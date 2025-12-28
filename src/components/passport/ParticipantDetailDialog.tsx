@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Camera, CheckCircle, XCircle, Loader2, Stethoscope } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Loader2, Stethoscope, Heart } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 
@@ -42,6 +42,12 @@ interface HealthNote {
   created_at: string;
 }
 
+interface HealthInfo {
+  id: string;
+  info: string;
+  participant_id: string;
+}
+
 interface ParticipantDetailDialogProps {
   participantId: string | null;
   open: boolean;
@@ -70,6 +76,7 @@ export const ParticipantDetailDialog = ({
   const [participant, setParticipant] = useState<ParticipantWithCabin | null>(null);
   const [activities, setActivities] = useState<ParticipantActivity[]>([]);
   const [healthNotes, setHealthNotes] = useState<HealthNote[]>([]);
+  const [healthInfo, setHealthInfo] = useState<HealthInfo | null>(null);
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -111,6 +118,16 @@ export const ParticipantDetailDialog = ({
 
       if (healthNotesError) throw healthNotesError;
       setHealthNotes(healthNotesData || []);
+
+      // Load health info (nurse public info for leaders)
+      const { data: healthInfoData, error: healthInfoError } = await supabase
+        .from('participant_health_info')
+        .select('id, info, participant_id')
+        .eq('participant_id', participantId)
+        .maybeSingle();
+
+      if (healthInfoError) throw healthInfoError;
+      setHealthInfo(healthInfoData || null);
     } catch (error) {
       console.error('Error loading participant:', error);
       toast({
@@ -315,6 +332,19 @@ export const ParticipantDetailDialog = ({
               </DialogHeader>
 
               <div className="space-y-6">
+                {/* Nurse health info for leaders (public) */}
+                {healthInfo?.info && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Heart className="h-4 w-4 text-blue-600" />
+                      <span>Helseinformasjon fra nurse</span>
+                    </div>
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg text-sm">
+                      {healthInfo.info}
+                    </div>
+                  </div>
+                )}
+
                 {/* Nurse notes (read-only) */}
                 {healthNotes.length > 0 && (
                   <div className="space-y-2">
