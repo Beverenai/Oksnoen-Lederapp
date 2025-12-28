@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
 import { 
   Search, 
   Heart, 
@@ -19,10 +21,12 @@ import {
   Clock, 
   FileText, 
   AlertCircle,
-  User,
   Save,
   Loader2,
-  Shield
+  Shield,
+  Activity,
+  MessageSquare,
+  User
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -50,11 +54,19 @@ interface HealthEvent {
   created_at: string;
 }
 
+interface ParticipantActivity {
+  id: string;
+  participant_id: string;
+  activity: string;
+  completed_at: string | null;
+}
+
 interface ParticipantWithHealth extends Participant {
   healthNotes: HealthNote[];
   healthEvents: HealthEvent[];
   cabin?: { name: string } | null;
   healthInfo?: { info: string } | null;
+  activities?: ParticipantActivity[];
 }
 
 const eventTypes = [
@@ -103,10 +115,11 @@ export default function Nurse() {
       // Load health notes, events, and health info for all participants
       const participantIds = participantsData?.map(p => p.id) || [];
       
-      const [notesRes, eventsRes, healthInfoRes] = await Promise.all([
+      const [notesRes, eventsRes, healthInfoRes, activitiesRes] = await Promise.all([
         supabase.from('participant_health_notes').select('*').in('participant_id', participantIds),
         supabase.from('participant_health_events').select('*').in('participant_id', participantIds).order('created_at', { ascending: false }),
         supabase.from('participant_health_info').select('*').in('participant_id', participantIds),
+        supabase.from('participant_activities').select('*').in('participant_id', participantIds),
       ]);
 
       const participantsWithHealth: ParticipantWithHealth[] = (participantsData || []).map(p => ({
@@ -115,6 +128,7 @@ export default function Nurse() {
         healthNotes: (notesRes.data || []).filter(n => n.participant_id === p.id),
         healthEvents: (eventsRes.data || []).filter(e => e.participant_id === p.id),
         healthInfo: (healthInfoRes.data || []).find(h => h.participant_id === p.id) || null,
+        activities: (activitiesRes.data || []).filter(a => a.participant_id === p.id),
       }));
 
       setParticipants(participantsWithHealth);
@@ -127,15 +141,17 @@ export default function Nurse() {
   };
 
   const loadParticipantDetails = async (participant: ParticipantWithHealth) => {
-    const [notesRes, eventsRes] = await Promise.all([
+    const [notesRes, eventsRes, activitiesRes] = await Promise.all([
       supabase.from('participant_health_notes').select('*').eq('participant_id', participant.id),
       supabase.from('participant_health_events').select('*').eq('participant_id', participant.id).order('created_at', { ascending: false }),
+      supabase.from('participant_activities').select('*').eq('participant_id', participant.id),
     ]);
 
     setSelectedParticipant({
       ...participant,
       healthNotes: notesRes.data || [],
       healthEvents: eventsRes.data || [],
+      activities: activitiesRes.data || [],
     });
   };
 
@@ -225,7 +241,7 @@ export default function Nurse() {
             <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h2 className="text-xl font-heading font-semibold">Ingen tilgang</h2>
             <p className="text-muted-foreground mt-2">
-              Du har ikke tilgang til sykepleier-siden.
+              Du har ikke tilgang til Nurse-siden.
             </p>
           </CardContent>
         </Card>
@@ -252,7 +268,7 @@ export default function Nurse() {
       <div>
         <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground flex items-center gap-2">
           <Heart className="w-8 h-8 text-destructive" />
-          Sykepleier
+          Nurse
         </h1>
         <p className="text-muted-foreground mt-1">
           Helsenotater og hendelseslogg for deltakere
@@ -286,18 +302,21 @@ export default function Nurse() {
               onClick={() => openParticipantDetail(participant)}
             >
               <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="w-5 h-5 text-primary" />
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src={participant.image_url || undefined} alt={participant.name} />
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {participant.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-foreground">{participant.name}</p>
+                        {participant.cabin && (
+                          <p className="text-sm text-muted-foreground">{participant.cabin.name}</p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-foreground">{participant.name}</p>
-                      {participant.cabin && (
-                        <p className="text-sm text-muted-foreground">{participant.cabin.name}</p>
-                      )}
-                    </div>
-                  </div>
                   <div className="flex gap-1">
                     {hasHealthInfo && (
                       <Badge variant="outline" className="text-xs bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/30 dark:text-pink-300 dark:border-pink-800">
@@ -360,21 +379,39 @@ export default function Nurse() {
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Heart className="w-5 h-5 text-destructive" />
-              {selectedParticipant?.name}
+            <DialogTitle className="flex items-center gap-3">
+              <Avatar className="w-10 h-10">
+                <AvatarImage src={selectedParticipant?.image_url || undefined} alt={selectedParticipant?.name} />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {selectedParticipant?.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <span>{selectedParticipant?.name}</span>
+                {selectedParticipant?.cabin && (
+                  <p className="text-sm font-normal text-muted-foreground">{selectedParticipant.cabin.name}</p>
+                )}
+              </div>
             </DialogTitle>
           </DialogHeader>
 
           <Tabs defaultValue="notes" className="flex-1 flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="notes" className="gap-2">
                 <FileText className="w-4 h-4" />
-                Helsenotater
+                <span className="hidden sm:inline">Helse</span>
               </TabsTrigger>
               <TabsTrigger value="events" className="gap-2">
                 <Clock className="w-4 h-4" />
-                Hendelseslogg
+                <span className="hidden sm:inline">Logg</span>
+              </TabsTrigger>
+              <TabsTrigger value="activities" className="gap-2">
+                <Activity className="w-4 h-4" />
+                <span className="hidden sm:inline">Aktiviteter</span>
+              </TabsTrigger>
+              <TabsTrigger value="leader-notes" className="gap-2">
+                <MessageSquare className="w-4 h-4" />
+                <span className="hidden sm:inline">Notater</span>
               </TabsTrigger>
             </TabsList>
 
@@ -527,6 +564,78 @@ export default function Nurse() {
                       )}
                     </div>
                   </ScrollArea>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Activities Tab */}
+            <TabsContent value="activities" className="flex-1 space-y-4 overflow-auto">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Activity className="w-4 h-4" />
+                    Fullførte aktiviteter
+                  </CardTitle>
+                  <CardDescription>
+                    Aktiviteter deltakeren har gjennomført
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {selectedParticipant?.activities && selectedParticipant.activities.length > 0 ? (
+                    <div className="space-y-4">
+                      <StyrkeproveBadges 
+                        completedActivities={selectedParticipant.activities.map(a => a.activity)} 
+                        showCount 
+                      />
+                      <div className="mt-4 space-y-2">
+                        {selectedParticipant.activities.map((activity) => (
+                          <div 
+                            key={activity.id} 
+                            className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border"
+                          >
+                            <span className="text-sm font-medium">{activity.activity}</span>
+                            {activity.completed_at && (
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(activity.completed_at), 'dd. MMM yyyy', { locale: nb })}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-4">
+                      Ingen aktiviteter registrert
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Leader Notes Tab */}
+            <TabsContent value="leader-notes" className="flex-1 space-y-4 overflow-auto">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    Leder-notater
+                  </CardTitle>
+                  <CardDescription>
+                    Kommentarer fra ledere
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {selectedParticipant?.notes ? (
+                    <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                      <p className="text-sm text-foreground whitespace-pre-wrap">
+                        {selectedParticipant.notes}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-4">
+                      Ingen notater fra ledere
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
