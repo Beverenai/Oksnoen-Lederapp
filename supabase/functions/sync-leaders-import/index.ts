@@ -26,6 +26,15 @@ interface LeaderImport {
   extra_5?: string;
 }
 
+// Parse cabin field: "Bedewinds & Marcusbu bak" -> ["Bedewinds", "Marcusbu bak"]
+const parseCabinNames = (cabinStr: string | undefined): string[] => {
+  if (!cabinStr) return [];
+  return cabinStr
+    .split(/\s*[&,]\s*|\s+og\s+/i)
+    .map(c => c.trim())
+    .filter(Boolean);
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -48,7 +57,11 @@ serve(async (req) => {
 
     console.log(`Syncing ${leaders.length} leaders`);
 
-    const results = { created: 0, updated: 0, skipped: 0, errors: [] as string[] };
+    // Pre-fetch all cabins for matching
+    const { data: allCabins } = await supabase.from('cabins').select('id, name');
+    const cabinsByName = new Map(allCabins?.map(c => [c.name.toLowerCase(), c.id]) || []);
+
+    const results = { created: 0, updated: 0, skipped: 0, cabinLinks: 0, errors: [] as string[] };
 
     for (const leader of leaders) {
       const phone = leader.phone?.replace(/\s/g, '');
@@ -128,6 +141,30 @@ serve(async (req) => {
         results.updated++;
       }
 
+      // Parse cabin names and create leader_cabins links
+      const cabinNames = parseCabinNames(leader.cabin);
+      if (cabinNames.length > 0) {
+        // Delete existing leader_cabins for this leader
+        await supabase.from('leader_cabins').delete().eq('leader_id', leaderId);
+
+        // Insert new leader_cabins links
+        for (const cabinName of cabinNames) {
+          const cabinId = cabinsByName.get(cabinName.toLowerCase());
+          if (cabinId) {
+            const { error: linkError } = await supabase.from('leader_cabins').insert({
+              leader_id: leaderId,
+              cabin_id: cabinId,
+            });
+            if (!linkError) {
+              results.cabinLinks++;
+              console.log(`Linked ${leader.name} to cabin: ${cabinName}`);
+            }
+          } else {
+            console.log(`Cabin not found for ${leader.name}: ${cabinName}`);
+          }
+        }
+      }
+
       // Upsert leader content
       const contentData = {
         leader_id: leaderId,
@@ -152,7 +189,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Sync complete: ${results.created} created, ${results.updated} updated, ${results.skipped} skipped`);
+    console.log(`Sync complete: ${results.created} created, ${results.updated} updated, ${results.cabinLinks} cabin links, ${results.skipped} skipped`);
 
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,6 +27,11 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
 import oksnoenHeader from '@/assets/oksnoen-header.png';
+
+interface LeaderCabin {
+  id: string;
+  name: string;
+}
 
 type LeaderContent = Tables<'leader_content'>;
 
@@ -105,11 +110,13 @@ const formatTeamDisplay = (team: string | null): string => {
 
 export default function Home() {
   const { leader, isAdmin, isNurse } = useAuth();
+  const navigate = useNavigate();
   const [content, setContent] = useState<LeaderContent | null>(null);
   const [sessionActivitiesText, setSessionActivitiesText] = useState<string>('');
   const [config, setConfig] = useState<HomeScreenConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasRead, setHasRead] = useState(false);
+  const [leaderCabins, setLeaderCabins] = useState<LeaderCabin[]>([]);
 
   // Fetch has_read status
   useEffect(() => {
@@ -132,7 +139,7 @@ export default function Home() {
 
     setIsLoading(true);
     try {
-      const [contentRes, activitiesTextRes, configRes] = await Promise.all([
+      const [contentRes, activitiesTextRes, configRes, cabinsRes] = await Promise.all([
         supabase
           .from('leader_content')
           .select('*')
@@ -148,11 +155,21 @@ export default function Home() {
           .select('*')
           .eq('is_visible', true)
           .order('sort_order'),
+        supabase
+          .from('leader_cabins')
+          .select('cabin_id, cabins(id, name)')
+          .eq('leader_id', leader.id),
       ]);
 
       setContent(contentRes.data);
       setSessionActivitiesText(activitiesTextRes.data?.value || '');
       setConfig((configRes.data || []) as HomeScreenConfig[]);
+      
+      // Extract cabins from leader_cabins join
+      const cabins = cabinsRes.data
+        ?.map((lc: any) => lc.cabins)
+        .filter(Boolean) as LeaderCabin[] || [];
+      setLeaderCabins(cabins);
     } catch (error) {
       console.error('Error loading home data:', error);
     } finally {
@@ -313,13 +330,23 @@ export default function Home() {
           )}
           
           <div className="flex flex-wrap gap-2 mt-3 justify-center">
-            {leader?.cabin_info && (
-              <Link to="/cabin">
-                <Badge variant="secondary" className="text-sm cursor-pointer hover:opacity-80 transition-opacity">
+            {leaderCabins.length > 0 ? (
+              leaderCabins.map(cabin => (
+                <Badge 
+                  key={cabin.id}
+                  variant="secondary" 
+                  className="text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => navigate(`/passport?cabin=${cabin.id}`)}
+                >
                   <HomeIcon className="w-3 h-3 mr-1" />
-                  {leader.cabin_info}
+                  {cabin.name}
                 </Badge>
-              </Link>
+              ))
+            ) : leader?.cabin_info && (
+              <Badge variant="secondary" className="text-sm">
+                <HomeIcon className="w-3 h-3 mr-1" />
+                {leader.cabin_info}
+              </Badge>
             )}
             {leader?.team && (
               <Link to={`/team/${leader.team.toLowerCase()}`}>
