@@ -80,8 +80,8 @@ export default function Passport() {
     setSearchParams({});
   };
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     try {
       const [participantsRes, cabinsRes, configRes] = await Promise.all([
         supabase
@@ -484,7 +484,7 @@ export default function Passport() {
         participantId={selectedParticipantId}
         open={isDetailDialogOpen}
         onOpenChange={setIsDetailDialogOpen}
-        onParticipantUpdated={loadData}
+        onParticipantUpdated={() => loadData(false)}
       />
     </div>
   );

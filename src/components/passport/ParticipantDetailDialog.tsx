@@ -85,10 +85,10 @@ export const ParticipantDetailDialog = ({
   const [isTogglingArrival, setIsTogglingArrival] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadParticipant = async () => {
+  const loadParticipant = async (showLoading = true) => {
     if (!participantId) return;
 
-    setIsLoading(true);
+    if (showLoading) setIsLoading(true);
     try {
       // Load participant data
       const { data: participantData, error: participantError } = await supabase
@@ -378,7 +378,7 @@ export const ParticipantDetailDialog = ({
                   <ActivityManager
                     participantId={participant.id}
                     completedActivities={activities}
-                    onActivityChanged={loadParticipant}
+                    onActivityChanged={() => loadParticipant(false)}
                   />
                 </div>
 
