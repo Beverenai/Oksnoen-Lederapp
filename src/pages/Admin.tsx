@@ -114,8 +114,11 @@ export default function Admin() {
     try {
       const { error } = await supabase
         .from('app_config')
-        .update({ value: webhookUrl, updated_at: new Date().toISOString() })
-        .eq('key', 'sync_webhook_url');
+        .upsert({ 
+          key: 'sync_webhook_url', 
+          value: webhookUrl, 
+          updated_at: new Date().toISOString() 
+        }, { onConflict: 'key' });
       
       if (error) throw error;
       toast.success('Webhook URL lagret!');
@@ -134,22 +137,24 @@ export default function Admin() {
     }
 
     setIsSyncing(true);
-    console.log('Triggering n8n webhook:', webhookUrl);
+    console.log('Triggering sync via backend function');
 
     try {
-      await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        mode: 'no-cors',
-        body: JSON.stringify({
-          timestamp: new Date().toISOString(),
-          triggered_from: 'admin_panel',
-        }),
-      });
+      const { data, error } = await supabase.functions.invoke('trigger-sync');
 
-      toast.success('Synkronisering startet! Sjekk n8n for status.');
+      if (error) {
+        console.error('Error calling trigger-sync:', error);
+        toast.error('Kunne ikke starte synkronisering');
+        return;
+      }
+
+      console.log('trigger-sync response:', data);
+
+      if (data?.success) {
+        toast.success(`Synkronisering fullført! (Status: ${data.webhookStatus})`);
+      } else {
+        toast.error(`Synkronisering feilet: ${data?.error || 'Ukjent feil'}`);
+      }
     } catch (error) {
       console.error('Error triggering sync:', error);
       toast.error('Kunne ikke starte synkronisering');
