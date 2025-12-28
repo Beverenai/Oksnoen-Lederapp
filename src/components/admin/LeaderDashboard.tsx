@@ -179,8 +179,10 @@ export function LeaderDashboard({ leaders, extraFieldsConfig, onLeaderUpdated, o
           
           const getBorderClass = () => {
             if (isKitchen) return 'ring-purple-500';
+            // Admin og Nurse skal ALLTID være grønne
+            if (adminNurseIds.has(leader.id)) return 'ring-green-500';
             if (isFri) return 'ring-blue-500';
-            if (adminNurseIds.has(leader.id) || content?.has_read) return 'ring-green-500';
+            if (content?.has_read) return 'ring-green-500';
             return 'ring-red-500';
           };
 
