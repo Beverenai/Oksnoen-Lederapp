@@ -30,7 +30,6 @@ interface LeaderDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   extraFieldsConfig: ExtraFieldConfig[];
-  onCabinClick?: (cabins: CabinInfo[], leaderId: string) => void;
 }
 
 // Team color mapping - supports both short (1, 2f) and long (Team 1, Team 2F) formats
@@ -79,8 +78,7 @@ export function LeaderDetailSheet({
   leader, 
   open, 
   onOpenChange, 
-  extraFieldsConfig,
-  onCabinClick
+  extraFieldsConfig
 }: LeaderDetailSheetProps) {
   const [linkedCabins, setLinkedCabins] = useState<CabinInfo[]>([]);
   
@@ -126,12 +124,6 @@ export function LeaderDetailSheet({
     return linkedCabins.map(c => c.name).join(' + ');
   };
   
-  // Handle cabin badge click
-  const handleCabinBadgeClick = () => {
-    if (linkedCabins.length > 0 && onCabinClick) {
-      onCabinClick(linkedCabins, leader.id);
-    }
-  };
   
   // Get visible extra fields with their values
   const visibleExtraFields = extraFieldsConfig
@@ -190,8 +182,7 @@ export function LeaderDetailSheet({
                 {linkedCabins.length > 0 ? (
                   <Badge 
                     variant="outline" 
-                    className="cursor-pointer hover:bg-accent flex items-center gap-1"
-                    onClick={handleCabinBadgeClick}
+                    className="flex items-center gap-1"
                   >
                     <Home className="w-3 h-3" />
                     {formatCabinsDisplay()}
