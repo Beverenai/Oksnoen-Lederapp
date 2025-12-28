@@ -57,6 +57,7 @@ export default function Leaders() {
   
   // Filter and sort state
   const [activeTeamFilter, setActiveTeamFilter] = useState<string | null>(null);
+  const [activeCabinFilter, setActiveCabinFilter] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('name');
 
   useEffect(() => {
@@ -121,6 +122,14 @@ export default function Leaders() {
     return TEAMS.filter(t => teamsInUse.has(t.key));
   }, [leaders]);
 
+  // Get unique cabins from leaders for filter chips
+  const availableCabins = useMemo(() => {
+    const cabins = leaders
+      .map(l => l.cabin?.trim())
+      .filter((cabin): cabin is string => !!cabin);
+    return [...new Set(cabins)].sort((a, b) => a.localeCompare(b, 'nb'));
+  }, [leaders]);
+
   // Filter and sort leaders
   const filteredAndSortedLeaders = useMemo(() => {
     let result = [...leaders];
@@ -129,6 +138,13 @@ export default function Leaders() {
     if (activeTeamFilter) {
       result = result.filter(
         l => l.team?.toLowerCase().trim() === activeTeamFilter
+      );
+    }
+
+    // Apply cabin filter
+    if (activeCabinFilter) {
+      result = result.filter(
+        l => l.cabin?.trim() === activeCabinFilter
       );
     }
 
@@ -152,7 +168,7 @@ export default function Leaders() {
     });
 
     return result;
-  }, [leaders, activeTeamFilter, sortBy]);
+  }, [leaders, activeTeamFilter, activeCabinFilter, sortBy]);
 
   // Get first name only
   const getFirstName = (fullName: string) => fullName.split(' ')[0];
@@ -160,6 +176,12 @@ export default function Leaders() {
   const handleTeamFilter = (teamKey: string | null) => {
     setActiveTeamFilter(prev => prev === teamKey ? null : teamKey);
   };
+
+  const handleCabinFilter = (cabin: string | null) => {
+    setActiveCabinFilter(prev => prev === cabin ? null : cabin);
+  };
+
+  const hasActiveFilter = activeTeamFilter || activeCabinFilter;
 
   if (isLoading) {
     return (
@@ -184,7 +206,7 @@ export default function Leaders() {
             Ledere
           </h1>
           <p className="text-sm text-muted-foreground">
-            {activeTeamFilter ? (
+            {hasActiveFilter ? (
               <>Viser {filteredAndSortedLeaders.length} av {leaders.length} ledere</>
             ) : (
               <>{leaders.length} ledere registrert</>
@@ -344,12 +366,12 @@ export default function Leaders() {
           <CardContent className="py-12 text-center">
             <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium text-foreground">
-              {activeTeamFilter ? 'Ingen ledere i dette teamet' : 'Ingen ledere'}
+              {hasActiveFilter ? 'Ingen ledere funnet' : 'Ingen ledere'}
             </h3>
             <p className="text-muted-foreground mt-1">
-              {activeTeamFilter ? (
+              {hasActiveFilter ? (
                 <button 
-                  onClick={() => setActiveTeamFilter(null)}
+                  onClick={() => { setActiveTeamFilter(null); setActiveCabinFilter(null); }}
                   className="text-primary underline"
                 >
                   Vis alle ledere
