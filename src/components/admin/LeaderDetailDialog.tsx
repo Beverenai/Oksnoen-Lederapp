@@ -103,8 +103,18 @@ export function LeaderDetailDialog({
         .from('participant-images')
         .getPublicUrl(fileName);
 
+      // Update local state
       setProfileImageUrl(publicUrl);
-      toast.success('Bilde lastet opp!');
+      
+      // Save directly to database to ensure it persists
+      const { error: updateError } = await supabase
+        .from('leaders')
+        .update({ profile_image_url: publicUrl })
+        .eq('id', leader.id);
+      
+      if (updateError) throw updateError;
+      
+      toast.success('Bilde lagret!');
     } catch (error) {
       console.error('Error uploading image:', error);
       toast.error('Kunne ikke laste opp bilde');
