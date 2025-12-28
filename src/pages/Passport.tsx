@@ -1,27 +1,20 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Search, 
   CheckCircle2, 
   Circle,
-  Upload,
   User,
-  Calendar,
   Home,
-  X,
-  Loader2,
   Filter,
   ChevronDown,
   ChevronRight,
@@ -29,12 +22,11 @@ import {
   Users
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, differenceInYears } from 'date-fns';
-import { nb } from 'date-fns/locale';
+import { differenceInYears } from 'date-fns';
 import type { Tables } from '@/integrations/supabase/types';
-import { ActivitySelector } from '@/components/passport/ActivitySelector';
 import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
 import { BulkActivityRegistration } from '@/components/passport/BulkActivityRegistration';
+import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 
 type Participant = Tables<'participants'>;
 type Cabin = Tables<'cabins'>;
@@ -63,13 +55,11 @@ export default function Passport() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCabin, setFilterCabin] = useState<string>(cabinFilterFromUrl || 'all');
   const [filterArrival, setFilterArrival] = useState<string>('all');
-  const [selectedParticipant, setSelectedParticipant] = useState<ParticipantWithCabin | null>(null);
+  const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
   const [showBulkRegistration, setShowBulkRegistration] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadData();
@@ -116,17 +106,10 @@ export default function Passport() {
       setIsLoading(false);
     }
   };
-
-  const loadParticipant = async (id: string) => {
-    const { data } = await supabase
-      .from('participants')
-      .select('*, cabins(*), participant_activities(*)')
-      .eq('id', id)
-      .single();
-    
-    if (data) {
-      setSelectedParticipant(data);
-    }
+  // Handler for opening participant detail dialog
+  const handleParticipantClick = (participantId: string) => {
+    setSelectedParticipantId(participantId);
+    setIsDetailDialogOpen(true);
   };
 
   const filteredParticipants = useMemo(() => {
@@ -189,69 +172,6 @@ export default function Passport() {
       newExpanded.add(cabinId);
     }
     setExpandedCabins(newExpanded);
-  };
-
-  const toggleArrival = async (participant: ParticipantWithCabin) => {
-    try {
-      await supabase
-        .from('participants')
-        .update({ has_arrived: !participant.has_arrived })
-        .eq('id', participant.id);
-      
-      loadData();
-      toast.success(participant.has_arrived ? 'Ankomst fjernet' : 'Markert som ankommet!');
-    } catch (error) {
-      toast.error('Kunne ikke oppdatere status');
-    }
-  };
-
-  const uploadImage = async (participantId: string, file: File) => {
-    setIsUploading(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${participantId}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('participant-images')
-        .upload(fileName, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from('participant-images')
-        .getPublicUrl(fileName);
-
-      await supabase
-        .from('participants')
-        .update({ image_url: urlData.publicUrl })
-        .eq('id', participantId);
-
-      loadData();
-      if (selectedParticipant?.id === participantId) {
-        loadParticipant(participantId);
-      }
-      toast.success('Bilde lastet opp!');
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      toast.error('Kunne ikke laste opp bilde');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const updateNotes = async (notes: string) => {
-    if (!selectedParticipant) return;
-
-    try {
-      await supabase
-        .from('participants')
-        .update({ notes })
-        .eq('id', selectedParticipant.id);
-      
-      setSelectedParticipant({ ...selectedParticipant, notes });
-    } catch (error) {
-      toast.error('Kunne ikke oppdatere notater');
-    }
   };
 
   if (isLoading) {
@@ -416,10 +336,7 @@ export default function Passport() {
                                   className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
                                     participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
                                   }`}
-                                  onClick={() => {
-                                    setSelectedParticipant(participant);
-                                    setIsDetailDialogOpen(true);
-                                  }}
+                                  onClick={() => handleParticipantClick(participant.id)}
                                 >
                                   <div className="flex items-start gap-3">
                                     <Avatar className="w-10 h-10 shrink-0">
@@ -485,10 +402,7 @@ export default function Passport() {
                                   className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
                                     participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
                                   }`}
-                                  onClick={() => {
-                                    setSelectedParticipant(participant);
-                                    setIsDetailDialogOpen(true);
-                                  }}
+                                  onClick={() => handleParticipantClick(participant.id)}
                                 >
                                   <div className="flex items-start gap-3">
                                     <Avatar className="w-10 h-10 shrink-0">
@@ -549,130 +463,12 @@ export default function Passport() {
       )}
 
       {/* Participant Detail Dialog */}
-      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          {selectedParticipant && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-3">
-                  <Avatar className="w-12 h-12">
-                    <AvatarImage src={selectedParticipant.image_url || undefined} />
-                    <AvatarFallback className="bg-muted">
-                      <User className="w-5 h-5" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <span>{selectedParticipant.name}</span>
-                    <div className="flex items-center gap-2 mt-1">
-                      {selectedParticipant.cabins && (
-                        <Badge variant="secondary">
-                          {selectedParticipant.cabins.name}
-                        </Badge>
-                      )}
-                      {selectedParticipant.room && (
-                        <Badge variant="outline">
-                          {selectedParticipant.room}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </DialogTitle>
-              </DialogHeader>
-
-              <div className="space-y-6 pt-4">
-                {/* Styrkeprøve badges */}
-                <StyrkeproveBadges
-                  completedActivities={(selectedParticipant.participant_activities || []).map(a => a.activity)}
-                  className="justify-center"
-                />
-
-                {/* Times attended */}
-                {(selectedParticipant.times_attended ?? 0) > 0 && (
-                  <div className="p-3 rounded-lg bg-primary/10 text-primary text-sm">
-                    <Calendar className="w-4 h-4 inline mr-2" />
-                    Vært på Oksnøen {selectedParticipant.times_attended} {selectedParticipant.times_attended === 1 ? 'år' : 'år'}
-                  </div>
-                )}
-
-                {/* Upload image */}
-                <div className="flex items-center gap-4">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        uploadImage(selectedParticipant.id, file);
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                  >
-                    {isUploading ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Upload className="w-4 h-4 mr-2" />
-                    )}
-                    Last opp bilde
-                  </Button>
-
-                  <Button
-                    variant={selectedParticipant.has_arrived ? 'secondary' : 'default'}
-                    onClick={() => toggleArrival(selectedParticipant)}
-                  >
-                    {selectedParticipant.has_arrived ? (
-                      <>
-                        <X className="w-4 h-4 mr-2" />
-                        Fjern ankomst
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Har ankommet
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                {/* Birth date */}
-                {selectedParticipant.birth_date && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="w-4 h-4" />
-                    <span>
-                      {format(new Date(selectedParticipant.birth_date), 'd. MMMM yyyy', { locale: nb })}
-                    </span>
-                  </div>
-                )}
-
-                {/* Activities */}
-                <div className="space-y-3">
-                  <h4 className="font-medium text-foreground">Aktiviteter</h4>
-                  <ActivitySelector
-                    participantId={selectedParticipant.id}
-                    completedActivities={(selectedParticipant.participant_activities || []).map(a => a.activity)}
-                    onActivityChanged={() => loadParticipant(selectedParticipant.id)}
-                  />
-                </div>
-
-                {/* Notes */}
-                <div className="space-y-2">
-                  <Label>Notater</Label>
-                  <Textarea
-                    placeholder="Generelle notater..."
-                    value={selectedParticipant.notes || ''}
-                    onChange={(e) => updateNotes(e.target.value)}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <ParticipantDetailDialog
+        participantId={selectedParticipantId}
+        open={isDetailDialogOpen}
+        onOpenChange={setIsDetailDialogOpen}
+        onParticipantUpdated={loadData}
+      />
     </div>
   );
 }

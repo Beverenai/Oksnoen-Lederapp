@@ -8,6 +8,7 @@ import { BarChart3, AlertCircle, Cake, ChevronDown, ChevronUp, Users } from 'luc
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { AgeDistributionChart } from '@/components/stats/AgeDistributionChart';
+import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 interface Participant {
   id: string;
   name: string;
@@ -47,6 +48,13 @@ export function ParticipantStatsCard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMissingOpen, setIsMissingOpen] = useState(false);
   const [isBirthdaysOpen, setIsBirthdaysOpen] = useState(true);
+  const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleParticipantClick = (participantId: string) => {
+    setSelectedParticipantId(participantId);
+    setIsDialogOpen(true);
+  };
 
   useEffect(() => {
     loadData();
@@ -210,7 +218,11 @@ export function ParticipantStatsCard() {
             <CollapsibleContent className="pt-2">
               <div className="space-y-1.5 pl-6 max-h-40 overflow-y-auto">
                 {missingActivities.map(({ participant, cabinName, age }) => (
-                  <div key={participant.id} className="text-sm flex items-center gap-2">
+                  <button
+                    key={participant.id}
+                    onClick={() => handleParticipantClick(participant.id)}
+                    className="text-sm flex items-center gap-2 w-full text-left hover:bg-muted/50 p-1 rounded transition-colors"
+                  >
                     <span className="font-medium">
                       {participant.first_name || participant.name}
                     </span>
@@ -222,7 +234,7 @@ export function ParticipantStatsCard() {
                         {cabinName}
                       </Badge>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             </CollapsibleContent>
@@ -249,7 +261,11 @@ export function ParticipantStatsCard() {
             <CollapsibleContent className="pt-2">
               <div className="space-y-1.5 pl-6 max-h-40 overflow-y-auto">
                 {upcomingBirthdays.map(birthday => (
-                  <div key={birthday.participant.id} className="text-sm flex items-center gap-2 flex-wrap">
+                  <button
+                    key={birthday.participant.id}
+                    onClick={() => handleParticipantClick(birthday.participant.id)}
+                    className="text-sm flex items-center gap-2 flex-wrap w-full text-left hover:bg-muted/50 p-1 rounded transition-colors"
+                  >
                     <span className="font-medium">
                       {birthday.participant.first_name || birthday.participant.name}
                     </span>
@@ -266,7 +282,7 @@ export function ParticipantStatsCard() {
                         {birthday.daysUntil === 0 ? 'I dag!' : 'I morgen'}
                       </Badge>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             </CollapsibleContent>
@@ -284,6 +300,14 @@ export function ParticipantStatsCard() {
 
       {/* Age Distribution Chart */}
       <AgeDistributionChart participants={participants} />
+
+      {/* Participant Detail Dialog */}
+      <ParticipantDetailDialog
+        participantId={selectedParticipantId}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onParticipantUpdated={loadData}
+      />
     </div>
   );
 }
