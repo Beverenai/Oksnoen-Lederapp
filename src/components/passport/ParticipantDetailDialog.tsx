@@ -246,148 +246,154 @@ export const ParticipantDetailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : participant ? (
           <>
-            <DialogHeader className="text-center">
-              {/* Large profile image */}
-              <div className="flex justify-center mb-4">
-                <div className="relative">
-                  <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
-                    <AvatarImage src={participant.image_url || undefined} alt={participant.name} />
-                    <AvatarFallback className="text-3xl font-semibold bg-muted">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="absolute bottom-0 right-0 rounded-full h-9 w-9 shadow-md"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploadingImage}
-                  >
-                    {isUploadingImage ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Camera className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                </div>
-              </div>
-
-              <DialogTitle className="text-xl">{participant.name}</DialogTitle>
-
-              {/* Age, cabin, room info */}
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground flex-wrap">
-                {age !== null && <span>{age} år</span>}
-                {age !== null && participant.cabin && <span>•</span>}
-                {participant.cabin && <span>{participant.cabin.name}</span>}
-                {participant.room && (
-                  <>
-                    <span>•</span>
-                    <span>Rom {participant.room}</span>
-                  </>
-                )}
-              </div>
-
-              {/* Arrival status badge */}
-              <div className="flex justify-center mt-2">
-                <Badge variant={participant.has_arrived ? 'default' : 'secondary'}>
-                  {participant.has_arrived ? 'Ankommet' : 'Ikke ankommet'}
-                </Badge>
-              </div>
-            </DialogHeader>
-
-            <div className="space-y-6 mt-4">
-              {/* Nurse notes (read-only) */}
-              {healthNotes.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Stethoscope className="h-4 w-4 text-pink-600" />
-                    <span>Sykepleier-notater</span>
-                  </div>
-                  <div className="space-y-2">
-                    {healthNotes.map((note) => (
-                      <div
-                        key={note.id}
-                        className="p-3 bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900 rounded-lg text-sm"
-                      >
-                        {note.content}
-                      </div>
-                    ))}
-                  </div>
+            {/* Large hero image at top */}
+            <div className="relative w-full h-64 bg-muted">
+              {participant.image_url ? (
+                <img
+                  src={participant.image_url}
+                  alt={participant.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/20">
+                  <span className="text-6xl font-bold text-muted-foreground/50">{initials}</span>
                 </div>
               )}
+              <Button
+                variant="secondary"
+                size="icon"
+                className="absolute bottom-3 right-3 rounded-full h-10 w-10 shadow-lg"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingImage}
+              >
+                {isUploadingImage ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Camera className="h-5 w-5" />
+                )}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </div>
 
-              {/* Styrkeprøve badges */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Styrkeprøve</h4>
-                <StyrkeproveBadges completedActivities={activities.map((a) => a.activity)} />
-              </div>
+            {/* Content below image */}
+            <div className="p-6">
+              <DialogHeader className="text-center mb-4">
+                <DialogTitle className="text-xl">{participant.name}</DialogTitle>
 
-              {/* Activities */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Aktiviteter</h4>
-                <ActivityManager
-                  participantId={participant.id}
-                  completedActivities={activities}
-                  onActivityChanged={loadParticipant}
-                />
-              </div>
-
-              {/* Notes */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Notater</h4>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Skriv notater her..."
-                  rows={3}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSaveNotes}
-                  disabled={isSavingNotes}
-                >
-                  {isSavingNotes ? (
+                {/* Age, cabin, room info */}
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground flex-wrap">
+                  {age !== null && <span>{age} år</span>}
+                  {age !== null && participant.cabin && <span>•</span>}
+                  {participant.cabin && <span>{participant.cabin.name}</span>}
+                  {participant.room && (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Lagrer...
+                      <span>•</span>
+                      <span>Rom {participant.room}</span>
                     </>
-                  ) : (
-                    'Lagre notater'
                   )}
+                </div>
+
+                {/* Arrival status badge */}
+                <div className="flex justify-center mt-2">
+                  <Badge variant={participant.has_arrived ? 'default' : 'secondary'}>
+                    {participant.has_arrived ? 'Ankommet' : 'Ikke ankommet'}
+                  </Badge>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-6">
+                {/* Nurse notes (read-only) */}
+                {healthNotes.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Stethoscope className="h-4 w-4 text-pink-600" />
+                      <span>Sykepleier-notater</span>
+                    </div>
+                    <div className="space-y-2">
+                      {healthNotes.map((note) => (
+                        <div
+                          key={note.id}
+                          className="p-3 bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900 rounded-lg text-sm"
+                        >
+                          {note.content}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Styrkeprøve badges */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Styrkeprøve</h4>
+                  <StyrkeproveBadges completedActivities={activities.map((a) => a.activity)} />
+                </div>
+
+                {/* Activities */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Aktiviteter</h4>
+                  <ActivityManager
+                    participantId={participant.id}
+                    completedActivities={activities}
+                    onActivityChanged={loadParticipant}
+                  />
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Notater</h4>
+                  <Textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Skriv notater her..."
+                    rows={3}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSaveNotes}
+                    disabled={isSavingNotes}
+                  >
+                    {isSavingNotes ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Lagrer...
+                      </>
+                    ) : (
+                      'Lagre notater'
+                    )}
+                  </Button>
+                </div>
+
+                {/* Arrival toggle */}
+                <Button
+                  variant={participant.has_arrived ? 'outline' : 'default'}
+                  className="w-full"
+                  onClick={toggleArrival}
+                  disabled={isTogglingArrival}
+                >
+                  {isTogglingArrival ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : participant.has_arrived ? (
+                    <XCircle className="h-4 w-4 mr-2" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                  )}
+                  {participant.has_arrived ? 'Marker som ikke ankommet' : 'Marker som ankommet'}
                 </Button>
               </div>
-
-              {/* Arrival toggle */}
-              <Button
-                variant={participant.has_arrived ? 'outline' : 'default'}
-                className="w-full"
-                onClick={toggleArrival}
-                disabled={isTogglingArrival}
-              >
-                {isTogglingArrival ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : participant.has_arrived ? (
-                  <XCircle className="h-4 w-4 mr-2" />
-                ) : (
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                )}
-                {participant.has_arrived ? 'Marker som ikke ankommet' : 'Marker som ankommet'}
-              </Button>
             </div>
           </>
         ) : (
