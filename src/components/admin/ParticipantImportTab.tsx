@@ -291,16 +291,27 @@ export function ParticipantImportTab() {
 
         const fullName = `${participant.firstName} ${participant.lastName}`.trim();
         
-        // Check if participant exists (by name + birth date)
+        // Check if participant exists - first try exact name match
         let existingParticipant = null;
-        if (participant.birthDate) {
-          const { data } = await supabase
+        
+        // Try exact name match first (case-insensitive)
+        const { data: exactMatch } = await supabase
+          .from('participants')
+          .select('id, birth_date')
+          .ilike('name', fullName)
+          .maybeSingle();
+        
+        if (exactMatch) {
+          existingParticipant = exactMatch;
+        } else if (participant.birthDate) {
+          // If no exact match, try birth date + first name
+          const { data: birthDateMatch } = await supabase
             .from('participants')
             .select('id')
             .eq('birth_date', participant.birthDate)
             .ilike('name', `%${participant.firstName}%`)
             .maybeSingle();
-          existingParticipant = data;
+          existingParticipant = birthDateMatch;
         }
 
         if (existingParticipant) {
