@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import confetti from 'canvas-confetti';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -93,6 +94,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { leader, isAdmin, isNurse, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
+  const [showHajoloSuccess, setShowHajoloSuccess] = useState(false);
   const location = useLocation();
 
   // Fetch has_read status for regular leaders
@@ -151,11 +153,35 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
 
     setHasRead(true);
-    toast.success('Hajolo! Du har bekreftet at du har lest informasjonen.');
+    setShowHajoloSuccess(true);
+    
+    // Trigger confetti
+    confetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => setShowHajoloSuccess(false), 3000);
   };
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Hajolo Success Overlay */}
+      {showHajoloSuccess && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowHajoloSuccess(false)}
+        >
+          <div className="animate-scale-in bg-card rounded-3xl p-10 text-center shadow-2xl border border-border">
+            <div className="text-7xl mb-4">🎉</div>
+            <h2 className="text-3xl font-heading font-bold text-green-600">Hajolo!</h2>
+            <p className="text-muted-foreground mt-3 text-lg">Du har bekreftet at du har lest informasjonen</p>
+            <p className="text-sm text-muted-foreground/70 mt-4">Trykk hvor som helst for å lukke</p>
+          </div>
+        </div>
+      )}
       {/* Mobile Header - smaller, just menu + logo - with safe area for Dynamic Island */}
       <header className="lg:hidden fixed top-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-b border-border z-50 px-4 pt-safe flex items-center justify-between h-[calc(3.5rem+env(safe-area-inset-top,0px))]">
         <div className="flex items-center gap-3">

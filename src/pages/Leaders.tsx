@@ -183,10 +183,10 @@ export default function Leaders() {
       
       switch (sortBy) {
         case 'activity':
-          // Leaders with activity first
-          const aHasActivity = !!a.content?.current_activity;
-          const bHasActivity = !!b.content?.current_activity;
-          if (aHasActivity !== bHasActivity) return bHasActivity ? 1 : -1;
+          // Alfabetisk sortering basert på aktivitetsinnhold
+          const aActivity = a.content?.current_activity || 'zzz';
+          const bActivity = b.content?.current_activity || 'zzz';
+          if (aActivity !== bActivity) return aActivity.localeCompare(bActivity, 'nb');
           return a.name.localeCompare(b.name, 'nb');
         case 'team':
           const aTeam = a.team || 'zzz';
