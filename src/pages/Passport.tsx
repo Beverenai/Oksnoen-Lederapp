@@ -403,7 +403,7 @@ export default function Passport() {
                                   : 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30'
                               }`}
                             >
-                              {roomSide} ({roomParticipants.length})
+                              {roomSide.charAt(0).toUpperCase() + roomSide.slice(1)} ({roomParticipants.length})
                             </Badge>
                           </div>
                           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
