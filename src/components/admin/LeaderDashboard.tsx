@@ -165,10 +165,10 @@ export function LeaderDashboard({ leaders, extraFieldsConfig, onLeaderUpdated, o
           return (
             <Card 
               key={leader.id} 
-              className={`relative overflow-hidden transition-all hover:shadow-md cursor-pointer ${hasObs ? 'ring-2 ring-destructive/50' : ''}`}
+              className={`relative overflow-hidden transition-all hover:shadow-md cursor-pointer min-h-[220px] ${hasObs ? 'ring-2 ring-destructive/50' : ''}`}
               onClick={() => handleEditClick(leader)}
             >
-              <CardContent className="p-4">
+              <CardContent className="p-4 h-full flex flex-col">
                 {/* Header with avatar and name */}
                 <div className="flex items-start gap-3 mb-3">
                   <Avatar className="w-12 h-12 border-2 border-primary/20">
@@ -216,18 +216,9 @@ export function LeaderDashboard({ leaders, extraFieldsConfig, onLeaderUpdated, o
                   )}
                 </div>
 
-                {/* OBS Message */}
-                {hasObs && (
-                  <Alert variant="destructive" className="mb-3 py-2 px-3">
-                    <AlertTriangle className="h-3 w-3" />
-                    <AlertDescription className="text-xs line-clamp-2">
-                      {content?.obs_message}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Activity */}
-                <div className="space-y-2">
+                {/* Content section - flex-1 to push content evenly */}
+                <div className="flex-1 space-y-2">
+                  {/* Activity - first priority */}
                   <div className="flex items-start gap-2">
                     <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                     <p className={`text-sm ${hasActivity ? 'text-foreground' : 'text-muted-foreground italic'}`}>
@@ -235,7 +226,7 @@ export function LeaderDashboard({ leaders, extraFieldsConfig, onLeaderUpdated, o
                     </p>
                   </div>
 
-                  {/* Notes */}
+                  {/* Notes - second priority */}
                   <div className="flex items-start gap-2">
                     <FileText className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <p className={`text-sm line-clamp-2 ${hasNotes ? 'text-foreground' : 'text-muted-foreground italic'}`}>
@@ -243,6 +234,16 @@ export function LeaderDashboard({ leaders, extraFieldsConfig, onLeaderUpdated, o
                     </p>
                   </div>
                 </div>
+
+                {/* OBS Message - at bottom, only if exists */}
+                {hasObs && (
+                  <Alert variant="destructive" className="mt-3 py-2 px-3">
+                    <AlertTriangle className="h-3 w-3" />
+                    <AlertDescription className="text-xs line-clamp-2">
+                      {content?.obs_message}
+                    </AlertDescription>
+                  </Alert>
+                )}
               </CardContent>
             </Card>
           );
