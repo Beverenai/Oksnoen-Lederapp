@@ -34,7 +34,8 @@ import {
   CheckCircle2,
   UserX,
   UserCheck,
-  Search
+  Search,
+  Check
 } from 'lucide-react';
 import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
@@ -530,13 +531,35 @@ export default function Admin() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground">
-          Admin
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Administrer ledere, aktiviteter og innhold
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground">
+            Admin
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Administrer ledere, aktiviteter og innhold
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <Button
+            onClick={triggerSync}
+            disabled={isSyncing}
+            variant={lastSyncSuccess ? "default" : "outline"}
+            className={lastSyncSuccess ? "bg-green-600 hover:bg-green-700" : ""}
+          >
+            {isSyncing ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : lastSyncSuccess ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            {isSyncing ? "Synkroniserer..." : lastSyncSuccess ? "Synket!" : "Synk ledere"}
+          </Button>
+          {syncError && (
+            <span className="text-xs text-destructive">Feil ved synk</span>
+          )}
+        </div>
       </div>
 
       <Tabs defaultValue="leaders" className="space-y-4">
