@@ -450,7 +450,7 @@ export default function Admin() {
       </div>
 
       <Tabs defaultValue="leaders" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
           <TabsTrigger value="leaders" className="gap-2">
             <Users className="w-4 h-4 hidden sm:block" />
             Ledere
@@ -467,8 +467,12 @@ export default function Admin() {
             <Megaphone className="w-4 h-4 hidden sm:block" />
             Veggen
           </TabsTrigger>
+          <TabsTrigger value="setup" className="gap-2">
+            <Settings className="w-4 h-4 hidden sm:block" />
+            Oppsett
+          </TabsTrigger>
           <TabsTrigger value="sync" className="gap-2">
-            <FileSpreadsheet className="w-4 h-4 hidden sm:block" />
+            <RefreshCw className="w-4 h-4 hidden sm:block" />
             Synk
           </TabsTrigger>
         </TabsList>
@@ -840,17 +844,17 @@ export default function Admin() {
           </Card>
         </TabsContent>
 
-        {/* Sync Tab */}
-        <TabsContent value="sync" className="space-y-4">
-          {/* Webhook Sync Card */}
+        {/* Setup Tab */}
+        <TabsContent value="setup" className="space-y-4">
+          {/* Webhook Configuration */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <RefreshCw className="w-5 h-5" />
-                Synkroniser fra Google Sheet
+                <Settings className="w-5 h-5" />
+                Webhook konfigurasjon
               </CardTitle>
               <CardDescription>
-                Koble til n8n webhook for å hente data fra Google Sheets
+                Konfigurer n8n webhook URL for synkronisering fra Google Sheets
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -884,103 +888,73 @@ export default function Admin() {
                   </Button>
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <Button 
-                onClick={triggerSync} 
-                disabled={isSyncing || !webhookUrl}
-                className="w-full sm:w-auto"
-              >
-                {isSyncing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Synkroniserer...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Synk nå
-                  </>
-                )}
-              </Button>
-
-              {lastSyncSuccess && !syncError && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400">
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span className="text-sm font-medium">Siste synkronisering fullført!</span>
-                </div>
-              )}
-
-              {syncError && (
-                <SyncErrorDetails
-                  error={syncError.error}
-                  webhookStatus={syncError.webhookStatus}
-                  webhookUrl={syncError.webhookUrl}
-                  correlationId={syncError.correlationId}
-                  rawResponse={syncError.rawResponse}
-                  n8nError={syncError.n8nError}
-                  n8nStackTrace={syncError.n8nStackTrace}
-                />
-              )}
-
-              <div className="border-t pt-4 mt-4">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setShowSyncInstructions(!showSyncInstructions)}
-                  className="w-full justify-start"
-                >
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  {showSyncInstructions ? 'Skjul oppsett-instruksjoner' : 'Vis oppsett-instruksjoner'}
-                </Button>
+          {/* Field Mapping Documentation */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5" />
+                Felt-mapping fra Google Sheet
+              </CardTitle>
+              <CardDescription>
+                Forventet format i Google Sheet for leder-import
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Google Sheet-kolonner:</p>
+                <code className="block text-xs bg-muted p-3 rounded overflow-x-auto">
+                  Tlf | Navn | Hytte Ansvar | Ministerpost | Team
+                </code>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 px-3 font-medium">Google Sheet-kolonne</th>
+                      <th className="text-left py-2 px-3 font-medium">Database-felt</th>
+                      <th className="text-left py-2 px-3 font-medium">Beskrivelse</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    <tr>
+                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Tlf</code></td>
+                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">phone</code></td>
+                      <td className="py-2 px-3 text-muted-foreground">Unik ID for å matche ledere (påkrevd)</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Navn</code></td>
+                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">name</code></td>
+                      <td className="py-2 px-3 text-muted-foreground">Fullt navn (påkrevd for nye ledere)</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Hytte Ansvar</code></td>
+                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">cabin_info</code></td>
+                      <td className="py-2 px-3 text-muted-foreground">Hvilken hytte lederen har ansvar for</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Ministerpost</code></td>
+                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">ministerpost</code></td>
+                      <td className="py-2 px-3 text-muted-foreground">Lederens rolle/stilling</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Team</code></td>
+                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">team</code></td>
+                      <td className="py-2 px-3 text-muted-foreground">Hvilket team lederen tilhører</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
 
-              {showSyncInstructions && (
-                <div className="p-4 rounded-lg bg-muted/50 space-y-4">
-                  <h4 className="font-semibold">Sett opp n8n-workflow:</h4>
-                  
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">1. Google Sheet-format (kolonner):</p>
-                    <code className="block text-xs bg-background p-2 rounded overflow-x-auto">
-                      Tlf | Navn | Aktivitet | Notater | Til deg | OBS! | Ekstra #1 | Ekstra #2 | Ekstra #3 | Ekstra #4 | Ekstra #5
-                    </code>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">2. n8n AI Builder prompt:</p>
-                    <code className="block text-xs bg-background p-2 rounded whitespace-pre-wrap">
-{`Lag en workflow som:
-1. Starter med Webhook trigger
-2. Henter alle rader fra Google Sheets
-3. Transformerer hver rad til dette format:
-   {
-     phone: [Tlf kolonne - fjern mellomrom],
-     current_activity: [Aktivitet],
-     personal_notes: [Notater],
-     personal_message: [Til deg],
-     obs_message: [OBS!],
-     extra_1: [Ekstra #1],
-     extra_2: [Ekstra #2],
-     extra_3: [Ekstra #3],
-     extra_4: [Ekstra #4],
-     extra_5: [Ekstra #5]
-   }
-4. Sender HTTP POST til:
-   https://noxnbtvxksgjsqzfdgcd.supabase.co/functions/v1/sync-leaders-import
-   
-   Med body: { "leaders": [array av transformerte objekter] }`}
-                    </code>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">3. Viktig:</p>
-                    <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
-                      <li>Bruk <strong>Webhook trigger</strong> (ikke manuell trigger)</li>
-                      <li>Kopier webhook URL fra n8n og lim inn over</li>
-                      <li>Telefonnummer brukes som ID for å matche ledere</li>
-                      <li>Ledere må først være opprettet i appen</li>
-                    </ul>
-                  </div>
-                </div>
-              )}
+              <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <p className="text-sm text-blue-700 dark:text-blue-400">
+                  <strong>Tips:</strong> Telefonnummer brukes som unik nøkkel. Hvis en leder med samme telefonnummer 
+                  allerede finnes, oppdateres informasjonen. Ellers opprettes en ny leder.
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -1046,6 +1020,175 @@ export default function Admin() {
                   </div>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Leader Overview */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Leder-oversikt ({leaders.length})
+              </CardTitle>
+              <CardDescription>
+                Oversikt over alle importerte ledere med detaljer
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 px-3 font-medium">Navn</th>
+                      <th className="text-left py-2 px-3 font-medium">Telefon</th>
+                      <th className="text-left py-2 px-3 font-medium hidden sm:table-cell">Team</th>
+                      <th className="text-left py-2 px-3 font-medium hidden md:table-cell">Hytte</th>
+                      <th className="text-left py-2 px-3 font-medium hidden lg:table-cell">Ministerpost</th>
+                      <th className="text-right py-2 px-3 font-medium">Handling</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {leaders.map((leader) => (
+                      <tr key={leader.id} className="hover:bg-muted/50">
+                        <td className="py-2 px-3 font-medium">{leader.name}</td>
+                        <td className="py-2 px-3 text-muted-foreground">{leader.phone}</td>
+                        <td className="py-2 px-3 text-muted-foreground hidden sm:table-cell">
+                          {leader.team || '-'}
+                        </td>
+                        <td className="py-2 px-3 text-muted-foreground hidden md:table-cell">
+                          {leader.cabin_info || leader.cabin || '-'}
+                        </td>
+                        <td className="py-2 px-3 text-muted-foreground hidden lg:table-cell">
+                          {leader.ministerpost || '-'}
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteLeader(leader.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {leaders.length === 0 && (
+                  <p className="text-muted-foreground text-center py-8">
+                    Ingen ledere importert enda. Sett opp webhook og kjør første synkronisering.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Sync Tab */}
+        <TabsContent value="sync" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <RefreshCw className="w-5 h-5" />
+                Synkroniser data
+              </CardTitle>
+              <CardDescription>
+                Kjør synkronisering fra Google Sheet for å oppdatere lederinformasjon
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!storedWebhookUrl && (
+                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-700 dark:text-yellow-400">
+                  <p className="text-sm">
+                    <strong>Ikke konfigurert:</strong> Gå til Oppsett-fanen for å legge inn webhook URL først.
+                  </p>
+                </div>
+              )}
+
+              <Button 
+                onClick={triggerSync} 
+                disabled={isSyncing || !storedWebhookUrl}
+                className="w-full sm:w-auto"
+              >
+                {isSyncing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Synkroniserer...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Synk nå
+                  </>
+                )}
+              </Button>
+
+              {lastSyncSuccess && !syncError && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="text-sm font-medium">Siste synkronisering fullført!</span>
+                </div>
+              )}
+
+              {syncError && (
+                <SyncErrorDetails
+                  error={syncError.error}
+                  webhookStatus={syncError.webhookStatus}
+                  webhookUrl={syncError.webhookUrl}
+                  correlationId={syncError.correlationId}
+                  rawResponse={syncError.rawResponse}
+                  n8nError={syncError.n8nError}
+                  n8nStackTrace={syncError.n8nStackTrace}
+                />
+              )}
+
+              <div className="border-t pt-4 mt-4">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowSyncInstructions(!showSyncInstructions)}
+                  className="w-full justify-start"
+                >
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  {showSyncInstructions ? 'Skjul n8n-instruksjoner' : 'Vis n8n-instruksjoner'}
+                </Button>
+              </div>
+
+              {showSyncInstructions && (
+                <div className="p-4 rounded-lg bg-muted/50 space-y-4">
+                  <h4 className="font-semibold">n8n Workflow oppsett:</h4>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">n8n AI Builder prompt:</p>
+                    <code className="block text-xs bg-background p-2 rounded whitespace-pre-wrap">
+{`Lag en workflow som:
+1. Starter med Webhook trigger
+2. Henter alle rader fra Google Sheets
+3. Transformerer hver rad til dette format:
+   {
+     phone: [Tlf - fjern mellomrom],
+     name: [Navn],
+     cabin_info: [Hytte Ansvar],
+     ministerpost: [Ministerpost],
+     team: [Team]
+   }
+4. Sender HTTP POST til:
+   https://noxnbtvxksgjsqzfdgcd.supabase.co/functions/v1/sync-leaders-import
+   
+   Med body: { "leaders": [array av transformerte objekter] }`}
+                    </code>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Viktig:</p>
+                    <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
+                      <li>Send alltid alle ledere fra Google Sheet</li>
+                      <li>Nye ledere opprettes automatisk (krever navn + telefon)</li>
+                      <li>Eksisterende ledere oppdateres basert på telefonnummer</li>
+                      <li>Telefonnummer uten mellomrom brukes som unik nøkkel</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

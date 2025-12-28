@@ -12,6 +12,8 @@ interface LeaderImport {
   email?: string;
   team?: string;
   cabin?: string;
+  cabin_info?: string;
+  ministerpost?: string;
   age?: number;
   current_activity?: string;
   personal_notes?: string;
@@ -82,6 +84,8 @@ serve(async (req) => {
             email: leader.email || null,
             team: leader.team || null,
             cabin: leader.cabin || null,
+            cabin_info: leader.cabin_info || null,
+            ministerpost: leader.ministerpost || null,
             age: leader.age || null,
           })
           .select('id')
@@ -105,6 +109,8 @@ serve(async (req) => {
         if (leader.email) updateData.email = leader.email;
         if (leader.team) updateData.team = leader.team;
         if (leader.cabin) updateData.cabin = leader.cabin;
+        if (leader.cabin_info) updateData.cabin_info = leader.cabin_info;
+        if (leader.ministerpost) updateData.ministerpost = leader.ministerpost;
         if (leader.age) updateData.age = leader.age;
 
         if (Object.keys(updateData).length > 0) {
