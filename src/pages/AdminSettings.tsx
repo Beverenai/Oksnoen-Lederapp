@@ -28,7 +28,8 @@ import {
   Check,
   ArrowLeft,
   Home,
-  Calendar
+  Calendar,
+  Bell
 } from 'lucide-react';
 import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
@@ -36,6 +37,7 @@ import { CabinsTab } from '@/components/admin/CabinsTab';
 import { ParticipantImportTab } from '@/components/admin/ParticipantImportTab';
 import { CabinAssignmentStatus } from '@/components/admin/CabinAssignmentStatus';
 import { ScheduleTab } from '@/components/admin/ScheduleTab';
+import { PushNotificationsTab } from '@/components/admin/PushNotificationsTab';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -520,6 +522,11 @@ export default function AdminSettings() {
         {/* Schedule Tab */}
         <TabsContent value="schedule" className="space-y-4">
           <ScheduleTab />
+        </TabsContent>
+
+        {/* Push Notifications Tab */}
+        <TabsContent value="push" className="space-y-4">
+          <PushNotificationsTab />
         </TabsContent>
 
         {/* Setup Tab */}
