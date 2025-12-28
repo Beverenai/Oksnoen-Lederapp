@@ -91,7 +91,11 @@ export default function Admin() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [leaderContent, setLeaderContent] = useState<Partial<LeaderContent>>({});
   const [homeConfig, setHomeConfig] = useState<HomeScreenConfig[]>([]);
+  const [localHomeConfig, setLocalHomeConfig] = useState<HomeScreenConfig[]>([]);
   const [extraFieldsConfig, setExtraFieldsConfig] = useState<ExtraFieldConfig[]>([]);
+  const [localExtraConfig, setLocalExtraConfig] = useState<ExtraFieldConfig[]>([]);
+  const [hasUnsavedConfigChanges, setHasUnsavedConfigChanges] = useState(false);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showSyncInstructions, setShowSyncInstructions] = useState(false);
@@ -358,8 +362,13 @@ export default function Admin() {
       }));
 
       setLeaders(leadersWithRoles);
-      setHomeConfig(configRes.data || []);
-      setExtraFieldsConfig((extraConfigRes.data || []) as ExtraFieldConfig[]);
+      const homeConfigData = configRes.data || [];
+      const extraConfigData = (extraConfigRes.data || []) as ExtraFieldConfig[];
+      setHomeConfig(homeConfigData);
+      setLocalHomeConfig(homeConfigData);
+      setExtraFieldsConfig(extraConfigData);
+      setLocalExtraConfig(extraConfigData);
+      setHasUnsavedConfigChanges(false);
     } catch (error) {
       console.error('Error loading admin data:', error);
       toast.error('Kunne ikke laste data');
@@ -437,41 +446,64 @@ export default function Admin() {
     }
   };
 
-  const toggleHomeConfigVisibility = async (config: HomeScreenConfig) => {
-    try {
-      await supabase
-        .from('home_screen_config')
-        .update({ is_visible: !config.is_visible })
-        .eq('id', config.id);
-      loadData();
-    } catch (error) {
-      toast.error('Kunne ikke oppdatere konfigurasjon');
-    }
+  // Local state updates for home config (without saving to DB)
+  const updateLocalHomeConfig = (configId: string, updates: Partial<HomeScreenConfig>) => {
+    setLocalHomeConfig(prev => prev.map(cfg => 
+      cfg.id === configId ? { ...cfg, ...updates } : cfg
+    ));
+    setHasUnsavedConfigChanges(true);
   };
 
-  const updateExtraFieldConfig = async (fieldId: string, updates: Partial<ExtraFieldConfig>) => {
-    try {
-      await supabase
-        .from('extra_fields_config')
-        .update(updates)
-        .eq('id', fieldId);
-      loadData();
-      toast.success('Oppdatert');
-    } catch (error) {
-      toast.error('Kunne ikke oppdatere');
-    }
+  // Local state updates for extra field config (without saving to DB)
+  const updateLocalExtraConfig = (fieldId: string, updates: Partial<ExtraFieldConfig>) => {
+    setLocalExtraConfig(prev => prev.map(cfg => 
+      cfg.id === fieldId ? { ...cfg, ...updates } : cfg
+    ));
+    setHasUnsavedConfigChanges(true);
   };
 
-  const updateHomeConfig = async (configId: string, updates: Partial<HomeScreenConfig>) => {
+  // Save all config changes to database
+  const saveAllConfigChanges = async () => {
+    setIsSavingConfig(true);
     try {
-      await supabase
-        .from('home_screen_config')
-        .update(updates)
-        .eq('id', configId);
-      loadData();
-      toast.success('Oppdatert');
+      // Update home screen config
+      for (const cfg of localHomeConfig) {
+        const original = homeConfig.find(c => c.id === cfg.id);
+        if (original && (
+          original.title !== cfg.title || 
+          original.icon !== cfg.icon || 
+          original.is_visible !== cfg.is_visible
+        )) {
+          await supabase
+            .from('home_screen_config')
+            .update({ title: cfg.title, icon: cfg.icon, is_visible: cfg.is_visible })
+            .eq('id', cfg.id);
+        }
+      }
+
+      // Update extra fields config
+      for (const cfg of localExtraConfig) {
+        const original = extraFieldsConfig.find(c => c.id === cfg.id);
+        if (original && (
+          original.title !== cfg.title || 
+          original.icon !== cfg.icon || 
+          original.is_visible !== cfg.is_visible
+        )) {
+          await supabase
+            .from('extra_fields_config')
+            .update({ title: cfg.title, icon: cfg.icon, is_visible: cfg.is_visible })
+            .eq('id', cfg.id);
+        }
+      }
+
+      setHasUnsavedConfigChanges(false);
+      await loadData();
+      toast.success('Konfigurasjon lagret!');
     } catch (error) {
-      toast.error('Kunne ikke oppdatere');
+      console.error('Error saving config:', error);
+      toast.error('Kunne ikke lagre konfigurasjon');
+    } finally {
+      setIsSavingConfig(false);
     }
   };
 
@@ -559,35 +591,6 @@ export default function Admin() {
 
         {/* Admin Dashboard Tab */}
         <TabsContent value="dashboard" className="space-y-4">
-          {/* Session Activities Text */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Aktiviteter denne økten
-              </CardTitle>
-              <CardDescription>
-                Skriv tekst som vises på hjemskjermen til alle ledere under "Aktiviteter denne økten"
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Skriv aktiviteter for denne økten her...&#10;&#10;Eksempel:&#10;• 09:00 - Frokost&#10;• 10:00 - Morgensamling&#10;• 11:00 - Aktiviteter"
-                value={sessionActivitiesText}
-                onChange={(e) => setSessionActivitiesText(e.target.value)}
-                className="min-h-[150px]"
-              />
-              <Button onClick={saveSessionActivitiesText} disabled={isSavingActivities}>
-                {isSavingActivities ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Lagre aktiviteter
-              </Button>
-            </CardContent>
-          </Card>
-
           {/* Leader Content */}
           <div className="grid gap-4 lg:grid-cols-3">
             {/* Leader list */}
@@ -614,8 +617,6 @@ export default function Admin() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Content editor */}
             <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle>
@@ -683,20 +684,63 @@ export default function Admin() {
             </Card>
           </div>
 
-          {/* Home screen config */}
+          {/* Session Activities Text - moved here after leader selection */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                Hjemskjerm-elementer
+                <Calendar className="w-5 h-5" />
+                Aktiviteter denne økten
               </CardTitle>
               <CardDescription>
-                Konfigurer tittel, ikon og synlighet for hvert element på hjemskjermen
+                Skriv tekst som vises på hjemskjermen til alle ledere under "Aktiviteter denne økten"
               </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                placeholder="Skriv aktiviteter for denne økten her...&#10;&#10;Eksempel:&#10;• 09:00 - Frokost&#10;• 10:00 - Morgensamling&#10;• 11:00 - Aktiviteter"
+                value={sessionActivitiesText}
+                onChange={(e) => setSessionActivitiesText(e.target.value)}
+                className="min-h-[150px]"
+              />
+              <Button onClick={saveSessionActivitiesText} disabled={isSavingActivities}>
+                {isSavingActivities ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Lagre aktiviteter
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Home screen config */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="w-5 h-5" />
+                    Hjemskjerm-elementer
+                  </CardTitle>
+                  <CardDescription>
+                    Konfigurer tittel, ikon og synlighet for hvert element på hjemskjermen
+                  </CardDescription>
+                </div>
+                {hasUnsavedConfigChanges && (
+                  <Button onClick={saveAllConfigChanges} disabled={isSavingConfig}>
+                    {isSavingConfig ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Lagre endringer
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {homeConfig.map((cfg) => {
+                {localHomeConfig.map((cfg) => {
                   const currentIcon = availableIcons.find(i => i.value === cfg.icon) || availableIcons[0];
                   const IconComponent = currentIcon.icon;
                   
@@ -709,7 +753,7 @@ export default function Admin() {
                         <Switch
                           checked={cfg.is_visible || false}
                           onCheckedChange={(checked) => 
-                            updateHomeConfig(cfg.id, { is_visible: checked })
+                            updateLocalHomeConfig(cfg.id, { is_visible: checked })
                           }
                         />
                         <div className="flex items-center gap-2">
@@ -723,7 +767,7 @@ export default function Admin() {
                           placeholder="Tittel"
                           value={cfg.title || ''}
                           onChange={(e) => 
-                            updateHomeConfig(cfg.id, { title: e.target.value })
+                            updateLocalHomeConfig(cfg.id, { title: e.target.value })
                           }
                           className="w-full sm:w-40"
                         />
@@ -731,7 +775,7 @@ export default function Admin() {
                         <Select
                           value={cfg.icon || 'info'}
                           onValueChange={(value) => 
-                            updateHomeConfig(cfg.id, { icon: value })
+                            updateLocalHomeConfig(cfg.id, { icon: value })
                           }
                         >
                           <SelectTrigger className="w-full sm:w-32">
@@ -914,17 +958,31 @@ export default function Admin() {
           {/* Extra Fields Config */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                Ekstra-felter konfigurasjon
-              </CardTitle>
-              <CardDescription>
-                Konfigurer tittel og ikon for ekstra-feltene fra Google Sheet
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="w-5 h-5" />
+                    Ekstra-felter konfigurasjon
+                  </CardTitle>
+                  <CardDescription>
+                    Konfigurer tittel og ikon for ekstra-feltene fra Google Sheet
+                  </CardDescription>
+                </div>
+                {hasUnsavedConfigChanges && (
+                  <Button onClick={saveAllConfigChanges} disabled={isSavingConfig}>
+                    {isSavingConfig ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Lagre endringer
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {extraFieldsConfig.map((field) => (
+                {localExtraConfig.map((field) => (
                   <div
                     key={field.id}
                     className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 rounded-lg bg-muted/50"
@@ -933,7 +991,7 @@ export default function Admin() {
                       <Switch
                         checked={field.is_visible}
                         onCheckedChange={(checked) => 
-                          updateExtraFieldConfig(field.id, { is_visible: checked })
+                          updateLocalExtraConfig(field.id, { is_visible: checked })
                         }
                       />
                       <Badge variant="outline">{field.field_key.replace('_', ' #')}</Badge>
@@ -944,7 +1002,7 @@ export default function Admin() {
                         placeholder="Tittel"
                         value={field.title}
                         onChange={(e) => 
-                          updateExtraFieldConfig(field.id, { title: e.target.value })
+                          updateLocalExtraConfig(field.id, { title: e.target.value })
                         }
                         className="w-full sm:w-40"
                       />
@@ -952,7 +1010,7 @@ export default function Admin() {
                       <Select
                         value={field.icon}
                         onValueChange={(value) => 
-                          updateExtraFieldConfig(field.id, { icon: value })
+                          updateLocalExtraConfig(field.id, { icon: value })
                         }
                       >
                         <SelectTrigger className="w-full sm:w-32">

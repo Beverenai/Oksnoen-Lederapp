@@ -39,14 +39,6 @@ interface HomeScreenConfig {
   icon: string | null;
 }
 
-interface ExtraFieldConfig {
-  id: string;
-  field_key: string;
-  title: string;
-  icon: string;
-  is_visible: boolean;
-  sort_order: number;
-}
 
 // Icon mapping for fields
 const iconMap: Record<string, LucideIcon> = {
@@ -69,7 +61,6 @@ export default function Home() {
   const [content, setContent] = useState<LeaderContent | null>(null);
   const [sessionActivitiesText, setSessionActivitiesText] = useState<string>('');
   const [config, setConfig] = useState<HomeScreenConfig[]>([]);
-  const [extraFieldsConfig, setExtraFieldsConfig] = useState<ExtraFieldConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = async () => {
@@ -77,7 +68,7 @@ export default function Home() {
 
     setIsLoading(true);
     try {
-      const [contentRes, activitiesTextRes, configRes, extraConfigRes] = await Promise.all([
+      const [contentRes, activitiesTextRes, configRes] = await Promise.all([
         supabase
           .from('leader_content')
           .select('*')
@@ -93,17 +84,11 @@ export default function Home() {
           .select('*')
           .eq('is_visible', true)
           .order('sort_order'),
-        supabase
-          .from('extra_fields_config')
-          .select('*')
-          .eq('is_visible', true)
-          .order('sort_order'),
       ]);
 
       setContent(contentRes.data);
       setSessionActivitiesText(activitiesTextRes.data?.value || '');
       setConfig((configRes.data || []) as HomeScreenConfig[]);
-      setExtraFieldsConfig((extraConfigRes.data || []) as ExtraFieldConfig[]);
     } catch (error) {
       console.error('Error loading home data:', error);
     } finally {
@@ -131,11 +116,6 @@ export default function Home() {
         event: '*', 
         schema: 'public', 
         table: 'app_config'
-      }, () => loadData())
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'extra_fields_config'
       }, () => loadData())
       .on('postgres_changes', { 
         event: '*', 
@@ -202,7 +182,9 @@ export default function Home() {
   }
 
   // Check if there's any content to show
-  const hasExtraContent = extraFieldsConfig.some(cfg => getExtraFieldValue(cfg.field_key));
+  const hasExtraContent = ['extra_1', 'extra_2', 'extra_3', 'extra_4', 'extra_5'].some(
+    key => config.find(c => c.element_key === key) && getExtraFieldValue(key)
+  );
   const hasAnyContent = content?.current_activity || 
     content?.extra_activity || 
     content?.personal_notes || 
@@ -362,15 +344,18 @@ export default function Home() {
           </Card>
         )}
 
-        {/* Extra Fields from Google Sheets */}
-        {extraFieldsConfig.map((fieldConfig) => {
-          const value = getExtraFieldValue(fieldConfig.field_key);
+        {/* Extra Fields - now using home_screen_config for visibility */}
+        {['extra_1', 'extra_2', 'extra_3', 'extra_4', 'extra_5'].map((fieldKey) => {
+          const fieldConfig = config.find(c => c.element_key === fieldKey);
+          if (!fieldConfig) return null;
+          
+          const value = getExtraFieldValue(fieldKey);
           if (!value) return null;
           
-          const IconComponent = iconMap[fieldConfig.icon] || Info;
+          const IconComponent = fieldConfig.icon && iconMap[fieldConfig.icon] ? iconMap[fieldConfig.icon] : Info;
           
           return (
-            <Card key={fieldConfig.id}>
+            <Card key={fieldKey}>
               <CardContent className="py-4">
                 <div className="flex items-start gap-3">
                   <div className="p-2 rounded-full bg-muted">
@@ -378,7 +363,7 @@ export default function Home() {
                   </div>
                   <div className="flex-1">
                     <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">
-                      {fieldConfig.title}
+                      {fieldConfig.title || fieldKey.replace('_', ' #')}
                     </p>
                     <p className="text-foreground">{value}</p>
                   </div>
