@@ -27,6 +27,9 @@ interface ParsedParticipant {
   room: string | null;
   timesAttended: number;
   info: string;
+  imageUrl: string | null;
+  hasArrived: boolean;
+  activities: { activity: string; count: number }[];
   valid: boolean;
   error?: string;
 }
@@ -34,6 +37,7 @@ interface ParsedParticipant {
 interface ImportResult {
   created: number;
   updated: number;
+  activitiesAdded: number;
   errors: string[];
 }
 
@@ -88,6 +92,15 @@ export function ParticipantImportTab() {
     return { cabinName: cabinField.trim(), room: null };
   };
 
+  // Helper to parse activity value (handles "Ja", "1", "2", "1 plass!", etc.)
+  const parseActivityValue = (value: string): number => {
+    if (!value || value.trim() === '') return 0;
+    const v = value.trim().toLowerCase();
+    if (v === 'ja' || v === 'ja!' || v === '1 plass!' || v === '1. plass' || v === '2 plass!' || v === '2. plass' || v === '3 plass!' || v === '3. plass') return 1;
+    const num = parseInt(v);
+    return isNaN(num) ? (v.length > 0 ? 1 : 0) : num;
+  };
+
   const parseCSV = (text: string): ParsedParticipant[] => {
     const lines = text.split('\n').filter(line => line.trim());
     if (lines.length < 2) return [];
@@ -96,13 +109,25 @@ export function ParticipantImportTab() {
     const separator = lines[0].includes(';') ? ';' : ',';
     const headers = lines[0].split(separator).map(h => h.trim().toLowerCase());
     
-    // Find column indices
+    // Find column indices for basic fields
     const firstNameIdx = headers.findIndex(h => h.includes('fornavn'));
     const lastNameIdx = headers.findIndex(h => h.includes('etternavn'));
-    const birthDateIdx = headers.findIndex(h => h.includes('født') || h.includes('fodt'));
+    const birthDateIdx = headers.findIndex(h => h.includes('født') || h.includes('fodt') || h === 'dato');
     const cabinIdx = headers.findIndex(h => h.includes('hytte'));
     const timesIdx = headers.findIndex(h => h.includes('deltatt') || h.includes('tidligere'));
-    const infoIdx = headers.findIndex(h => h === 'info');
+    const infoIdx = headers.findIndex(h => h === 'info' || h === 'kommentar' || h === 'kommentarer');
+    const imageIdx = headers.findIndex(h => h === 'bilde' || h === 'image' || h === 'image_url');
+    const arrivedIdx = headers.findIndex(h => h.includes('ankommet') || h.includes('arrived'));
+
+    // Find activity column indices
+    const activityColumns: { name: string; idx: number }[] = [];
+    const activityNames = ['tube', 'tretten', 'taubane', 'vannski', 'triatlon', 'klatring', 'skrikern', 'åtte', 'ti', 'bruskasse', 'rappis', 'outboard', 'pil & bue', 'styrkeprøven'];
+    headers.forEach((h, idx) => {
+      const match = activityNames.find(a => h === a || h.includes(a));
+      if (match) {
+        activityColumns.push({ name: match, idx });
+      }
+    });
 
     return lines.slice(1).map((line, idx) => {
       const values = line.split(separator).map(v => v.trim().replace(/^"|"$/g, ''));
@@ -113,6 +138,8 @@ export function ParticipantImportTab() {
       const cabinRaw = cabinIdx >= 0 ? values[cabinIdx] || '' : '';
       const timesRaw = timesIdx >= 0 ? values[timesIdx] || '0' : '0';
       const info = infoIdx >= 0 ? values[infoIdx] || '' : '';
+      const imageUrl = imageIdx >= 0 ? values[imageIdx] || null : null;
+      const arrivedRaw = arrivedIdx >= 0 ? values[arrivedIdx] || '' : '';
 
       const { cabinName, room } = parseCabinField(cabinRaw);
       
@@ -135,6 +162,46 @@ export function ParticipantImportTab() {
       // Parse times attended
       const timesAttended = parseInt(timesRaw) || 0;
 
+      // Parse has arrived
+      const hasArrived = arrivedRaw.toLowerCase() === 'true' || arrivedRaw === '1' || arrivedRaw.toLowerCase() === 'ja';
+
+      // Parse activities
+      const activities: { activity: string; count: number }[] = [];
+      activityColumns.forEach(({ name, idx }) => {
+        const rawValue = values[idx] || '';
+        
+        // Special handling for Skrikern
+        if (name === 'skrikern') {
+          const v = rawValue.toLowerCase().trim();
+          if (v === 'store' || v === 'begge') {
+            activities.push({ activity: 'Skrikern', count: 2 }); // Both ways
+          } else if (v === 'lille' || v === '1' || v === 'ja') {
+            activities.push({ activity: 'Skrikern', count: 1 }); // One way
+          }
+        } 
+        // Special handling for Styrkeprøven
+        else if (name === 'styrkeprøven') {
+          const v = rawValue.toLowerCase().trim();
+          if (v === 'store') {
+            activities.push({ activity: 'Store Styrkeprøven', count: 1 });
+          } else if (v === 'lille') {
+            activities.push({ activity: 'Lille Styrkeprøven', count: 1 });
+          } else if (v && !v.startsWith('http')) {
+            // If it has a value that's not a URL, try to parse it
+            const count = parseActivityValue(v);
+            if (count > 0) activities.push({ activity: 'Styrkeprøven', count });
+          }
+        }
+        else {
+          const count = parseActivityValue(rawValue);
+          if (count > 0) {
+            // Map activity names to proper display names
+            const displayName = name.charAt(0).toUpperCase() + name.slice(1);
+            activities.push({ activity: displayName, count });
+          }
+        }
+      });
+
       // Validation
       const valid = firstName.length > 0 && cabinName.length > 0;
       const error = !valid 
@@ -149,6 +216,9 @@ export function ParticipantImportTab() {
         room,
         timesAttended,
         info,
+        imageUrl,
+        hasArrived,
+        activities,
         valid,
         error
       };
@@ -174,7 +244,7 @@ export function ParticipantImportTab() {
 
     setIsImporting(true);
     setImportResult(null);
-    const result: ImportResult = { created: 0, updated: 0, errors: [] };
+    const result: ImportResult = { created: 0, updated: 0, activitiesAdded: 0, errors: [] };
 
     try {
       // Create a map of cabin names to IDs
@@ -235,16 +305,21 @@ export function ParticipantImportTab() {
 
         if (existingParticipant) {
           // Update existing
+          const updateData = {
+            name: fullName,
+            first_name: participant.firstName,
+            last_name: participant.lastName,
+            cabin_id: cabinId,
+            room: participant.room,
+            times_attended: participant.timesAttended,
+            has_arrived: participant.hasArrived,
+            image_url: participant.imageUrl || undefined,
+            notes: participant.info || undefined
+          };
+
           const { error } = await supabase
             .from('participants')
-            .update({
-              name: fullName,
-              first_name: participant.firstName,
-              last_name: participant.lastName,
-              cabin_id: cabinId,
-              room: participant.room,
-              times_attended: participant.timesAttended
-            })
+            .update(updateData)
             .eq('id', existingParticipant.id);
 
           if (error) {
@@ -261,20 +336,49 @@ export function ParticipantImportTab() {
                   info: participant.info
                 }, { onConflict: 'participant_id' });
             }
+
+            // Add activities
+            if (participant.activities.length > 0) {
+              // First delete existing activities
+              await supabase
+                .from('participant_activities')
+                .delete()
+                .eq('participant_id', existingParticipant.id);
+
+              // Insert new activities
+              const activitiesToInsert: { participant_id: string; activity: string }[] = [];
+              for (const act of participant.activities) {
+                for (let i = 0; i < act.count; i++) {
+                  activitiesToInsert.push({
+                    participant_id: existingParticipant.id,
+                    activity: act.activity
+                  });
+                }
+              }
+              if (activitiesToInsert.length > 0) {
+                await supabase.from('participant_activities').insert(activitiesToInsert);
+                result.activitiesAdded += activitiesToInsert.length;
+              }
+            }
           }
         } else {
           // Create new
+          const insertData = {
+            name: fullName,
+            first_name: participant.firstName,
+            last_name: participant.lastName,
+            birth_date: participant.birthDate,
+            cabin_id: cabinId,
+            room: participant.room,
+            times_attended: participant.timesAttended,
+            has_arrived: participant.hasArrived,
+            image_url: participant.imageUrl || null,
+            notes: participant.info || null
+          };
+
           const { data: newParticipant, error } = await supabase
             .from('participants')
-            .insert({
-              name: fullName,
-              first_name: participant.firstName,
-              last_name: participant.lastName,
-              birth_date: participant.birthDate,
-              cabin_id: cabinId,
-              room: participant.room,
-              times_attended: participant.timesAttended
-            })
+            .insert(insertData)
             .select('id')
             .single();
 
@@ -292,6 +396,23 @@ export function ParticipantImportTab() {
                   info: participant.info
                 });
             }
+
+            // Add activities
+            if (participant.activities.length > 0 && newParticipant) {
+              const activitiesToInsert: { participant_id: string; activity: string }[] = [];
+              for (const act of participant.activities) {
+                for (let i = 0; i < act.count; i++) {
+                  activitiesToInsert.push({
+                    participant_id: newParticipant.id,
+                    activity: act.activity
+                  });
+                }
+              }
+              if (activitiesToInsert.length > 0) {
+                await supabase.from('participant_activities').insert(activitiesToInsert);
+                result.activitiesAdded += activitiesToInsert.length;
+              }
+            }
           }
         }
       }
@@ -300,7 +421,7 @@ export function ParticipantImportTab() {
       loadData();
       
       if (result.errors.length === 0) {
-        toast.success(`Import fullført! ${result.created} nye, ${result.updated} oppdatert`);
+        toast.success(`Import fullført! ${result.created} nye, ${result.updated} oppdatert, ${result.activitiesAdded} aktiviteter`);
         setParsedData([]);
         if (fileInputRef.current) fileInputRef.current.value = '';
       } else {
@@ -405,10 +526,11 @@ export function ParticipantImportTab() {
             />
             
             <div className="p-3 rounded-lg bg-muted/50 text-sm">
-              <p className="font-medium mb-2">Forventet CSV-format:</p>
-              <code className="text-xs">Fornavn;Etternavn;Født;Hytte;Deltatt tidligere;Info</code>
-              <p className="text-muted-foreground mt-2">
-                Eksempel: <code className="text-xs">Ada;Friis;2012-05-15;Marcusbu bak venstre;2;Allergisk mot nøtter</code>
+              <p className="font-medium mb-2">Støttede kolonner:</p>
+              <p className="text-xs text-muted-foreground mb-1">Fornavn, Etternavn, Dato/Født, Hytte, Bilde, Har ankommet, Kommentar</p>
+              <p className="text-xs text-muted-foreground">Aktiviteter: Tube, Tretten, Taubane, Vannski, Triatlon, Klatring, Skrikern, Åtte, Ti, Bruskasse, Rappis, Outboard, Pil & Bue, Styrkeprøven</p>
+              <p className="text-muted-foreground mt-2 text-xs">
+                Eksporter fra Numbers som CSV og last opp her. Aktiviteter støtter "Ja", tall (1,2,3), og spesialverdier som "Store"/"Lille" for Skrikern/Styrkeprøven.
               </p>
             </div>
           </div>
@@ -447,8 +569,8 @@ export function ParticipantImportTab() {
                       <th className="text-left py-2 px-3">Status</th>
                       <th className="text-left py-2 px-3">Navn</th>
                       <th className="text-left py-2 px-3">Hytte</th>
-                      <th className="text-left py-2 px-3">Rom</th>
-                      <th className="text-left py-2 px-3">År</th>
+                      <th className="text-left py-2 px-3">Bilde</th>
+                      <th className="text-left py-2 px-3">Aktiviteter</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -464,11 +586,11 @@ export function ParticipantImportTab() {
                           )}
                         </td>
                         <td className="py-2 px-3">{p.firstName} {p.lastName}</td>
-                        <td className="py-2 px-3">{p.cabinName}</td>
+                        <td className="py-2 px-3">{p.cabinName} {p.room && <Badge variant="outline" className="ml-1">{p.room}</Badge>}</td>
                         <td className="py-2 px-3">
-                          {p.room && <Badge variant="outline">{p.room}</Badge>}
+                          {p.imageUrl ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <span className="text-muted-foreground">-</span>}
                         </td>
-                        <td className="py-2 px-3">{p.timesAttended}</td>
+                        <td className="py-2 px-3">{p.activities.reduce((sum, a) => sum + a.count, 0)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -486,7 +608,7 @@ export function ParticipantImportTab() {
           {importResult && (
             <div className={`p-4 rounded-lg ${importResult.errors.length > 0 ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-green-500/10 border border-green-500/20'}`}>
               <p className="font-medium mb-2">
-                Import resultat: {importResult.created} opprettet, {importResult.updated} oppdatert
+                Import resultat: {importResult.created} opprettet, {importResult.updated} oppdatert, {importResult.activitiesAdded} aktiviteter lagt til
               </p>
               {importResult.errors.length > 0 && (
                 <div className="mt-2">
