@@ -27,61 +27,113 @@ interface LeaderImport {
 }
 
 // Alias mapping for common cabin name variations
+// Nøkkelen er normalisert alias (lowercase), verdien er array av mulige hyttenavn å søke etter
 const CABIN_ALIASES: Record<string, string[]> = {
-  'bedewinds': ['bedewins'],
+  // Bedewinds varianter
   'bedewins': ['bedewinds'],
-  'marcus bu': ['marcusbu bak', 'marcusbu front'],
-  'marcusbu': ['marcusbu bak', 'marcusbu front'],
-  'berit bu': ['beritbu bak', 'beritbu front'],
-  'beritbu': ['beritbu bak', 'beritbu front'],
+  'bedewind': ['bedewinds'],
+  
+  // Hytter med bak/front varianter - mapper til begge så matching kan velge
   'balder': ['balder bak', 'balder front'],
+  'hulder': ['hulder bak', 'hulder front'],
+  'marcusbu': ['marcusbu bak', 'marcusbu front'],
+  'marcus bu': ['marcusbu bak', 'marcusbu front'],
+  'beritbu': ['beritbu bak', 'beritbu front'],
+  'berit bu': ['beritbu bak', 'beritbu front'],
+  
+  // Bestefars varianter
+  'bestefars': ['bestefars kro'],
+  'bestefar': ['bestefars kro'],
+  
+  // Seilern varianter - mapper til alle mulige
+  'seilern': ['seilern halua', 'seilern haui', 'seilern hawaii', 'seilern kauai', 'seilern lanai', 'seilern maui', 'seilern molokai', 'seilern oahu'],
+  
+  // Skyss varianter
+  'skyss ii+iii': ['skyss ii + iii'],
+  'skyss 2+3': ['skyss ii + iii'],
+  'skyss ii + iii': ['skyss ii + iii'],
+  
+  // Kjøkken varianter
   'kokk': ['kjøkkenhytte'],
   'the kokk': ['kjøkkenhytte'],
   'assisterende kokke': ['kjøkkenhytte'],
+  'kjøkken': ['kjøkkenhytte'],
 };
 
-// Parse cabin field: "Bedewinds & Marcusbu bak" -> ["Bedewinds", "Marcusbu bak"]
+// Parse cabin field: "Bedewinds & Marcusbu bak" eller "Hytte1, Hytte2" -> ["Bedewinds", "Marcusbu bak"]
+// Støtter: & (og), , (komma), og (ord), + (pluss - men ikke i "II+III")
 const parseCabinNames = (cabinStr: string | undefined): string[] => {
   if (!cabinStr) return [];
-  return cabinStr
+  
+  // Beskytt "II+III" og lignende ved å midlertidig erstatte
+  const protectedStr = cabinStr.replace(/(\w+)\+(\w+)/g, '$1__PLUS__$2');
+  
+  // Splitt på &, , og "og" (som ord)
+  const parts = protectedStr
     .split(/\s*[&,]\s*|\s+og\s+/i)
     .map(c => c.trim())
     .filter(Boolean);
+  
+  // Gjenopprett + i hyttenavn
+  return parts.map(p => p.replace(/__PLUS__/g, '+'));
 };
 
 // Find matching cabin ID with fuzzy matching and aliases
 const findCabinId = (cabinName: string, cabinsByName: Map<string, string>): string | null => {
-  const normalized = cabinName.toLowerCase().trim();
+  // Normaliser: lowercase, trim, fjern ekstra mellomrom
+  const normalized = cabinName.toLowerCase().trim().replace(/\s+/g, ' ');
+  
+  console.log(`Finding cabin for: "${cabinName}" -> normalized: "${normalized}"`);
   
   // 1. Exact match
   if (cabinsByName.has(normalized)) {
+    console.log(`  Exact match found: ${normalized}`);
     return cabinsByName.get(normalized)!;
   }
   
-  // 2. Check aliases
+  // 2. Check aliases - hvis vi har en alias, prøv alle mulige matcher
   const aliases = CABIN_ALIASES[normalized];
   if (aliases) {
     for (const alias of aliases) {
-      if (cabinsByName.has(alias)) {
-        return cabinsByName.get(alias)!;
+      const aliasNormalized = alias.toLowerCase();
+      if (cabinsByName.has(aliasNormalized)) {
+        console.log(`  Alias match found: ${normalized} -> ${aliasNormalized}`);
+        return cabinsByName.get(aliasNormalized)!;
       }
     }
   }
   
-  // 3. Partial match - find cabins that start with the given name
+  // 3. Sjekk om noen aliaser matcher deler av input (f.eks. "Hulder bak" matcher alias "hulder")
+  for (const [aliasKey, aliasValues] of Object.entries(CABIN_ALIASES)) {
+    if (normalized.startsWith(aliasKey)) {
+      // Input starter med alias-nøkkelen, prøv å finne en mer spesifikk match
+      for (const aliasValue of aliasValues) {
+        const aliasNormalized = aliasValue.toLowerCase();
+        if (cabinsByName.has(aliasNormalized)) {
+          console.log(`  Partial alias match: ${normalized} starts with ${aliasKey} -> ${aliasNormalized}`);
+          return cabinsByName.get(aliasNormalized)!;
+        }
+      }
+    }
+  }
+  
+  // 4. Partial match - find cabins that start with the given name
   for (const [name, id] of cabinsByName.entries()) {
     if (name.startsWith(normalized) || normalized.startsWith(name)) {
+      console.log(`  Partial match found: ${name}`);
       return id;
     }
   }
   
-  // 4. Fuzzy match - check if cabin name contains the search term
+  // 5. Fuzzy match - check if cabin name contains the search term
   for (const [name, id] of cabinsByName.entries()) {
     if (name.includes(normalized) || normalized.includes(name)) {
+      console.log(`  Fuzzy match found: ${name}`);
       return id;
     }
   }
   
+  console.log(`  No match found for: ${normalized}`);
   return null;
 };
 
