@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -313,16 +314,20 @@ export default function Home() {
           
           <div className="flex flex-wrap gap-2 mt-3 justify-center">
             {leader?.cabin_info && (
-              <Badge variant="secondary" className="text-sm">
-                <HomeIcon className="w-3 h-3 mr-1" />
-                {leader.cabin_info}
-              </Badge>
+              <Link to="/cabin">
+                <Badge variant="secondary" className="text-sm cursor-pointer hover:opacity-80 transition-opacity">
+                  <HomeIcon className="w-3 h-3 mr-1" />
+                  {leader.cabin_info}
+                </Badge>
+              </Link>
             )}
             {leader?.team && (
-              <Badge variant="outline" className="text-sm">
-                <Users className="w-3 h-3 mr-1" />
-                {formatTeamDisplay(leader.team)}
-              </Badge>
+              <Link to={`/team/${leader.team.toLowerCase()}`}>
+                <Badge variant="outline" className="text-sm cursor-pointer hover:opacity-80 transition-opacity">
+                  <Users className="w-3 h-3 mr-1" />
+                  {formatTeamDisplay(leader.team)}
+                </Badge>
+              </Link>
             )}
           </div>
         </div>

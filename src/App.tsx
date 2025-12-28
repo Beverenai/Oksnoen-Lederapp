@@ -9,6 +9,7 @@ import Login from "@/pages/Login";
 import Home from "@/pages/Home";
 import Profile from "@/pages/Profile";
 import Leaders from "@/pages/Leaders";
+import Team from "@/pages/Team";
 import Passport from "@/pages/Passport";
 import Wall from "@/pages/Wall";
 import Admin from "@/pages/Admin";
@@ -83,6 +84,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Passport />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/team/:team"
+        element={
+          <ProtectedRoute>
+            <Team />
           </ProtectedRoute>
         }
       />
