@@ -23,8 +23,8 @@ import {
   type LucideIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
-import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import oksnoenHeader from '@/assets/oksnoen-header.png';
 
 type LeaderContent = Tables<'leader_content'>;
@@ -98,6 +98,23 @@ export default function Home() {
   const [sessionActivitiesText, setSessionActivitiesText] = useState<string>('');
   const [config, setConfig] = useState<HomeScreenConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasRead, setHasRead] = useState(false);
+
+  // Fetch has_read status
+  useEffect(() => {
+    if (!leader) return;
+    
+    const fetchHasRead = async () => {
+      const { data } = await supabase
+        .from('leader_content')
+        .select('has_read')
+        .eq('leader_id', leader.id)
+        .maybeSingle();
+      setHasRead(data?.has_read ?? false);
+    };
+    
+    fetchHasRead();
+  }, [leader, content]);
 
   const loadData = async () => {
     if (!leader) return;
@@ -245,15 +262,6 @@ export default function Home() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
         
-        {/* Logo in top left */}
-        <div className="absolute top-4 left-4">
-          <img 
-            src={oksnoenLogo} 
-            alt="Oksnøen" 
-            className="w-12 h-12 object-contain"
-          />
-        </div>
-
         {/* Refresh button */}
         <Button 
           variant="ghost" 
@@ -268,16 +276,26 @@ export default function Home() {
       {/* Profile Section - overlapping header */}
       <div className="relative px-4 -mt-16">
         <div className="flex flex-col items-center text-center">
-          <Avatar className="h-28 w-28 border-4 border-background shadow-xl">
+          {/* User name at the very top */}
+          <h1 className="text-2xl font-heading font-bold text-white mb-4 drop-shadow-lg">
+            Hei, {leader?.name?.split(' ')[0]}!
+          </h1>
+          
+          <Avatar className={cn(
+            "h-28 w-28 border-4 shadow-xl ring-4",
+            hasRead 
+              ? "border-green-500 ring-green-500/30" 
+              : "border-red-500 ring-red-500/30"
+          )}>
             <AvatarImage src={leader?.profile_image_url || ''} alt={leader?.name} />
             <AvatarFallback className="bg-primary text-primary-foreground font-heading text-2xl">
               {leader?.name ? getInitials(leader.name) : '?'}
             </AvatarFallback>
           </Avatar>
           
-          <h1 className="text-2xl font-heading font-bold text-foreground mt-3">
+          <p className="text-lg font-medium text-foreground mt-3">
             {leader?.name}
-          </h1>
+          </p>
           
           {leader?.ministerpost && (
             <p className="text-muted-foreground mt-1">{leader.ministerpost}</p>
