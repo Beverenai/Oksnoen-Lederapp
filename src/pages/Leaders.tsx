@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Users, Phone, Activity, Cross, ArrowUpDown, Check, Search, X } from 'lucide-react';
+import { Users, Phone, Activity, Cross, ArrowUpDown, Check, Search, X, Home } from 'lucide-react';
 import { LeaderDetailSheet } from '@/components/leaders/LeaderDetailSheet';
+import { CabinReportSheet } from '@/components/leaders/CabinReportSheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,10 +22,16 @@ type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
 type ExtraFieldConfig = Tables<'extra_fields_config'>;
 
+interface CabinInfo {
+  id: string;
+  name: string;
+}
+
 interface LeaderWithContent extends Leader {
   content?: LeaderContent | null;
   isAdmin?: boolean;
   isNurse?: boolean;
+  linkedCabins?: CabinInfo[];
 }
 
 type SortOption = 'name' | 'activity' | 'team';
@@ -83,6 +90,11 @@ export default function Leaders() {
   const [sortBy, setSortBy] = useState<SortOption>('activity'); // Default to activity
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  
+  // Cabin report sheet state
+  const [cabinReportOpen, setCabinReportOpen] = useState(false);
+  const [selectedCabins, setSelectedCabins] = useState<CabinInfo[]>([]);
+  const [selectedLeaderId, setSelectedLeaderId] = useState<string | null>(null);
 
   useEffect(() => {
     loadLeaders();
@@ -90,8 +102,8 @@ export default function Leaders() {
 
   const loadLeaders = async () => {
     try {
-      // Fetch leaders, content, roles, and extra fields config in parallel
-      const [leadersRes, contentRes, rolesRes, configRes] = await Promise.all([
+      // Fetch leaders, content, roles, extra fields config, and leader_cabins in parallel
+      const [leadersRes, contentRes, rolesRes, configRes, leaderCabinsRes] = await Promise.all([
         supabase
           .from('leaders')
           .select('*')
@@ -107,24 +119,45 @@ export default function Leaders() {
           .from('extra_fields_config')
           .select('*')
           .eq('is_visible', true)
-          .order('sort_order')
+          .order('sort_order'),
+        supabase
+          .from('leader_cabins')
+          .select(`
+            leader_id,
+            cabins!leader_cabins_cabin_id_fkey (
+              id,
+              name
+            )
+          `)
       ]);
 
       const leadersData = leadersRes.data || [];
       const contentData = contentRes.data || [];
       const rolesData = rolesRes.data || [];
       const configData = configRes.data || [];
+      const leaderCabinsData = leaderCabinsRes.data || [];
 
       // Create lookup maps
       const contentMap = new Map(contentData.map(c => [c.leader_id, c]));
       const adminIds = new Set(rolesData.filter(r => r.role === 'admin').map(r => r.leader_id));
       const nurseIds = new Set(rolesData.filter(r => r.role === 'nurse').map(r => r.leader_id));
+      
+      // Build leader -> cabins map
+      const leaderCabinsMap = new Map<string, CabinInfo[]>();
+      leaderCabinsData.forEach((lc: any) => {
+        if (lc.cabins) {
+          const existing = leaderCabinsMap.get(lc.leader_id) || [];
+          existing.push({ id: lc.cabins.id, name: lc.cabins.name });
+          leaderCabinsMap.set(lc.leader_id, existing);
+        }
+      });
 
       const leadersWithContent: LeaderWithContent[] = leadersData.map((leader) => ({
         ...leader,
         content: contentMap.get(leader.id) || null,
         isAdmin: adminIds.has(leader.id),
         isNurse: nurseIds.has(leader.id) || leader.team?.toLowerCase() === 'nurse',
+        linkedCabins: leaderCabinsMap.get(leader.id) || [],
       }));
 
       setLeaders(leadersWithContent);
@@ -133,6 +166,22 @@ export default function Leaders() {
       console.error('Error loading leaders:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Format linked cabins display with "+" between them
+  const formatCabinsDisplay = (cabins: CabinInfo[] | undefined): string => {
+    if (!cabins || cabins.length === 0) return '';
+    return cabins.map(c => c.name).join(' + ');
+  };
+  
+  // Handle cabin badge click
+  const handleCabinClick = (e: React.MouseEvent, leader: LeaderWithContent) => {
+    e.stopPropagation();
+    if (leader.linkedCabins && leader.linkedCabins.length > 0) {
+      setSelectedCabins(leader.linkedCabins);
+      setSelectedLeaderId(leader.id);
+      setCabinReportOpen(true);
     }
   };
 
@@ -427,7 +476,16 @@ export default function Leaders() {
                         {formatTeamDisplay(leader.team)}
                       </Badge>
                     )}
-                    {leader.cabin && (
+                    {leader.linkedCabins && leader.linkedCabins.length > 0 ? (
+                      <Badge 
+                        variant="outline" 
+                        className="text-[10px] px-1.5 py-0 cursor-pointer hover:bg-accent flex items-center gap-1"
+                        onClick={(e) => handleCabinClick(e, leader)}
+                      >
+                        <Home className="w-3 h-3" />
+                        {formatCabinsDisplay(leader.linkedCabins)}
+                      </Badge>
+                    ) : leader.cabin && (
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                         {leader.cabin}
                       </Badge>
@@ -489,6 +547,19 @@ export default function Leaders() {
         open={!!selectedLeader}
         onOpenChange={(open) => !open && setSelectedLeader(null)}
         extraFieldsConfig={extraFieldsConfig}
+        onCabinClick={(cabins, leaderId) => {
+          setSelectedCabins(cabins);
+          setSelectedLeaderId(leaderId);
+          setCabinReportOpen(true);
+        }}
+      />
+      
+      {/* Cabin report sheet */}
+      <CabinReportSheet
+        open={cabinReportOpen}
+        onOpenChange={setCabinReportOpen}
+        cabins={selectedCabins}
+        leaderId={selectedLeaderId || undefined}
       />
     </div>
   );

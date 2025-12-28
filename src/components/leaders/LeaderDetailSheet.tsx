@@ -1,20 +1,28 @@
+import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Phone, AlertTriangle, Car, Anchor, Mountain, Cross } from 'lucide-react';
+import { Phone, AlertTriangle, Car, Anchor, Mountain, Cross, Home } from 'lucide-react';
 import { icons } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
 type ExtraFieldConfig = Tables<'extra_fields_config'>;
 
+interface CabinInfo {
+  id: string;
+  name: string;
+}
+
 interface LeaderWithContent extends Leader {
   content?: LeaderContent | null;
   isAdmin?: boolean;
   isNurse?: boolean;
+  linkedCabins?: CabinInfo[];
 }
 
 interface LeaderDetailSheetProps {
@@ -22,6 +30,7 @@ interface LeaderDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   extraFieldsConfig: ExtraFieldConfig[];
+  onCabinClick?: (cabins: CabinInfo[], leaderId: string) => void;
 }
 
 // Team color mapping - supports both short (1, 2f) and long (Team 1, Team 2F) formats
@@ -70,11 +79,59 @@ export function LeaderDetailSheet({
   leader, 
   open, 
   onOpenChange, 
-  extraFieldsConfig 
+  extraFieldsConfig,
+  onCabinClick
 }: LeaderDetailSheetProps) {
+  const [linkedCabins, setLinkedCabins] = useState<CabinInfo[]>([]);
+  
+  // Load linked cabins when leader changes
+  useEffect(() => {
+    if (leader?.id && open) {
+      // First check if linkedCabins is already provided
+      if (leader.linkedCabins && leader.linkedCabins.length > 0) {
+        setLinkedCabins(leader.linkedCabins);
+      } else {
+        // Fetch from database
+        loadLinkedCabins(leader.id);
+      }
+    }
+  }, [leader?.id, open, leader?.linkedCabins]);
+  
+  const loadLinkedCabins = async (leaderId: string) => {
+    const { data, error } = await supabase
+      .from('leader_cabins')
+      .select(`
+        cabins!leader_cabins_cabin_id_fkey (
+          id,
+          name
+        )
+      `)
+      .eq('leader_id', leaderId);
+    
+    if (!error && data) {
+      const cabins: CabinInfo[] = data
+        .map((lc: any) => lc.cabins)
+        .filter(Boolean);
+      setLinkedCabins(cabins);
+    }
+  };
+  
   if (!leader) return null;
 
   const content = leader.content;
+  
+  // Format linked cabins display with "+" between them
+  const formatCabinsDisplay = (): string => {
+    if (linkedCabins.length === 0) return leader.cabin || '';
+    return linkedCabins.map(c => c.name).join(' + ');
+  };
+  
+  // Handle cabin badge click
+  const handleCabinBadgeClick = () => {
+    if (linkedCabins.length > 0 && onCabinClick) {
+      onCabinClick(linkedCabins, leader.id);
+    }
+  };
   
   // Get visible extra fields with their values
   const visibleExtraFields = extraFieldsConfig
@@ -130,7 +187,18 @@ export function LeaderDetailSheet({
                 {leader.team && (
                   <Badge className={getTeamStyles(leader.team)}>{formatTeamDisplay(leader.team)}</Badge>
                 )}
-                {leader.cabin && <Badge variant="outline">{leader.cabin}</Badge>}
+                {linkedCabins.length > 0 ? (
+                  <Badge 
+                    variant="outline" 
+                    className="cursor-pointer hover:bg-accent flex items-center gap-1"
+                    onClick={handleCabinBadgeClick}
+                  >
+                    <Home className="w-3 h-3" />
+                    {formatCabinsDisplay()}
+                  </Badge>
+                ) : leader.cabin && (
+                  <Badge variant="outline">{leader.cabin}</Badge>
+                )}
               </div>
             </div>
           </div>
