@@ -12,32 +12,10 @@ interface AgeDistributionChartProps {
   participants: Participant[];
 }
 
-const chartConfig = {
-  count: {
-    label: 'Antall',
-  },
-  '8-10': {
-    label: '8-10 år',
-    color: 'hsl(var(--chart-1))',
-  },
-  '11-12': {
-    label: '11-12 år',
-    color: 'hsl(var(--chart-2))',
-  },
-  '13-15': {
-    label: '13-15 år',
-    color: 'hsl(var(--chart-3))',
-  },
-};
-
 export function AgeDistributionChart({ participants }: AgeDistributionChartProps) {
-  const ageGroups = useMemo(() => {
+  const ageData = useMemo(() => {
     const today = new Date();
-    const groups = {
-      '8-10': 0,
-      '11-12': 0,
-      '13-15': 0,
-    };
+    const counts: Record<number, number> = {};
 
     participants.forEach((p) => {
       if (!p.birth_date) return;
@@ -49,19 +27,37 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
         age--;
       }
 
-      if (age >= 8 && age <= 10) groups['8-10']++;
-      else if (age >= 11 && age <= 12) groups['11-12']++;
-      else if (age >= 13 && age <= 15) groups['13-15']++;
+      counts[age] = (counts[age] || 0) + 1;
     });
 
-    return [
-      { name: '8-10 år', count: groups['8-10'], fill: 'hsl(var(--chart-1))' },
-      { name: '11-12 år', count: groups['11-12'], fill: 'hsl(var(--chart-2))' },
-      { name: '13-15 år', count: groups['13-15'], fill: 'hsl(var(--chart-3))' },
-    ];
+    // Sort by age and create data array
+    return Object.entries(counts)
+      .map(([age, count]) => ({ age: parseInt(age), count }))
+      .sort((a, b) => a.age - b.age)
+      .map((item, index) => ({
+        name: `${item.age} år`,
+        count: item.count,
+        fill: `hsl(var(--chart-${(index % 5) + 1}))`,
+      }));
   }, [participants]);
 
-  const total = ageGroups.reduce((sum, g) => sum + g.count, 0);
+  const total = ageData.reduce((sum, g) => sum + g.count, 0);
+
+  // Generate chart config dynamically
+  const chartConfig = useMemo(() => {
+    const config: Record<string, { label: string; color?: string }> = {
+      count: { label: 'Antall' },
+    };
+    ageData.forEach((item, index) => {
+      config[item.name] = {
+        label: item.name,
+        color: `hsl(var(--chart-${(index % 5) + 1}))`,
+      };
+    });
+    return config;
+  }, [ageData]);
+
+  const chartHeight = Math.max(180, ageData.length * 36);
 
   return (
     <Card>
@@ -69,20 +65,20 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
         <CardTitle className="text-base font-medium">Aldersfordeling</CardTitle>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-[180px] w-full">
+        <ChartContainer config={chartConfig} className="w-full" style={{ height: chartHeight }}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={ageGroups} layout="vertical" margin={{ left: 10, right: 40 }}>
+            <BarChart data={ageData} layout="vertical" margin={{ left: 10, right: 40 }}>
               <XAxis type="number" hide />
               <YAxis 
                 type="category" 
                 dataKey="name" 
                 axisLine={false}
                 tickLine={false}
-                width={70}
+                width={50}
                 tick={{ fontSize: 12 }}
               />
-              <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={32}>
-                {ageGroups.map((entry, index) => (
+              <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={28}>
+                {ageData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
                 <LabelList 

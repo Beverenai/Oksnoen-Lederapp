@@ -41,6 +41,7 @@ interface RoomSwap {
   status: string;
   created_at: string;
   approved_at: string | null;
+  reason: string | null;
   participant?: Participant;
   from_cabin?: Cabin;
   to_cabin?: Cabin;
@@ -59,7 +60,7 @@ export function RoomSwapTab() {
   const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
   const [targetCabinId, setTargetCabinId] = useState('');
   const [targetRoom, setTargetRoom] = useState('');
-
+  const [swapReason, setSwapReason] = useState('');
   // Selection state for batch approval
   const [selectedSwapIds, setSelectedSwapIds] = useState<string[]>([]);
 
@@ -160,6 +161,7 @@ export function RoomSwapTab() {
         to_cabin_id: targetCabinId,
         to_room: targetRoom || null,
         status: 'pending',
+        reason: swapReason.trim() || null,
       });
 
       if (error) throw error;
@@ -169,6 +171,7 @@ export function RoomSwapTab() {
       setSearchQuery('');
       setTargetCabinId('');
       setTargetRoom('');
+      setSwapReason('');
       loadData();
     } catch (error) {
       console.error('Error adding swap:', error);
@@ -345,6 +348,16 @@ export function RoomSwapTab() {
             </Select>
           </div>
 
+          {/* Reason */}
+          <div className="space-y-2">
+            <Label>Grunn (valgfritt)</Label>
+            <Input
+              placeholder="F.eks. ønsker å bo med venner..."
+              value={swapReason}
+              onChange={(e) => setSwapReason(e.target.value)}
+            />
+          </div>
+
           <Button
             onClick={handleAddSwap}
             disabled={!selectedParticipant || !targetCabinId || submitting}
@@ -415,6 +428,11 @@ export function RoomSwapTab() {
                           {getCabinName(swap.to_cabin_id)} {swap.to_room || ''}
                         </span>
                       </div>
+                      {swap.reason && (
+                        <p className="text-xs text-muted-foreground mt-1 italic">
+                          "{swap.reason}"
+                        </p>
+                      )}
                     </div>
                   </div>
                 );
@@ -463,6 +481,11 @@ export function RoomSwapTab() {
                           </>
                         )}
                       </div>
+                      {swap.reason && (
+                        <p className="text-xs text-muted-foreground mt-1 italic">
+                          "{swap.reason}"
+                        </p>
+                      )}
                     </div>
                   </div>
                 );

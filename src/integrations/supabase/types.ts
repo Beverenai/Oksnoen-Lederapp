@@ -564,6 +564,7 @@ export type Database = {
           from_room: string | null
           id: string
           participant_id: string
+          reason: string | null
           status: string
           to_cabin_id: string
           to_room: string | null
@@ -576,6 +577,7 @@ export type Database = {
           from_room?: string | null
           id?: string
           participant_id: string
+          reason?: string | null
           status?: string
           to_cabin_id: string
           to_room?: string | null
@@ -588,6 +590,7 @@ export type Database = {
           from_room?: string | null
           id?: string
           participant_id?: string
+          reason?: string | null
           status?: string
           to_cabin_id?: string
           to_room?: string | null
