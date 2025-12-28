@@ -120,11 +120,39 @@ export default function Admin() {
     n8nStackTrace?: string[] | null;
   } | null>(null);
   const [lastSyncSuccess, setLastSyncSuccess] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
     loadWebhookUrl();
+    loadLastSyncTime();
   }, []);
+
+  const loadLastSyncTime = async () => {
+    const { data } = await supabase
+      .from('app_config')
+      .select('value')
+      .eq('key', 'last_sync_timestamp')
+      .maybeSingle();
+    
+    if (data?.value) {
+      setLastSyncTime(data.value);
+    }
+  };
+
+  const formatSyncTime = (isoString: string) => {
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleDateString('nb-NO', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return null;
+    }
+  };
 
   const loadWebhookUrl = async () => {
     const { data } = await supabase
@@ -186,6 +214,7 @@ export default function Admin() {
 
       if (data?.success) {
         setLastSyncSuccess(true);
+        setLastSyncTime(new Date().toISOString());
         toast.success(`Synkronisering fullført! (Status: ${data.webhookStatus})`);
       } else {
         setSyncError({
@@ -556,8 +585,12 @@ export default function Admin() {
             )}
             {isSyncing ? "Synkroniserer..." : lastSyncSuccess ? "Synket!" : "Synk ledere"}
           </Button>
-          {syncError && (
+          {syncError ? (
             <span className="text-xs text-destructive">Feil ved synk</span>
+          ) : lastSyncTime && (
+            <span className="text-xs text-muted-foreground">
+              Sist synket: {formatSyncTime(lastSyncTime)}
+            </span>
           )}
         </div>
       </div>
