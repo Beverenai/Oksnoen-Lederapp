@@ -54,6 +54,7 @@ interface ParticipantWithHealth extends Participant {
   healthNotes: HealthNote[];
   healthEvents: HealthEvent[];
   cabin?: { name: string } | null;
+  healthInfo?: { info: string } | null;
 }
 
 const eventTypes = [
@@ -99,12 +100,13 @@ export default function Nurse() {
 
       if (error) throw error;
 
-      // Load health notes and events for all participants
+      // Load health notes, events, and health info for all participants
       const participantIds = participantsData?.map(p => p.id) || [];
       
-      const [notesRes, eventsRes] = await Promise.all([
+      const [notesRes, eventsRes, healthInfoRes] = await Promise.all([
         supabase.from('participant_health_notes').select('*').in('participant_id', participantIds),
         supabase.from('participant_health_events').select('*').in('participant_id', participantIds).order('created_at', { ascending: false }),
+        supabase.from('participant_health_info').select('*').in('participant_id', participantIds),
       ]);
 
       const participantsWithHealth: ParticipantWithHealth[] = (participantsData || []).map(p => ({
@@ -112,6 +114,7 @@ export default function Nurse() {
         cabin: p.cabins,
         healthNotes: (notesRes.data || []).filter(n => n.participant_id === p.id),
         healthEvents: (eventsRes.data || []).filter(e => e.participant_id === p.id),
+        healthInfo: (healthInfoRes.data || []).find(h => h.participant_id === p.id) || null,
       }));
 
       setParticipants(participantsWithHealth);
@@ -272,6 +275,7 @@ export default function Nurse() {
         {filteredParticipants.map((participant) => {
           const hasNotes = participant.healthNotes.length > 0;
           const hasEvents = participant.healthEvents.length > 0;
+          const hasHealthInfo = !!participant.healthInfo?.info;
           const latestEvent = participant.healthEvents[0];
           const highSeverity = participant.healthEvents.some(e => e.severity === 'high');
           
@@ -295,6 +299,12 @@ export default function Nurse() {
                     </div>
                   </div>
                   <div className="flex gap-1">
+                    {hasHealthInfo && (
+                      <Badge variant="outline" className="text-xs bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/30 dark:text-pink-300 dark:border-pink-800">
+                        <Heart className="w-3 h-3 mr-1" />
+                        Info
+                      </Badge>
+                    )}
                     {hasNotes && (
                       <Badge variant="outline" className="text-xs">
                         <FileText className="w-3 h-3 mr-1" />
@@ -308,7 +318,14 @@ export default function Nurse() {
                     )}
                   </div>
                 </div>
-                {hasEvents && latestEvent && (
+                {hasHealthInfo && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {participant.healthInfo?.info}
+                    </p>
+                  </div>
+                )}
+                {hasEvents && latestEvent && !hasHealthInfo && (
                   <div className="mt-3 pt-3 border-t border-border">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="w-3 h-3" />
@@ -363,6 +380,26 @@ export default function Nurse() {
 
             {/* Health Notes Tab */}
             <TabsContent value="notes" className="flex-1 space-y-4 overflow-auto">
+              {/* Imported Health Info from CSV */}
+              {selectedParticipant?.healthInfo?.info && (
+                <Card className="border-pink-200 bg-pink-50/50 dark:border-pink-800 dark:bg-pink-950/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2 text-pink-700 dark:text-pink-300">
+                      <Heart className="w-4 h-4" />
+                      Importert helseinformasjon
+                    </CardTitle>
+                    <CardDescription>
+                      Informasjon fra påmeldingsskjema
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-foreground whitespace-pre-wrap">
+                      {selectedParticipant.healthInfo.info}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Generelle helsenotater</CardTitle>

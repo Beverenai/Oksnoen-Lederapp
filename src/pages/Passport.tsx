@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,8 @@ import {
   Loader2,
   Filter,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  ArrowLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -46,10 +48,13 @@ interface CabinGroup {
 }
 
 export default function Passport() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const cabinFilterFromUrl = searchParams.get('cabin');
+  
   const [participants, setParticipants] = useState<ParticipantWithCabin[]>([]);
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterCabin, setFilterCabin] = useState<string>('all');
+  const [filterCabin, setFilterCabin] = useState<string>(cabinFilterFromUrl || 'all');
   const [filterArrival, setFilterArrival] = useState<string>('all');
   const [selectedParticipant, setSelectedParticipant] = useState<ParticipantWithCabin | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,6 +80,18 @@ export default function Passport() {
     loadData();
   }, []);
 
+  // Sync filterCabin with URL parameter
+  useEffect(() => {
+    if (cabinFilterFromUrl) {
+      setFilterCabin(cabinFilterFromUrl);
+    }
+  }, [cabinFilterFromUrl]);
+
+  const clearCabinFilter = () => {
+    setFilterCabin('all');
+    setSearchParams({});
+  };
+
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -89,9 +106,13 @@ export default function Passport() {
       setParticipants(participantsRes.data || []);
       setCabins(cabinsRes.data || []);
       
-      // Expand all cabins by default
+      // Expand all cabins by default, or just the filtered one
       if (cabinsRes.data) {
-        setExpandedCabins(new Set(cabinsRes.data.map(c => c.id)));
+        if (cabinFilterFromUrl) {
+          setExpandedCabins(new Set([cabinFilterFromUrl]));
+        } else {
+          setExpandedCabins(new Set(cabinsRes.data.map(c => c.id)));
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -309,12 +330,25 @@ export default function Passport() {
     );
   }
 
+  // Get the filtered cabin name for display
+  const filteredCabinName = cabinFilterFromUrl 
+    ? cabins.find(c => c.id === cabinFilterFromUrl)?.name 
+    : null;
+
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Back button when filtered by cabin */}
+      {cabinFilterFromUrl && (
+        <Button variant="ghost" onClick={clearCabinFilter} className="mb-2">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Tilbake til alle hytter
+        </Button>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground">
-            Passkontroll
+            {filteredCabinName ? `${filteredCabinName}` : 'Passkontroll'}
           </h1>
           <p className="text-muted-foreground mt-1">
             {arrivedCount} av {participants.length} deltakere har ankommet
