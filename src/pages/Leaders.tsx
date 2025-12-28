@@ -5,7 +5,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Phone, Activity, Cross, ArrowUpDown, Check } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Users, Phone, Activity, Cross, ArrowUpDown, Check, Search, X } from 'lucide-react';
 import { LeaderDetailSheet } from '@/components/leaders/LeaderDetailSheet';
 import {
   DropdownMenu,
@@ -14,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { Tables } from '@/integrations/supabase/types';
+import { cn } from '@/lib/utils';
 
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
@@ -64,10 +66,12 @@ export default function Leaders() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedLeader, setSelectedLeader] = useState<LeaderWithContent | null>(null);
   
-  // Filter and sort state
+  // Filter, sort and search state
   const [activeTeamFilter, setActiveTeamFilter] = useState<string | null>(null);
   const [activeCabinFilter, setActiveCabinFilter] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<SortOption>('name');
+  const [sortBy, setSortBy] = useState<SortOption>('activity'); // Default to activity
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
     loadLeaders();
@@ -143,6 +147,17 @@ export default function Leaders() {
   const filteredAndSortedLeaders = useMemo(() => {
     let result = [...leaders];
 
+    // Apply search filter first
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(l =>
+        l.name.toLowerCase().includes(query) ||
+        l.ministerpost?.toLowerCase().includes(query) ||
+        l.team?.toLowerCase().includes(query) ||
+        l.cabin?.toLowerCase().includes(query)
+      );
+    }
+
     // Apply team filter
     if (activeTeamFilter) {
       result = result.filter(
@@ -177,7 +192,18 @@ export default function Leaders() {
     });
 
     return result;
-  }, [leaders, activeTeamFilter, activeCabinFilter, sortBy]);
+  }, [leaders, activeTeamFilter, activeCabinFilter, sortBy, searchQuery]);
+  
+  // Get border color for a leader card
+  const getBorderClass = (leader: LeaderWithContent) => {
+    const isFri = leader.content?.current_activity?.toLowerCase().includes('fri');
+    const isKitchen = leader.team?.toLowerCase() === 'kjøkken';
+    const isAlwaysGreen = leader.isAdmin || leader.isNurse || isKitchen;
+    
+    if (isFri) return 'ring-2 ring-blue-500';
+    if (isAlwaysGreen || leader.content?.has_read) return 'ring-2 ring-green-500';
+    return 'ring-2 ring-red-500';
+  };
 
   // Get first name only
   const getFirstName = (fullName: string) => fullName.split(' ')[0];
@@ -190,7 +216,7 @@ export default function Leaders() {
     setActiveCabinFilter(prev => prev === cabin ? null : cabin);
   };
 
-  const hasActiveFilter = activeTeamFilter || activeCabinFilter;
+  const hasActiveFilter = activeTeamFilter || activeCabinFilter || searchQuery.trim();
 
   if (isLoading) {
     return (
@@ -208,44 +234,84 @@ export default function Leaders() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Header with sort button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-foreground">
-            Ledere
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {hasActiveFilter ? (
-              <>Viser {filteredAndSortedLeaders.length} av {leaders.length} ledere</>
-            ) : (
-              <>{leaders.length} ledere registrert</>
-            )}
-          </p>
-        </div>
-
-        {/* Sort dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <ArrowUpDown className="w-4 h-4" />
-              Sorter
+      {/* Header with search and sort */}
+      <div className="flex items-center justify-between gap-2">
+        {isSearchOpen ? (
+          // Expanded search bar
+          <div className="flex-1 flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Søk etter leder..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+                autoFocus
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setIsSearchOpen(false);
+                setSearchQuery('');
+              }}
+            >
+              <X className="w-4 h-4" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => setSortBy('name')} className="gap-2">
-              {sortBy === 'name' && <Check className="w-4 h-4" />}
-              <span className={sortBy !== 'name' ? 'ml-6' : ''}>Navn (A-Å)</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortBy('activity')} className="gap-2">
-              {sortBy === 'activity' && <Check className="w-4 h-4" />}
-              <span className={sortBy !== 'activity' ? 'ml-6' : ''}>Aktivitet først</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortBy('team')} className="gap-2">
-              {sortBy === 'team' && <Check className="w-4 h-4" />}
-              <span className={sortBy !== 'team' ? 'ml-6' : ''}>Gruppert etter team</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </div>
+        ) : (
+          // Normal header
+          <>
+            <div>
+              <h1 className="text-2xl font-heading font-bold text-foreground">
+                Ledere
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {hasActiveFilter ? (
+                  <>Viser {filteredAndSortedLeaders.length} av {leaders.length} ledere</>
+                ) : (
+                  <>{leaders.length} ledere registrert</>
+                )}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Search button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSearchOpen(true)}
+              >
+                <Search className="w-4 h-4" />
+              </Button>
+              
+              {/* Sort dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <ArrowUpDown className="w-4 h-4" />
+                    Sorter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => setSortBy('name')} className="gap-2">
+                    {sortBy === 'name' && <Check className="w-4 h-4" />}
+                    <span className={sortBy !== 'name' ? 'ml-6' : ''}>Navn (A-Å)</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy('activity')} className="gap-2">
+                    {sortBy === 'activity' && <Check className="w-4 h-4" />}
+                    <span className={sortBy !== 'activity' ? 'ml-6' : ''}>Aktivitet først</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy('team')} className="gap-2">
+                    {sortBy === 'team' && <Check className="w-4 h-4" />}
+                    <span className={sortBy !== 'team' ? 'ml-6' : ''}>Gruppert etter team</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Team filter chips - horizontal scroll */}
@@ -288,7 +354,10 @@ export default function Leaders() {
         {filteredAndSortedLeaders.map((leader) => (
           <Card 
             key={leader.id} 
-            className="cursor-pointer hover:bg-accent/50 transition-colors active:scale-[0.99]"
+            className={cn(
+              "cursor-pointer hover:bg-accent/50 transition-colors active:scale-[0.99]",
+              getBorderClass(leader)
+            )}
             onClick={() => setSelectedLeader(leader)}
           >
             <CardContent className="p-3">
