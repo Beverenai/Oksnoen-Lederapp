@@ -566,7 +566,7 @@ export default function Admin() {
     setIsLoading(true);
     try {
       const [leadersRes, rolesRes, configRes, extraConfigRes] = await Promise.all([
-        supabase.from('leaders').select('*').order('name'),
+        supabase.from('leaders').select('*').order('created_at'),
         supabase.from('user_roles').select('*'),
         supabase.from('home_screen_config').select('*').order('sort_order'),
         supabase.from('extra_fields_config').select('*').order('sort_order'),
