@@ -30,8 +30,10 @@ import {
   Zap,
   Activity,
   MessageSquare,
-  FileSpreadsheet
+  FileSpreadsheet,
+  CheckCircle2
 } from 'lucide-react';
+import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -89,8 +91,19 @@ export default function Admin() {
 
   // Sync webhook
   const [webhookUrl, setWebhookUrl] = useState('');
+  const [storedWebhookUrl, setStoredWebhookUrl] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSavingWebhook, setIsSavingWebhook] = useState(false);
+  const [syncError, setSyncError] = useState<{
+    error: string;
+    webhookStatus?: number;
+    webhookUrl?: string;
+    correlationId?: string;
+    rawResponse?: string;
+    n8nError?: string | null;
+    n8nStackTrace?: string[] | null;
+  } | null>(null);
+  const [lastSyncSuccess, setLastSyncSuccess] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -106,6 +119,7 @@ export default function Admin() {
     
     if (data?.value) {
       setWebhookUrl(data.value);
+      setStoredWebhookUrl(data.value);
     }
   };
 
@@ -121,6 +135,7 @@ export default function Admin() {
         }, { onConflict: 'key' });
       
       if (error) throw error;
+      setStoredWebhookUrl(webhookUrl);
       toast.success('Webhook URL lagret!');
     } catch (error) {
       console.error('Error saving webhook URL:', error);
@@ -137,6 +152,8 @@ export default function Admin() {
     }
 
     setIsSyncing(true);
+    setSyncError(null);
+    setLastSyncSuccess(false);
     console.log('Triggering sync via backend function');
 
     try {
@@ -144,6 +161,7 @@ export default function Admin() {
 
       if (error) {
         console.error('Error calling trigger-sync:', error);
+        setSyncError({ error: 'Kunne ikke kontakte backend' });
         toast.error('Kunne ikke starte synkronisering');
         return;
       }
@@ -151,12 +169,23 @@ export default function Admin() {
       console.log('trigger-sync response:', data);
 
       if (data?.success) {
+        setLastSyncSuccess(true);
         toast.success(`Synkronisering fullført! (Status: ${data.webhookStatus})`);
       } else {
-        toast.error(`Synkronisering feilet: ${data?.error || 'Ukjent feil'}`);
+        setSyncError({
+          error: data?.error || 'Ukjent feil',
+          webhookStatus: data?.webhookStatus,
+          webhookUrl: data?.webhookUrl,
+          correlationId: data?.correlationId,
+          rawResponse: data?.rawResponse,
+          n8nError: data?.n8nError,
+          n8nStackTrace: data?.n8nStackTrace,
+        });
+        toast.error(`Synkronisering feilet: ${data?.n8nError || data?.error || 'Ukjent feil'}`);
       }
     } catch (error) {
       console.error('Error triggering sync:', error);
+      setSyncError({ error: 'Nettverksfeil ved synkronisering' });
       toast.error('Kunne ikke starte synkronisering');
     } finally {
       setIsSyncing(false);
@@ -825,6 +854,13 @@ export default function Admin() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {storedWebhookUrl && (
+                <div className="p-3 rounded-lg bg-muted/50 text-sm">
+                  <p className="text-muted-foreground">Lagret URL:</p>
+                  <code className="text-xs break-all">{storedWebhookUrl}</code>
+                </div>
+              )}
+              
               <div className="space-y-2">
                 <Label htmlFor="webhookUrl">n8n Webhook URL</Label>
                 <div className="flex gap-2">
@@ -866,6 +902,25 @@ export default function Admin() {
                   </>
                 )}
               </Button>
+
+              {lastSyncSuccess && !syncError && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="text-sm font-medium">Siste synkronisering fullført!</span>
+                </div>
+              )}
+
+              {syncError && (
+                <SyncErrorDetails
+                  error={syncError.error}
+                  webhookStatus={syncError.webhookStatus}
+                  webhookUrl={syncError.webhookUrl}
+                  correlationId={syncError.correlationId}
+                  rawResponse={syncError.rawResponse}
+                  n8nError={syncError.n8nError}
+                  n8nStackTrace={syncError.n8nStackTrace}
+                />
+              )}
 
               <div className="border-t pt-4 mt-4">
                 <Button 
