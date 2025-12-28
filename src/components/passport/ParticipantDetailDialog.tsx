@@ -14,6 +14,7 @@ import { toast } from '@/hooks/use-toast';
 import { Camera, CheckCircle, XCircle, Loader2, Stethoscope, Heart, Trophy } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ParticipantWithCabin {
   id: string;
@@ -74,6 +75,7 @@ export const ParticipantDetailDialog = ({
   onOpenChange,
   onParticipantUpdated,
 }: ParticipantDetailDialogProps) => {
+  const { isAdmin, isNurse } = useAuth();
   const [participant, setParticipant] = useState<ParticipantWithCabin | null>(null);
   const [activities, setActivities] = useState<ParticipantActivity[]>([]);
   const [healthNotes, setHealthNotes] = useState<HealthNote[]>([]);
@@ -333,12 +335,12 @@ export const ParticipantDetailDialog = ({
               </DialogHeader>
 
               <div className="space-y-6">
-                {/* Nurse health info for leaders (public) */}
+                {/* Info fra Nurse (public - visible to all) */}
                 {healthInfo?.info && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <Heart className="h-4 w-4 text-blue-600" />
-                      <span>Helseinformasjon fra nurse</span>
+                      <span>Info fra Nurse</span>
                     </div>
                     <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg text-sm">
                       {healthInfo.info}
@@ -346,12 +348,12 @@ export const ParticipantDetailDialog = ({
                   </div>
                 )}
 
-                {/* Nurse notes (read-only) */}
-                {healthNotes.length > 0 && (
+                {/* Nurse Notater - kun synlig for nurse og admin */}
+                {(isAdmin || isNurse) && healthNotes.length > 0 && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <Stethoscope className="h-4 w-4 text-pink-600" />
-                      <span>Sykepleier-notater</span>
+                      <span>Nurse Notater</span>
                     </div>
                     <div className="space-y-2">
                       {healthNotes.map((note) => (
