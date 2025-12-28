@@ -31,7 +31,7 @@ serve(async (req) => {
 
     const contentMap = new Map(contents?.map(c => [c.leader_id, c]) || []);
 
-    const exportData = leaders?.map(leader => {
+const exportData = leaders?.map(leader => {
       const content = contentMap.get(leader.id);
       return {
         name: leader.name,
@@ -54,6 +54,11 @@ serve(async (req) => {
         extra_activity: content?.extra_activity || null,
         obs_message: content?.obs_message || null,
         personal_notes: content?.personal_notes || null,
+        extra_1: content?.extra_1 || null,
+        extra_2: content?.extra_2 || null,
+        extra_3: content?.extra_3 || null,
+        extra_4: content?.extra_4 || null,
+        extra_5: content?.extra_5 || null,
       };
     }) || [];
 

@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.trigger-sync]
 verify_jwt = false
+
+[functions.trigger-export]
+verify_jwt = false
