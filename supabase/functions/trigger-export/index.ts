@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       return {
         phone: leader.phone,
         name: leader.name,
-        cabin_info: leader.cabin_info,
+        cabin_info: leader.cabin || leader.cabin_info || '',
         ministerpost: leader.ministerpost,
         team: leader.team,
         current_activity: content?.current_activity || '',
