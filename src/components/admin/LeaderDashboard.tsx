@@ -177,10 +177,12 @@ export function LeaderDashboard({ leaders, extraFieldsConfig, onLeaderUpdated, o
           const isFri = content?.current_activity?.toLowerCase().includes('fri');
           const isKitchen = leader.team?.toLowerCase() === 'kjøkken';
           
+          const isAdminOrNurse = adminNurseIds.has(leader.id);
+          
           const getBorderClass = () => {
+            // Admin og Nurse skal ALLTID være grønne - høyeste prioritet
+            if (isAdminOrNurse) return 'ring-green-500';
             if (isKitchen) return 'ring-purple-500';
-            // Admin og Nurse skal ALLTID være grønne
-            if (adminNurseIds.has(leader.id)) return 'ring-green-500';
             if (isFri) return 'ring-blue-500';
             if (content?.has_read) return 'ring-green-500';
             return 'ring-red-500';
@@ -192,7 +194,7 @@ export function LeaderDashboard({ leaders, extraFieldsConfig, onLeaderUpdated, o
               className={cn(
                 'relative overflow-hidden transition-all hover:shadow-md cursor-pointer min-h-[220px] ring-2',
                 getBorderClass(),
-                hasObs && 'ring-destructive/50'
+                hasObs && !isAdminOrNurse && 'ring-destructive/50'
               )}
               onClick={() => handleEditClick(leader)}
             >
