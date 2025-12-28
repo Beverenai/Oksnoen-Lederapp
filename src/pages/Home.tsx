@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Activity, 
   Plus, 
@@ -16,6 +17,9 @@ import {
   Heart,
   Bell,
   Zap,
+  Home as HomeIcon,
+  Users,
+  MapPin,
   type LucideIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,7 +27,16 @@ import type { Tables } from '@/integrations/supabase/types';
 
 type LeaderContent = Tables<'leader_content'>;
 type SessionActivity = Tables<'session_activities'>;
-type HomeScreenConfig = Tables<'home_screen_config'>;
+
+interface HomeScreenConfig {
+  id: string;
+  element_key: string;
+  label: string;
+  is_visible: boolean;
+  sort_order: number;
+  title: string | null;
+  icon: string | null;
+}
 
 interface ExtraFieldConfig {
   id: string;
@@ -34,7 +47,7 @@ interface ExtraFieldConfig {
   sort_order: number;
 }
 
-// Icon mapping for extra fields
+// Icon mapping for fields
 const iconMap: Record<string, LucideIcon> = {
   info: Info,
   star: Star,
@@ -44,6 +57,10 @@ const iconMap: Record<string, LucideIcon> = {
   activity: Activity,
   plus: Plus,
   message: MessageSquare,
+  'alert-triangle': AlertTriangle,
+  calendar: Calendar,
+  home: HomeIcon,
+  users: Users,
 };
 
 export default function Home() {
@@ -84,7 +101,7 @@ export default function Home() {
 
       setContent(contentRes.data);
       setSessionActivities(activitiesRes.data || []);
-      setConfig(configRes.data || []);
+      setConfig((configRes.data || []) as HomeScreenConfig[]);
       setExtraFieldsConfig((extraConfigRes.data || []) as ExtraFieldConfig[]);
     } catch (error) {
       console.error('Error loading home data:', error);
@@ -119,6 +136,11 @@ export default function Home() {
         schema: 'public', 
         table: 'extra_fields_config'
       }, () => loadData())
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'home_screen_config'
+      }, () => loadData())
       .subscribe();
 
     return () => {
@@ -126,9 +148,26 @@ export default function Home() {
     };
   }, [leader]);
 
+  const getConfigForElement = (key: string): HomeScreenConfig | undefined => {
+    return config.find(c => c.element_key === key);
+  };
+
   const isElementVisible = (key: string) => {
     const element = config.find(c => c.element_key === key);
     return element?.is_visible !== false;
+  };
+
+  const getElementTitle = (key: string, fallback: string): string => {
+    const element = getConfigForElement(key);
+    return element?.title || fallback;
+  };
+
+  const getElementIcon = (key: string, fallback: LucideIcon): LucideIcon => {
+    const element = getConfigForElement(key);
+    if (element?.icon && iconMap[element.icon]) {
+      return iconMap[element.icon];
+    }
+    return fallback;
   };
 
   // Get extra field value from content
@@ -139,16 +178,28 @@ export default function Home() {
     return typeof value === 'string' ? value : null;
   };
 
+  // Get initials from name
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6 animate-fade-in">
-        <Skeleton className="h-10 w-48" />
-        <div className="grid gap-4 md:grid-cols-2">
-          <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-20 w-20 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-32" />
+          </div>
         </div>
+        <Skeleton className="h-24" />
+        <Skeleton className="h-40" />
       </div>
     );
   }
@@ -162,158 +213,203 @@ export default function Home() {
     sessionActivities.length > 0 ||
     hasExtraContent;
 
+  const ActivityIcon = getElementIcon('current_activity', Activity);
+  const ExtraActivityIcon = getElementIcon('extra_activity', Plus);
+  const NotesIcon = getElementIcon('personal_notes', MessageSquare);
+  const ObsIcon = getElementIcon('obs_message', AlertTriangle);
+  const SessionIcon = getElementIcon('session_activities', Calendar);
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground">
-            Hei, {leader?.name?.split(' ')[0]}!
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Her er din oversikt for akkurat nå
-          </p>
+    <div className="space-y-6 animate-fade-in pb-8">
+      {/* Profile Header */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-4">
+          <Avatar className="h-16 w-16 md:h-20 md:w-20 border-2 border-primary/20">
+            <AvatarImage src={leader?.profile_image_url || ''} alt={leader?.name} />
+            <AvatarFallback className="bg-primary/10 text-primary font-heading text-lg md:text-xl">
+              {leader?.name ? getInitials(leader.name) : '?'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="space-y-1">
+            <h1 className="text-xl md:text-2xl font-heading font-bold text-foreground">
+              {leader?.name}
+            </h1>
+            {leader?.ministerpost && (
+              <p className="text-sm text-muted-foreground">{leader.ministerpost}</p>
+            )}
+            <div className="flex flex-wrap gap-2 pt-1">
+              {leader?.cabin_info && (
+                <Badge variant="secondary" className="text-xs">
+                  <HomeIcon className="w-3 h-3 mr-1" />
+                  {leader.cabin_info}
+                </Badge>
+              )}
+              {leader?.team && (
+                <Badge variant="outline" className="text-xs">
+                  <Users className="w-3 h-3 mr-1" />
+                  {leader.team}
+                </Badge>
+              )}
+            </div>
+          </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={loadData}>
+        <Button variant="ghost" size="icon" onClick={loadData} className="shrink-0">
           <RefreshCw className="w-5 h-5" />
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* OBS - kritisk info først */}
-        {isElementVisible('obs_message') && content?.obs_message && (
-          <Card className="md:col-span-2 border-warning bg-warning/5">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-warning text-lg">
-                <AlertTriangle className="w-5 h-5" />
-                OBS
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-foreground font-medium">{content.obs_message}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Aktivitet */}
-        {isElementVisible('current_activity') && (
-          <Card className="border-primary/20">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Activity className="w-5 h-5 text-primary" />
-                Din aktivitet
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {content?.current_activity ? (
-                <p className="text-foreground text-lg font-medium">
-                  {content.current_activity}
+      {/* Main Activity - Large Display */}
+      {isElementVisible('current_activity') && (
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-primary/20">
+                <ActivityIcon className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs uppercase tracking-wide text-primary font-medium mb-1">
+                  {getElementTitle('current_activity', 'Din aktivitet')}
                 </p>
-              ) : (
-                <p className="text-muted-foreground">Ingen aktivitet tildelt</p>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                <p className="text-xl md:text-2xl font-heading font-bold text-foreground">
+                  {content?.current_activity || 'Ingen aktivitet tildelt'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Ekstra aktivitet */}
-        {isElementVisible('extra_activity') && content?.extra_activity && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Plus className="w-5 h-5 text-accent" />
-                Ekstra aktivitet
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-foreground">{content.extra_activity}</p>
-            </CardContent>
-          </Card>
-        )}
+      {/* OBS Alert Box */}
+      {isElementVisible('obs_message') && content?.obs_message && (
+        <Card className="border-success bg-success/10">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-success/20">
+                <ObsIcon className="w-5 h-5 text-success" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs uppercase tracking-wide text-success font-medium mb-1">
+                  {getElementTitle('obs_message', 'OBS')}
+                </p>
+                <p className="text-foreground font-medium">{content.obs_message}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Notater til deg */}
-        {isElementVisible('personal_notes') && content?.personal_notes && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <MessageSquare className="w-5 h-5 text-primary" />
-                Notater til deg
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-foreground">{content.personal_notes}</p>
-            </CardContent>
-          </Card>
-        )}
+      {/* Extra Activity */}
+      {isElementVisible('extra_activity') && content?.extra_activity && (
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-accent/20">
+                <ExtraActivityIcon className="w-5 h-5 text-accent" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs uppercase tracking-wide text-accent font-medium mb-1">
+                  {getElementTitle('extra_activity', 'Ekstra aktivitet')}
+                </p>
+                <p className="text-foreground">{content.extra_activity}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Extra fields from Google Sheets */}
-        {extraFieldsConfig.map((fieldConfig) => {
-          const value = getExtraFieldValue(fieldConfig.field_key);
-          if (!value) return null;
-          
-          const IconComponent = iconMap[fieldConfig.icon] || Info;
-          
-          return (
-            <Card key={fieldConfig.id}>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <IconComponent className="w-5 h-5 text-primary" />
-                  {fieldConfig.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-foreground">{value}</p>
-              </CardContent>
-            </Card>
-          );
-        })}
+      {/* Personal Notes */}
+      {isElementVisible('personal_notes') && content?.personal_notes && (
+        <Card className="border-primary/20">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-primary/10">
+                <NotesIcon className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs uppercase tracking-wide text-primary font-medium mb-1">
+                  {getElementTitle('personal_notes', 'Notater til deg')}
+                </p>
+                <p className="text-foreground">{content.personal_notes}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Aktiviteter denne økten */}
-        {isElementVisible('session_activities') && sessionActivities.length > 0 && (
-          <Card className="md:col-span-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Calendar className="w-5 h-5 text-primary" />
-                Aktiviteter denne økten
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {sessionActivities.map((activity) => (
-                  <div 
-                    key={activity.id} 
-                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
-                  >
-                    <Badge variant="secondary" className="shrink-0">
-                      {activity.time_slot || 'Nå'}
-                    </Badge>
-                    <div>
-                      <p className="font-medium text-foreground">{activity.title}</p>
-                      {activity.description && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {activity.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
+      {/* Extra Fields from Google Sheets */}
+      {extraFieldsConfig.map((fieldConfig) => {
+        const value = getExtraFieldValue(fieldConfig.field_key);
+        if (!value) return null;
+        
+        const IconComponent = iconMap[fieldConfig.icon] || Info;
+        
+        return (
+          <Card key={fieldConfig.id}>
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-full bg-muted">
+                  <IconComponent className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">
+                    {fieldConfig.title}
+                  </p>
+                  <p className="text-foreground">{value}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
-        )}
+        );
+      })}
 
-        {/* Tom tilstand */}
-        {!hasAnyContent && (
-          <Card className="md:col-span-2">
-            <CardContent className="py-12 text-center">
-              <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground">Alt klart!</h3>
-              <p className="text-muted-foreground mt-1">
-                Ingen aktiviteter eller beskjeder akkurat nå
+      {/* Session Activities */}
+      {isElementVisible('session_activities') && sessionActivities.length > 0 && (
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="p-2 rounded-full bg-primary/10">
+                <SessionIcon className="w-5 h-5 text-primary" />
+              </div>
+              <p className="text-xs uppercase tracking-wide text-primary font-medium pt-2">
+                {getElementTitle('session_activities', 'Denne økten har du:')}
               </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </div>
+            <div className="space-y-3 ml-12">
+              {sessionActivities.map((activity) => (
+                <div 
+                  key={activity.id} 
+                  className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
+                >
+                  <Badge variant="secondary" className="shrink-0 font-mono">
+                    {activity.time_slot || 'Nå'}
+                  </Badge>
+                  <div>
+                    <p className="font-medium text-foreground">{activity.title}</p>
+                    {activity.description && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {activity.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Empty State */}
+      {!hasAnyContent && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground">Alt klart!</h3>
+            <p className="text-muted-foreground mt-1">
+              Ingen aktiviteter eller beskjeder akkurat nå
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
