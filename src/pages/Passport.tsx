@@ -48,6 +48,7 @@ const calculateAge = (birthDate: string): number => {
 };
 
 export default function Passport() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const cabinFilterFromUrl = searchParams.get('cabin');
   
@@ -61,6 +62,7 @@ export default function Passport() {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
   const [showBulkRegistration, setShowBulkRegistration] = useState(false);
+  const [checkoutEnabled, setCheckoutEnabled] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -81,16 +83,18 @@ export default function Passport() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [participantsRes, cabinsRes] = await Promise.all([
+      const [participantsRes, cabinsRes, configRes] = await Promise.all([
         supabase
           .from('participants')
           .select('*, cabins(*), participant_activities(*)')
           .order('name'),
         supabase.from('cabins').select('*').order('name', { ascending: true }),
+        supabase.from('app_config').select('value').eq('key', 'checkout_enabled').maybeSingle(),
       ]);
 
       setParticipants(participantsRes.data || []);
       setCabins(cabinsRes.data || []);
+      setCheckoutEnabled(configRes.data?.value === 'true');
       
       // Expand all cabins by default, or just the filtered one
       if (cabinsRes.data) {
@@ -214,13 +218,25 @@ export default function Passport() {
           </p>
         </div>
 
-        <Button
-          variant={showBulkRegistration ? 'secondary' : 'outline'}
-          onClick={() => setShowBulkRegistration(!showBulkRegistration)}
-        >
-          <Users className="w-4 h-4 mr-2" />
-          {showBulkRegistration ? 'Skjul' : 'Registrer aktivitet'}
-        </Button>
+        <div className="flex gap-2">
+          {checkoutEnabled && (
+            <Button
+              variant="default"
+              onClick={() => navigate('/checkout')}
+              className="gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              Utsjekk
+            </Button>
+          )}
+          <Button
+            variant={showBulkRegistration ? 'secondary' : 'outline'}
+            onClick={() => setShowBulkRegistration(!showBulkRegistration)}
+          >
+            <Users className="w-4 h-4 mr-2" />
+            {showBulkRegistration ? 'Skjul' : 'Registrer aktivitet'}
+          </Button>
+        </div>
       </div>
 
       {/* Bulk Activity Registration */}
