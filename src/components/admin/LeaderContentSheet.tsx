@@ -225,12 +225,14 @@ export function LeaderContentSheet({
             {/* Team Badge */}
             <Popover open={editingField === 'team'} onOpenChange={(open) => setEditingField(open ? 'team' : null)}>
               <PopoverTrigger asChild>
-                <Badge 
-                  className={`cursor-pointer hover:opacity-80 transition-opacity ${team ? getTeamStyles(team) : 'bg-muted text-muted-foreground'}`}
-                >
-                  {team || 'Velg team'}
-                  <Pencil className="w-3 h-3 ml-1" />
-                </Badge>
+                <button type="button" className="focus:outline-none">
+                  <Badge 
+                    className={`cursor-pointer hover:opacity-80 transition-opacity ${team ? getTeamStyles(team) : 'bg-muted text-muted-foreground'}`}
+                  >
+                    {team || 'Velg team'}
+                    <Pencil className="w-3 h-3 ml-1" />
+                  </Badge>
+                </button>
               </PopoverTrigger>
               <PopoverContent className="w-48 p-2 bg-popover" align="start">
                 <div className="space-y-1">
@@ -256,13 +258,15 @@ export function LeaderContentSheet({
             {/* Cabin Badge */}
             <Popover open={editingField === 'cabin'} onOpenChange={(open) => setEditingField(open ? 'cabin' : null)}>
               <PopoverTrigger asChild>
-                <Badge 
-                  variant="outline"
-                  className="cursor-pointer hover:opacity-80 transition-opacity"
-                >
-                  {cabin || 'Hytte-ansvar'}
-                  <Pencil className="w-3 h-3 ml-1" />
-                </Badge>
+                <button type="button" className="focus:outline-none">
+                  <Badge 
+                    variant="outline"
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                  >
+                    {cabin || 'Hytte-ansvar'}
+                    <Pencil className="w-3 h-3 ml-1" />
+                  </Badge>
+                </button>
               </PopoverTrigger>
               <PopoverContent className="w-56 p-3 bg-popover" align="start">
                 <div className="space-y-2">
@@ -284,13 +288,15 @@ export function LeaderContentSheet({
             {/* Ministerpost Badge */}
             <Popover open={editingField === 'ministerpost'} onOpenChange={(open) => setEditingField(open ? 'ministerpost' : null)}>
               <PopoverTrigger asChild>
-                <Badge 
-                  variant="secondary"
-                  className="cursor-pointer hover:opacity-80 transition-opacity"
-                >
-                  {ministerpost || 'Ministerpost'}
-                  <Pencil className="w-3 h-3 ml-1" />
-                </Badge>
+                <button type="button" className="focus:outline-none">
+                  <Badge 
+                    variant="secondary"
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                  >
+                    {ministerpost || 'Ministerpost'}
+                    <Pencil className="w-3 h-3 ml-1" />
+                  </Badge>
+                </button>
               </PopoverTrigger>
               <PopoverContent className="w-56 p-3 bg-popover" align="start">
                 <div className="space-y-2">
