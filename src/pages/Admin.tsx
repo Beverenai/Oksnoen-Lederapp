@@ -31,7 +31,9 @@ import {
   Activity,
   MessageSquare,
   FileSpreadsheet,
-  CheckCircle2
+  CheckCircle2,
+  UserX,
+  UserCheck
 } from 'lucide-react';
 import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import { toast } from 'sonner';
@@ -75,7 +77,7 @@ export default function Admin() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showSyncInstructions, setShowSyncInstructions] = useState(false);
-
+  const [isDeactivating, setIsDeactivating] = useState(false);
   // New leader form
   const [newLeaderName, setNewLeaderName] = useState('');
   const [newLeaderPhone, setNewLeaderPhone] = useState('');
@@ -189,6 +191,67 @@ export default function Admin() {
       toast.error('Kunne ikke starte synkronisering');
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const deactivateAllLeaders = async () => {
+    if (!confirm('Er du sikker på at du vil deaktivere alle ledere? De vil ikke kunne logge inn før de aktiveres igjen.')) return;
+
+    setIsDeactivating(true);
+    try {
+      const { error } = await supabase
+        .from('leaders')
+        .update({ is_active: false })
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all
+
+      if (error) throw error;
+      
+      loadData();
+      toast.success('Alle ledere er nå deaktivert');
+    } catch (error) {
+      console.error('Error deactivating leaders:', error);
+      toast.error('Kunne ikke deaktivere ledere');
+    } finally {
+      setIsDeactivating(false);
+    }
+  };
+
+  const activateAllLeaders = async () => {
+    if (!confirm('Er du sikker på at du vil aktivere alle ledere?')) return;
+
+    setIsDeactivating(true);
+    try {
+      const { error } = await supabase
+        .from('leaders')
+        .update({ is_active: true })
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all
+
+      if (error) throw error;
+      
+      loadData();
+      toast.success('Alle ledere er nå aktivert');
+    } catch (error) {
+      console.error('Error activating leaders:', error);
+      toast.error('Kunne ikke aktivere ledere');
+    } finally {
+      setIsDeactivating(false);
+    }
+  };
+
+  const toggleLeaderActive = async (leader: Leader) => {
+    try {
+      const { error } = await supabase
+        .from('leaders')
+        .update({ is_active: !leader.is_active })
+        .eq('id', leader.id);
+
+      if (error) throw error;
+      
+      loadData();
+      toast.success(leader.is_active ? 'Leder deaktivert' : 'Leder aktivert');
+    } catch (error) {
+      console.error('Error toggling leader active:', error);
+      toast.error('Kunne ikke oppdatere leder');
     }
   };
 
@@ -1070,15 +1133,47 @@ export default function Admin() {
                 <Users className="w-5 h-5" />
                 Leder-oversikt ({leaders.length})
               </CardTitle>
-              <CardDescription>
-                Oversikt over alle importerte ledere med detaljer
+              <CardDescription className="flex flex-wrap gap-2 items-center">
+                <span>Aktive: {leaders.filter(l => l.is_active !== false).length}</span>
+                <span className="text-muted-foreground">•</span>
+                <span>Inaktive: {leaders.filter(l => l.is_active === false).length}</span>
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={deactivateAllLeaders}
+                  disabled={isDeactivating}
+                >
+                  {isDeactivating ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <UserX className="w-4 h-4 mr-2" />
+                  )}
+                  Deaktiver alle
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={activateAllLeaders}
+                  disabled={isDeactivating}
+                >
+                  {isDeactivating ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <UserCheck className="w-4 h-4 mr-2" />
+                  )}
+                  Aktiver alle
+                </Button>
+              </div>
+              
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
+                      <th className="text-left py-2 px-3 font-medium">Status</th>
                       <th className="text-left py-2 px-3 font-medium">Navn</th>
                       <th className="text-left py-2 px-3 font-medium">Telefon</th>
                       <th className="text-left py-2 px-3 font-medium hidden sm:table-cell">Team</th>
@@ -1089,7 +1184,13 @@ export default function Admin() {
                   </thead>
                   <tbody className="divide-y">
                     {leaders.map((leader) => (
-                      <tr key={leader.id} className="hover:bg-muted/50">
+                      <tr key={leader.id} className={`hover:bg-muted/50 ${leader.is_active === false ? 'opacity-50' : ''}`}>
+                        <td className="py-2 px-3">
+                          <Switch
+                            checked={leader.is_active !== false}
+                            onCheckedChange={() => toggleLeaderActive(leader)}
+                          />
+                        </td>
                         <td className="py-2 px-3 font-medium">{leader.name}</td>
                         <td className="py-2 px-3 text-muted-foreground">{leader.phone}</td>
                         <td className="py-2 px-3 text-muted-foreground hidden sm:table-cell">

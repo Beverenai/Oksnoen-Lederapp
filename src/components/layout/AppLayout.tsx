@@ -13,7 +13,8 @@ import {
   LogOut,
   Menu,
   X,
-  Heart
+  Heart,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -25,6 +26,7 @@ interface AppLayoutProps {
 
 const navItems = [
   { to: '/', icon: Home, label: 'Hjem' },
+  { to: '/profile', icon: User, label: 'Min Profil' },
   { to: '/leaders', icon: Users, label: 'Ledere' },
   { to: '/passport', icon: ClipboardCheck, label: 'Passkontroll' },
   { to: '/cabin', icon: Building2, label: 'Din Hytte' },
