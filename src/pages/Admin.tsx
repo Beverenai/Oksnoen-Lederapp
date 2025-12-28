@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
-import { ParticipantStatsCard } from '@/components/admin/ParticipantStatsCard';
+
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
@@ -564,7 +564,7 @@ export default function Admin() {
       </div>
 
       {/* Participant Stats */}
-      <ParticipantStatsCard />
+      
 
       {/* Leader Dashboard */}
       <LeaderDashboard
