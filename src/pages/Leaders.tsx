@@ -109,7 +109,7 @@ export default function Leaders() {
         ...leader,
         content: contentMap.get(leader.id) || null,
         isAdmin: adminIds.has(leader.id),
-        isNurse: nurseIds.has(leader.id),
+        isNurse: nurseIds.has(leader.id) || leader.team?.toLowerCase() === 'nurse',
       }));
 
       setLeaders(leadersWithContent);
@@ -314,11 +314,6 @@ export default function Leaders() {
                         Admin
                       </Badge>
                     )}
-                    {leader.isNurse && (
-                      <span className="text-red-600 flex items-center" title="Sykepleier">
-                        <Cross className="w-4 h-4" fill="currentColor" />
-                      </span>
-                    )}
                   </div>
                   
                   {leader.ministerpost && (
@@ -351,6 +346,13 @@ export default function Leaders() {
                     )}
                   </div>
                 </div>
+
+                {/* Nurse indicator */}
+                {leader.isNurse && (
+                  <span className="shrink-0 text-red-600 flex items-center" title="Sykepleier">
+                    <Cross className="w-6 h-6" fill="currentColor" />
+                  </span>
+                )}
 
                 {/* Call button - smaller */}
                 <Button
