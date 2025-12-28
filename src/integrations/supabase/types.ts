@@ -508,6 +508,7 @@ export type Database = {
       }
       participants: {
         Row: {
+          activity_notes: string | null
           birth_date: string | null
           cabin_id: string | null
           created_at: string | null
@@ -528,6 +529,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          activity_notes?: string | null
           birth_date?: string | null
           cabin_id?: string | null
           created_at?: string | null
@@ -548,6 +550,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          activity_notes?: string | null
           birth_date?: string | null
           cabin_id?: string | null
           created_at?: string | null

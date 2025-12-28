@@ -12,6 +12,7 @@ interface ParticipantData {
   age?: number;
   cabin?: string;
   activities: string[];
+  activityNotes?: string;
   littleStyrkeprove: boolean;
   bigStyrkeprove: boolean;
 }
@@ -22,6 +23,7 @@ Regler for pass-skriving på Oksnøen:
 - Passet skal være personlig og oppmuntrende
 - Bruk deltakerens fornavn
 - Nevn 2-3 aktiviteter de har gjort (velg de mest spennende)
+- VIKTIG: Hvis det finnes "Aktivitetsnotater fra ledere", bruk disse som grunnlag! De inneholder prestasjoner og observasjoner (f.eks. "1. plass i svømmekonkurranse")
 - Hvis de har klart Lille eller Store Styrkeprøven, fremhev dette som en stor prestasjon
 - Hold passet kort (2-3 setninger)
 - Skriv på norsk bokmål
@@ -31,7 +33,9 @@ Regler for pass-skriving på Oksnøen:
 Eksempler på gode pass:
 - "Ola har hatt en fantastisk uke på Oksnøen! Med stor mot har han klart Store Styrkeprøven og vist at han tør å utfordre seg selv i klatreveggen og taubanen. Flott innsats, Ola!"
 - "Lisa har virkelig kastet seg ut i leirlivet! Hun har prøvd alt fra pil og bue til kano, og vi er imponert over motet hennes. Håper vi sees igjen neste år!"
-- "Emil har klart Lille Styrkeprøven og vært en super deltaker på leiren. Han har vist god lagånd og alltid et smil på lur. Takk for en fin uke, Emil!"`;
+- "Emil har klart Lille Styrkeprøven og vært en super deltaker på leiren. Han har vist god lagånd og alltid et smil på lur. Takk for en fin uke, Emil!"
+- "Sara tok førsteplassen i svømmekonkurransen og viste imponerende ferdigheter i klatring. En ekte Oksnøen-mester!"`;
+
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -62,6 +66,7 @@ Navn: ${participant.name}
 Alder: ${participant.age ? `${participant.age} år` : 'Ukjent'}
 Hytte: ${participant.cabin || 'Ukjent'}
 Aktiviteter gjort: ${participant.activities.length > 0 ? participant.activities.join(', ') : 'Ingen registrert'}
+${participant.activityNotes ? `Aktivitetsnotater fra ledere: ${participant.activityNotes}` : ''}
 Styrkeprøve: ${participant.bigStyrkeprove ? 'Store Styrkeprøven ✅' : participant.littleStyrkeprove ? 'Lille Styrkeprøven ✅' : 'Ingen styrkeprøve'}
 
 Skriv passet nå:`;
