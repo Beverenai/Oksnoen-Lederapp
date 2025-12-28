@@ -91,11 +91,11 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
 };
 
 const nurseNavItems = [
-  { to: '/nurse', icon: Heart, label: 'Sykepleier' },
+  { to: '/nurse', icon: Heart, label: 'Nurse' },
 ];
 
 const adminNavItems = [
-  { to: '/participant-stats', icon: BarChart2, label: 'Deltakerstatistikk' },
+  { to: '/participant-stats', icon: BarChart2, label: 'Deltagere' },
   { to: '/admin', icon: Settings, label: 'Admin' },
 ];
 
