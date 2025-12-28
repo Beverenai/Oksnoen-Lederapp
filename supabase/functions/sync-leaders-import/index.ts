@@ -26,6 +26,32 @@ interface LeaderImport {
   extra_5?: string;
 }
 
+// Teams that should NOT have cabin responsibility
+const TEAMS_WITHOUT_CABIN_RESPONSIBILITY = ['kjøkken'];
+
+// Roles that should NOT have cabin responsibility  
+const ROLES_WITHOUT_CABIN_RESPONSIBILITY = ['admin', 'nurse'];
+
+// Check if a leader should have cabin assignment based on team and role
+const shouldHaveCabinAssignment = (
+  team: string | undefined,
+  leaderId: string,
+  rolesMap: Map<string, string[]>
+): boolean => {
+  // Check team
+  if (team && TEAMS_WITHOUT_CABIN_RESPONSIBILITY.includes(team.toLowerCase())) {
+    return false;
+  }
+  
+  // Check roles
+  const roles = rolesMap.get(leaderId) || [];
+  if (roles.some(role => ROLES_WITHOUT_CABIN_RESPONSIBILITY.includes(role))) {
+    return false;
+  }
+  
+  return true;
+};
+
 // Alias mapping for common cabin name variations
 // Nøkkelen er normalisert alias (lowercase), verdien er array av mulige hyttenavn å søke etter
 const CABIN_ALIASES: Record<string, string[]> = {
@@ -163,7 +189,17 @@ serve(async (req) => {
     const { data: allCabins } = await supabase.from('cabins').select('id, name');
     const cabinsByName = new Map(allCabins?.map(c => [c.name.toLowerCase(), c.id]) || []);
 
-    const results = { created: 0, updated: 0, skipped: 0, cabinLinks: 0, errors: [] as string[] };
+    // Pre-fetch all user roles for checking admin/nurse
+    const { data: allRoles } = await supabase.from('user_roles').select('leader_id, role');
+    const rolesMap = new Map<string, string[]>();
+    (allRoles || []).forEach((r: { leader_id: string; role: string }) => {
+      const existing = rolesMap.get(r.leader_id) || [];
+      existing.push(r.role);
+      rolesMap.set(r.leader_id, existing);
+    });
+    console.log(`Loaded ${rolesMap.size} leaders with special roles`);
+
+    const results = { created: 0, updated: 0, skipped: 0, cabinLinks: 0, cabinSkipped: 0, errors: [] as string[] };
 
     for (const leader of leaders) {
       const phone = leader.phone?.replace(/\s/g, '');
@@ -241,28 +277,36 @@ serve(async (req) => {
         results.updated++;
       }
 
-      // Parse cabin names and create leader_cabins links
-      const cabinNames = parseCabinNames(leader.cabin || leader.cabin_info);
-      if (cabinNames.length > 0) {
-        // Delete existing leader_cabins for this leader
-        await supabase.from('leader_cabins').delete().eq('leader_id', leaderId);
+      // Check if leader should have cabin assignment (excludes Kjøkken team and admin/nurse roles)
+      if (shouldHaveCabinAssignment(leader.team, leaderId, rolesMap)) {
+        // Parse cabin names and create leader_cabins links
+        const cabinNames = parseCabinNames(leader.cabin || leader.cabin_info);
+        if (cabinNames.length > 0) {
+          // Delete existing leader_cabins for this leader
+          await supabase.from('leader_cabins').delete().eq('leader_id', leaderId);
 
-        // Insert new leader_cabins links using improved matching
-        for (const cabinName of cabinNames) {
-          const cabinId = findCabinId(cabinName, cabinsByName);
-          if (cabinId) {
-            const { error: linkError } = await supabase.from('leader_cabins').insert({
-              leader_id: leaderId,
-              cabin_id: cabinId,
-            });
-            if (!linkError) {
-              results.cabinLinks++;
-              console.log(`Linked ${leader.name} to cabin: ${cabinName} -> ${cabinId}`);
+          // Insert new leader_cabins links using improved matching
+          for (const cabinName of cabinNames) {
+            const cabinId = findCabinId(cabinName, cabinsByName);
+            if (cabinId) {
+              const { error: linkError } = await supabase.from('leader_cabins').insert({
+                leader_id: leaderId,
+                cabin_id: cabinId,
+              });
+              if (!linkError) {
+                results.cabinLinks++;
+                console.log(`Linked ${leader.name} to cabin: ${cabinName} -> ${cabinId}`);
+              }
+            } else {
+              console.log(`Cabin not found for ${leader.name}: ${cabinName} (tried fuzzy matching)`);
             }
-          } else {
-            console.log(`Cabin not found for ${leader.name}: ${cabinName} (tried fuzzy matching)`);
           }
         }
+      } else {
+        // Leader should NOT have cabin assignment - remove any existing links
+        await supabase.from('leader_cabins').delete().eq('leader_id', leaderId);
+        results.cabinSkipped++;
+        console.log(`Skipped cabin assignment for ${leader.name} (team: ${leader.team}, excluded)`);
       }
 
       // Upsert leader content
@@ -289,7 +333,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Sync complete: ${results.created} created, ${results.updated} updated, ${results.cabinLinks} cabin links, ${results.skipped} skipped`);
+    console.log(`Sync complete: ${results.created} created, ${results.updated} updated, ${results.cabinLinks} cabin links, ${results.cabinSkipped} cabin skipped (exempt), ${results.skipped} skipped`);
 
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
