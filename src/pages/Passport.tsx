@@ -420,7 +420,16 @@ export default function Passport() {
                                     </Badge>
                                   )}
                                   {participant.room && (
-                                    <Badge variant="secondary" className="text-xs">
+                                    <Badge 
+                                      variant="secondary" 
+                                      className={`text-xs ${
+                                        participant.room === 'høyre' 
+                                          ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30' 
+                                          : participant.room === 'venstre'
+                                          ? 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30'
+                                          : ''
+                                      }`}
+                                    >
                                       {participant.room}
                                     </Badge>
                                   )}
