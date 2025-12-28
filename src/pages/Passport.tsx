@@ -10,11 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Search, 
-  Plus, 
   CheckCircle2, 
   Circle,
   Upload,
@@ -26,12 +25,16 @@ import {
   Filter,
   ChevronDown,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  Users
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
+import { ActivitySelector } from '@/components/passport/ActivitySelector';
+import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
+import { BulkActivityRegistration } from '@/components/passport/BulkActivityRegistration';
 
 type Participant = Tables<'participants'>;
 type Cabin = Tables<'cabins'>;
@@ -58,23 +61,11 @@ export default function Passport() {
   const [filterArrival, setFilterArrival] = useState<string>('all');
   const [selectedParticipant, setSelectedParticipant] = useState<ParticipantWithCabin | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
+  const [showBulkRegistration, setShowBulkRegistration] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // New participant form
-  const [newName, setNewName] = useState('');
-  const [newBirthDate, setNewBirthDate] = useState('');
-  const [newCabin, setNewCabin] = useState('');
-  const [newNotes, setNewNotes] = useState('');
-
-  // New cabin form
-  const [newCabinName, setNewCabinName] = useState('');
-
-  // New activity form
-  const [newActivity, setNewActivity] = useState('');
 
   useEffect(() => {
     loadData();
@@ -192,50 +183,6 @@ export default function Passport() {
     setExpandedCabins(newExpanded);
   };
 
-  const addParticipant = async () => {
-    if (!newName.trim()) {
-      toast.error('Skriv inn et navn');
-      return;
-    }
-
-    try {
-      await supabase.from('participants').insert({
-        name: newName.trim(),
-        birth_date: newBirthDate || null,
-        cabin_id: newCabin || null,
-        notes: newNotes || null,
-      });
-
-      setNewName('');
-      setNewBirthDate('');
-      setNewCabin('');
-      setNewNotes('');
-      setIsAddDialogOpen(false);
-      loadData();
-      toast.success('Deltaker lagt til!');
-    } catch (error) {
-      console.error('Error adding participant:', error);
-      toast.error('Kunne ikke legge til deltaker');
-    }
-  };
-
-  const addCabin = async () => {
-    if (!newCabinName.trim()) return;
-
-    try {
-      await supabase.from('cabins').insert({ name: newCabinName.trim() });
-      setNewCabinName('');
-      loadData();
-      toast.success('Hytte lagt til!');
-    } catch (error: any) {
-      if (error.code === '23505') {
-        toast.error('Denne hytten finnes allerede');
-      } else {
-        toast.error('Kunne ikke legge til hytte');
-      }
-    }
-  };
-
   const toggleArrival = async (participant: ParticipantWithCabin) => {
     try {
       await supabase
@@ -281,23 +228,6 @@ export default function Passport() {
       toast.error('Kunne ikke laste opp bilde');
     } finally {
       setIsUploading(false);
-    }
-  };
-
-  const addActivity = async () => {
-    if (!selectedParticipant || !newActivity.trim()) return;
-
-    try {
-      await supabase.from('participant_activities').insert({
-        participant_id: selectedParticipant.id,
-        activity: newActivity.trim(),
-      });
-
-      setNewActivity('');
-      loadParticipant(selectedParticipant.id);
-      toast.success('Aktivitet lagt til!');
-    } catch (error) {
-      toast.error('Kunne ikke legge til aktivitet');
     }
   };
 
@@ -355,74 +285,23 @@ export default function Passport() {
           </p>
         </div>
 
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Legg til deltaker
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Legg til ny deltaker</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>Navn *</Label>
-                <Input
-                  placeholder="Fullt navn"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Fødselsdato</Label>
-                <Input
-                  type="date"
-                  value={newBirthDate}
-                  onChange={(e) => setNewBirthDate(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Hytte</Label>
-                <Select value={newCabin} onValueChange={setNewCabin}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Velg hytte" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cabins.map((cabin) => (
-                      <SelectItem key={cabin.id} value={cabin.id}>
-                        {cabin.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="flex gap-2 mt-2">
-                  <Input
-                    placeholder="Eller legg til ny hytte"
-                    value={newCabinName}
-                    onChange={(e) => setNewCabinName(e.target.value)}
-                  />
-                  <Button variant="secondary" size="icon" onClick={addCabin}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Notater</Label>
-                <Textarea
-                  placeholder="Allergier, viktig info, etc."
-                  value={newNotes}
-                  onChange={(e) => setNewNotes(e.target.value)}
-                />
-              </div>
-              <Button onClick={addParticipant} className="w-full">
-                Legg til deltaker
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button
+          variant={showBulkRegistration ? 'secondary' : 'outline'}
+          onClick={() => setShowBulkRegistration(!showBulkRegistration)}
+        >
+          <Users className="w-4 h-4 mr-2" />
+          {showBulkRegistration ? 'Skjul' : 'Registrer aktivitet'}
+        </Button>
       </div>
+
+      {/* Bulk Activity Registration */}
+      {showBulkRegistration && (
+        <BulkActivityRegistration
+          participants={participants}
+          onComplete={loadData}
+          onClose={() => setShowBulkRegistration(false)}
+        />
+      )}
 
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -498,51 +377,54 @@ export default function Passport() {
                 <CollapsibleContent>
                   <CardContent className="pt-0">
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {cabinParticipants.map((participant) => (
-                        <div
-                          key={participant.id}
-                          className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-                            participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
-                          }`}
-                          onClick={() => {
-                            setSelectedParticipant(participant);
-                            setIsDetailDialogOpen(true);
-                          }}
-                        >
-                          <div className="flex items-start gap-3">
-                            <Avatar className="w-10 h-10 shrink-0">
-                              <AvatarImage src={participant.image_url || undefined} />
-                              <AvatarFallback className="bg-muted text-muted-foreground">
-                                <User className="w-4 h-4" />
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium text-foreground truncate text-sm">
-                                  {participant.name}
-                                </p>
-                                {participant.has_arrived ? (
-                                  <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
-                                ) : (
-                                  <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1 mt-1 flex-wrap">
-                                {participant.room && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    {participant.room}
-                                  </Badge>
-                                )}
-                                {(participant.times_attended ?? 0) > 0 && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {participant.times_attended} år
-                                  </span>
-                                )}
+                      {cabinParticipants.map((participant) => {
+                        const completedActivities = (participant.participant_activities || []).map(a => a.activity);
+                        
+                        return (
+                          <div
+                            key={participant.id}
+                            className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+                              participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
+                            }`}
+                            onClick={() => {
+                              setSelectedParticipant(participant);
+                              setIsDetailDialogOpen(true);
+                            }}
+                          >
+                            <div className="flex items-start gap-3">
+                              <Avatar className="w-10 h-10 shrink-0">
+                                <AvatarImage src={participant.image_url || undefined} />
+                                <AvatarFallback className="bg-muted text-muted-foreground">
+                                  <User className="w-4 h-4" />
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-foreground truncate text-sm">
+                                    {participant.name}
+                                  </p>
+                                  {participant.has_arrived ? (
+                                    <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                                  ) : (
+                                    <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                  {participant.room && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {participant.room}
+                                    </Badge>
+                                  )}
+                                  <StyrkeproveBadges 
+                                    completedActivities={completedActivities} 
+                                    showCount 
+                                  />
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </CollapsibleContent>
@@ -558,7 +440,7 @@ export default function Passport() {
             <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium text-foreground">Ingen deltakere funnet</h3>
             <p className="text-muted-foreground mt-1">
-              {searchQuery ? 'Prøv et annet søk' : 'Legg til deltakere for å komme i gang'}
+              {searchQuery ? 'Prøv et annet søk' : 'Ingen deltakere registrert ennå'}
             </p>
           </CardContent>
         </Card>
@@ -596,6 +478,12 @@ export default function Passport() {
               </DialogHeader>
 
               <div className="space-y-6 pt-4">
+                {/* Styrkeprøve badges */}
+                <StyrkeproveBadges
+                  completedActivities={(selectedParticipant.participant_activities || []).map(a => a.activity)}
+                  className="justify-center"
+                />
+
                 {/* Times attended */}
                 {(selectedParticipant.times_attended ?? 0) > 0 && (
                   <div className="p-3 rounded-lg bg-primary/10 text-primary text-sm">
@@ -662,24 +550,11 @@ export default function Passport() {
                 {/* Activities */}
                 <div className="space-y-3">
                   <h4 className="font-medium text-foreground">Aktiviteter</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {(selectedParticipant.participant_activities || []).map((activity) => (
-                      <Badge key={activity.id} variant="outline">
-                        {activity.activity}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Legg til aktivitet"
-                      value={newActivity}
-                      onChange={(e) => setNewActivity(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && addActivity()}
-                    />
-                    <Button size="icon" onClick={addActivity}>
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  <ActivitySelector
+                    participantId={selectedParticipant.id}
+                    completedActivities={(selectedParticipant.participant_activities || []).map(a => a.activity)}
+                    onActivityChanged={() => loadParticipant(selectedParticipant.id)}
+                  />
                 </div>
 
                 {/* Notes */}
