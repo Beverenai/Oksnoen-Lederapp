@@ -152,13 +152,15 @@ export default function Leaders() {
         }
       });
 
-      const leadersWithContent: LeaderWithContent[] = leadersData.map((leader) => ({
-        ...leader,
-        content: contentMap.get(leader.id) || null,
-        isAdmin: adminIds.has(leader.id),
-        isNurse: nurseIds.has(leader.id) || leader.team?.toLowerCase() === 'nurse',
-        linkedCabins: leaderCabinsMap.get(leader.id) || [],
-      }));
+      const leadersWithContent: LeaderWithContent[] = leadersData
+        .filter((leader) => leader.name.toLowerCase() !== 'superadmin')
+        .map((leader) => ({
+          ...leader,
+          content: contentMap.get(leader.id) || null,
+          isAdmin: adminIds.has(leader.id),
+          isNurse: nurseIds.has(leader.id) || leader.team?.toLowerCase() === 'nurse',
+          linkedCabins: leaderCabinsMap.get(leader.id) || [],
+        }));
 
       setLeaders(leadersWithContent);
       setExtraFieldsConfig(configData);
