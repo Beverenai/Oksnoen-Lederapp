@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Phone, AlertTriangle, Car, Anchor, Mountain } from 'lucide-react';
+import { Phone, AlertTriangle, Car, Anchor, Mountain, Cross } from 'lucide-react';
 import { icons } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -23,6 +23,28 @@ interface LeaderDetailSheetProps {
   onOpenChange: (open: boolean) => void;
   extraFieldsConfig: ExtraFieldConfig[];
 }
+
+// Team color mapping based on provided design
+const getTeamStyles = (team: string | null): string => {
+  const teamLower = team?.toLowerCase().trim();
+  switch (teamLower) {
+    case 'team 1':
+      return 'bg-red-500 text-white border-red-500';
+    case 'team 2':
+      return 'bg-orange-500 text-white border-orange-500';
+    case 'team 1f':
+      return 'bg-yellow-400 text-black border-yellow-400';
+    case 'team 2f':
+      return 'bg-blue-500 text-white border-blue-500';
+    case 'kjøkken':
+      return 'bg-purple-500 text-white border-purple-500';
+    default:
+      return 'bg-muted text-muted-foreground border-border';
+  }
+};
+
+// Get first name only
+const getFirstName = (fullName: string) => fullName.split(' ')[0];
 
 export function LeaderDetailSheet({ 
   leader, 
@@ -56,7 +78,7 @@ export function LeaderDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl">
+      <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl pb-safe">
         <SheetHeader className="text-left pb-4">
           <div className="flex items-start gap-4">
             <Avatar className="w-20 h-20 border-2 border-primary/20">
@@ -64,19 +86,31 @@ export function LeaderDetailSheet({
                 <AvatarImage src={leader.profile_image_url} alt={leader.name} />
               )}
               <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                {leader.name.slice(0, 2).toUpperCase()}
+                {getFirstName(leader.name).slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1">
-              <SheetTitle className="text-xl">{leader.name}</SheetTitle>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <SheetTitle className="text-xl">{getFirstName(leader.name)}</SheetTitle>
+                {leader.isAdmin && (
+                  <Badge variant="secondary" className="text-xs bg-slate-500 text-white border-slate-500">
+                    Admin
+                  </Badge>
+                )}
+                {leader.isNurse && (
+                  <span className="text-red-600 flex items-center" title="Sykepleier">
+                    <Cross className="w-5 h-5" fill="currentColor" />
+                  </span>
+                )}
+              </div>
               {leader.ministerpost && (
-                <p className="text-sm text-primary font-medium mt-0.5">{leader.ministerpost}</p>
+                <p className="text-sm text-muted-foreground mt-0.5">{leader.ministerpost}</p>
               )}
               <div className="flex flex-wrap gap-1.5 mt-2">
-                {leader.team && <Badge variant="secondary">{leader.team}</Badge>}
+                {leader.team && (
+                  <Badge className={getTeamStyles(leader.team)}>{leader.team}</Badge>
+                )}
                 {leader.cabin && <Badge variant="outline">{leader.cabin}</Badge>}
-                {leader.isAdmin && <Badge>Admin</Badge>}
-                {leader.isNurse && <Badge variant="secondary">Sykepleier</Badge>}
               </div>
             </div>
           </div>

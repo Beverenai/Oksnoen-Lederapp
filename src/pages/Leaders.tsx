@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Phone, Activity } from 'lucide-react';
+import { Users, Phone, Activity, Cross } from 'lucide-react';
 import { LeaderDetailSheet } from '@/components/leaders/LeaderDetailSheet';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -18,6 +18,25 @@ interface LeaderWithContent extends Leader {
   isAdmin?: boolean;
   isNurse?: boolean;
 }
+
+// Team color mapping based on provided design
+const getTeamStyles = (team: string | null): string => {
+  const teamLower = team?.toLowerCase().trim();
+  switch (teamLower) {
+    case 'team 1':
+      return 'bg-red-500 text-white border-red-500';
+    case 'team 2':
+      return 'bg-orange-500 text-white border-orange-500';
+    case 'team 1f':
+      return 'bg-yellow-400 text-black border-yellow-400';
+    case 'team 2f':
+      return 'bg-blue-500 text-white border-blue-500';
+    case 'kjøkken':
+      return 'bg-purple-500 text-white border-purple-500';
+    default:
+      return 'bg-muted text-muted-foreground border-border';
+  }
+};
 
 export default function Leaders() {
   const [leaders, setLeaders] = useState<LeaderWithContent[]>([]);
@@ -77,6 +96,9 @@ export default function Leaders() {
     }
   };
 
+  // Get first name only
+  const getFirstName = (fullName: string) => fullName.split(' ')[0];
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -101,7 +123,7 @@ export default function Leaders() {
         </p>
       </div>
 
-      <div className="grid gap-3">
+      <div className="grid gap-2">
         {leaders.map((leader) => (
           <Card 
             key={leader.id} 
@@ -111,60 +133,75 @@ export default function Leaders() {
             <CardContent className="p-3">
               <div className="flex items-center gap-3">
                 {/* Profile image */}
-                <Avatar className="w-14 h-14 shrink-0">
+                <Avatar className="w-12 h-12 shrink-0">
                   {leader.profile_image_url && (
                     <AvatarImage src={leader.profile_image_url} alt={leader.name} />
                   )}
-                  <AvatarFallback className="bg-primary/10 text-primary text-lg">
-                    {leader.name.slice(0, 2).toUpperCase()}
+                  <AvatarFallback className="bg-primary/10 text-primary text-base">
+                    {getFirstName(leader.name).slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground truncate">
-                    {leader.name}
-                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-foreground">
+                      {getFirstName(leader.name)}
+                    </p>
+                    {leader.isAdmin && (
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-slate-500 text-white border-slate-500">
+                        Admin
+                      </Badge>
+                    )}
+                    {leader.isNurse && (
+                      <span className="text-red-600 flex items-center" title="Sykepleier">
+                        <Cross className="w-4 h-4" fill="currentColor" />
+                      </span>
+                    )}
+                  </div>
+                  
                   {leader.ministerpost && (
-                    <p className="text-xs text-primary font-medium truncate">
+                    <p className="text-xs text-muted-foreground truncate">
                       {leader.ministerpost}
                     </p>
                   )}
                   
-                  {/* Activity */}
+                  {/* Activity - prominent */}
                   {leader.content?.current_activity && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                      <Activity className="w-3 h-3" />
-                      <span className="truncate">{leader.content.current_activity}</span>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <Activity className="w-4 h-4 text-primary shrink-0" />
+                      <span className="text-sm font-medium text-primary truncate">
+                        {leader.content.current_activity}
+                      </span>
                     </div>
                   )}
 
                   {/* Badges */}
                   <div className="flex flex-wrap gap-1 mt-1.5">
                     {leader.team && (
-                      <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                      <Badge className={`text-[10px] px-1.5 py-0 ${getTeamStyles(leader.team)}`}>
                         {leader.team}
                       </Badge>
                     )}
                     {leader.cabin && (
-                      <Badge variant="outline" className="text-xs px-1.5 py-0">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                         {leader.cabin}
                       </Badge>
                     )}
                   </div>
                 </div>
 
-                {/* Call button */}
+                {/* Call button - smaller */}
                 <Button
                   variant="default"
                   size="icon"
-                  className="shrink-0 bg-green-600 hover:bg-green-700 text-white rounded-full h-11 w-11"
+                  className="shrink-0 bg-green-600 hover:bg-green-700 text-white rounded-full h-9 w-9"
                   onClick={(e) => {
                     e.stopPropagation();
                     window.location.href = `tel:${leader.phone}`;
                   }}
                 >
-                  <Phone className="w-5 h-5" />
+                  <Phone className="w-4 h-4" />
                 </Button>
               </div>
             </CardContent>

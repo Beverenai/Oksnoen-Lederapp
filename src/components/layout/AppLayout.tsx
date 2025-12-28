@@ -62,8 +62,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Header - smaller, just menu + logo */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card/95 backdrop-blur-sm border-b border-border z-50 px-4 flex items-center justify-between">
+      {/* Mobile Header - smaller, just menu + logo - with safe area for Dynamic Island */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-b border-border z-50 px-4 pt-safe flex items-center justify-between h-[calc(3.5rem+env(safe-area-inset-top,0px))]">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -285,8 +285,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         })}
       </nav>
 
-      {/* Main Content */}
-      <main className="lg:ml-64 pt-14 lg:pt-0 pb-20 lg:pb-0 min-h-screen">
+      {/* Main Content - adjusted for safe area header */}
+      <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 pb-20 lg:pb-0 min-h-screen">
         <div className="p-4 lg:p-8">
           {children}
         </div>
