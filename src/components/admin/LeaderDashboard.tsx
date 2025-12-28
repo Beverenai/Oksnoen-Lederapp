@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Search, AlertTriangle, Edit, MapPin, FileText } from 'lucide-react';
 import { LeaderContentSheet } from './LeaderContentSheet';
 import type { Tables } from '@/integrations/supabase/types';
+import { cn } from '@/lib/utils';
 
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
@@ -64,16 +65,26 @@ export function LeaderDashboard({ leaders, extraFieldsConfig, onLeaderUpdated, o
   const [selectedLeader, setSelectedLeader] = useState<LeaderWithContent | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [adminNurseIds, setAdminNurseIds] = useState<Set<string>>(new Set());
 
   const activeLeaders = leaders.filter(l => l.is_active !== false && l.phone !== '12345678');
 
-  // Fetch all leader content
+  // Fetch all leader content and roles
   useEffect(() => {
     const fetchContent = async () => {
       setLoading(true);
       const { data: contentData } = await supabase
         .from('leader_content')
         .select('*');
+
+      // Fetch admin and nurse roles to know who should always be "green"
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('leader_id, role')
+        .in('role', ['admin', 'nurse']);
+
+      const adminNurseSet = new Set(rolesData?.map(r => r.leader_id) || []);
+      setAdminNurseIds(adminNurseSet);
 
       const leadersMap = activeLeaders.map(leader => ({
         ...leader,
@@ -165,7 +176,14 @@ export function LeaderDashboard({ leaders, extraFieldsConfig, onLeaderUpdated, o
           return (
             <Card 
               key={leader.id} 
-              className={`relative overflow-hidden transition-all hover:shadow-md cursor-pointer min-h-[220px] ${hasObs ? 'ring-2 ring-destructive/50' : ''}`}
+              className={cn(
+                'relative overflow-hidden transition-all hover:shadow-md cursor-pointer min-h-[220px] ring-2',
+                // Admin/Nurse always green, others based on has_read status
+                adminNurseIds.has(leader.id) || content?.has_read
+                  ? 'ring-green-500'
+                  : 'ring-red-500',
+                hasObs && 'ring-destructive/50'
+              )}
               onClick={() => handleEditClick(leader)}
             >
               <CardContent className="p-4 h-full flex flex-col">

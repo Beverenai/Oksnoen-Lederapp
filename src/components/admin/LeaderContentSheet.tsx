@@ -174,6 +174,7 @@ export function LeaderContentSheet({
         extra_3: extra3 || null,
         extra_4: extra4 || null,
         extra_5: extra5 || null,
+        has_read: false, // Reset when content is changed
         updated_at: new Date().toISOString()
       };
 
