@@ -1,1 +1,10 @@
 project_id = "noxnbtvxksgjsqzfdgcd"
+
+[functions.sync-leaders-export]
+verify_jwt = false
+
+[functions.sync-leaders-import]
+verify_jwt = false
+
+[functions.trigger-sync]
+verify_jwt = false
