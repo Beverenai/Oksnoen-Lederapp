@@ -250,7 +250,7 @@ export default function Admin() {
   };
 
   const deactivateAllLeaders = async () => {
-    if (!confirm('Er du sikker på at du vil deaktivere alle ledere? De vil ikke kunne logge inn før de aktiveres igjen.')) return;
+    if (!confirm('Reset periode: Dette vil deaktivere alle nåværende ledere.\n\nNår du syncer nye ledere, vil de som matcher (basert på telefonnummer) automatisk bli aktivert igjen med sin lagrede info (profilbilde, notater osv).')) return;
 
     setIsDeactivating(true);
     try {
@@ -1350,9 +1350,9 @@ export default function Admin() {
                   {isDeactivating ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : (
-                    <UserX className="w-4 h-4 mr-2" />
+                    <RefreshCw className="w-4 h-4 mr-2" />
                   )}
-                  Deaktiver alle
+                  Reset periode
                 </Button>
                 <Button 
                   variant="outline" 

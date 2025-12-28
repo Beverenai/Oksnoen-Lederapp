@@ -103,8 +103,10 @@ serve(async (req) => {
       } else {
         leaderId = existingLeader.id;
 
-        // Update leader info if provided
-        const updateData: Record<string, unknown> = {};
+        // Update leader info if provided - always reactivate on sync
+        const updateData: Record<string, unknown> = {
+          is_active: true,  // Reactivate leader when synced
+        };
         if (leader.name) updateData.name = leader.name;
         if (leader.email) updateData.email = leader.email;
         if (leader.team) updateData.team = leader.team;
