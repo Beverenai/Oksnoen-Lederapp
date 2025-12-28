@@ -442,16 +442,9 @@ export default function Leaders() {
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-foreground">
-                      {getFirstName(leader.name)}
-                    </p>
-                    {leader.isAdmin && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-slate-500 text-white border-slate-500">
-                        Admin
-                      </Badge>
-                    )}
-                  </div>
+                  <p className="font-semibold text-foreground">
+                    {getFirstName(leader.name)}
+                  </p>
                   
                   {leader.ministerpost && (
                     <p className="text-xs text-muted-foreground truncate">
