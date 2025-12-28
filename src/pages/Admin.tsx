@@ -906,47 +906,87 @@ export default function Admin() {
               <div className="space-y-2">
                 <p className="text-sm font-medium">Google Sheet-kolonner:</p>
                 <code className="block text-xs bg-muted p-3 rounded overflow-x-auto">
-                  Tlf | Navn | Hytte Ansvar | Ministerpost | Team
+                  Tlf | Navn | Hytte Ansvar | Ministerpost | Team | Aktivitet | Notater Til deg | OBS! | Ekstra #1 | Ekstra #2 | Ekstra #3 | Ekstra #4 | Ekstra #5
                 </code>
               </div>
               
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 px-3 font-medium">Google Sheet-kolonne</th>
-                      <th className="text-left py-2 px-3 font-medium">Database-felt</th>
-                      <th className="text-left py-2 px-3 font-medium">Beskrivelse</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    <tr>
-                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Tlf</code></td>
-                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">phone</code></td>
-                      <td className="py-2 px-3 text-muted-foreground">Unik ID for å matche ledere (påkrevd)</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Navn</code></td>
-                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">name</code></td>
-                      <td className="py-2 px-3 text-muted-foreground">Fullt navn (påkrevd for nye ledere)</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Hytte Ansvar</code></td>
-                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">cabin_info</code></td>
-                      <td className="py-2 px-3 text-muted-foreground">Hvilken hytte lederen har ansvar for</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Ministerpost</code></td>
-                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">ministerpost</code></td>
-                      <td className="py-2 px-3 text-muted-foreground">Lederens rolle/stilling</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Team</code></td>
-                      <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">team</code></td>
-                      <td className="py-2 px-3 text-muted-foreground">Hvilket team lederen tilhører</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Lederinfo (leaders-tabellen):</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 px-3 font-medium">Google Sheet</th>
+                        <th className="text-left py-2 px-3 font-medium">JSON-felt</th>
+                        <th className="text-left py-2 px-3 font-medium">Beskrivelse</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      <tr>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Tlf</code></td>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">phone</code></td>
+                        <td className="py-2 px-3 text-muted-foreground">Unik ID for å matche ledere <Badge variant="destructive" className="ml-1 text-[10px]">Påkrevd</Badge></td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Navn</code></td>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">name</code></td>
+                        <td className="py-2 px-3 text-muted-foreground">Fullt navn <Badge variant="destructive" className="ml-1 text-[10px]">Påkrevd for nye</Badge></td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Hytte Ansvar</code></td>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">cabin_info</code></td>
+                        <td className="py-2 px-3 text-muted-foreground">Hvilken hytte lederen har ansvar for</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Ministerpost</code></td>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">ministerpost</code></td>
+                        <td className="py-2 px-3 text-muted-foreground">Lederens rolle/stilling</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Team</code></td>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">team</code></td>
+                        <td className="py-2 px-3 text-muted-foreground">Hvilket team lederen tilhører</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Innhold (leader_content-tabellen):</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 px-3 font-medium">Google Sheet</th>
+                        <th className="text-left py-2 px-3 font-medium">JSON-felt</th>
+                        <th className="text-left py-2 px-3 font-medium">Beskrivelse</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      <tr>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Aktivitet</code></td>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">current_activity</code></td>
+                        <td className="py-2 px-3 text-muted-foreground">Nåværende aktivitet</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Notater Til deg</code></td>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">personal_notes</code></td>
+                        <td className="py-2 px-3 text-muted-foreground">Personlige notater</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">OBS!</code></td>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">obs_message</code></td>
+                        <td className="py-2 px-3 text-muted-foreground">OBS-melding</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Ekstra #1-5</code></td>
+                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">extra_1 - extra_5</code></td>
+                        <td className="py-2 px-3 text-muted-foreground">Konfigurerbare ekstra-felt</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
@@ -1158,33 +1198,50 @@ export default function Admin() {
                   <h4 className="font-semibold">n8n Workflow oppsett:</h4>
                   
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">n8n AI Builder prompt:</p>
-                    <code className="block text-xs bg-background p-2 rounded whitespace-pre-wrap">
-{`Lag en workflow som:
-1. Starter med Webhook trigger
-2. Henter alle rader fra Google Sheets
-3. Transformerer hver rad til dette format:
-   {
-     phone: [Tlf - fjern mellomrom],
-     name: [Navn],
-     cabin_info: [Hytte Ansvar],
-     ministerpost: [Ministerpost],
-     team: [Team]
-   }
-4. Sender HTTP POST til:
-   https://noxnbtvxksgjsqzfdgcd.supabase.co/functions/v1/sync-leaders-import
-   
-   Med body: { "leaders": [array av transformerte objekter] }`}
+                    <p className="text-sm font-medium">Komplett JSON-format for HTTP Request body:</p>
+                    <code className="block text-xs bg-background p-3 rounded whitespace-pre-wrap overflow-x-auto">
+{`{
+  "leaders": [
+    {
+      "phone": {{ $json['Tlf'].replace(/\\s/g, '') }},
+      "name": {{ $json['Navn'] }},
+      "cabin_info": {{ $json['Hytte Ansvar'] }},
+      "ministerpost": {{ $json['Ministerpost'] }},
+      "team": {{ $json['Team'] }},
+      "current_activity": {{ $json['Aktivitet'] }},
+      "personal_notes": {{ $json['Notater Til deg'] }},
+      "obs_message": {{ $json['OBS!'] }},
+      "extra_1": {{ $json['Ekstra #1'] }},
+      "extra_2": {{ $json['Ekstra #2'] }},
+      "extra_3": {{ $json['Ekstra #3'] }},
+      "extra_4": {{ $json['Ekstra #4'] }},
+      "extra_5": {{ $json['Ekstra #5'] }}
+    }
+  ]
+}`}
                     </code>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Endpoint:</p>
+                    <code className="block text-xs bg-background p-2 rounded break-all">
+                      POST https://noxnbtvxksgjsqzfdgcd.supabase.co/functions/v1/sync-leaders-import
+                    </code>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                    <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                      <strong>n8n Tips:</strong> Bruk bracket-notation <code className="bg-background px-1 rounded">$json['kolonne']</code> for kolonner med mellomrom eller spesialtegn (f.eks. "Hytte Ansvar", "OBS!", "Ekstra #1").
+                    </p>
                   </div>
 
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Viktig:</p>
                     <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
-                      <li>Send alltid alle ledere fra Google Sheet</li>
-                      <li>Nye ledere opprettes automatisk (krever navn + telefon)</li>
-                      <li>Eksisterende ledere oppdateres basert på telefonnummer</li>
-                      <li>Telefonnummer uten mellomrom brukes som unik nøkkel</li>
+                      <li><strong>phone</strong> og <strong>name</strong> er påkrevd for nye ledere</li>
+                      <li>Telefonnummer brukes som unik nøkkel for matching</li>
+                      <li>Eksisterende ledere oppdateres, nye opprettes automatisk</li>
+                      <li>Alle innholdsfelt (Aktivitet, Notater, OBS!, Ekstra) er valgfrie</li>
                     </ul>
                   </div>
                 </div>
