@@ -17,13 +17,15 @@ import {
   Home,
   ChevronDown,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { differenceInYears } from 'date-fns';
 import type { Tables } from '@/integrations/supabase/types';
 import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
+import { CabinReportSheet } from '@/components/leaders/CabinReportSheet';
 
 type Participant = Tables<'participants'>;
 type Cabin = Tables<'cabins'>;
@@ -51,6 +53,8 @@ export default function MyCabins() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
+  const [cabinReportOpen, setCabinReportOpen] = useState(false);
+  const [selectedCabinForReport, setSelectedCabinForReport] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     loadData();
@@ -143,6 +147,11 @@ export default function MyCabins() {
     }
   };
 
+  const openCabinReport = (cabin: LeaderCabin) => {
+    setSelectedCabinForReport([{ id: cabin.id, name: cabin.name }]);
+    setCabinReportOpen(true);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -228,9 +237,23 @@ export default function MyCabins() {
                         <Home className="w-5 h-5 text-primary" />
                         <CardTitle className="text-lg">{cabin.name}</CardTitle>
                       </div>
-                      <Badge variant="outline">
-                        {cabinArrived}/{cabin.participants.length} ankommet
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openCabinReport(cabin);
+                          }}
+                        >
+                          <FileText className="w-4 h-4" />
+                          Rapport
+                        </Button>
+                        <Badge variant="outline">
+                          {cabinArrived}/{cabin.participants.length} ankommet
+                        </Badge>
+                      </div>
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -459,6 +482,14 @@ export default function MyCabins() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Cabin Report Sheet */}
+      <CabinReportSheet
+        open={cabinReportOpen}
+        onOpenChange={setCabinReportOpen}
+        cabins={selectedCabinForReport}
+        leaderId={leader?.id}
+      />
     </div>
   );
 }

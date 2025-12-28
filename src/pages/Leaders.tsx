@@ -8,7 +8,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Users, Phone, Activity, Cross, ArrowUpDown, Check, Search, X, Home } from 'lucide-react';
 import { LeaderDetailSheet } from '@/components/leaders/LeaderDetailSheet';
-import { CabinReportSheet } from '@/components/leaders/CabinReportSheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,11 +89,6 @@ export default function Leaders() {
   const [sortBy, setSortBy] = useState<SortOption>('activity'); // Default to activity
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  
-  // Cabin report sheet state
-  const [cabinReportOpen, setCabinReportOpen] = useState(false);
-  const [selectedCabins, setSelectedCabins] = useState<CabinInfo[]>([]);
-  const [selectedLeaderId, setSelectedLeaderId] = useState<string | null>(null);
 
   useEffect(() => {
     loadLeaders();
@@ -175,16 +169,6 @@ export default function Leaders() {
   const formatCabinsDisplay = (cabins: CabinInfo[] | undefined): string => {
     if (!cabins || cabins.length === 0) return '';
     return cabins.map(c => c.name).join(' + ');
-  };
-  
-  // Handle cabin badge click
-  const handleCabinClick = (e: React.MouseEvent, leader: LeaderWithContent) => {
-    e.stopPropagation();
-    if (leader.linkedCabins && leader.linkedCabins.length > 0) {
-      setSelectedCabins(leader.linkedCabins);
-      setSelectedLeaderId(leader.id);
-      setCabinReportOpen(true);
-    }
   };
 
   // Get teams for filter chips (only show FILTER_TEAMS that are in use)
@@ -474,8 +458,7 @@ export default function Leaders() {
                     {leader.linkedCabins && leader.linkedCabins.length > 0 ? (
                       <Badge 
                         variant="outline" 
-                        className="text-[10px] px-1.5 py-0 cursor-pointer hover:bg-accent flex items-center gap-1"
-                        onClick={(e) => handleCabinClick(e, leader)}
+                        className="text-[10px] px-1.5 py-0 flex items-center gap-1"
                       >
                         <Home className="w-3 h-3" />
                         {formatCabinsDisplay(leader.linkedCabins)}
@@ -542,19 +525,6 @@ export default function Leaders() {
         open={!!selectedLeader}
         onOpenChange={(open) => !open && setSelectedLeader(null)}
         extraFieldsConfig={extraFieldsConfig}
-        onCabinClick={(cabins, leaderId) => {
-          setSelectedCabins(cabins);
-          setSelectedLeaderId(leaderId);
-          setCabinReportOpen(true);
-        }}
-      />
-      
-      {/* Cabin report sheet */}
-      <CabinReportSheet
-        open={cabinReportOpen}
-        onOpenChange={setCabinReportOpen}
-        cabins={selectedCabins}
-        leaderId={selectedLeaderId || undefined}
       />
     </div>
   );
