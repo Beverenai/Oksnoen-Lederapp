@@ -4,8 +4,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
 import AppLayout from "@/components/layout/AppLayout";
 import Login from "@/pages/Login";
+import Install from "@/pages/Install";
+import Onboarding from "@/pages/Onboarding";
 import Home from "@/pages/Home";
 import Profile from "@/pages/Profile";
 import Leaders from "@/pages/Leaders";
@@ -26,7 +29,7 @@ import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { leader, isLoading } = useAuth();
+  const { leader, isLoading, isProfileComplete } = useAuth();
 
   if (isLoading) {
     return (
@@ -40,11 +43,40 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
+  // Redirect to onboarding if profile is not complete
+  if (!isProfileComplete) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   return <AppLayout>{children}</AppLayout>;
 }
 
+function OnboardingRoute({ children }: { children: React.ReactNode }) {
+  const { leader, isLoading, isProfileComplete } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Laster...</div>
+      </div>
+    );
+  }
+
+  if (!leader) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If profile is already complete, redirect to home
+  if (isProfileComplete) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function AppRoutes() {
-  const { leader, isLoading } = useAuth();
+  const { leader, isLoading, isProfileComplete } = useAuth();
+  const { isInstalled, hasDeclined } = usePWAInstall();
 
   if (isLoading) {
     return (
@@ -56,10 +88,42 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {/* Install route - shown first for non-installed users who haven't logged in */}
+      <Route 
+        path="/install" 
+        element={
+          leader ? (
+            isProfileComplete ? <Navigate to="/" replace /> : <Navigate to="/onboarding" replace />
+          ) : (
+            <Install />
+          )
+        } 
+      />
+      
+      {/* Login route */}
       <Route 
         path="/login" 
-        element={leader ? <Navigate to="/" replace /> : <Login />} 
+        element={
+          leader ? (
+            isProfileComplete ? <Navigate to="/" replace /> : <Navigate to="/onboarding" replace />
+          ) : (
+            // Show install page first if not installed and not declined
+            !isInstalled && !hasDeclined ? <Navigate to="/install" replace /> : <Login />
+          )
+        } 
       />
+
+      {/* Onboarding route - requires login but not complete profile */}
+      <Route
+        path="/onboarding"
+        element={
+          <OnboardingRoute>
+            <Onboarding />
+          </OnboardingRoute>
+        }
+      />
+
+      {/* Protected routes */}
       <Route
         path="/"
         element={
