@@ -569,7 +569,7 @@ export default function Admin() {
       {/* Leader Dashboard */}
       <LeaderDashboard
         leaders={leaders}
-        extraFieldsConfig={localExtraConfig}
+        homeConfig={localHomeConfig}
         onLeaderUpdated={loadData}
         onScheduleAutoExport={scheduleAutoExport}
       />

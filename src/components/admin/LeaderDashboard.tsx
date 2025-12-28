@@ -14,15 +14,14 @@ import { cn } from '@/lib/utils';
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
 
-type ExtraFieldConfig = {
+type HomeScreenConfigItem = {
   id: string;
-  field_key: string;
-  title: string;
-  icon: string;
+  element_key: string;
+  label: string;
+  title: string | null;
+  icon: string | null;
   is_visible: boolean | null;
   sort_order: number | null;
-  created_at?: string | null;
-  updated_at?: string | null;
 };
 
 interface LeaderWithContent extends Leader {
@@ -72,12 +71,12 @@ const getFirstName = (fullName: string) => fullName.split(' ')[0];
 
 interface LeaderDashboardProps {
   leaders: Leader[];
-  extraFieldsConfig: ExtraFieldConfig[];
+  homeConfig: HomeScreenConfigItem[];
   onLeaderUpdated: () => void;
   onScheduleAutoExport: () => void;
 }
 
-export function LeaderDashboard({ leaders, extraFieldsConfig, onLeaderUpdated, onScheduleAutoExport }: LeaderDashboardProps) {
+export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onScheduleAutoExport }: LeaderDashboardProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [leadersWithContent, setLeadersWithContent] = useState<LeaderWithContent[]>([]);
   const [selectedLeader, setSelectedLeader] = useState<LeaderWithContent | null>(null);
@@ -309,7 +308,7 @@ export function LeaderDashboard({ leaders, extraFieldsConfig, onLeaderUpdated, o
         leader={selectedLeader}
         open={isSheetOpen}
         onOpenChange={setIsSheetOpen}
-        extraFieldsConfig={extraFieldsConfig}
+        homeConfig={homeConfig}
         onSaved={handleContentSaved}
       />
     </div>

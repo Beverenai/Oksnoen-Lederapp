@@ -18,15 +18,14 @@ import type { Tables } from '@/integrations/supabase/types';
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
 
-type ExtraFieldConfig = {
+type HomeScreenConfigItem = {
   id: string;
-  field_key: string;
-  title: string;
-  icon: string;
+  element_key: string;
+  label: string;
+  title: string | null;
+  icon: string | null;
   is_visible: boolean | null;
   sort_order: number | null;
-  created_at?: string | null;
-  updated_at?: string | null;
 };
 
 interface LeaderWithContent extends Leader {
@@ -37,7 +36,7 @@ interface LeaderContentSheetProps {
   leader: LeaderWithContent | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  extraFieldsConfig: ExtraFieldConfig[];
+  homeConfig: HomeScreenConfigItem[];
   onSaved: () => void;
 }
 
@@ -78,7 +77,7 @@ export function LeaderContentSheet({
   leader,
   open,
   onOpenChange,
-  extraFieldsConfig,
+  homeConfig,
   onSaved
 }: LeaderContentSheetProps) {
   const [saving, setSaving] = useState(false);
@@ -125,8 +124,9 @@ export function LeaderContentSheet({
 
   if (!leader) return null;
 
-  const visibleExtraFields = extraFieldsConfig
-    .filter(c => c.is_visible)
+  // Filter home_screen_config to get visible extra fields (extra_1 through extra_5)
+  const visibleExtraFields = homeConfig
+    .filter(c => c.element_key.startsWith('extra_') && c.is_visible)
     .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
   const getExtraFieldValue = (fieldKey: string) => {
@@ -382,12 +382,12 @@ export function LeaderContentSheet({
                 {visibleExtraFields.map(field => (
                   <div key={field.id} className="space-y-2">
                     <Label className="flex items-center gap-2">
-                      {getIcon(field.icon)}
-                      {field.title || field.field_key}
+                      {getIcon(field.icon || 'info')}
+                      {field.title || field.label || field.element_key}
                     </Label>
                     <Textarea
-                      value={getExtraFieldValue(field.field_key)}
-                      onChange={(e) => setExtraFieldValue(field.field_key, e.target.value)}
+                      value={getExtraFieldValue(field.element_key)}
+                      onChange={(e) => setExtraFieldValue(field.element_key, e.target.value)}
                       placeholder={`Skriv ${field.title?.toLowerCase() || 'info'}...`}
                       rows={2}
                     />
