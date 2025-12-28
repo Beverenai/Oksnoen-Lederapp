@@ -470,17 +470,17 @@ export default function AdminSettings() {
 
       <Tabs defaultValue="leaders" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
-          <TabsTrigger value="setup" className="gap-2">
-            <Settings className="w-4 h-4 hidden sm:block" />
-            Oppsett
+          <TabsTrigger value="leaders" className="gap-2">
+            <Users className="w-4 h-4 hidden sm:block" />
+            Ledere
           </TabsTrigger>
           <TabsTrigger value="sync" className="gap-2">
             <RefreshCw className="w-4 h-4 hidden sm:block" />
             Synk
           </TabsTrigger>
-          <TabsTrigger value="leaders" className="gap-2">
-            <Users className="w-4 h-4 hidden sm:block" />
-            Ledere
+          <TabsTrigger value="setup" className="gap-2">
+            <Settings className="w-4 h-4 hidden sm:block" />
+            Oppsett
           </TabsTrigger>
         </TabsList>
 
@@ -918,12 +918,16 @@ export default function AdminSettings() {
             </CardContent>
           </Card>
 
-          {/* Leader Overview in Sync Tab */}
+        </TabsContent>
+
+        {/* Leaders Tab */}
+        <TabsContent value="leaders" className="space-y-4">
+          {/* Leader Overview Stats and Actions */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5" />
-                Leder-oversikt ({leaders.filter(l => l.phone !== '12345678').length})
+                Ledere ({leaders.filter(l => l.phone !== '12345678').length})
               </CardTitle>
               <CardDescription className="flex flex-wrap gap-2 items-center">
                 <span>Aktive: {leaders.filter(l => l.is_active !== false && l.phone !== '12345678').length}</span>
@@ -933,6 +937,19 @@ export default function AdminSettings() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={deactivateAllLeaders}
+                  disabled={isDeactivating}
+                >
+                  {isDeactivating ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Users className="w-4 h-4 mr-2" />
+                  )}
+                  Deaktiver alle
+                </Button>
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -947,7 +964,19 @@ export default function AdminSettings() {
                   Aktiver alle
                 </Button>
               </div>
+
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Søk etter leder..."
+                  value={leaderSearch}
+                  onChange={(e) => setLeaderSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
               
+              {/* Leaders Table */}
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -962,7 +991,13 @@ export default function AdminSettings() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {leaders.filter(l => l.phone !== '12345678').map((leader) => (
+                    {leaders
+                      .filter((leader) =>
+                        leader.phone !== '12345678' &&
+                        (leader.name.toLowerCase().includes(leaderSearch.toLowerCase()) ||
+                        leader.phone.includes(leaderSearch))
+                      )
+                      .map((leader) => (
                       <tr 
                         key={leader.id} 
                         className={`hover:bg-muted/50 cursor-pointer ${leader.is_active === false ? 'opacity-50' : ''}`}
@@ -1010,18 +1045,16 @@ export default function AdminSettings() {
                     ))}
                   </tbody>
                 </table>
-                {leaders.length === 0 && (
+                {leaders.filter(l => l.phone !== '12345678').length === 0 && (
                   <p className="text-muted-foreground text-center py-8">
-                    Ingen ledere importert enda. Sett opp webhook og kjør første synkronisering.
+                    Ingen ledere registrert enda
                   </p>
                 )}
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        {/* Leaders Tab */}
-        <TabsContent value="leaders" className="space-y-4">
+          {/* Add New Leader */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1062,73 +1095,6 @@ export default function AdminSettings() {
                 <Plus className="w-4 h-4 mr-2" />
                 Legg til leder
               </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Alle ledere ({leaders.filter(l => l.phone !== '12345678').length})</CardTitle>
-              <CardDescription>
-                Klikk på en leder for å redigere profil og rolle
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Søk etter leder..."
-                  value={leaderSearch}
-                  onChange={(e) => setLeaderSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <div className="space-y-2">
-                {leaders
-                  .filter((leader) =>
-                    leader.phone !== '12345678' &&
-                    (leader.name.toLowerCase().includes(leaderSearch.toLowerCase()) ||
-                    leader.phone.includes(leaderSearch))
-                  )
-                  .map((leader) => (
-                  <div
-                    key={leader.id}
-                    onClick={() => {
-                      setEditingLeader(leader);
-                      setIsEditDialogOpen(true);
-                    }}
-                    className={`flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors ${leader.is_active === false ? 'opacity-50' : ''}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{leader.name}</p>
-                          {leader.is_active === false && (
-                            <Badge variant="outline" className="text-xs">Inaktiv</Badge>
-                          )}
-                          {leader.role === 'admin' && (
-                            <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">
-                              <Shield className="w-3 h-3 mr-1" />
-                              Admin
-                            </Badge>
-                          )}
-                          {leader.role === 'nurse' && (
-                            <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-                              <Heart className="w-3 h-3 mr-1" />
-                              Sykepleier
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">{leader.phone}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {leaders.filter(l => l.phone !== '12345678').length === 0 && (
-                  <p className="text-muted-foreground text-center py-4">
-                    Ingen ledere registrert enda
-                  </p>
-                )}
-              </div>
             </CardContent>
           </Card>
 
