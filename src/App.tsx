@@ -13,6 +13,7 @@ import Team from "@/pages/Team";
 import Passport from "@/pages/Passport";
 import Wall from "@/pages/Wall";
 import Admin from "@/pages/Admin";
+import AdminSettings from "@/pages/AdminSettings";
 import Nurse from "@/pages/Nurse";
 import Fix from "@/pages/Fix";
 import ComingSoon from "@/pages/ComingSoon";
@@ -140,6 +141,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Admin />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/settings"
+        element={
+          <ProtectedRoute>
+            <AdminSettings />
           </ProtectedRoute>
         }
       />
