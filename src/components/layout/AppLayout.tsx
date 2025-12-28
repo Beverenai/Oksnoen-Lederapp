@@ -12,7 +12,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -32,12 +33,16 @@ const navItems = [
   { to: '/wall', icon: Megaphone, label: 'Den store veggen' },
 ];
 
+const nurseNavItems = [
+  { to: '/nurse', icon: Heart, label: 'Sykepleier' },
+];
+
 const adminNavItems = [
   { to: '/admin', icon: Settings, label: 'Admin' },
 ];
 
 export default function AppLayout({ children }: AppLayoutProps) {
-  const { leader, isAdmin, logout } = useAuth();
+  const { leader, isAdmin, isNurse, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -86,14 +91,31 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </NavLink>
           ))}
           
-          {isAdmin && (
+          {(isAdmin || isNurse) && (
             <>
               <div className="pt-4 pb-2">
                 <span className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Administrasjon
+                  Spesielle tilganger
                 </span>
               </div>
-              {adminNavItems.map((item) => (
+              {(isAdmin || isNurse) && nurseNavItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-foreground hover:bg-muted'
+                    )
+                  }
+                >
+                  <item.icon className="w-5 h-5" />
+                  {item.label}
+                </NavLink>
+              ))}
+              {isAdmin && adminNavItems.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -161,14 +183,32 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </NavLink>
           ))}
           
-          {isAdmin && (
+          {(isAdmin || isNurse) && (
             <>
               <div className="pt-4 pb-2">
                 <span className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Administrasjon
+                  Spesielle tilganger
                 </span>
               </div>
-              {adminNavItems.map((item) => (
+              {(isAdmin || isNurse) && nurseNavItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-foreground hover:bg-muted'
+                    )
+                  }
+                >
+                  <item.icon className="w-5 h-5" />
+                  {item.label}
+                </NavLink>
+              ))}
+              {isAdmin && adminNavItems.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}

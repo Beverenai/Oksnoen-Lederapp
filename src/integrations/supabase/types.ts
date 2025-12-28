@@ -87,6 +87,7 @@ export type Database = {
           id: string
           leader_id: string
           obs_message: string | null
+          personal_message: string | null
           personal_notes: string | null
           updated_at: string | null
         }
@@ -96,6 +97,7 @@ export type Database = {
           id?: string
           leader_id: string
           obs_message?: string | null
+          personal_message?: string | null
           personal_notes?: string | null
           updated_at?: string | null
         }
@@ -105,6 +107,7 @@ export type Database = {
           id?: string
           leader_id?: string
           obs_message?: string | null
+          personal_message?: string | null
           personal_notes?: string | null
           updated_at?: string | null
         }
@@ -120,27 +123,63 @@ export type Database = {
       }
       leaders: {
         Row: {
+          age: number | null
           cabin: string | null
+          cabin_info: string | null
+          can_climbing: boolean | null
+          can_rappelling: boolean | null
+          can_rope_setup: boolean | null
+          can_zipline: boolean | null
           created_at: string | null
+          email: string | null
+          has_boat_license: boolean | null
+          has_drivers_license: boolean | null
           id: string
+          ministerpost: string | null
           name: string
           phone: string
+          profile_image_url: string | null
+          team: string | null
           updated_at: string | null
         }
         Insert: {
+          age?: number | null
           cabin?: string | null
+          cabin_info?: string | null
+          can_climbing?: boolean | null
+          can_rappelling?: boolean | null
+          can_rope_setup?: boolean | null
+          can_zipline?: boolean | null
           created_at?: string | null
+          email?: string | null
+          has_boat_license?: boolean | null
+          has_drivers_license?: boolean | null
           id?: string
+          ministerpost?: string | null
           name: string
           phone: string
+          profile_image_url?: string | null
+          team?: string | null
           updated_at?: string | null
         }
         Update: {
+          age?: number | null
           cabin?: string | null
+          cabin_info?: string | null
+          can_climbing?: boolean | null
+          can_rappelling?: boolean | null
+          can_rope_setup?: boolean | null
+          can_zipline?: boolean | null
           created_at?: string | null
+          email?: string | null
+          has_boat_license?: boolean | null
+          has_drivers_license?: boolean | null
           id?: string
+          ministerpost?: string | null
           name?: string
           phone?: string
+          profile_image_url?: string | null
+          team?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -167,6 +206,93 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "participant_activities_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      participant_health_events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string
+          event_type: string
+          id: string
+          participant_id: string
+          severity: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description: string
+          event_type: string
+          id?: string
+          participant_id: string
+          severity?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          event_type?: string
+          id?: string
+          participant_id?: string
+          severity?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_health_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_health_events_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      participant_health_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          participant_id: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          participant_id: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          participant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_health_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_health_notes_participant_id_fkey"
             columns: ["participant_id"]
             isOneToOne: false
             referencedRelation: "participants"
@@ -288,7 +414,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "leader"
+      app_role: "admin" | "leader" | "nurse"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -416,7 +542,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "leader"],
+      app_role: ["admin", "leader", "nurse"],
     },
   },
 } as const

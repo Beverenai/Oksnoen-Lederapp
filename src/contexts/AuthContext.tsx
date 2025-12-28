@@ -3,11 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
-type AppRole = 'admin' | 'leader';
+type AppRole = 'admin' | 'leader' | 'nurse';
 
 interface AuthContextType {
   leader: Leader | null;
   isAdmin: boolean;
+  isNurse: boolean;
   isLoading: boolean;
   login: (phone: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [leader, setLeader] = useState<Leader | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isNurse, setIsNurse] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -45,15 +47,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setLeader(leaderData);
 
-      // Check if admin
-      const { data: roleData } = await supabase
+      // Check roles
+      const { data: rolesData } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('leader_id', leaderId)
-        .eq('role', 'admin')
-        .maybeSingle();
+        .eq('leader_id', leaderId);
 
-      setIsAdmin(!!roleData);
+      const roles = rolesData?.map(r => r.role) || [];
+      setIsAdmin(roles.includes('admin'));
+      setIsNurse(roles.includes('nurse'));
     } catch (error) {
       console.error('Error loading leader:', error);
     } finally {
@@ -81,15 +83,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('leaderId', data.id);
     setLeader(data);
 
-    // Check if admin
-    const { data: roleData } = await supabase
+    // Check roles
+    const { data: rolesData } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('leader_id', data.id)
-      .eq('role', 'admin')
-      .maybeSingle();
+      .eq('leader_id', data.id);
 
-    setIsAdmin(!!roleData);
+    const roles = rolesData?.map(r => r.role) || [];
+    setIsAdmin(roles.includes('admin'));
+    setIsNurse(roles.includes('nurse'));
+    
     return { success: true };
   };
 
@@ -97,10 +100,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('leaderId');
     setLeader(null);
     setIsAdmin(false);
+    setIsNurse(false);
   };
 
   return (
-    <AuthContext.Provider value={{ leader, isAdmin, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ leader, isAdmin, isNurse, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
