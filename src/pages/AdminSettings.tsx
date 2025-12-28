@@ -468,7 +468,7 @@ export default function AdminSettings() {
         </div>
       </div>
 
-      <Tabs defaultValue="setup" className="space-y-4">
+      <Tabs defaultValue="leaders" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
           <TabsTrigger value="setup" className="gap-2">
             <Settings className="w-4 h-4 hidden sm:block" />
