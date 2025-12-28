@@ -534,6 +534,57 @@ export default function Admin() {
     }
   };
 
+  // Default home config values for reset functionality
+  const DEFAULT_HOME_CONFIG: Record<string, {
+    title: string;
+    icon: string;
+    bg_color: string;
+    text_size: string;
+    is_bold: boolean;
+    is_italic: boolean;
+    is_visible: boolean;
+    sort_order: number;
+  }> = {
+    current_activity: { title: 'Denne økten skal du:', icon: 'activity', bg_color: 'green', text_size: 'lg', is_bold: false, is_italic: false, is_visible: true, sort_order: 0 },
+    extra_activity: { title: 'Ekstra aktivitet', icon: 'plus', bg_color: 'default', text_size: 'sm', is_bold: false, is_italic: false, is_visible: true, sort_order: 1 },
+    personal_notes: { title: 'Notater til deg', icon: 'message', bg_color: 'blue', text_size: 'md', is_bold: false, is_italic: false, is_visible: true, sort_order: 2 },
+    obs_message: { title: 'OBS', icon: 'alert-triangle', bg_color: 'yellow', text_size: 'sm', is_bold: false, is_italic: false, is_visible: true, sort_order: 3 },
+    session_activities: { title: 'Aktiviteter denne økten', icon: 'calendar', bg_color: 'default', text_size: 'md', is_bold: false, is_italic: false, is_visible: true, sort_order: 4 },
+    extra_1: { title: 'Ekstra 1', icon: 'info', bg_color: 'default', text_size: 'md', is_bold: false, is_italic: false, is_visible: true, sort_order: 5 },
+    extra_2: { title: 'Ekstra 2', icon: 'info', bg_color: 'default', text_size: 'md', is_bold: false, is_italic: false, is_visible: true, sort_order: 6 },
+    extra_3: { title: 'Ekstra 3', icon: 'info', bg_color: 'default', text_size: 'md', is_bold: false, is_italic: false, is_visible: true, sort_order: 7 },
+    extra_4: { title: 'Ekstra 4', icon: 'info', bg_color: 'default', text_size: 'md', is_bold: false, is_italic: false, is_visible: true, sort_order: 8 },
+    extra_5: { title: 'Ekstra 5', icon: 'info', bg_color: 'default', text_size: 'md', is_bold: false, is_italic: false, is_visible: true, sort_order: 9 },
+  };
+
+  // Reset home config to default values
+  const resetHomeConfig = () => {
+    const resetConfig = localHomeConfig.map(cfg => {
+      const defaults = DEFAULT_HOME_CONFIG[cfg.element_key];
+      if (defaults) {
+        return {
+          ...cfg,
+          title: defaults.title,
+          icon: defaults.icon,
+          bg_color: defaults.bg_color,
+          text_size: defaults.text_size,
+          is_bold: defaults.is_bold,
+          is_italic: defaults.is_italic,
+          is_visible: defaults.is_visible,
+          sort_order: defaults.sort_order,
+        };
+      }
+      return cfg;
+    });
+    
+    // Sort by sort_order
+    resetConfig.sort((a, b) => a.sort_order - b.sort_order);
+    
+    setLocalHomeConfig(resetConfig);
+    setHasUnsavedConfigChanges(true);
+    toast.info('Konfigurasjon tilbakestilt til standard. Klikk "Lagre endringer" for å bekrefte.');
+  };
+
   // Local state updates for home config (without saving to DB)
   const updateLocalHomeConfig = (configId: string, updates: Partial<HomeScreenConfig>) => {
     setLocalHomeConfig(prev => prev.map(cfg => 
@@ -828,16 +879,22 @@ export default function Admin() {
                     Konfigurer tittel, ikon og synlighet for hvert element på hjemskjermen
                   </CardDescription>
                 </div>
-                {hasUnsavedConfigChanges && (
-                  <Button onClick={saveAllConfigChanges} disabled={isSavingConfig}>
-                    {isSavingConfig ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4 mr-2" />
-                    )}
-                    Lagre endringer
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={resetHomeConfig}>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Tilbakestill til standard
                   </Button>
-                )}
+                  {hasUnsavedConfigChanges && (
+                    <Button onClick={saveAllConfigChanges} disabled={isSavingConfig}>
+                      {isSavingConfig ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Lagre endringer
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
