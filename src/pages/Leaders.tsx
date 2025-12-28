@@ -27,21 +27,21 @@ interface LeaderWithContent extends Leader {
 
 type SortOption = 'name' | 'activity' | 'team';
 
-// Teams to show in filter chips (simplified list)
+// Teams to show in filter chips (keys match database values)
 const FILTER_TEAMS = [
-  { key: 'team 1', label: 'Team 1', bg: 'bg-red-500', text: 'text-white', border: 'border-red-500' },
-  { key: 'team 2', label: 'Team 2', bg: 'bg-orange-500', text: 'text-white', border: 'border-orange-500' },
-  { key: 'team 1f', label: 'Team 1F', bg: 'bg-yellow-400', text: 'text-black', border: 'border-yellow-400' },
-  { key: 'team 2f', label: 'Team 2F', bg: 'bg-blue-500', text: 'text-white', border: 'border-blue-500' },
+  { key: '1', label: '1', bg: 'bg-red-500', text: 'text-white', border: 'border-red-500' },
+  { key: '2', label: '2', bg: 'bg-orange-500', text: 'text-white', border: 'border-orange-500' },
+  { key: '1f', label: '1F', bg: 'bg-yellow-400', text: 'text-black', border: 'border-yellow-400' },
+  { key: '2f', label: '2F', bg: 'bg-blue-500', text: 'text-white', border: 'border-blue-500' },
   { key: 'kjøkken', label: 'Kjøkken', bg: 'bg-purple-500', text: 'text-white', border: 'border-purple-500' },
 ];
 
-// All team colors for badge styling (includes teams not in filter)
+// All team colors for badge styling (keys match database values)
 const ALL_TEAM_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-  'team 1': { bg: 'bg-red-500', text: 'text-white', border: 'border-red-500' },
-  'team 2': { bg: 'bg-orange-500', text: 'text-white', border: 'border-orange-500' },
-  'team 1f': { bg: 'bg-yellow-400', text: 'text-black', border: 'border-yellow-400' },
-  'team 2f': { bg: 'bg-blue-500', text: 'text-white', border: 'border-blue-500' },
+  '1': { bg: 'bg-red-500', text: 'text-white', border: 'border-red-500' },
+  '2': { bg: 'bg-orange-500', text: 'text-white', border: 'border-orange-500' },
+  '1f': { bg: 'bg-yellow-400', text: 'text-black', border: 'border-yellow-400' },
+  '2f': { bg: 'bg-blue-500', text: 'text-white', border: 'border-blue-500' },
   'kjøkken': { bg: 'bg-purple-500', text: 'text-white', border: 'border-purple-500' },
   'joker': { bg: 'bg-pink-500', text: 'text-white', border: 'border-pink-500' },
   'sjef': { bg: 'bg-slate-600', text: 'text-white', border: 'border-slate-600' },
