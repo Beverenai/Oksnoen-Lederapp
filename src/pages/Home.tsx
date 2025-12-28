@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Tables } from '@/integrations/supabase/types';
+import oksnoenLogo from '@/assets/oksnoen-logo.png';
+import oksnoenHeader from '@/assets/oksnoen-header.png';
 
 type LeaderContent = Tables<'leader_content'>;
 type SessionActivity = Tables<'session_activities'>;
@@ -190,16 +192,12 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-20 w-20 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-4 w-32" />
-          </div>
+      <div className="space-y-6 animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8">
+        <Skeleton className="h-48 w-full" />
+        <div className="px-4 space-y-4">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-40" />
         </div>
-        <Skeleton className="h-24" />
-        <Skeleton className="h-40" />
       </div>
     );
   }
@@ -220,196 +218,226 @@ export default function Home() {
   const SessionIcon = getElementIcon('session_activities', Calendar);
 
   return (
-    <div className="space-y-6 animate-fade-in pb-8">
-      {/* Profile Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16 md:h-20 md:w-20 border-2 border-primary/20">
-            <AvatarImage src={leader?.profile_image_url || ''} alt={leader?.name} />
-            <AvatarFallback className="bg-primary/10 text-primary font-heading text-lg md:text-xl">
-              {leader?.name ? getInitials(leader.name) : '?'}
-            </AvatarFallback>
-          </Avatar>
-          <div className="space-y-1">
-            <h1 className="text-xl md:text-2xl font-heading font-bold text-foreground">
-              {leader?.name}
-            </h1>
-            {leader?.ministerpost && (
-              <p className="text-sm text-muted-foreground">{leader.ministerpost}</p>
-            )}
-            <div className="flex flex-wrap gap-2 pt-1">
-              {leader?.cabin_info && (
-                <Badge variant="secondary" className="text-xs">
-                  <HomeIcon className="w-3 h-3 mr-1" />
-                  {leader.cabin_info}
-                </Badge>
-              )}
-              {leader?.team && (
-                <Badge variant="outline" className="text-xs">
-                  <Users className="w-3 h-3 mr-1" />
-                  {leader.team}
-                </Badge>
-              )}
-            </div>
-          </div>
+    <div className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 pb-24">
+      {/* Header with background image */}
+      <div className="relative h-44 md:h-52 overflow-hidden">
+        <img 
+          src={oksnoenHeader} 
+          alt="Oksnøen" 
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
+        
+        {/* Logo in top left */}
+        <div className="absolute top-4 left-4">
+          <img 
+            src={oksnoenLogo} 
+            alt="Oksnøen" 
+            className="w-12 h-12 object-contain"
+          />
         </div>
-        <Button variant="ghost" size="icon" onClick={loadData} className="shrink-0">
+
+        {/* Refresh button */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={loadData} 
+          className="absolute top-4 right-4 text-white hover:bg-white/20"
+        >
           <RefreshCw className="w-5 h-5" />
         </Button>
       </div>
 
-      {/* Main Activity - Large Display */}
-      {isElementVisible('current_activity') && (
-        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
-          <CardContent className="pt-6 pb-6">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-full bg-primary/20">
-                <ActivityIcon className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs uppercase tracking-wide text-primary font-medium mb-1">
-                  {getElementTitle('current_activity', 'Din aktivitet')}
-                </p>
-                <p className="text-xl md:text-2xl font-heading font-bold text-foreground">
-                  {content?.current_activity || 'Ingen aktivitet tildelt'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Profile Section - overlapping header */}
+      <div className="relative px-4 -mt-16">
+        <div className="flex flex-col items-center text-center">
+          <Avatar className="h-28 w-28 border-4 border-background shadow-xl">
+            <AvatarImage src={leader?.profile_image_url || ''} alt={leader?.name} />
+            <AvatarFallback className="bg-primary text-primary-foreground font-heading text-2xl">
+              {leader?.name ? getInitials(leader.name) : '?'}
+            </AvatarFallback>
+          </Avatar>
+          
+          <h1 className="text-2xl font-heading font-bold text-foreground mt-3">
+            {leader?.name}
+          </h1>
+          
+          {leader?.ministerpost && (
+            <p className="text-muted-foreground mt-1">{leader.ministerpost}</p>
+          )}
+          
+          <div className="flex flex-wrap gap-2 mt-3 justify-center">
+            {leader?.cabin_info && (
+              <Badge variant="secondary" className="text-sm">
+                <HomeIcon className="w-3 h-3 mr-1" />
+                {leader.cabin_info}
+              </Badge>
+            )}
+            {leader?.team && (
+              <Badge variant="outline" className="text-sm">
+                <Users className="w-3 h-3 mr-1" />
+                {leader.team}
+              </Badge>
+            )}
+          </div>
+        </div>
+      </div>
 
-      {/* OBS Alert Box */}
-      {isElementVisible('obs_message') && content?.obs_message && (
-        <Card className="border-success bg-success/10">
-          <CardContent className="py-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-full bg-success/20">
-                <ObsIcon className="w-5 h-5 text-success" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs uppercase tracking-wide text-success font-medium mb-1">
-                  {getElementTitle('obs_message', 'OBS')}
-                </p>
-                <p className="text-foreground font-medium">{content.obs_message}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Extra Activity */}
-      {isElementVisible('extra_activity') && content?.extra_activity && (
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-full bg-accent/20">
-                <ExtraActivityIcon className="w-5 h-5 text-accent" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs uppercase tracking-wide text-accent font-medium mb-1">
-                  {getElementTitle('extra_activity', 'Ekstra aktivitet')}
-                </p>
-                <p className="text-foreground">{content.extra_activity}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Personal Notes */}
-      {isElementVisible('personal_notes') && content?.personal_notes && (
-        <Card className="border-primary/20">
-          <CardContent className="py-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-full bg-primary/10">
-                <NotesIcon className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs uppercase tracking-wide text-primary font-medium mb-1">
-                  {getElementTitle('personal_notes', 'Notater til deg')}
-                </p>
-                <p className="text-foreground">{content.personal_notes}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Extra Fields from Google Sheets */}
-      {extraFieldsConfig.map((fieldConfig) => {
-        const value = getExtraFieldValue(fieldConfig.field_key);
-        if (!value) return null;
-        
-        const IconComponent = iconMap[fieldConfig.icon] || Info;
-        
-        return (
-          <Card key={fieldConfig.id}>
-            <CardContent className="py-4">
+      {/* Content Cards */}
+      <div className="px-4 mt-6 space-y-4">
+        {/* Main Activity - Large Display */}
+        {isElementVisible('current_activity') && (
+          <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
+            <CardContent className="pt-6 pb-6">
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-full bg-muted">
-                  <IconComponent className="w-5 h-5 text-muted-foreground" />
+                <div className="p-2 rounded-full bg-primary/20">
+                  <ActivityIcon className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">
-                    {fieldConfig.title}
+                  <p className="text-xs uppercase tracking-wide text-primary font-medium mb-1">
+                    {getElementTitle('current_activity', 'Din aktivitet')}
                   </p>
-                  <p className="text-foreground">{value}</p>
+                  <p className="text-xl md:text-2xl font-heading font-bold text-foreground">
+                    {content?.current_activity || 'Ingen aktivitet tildelt'}
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-        );
-      })}
+        )}
 
-      {/* Session Activities */}
-      {isElementVisible('session_activities') && sessionActivities.length > 0 && (
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="p-2 rounded-full bg-primary/10">
-                <SessionIcon className="w-5 h-5 text-primary" />
+        {/* OBS Alert Box */}
+        {isElementVisible('obs_message') && content?.obs_message && (
+          <Card className="border-success bg-success/10">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-full bg-success/20">
+                  <ObsIcon className="w-5 h-5 text-success" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs uppercase tracking-wide text-success font-medium mb-1">
+                    {getElementTitle('obs_message', 'OBS')}
+                  </p>
+                  <p className="text-foreground font-medium">{content.obs_message}</p>
+                </div>
               </div>
-              <p className="text-xs uppercase tracking-wide text-primary font-medium pt-2">
-                {getElementTitle('session_activities', 'Denne økten har du:')}
-              </p>
-            </div>
-            <div className="space-y-3 ml-12">
-              {sessionActivities.map((activity) => (
-                <div 
-                  key={activity.id} 
-                  className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
-                >
-                  <Badge variant="secondary" className="shrink-0 font-mono">
-                    {activity.time_slot || 'Nå'}
-                  </Badge>
-                  <div>
-                    <p className="font-medium text-foreground">{activity.title}</p>
-                    {activity.description && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {activity.description}
-                      </p>
-                    )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Extra Activity */}
+        {isElementVisible('extra_activity') && content?.extra_activity && (
+          <Card>
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-full bg-accent/20">
+                  <ExtraActivityIcon className="w-5 h-5 text-accent" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs uppercase tracking-wide text-accent font-medium mb-1">
+                    {getElementTitle('extra_activity', 'Ekstra aktivitet')}
+                  </p>
+                  <p className="text-foreground">{content.extra_activity}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Personal Notes */}
+        {isElementVisible('personal_notes') && content?.personal_notes && (
+          <Card className="border-primary/20">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-full bg-primary/10">
+                  <NotesIcon className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs uppercase tracking-wide text-primary font-medium mb-1">
+                    {getElementTitle('personal_notes', 'Notater til deg')}
+                  </p>
+                  <p className="text-foreground">{content.personal_notes}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Extra Fields from Google Sheets */}
+        {extraFieldsConfig.map((fieldConfig) => {
+          const value = getExtraFieldValue(fieldConfig.field_key);
+          if (!value) return null;
+          
+          const IconComponent = iconMap[fieldConfig.icon] || Info;
+          
+          return (
+            <Card key={fieldConfig.id}>
+              <CardContent className="py-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-full bg-muted">
+                    <IconComponent className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">
+                      {fieldConfig.title}
+                    </p>
+                    <p className="text-foreground">{value}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          );
+        })}
 
-      {/* Empty State */}
-      {!hasAnyContent && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground">Alt klart!</h3>
-            <p className="text-muted-foreground mt-1">
-              Ingen aktiviteter eller beskjeder akkurat nå
-            </p>
-          </CardContent>
-        </Card>
-      )}
+        {/* Session Activities */}
+        {isElementVisible('session_activities') && sessionActivities.length > 0 && (
+          <Card>
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="p-2 rounded-full bg-primary/10">
+                  <SessionIcon className="w-5 h-5 text-primary" />
+                </div>
+                <p className="text-xs uppercase tracking-wide text-primary font-medium pt-2">
+                  {getElementTitle('session_activities', 'Denne økten har du:')}
+                </p>
+              </div>
+              <div className="space-y-3 ml-12">
+                {sessionActivities.map((activity) => (
+                  <div 
+                    key={activity.id} 
+                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
+                  >
+                    <Badge variant="secondary" className="shrink-0 font-mono">
+                      {activity.time_slot || 'Nå'}
+                    </Badge>
+                    <div>
+                      <p className="font-medium text-foreground">{activity.title}</p>
+                      {activity.description && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {activity.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Empty State */}
+        {!hasAnyContent && (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground">Alt klart!</h3>
+              <p className="text-muted-foreground mt-1">
+                Ingen aktiviteter eller beskjeder akkurat nå
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
