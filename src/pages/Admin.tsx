@@ -35,7 +35,8 @@ import {
   UserX,
   UserCheck,
   Search,
-  Check
+  Check,
+  AlertTriangle
 } from 'lucide-react';
 import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
@@ -45,13 +46,22 @@ import type { Tables } from '@/integrations/supabase/types';
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
 type SessionActivity = Tables<'session_activities'>;
-type HomeScreenConfig = Tables<'home_screen_config'>;
 type Announcement = Tables<'announcements'>;
 type UserRole = Tables<'user_roles'>;
 type AppRole = 'admin' | 'nurse' | 'leader';
 
 interface LeaderWithRole extends Leader {
   role: AppRole;
+}
+
+interface HomeScreenConfig {
+  id: string;
+  element_key: string;
+  label: string;
+  is_visible: boolean;
+  sort_order: number;
+  title: string | null;
+  icon: string | null;
 }
 
 interface ExtraFieldConfig {
@@ -72,6 +82,8 @@ const availableIcons = [
   { value: 'activity', label: 'Aktivitet', icon: Activity },
   { value: 'plus', label: 'Pluss', icon: Plus },
   { value: 'message', label: 'Melding', icon: MessageSquare },
+  { value: 'alert-triangle', label: 'OBS', icon: AlertTriangle },
+  { value: 'calendar', label: 'Kalender', icon: Calendar },
 ];
 
 export default function Admin() {
@@ -533,6 +545,19 @@ export default function Admin() {
     }
   };
 
+  const updateHomeConfig = async (configId: string, updates: Partial<HomeScreenConfig>) => {
+    try {
+      await supabase
+        .from('home_screen_config')
+        .update(updates)
+        .eq('id', configId);
+      loadData();
+      toast.success('Oppdatert');
+    } catch (error) {
+      toast.error('Kunne ikke oppdatere');
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -851,26 +876,70 @@ export default function Admin() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5" />
-                Hjemskjerm-konfigurasjon
+                Hjemskjerm-elementer
               </CardTitle>
               <CardDescription>
-                Velg hvilke elementer som vises på ledernes hjemskjerm
+                Konfigurer tittel, ikon og synlighet for hvert element på hjemskjermen
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {homeConfig.map((config) => (
-                  <div
-                    key={config.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                  >
-                    <span className="font-medium">{config.label}</span>
-                    <Switch
-                      checked={config.is_visible || false}
-                      onCheckedChange={() => toggleHomeConfigVisibility(config)}
-                    />
-                  </div>
-                ))}
+              <div className="space-y-4">
+                {homeConfig.map((cfg) => {
+                  const currentIcon = availableIcons.find(i => i.value === cfg.icon) || availableIcons[0];
+                  const IconComponent = currentIcon.icon;
+                  
+                  return (
+                    <div
+                      key={cfg.id}
+                      className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 rounded-lg bg-muted/50"
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        <Switch
+                          checked={cfg.is_visible || false}
+                          onCheckedChange={(checked) => 
+                            updateHomeConfig(cfg.id, { is_visible: checked })
+                          }
+                        />
+                        <div className="flex items-center gap-2">
+                          <IconComponent className="w-4 h-4 text-muted-foreground" />
+                          <Badge variant="outline">{cfg.label}</Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <Input
+                          placeholder="Tittel"
+                          value={cfg.title || ''}
+                          onChange={(e) => 
+                            updateHomeConfig(cfg.id, { title: e.target.value })
+                          }
+                          className="w-full sm:w-40"
+                        />
+                        
+                        <Select
+                          value={cfg.icon || 'info'}
+                          onValueChange={(value) => 
+                            updateHomeConfig(cfg.id, { icon: value })
+                          }
+                        >
+                          <SelectTrigger className="w-full sm:w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableIcons.map(({ value, label, icon: Icon }) => (
+                              <SelectItem key={value} value={value}>
+                                <div className="flex items-center gap-2">
+                                  <Icon className="w-4 h-4" />
+                                  {label}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

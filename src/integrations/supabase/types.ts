@@ -113,24 +113,30 @@ export type Database = {
       home_screen_config: {
         Row: {
           element_key: string
+          icon: string | null
           id: string
           is_visible: boolean | null
           label: string
           sort_order: number | null
+          title: string | null
         }
         Insert: {
           element_key: string
+          icon?: string | null
           id?: string
           is_visible?: boolean | null
           label: string
           sort_order?: number | null
+          title?: string | null
         }
         Update: {
           element_key?: string
+          icon?: string | null
           id?: string
           is_visible?: boolean | null
           label?: string
           sort_order?: number | null
+          title?: string | null
         }
         Relationships: []
       }
