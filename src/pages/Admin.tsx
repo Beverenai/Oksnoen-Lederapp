@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -198,6 +198,12 @@ export default function Admin() {
   const [isSavingExportWebhook, setIsSavingExportWebhook] = useState(false);
   const [lastExportSuccess, setLastExportSuccess] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  
+  // Auto-export state
+  const [pendingExport, setPendingExport] = useState(false);
+  const [exportCountdown, setExportCountdown] = useState(0);
+  const exportTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadData();
@@ -205,6 +211,12 @@ export default function Admin() {
     loadExportWebhookUrl();
     loadLastSyncTime();
     loadSessionActivitiesText();
+    
+    // Cleanup timers on unmount
+    return () => {
+      if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    };
   }, []);
 
   const loadSessionActivitiesText = async () => {
@@ -336,16 +348,22 @@ export default function Admin() {
     }
   };
 
-  const triggerExport = async () => {
+  const triggerExport = useCallback(async (isAutoExport = false) => {
     if (!storedExportWebhookUrl) {
-      toast.error('Legg inn eksport webhook URL først');
+      if (!isAutoExport) toast.error('Legg inn eksport webhook URL først');
       return;
     }
+
+    // Clear pending state
+    setPendingExport(false);
+    setExportCountdown(0);
+    if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
 
     setIsExporting(true);
     setExportError(null);
     setLastExportSuccess(false);
-    console.log('Triggering export via backend function');
+    console.log('Triggering export via backend function', isAutoExport ? '(auto)' : '(manual)');
 
     try {
       const { data, error } = await supabase.functions.invoke('trigger-export');
@@ -353,7 +371,7 @@ export default function Admin() {
       if (error) {
         console.error('Error calling trigger-export:', error);
         setExportError('Kunne ikke kontakte backend');
-        toast.error('Kunne ikke starte eksport');
+        if (!isAutoExport) toast.error('Kunne ikke starte eksport');
         return;
       }
 
@@ -364,16 +382,53 @@ export default function Admin() {
         toast.success(`Eksport fullført! ${data.leadersExported} ledere sendt til Google Sheets`);
       } else {
         setExportError(data?.error || 'Ukjent feil');
-        toast.error(`Eksport feilet: ${data?.error || 'Ukjent feil'}`);
+        if (!isAutoExport) toast.error(`Eksport feilet: ${data?.error || 'Ukjent feil'}`);
       }
     } catch (error) {
       console.error('Error triggering export:', error);
       setExportError('Nettverksfeil ved eksport');
-      toast.error('Kunne ikke starte eksport');
+      if (!isAutoExport) toast.error('Kunne ikke starte eksport');
     } finally {
       setIsExporting(false);
     }
-  };
+  }, [storedExportWebhookUrl]);
+
+  // Schedule auto-export with 30 second debounce
+  const scheduleAutoExport = useCallback(() => {
+    if (!storedExportWebhookUrl) return;
+    
+    // Clear existing timers
+    if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    
+    setPendingExport(true);
+    setExportCountdown(30);
+    
+    // Start countdown
+    countdownIntervalRef.current = setInterval(() => {
+      setExportCountdown(prev => {
+        if (prev <= 1) {
+          if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    // Schedule the export
+    exportTimerRef.current = setTimeout(() => {
+      triggerExport(true);
+    }, 30000);
+  }, [storedExportWebhookUrl, triggerExport]);
+
+  // Cancel pending export
+  const cancelPendingExport = useCallback(() => {
+    if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    setPendingExport(false);
+    setExportCountdown(0);
+    toast.info('Auto-eksport avbrutt');
+  }, []);
 
   const triggerSync = async () => {
     if (!webhookUrl) {
@@ -556,6 +611,9 @@ export default function Admin() {
 
       if (error) throw error;
       toast.success('Innhold lagret!');
+      
+      // Schedule auto-export after successful save
+      scheduleAutoExport();
     } catch (error) {
       console.error('Error saving content:', error);
       toast.error('Kunne ikke lagre');
@@ -1519,10 +1577,40 @@ export default function Admin() {
                 </div>
               )}
 
+              {/* Pending export status */}
+              {pendingExport && (
+                <div className="flex items-center justify-between gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">
+                      Auto-eksport om {exportCountdown} sekunder...
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => triggerExport(false)}
+                      className="h-7 text-xs"
+                    >
+                      Eksporter nå
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={cancelPendingExport}
+                      className="h-7 text-xs"
+                    >
+                      Avbryt
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2">
                 <Button 
-                  onClick={triggerExport} 
-                  disabled={isExporting || !storedExportWebhookUrl}
+                  onClick={() => triggerExport(false)} 
+                  disabled={isExporting || !storedExportWebhookUrl || pendingExport}
                   variant="outline"
                 >
                   {isExporting ? (
@@ -1539,7 +1627,7 @@ export default function Admin() {
                 </Button>
               </div>
 
-              {lastExportSuccess && !exportError && (
+              {lastExportSuccess && !exportError && !pendingExport && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400">
                   <CheckCircle2 className="w-5 h-5" />
                   <span className="text-sm font-medium">Eksport fullført!</span>
