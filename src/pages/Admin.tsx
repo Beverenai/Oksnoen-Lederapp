@@ -31,6 +31,7 @@ import {
   MessageSquare,
   FileSpreadsheet,
   CheckCircle2,
+  Upload,
   UserCheck,
   Search,
   Check,
@@ -190,9 +191,18 @@ export default function Admin() {
   const [lastSyncSuccess, setLastSyncSuccess] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
+  // Export webhook
+  const [exportWebhookUrl, setExportWebhookUrl] = useState('');
+  const [storedExportWebhookUrl, setStoredExportWebhookUrl] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [isSavingExportWebhook, setIsSavingExportWebhook] = useState(false);
+  const [lastExportSuccess, setLastExportSuccess] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
   useEffect(() => {
     loadData();
     loadWebhookUrl();
+    loadExportWebhookUrl();
     loadLastSyncTime();
     loadSessionActivitiesText();
   }, []);
@@ -269,6 +279,19 @@ export default function Admin() {
     }
   };
 
+  const loadExportWebhookUrl = async () => {
+    const { data } = await supabase
+      .from('app_config')
+      .select('value')
+      .eq('key', 'export_webhook_url')
+      .maybeSingle();
+    
+    if (data?.value) {
+      setExportWebhookUrl(data.value);
+      setStoredExportWebhookUrl(data.value);
+    }
+  };
+
   const saveWebhookUrl = async () => {
     setIsSavingWebhook(true);
     try {
@@ -282,12 +305,73 @@ export default function Admin() {
       
       if (error) throw error;
       setStoredWebhookUrl(webhookUrl);
-      toast.success('Webhook URL lagret!');
+      toast.success('Import webhook URL lagret!');
     } catch (error) {
       console.error('Error saving webhook URL:', error);
       toast.error('Kunne ikke lagre webhook URL');
     } finally {
       setIsSavingWebhook(false);
+    }
+  };
+
+  const saveExportWebhookUrl = async () => {
+    setIsSavingExportWebhook(true);
+    try {
+      const { error } = await supabase
+        .from('app_config')
+        .upsert({ 
+          key: 'export_webhook_url', 
+          value: exportWebhookUrl, 
+          updated_at: new Date().toISOString() 
+        }, { onConflict: 'key' });
+      
+      if (error) throw error;
+      setStoredExportWebhookUrl(exportWebhookUrl);
+      toast.success('Eksport webhook URL lagret!');
+    } catch (error) {
+      console.error('Error saving export webhook URL:', error);
+      toast.error('Kunne ikke lagre eksport webhook URL');
+    } finally {
+      setIsSavingExportWebhook(false);
+    }
+  };
+
+  const triggerExport = async () => {
+    if (!storedExportWebhookUrl) {
+      toast.error('Legg inn eksport webhook URL først');
+      return;
+    }
+
+    setIsExporting(true);
+    setExportError(null);
+    setLastExportSuccess(false);
+    console.log('Triggering export via backend function');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('trigger-export');
+
+      if (error) {
+        console.error('Error calling trigger-export:', error);
+        setExportError('Kunne ikke kontakte backend');
+        toast.error('Kunne ikke starte eksport');
+        return;
+      }
+
+      console.log('trigger-export response:', data);
+
+      if (data?.success) {
+        setLastExportSuccess(true);
+        toast.success(`Eksport fullført! ${data.leadersExported} ledere sendt til Google Sheets`);
+      } else {
+        setExportError(data?.error || 'Ukjent feil');
+        toast.error(`Eksport feilet: ${data?.error || 'Ukjent feil'}`);
+      }
+    } catch (error) {
+      console.error('Error triggering export:', error);
+      setExportError('Nettverksfeil ved eksport');
+      toast.error('Kunne ikke starte eksport');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -463,6 +547,11 @@ export default function Admin() {
           extra_activity: leaderContent.extra_activity || null,
           personal_notes: leaderContent.personal_notes || null,
           obs_message: leaderContent.obs_message || null,
+          extra_1: leaderContent.extra_1 || null,
+          extra_2: leaderContent.extra_2 || null,
+          extra_3: leaderContent.extra_3 || null,
+          extra_4: leaderContent.extra_4 || null,
+          extra_5: leaderContent.extra_5 || null,
         });
 
       if (error) throw error;
@@ -819,6 +908,21 @@ export default function Admin() {
                         }
                       />
                     </div>
+                    
+                    {/* Extra fields - only show if enabled in config */}
+                    {localExtraConfig.filter(cfg => cfg.is_visible).map((extraField) => (
+                      <div key={extraField.field_key} className="space-y-2">
+                        <Label>{extraField.title || extraField.field_key.replace('_', ' #')}</Label>
+                        <Input
+                          placeholder={`Innhold for ${extraField.title || extraField.field_key}`}
+                          value={(leaderContent as any)[extraField.field_key] || ''}
+                          onChange={(e) =>
+                            setLeaderContent({ ...leaderContent, [extraField.field_key]: e.target.value })
+                          }
+                        />
+                      </div>
+                    ))}
+                    
                     <Button onClick={saveLeaderContent} disabled={isSaving}>
                       {isSaving ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1038,15 +1142,15 @@ export default function Admin() {
 
         {/* Setup Tab */}
         <TabsContent value="setup" className="space-y-4">
-          {/* Webhook Configuration */}
+          {/* Import Webhook Configuration */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                Webhook konfigurasjon
+                <RefreshCw className="w-5 h-5" />
+                Import Webhook (Google Sheets → App)
               </CardTitle>
               <CardDescription>
-                Konfigurer n8n webhook URL for synkronisering fra Google Sheets
+                Konfigurer n8n webhook URL for import fra Google Sheets
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1058,11 +1162,11 @@ export default function Admin() {
               )}
               
               <div className="space-y-2">
-                <Label htmlFor="webhookUrl">n8n Webhook URL</Label>
+                <Label htmlFor="webhookUrl">n8n Import Webhook URL</Label>
                 <div className="flex gap-2">
                   <Input
                     id="webhookUrl"
-                    placeholder="https://n8n.example.com/webhook/abc123"
+                    placeholder="https://n8n.example.com/webhook/import"
                     value={webhookUrl}
                     onChange={(e) => setWebhookUrl(e.target.value)}
                     className="flex-1"
@@ -1079,6 +1183,57 @@ export default function Admin() {
                     )}
                   </Button>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Export Webhook Configuration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="w-5 h-5" />
+                Eksport Webhook (App → Google Sheets)
+              </CardTitle>
+              <CardDescription>
+                Konfigurer n8n webhook URL for eksport til Google Sheets
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {storedExportWebhookUrl && (
+                <div className="p-3 rounded-lg bg-muted/50 text-sm">
+                  <p className="text-muted-foreground">Lagret URL:</p>
+                  <code className="text-xs break-all">{storedExportWebhookUrl}</code>
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="exportWebhookUrl">n8n Eksport Webhook URL</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="exportWebhookUrl"
+                    placeholder="https://n8n.example.com/webhook/export"
+                    value={exportWebhookUrl}
+                    onChange={(e) => setExportWebhookUrl(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button 
+                    onClick={saveExportWebhookUrl} 
+                    disabled={isSavingExportWebhook}
+                    variant="outline"
+                  >
+                    {isSavingExportWebhook ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <p className="text-sm text-blue-700 dark:text-blue-400">
+                  <strong>n8n eksport workflow:</strong> Lag en workflow som mottar data via webhook og oppdaterer Google Sheet basert på telefonnummer.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -1270,23 +1425,23 @@ export default function Admin() {
           </Card>
         </TabsContent>
 
-        {/* Sync Tab */}
         <TabsContent value="sync" className="space-y-4">
+          {/* Import Section */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <RefreshCw className="w-5 h-5" />
-                Synkroniser data
+                Import fra Google Sheets
               </CardTitle>
               <CardDescription>
-                Kjør synkronisering fra Google Sheet for å oppdatere lederinformasjon
+                Hent data fra Google Sheet og oppdater ledere i appen
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {!storedWebhookUrl && (
                 <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-700 dark:text-yellow-400">
                   <p className="text-sm">
-                    <strong>Ikke konfigurert:</strong> Gå til Oppsett-fanen for å legge inn webhook URL først.
+                    <strong>Ikke konfigurert:</strong> Gå til Oppsett-fanen for å legge inn import webhook URL først.
                   </p>
                 </div>
               )}
@@ -1299,12 +1454,12 @@ export default function Admin() {
                   {isSyncing ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Synkroniserer...
+                      Importerer...
                     </>
                   ) : (
                     <>
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      Synk nå
+                      Importer nå
                     </>
                   )}
                 </Button>
@@ -1326,7 +1481,7 @@ export default function Admin() {
               {lastSyncSuccess && !syncError && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400">
                   <CheckCircle2 className="w-5 h-5" />
-                  <span className="text-sm font-medium">Siste synkronisering fullført!</span>
+                  <span className="text-sm font-medium">Siste import fullført!</span>
                 </div>
               )}
 
@@ -1341,25 +1496,90 @@ export default function Admin() {
                   n8nStackTrace={syncError.n8nStackTrace}
                 />
               )}
+            </CardContent>
+          </Card>
 
-              <div className="border-t pt-4 mt-4">
+          {/* Export Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="w-5 h-5" />
+                Eksporter til Google Sheets
+              </CardTitle>
+              <CardDescription>
+                Send data fra appen tilbake til Google Sheet
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!storedExportWebhookUrl && (
+                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-700 dark:text-yellow-400">
+                  <p className="text-sm">
+                    <strong>Ikke konfigurert:</strong> Gå til Oppsett-fanen for å legge inn eksport webhook URL først.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2">
                 <Button 
-                  variant="ghost" 
-                  onClick={() => setShowSyncInstructions(!showSyncInstructions)}
-                  className="w-full justify-start"
+                  onClick={triggerExport} 
+                  disabled={isExporting || !storedExportWebhookUrl}
+                  variant="outline"
                 >
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  {showSyncInstructions ? 'Skjul n8n-instruksjoner' : 'Vis n8n-instruksjoner'}
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Eksporterer...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Eksporter til Google Sheets
+                    </>
+                  )}
                 </Button>
               </div>
 
+              {lastExportSuccess && !exportError && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="text-sm font-medium">Eksport fullført!</span>
+                </div>
+              )}
+
+              {exportError && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400">
+                  <p className="text-sm"><strong>Feil:</strong> {exportError}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* n8n Instructions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5" />
+                n8n Workflow instruksjoner
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => setShowSyncInstructions(!showSyncInstructions)}
+                className="w-full justify-start"
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                {showSyncInstructions ? 'Skjul instruksjoner' : 'Vis instruksjoner'}
+              </Button>
+
               {showSyncInstructions && (
-                <div className="p-4 rounded-lg bg-muted/50 space-y-4">
-                  <h4 className="font-semibold">n8n Workflow oppsett:</h4>
-                  
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Komplett JSON-format for HTTP Request body:</p>
-                    <code className="block text-xs bg-background p-3 rounded whitespace-pre-wrap overflow-x-auto">
+                <div className="p-4 rounded-lg bg-muted/50 space-y-6">
+                  <div>
+                    <h4 className="font-semibold mb-3">Import Workflow (Google Sheets → App):</h4>
+                    
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">JSON-format for HTTP Request body:</p>
+                      <code className="block text-xs bg-background p-3 rounded whitespace-pre-wrap overflow-x-auto">
 {`{
   "leaders": [
     {
@@ -1379,30 +1599,58 @@ export default function Admin() {
     }
   ]
 }`}
-                    </code>
+                      </code>
+                    </div>
+
+                    <div className="space-y-2 mt-3">
+                      <p className="text-sm font-medium">Import Endpoint:</p>
+                      <code className="block text-xs bg-background p-2 rounded break-all">
+                        POST https://noxnbtvxksgjsqzfdgcd.supabase.co/functions/v1/sync-leaders-import
+                      </code>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Endpoint:</p>
-                    <code className="block text-xs bg-background p-2 rounded break-all">
-                      POST https://noxnbtvxksgjsqzfdgcd.supabase.co/functions/v1/sync-leaders-import
-                    </code>
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Eksport Workflow (App → Google Sheets):</h4>
+                    
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Mottatt data fra appen:</p>
+                      <code className="block text-xs bg-background p-3 rounded whitespace-pre-wrap overflow-x-auto">
+{`{
+  "timestamp": "2024-01-15T10:30:00Z",
+  "correlationId": "1234567890",
+  "leaders": [
+    {
+      "phone": "12345678",
+      "name": "Ola Nordmann",
+      "cabin_info": "Hytte 1",
+      "ministerpost": "Leder",
+      "team": "Team A",
+      "current_activity": "Frokost",
+      "personal_notes": "Husk møte kl 10",
+      "obs_message": "",
+      "extra_1": "", "extra_2": "", ...
+    }
+  ]
+}`}
+                      </code>
+                    </div>
+
+                    <div className="space-y-2 mt-3">
+                      <p className="text-sm font-medium">n8n workflow steg:</p>
+                      <ol className="text-sm list-decimal list-inside space-y-1 text-muted-foreground">
+                        <li>Webhook node: Motta data fra appen</li>
+                        <li>Loop: For hver leder i "leaders" array</li>
+                        <li>Google Sheets: Finn rad basert på telefonnummer</li>
+                        <li>Google Sheets: Oppdater celler med ny data</li>
+                      </ol>
+                    </div>
                   </div>
 
                   <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                     <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                      <strong>n8n Tips:</strong> Bruk bracket-notation <code className="bg-background px-1 rounded">$json['kolonne']</code> for kolonner med mellomrom eller spesialtegn (f.eks. "Hytte Ansvar", "OBS!", "Ekstra #1").
+                      <strong>Tips:</strong> Telefonnummer brukes som unik nøkkel. Bruk Google Sheets "Lookup" for å finne riktig rad.
                     </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Viktig:</p>
-                    <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
-                      <li><strong>phone</strong> og <strong>name</strong> er påkrevd for nye ledere</li>
-                      <li>Telefonnummer brukes som unik nøkkel for matching</li>
-                      <li>Eksisterende ledere oppdateres, nye opprettes automatisk</li>
-                      <li>Alle innholdsfelt (Aktivitet, Notater, OBS!, Ekstra) er valgfrie</li>
-                    </ul>
                   </div>
                 </div>
               )}
