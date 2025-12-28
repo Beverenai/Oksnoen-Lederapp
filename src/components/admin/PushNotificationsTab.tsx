@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import { Bell, Send, Users, Key, Loader2, AlertCircle, CheckCircle2 } from 'luci
 import { toast } from 'sonner';
 
 export function PushNotificationsTab() {
+  const { leader } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isGeneratingKeys, setIsGeneratingKeys] = useState(false);
@@ -51,9 +53,16 @@ export function PushNotificationsTab() {
   };
 
   const generateVapidKeys = async () => {
+    if (!leader?.id) {
+      toast.error('Du må være logget inn');
+      return;
+    }
+    
     setIsGeneratingKeys(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-vapid-keys');
+      const { data, error } = await supabase.functions.invoke('generate-vapid-keys', {
+        body: { leader_id: leader.id }
+      });
 
       if (error) {
         throw error;

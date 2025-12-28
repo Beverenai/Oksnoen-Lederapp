@@ -42,52 +42,41 @@ serve(async (req) => {
   }
 
   try {
-    // Check admin authorization
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    // Parse request body for leader_id
+    const { leader_id } = await req.json();
+    
+    if (!leader_id) {
       return new Response(
-        JSON.stringify({ error: "No authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "leader_id is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabaseClient = createClient(
+    // Use service role to verify admin status
+    const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get user and check if admin
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Check admin role using phone number matching
-    const { data: leader } = await supabaseClient
+    // Check if leader exists
+    const { data: leader, error: leaderError } = await supabaseAdmin
       .from("leaders")
       .select("id")
-      .eq("phone", user.phone?.replace("+47", "") || "")
+      .eq("id", leader_id)
       .single();
 
-    if (!leader) {
+    if (leaderError || !leader) {
       return new Response(
         JSON.stringify({ error: "Leader not found" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { data: roleData } = await supabaseClient
+    // Check admin role
+    const { data: roleData } = await supabaseAdmin
       .from("user_roles")
       .select("role")
-      .eq("leader_id", leader.id)
+      .eq("leader_id", leader_id)
       .eq("role", "admin")
       .single();
 
