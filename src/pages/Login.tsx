@@ -4,8 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Phone, TreePine, Loader2 } from 'lucide-react';
+import { Phone, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import oksnoenLogo from '@/assets/oksnoen-logo.png';
 
 export default function Login() {
   const [phone, setPhone] = useState('');
@@ -37,11 +38,13 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-            <TreePine className="w-8 h-8 text-primary" />
-          </div>
+          <img 
+            src={oksnoenLogo} 
+            alt="Oksnøen" 
+            className="w-24 h-24 mx-auto mb-4 object-contain"
+          />
           <h1 className="text-3xl font-heading font-bold text-foreground">
-            Leder App
+            Oksnøen
           </h1>
           <p className="text-muted-foreground mt-2">
             Logg inn med telefonnummeret ditt

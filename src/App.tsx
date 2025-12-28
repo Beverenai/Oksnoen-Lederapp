@@ -13,6 +13,7 @@ import Passport from "@/pages/Passport";
 import Wall from "@/pages/Wall";
 import Admin from "@/pages/Admin";
 import Nurse from "@/pages/Nurse";
+import Fix from "@/pages/Fix";
 import ComingSoon from "@/pages/ComingSoon";
 import NotFound from "@/pages/NotFound";
 
@@ -130,6 +131,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Admin />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/fix"
+        element={
+          <ProtectedRoute>
+            <Fix />
           </ProtectedRoute>
         }
       />
