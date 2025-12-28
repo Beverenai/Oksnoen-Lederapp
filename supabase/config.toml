@@ -17,3 +17,18 @@ verify_jwt = false
 
 [functions.generate-pass]
 verify_jwt = false
+
+[functions.generate-vapid-keys]
+verify_jwt = false
+
+[functions.push-vapid-key]
+verify_jwt = false
+
+[functions.push-subscribe]
+verify_jwt = false
+
+[functions.push-unsubscribe]
+verify_jwt = false
+
+[functions.push-send]
+verify_jwt = false
