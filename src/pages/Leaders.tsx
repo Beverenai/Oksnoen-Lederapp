@@ -1,12 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Phone, Activity, Cross } from 'lucide-react';
+import { Users, Phone, Activity, Cross, ArrowUpDown, Check } from 'lucide-react';
 import { LeaderDetailSheet } from '@/components/leaders/LeaderDetailSheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
@@ -19,23 +25,28 @@ interface LeaderWithContent extends Leader {
   isNurse?: boolean;
 }
 
+type SortOption = 'name' | 'activity' | 'team';
+
+// Team definitions with colors
+const TEAMS = [
+  { key: 'team 1', label: 'Team 1', bg: 'bg-red-500', text: 'text-white', border: 'border-red-500' },
+  { key: 'team 2', label: 'Team 2', bg: 'bg-orange-500', text: 'text-white', border: 'border-orange-500' },
+  { key: 'team 1f', label: 'Team 1F', bg: 'bg-yellow-400', text: 'text-black', border: 'border-yellow-400' },
+  { key: 'team 2f', label: 'Team 2F', bg: 'bg-blue-500', text: 'text-white', border: 'border-blue-500' },
+  { key: 'kjøkken', label: 'Kjøkken', bg: 'bg-purple-500', text: 'text-white', border: 'border-purple-500' },
+  { key: 'joker', label: 'Joker', bg: 'bg-pink-500', text: 'text-white', border: 'border-pink-500' },
+  { key: 'sjef', label: 'Sjef', bg: 'bg-slate-600', text: 'text-white', border: 'border-slate-600' },
+  { key: 'nurse', label: 'Nurse', bg: 'bg-rose-600', text: 'text-white', border: 'border-rose-600' },
+];
+
 // Team color mapping based on provided design
 const getTeamStyles = (team: string | null): string => {
   const teamLower = team?.toLowerCase().trim();
-  switch (teamLower) {
-    case 'team 1':
-      return 'bg-red-500 text-white border-red-500';
-    case 'team 2':
-      return 'bg-orange-500 text-white border-orange-500';
-    case 'team 1f':
-      return 'bg-yellow-400 text-black border-yellow-400';
-    case 'team 2f':
-      return 'bg-blue-500 text-white border-blue-500';
-    case 'kjøkken':
-      return 'bg-purple-500 text-white border-purple-500';
-    default:
-      return 'bg-muted text-muted-foreground border-border';
+  const teamConfig = TEAMS.find(t => t.key === teamLower);
+  if (teamConfig) {
+    return `${teamConfig.bg} ${teamConfig.text} ${teamConfig.border}`;
   }
+  return 'bg-muted text-muted-foreground border-border';
 };
 
 export default function Leaders() {
@@ -43,6 +54,10 @@ export default function Leaders() {
   const [extraFieldsConfig, setExtraFieldsConfig] = useState<ExtraFieldConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedLeader, setSelectedLeader] = useState<LeaderWithContent | null>(null);
+  
+  // Filter and sort state
+  const [activeTeamFilter, setActiveTeamFilter] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortOption>('name');
 
   useEffect(() => {
     loadLeaders();
@@ -96,13 +111,61 @@ export default function Leaders() {
     }
   };
 
+  // Get unique teams from leaders for filter chips
+  const availableTeams = useMemo(() => {
+    const teamsInUse = new Set(
+      leaders
+        .map(l => l.team?.toLowerCase().trim())
+        .filter(Boolean)
+    );
+    return TEAMS.filter(t => teamsInUse.has(t.key));
+  }, [leaders]);
+
+  // Filter and sort leaders
+  const filteredAndSortedLeaders = useMemo(() => {
+    let result = [...leaders];
+
+    // Apply team filter
+    if (activeTeamFilter) {
+      result = result.filter(
+        l => l.team?.toLowerCase().trim() === activeTeamFilter
+      );
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'activity':
+          // Leaders with activity first
+          const aHasActivity = !!a.content?.current_activity;
+          const bHasActivity = !!b.content?.current_activity;
+          if (aHasActivity !== bHasActivity) return bHasActivity ? 1 : -1;
+          return a.name.localeCompare(b.name, 'nb');
+        case 'team':
+          const aTeam = a.team || 'zzz';
+          const bTeam = b.team || 'zzz';
+          if (aTeam !== bTeam) return aTeam.localeCompare(bTeam, 'nb');
+          return a.name.localeCompare(b.name, 'nb');
+        default:
+          return a.name.localeCompare(b.name, 'nb');
+      }
+    });
+
+    return result;
+  }, [leaders, activeTeamFilter, sortBy]);
+
   // Get first name only
   const getFirstName = (fullName: string) => fullName.split(' ')[0];
+
+  const handleTeamFilter = (teamKey: string | null) => {
+    setActiveTeamFilter(prev => prev === teamKey ? null : teamKey);
+  };
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-10 w-full" />
         <div className="grid gap-3">
           {[...Array(6)].map((_, i) => (
             <Skeleton key={i} className="h-24" />
@@ -114,17 +177,84 @@ export default function Leaders() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-foreground">
-          Ledere
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {leaders.length} ledere registrert
-        </p>
+      {/* Header with sort button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-heading font-bold text-foreground">
+            Ledere
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {activeTeamFilter ? (
+              <>Viser {filteredAndSortedLeaders.length} av {leaders.length} ledere</>
+            ) : (
+              <>{leaders.length} ledere registrert</>
+            )}
+          </p>
+        </div>
+
+        {/* Sort dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <ArrowUpDown className="w-4 h-4" />
+              Sorter
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => setSortBy('name')} className="gap-2">
+              {sortBy === 'name' && <Check className="w-4 h-4" />}
+              <span className={sortBy !== 'name' ? 'ml-6' : ''}>Navn (A-Å)</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortBy('activity')} className="gap-2">
+              {sortBy === 'activity' && <Check className="w-4 h-4" />}
+              <span className={sortBy !== 'activity' ? 'ml-6' : ''}>Aktivitet først</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortBy('team')} className="gap-2">
+              {sortBy === 'team' && <Check className="w-4 h-4" />}
+              <span className={sortBy !== 'team' ? 'ml-6' : ''}>Gruppert etter team</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
+      {/* Team filter chips - horizontal scroll */}
+      {availableTeams.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
+          {/* "Alle" chip */}
+          <button
+            onClick={() => setActiveTeamFilter(null)}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all
+              ${!activeTeamFilter 
+                ? 'bg-foreground text-background' 
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+          >
+            Alle
+          </button>
+          
+          {/* Team chips */}
+          {availableTeams.map((team) => (
+            <button
+              key={team.key}
+              onClick={() => handleTeamFilter(team.key)}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all border-2
+                ${activeTeamFilter === team.key
+                  ? `${team.bg} ${team.text} ${team.border}`
+                  : `bg-transparent ${team.border} hover:${team.bg}/20`
+                }`}
+              style={{
+                borderColor: activeTeamFilter !== team.key ? undefined : undefined,
+              }}
+            >
+              {team.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Leaders list */}
       <div className="grid gap-2">
-        {leaders.map((leader) => (
+        {filteredAndSortedLeaders.map((leader) => (
           <Card 
             key={leader.id} 
             className="cursor-pointer hover:bg-accent/50 transition-colors active:scale-[0.99]"
@@ -209,13 +339,24 @@ export default function Leaders() {
         ))}
       </div>
 
-      {leaders.length === 0 && (
+      {filteredAndSortedLeaders.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground">Ingen ledere</h3>
+            <h3 className="text-lg font-medium text-foreground">
+              {activeTeamFilter ? 'Ingen ledere i dette teamet' : 'Ingen ledere'}
+            </h3>
             <p className="text-muted-foreground mt-1">
-              Kontakt admin for å bli lagt til
+              {activeTeamFilter ? (
+                <button 
+                  onClick={() => setActiveTeamFilter(null)}
+                  className="text-primary underline"
+                >
+                  Vis alle ledere
+                </button>
+              ) : (
+                'Kontakt admin for å bli lagt til'
+              )}
             </p>
           </CardContent>
         </Card>
