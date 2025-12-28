@@ -41,7 +41,7 @@ const exportData = leaders?.map(leader => {
         age: leader.age,
         team: leader.team,
         cabin: leader.cabin,
-        cabin_info: leader.cabin_info,
+        cabin_info: leader.cabin, // Backward compatibility - same as cabin
         has_drivers_license: leader.has_drivers_license,
         has_boat_license: leader.has_boat_license,
         can_rappelling: leader.can_rappelling,

@@ -45,7 +45,6 @@ export function LeaderDetailDialog({
   const [age, setAge] = useState<number | null>(null);
   const [team, setTeam] = useState('');
   const [cabin, setCabin] = useState('');
-  const [cabinInfo, setCabinInfo] = useState('');
   const [ministerpost, setMinisterpost] = useState('');
   const [profileImageUrl, setProfileImageUrl] = useState('');
   
@@ -69,8 +68,7 @@ export function LeaderDetailDialog({
       setEmail(leader.email || '');
       setAge(leader.age);
       setTeam(leader.team || '');
-      setCabin(leader.cabin || '');
-      setCabinInfo(leader.cabin_info || '');
+      setCabin(leader.cabin || leader.cabin_info || '');
       setMinisterpost(leader.ministerpost || '');
       setProfileImageUrl(leader.profile_image_url || '');
       setHasCar(leader.has_car || false);
@@ -138,7 +136,6 @@ export function LeaderDetailDialog({
           age: age || null,
           team: team || null,
           cabin: cabin || null,
-          cabin_info: cabinInfo || null,
           ministerpost: ministerpost || null,
           profile_image_url: profileImageUrl || null,
           has_car: hasCar,
@@ -281,14 +278,6 @@ export function LeaderDetailDialog({
                 id="cabin"
                 value={cabin}
                 onChange={(e) => setCabin(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cabinInfo">Hytte-ansvar</Label>
-              <Input
-                id="cabinInfo"
-                value={cabinInfo}
-                onChange={(e) => setCabinInfo(e.target.value)}
               />
             </div>
             <div className="space-y-2">
