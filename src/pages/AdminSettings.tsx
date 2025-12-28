@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Users, 
   Plus, 
@@ -1003,12 +1004,10 @@ export default function AdminSettings() {
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-2 px-3 font-medium">Status</th>
+                      <th className="text-left py-2 px-3 font-medium">Bilde</th>
                       <th className="text-left py-2 px-3 font-medium">Navn</th>
                       <th className="text-left py-2 px-3 font-medium">Rolle</th>
                       <th className="text-left py-2 px-3 font-medium">Telefon</th>
-                      <th className="text-left py-2 px-3 font-medium hidden sm:table-cell">Team</th>
-                      <th className="text-left py-2 px-3 font-medium hidden md:table-cell">Hytte</th>
-                      <th className="text-left py-2 px-3 font-medium hidden lg:table-cell">Ministerpost</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -1034,6 +1033,16 @@ export default function AdminSettings() {
                             onClick={(e) => e.stopPropagation()}
                           />
                         </td>
+                        <td className="py-2 px-3">
+                          <Avatar className="h-8 w-8">
+                            {leader.profile_image_url ? (
+                              <AvatarImage src={leader.profile_image_url} alt={leader.name} />
+                            ) : null}
+                            <AvatarFallback className="text-xs">
+                              {leader.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        </td>
                         <td className="py-2 px-3 font-medium">{leader.name}</td>
                         <td className="py-2 px-3">
                           {leader.role === 'admin' && (
@@ -1053,15 +1062,6 @@ export default function AdminSettings() {
                           )}
                         </td>
                         <td className="py-2 px-3 text-muted-foreground">{leader.phone}</td>
-                        <td className="py-2 px-3 text-muted-foreground hidden sm:table-cell">
-                          {leader.team || '-'}
-                        </td>
-                        <td className="py-2 px-3 text-muted-foreground hidden md:table-cell">
-                          {leader.cabin_info || leader.cabin || '-'}
-                        </td>
-                        <td className="py-2 px-3 text-muted-foreground hidden lg:table-cell">
-                          {leader.ministerpost || '-'}
-                        </td>
                       </tr>
                     ))}
                   </tbody>
