@@ -12,6 +12,7 @@ import Leaders from "@/pages/Leaders";
 import Team from "@/pages/Team";
 import Passport from "@/pages/Passport";
 import MyCabins from "@/pages/MyCabins";
+import Schedule from "@/pages/Schedule";
 import Wall from "@/pages/Wall";
 import Admin from "@/pages/Admin";
 import AdminSettings from "@/pages/AdminSettings";
@@ -108,18 +109,10 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/cabin"
-        element={
-          <ProtectedRoute>
-            <ComingSoon title="Din Hytte" />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/schedule"
         element={
           <ProtectedRoute>
-            <ComingSoon title="Vaktplan" />
+            <Schedule />
           </ProtectedRoute>
         }
       />

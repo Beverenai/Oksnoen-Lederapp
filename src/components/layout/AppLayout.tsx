@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Home, 
   Users, 
@@ -22,7 +23,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 
@@ -30,24 +30,25 @@ interface AppLayoutProps {
   children: ReactNode;
 }
 
-// All navigation items for sidebar/menu
-const allNavItems = [
+// Navigation items that are always shown
+const baseNavItems = [
   { to: '/', icon: Home, label: 'Hjem' },
   { to: '/profile', icon: User, label: 'Min Profil' },
   { to: '/leaders', icon: Users, label: 'Ledere' },
   { to: '/passport', icon: ClipboardCheck, label: 'Passkontroll' },
   { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
-  { to: '/schedule', icon: Calendar, label: 'Vaktplan' },
-  { to: '/important-info', icon: AlertTriangle, label: 'Viktig info' },
-  { to: '/wall', icon: Megaphone, label: 'Den store veggen' },
-  { to: '/fix', icon: Wrench, label: 'Rapporter' },
 ];
 
-// Navigation items for mobile slide-out menu only (simplified)
-const mobileMenuItems = [
+// Dynamic items that depend on state
+const scheduleNavItem = { to: '/schedule', icon: Calendar, label: 'Vaktplan' };
+const importantInfoNavItem = { to: '/important-info', icon: AlertTriangle, label: 'Viktig info' };
+const wallNavItem = { to: '/wall', icon: Megaphone, label: 'Den store veggen' };
+const fixNavItem = { to: '/fix', icon: Wrench, label: 'Rapporter' };
+
+// Base navigation items for mobile slide-out menu (simplified)
+const baseMobileMenuItems = [
   { to: '/profile', icon: User, label: 'Min Profil' },
   { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
-  { to: '/schedule', icon: Calendar, label: 'Vaktplan' },
 ];
 
 // Bottom nav items type
@@ -104,7 +105,37 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
   const [showHajoloSuccess, setShowHajoloSuccess] = useState(false);
+  const [hasScheduleImage, setHasScheduleImage] = useState(false);
   const location = useLocation();
+
+  // Build dynamic nav items based on schedule image availability
+  const allNavItems = [
+    ...baseNavItems,
+    ...(hasScheduleImage ? [scheduleNavItem] : []),
+    importantInfoNavItem,
+    wallNavItem,
+    fixNavItem,
+  ];
+
+  const mobileMenuItems = [
+    ...baseMobileMenuItems,
+    ...(hasScheduleImage ? [scheduleNavItem] : []),
+  ];
+
+  // Fetch schedule image availability
+  useEffect(() => {
+    const fetchScheduleImage = async () => {
+      const { data } = await supabase
+        .from('app_config')
+        .select('value')
+        .eq('key', 'schedule_image_url')
+        .maybeSingle();
+      
+      setHasScheduleImage(!!data?.value);
+    };
+
+    fetchScheduleImage();
+  }, []);
 
   // Fetch has_read status for regular leaders
   const fetchHasReadStatus = useCallback(async () => {
