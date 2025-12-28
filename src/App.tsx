@@ -17,6 +17,7 @@ import AdminSettings from "@/pages/AdminSettings";
 import Nurse from "@/pages/Nurse";
 import Fix from "@/pages/Fix";
 import ComingSoon from "@/pages/ComingSoon";
+import ParticipantStats from "@/pages/ParticipantStats";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -149,6 +150,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AdminSettings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/participant-stats"
+        element={
+          <ProtectedRoute>
+            <ParticipantStats />
           </ProtectedRoute>
         }
       />

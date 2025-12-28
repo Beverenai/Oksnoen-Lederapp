@@ -16,7 +16,8 @@ import {
   Heart,
   User,
   Wrench,
-  Check
+  Check,
+  BarChart2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -94,6 +95,7 @@ const nurseNavItems = [
 ];
 
 const adminNavItems = [
+  { to: '/participant-stats', icon: BarChart2, label: 'Deltakerstatistikk' },
   { to: '/admin', icon: Settings, label: 'Admin' },
 ];
 
