@@ -172,8 +172,15 @@ export default function Leaders() {
       );
     }
 
-    // Apply sorting
+    // Apply sorting - Kjøkken always at the bottom
     result.sort((a, b) => {
+      const aIsKitchen = a.team?.toLowerCase() === 'kjøkken';
+      const bIsKitchen = b.team?.toLowerCase() === 'kjøkken';
+      
+      // Kjøkken always at bottom
+      if (aIsKitchen && !bIsKitchen) return 1;
+      if (!aIsKitchen && bIsKitchen) return -1;
+      
       switch (sortBy) {
         case 'activity':
           // Leaders with activity first
@@ -198,10 +205,11 @@ export default function Leaders() {
   const getBorderClass = (leader: LeaderWithContent) => {
     const isFri = leader.content?.current_activity?.toLowerCase().includes('fri');
     const isKitchen = leader.team?.toLowerCase() === 'kjøkken';
-    const isAlwaysGreen = leader.isAdmin || leader.isNurse || isKitchen;
     
+    // Kjøkken = purple, FRI = blue, Admin/Nurse/has_read = green, else red
+    if (isKitchen) return 'ring-2 ring-purple-500';
     if (isFri) return 'ring-2 ring-blue-500';
-    if (isAlwaysGreen || leader.content?.has_read) return 'ring-2 ring-green-500';
+    if (leader.isAdmin || leader.isNurse || leader.content?.has_read) return 'ring-2 ring-green-500';
     return 'ring-2 ring-red-500';
   };
 

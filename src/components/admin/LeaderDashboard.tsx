@@ -173,14 +173,14 @@ export function LeaderDashboard({ leaders, extraFieldsConfig, onLeaderUpdated, o
           const hasActivity = !!content?.current_activity;
           const hasNotes = !!content?.personal_notes;
           
-          // Border color logic: FRI=blue, Admin/Nurse/Kjøkken=always green, has_read=green, else red
+          // Border color logic: Kjøkken=purple, FRI=blue, Admin/Nurse/has_read=green, else red
           const isFri = content?.current_activity?.toLowerCase().includes('fri');
           const isKitchen = leader.team?.toLowerCase() === 'kjøkken';
-          const isAlwaysGreen = adminNurseIds.has(leader.id) || isKitchen;
           
           const getBorderClass = () => {
+            if (isKitchen) return 'ring-purple-500';
             if (isFri) return 'ring-blue-500';
-            if (isAlwaysGreen || content?.has_read) return 'ring-green-500';
+            if (adminNurseIds.has(leader.id) || content?.has_read) return 'ring-green-500';
             return 'ring-red-500';
           };
 
