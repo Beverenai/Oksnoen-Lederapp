@@ -27,13 +27,15 @@ import {
   Search,
   Check,
   ArrowLeft,
-  Home
+  Home,
+  Calendar
 } from 'lucide-react';
 import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { CabinsTab } from '@/components/admin/CabinsTab';
 import { ParticipantImportTab } from '@/components/admin/ParticipantImportTab';
 import { CabinAssignmentStatus } from '@/components/admin/CabinAssignmentStatus';
+import { ScheduleTab } from '@/components/admin/ScheduleTab';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -474,7 +476,7 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="leaders" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
           <TabsTrigger value="leaders" className="gap-2">
             <Users className="w-4 h-4 hidden sm:block" />
             Ledere
@@ -486,6 +488,10 @@ export default function AdminSettings() {
           <TabsTrigger value="participants" className="gap-2">
             <Users className="w-4 h-4 hidden sm:block" />
             Deltakere
+          </TabsTrigger>
+          <TabsTrigger value="schedule" className="gap-2">
+            <Calendar className="w-4 h-4 hidden sm:block" />
+            Vaktplan
           </TabsTrigger>
           <TabsTrigger value="sync" className="gap-2">
             <RefreshCw className="w-4 h-4 hidden sm:block" />
@@ -505,6 +511,11 @@ export default function AdminSettings() {
         {/* Participants Tab */}
         <TabsContent value="participants" className="space-y-4">
           <ParticipantImportTab />
+        </TabsContent>
+
+        {/* Schedule Tab */}
+        <TabsContent value="schedule" className="space-y-4">
+          <ScheduleTab />
         </TabsContent>
 
         {/* Setup Tab */}
