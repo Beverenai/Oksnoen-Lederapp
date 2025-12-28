@@ -93,7 +93,7 @@ const iconMap: Record<string, LucideIcon> = {
 };
 
 export default function Home() {
-  const { leader } = useAuth();
+  const { leader, isAdmin, isNurse } = useAuth();
   const [content, setContent] = useState<LeaderContent | null>(null);
   const [sessionActivitiesText, setSessionActivitiesText] = useState<string>('');
   const [config, setConfig] = useState<HomeScreenConfig[]>([]);
@@ -283,7 +283,7 @@ export default function Home() {
           
           <Avatar className={cn(
             "h-28 w-28 border-4 shadow-xl ring-4",
-            hasRead 
+            (isAdmin || isNurse || hasRead) 
               ? "border-green-500 ring-green-500/30" 
               : "border-red-500 ring-red-500/30"
           )}>
