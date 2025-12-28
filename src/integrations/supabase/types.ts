@@ -59,6 +59,45 @@ export type Database = {
         }
         Relationships: []
       }
+      cabin_reports: {
+        Row: {
+          cabin_id: string
+          content: string | null
+          id: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          cabin_id: string
+          content?: string | null
+          id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          cabin_id?: string
+          content?: string | null
+          id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cabin_reports_cabin_id_fkey"
+            columns: ["cabin_id"]
+            isOneToOne: true
+            referencedRelation: "cabins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cabin_reports_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cabins: {
         Row: {
           created_at: string | null
