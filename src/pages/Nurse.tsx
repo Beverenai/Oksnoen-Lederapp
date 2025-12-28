@@ -26,7 +26,9 @@ import {
   Shield,
   Activity,
   MessageSquare,
-  User
+  User,
+  Home,
+  Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -67,6 +69,7 @@ interface ParticipantWithHealth extends Participant {
   cabin?: { name: string } | null;
   healthInfo?: { info: string } | null;
   activities?: ParticipantActivity[];
+  publicHealthNote?: string | null;
 }
 
 const eventTypes = [
@@ -89,11 +92,14 @@ export default function Nurse() {
   const [participants, setParticipants] = useState<ParticipantWithHealth[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [cabinFilter, setCabinFilter] = useState<string>('all');
   const [selectedParticipant, setSelectedParticipant] = useState<ParticipantWithHealth | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isImageOpen, setIsImageOpen] = useState(false);
   
   // Form states
   const [newNote, setNewNote] = useState('');
+  const [publicNote, setPublicNote] = useState('');
   const [newEventType, setNewEventType] = useState('observation');
   const [newEventDescription, setNewEventDescription] = useState('');
   const [newEventSeverity, setNewEventSeverity] = useState('low');
@@ -122,14 +128,18 @@ export default function Nurse() {
         supabase.from('participant_activities').select('*').in('participant_id', participantIds),
       ]);
 
-      const participantsWithHealth: ParticipantWithHealth[] = (participantsData || []).map(p => ({
-        ...p,
-        cabin: p.cabins,
-        healthNotes: (notesRes.data || []).filter(n => n.participant_id === p.id),
-        healthEvents: (eventsRes.data || []).filter(e => e.participant_id === p.id),
-        healthInfo: (healthInfoRes.data || []).find(h => h.participant_id === p.id) || null,
-        activities: (activitiesRes.data || []).filter(a => a.participant_id === p.id),
-      }));
+      const participantsWithHealth: ParticipantWithHealth[] = (participantsData || []).map(p => {
+        const healthInfo = (healthInfoRes.data || []).find(h => h.participant_id === p.id);
+        return {
+          ...p,
+          cabin: p.cabins,
+          healthNotes: (notesRes.data || []).filter(n => n.participant_id === p.id),
+          healthEvents: (eventsRes.data || []).filter(e => e.participant_id === p.id),
+          healthInfo: healthInfo || null,
+          activities: (activitiesRes.data || []).filter(a => a.participant_id === p.id),
+          publicHealthNote: healthInfo?.info || null,
+        };
+      });
 
       setParticipants(participantsWithHealth);
     } catch (error) {
@@ -141,18 +151,25 @@ export default function Nurse() {
   };
 
   const loadParticipantDetails = async (participant: ParticipantWithHealth) => {
-    const [notesRes, eventsRes, activitiesRes] = await Promise.all([
+    const [notesRes, eventsRes, activitiesRes, healthInfoRes] = await Promise.all([
       supabase.from('participant_health_notes').select('*').eq('participant_id', participant.id),
       supabase.from('participant_health_events').select('*').eq('participant_id', participant.id).order('created_at', { ascending: false }),
       supabase.from('participant_activities').select('*').eq('participant_id', participant.id),
+      supabase.from('participant_health_info').select('*').eq('participant_id', participant.id).maybeSingle(),
     ]);
 
-    setSelectedParticipant({
+    const updatedParticipant = {
       ...participant,
       healthNotes: notesRes.data || [],
       healthEvents: eventsRes.data || [],
       activities: activitiesRes.data || [],
-    });
+      healthInfo: healthInfoRes.data || null,
+      publicHealthNote: healthInfoRes.data?.info || null,
+    };
+
+    setSelectedParticipant(updatedParticipant);
+    setNewNote(notesRes.data?.[0]?.content || '');
+    setPublicNote(healthInfoRes.data?.info || '');
   };
 
   const openParticipantDetail = async (participant: ParticipantWithHealth) => {
@@ -197,6 +214,43 @@ export default function Nurse() {
     }
   };
 
+  const savePublicHealthNote = async () => {
+    if (!selectedParticipant) return;
+
+    setIsSaving(true);
+    try {
+      // Check if there's existing health info
+      const { data: existingInfo } = await supabase
+        .from('participant_health_info')
+        .select('*')
+        .eq('participant_id', selectedParticipant.id)
+        .maybeSingle();
+      
+      if (existingInfo) {
+        await supabase
+          .from('participant_health_info')
+          .update({ info: publicNote })
+          .eq('id', existingInfo.id);
+      } else if (publicNote.trim()) {
+        await supabase
+          .from('participant_health_info')
+          .insert({
+            participant_id: selectedParticipant.id,
+            info: publicNote,
+          });
+      }
+
+      toast.success('Info for ledere lagret');
+      await loadParticipantDetails(selectedParticipant);
+      loadParticipants();
+    } catch (error) {
+      console.error('Error saving public health note:', error);
+      toast.error('Kunne ikke lagre info');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const addHealthEvent = async () => {
     if (!selectedParticipant || !newEventDescription.trim()) {
       toast.error('Skriv inn en beskrivelse');
@@ -227,8 +281,25 @@ export default function Nurse() {
     }
   };
 
-  const filteredParticipants = participants.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  // Get unique cabins for filter
+  const uniqueCabins = Array.from(
+    new Set(participants.filter(p => p.cabin?.name).map(p => p.cabin!.name))
+  ).sort();
+
+  // Filter participants by search query and cabin
+  const filteredParticipants = participants.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.cabin?.name?.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesCabin = cabinFilter === 'all' || p.cabin?.name === cabinFilter;
+    return matchesSearch && matchesCabin;
+  });
+
+  // Separate participants with health info from others
+  const participantsWithHealthInfo = filteredParticipants.filter(p => 
+    p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info
+  );
+  const participantsWithoutHealthInfo = filteredParticipants.filter(p => 
+    p.healthNotes.length === 0 && p.healthEvents.length === 0 && !p.healthInfo?.info
   );
 
   const hasAccess = isAdmin || isNurse;
@@ -263,6 +334,79 @@ export default function Nurse() {
     );
   }
 
+  const ParticipantCard = ({ participant }: { participant: ParticipantWithHealth }) => {
+    const hasNotes = participant.healthNotes.length > 0;
+    const hasEvents = participant.healthEvents.length > 0;
+    const hasHealthInfo = !!participant.healthInfo?.info;
+    const latestEvent = participant.healthEvents[0];
+    const highSeverity = participant.healthEvents.some(e => e.severity === 'high');
+    
+    return (
+      <Card 
+        className={`cursor-pointer transition-all hover:shadow-md ${highSeverity ? 'border-destructive/50' : ''}`}
+        onClick={() => openParticipantDetail(participant)}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar className="w-10 h-10">
+                <AvatarImage src={participant.image_url || undefined} alt={participant.name} />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {participant.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium text-foreground">{participant.name}</p>
+                {participant.cabin && (
+                  <p className="text-sm text-muted-foreground">{participant.cabin.name}</p>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-1">
+              {hasHealthInfo && (
+                <Badge variant="outline" className="text-xs bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/30 dark:text-pink-300 dark:border-pink-800">
+                  <Heart className="w-3 h-3 mr-1" />
+                  Info
+                </Badge>
+              )}
+              {hasNotes && (
+                <Badge variant="outline" className="text-xs">
+                  <FileText className="w-3 h-3 mr-1" />
+                  Notat
+                </Badge>
+              )}
+              {highSeverity && (
+                <Badge variant="destructive" className="text-xs">
+                  <AlertCircle className="w-3 h-3" />
+                </Badge>
+              )}
+            </div>
+          </div>
+          {hasHealthInfo && (
+            <div className="mt-3 pt-3 border-t border-border">
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {participant.healthInfo?.info}
+              </p>
+            </div>
+          )}
+          {hasEvents && latestEvent && !hasHealthInfo && (
+            <div className="mt-3 pt-3 border-t border-border">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="w-3 h-3" />
+                <span>
+                  {format(new Date(latestEvent.created_at), 'dd. MMM HH:mm', { locale: nb })}
+                </span>
+                <Badge variant="secondary" className="text-xs">
+                  {eventTypes.find(t => t.value === latestEvent.event_type)?.label || latestEvent.event_type}
+                </Badge>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -275,93 +419,66 @@ export default function Nurse() {
         </p>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Søk etter deltaker..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Søk etter deltaker eller hytte..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={cabinFilter} onValueChange={setCabinFilter}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <Home className="w-4 h-4 mr-2" />
+            <SelectValue placeholder="Velg hytte" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Alle hytter</SelectItem>
+            {uniqueCabins.map((cabin) => (
+              <SelectItem key={cabin} value={cabin}>
+                {cabin}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Participants grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredParticipants.map((participant) => {
-          const hasNotes = participant.healthNotes.length > 0;
-          const hasEvents = participant.healthEvents.length > 0;
-          const hasHealthInfo = !!participant.healthInfo?.info;
-          const latestEvent = participant.healthEvents[0];
-          const highSeverity = participant.healthEvents.some(e => e.severity === 'high');
-          
-          return (
-            <Card 
-              key={participant.id} 
-              className={`cursor-pointer transition-all hover:shadow-md ${highSeverity ? 'border-destructive/50' : ''}`}
-              onClick={() => openParticipantDetail(participant)}
-            >
-              <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={participant.image_url || undefined} alt={participant.name} />
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {participant.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-foreground">{participant.name}</p>
-                        {participant.cabin && (
-                          <p className="text-sm text-muted-foreground">{participant.cabin.name}</p>
-                        )}
-                      </div>
-                    </div>
-                  <div className="flex gap-1">
-                    {hasHealthInfo && (
-                      <Badge variant="outline" className="text-xs bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/30 dark:text-pink-300 dark:border-pink-800">
-                        <Heart className="w-3 h-3 mr-1" />
-                        Info
-                      </Badge>
-                    )}
-                    {hasNotes && (
-                      <Badge variant="outline" className="text-xs">
-                        <FileText className="w-3 h-3 mr-1" />
-                        Notat
-                      </Badge>
-                    )}
-                    {highSeverity && (
-                      <Badge variant="destructive" className="text-xs">
-                        <AlertCircle className="w-3 h-3" />
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                {hasHealthInfo && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {participant.healthInfo?.info}
-                    </p>
-                  </div>
-                )}
-                {hasEvents && latestEvent && !hasHealthInfo && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-3 h-3" />
-                      <span>
-                        {format(new Date(latestEvent.created_at), 'dd. MMM HH:mm', { locale: nb })}
-                      </span>
-                      <Badge variant="secondary" className="text-xs">
-                        {eventTypes.find(t => t.value === latestEvent.event_type)?.label || latestEvent.event_type}
-                      </Badge>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {/* Participants with health info - shown at top */}
+      {participantsWithHealthInfo.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Heart className="w-5 h-5 text-destructive" />
+            <h2 className="text-lg font-semibold text-foreground">
+              Deltakere med helseinfo ({participantsWithHealthInfo.length})
+            </h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {participantsWithHealthInfo.map((participant) => (
+              <ParticipantCard key={participant.id} participant={participant} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* All other participants */}
+      {participantsWithoutHealthInfo.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <User className="w-5 h-5 text-muted-foreground" />
+            <h2 className="text-lg font-semibold text-foreground">
+              Alle deltakere ({participantsWithoutHealthInfo.length})
+            </h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {participantsWithoutHealthInfo.map((participant) => (
+              <ParticipantCard key={participant.id} participant={participant} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {filteredParticipants.length === 0 && (
         <Card>
@@ -369,7 +486,7 @@ export default function Nurse() {
             <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium text-foreground">Ingen deltakere funnet</h3>
             <p className="text-muted-foreground mt-1">
-              Prøv å søke med et annet navn
+              Prøv å søke med et annet navn eller velg en annen hytte
             </p>
           </CardContent>
         </Card>
@@ -380,17 +497,26 @@ export default function Nurse() {
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
-              <Avatar className="w-10 h-10">
-                <AvatarImage src={selectedParticipant?.image_url || undefined} alt={selectedParticipant?.name} />
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  {selectedParticipant?.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <div 
+                className="cursor-pointer"
+                onClick={() => setIsImageOpen(true)}
+              >
+                <Avatar className="w-16 h-16 ring-2 ring-primary/20 hover:ring-primary/40 transition-all">
+                  <AvatarImage src={selectedParticipant?.image_url || undefined} alt={selectedParticipant?.name} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-xl">
+                    {selectedParticipant?.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
               <div>
                 <span>{selectedParticipant?.name}</span>
                 {selectedParticipant?.cabin && (
                   <p className="text-sm font-normal text-muted-foreground">{selectedParticipant.cabin.name}</p>
                 )}
+                <p className="text-xs font-normal text-muted-foreground flex items-center gap-1 mt-1">
+                  <Eye className="w-3 h-3" />
+                  Klikk på bildet for å forstørre
+                </p>
               </div>
             </DialogTitle>
           </DialogHeader>
@@ -417,37 +543,46 @@ export default function Nurse() {
 
             {/* Health Notes Tab */}
             <TabsContent value="notes" className="flex-1 space-y-4 overflow-auto">
-              {/* Imported Health Info from CSV */}
-              {selectedParticipant?.healthInfo?.info && (
-                <Card className="border-pink-200 bg-pink-50/50 dark:border-pink-800 dark:bg-pink-950/20">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2 text-pink-700 dark:text-pink-300">
-                      <Heart className="w-4 h-4" />
-                      Importert helseinformasjon
-                    </CardTitle>
-                    <CardDescription>
-                      Informasjon fra påmeldingsskjema
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-foreground whitespace-pre-wrap">
-                      {selectedParticipant.healthInfo.info}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
+              {/* Public Health Info for Leaders */}
+              <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                    <Eye className="w-4 h-4" />
+                    Info synlig for ledere
+                  </CardTitle>
+                  <CardDescription>
+                    Denne informasjonen vises for ledere når de ser på deltakeren
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Textarea
+                    placeholder="Skriv info som ledere skal kunne se..."
+                    value={publicNote}
+                    onChange={(e) => setPublicNote(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                  <Button onClick={savePublicHealthNote} disabled={isSaving} variant="outline">
+                    {isSaving ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Lagre info for ledere
+                  </Button>
+                </CardContent>
+              </Card>
 
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Generelle helsenotater</CardTitle>
+                  <CardTitle className="text-base">Interne helsenotater</CardTitle>
                   <CardDescription>
-                    Allergier, medisiner, spesielle behov, etc.
+                    Kun synlig for sykepleiere - allergier, medisiner, spesielle behov, etc.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Textarea
                     placeholder="Skriv helsenotater her..."
-                    value={newNote || selectedParticipant?.healthNotes[0]?.content || ''}
+                    value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     className="min-h-[150px]"
                   />
@@ -640,6 +775,28 @@ export default function Nurse() {
               </Card>
             </TabsContent>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Large Image Dialog */}
+      <Dialog open={isImageOpen} onOpenChange={setIsImageOpen}>
+        <DialogContent className="max-w-lg p-2">
+          <div className="relative w-full aspect-square">
+            {selectedParticipant?.image_url ? (
+              <img 
+                src={selectedParticipant.image_url} 
+                alt={selectedParticipant.name}
+                className="w-full h-full object-cover rounded-lg"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-muted rounded-lg">
+                <User className="w-24 h-24 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          <p className="text-center font-medium text-foreground mt-2">
+            {selectedParticipant?.name}
+          </p>
         </DialogContent>
       </Dialog>
     </div>
