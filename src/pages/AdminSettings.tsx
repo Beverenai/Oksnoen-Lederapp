@@ -25,10 +25,13 @@ import {
   UserCheck,
   Search,
   Check,
-  ArrowLeft
+  ArrowLeft,
+  Home
 } from 'lucide-react';
 import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
+import { CabinsTab } from '@/components/admin/CabinsTab';
+import { ParticipantImportTab } from '@/components/admin/ParticipantImportTab';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -469,10 +472,18 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="leaders" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
           <TabsTrigger value="leaders" className="gap-2">
             <Users className="w-4 h-4 hidden sm:block" />
             Ledere
+          </TabsTrigger>
+          <TabsTrigger value="cabins" className="gap-2">
+            <Home className="w-4 h-4 hidden sm:block" />
+            Hytter
+          </TabsTrigger>
+          <TabsTrigger value="participants" className="gap-2">
+            <Users className="w-4 h-4 hidden sm:block" />
+            Deltakere
           </TabsTrigger>
           <TabsTrigger value="sync" className="gap-2">
             <RefreshCw className="w-4 h-4 hidden sm:block" />
@@ -483,6 +494,16 @@ export default function AdminSettings() {
             Oppsett
           </TabsTrigger>
         </TabsList>
+
+        {/* Cabins Tab */}
+        <TabsContent value="cabins" className="space-y-4">
+          <CabinsTab />
+        </TabsContent>
+
+        {/* Participants Tab */}
+        <TabsContent value="participants" className="space-y-4">
+          <ParticipantImportTab />
+        </TabsContent>
 
         {/* Setup Tab */}
         <TabsContent value="setup" className="space-y-4">
