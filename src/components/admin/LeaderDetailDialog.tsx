@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Loader2, Save, Upload, Shield, Users, Heart } from 'lucide-react';
+import { Loader2, Save, Upload, Shield, Users, Heart, Camera } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
@@ -189,33 +189,30 @@ export function LeaderDetailDialog({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Profile Image */}
-          <div className="flex items-center gap-4">
-            <Avatar className="w-20 h-20">
-              <AvatarImage src={profileImageUrl} alt={name} />
-              <AvatarFallback className="text-lg">{getInitials(name)}</AvatarFallback>
-            </Avatar>
-            <div>
-              <Label htmlFor="profile-image" className="cursor-pointer">
-                <Button variant="outline" size="sm" asChild disabled={isUploading}>
-                  <span>
-                    {isUploading ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Upload className="w-4 h-4 mr-2" />
-                    )}
-                    Last opp bilde
-                  </span>
-                </Button>
-              </Label>
-              <input
-                id="profile-image"
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-            </div>
+          {/* Profile Image - Clickable Avatar */}
+          <div className="flex flex-col items-center gap-3">
+            <Label htmlFor="profile-image" className="cursor-pointer group relative">
+              <Avatar className="w-24 h-24 ring-2 ring-border group-hover:ring-primary transition-all">
+                <AvatarImage src={profileImageUrl} alt={name} />
+                <AvatarFallback className="text-xl">{getInitials(name)}</AvatarFallback>
+              </Avatar>
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                {isUploading ? (
+                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                ) : (
+                  <Camera className="w-6 h-6 text-white" />
+                )}
+              </div>
+            </Label>
+            <p className="text-xs text-muted-foreground">Klikk for å endre bilde</p>
+            <input
+              id="profile-image"
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+              disabled={isUploading}
+            />
           </div>
 
           <Separator />
