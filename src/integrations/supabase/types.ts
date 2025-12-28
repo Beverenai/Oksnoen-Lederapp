@@ -64,16 +64,19 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          sort_order: number | null
         }
         Insert: {
           created_at?: string | null
           id?: string
           name: string
+          sort_order?: number | null
         }
         Update: {
           created_at?: string | null
           id?: string
           name?: string
+          sort_order?: number | null
         }
         Relationships: []
       }
@@ -151,6 +154,42 @@ export type Database = {
           title?: string | null
         }
         Relationships: []
+      }
+      leader_cabins: {
+        Row: {
+          cabin_id: string
+          created_at: string | null
+          id: string
+          leader_id: string
+        }
+        Insert: {
+          cabin_id: string
+          created_at?: string | null
+          id?: string
+          leader_id: string
+        }
+        Update: {
+          cabin_id?: string
+          created_at?: string | null
+          id?: string
+          leader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_cabins_cabin_id_fkey"
+            columns: ["cabin_id"]
+            isOneToOne: false
+            referencedRelation: "cabins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_cabins_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leader_content: {
         Row: {
@@ -354,6 +393,38 @@ export type Database = {
           },
         ]
       }
+      participant_health_info: {
+        Row: {
+          created_at: string | null
+          id: string
+          info: string
+          participant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          info: string
+          participant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          info?: string
+          participant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_health_info_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: true
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participant_health_notes: {
         Row: {
           content: string
@@ -401,33 +472,45 @@ export type Database = {
           birth_date: string | null
           cabin_id: string | null
           created_at: string | null
+          first_name: string | null
           has_arrived: boolean | null
           id: string
           image_url: string | null
+          last_name: string | null
           name: string
           notes: string | null
+          room: string | null
+          times_attended: number | null
           updated_at: string | null
         }
         Insert: {
           birth_date?: string | null
           cabin_id?: string | null
           created_at?: string | null
+          first_name?: string | null
           has_arrived?: boolean | null
           id?: string
           image_url?: string | null
+          last_name?: string | null
           name: string
           notes?: string | null
+          room?: string | null
+          times_attended?: number | null
           updated_at?: string | null
         }
         Update: {
           birth_date?: string | null
           cabin_id?: string | null
           created_at?: string | null
+          first_name?: string | null
           has_arrived?: boolean | null
           id?: string
           image_url?: string | null
+          last_name?: string | null
           name?: string
           notes?: string | null
+          room?: string | null
+          times_attended?: number | null
           updated_at?: string | null
         }
         Relationships: [
