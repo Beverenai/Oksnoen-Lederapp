@@ -36,13 +36,17 @@ import {
   Check,
   AlertTriangle,
   Bold,
-  Italic
+  Italic,
+  GripVertical
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
@@ -98,6 +102,47 @@ const availableIcons = [
   { value: 'alert-triangle', label: 'OBS', icon: AlertTriangle },
   { value: 'calendar', label: 'Kalender', icon: Calendar },
 ];
+
+// Sortable item component for drag-and-drop
+interface SortableItemProps {
+  id: string;
+  children: React.ReactNode;
+}
+
+function SortableItem({ id, children }: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 999 : undefined,
+    position: isDragging ? 'relative' as const : undefined,
+    opacity: isDragging ? 0.8 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          className="mt-4 p-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+        <div className="flex-1">{children}</div>
+      </div>
+    </div>
+  );
+}
 
 export default function Admin() {
   const { isAdmin } = useAuth();
@@ -463,6 +508,32 @@ export default function Admin() {
     }
   };
 
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      setLocalHomeConfig((items) => {
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over.id);
+        const newItems = arrayMove(items, oldIndex, newIndex);
+        
+        // Update sort_order based on new position
+        return newItems.map((item, index) => ({
+          ...item,
+          sort_order: index
+        }));
+      });
+      setHasUnsavedConfigChanges(true);
+    }
+  };
+
   // Local state updates for home config (without saving to DB)
   const updateLocalHomeConfig = (configId: string, updates: Partial<HomeScreenConfig>) => {
     setLocalHomeConfig(prev => prev.map(cfg => 
@@ -493,7 +564,8 @@ export default function Admin() {
           original.bg_color !== cfg.bg_color ||
           original.text_size !== cfg.text_size ||
           original.is_bold !== cfg.is_bold ||
-          original.is_italic !== cfg.is_italic
+          original.is_italic !== cfg.is_italic ||
+          original.sort_order !== cfg.sort_order
         )) {
           await supabase
             .from('home_screen_config')
@@ -504,7 +576,8 @@ export default function Admin() {
               bg_color: cfg.bg_color,
               text_size: cfg.text_size,
               is_bold: cfg.is_bold,
-              is_italic: cfg.is_italic
+              is_italic: cfg.is_italic,
+              sort_order: cfg.sort_order
             })
             .eq('id', cfg.id);
         }
@@ -768,130 +841,140 @@ export default function Admin() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {localHomeConfig.map((cfg) => {
-                  const currentIcon = availableIcons.find(i => i.value === cfg.icon) || availableIcons[0];
-                  const IconComponent = currentIcon.icon;
-                  
-                  return (
-                    <div
-                      key={cfg.id}
-                      className="p-4 rounded-lg bg-muted/50 space-y-4"
-                    >
-                      {/* Row 1: Toggle, icon, badge */}
-                      <div className="flex items-center gap-3">
-                        <Switch
-                          checked={cfg.is_visible || false}
-                          onCheckedChange={(checked) => 
-                            updateLocalHomeConfig(cfg.id, { is_visible: checked })
-                          }
-                        />
-                        <div className="flex items-center gap-2">
-                          <IconComponent className="w-4 h-4 text-muted-foreground" />
-                          <Badge variant="outline">{cfg.label}</Badge>
-                        </div>
-                      </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={localHomeConfig.map(cfg => cfg.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-3">
+                    {localHomeConfig.map((cfg) => {
+                      const currentIcon = availableIcons.find(i => i.value === cfg.icon) || availableIcons[0];
+                      const IconComponent = currentIcon.icon;
                       
-                      {/* Row 2: Title and icon selector */}
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Input
-                          placeholder="Tittel"
-                          value={cfg.title || ''}
-                          onChange={(e) => 
-                            updateLocalHomeConfig(cfg.id, { title: e.target.value })
-                          }
-                          className="flex-1"
-                        />
-                        
-                        <Select
-                          value={cfg.icon || 'info'}
-                          onValueChange={(value) => 
-                            updateLocalHomeConfig(cfg.id, { icon: value })
-                          }
-                        >
-                          <SelectTrigger className="w-full sm:w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableIcons.map(({ value, label, icon: Icon }) => (
-                              <SelectItem key={value} value={value}>
-                                <div className="flex items-center gap-2">
-                                  <Icon className="w-4 h-4" />
-                                  {label}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      {/* Row 3: Color picker */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground min-w-[50px]">Farge:</span>
-                        <div className="flex gap-1.5">
-                          {availableColors.map((color) => (
-                            <button
-                              key={color.value}
-                              type="button"
-                              onClick={() => updateLocalHomeConfig(cfg.id, { bg_color: color.value })}
-                              className={`w-6 h-6 rounded-full ${color.class} border-2 transition-all ${
-                                (cfg.bg_color || 'default') === color.value 
-                                  ? 'border-foreground scale-110' 
-                                  : 'border-transparent hover:scale-105'
-                              }`}
-                              title={color.label}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Row 4: Text size and bold/italic */}
-                      <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">Størrelse:</span>
-                          <ToggleGroup 
-                            type="single" 
-                            value={cfg.text_size || 'md'}
-                            onValueChange={(value) => {
-                              if (value) updateLocalHomeConfig(cfg.id, { text_size: value });
-                            }}
-                            className="bg-background rounded-md"
-                          >
-                            <ToggleGroupItem value="sm" size="sm" className="text-xs px-2">S</ToggleGroupItem>
-                            <ToggleGroupItem value="md" size="sm" className="text-xs px-2">M</ToggleGroupItem>
-                            <ToggleGroupItem value="lg" size="sm" className="text-xs px-2">L</ToggleGroupItem>
-                          </ToggleGroup>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">Stil:</span>
-                          <ToggleGroup 
-                            type="multiple" 
-                            value={[
-                              ...(cfg.is_bold ? ['bold'] : []),
-                              ...(cfg.is_italic ? ['italic'] : [])
-                            ]}
-                            onValueChange={(values) => {
-                              updateLocalHomeConfig(cfg.id, { 
-                                is_bold: values.includes('bold'),
-                                is_italic: values.includes('italic')
-                              });
-                            }}
-                            className="bg-background rounded-md"
-                          >
-                            <ToggleGroupItem value="bold" size="sm" className="px-2">
-                              <Bold className="w-3.5 h-3.5" />
-                            </ToggleGroupItem>
-                            <ToggleGroupItem value="italic" size="sm" className="px-2">
-                              <Italic className="w-3.5 h-3.5" />
-                            </ToggleGroupItem>
-                          </ToggleGroup>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      return (
+                        <SortableItem key={cfg.id} id={cfg.id}>
+                          <div className="p-4 rounded-lg bg-muted/50 space-y-4">
+                            {/* Row 1: Toggle, icon, badge */}
+                            <div className="flex items-center gap-3">
+                              <Switch
+                                checked={cfg.is_visible || false}
+                                onCheckedChange={(checked) => 
+                                  updateLocalHomeConfig(cfg.id, { is_visible: checked })
+                                }
+                              />
+                              <div className="flex items-center gap-2">
+                                <IconComponent className="w-4 h-4 text-muted-foreground" />
+                                <Badge variant="outline">{cfg.label}</Badge>
+                              </div>
+                            </div>
+                            
+                            {/* Row 2: Title and icon selector */}
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <Input
+                                placeholder="Tittel"
+                                value={cfg.title || ''}
+                                onChange={(e) => 
+                                  updateLocalHomeConfig(cfg.id, { title: e.target.value })
+                                }
+                                className="flex-1"
+                              />
+                              
+                              <Select
+                                value={cfg.icon || 'info'}
+                                onValueChange={(value) => 
+                                  updateLocalHomeConfig(cfg.id, { icon: value })
+                                }
+                              >
+                                <SelectTrigger className="w-full sm:w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableIcons.map(({ value, label, icon: Icon }) => (
+                                    <SelectItem key={value} value={value}>
+                                      <div className="flex items-center gap-2">
+                                        <Icon className="w-4 h-4" />
+                                        {label}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            {/* Row 3: Color picker */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground min-w-[50px]">Farge:</span>
+                              <div className="flex gap-1.5">
+                                {availableColors.map((color) => (
+                                  <button
+                                    key={color.value}
+                                    type="button"
+                                    onClick={() => updateLocalHomeConfig(cfg.id, { bg_color: color.value })}
+                                    className={`w-6 h-6 rounded-full ${color.class} border-2 transition-all ${
+                                      (cfg.bg_color || 'default') === color.value 
+                                        ? 'border-foreground scale-110' 
+                                        : 'border-transparent hover:scale-105'
+                                    }`}
+                                    title={color.label}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            
+                            {/* Row 4: Text size and bold/italic */}
+                            <div className="flex flex-wrap items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">Størrelse:</span>
+                                <ToggleGroup 
+                                  type="single" 
+                                  value={cfg.text_size || 'md'}
+                                  onValueChange={(value) => {
+                                    if (value) updateLocalHomeConfig(cfg.id, { text_size: value });
+                                  }}
+                                  className="bg-background rounded-md"
+                                >
+                                  <ToggleGroupItem value="sm" size="sm" className="text-xs px-2">S</ToggleGroupItem>
+                                  <ToggleGroupItem value="md" size="sm" className="text-xs px-2">M</ToggleGroupItem>
+                                  <ToggleGroupItem value="lg" size="sm" className="text-xs px-2">L</ToggleGroupItem>
+                                </ToggleGroup>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">Stil:</span>
+                                <ToggleGroup 
+                                  type="multiple" 
+                                  value={[
+                                    ...(cfg.is_bold ? ['bold'] : []),
+                                    ...(cfg.is_italic ? ['italic'] : [])
+                                  ]}
+                                  onValueChange={(values) => {
+                                    updateLocalHomeConfig(cfg.id, { 
+                                      is_bold: values.includes('bold'),
+                                      is_italic: values.includes('italic')
+                                    });
+                                  }}
+                                  className="bg-background rounded-md"
+                                >
+                                  <ToggleGroupItem value="bold" size="sm" className="px-2">
+                                    <Bold className="w-3.5 h-3.5" />
+                                  </ToggleGroupItem>
+                                  <ToggleGroupItem value="italic" size="sm" className="px-2">
+                                    <Italic className="w-3.5 h-3.5" />
+                                  </ToggleGroupItem>
+                                </ToggleGroup>
+                              </div>
+                            </div>
+                          </div>
+                        </SortableItem>
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </CardContent>
           </Card>
         </TabsContent>
