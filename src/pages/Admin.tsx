@@ -34,8 +34,11 @@ import {
   UserCheck,
   Search,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  Bold,
+  Italic
 } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { toast } from 'sonner';
@@ -58,7 +61,21 @@ interface HomeScreenConfig {
   sort_order: number;
   title: string | null;
   icon: string | null;
+  bg_color: string | null;
+  text_size: string | null;
+  is_bold: boolean | null;
+  is_italic: boolean | null;
 }
+
+const availableColors = [
+  { value: 'default', label: 'Standard', class: 'bg-muted' },
+  { value: 'green', label: 'Grønn', class: 'bg-emerald-500' },
+  { value: 'yellow', label: 'Gul', class: 'bg-amber-500' },
+  { value: 'blue', label: 'Blå', class: 'bg-blue-500' },
+  { value: 'red', label: 'Rød', class: 'bg-red-500' },
+  { value: 'purple', label: 'Lilla', class: 'bg-purple-500' },
+  { value: 'orange', label: 'Oransje', class: 'bg-orange-500' },
+];
 
 interface ExtraFieldConfig {
   id: string;
@@ -472,11 +489,23 @@ export default function Admin() {
         if (original && (
           original.title !== cfg.title || 
           original.icon !== cfg.icon || 
-          original.is_visible !== cfg.is_visible
+          original.is_visible !== cfg.is_visible ||
+          original.bg_color !== cfg.bg_color ||
+          original.text_size !== cfg.text_size ||
+          original.is_bold !== cfg.is_bold ||
+          original.is_italic !== cfg.is_italic
         )) {
           await supabase
             .from('home_screen_config')
-            .update({ title: cfg.title, icon: cfg.icon, is_visible: cfg.is_visible })
+            .update({ 
+              title: cfg.title, 
+              icon: cfg.icon, 
+              is_visible: cfg.is_visible,
+              bg_color: cfg.bg_color,
+              text_size: cfg.text_size,
+              is_bold: cfg.is_bold,
+              is_italic: cfg.is_italic
+            })
             .eq('id', cfg.id);
         }
       }
@@ -739,7 +768,7 @@ export default function Admin() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {localHomeConfig.map((cfg) => {
                   const currentIcon = availableIcons.find(i => i.value === cfg.icon) || availableIcons[0];
                   const IconComponent = currentIcon.icon;
@@ -747,9 +776,10 @@ export default function Admin() {
                   return (
                     <div
                       key={cfg.id}
-                      className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 rounded-lg bg-muted/50"
+                      className="p-4 rounded-lg bg-muted/50 space-y-4"
                     >
-                      <div className="flex items-center gap-3 flex-1">
+                      {/* Row 1: Toggle, icon, badge */}
+                      <div className="flex items-center gap-3">
                         <Switch
                           checked={cfg.is_visible || false}
                           onCheckedChange={(checked) => 
@@ -762,14 +792,15 @@ export default function Admin() {
                         </div>
                       </div>
                       
-                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                      {/* Row 2: Title and icon selector */}
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <Input
                           placeholder="Tittel"
                           value={cfg.title || ''}
                           onChange={(e) => 
                             updateLocalHomeConfig(cfg.id, { title: e.target.value })
                           }
-                          className="w-full sm:w-40"
+                          className="flex-1"
                         />
                         
                         <Select
@@ -792,6 +823,70 @@ export default function Admin() {
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                      
+                      {/* Row 3: Color picker */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground min-w-[50px]">Farge:</span>
+                        <div className="flex gap-1.5">
+                          {availableColors.map((color) => (
+                            <button
+                              key={color.value}
+                              type="button"
+                              onClick={() => updateLocalHomeConfig(cfg.id, { bg_color: color.value })}
+                              className={`w-6 h-6 rounded-full ${color.class} border-2 transition-all ${
+                                (cfg.bg_color || 'default') === color.value 
+                                  ? 'border-foreground scale-110' 
+                                  : 'border-transparent hover:scale-105'
+                              }`}
+                              title={color.label}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Row 4: Text size and bold/italic */}
+                      <div className="flex flex-wrap items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Størrelse:</span>
+                          <ToggleGroup 
+                            type="single" 
+                            value={cfg.text_size || 'md'}
+                            onValueChange={(value) => {
+                              if (value) updateLocalHomeConfig(cfg.id, { text_size: value });
+                            }}
+                            className="bg-background rounded-md"
+                          >
+                            <ToggleGroupItem value="sm" size="sm" className="text-xs px-2">S</ToggleGroupItem>
+                            <ToggleGroupItem value="md" size="sm" className="text-xs px-2">M</ToggleGroupItem>
+                            <ToggleGroupItem value="lg" size="sm" className="text-xs px-2">L</ToggleGroupItem>
+                          </ToggleGroup>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Stil:</span>
+                          <ToggleGroup 
+                            type="multiple" 
+                            value={[
+                              ...(cfg.is_bold ? ['bold'] : []),
+                              ...(cfg.is_italic ? ['italic'] : [])
+                            ]}
+                            onValueChange={(values) => {
+                              updateLocalHomeConfig(cfg.id, { 
+                                is_bold: values.includes('bold'),
+                                is_italic: values.includes('italic')
+                              });
+                            }}
+                            className="bg-background rounded-md"
+                          >
+                            <ToggleGroupItem value="bold" size="sm" className="px-2">
+                              <Bold className="w-3.5 h-3.5" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="italic" size="sm" className="px-2">
+                              <Italic className="w-3.5 h-3.5" />
+                            </ToggleGroupItem>
+                          </ToggleGroup>
+                        </div>
                       </div>
                     </div>
                   );

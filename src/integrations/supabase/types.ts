@@ -112,30 +112,42 @@ export type Database = {
       }
       home_screen_config: {
         Row: {
+          bg_color: string | null
           element_key: string
           icon: string | null
           id: string
+          is_bold: boolean | null
+          is_italic: boolean | null
           is_visible: boolean | null
           label: string
           sort_order: number | null
+          text_size: string | null
           title: string | null
         }
         Insert: {
+          bg_color?: string | null
           element_key: string
           icon?: string | null
           id?: string
+          is_bold?: boolean | null
+          is_italic?: boolean | null
           is_visible?: boolean | null
           label: string
           sort_order?: number | null
+          text_size?: string | null
           title?: string | null
         }
         Update: {
+          bg_color?: string | null
           element_key?: string
           icon?: string | null
           id?: string
+          is_bold?: boolean | null
+          is_italic?: boolean | null
           is_visible?: boolean | null
           label?: string
           sort_order?: number | null
+          text_size?: string | null
           title?: string | null
         }
         Relationships: []
