@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Users, 
   Home, 
@@ -38,11 +39,14 @@ import {
   AlertTriangle,
   Bold,
   Italic,
-  GripVertical
+  GripVertical,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
+import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
@@ -205,6 +209,9 @@ export default function Admin() {
   const [exportCountdown, setExportCountdown] = useState(0);
   const exportTimerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Collapsible states for dashboard
+  const [isHomeConfigOpen, setIsHomeConfigOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -909,113 +916,13 @@ export default function Admin() {
 
         {/* Admin Dashboard Tab */}
         <TabsContent value="dashboard" className="space-y-4">
-          {/* Leader Content */}
-          <div className="grid gap-4 lg:grid-cols-3">
-            {/* Leader list */}
-            <Card className="lg:col-span-1">
-              <CardHeader>
-                <CardTitle>Velg leder</CardTitle>
-                <CardDescription>Klikk for å redigere innhold</CardDescription>
-              </CardHeader>
-              <CardContent>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                  {leaders.filter(l => l.is_active !== false && l.phone !== '12345678').map((leader) => (
-                    <button
-                      key={leader.id}
-                      onClick={() => loadLeaderContent(leader)}
-                      className={`w-full text-left p-3 rounded-lg transition-colors ${
-                        selectedLeader?.id === leader.id
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted/50 hover:bg-muted'
-                      }`}
-                    >
-                      <p className="font-medium">{leader.name}</p>
-                    </button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>
-                  {selectedLeader ? `Innhold for ${selectedLeader.name}` : 'Velg en leder'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {selectedLeader ? (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Aktivitet</Label>
-                      <Input
-                        placeholder="Hva skal lederen gjøre nå?"
-                        value={leaderContent.current_activity || ''}
-                        onChange={(e) =>
-                          setLeaderContent({ ...leaderContent, current_activity: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Ekstra aktivitet</Label>
-                      <Input
-                        placeholder="Eventuelle tilleggsoppgaver"
-                        value={leaderContent.extra_activity || ''}
-                        onChange={(e) =>
-                          setLeaderContent({ ...leaderContent, extra_activity: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Notater til lederen</Label>
-                      <Textarea
-                        placeholder="Personlige beskjeder"
-                        value={leaderContent.personal_notes || ''}
-                        onChange={(e) =>
-                          setLeaderContent({ ...leaderContent, personal_notes: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-warning">OBS-melding</Label>
-                      <Textarea
-                        placeholder="Kritisk informasjon (vises øverst)"
-                        value={leaderContent.obs_message || ''}
-                        onChange={(e) =>
-                          setLeaderContent({ ...leaderContent, obs_message: e.target.value })
-                        }
-                      />
-                    </div>
-                    
-                    {/* Extra fields - only show if enabled in config */}
-                    {localExtraConfig.filter(cfg => cfg.is_visible).map((extraField) => (
-                      <div key={extraField.field_key} className="space-y-2">
-                        <Label>{extraField.title || extraField.field_key.replace('_', ' #')}</Label>
-                        <Input
-                          placeholder={`Innhold for ${extraField.title || extraField.field_key}`}
-                          value={(leaderContent as any)[extraField.field_key] || ''}
-                          onChange={(e) =>
-                            setLeaderContent({ ...leaderContent, [extraField.field_key]: e.target.value })
-                          }
-                        />
-                      </div>
-                    ))}
-                    
-                    <Button onClick={saveLeaderContent} disabled={isSaving}>
-                      {isSaving ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4 mr-2" />
-                      )}
-                      Lagre
-                    </Button>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-center py-8">
-                    Velg en leder fra listen for å redigere innhold
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          {/* Leader Dashboard - new component with inline editing */}
+          <LeaderDashboard
+            leaders={leaders}
+            extraFieldsConfig={localExtraConfig}
+            onLeaderUpdated={loadData}
+            onScheduleAutoExport={scheduleAutoExport}
+          />
 
           {/* Session Activities Text - moved here after leader selection */}
           <Card>
@@ -1046,174 +953,188 @@ export default function Admin() {
             </CardContent>
           </Card>
 
-          {/* Home screen config */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
+          {/* Home screen config - collapsible */}
+          <Collapsible open={isHomeConfigOpen} onOpenChange={setIsHomeConfigOpen}>
+            <Card>
+              <CardHeader>
+                <CollapsibleTrigger className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
                     <Settings className="w-5 h-5" />
-                    Hjemskjerm-elementer
-                  </CardTitle>
-                  <CardDescription>
-                    Konfigurer tittel, ikon og synlighet for hvert element på hjemskjermen
-                  </CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={resetHomeConfig}>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Tilbakestill til standard
-                  </Button>
-                  {hasUnsavedConfigChanges && (
-                    <Button onClick={saveAllConfigChanges} disabled={isSavingConfig}>
-                      {isSavingConfig ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4 mr-2" />
-                      )}
-                      Lagre endringer
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={localHomeConfig.map(cfg => cfg.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-3">
-                    {localHomeConfig.map((cfg) => {
-                      const currentIcon = availableIcons.find(i => i.value === cfg.icon) || availableIcons[0];
-                      const IconComponent = currentIcon.icon;
-                      
-                      return (
-                        <SortableItem key={cfg.id} id={cfg.id}>
-                          <div className="p-4 rounded-lg bg-muted/50 space-y-4">
-                            {/* Row 1: Toggle, icon, badge */}
-                            <div className="flex items-center gap-3">
-                              <Switch
-                                checked={cfg.is_visible || false}
-                                onCheckedChange={(checked) => 
-                                  updateLocalHomeConfig(cfg.id, { is_visible: checked })
-                                }
-                              />
-                              <div className="flex items-center gap-2">
-                                <IconComponent className="w-4 h-4 text-muted-foreground" />
-                                <Badge variant="outline">{cfg.label}</Badge>
-                              </div>
-                            </div>
-                            
-                            {/* Row 2: Title and icon selector */}
-                            <div className="flex flex-col sm:flex-row gap-2">
-                              <Input
-                                placeholder="Tittel"
-                                value={cfg.title || ''}
-                                onChange={(e) => 
-                                  updateLocalHomeConfig(cfg.id, { title: e.target.value })
-                                }
-                                className="flex-1"
-                              />
-                              
-                              <Select
-                                value={cfg.icon || 'info'}
-                                onValueChange={(value) => 
-                                  updateLocalHomeConfig(cfg.id, { icon: value })
-                                }
-                              >
-                                <SelectTrigger className="w-full sm:w-32">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {availableIcons.map(({ value, label, icon: Icon }) => (
-                                    <SelectItem key={value} value={value}>
-                                      <div className="flex items-center gap-2">
-                                        <Icon className="w-4 h-4" />
-                                        {label}
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            
-                            {/* Row 3: Color picker */}
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-muted-foreground min-w-[50px]">Farge:</span>
-                              <div className="flex gap-1.5">
-                                {availableColors.map((color) => (
-                                  <button
-                                    key={color.value}
-                                    type="button"
-                                    onClick={() => updateLocalHomeConfig(cfg.id, { bg_color: color.value })}
-                                    className={`w-6 h-6 rounded-full ${color.class} border-2 transition-all ${
-                                      (cfg.bg_color || 'default') === color.value 
-                                        ? 'border-foreground scale-110' 
-                                        : 'border-transparent hover:scale-105'
-                                    }`}
-                                    title={color.label}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                            
-                            {/* Row 4: Text size and bold/italic */}
-                            <div className="flex flex-wrap items-center gap-4">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-muted-foreground">Størrelse:</span>
-                                <ToggleGroup 
-                                  type="single" 
-                                  value={cfg.text_size || 'md'}
-                                  onValueChange={(value) => {
-                                    if (value) updateLocalHomeConfig(cfg.id, { text_size: value });
-                                  }}
-                                  className="bg-background rounded-md"
-                                >
-                                  <ToggleGroupItem value="sm" size="sm" className="text-xs px-2">S</ToggleGroupItem>
-                                  <ToggleGroupItem value="md" size="sm" className="text-xs px-2">M</ToggleGroupItem>
-                                  <ToggleGroupItem value="lg" size="sm" className="text-xs px-2">L</ToggleGroupItem>
-                                </ToggleGroup>
-                              </div>
-                              
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-muted-foreground">Stil:</span>
-                                <ToggleGroup 
-                                  type="multiple" 
-                                  value={[
-                                    ...(cfg.is_bold ? ['bold'] : []),
-                                    ...(cfg.is_italic ? ['italic'] : [])
-                                  ]}
-                                  onValueChange={(values) => {
-                                    updateLocalHomeConfig(cfg.id, { 
-                                      is_bold: values.includes('bold'),
-                                      is_italic: values.includes('italic')
-                                    });
-                                  }}
-                                  className="bg-background rounded-md"
-                                >
-                                  <ToggleGroupItem value="bold" size="sm" className="px-2">
-                                    <Bold className="w-3.5 h-3.5" />
-                                  </ToggleGroupItem>
-                                  <ToggleGroupItem value="italic" size="sm" className="px-2">
-                                    <Italic className="w-3.5 h-3.5" />
-                                  </ToggleGroupItem>
-                                </ToggleGroup>
-                              </div>
-                            </div>
-                          </div>
-                        </SortableItem>
-                      );
-                    })}
+                    <div className="text-left">
+                      <CardTitle>Hjemskjerm-elementer</CardTitle>
+                      <CardDescription>
+                        Konfigurer tittel, ikon og synlighet for hvert element på hjemskjermen
+                      </CardDescription>
+                    </div>
                   </div>
-                </SortableContext>
-              </DndContext>
-            </CardContent>
-          </Card>
+                  <div className="flex items-center gap-2">
+                    {hasUnsavedConfigChanges && (
+                      <Badge variant="secondary" className="text-xs">Ulagrede endringer</Badge>
+                    )}
+                    {isHomeConfigOpen ? (
+                      <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </div>
+                </CollapsibleTrigger>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent>
+                  <div className="flex justify-end gap-2 mb-4">
+                    <Button variant="outline" size="sm" onClick={resetHomeConfig}>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Tilbakestill til standard
+                    </Button>
+                    {hasUnsavedConfigChanges && (
+                      <Button size="sm" onClick={saveAllConfigChanges} disabled={isSavingConfig}>
+                        {isSavingConfig ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4 mr-2" />
+                        )}
+                        Lagre endringer
+                      </Button>
+                    )}
+                  </div>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={localHomeConfig.map(cfg => cfg.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-3">
+                        {localHomeConfig.map((cfg) => {
+                          const currentIcon = availableIcons.find(i => i.value === cfg.icon) || availableIcons[0];
+                          const IconComponent = currentIcon.icon;
+                          
+                          return (
+                            <SortableItem key={cfg.id} id={cfg.id}>
+                              <div className="p-4 rounded-lg bg-muted/50 space-y-4">
+                                {/* Row 1: Toggle, icon, badge */}
+                                <div className="flex items-center gap-3">
+                                  <Switch
+                                    checked={cfg.is_visible || false}
+                                    onCheckedChange={(checked) => 
+                                      updateLocalHomeConfig(cfg.id, { is_visible: checked })
+                                    }
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <IconComponent className="w-4 h-4 text-muted-foreground" />
+                                    <Badge variant="outline">{cfg.label}</Badge>
+                                  </div>
+                                </div>
+                                
+                                {/* Row 2: Title and icon selector */}
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  <Input
+                                    placeholder="Tittel"
+                                    value={cfg.title || ''}
+                                    onChange={(e) => 
+                                      updateLocalHomeConfig(cfg.id, { title: e.target.value })
+                                    }
+                                    className="flex-1"
+                                  />
+                                  
+                                  <Select
+                                    value={cfg.icon || 'info'}
+                                    onValueChange={(value) => 
+                                      updateLocalHomeConfig(cfg.id, { icon: value })
+                                    }
+                                  >
+                                    <SelectTrigger className="w-full sm:w-32">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {availableIcons.map(({ value, label, icon: Icon }) => (
+                                        <SelectItem key={value} value={value}>
+                                          <div className="flex items-center gap-2">
+                                            <Icon className="w-4 h-4" />
+                                            {label}
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                {/* Row 3: Color picker */}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-muted-foreground min-w-[50px]">Farge:</span>
+                                  <div className="flex gap-1.5">
+                                    {availableColors.map((color) => (
+                                      <button
+                                        key={color.value}
+                                        type="button"
+                                        onClick={() => updateLocalHomeConfig(cfg.id, { bg_color: color.value })}
+                                        className={`w-6 h-6 rounded-full ${color.class} border-2 transition-all ${
+                                          (cfg.bg_color || 'default') === color.value 
+                                            ? 'border-foreground scale-110' 
+                                            : 'border-transparent hover:scale-105'
+                                        }`}
+                                        title={color.label}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                                
+                                {/* Row 4: Text size and bold/italic */}
+                                <div className="flex flex-wrap items-center gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">Størrelse:</span>
+                                    <ToggleGroup 
+                                      type="single" 
+                                      value={cfg.text_size || 'md'}
+                                      onValueChange={(value) => {
+                                        if (value) updateLocalHomeConfig(cfg.id, { text_size: value });
+                                      }}
+                                      className="bg-background rounded-md"
+                                    >
+                                      <ToggleGroupItem value="sm" size="sm" className="text-xs px-2">S</ToggleGroupItem>
+                                      <ToggleGroupItem value="md" size="sm" className="text-xs px-2">M</ToggleGroupItem>
+                                      <ToggleGroupItem value="lg" size="sm" className="text-xs px-2">L</ToggleGroupItem>
+                                    </ToggleGroup>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">Stil:</span>
+                                    <ToggleGroup 
+                                      type="multiple" 
+                                      value={[
+                                        ...(cfg.is_bold ? ['bold'] : []),
+                                        ...(cfg.is_italic ? ['italic'] : [])
+                                      ]}
+                                      onValueChange={(values) => {
+                                        updateLocalHomeConfig(cfg.id, { 
+                                          is_bold: values.includes('bold'),
+                                          is_italic: values.includes('italic')
+                                        });
+                                      }}
+                                      className="bg-background rounded-md"
+                                    >
+                                      <ToggleGroupItem value="bold" size="sm" className="px-2">
+                                        <Bold className="w-3.5 h-3.5" />
+                                      </ToggleGroupItem>
+                                      <ToggleGroupItem value="italic" size="sm" className="px-2">
+                                        <Italic className="w-3.5 h-3.5" />
+                                      </ToggleGroupItem>
+                                    </ToggleGroup>
+                                  </div>
+                                </div>
+                              </div>
+                            </SortableItem>
+                          );
+                        })}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         </TabsContent>
 
         {/* Setup Tab */}
@@ -1421,84 +1342,6 @@ export default function Admin() {
             </CardContent>
           </Card>
 
-          {/* Extra Fields Config */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="w-5 h-5" />
-                    Ekstra-felter konfigurasjon
-                  </CardTitle>
-                  <CardDescription>
-                    Konfigurer tittel og ikon for ekstra-feltene fra Google Sheet
-                  </CardDescription>
-                </div>
-                {hasUnsavedConfigChanges && (
-                  <Button onClick={saveAllConfigChanges} disabled={isSavingConfig}>
-                    {isSavingConfig ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4 mr-2" />
-                    )}
-                    Lagre endringer
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {localExtraConfig.map((field) => (
-                  <div
-                    key={field.id}
-                    className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 rounded-lg bg-muted/50"
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      <Switch
-                        checked={field.is_visible}
-                        onCheckedChange={(checked) => 
-                          updateLocalExtraConfig(field.id, { is_visible: checked })
-                        }
-                      />
-                      <Badge variant="outline">{field.field_key.replace('_', ' #')}</Badge>
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                      <Input
-                        placeholder="Tittel"
-                        value={field.title}
-                        onChange={(e) => 
-                          updateLocalExtraConfig(field.id, { title: e.target.value })
-                        }
-                        className="w-full sm:w-40"
-                      />
-                      
-                      <Select
-                        value={field.icon}
-                        onValueChange={(value) => 
-                          updateLocalExtraConfig(field.id, { icon: value })
-                        }
-                      >
-                        <SelectTrigger className="w-full sm:w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableIcons.map(({ value, label, icon: Icon }) => (
-                            <SelectItem key={value} value={value}>
-                              <div className="flex items-center gap-2">
-                                <Icon className="w-4 h-4" />
-                                {label}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="sync" className="space-y-4">
