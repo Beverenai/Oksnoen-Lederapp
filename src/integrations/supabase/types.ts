@@ -202,8 +202,10 @@ export type Database = {
           created_at: string | null
           email: string | null
           has_boat_license: boolean | null
+          has_car: boolean | null
           has_drivers_license: boolean | null
           id: string
+          is_active: boolean | null
           ministerpost: string | null
           name: string
           phone: string
@@ -222,8 +224,10 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           has_boat_license?: boolean | null
+          has_car?: boolean | null
           has_drivers_license?: boolean | null
           id?: string
+          is_active?: boolean | null
           ministerpost?: string | null
           name: string
           phone: string
@@ -242,8 +246,10 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           has_boat_license?: boolean | null
+          has_car?: boolean | null
           has_drivers_license?: boolean | null
           id?: string
+          is_active?: boolean | null
           ministerpost?: string | null
           name?: string
           phone?: string

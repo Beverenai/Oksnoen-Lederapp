@@ -24,9 +24,11 @@ export default function Leaders() {
 
   const loadLeaders = async () => {
     try {
+      // Only fetch active leaders
       const { data: leadersData } = await supabase
         .from('leaders')
         .select('*')
+        .eq('is_active', true)
         .order('name');
 
       const { data: rolesData } = await supabase

@@ -80,6 +80,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: 'Fant ingen leder med dette telefonnummeret.' };
     }
 
+    // Check if leader is active
+    if (data.is_active === false) {
+      return { success: false, error: 'Din bruker er ikke aktiv for denne sesjonen. Kontakt admin.' };
+    }
+
     localStorage.setItem('leaderId', data.id);
     setLeader(data);
 
