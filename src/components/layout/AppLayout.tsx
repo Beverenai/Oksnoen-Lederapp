@@ -36,7 +36,7 @@ const allNavItems = [
   { to: '/profile', icon: User, label: 'Min Profil' },
   { to: '/leaders', icon: Users, label: 'Ledere' },
   { to: '/passport', icon: ClipboardCheck, label: 'Passkontroll' },
-  { to: '/cabin', icon: Building2, label: 'Din Hytte' },
+  { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
   { to: '/schedule', icon: Calendar, label: 'Vaktplan' },
   { to: '/important-info', icon: AlertTriangle, label: 'Viktig info' },
   { to: '/wall', icon: Megaphone, label: 'Den store veggen' },
@@ -46,7 +46,7 @@ const allNavItems = [
 // Navigation items for mobile slide-out menu only (simplified)
 const mobileMenuItems = [
   { to: '/profile', icon: User, label: 'Min Profil' },
-  { to: '/cabin', icon: Building2, label: 'Din Hytte' },
+  { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
   { to: '/schedule', icon: Calendar, label: 'Vaktplan' },
 ];
 
