@@ -348,26 +348,6 @@ export const ParticipantDetailDialog = ({
                   </div>
                 )}
 
-                {/* Nurse Notater - kun synlig for nurse og admin */}
-                {(isAdmin || isNurse) && healthNotes.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Stethoscope className="h-4 w-4 text-pink-600" />
-                      <span>Nurse Notater</span>
-                    </div>
-                    <div className="space-y-2">
-                      {healthNotes.map((note) => (
-                        <div
-                          key={note.id}
-                          className="p-3 bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900 rounded-lg text-sm"
-                        >
-                          {note.content}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Styrkeprøve badges */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium">Styrkeprøve</h4>
