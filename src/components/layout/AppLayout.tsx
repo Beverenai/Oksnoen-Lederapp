@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -15,12 +15,14 @@ import {
   X,
   Heart,
   User,
-  Wrench
+  Wrench,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -39,8 +41,16 @@ const allNavItems = [
   { to: '/fix', icon: Wrench, label: 'Rapporter' },
 ];
 
+// Bottom nav items type
+type BottomNavItem = {
+  to: string;
+  icon: typeof Home;
+  label: string;
+  isHajolo?: boolean;
+};
+
 // Base bottom nav items - will be adjusted based on role
-const getBottomNavItems = (isAdmin: boolean, isNurse: boolean) => {
+const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] => {
   if (isAdmin) {
     // Admin gets Dashboard in the middle
     return [
@@ -60,10 +70,11 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean) => {
       { to: '/fix', icon: Wrench, label: 'Fix' },
     ];
   } else {
-    // Regular users get 4 items
+    // Regular users get Hajolo in the middle
     return [
       { to: '/', icon: Home, label: 'Hjem' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
+      { to: '#', icon: Check, label: 'Hajolo', isHajolo: true },
       { to: '/passport', icon: ClipboardCheck, label: 'Passkontor' },
       { to: '/fix', icon: Wrench, label: 'Fix' },
     ];
@@ -81,7 +92,67 @@ const adminNavItems = [
 export default function AppLayout({ children }: AppLayoutProps) {
   const { leader, isAdmin, isNurse, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [hasRead, setHasRead] = useState(false);
   const location = useLocation();
+
+  // Fetch has_read status for regular leaders
+  const fetchHasReadStatus = useCallback(async () => {
+    if (!leader || isAdmin || isNurse) return;
+    
+    const { data } = await supabase
+      .from('leader_content')
+      .select('has_read')
+      .eq('leader_id', leader.id)
+      .maybeSingle();
+    
+    setHasRead(data?.has_read ?? false);
+  }, [leader, isAdmin, isNurse]);
+
+  // Fetch and subscribe to has_read status for regular leaders
+  useEffect(() => {
+    if (!leader || isAdmin || isNurse) return;
+
+    fetchHasReadStatus();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('hajolo-status')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'leader_content',
+          filter: `leader_id=eq.${leader.id}`
+        },
+        () => fetchHasReadStatus()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [leader, isAdmin, isNurse, fetchHasReadStatus]);
+
+  // Handle Hajolo click
+  const handleHajoloClick = async () => {
+    if (!leader) return;
+
+    const { error } = await supabase
+      .from('leader_content')
+      .upsert(
+        { leader_id: leader.id, has_read: true },
+        { onConflict: 'leader_id' }
+      );
+
+    if (error) {
+      toast.error('Kunne ikke bekrefte');
+      return;
+    }
+
+    setHasRead(true);
+    toast.success('Hajolo! Du har bekreftet at du har lest informasjonen.');
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -290,6 +361,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-card border-t border-border z-50 flex items-center justify-around px-2 pb-safe">
         {getBottomNavItems(isAdmin, isNurse).map((item) => {
           const isActive = location.pathname === item.to;
+          
+          // Special rendering for Hajolo button
+          if (item.isHajolo) {
+            return (
+              <button
+                key="hajolo"
+                onClick={handleHajoloClick}
+                className="flex flex-col items-center justify-center gap-1 px-4 py-2"
+              >
+                <div
+                  className={cn(
+                    'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
+                    hasRead ? 'bg-green-500' : 'bg-red-500'
+                  )}
+                >
+                  <Check className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-xs font-medium">{item.label}</span>
+              </button>
+            );
+          }
+          
           return (
             <NavLink
               key={item.to}
