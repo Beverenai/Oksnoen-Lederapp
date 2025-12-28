@@ -19,6 +19,7 @@ import Nurse from "@/pages/Nurse";
 import Fix from "@/pages/Fix";
 import ComingSoon from "@/pages/ComingSoon";
 import ParticipantStats from "@/pages/ParticipantStats";
+import Checkout from "@/pages/Checkout";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -167,6 +168,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ParticipantStats />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/checkout"
+        element={
+          <ProtectedRoute>
+            <Checkout />
           </ProtectedRoute>
         }
       />

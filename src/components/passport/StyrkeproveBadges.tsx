@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Medal } from 'lucide-react';
-import { hasStoreStyrkprove, hasLilleStyrkprove, getCompletedCount, getTotalActivities } from '@/lib/activityUtils';
+import { hasStoreStyrkprove, hasLilleStyrkprove, getUniqueCompletedCount, getTotalActivities } from '@/lib/activityUtils';
 
 interface StyrkeproveBadgesProps {
   completedActivities: string[];
@@ -15,7 +15,8 @@ export function StyrkeproveBadges({
 }: StyrkeproveBadgesProps) {
   const hasStore = hasStoreStyrkprove(completedActivities);
   const hasLille = hasLilleStyrkprove(completedActivities);
-  const count = getCompletedCount(completedActivities);
+  // Use unique count - each activity only counts once
+  const count = getUniqueCompletedCount(completedActivities);
   const total = getTotalActivities();
 
   if (!hasStore && !hasLille && !showCount) return null;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,8 @@ import {
   ChevronDown,
   ChevronRight,
   ArrowLeft,
-  Users
+  Users,
+  Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { differenceInYears } from 'date-fns';
