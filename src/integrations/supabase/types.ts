@@ -518,6 +518,11 @@ export type Database = {
           last_name: string | null
           name: string
           notes: string | null
+          pass_suggestion: string | null
+          pass_text: string | null
+          pass_written: boolean | null
+          pass_written_at: string | null
+          pass_written_by: string | null
           room: string | null
           times_attended: number | null
           updated_at: string | null
@@ -533,6 +538,11 @@ export type Database = {
           last_name?: string | null
           name: string
           notes?: string | null
+          pass_suggestion?: string | null
+          pass_text?: string | null
+          pass_written?: boolean | null
+          pass_written_at?: string | null
+          pass_written_by?: string | null
           room?: string | null
           times_attended?: number | null
           updated_at?: string | null
@@ -548,6 +558,11 @@ export type Database = {
           last_name?: string | null
           name?: string
           notes?: string | null
+          pass_suggestion?: string | null
+          pass_text?: string | null
+          pass_written?: boolean | null
+          pass_written_at?: string | null
+          pass_written_by?: string | null
           room?: string | null
           times_attended?: number | null
           updated_at?: string | null
@@ -558,6 +573,13 @@ export type Database = {
             columns: ["cabin_id"]
             isOneToOne: false
             referencedRelation: "cabins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participants_pass_written_by_fkey"
+            columns: ["pass_written_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
             referencedColumns: ["id"]
           },
         ]

@@ -46,6 +46,29 @@ export function hasLilleStyrkprove(completedActivities: string[]): boolean {
   );
 }
 
+// Get count of unique activities completed (each activity counts as 1, regardless of how many times done)
+export function getUniqueCompletedCount(completedActivities: string[]): number {
+  const uniqueActivities = new Set(completedActivities.map(a => a.toLowerCase().trim()));
+  return uniqueActivities.size;
+}
+
+// Get unique activity names from completed activities
+export function getUniqueActivities(completedActivities: string[]): string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  
+  for (const activity of completedActivities) {
+    const normalized = activity.toLowerCase().trim();
+    if (!seen.has(normalized)) {
+      seen.add(normalized);
+      unique.push(activity);
+    }
+  }
+  
+  return unique;
+}
+
+// Legacy function - counts all instances (kept for backwards compatibility)
 export function getCompletedCount(completedActivities: string[]): number {
   return completedActivities.length;
 }
