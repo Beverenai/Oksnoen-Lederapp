@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
+import { NumbersDataImportTab } from '@/components/admin/NumbersDataImportTab';
 
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -789,6 +790,9 @@ export default function Admin() {
           </CollapsibleContent>
         </Card>
       </Collapsible>
+
+      {/* Numbers Data Import */}
+      <NumbersDataImportTab />
     </div>
   );
 }
