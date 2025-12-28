@@ -10,7 +10,13 @@ import {
   MessageSquare, 
   AlertTriangle, 
   Calendar,
-  RefreshCw
+  RefreshCw,
+  Info,
+  Star,
+  Heart,
+  Bell,
+  Zap,
+  type LucideIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Tables } from '@/integrations/supabase/types';
@@ -19,11 +25,33 @@ type LeaderContent = Tables<'leader_content'>;
 type SessionActivity = Tables<'session_activities'>;
 type HomeScreenConfig = Tables<'home_screen_config'>;
 
+interface ExtraFieldConfig {
+  id: string;
+  field_key: string;
+  title: string;
+  icon: string;
+  is_visible: boolean;
+  sort_order: number;
+}
+
+// Icon mapping for extra fields
+const iconMap: Record<string, LucideIcon> = {
+  info: Info,
+  star: Star,
+  heart: Heart,
+  bell: Bell,
+  zap: Zap,
+  activity: Activity,
+  plus: Plus,
+  message: MessageSquare,
+};
+
 export default function Home() {
   const { leader } = useAuth();
   const [content, setContent] = useState<LeaderContent | null>(null);
   const [sessionActivities, setSessionActivities] = useState<SessionActivity[]>([]);
   const [config, setConfig] = useState<HomeScreenConfig[]>([]);
+  const [extraFieldsConfig, setExtraFieldsConfig] = useState<ExtraFieldConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = async () => {
@@ -31,7 +59,7 @@ export default function Home() {
 
     setIsLoading(true);
     try {
-      const [contentRes, activitiesRes, configRes] = await Promise.all([
+      const [contentRes, activitiesRes, configRes, extraConfigRes] = await Promise.all([
         supabase
           .from('leader_content')
           .select('*')
@@ -47,11 +75,17 @@ export default function Home() {
           .select('*')
           .eq('is_visible', true)
           .order('sort_order'),
+        supabase
+          .from('extra_fields_config')
+          .select('*')
+          .eq('is_visible', true)
+          .order('sort_order'),
       ]);
 
       setContent(contentRes.data);
       setSessionActivities(activitiesRes.data || []);
       setConfig(configRes.data || []);
+      setExtraFieldsConfig((extraConfigRes.data || []) as ExtraFieldConfig[]);
     } catch (error) {
       console.error('Error loading home data:', error);
     } finally {
@@ -80,6 +114,11 @@ export default function Home() {
         schema: 'public', 
         table: 'session_activities'
       }, () => loadData())
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'extra_fields_config'
+      }, () => loadData())
       .subscribe();
 
     return () => {
@@ -90,6 +129,14 @@ export default function Home() {
   const isElementVisible = (key: string) => {
     const element = config.find(c => c.element_key === key);
     return element?.is_visible !== false;
+  };
+
+  // Get extra field value from content
+  const getExtraFieldValue = (fieldKey: string): string | null => {
+    if (!content) return null;
+    const key = fieldKey as keyof LeaderContent;
+    const value = content[key];
+    return typeof value === 'string' ? value : null;
   };
 
   if (isLoading) {
@@ -105,6 +152,15 @@ export default function Home() {
       </div>
     );
   }
+
+  // Check if there's any content to show
+  const hasExtraContent = extraFieldsConfig.some(cfg => getExtraFieldValue(cfg.field_key));
+  const hasAnyContent = content?.current_activity || 
+    content?.extra_activity || 
+    content?.personal_notes || 
+    content?.obs_message || 
+    sessionActivities.length > 0 ||
+    hasExtraContent;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -189,6 +245,28 @@ export default function Home() {
           </Card>
         )}
 
+        {/* Extra fields from Google Sheets */}
+        {extraFieldsConfig.map((fieldConfig) => {
+          const value = getExtraFieldValue(fieldConfig.field_key);
+          if (!value) return null;
+          
+          const IconComponent = iconMap[fieldConfig.icon] || Info;
+          
+          return (
+            <Card key={fieldConfig.id}>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <IconComponent className="w-5 h-5 text-primary" />
+                  {fieldConfig.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-foreground">{value}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
+
         {/* Aktiviteter denne økten */}
         {isElementVisible('session_activities') && sessionActivities.length > 0 && (
           <Card className="md:col-span-2">
@@ -224,11 +302,7 @@ export default function Home() {
         )}
 
         {/* Tom tilstand */}
-        {!content?.current_activity && 
-         !content?.extra_activity && 
-         !content?.personal_notes && 
-         !content?.obs_message && 
-         sessionActivities.length === 0 && (
+        {!hasAnyContent && (
           <Card className="md:col-span-2">
             <CardContent className="py-12 text-center">
               <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />

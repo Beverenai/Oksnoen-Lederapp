@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Users, 
   Home, 
@@ -20,7 +21,16 @@ import {
   Settings,
   Loader2,
   Shield,
-  Calendar
+  Calendar,
+  RefreshCw,
+  Info,
+  Star,
+  Heart,
+  Bell,
+  Zap,
+  Activity,
+  MessageSquare,
+  FileSpreadsheet
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -31,6 +41,26 @@ type SessionActivity = Tables<'session_activities'>;
 type HomeScreenConfig = Tables<'home_screen_config'>;
 type Announcement = Tables<'announcements'>;
 
+interface ExtraFieldConfig {
+  id: string;
+  field_key: string;
+  title: string;
+  icon: string;
+  is_visible: boolean;
+  sort_order: number;
+}
+
+const availableIcons = [
+  { value: 'info', label: 'Info', icon: Info },
+  { value: 'star', label: 'Stjerne', icon: Star },
+  { value: 'heart', label: 'Hjerte', icon: Heart },
+  { value: 'bell', label: 'Bjelle', icon: Bell },
+  { value: 'zap', label: 'Lyn', icon: Zap },
+  { value: 'activity', label: 'Aktivitet', icon: Activity },
+  { value: 'plus', label: 'Pluss', icon: Plus },
+  { value: 'message', label: 'Melding', icon: MessageSquare },
+];
+
 export default function Admin() {
   const { isAdmin } = useAuth();
   const [leaders, setLeaders] = useState<Leader[]>([]);
@@ -39,8 +69,10 @@ export default function Admin() {
   const [sessionActivities, setSessionActivities] = useState<SessionActivity[]>([]);
   const [homeConfig, setHomeConfig] = useState<HomeScreenConfig[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [extraFieldsConfig, setExtraFieldsConfig] = useState<ExtraFieldConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSyncInstructions, setShowSyncInstructions] = useState(false);
 
   // New leader form
   const [newLeaderName, setNewLeaderName] = useState('');
@@ -62,17 +94,19 @@ export default function Admin() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [leadersRes, activitiesRes, configRes, announcementsRes] = await Promise.all([
+      const [leadersRes, activitiesRes, configRes, announcementsRes, extraConfigRes] = await Promise.all([
         supabase.from('leaders').select('*').order('name'),
         supabase.from('session_activities').select('*').order('sort_order'),
         supabase.from('home_screen_config').select('*').order('sort_order'),
         supabase.from('announcements').select('*').order('created_at', { ascending: false }),
+        supabase.from('extra_fields_config').select('*').order('sort_order'),
       ]);
 
       setLeaders(leadersRes.data || []);
       setSessionActivities(activitiesRes.data || []);
       setHomeConfig(configRes.data || []);
       setAnnouncements(announcementsRes.data || []);
+      setExtraFieldsConfig((extraConfigRes.data || []) as ExtraFieldConfig[]);
     } catch (error) {
       console.error('Error loading admin data:', error);
       toast.error('Kunne ikke laste data');
@@ -265,6 +299,19 @@ export default function Admin() {
     }
   };
 
+  const updateExtraFieldConfig = async (fieldId: string, updates: Partial<ExtraFieldConfig>) => {
+    try {
+      await supabase
+        .from('extra_fields_config')
+        .update(updates)
+        .eq('id', fieldId);
+      loadData();
+      toast.success('Oppdatert');
+    } catch (error) {
+      toast.error('Kunne ikke oppdatere');
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -302,7 +349,7 @@ export default function Admin() {
       </div>
 
       <Tabs defaultValue="leaders" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
           <TabsTrigger value="leaders" className="gap-2">
             <Users className="w-4 h-4 hidden sm:block" />
             Ledere
@@ -318,6 +365,10 @@ export default function Admin() {
           <TabsTrigger value="announcements" className="gap-2">
             <Megaphone className="w-4 h-4 hidden sm:block" />
             Veggen
+          </TabsTrigger>
+          <TabsTrigger value="sync" className="gap-2">
+            <FileSpreadsheet className="w-4 h-4 hidden sm:block" />
+            Synk
           </TabsTrigger>
         </TabsList>
 
@@ -683,6 +734,141 @@ export default function Admin() {
                     Ingen beskjeder enda
                   </p>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Sync Tab */}
+        <TabsContent value="sync" className="space-y-4">
+          {/* Sync from Google Sheets */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <RefreshCw className="w-5 h-5" />
+                Synkroniser fra Google Sheets
+              </CardTitle>
+              <CardDescription>
+                Hent aktiviteter, notater og ekstra-info fra Google Sheet
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button onClick={() => setShowSyncInstructions(!showSyncInstructions)}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                {showSyncInstructions ? 'Skjul instruksjoner' : 'Vis synk-instruksjoner'}
+              </Button>
+
+              {showSyncInstructions && (
+                <div className="p-4 rounded-lg bg-muted/50 space-y-4">
+                  <h4 className="font-semibold">Sett opp n8n-workflow:</h4>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">1. Google Sheet-format (kolonner):</p>
+                    <code className="block text-xs bg-background p-2 rounded overflow-x-auto">
+                      Tlf | Navn | Aktivitet | Notater | Til deg | OBS! | Ekstra #1 | Ekstra #2 | Ekstra #3 | Ekstra #4 | Ekstra #5
+                    </code>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">2. n8n AI Builder prompt:</p>
+                    <code className="block text-xs bg-background p-2 rounded whitespace-pre-wrap">
+{`Lag en workflow som:
+1. Starter med manuell trigger
+2. Henter alle rader fra Google Sheets
+3. Transformerer hver rad til dette format:
+   {
+     phone: [Tlf kolonne - fjern mellomrom],
+     current_activity: [Aktivitet],
+     personal_notes: [Notater],
+     personal_message: [Til deg],
+     obs_message: [OBS!],
+     extra_1: [Ekstra #1],
+     extra_2: [Ekstra #2],
+     extra_3: [Ekstra #3],
+     extra_4: [Ekstra #4],
+     extra_5: [Ekstra #5]
+   }
+4. Sender HTTP POST til:
+   https://noxnbtvxksgjsqzfdgcd.supabase.co/functions/v1/sync-leaders-import
+   
+   Med body: { "leaders": [array av transformerte objekter] }`}
+                    </code>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">3. Viktig:</p>
+                    <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
+                      <li>Telefonnummer brukes som ID for å matche ledere</li>
+                      <li>Ledere må først være opprettet i appen</li>
+                      <li>Kjør workflowen manuelt i n8n når du vil synkronisere</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Extra Fields Config */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Ekstra-felter konfigurasjon
+              </CardTitle>
+              <CardDescription>
+                Konfigurer tittel og ikon for ekstra-feltene fra Google Sheet
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {extraFieldsConfig.map((field) => (
+                  <div
+                    key={field.id}
+                    className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 rounded-lg bg-muted/50"
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <Switch
+                        checked={field.is_visible}
+                        onCheckedChange={(checked) => 
+                          updateExtraFieldConfig(field.id, { is_visible: checked })
+                        }
+                      />
+                      <Badge variant="outline">{field.field_key.replace('_', ' #')}</Badge>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                      <Input
+                        placeholder="Tittel"
+                        value={field.title}
+                        onChange={(e) => 
+                          updateExtraFieldConfig(field.id, { title: e.target.value })
+                        }
+                        className="w-full sm:w-40"
+                      />
+                      
+                      <Select
+                        value={field.icon}
+                        onValueChange={(value) => 
+                          updateExtraFieldConfig(field.id, { icon: value })
+                        }
+                      >
+                        <SelectTrigger className="w-full sm:w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableIcons.map(({ value, label, icon: Icon }) => (
+                            <SelectItem key={value} value={value}>
+                              <div className="flex items-center gap-2">
+                                <Icon className="w-4 h-4" />
+                                {label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
