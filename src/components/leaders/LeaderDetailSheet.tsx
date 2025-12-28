@@ -53,6 +53,16 @@ const getTeamStyles = (team: string | null): string => {
   }
 };
 
+// Format team display: "1" -> "Team 1", "2f" -> "Team 2F", others unchanged
+const formatTeamDisplay = (team: string | null): string => {
+  if (!team) return '';
+  const teamLower = team.toLowerCase().trim();
+  if (['1', '2', '1f', '2f'].includes(teamLower)) {
+    return `Team ${team.toUpperCase()}`;
+  }
+  return team;
+};
+
 // Get first name only
 const getFirstName = (fullName: string) => fullName.split(' ')[0];
 
@@ -118,7 +128,7 @@ export function LeaderDetailSheet({
               )}
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {leader.team && (
-                  <Badge className={getTeamStyles(leader.team)}>{leader.team}</Badge>
+                  <Badge className={getTeamStyles(leader.team)}>{formatTeamDisplay(leader.team)}</Badge>
                 )}
                 {leader.cabin && <Badge variant="outline">{leader.cabin}</Badge>}
               </div>

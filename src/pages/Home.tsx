@@ -92,6 +92,16 @@ const iconMap: Record<string, LucideIcon> = {
   users: Users,
 };
 
+// Format team display: "1" -> "Team 1", "2f" -> "Team 2F", others unchanged
+const formatTeamDisplay = (team: string | null): string => {
+  if (!team) return '';
+  const teamLower = team.toLowerCase().trim();
+  if (['1', '2', '1f', '2f'].includes(teamLower)) {
+    return `Team ${team.toUpperCase()}`;
+  }
+  return team;
+};
+
 export default function Home() {
   const { leader, isAdmin, isNurse } = useAuth();
   const [content, setContent] = useState<LeaderContent | null>(null);
@@ -311,7 +321,7 @@ export default function Home() {
             {leader?.team && (
               <Badge variant="outline" className="text-sm">
                 <Users className="w-3 h-3 mr-1" />
-                {leader.team}
+                {formatTeamDisplay(leader.team)}
               </Badge>
             )}
           </div>

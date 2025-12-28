@@ -58,6 +58,16 @@ const getTeamStyles = (team: string | null): string => {
   }
 };
 
+// Format team display: "1" -> "Team 1", "2f" -> "Team 2F", others unchanged
+const formatTeamDisplay = (team: string | null): string => {
+  if (!team) return '';
+  const teamLower = team.toLowerCase().trim();
+  if (['1', '2', '1f', '2f'].includes(teamLower)) {
+    return `Team ${team.toUpperCase()}`;
+  }
+  return team;
+};
+
 const getFirstName = (fullName: string) => fullName.split(' ')[0];
 
 interface LeaderDashboardProps {
@@ -244,7 +254,7 @@ export function LeaderDashboard({ leaders, extraFieldsConfig, onLeaderUpdated, o
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {leader.team && (
                     <Badge className={cn("text-xs", getTeamStyles(leader.team))}>
-                      {leader.team}
+                      {formatTeamDisplay(leader.team)}
                     </Badge>
                   )}
                   {leader.cabin && (
