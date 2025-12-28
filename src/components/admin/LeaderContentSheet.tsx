@@ -219,12 +219,12 @@ export function LeaderContentSheet({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Team</Label>
-              <Select value={team} onValueChange={setTeam}>
+              <Select value={team || "__none__"} onValueChange={(v) => setTeam(v === "__none__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Velg team" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Ingen</SelectItem>
+                  <SelectItem value="__none__">Ingen</SelectItem>
                   {TEAM_OPTIONS.map(t => (
                     <SelectItem key={t} value={t}>
                       <Badge className={`${getTeamStyles(t)} mr-2`}>{t}</Badge>
