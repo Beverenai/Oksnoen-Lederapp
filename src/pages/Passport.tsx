@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Search, 
   Plus, 
@@ -21,7 +22,9 @@ import {
   Home,
   X,
   Loader2,
-  Filter
+  Filter,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -37,6 +40,11 @@ interface ParticipantWithCabin extends Participant {
   participant_activities?: ParticipantActivity[];
 }
 
+interface CabinGroup {
+  cabin: Cabin;
+  participants: ParticipantWithCabin[];
+}
+
 export default function Passport() {
   const [participants, setParticipants] = useState<ParticipantWithCabin[]>([]);
   const [cabins, setCabins] = useState<Cabin[]>([]);
@@ -48,6 +56,7 @@ export default function Passport() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // New participant form
@@ -74,11 +83,16 @@ export default function Passport() {
           .from('participants')
           .select('*, cabins(*), participant_activities(*)')
           .order('name'),
-        supabase.from('cabins').select('*').order('name'),
+        supabase.from('cabins').select('*').order('sort_order', { ascending: true }),
       ]);
 
       setParticipants(participantsRes.data || []);
       setCabins(cabinsRes.data || []);
+      
+      // Expand all cabins by default
+      if (cabinsRes.data) {
+        setExpandedCabins(new Set(cabinsRes.data.map(c => c.id)));
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Kunne ikke laste data');
@@ -99,18 +113,63 @@ export default function Passport() {
     }
   };
 
-  const filteredParticipants = participants.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCabin = filterCabin === 'all' || p.cabin_id === filterCabin;
-    const matchesArrival = 
-      filterArrival === 'all' ||
-      (filterArrival === 'arrived' && p.has_arrived) ||
-      (filterArrival === 'not-arrived' && !p.has_arrived);
-    
-    return matchesSearch && matchesCabin && matchesArrival;
-  });
+  const filteredParticipants = useMemo(() => {
+    return participants.filter((p) => {
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCabin = filterCabin === 'all' || p.cabin_id === filterCabin;
+      const matchesArrival = 
+        filterArrival === 'all' ||
+        (filterArrival === 'arrived' && p.has_arrived) ||
+        (filterArrival === 'not-arrived' && !p.has_arrived);
+      
+      return matchesSearch && matchesCabin && matchesArrival;
+    });
+  }, [participants, searchQuery, filterCabin, filterArrival]);
+
+  // Group participants by cabin
+  const cabinGroups = useMemo((): CabinGroup[] => {
+    const groups: CabinGroup[] = [];
+    const cabinMap = new Map<string, ParticipantWithCabin[]>();
+    const uncategorized: ParticipantWithCabin[] = [];
+
+    filteredParticipants.forEach(p => {
+      if (p.cabin_id && p.cabins) {
+        const existing = cabinMap.get(p.cabin_id) || [];
+        existing.push(p);
+        cabinMap.set(p.cabin_id, existing);
+      } else {
+        uncategorized.push(p);
+      }
+    });
+
+    cabins.forEach(cabin => {
+      const cabinParticipants = cabinMap.get(cabin.id);
+      if (cabinParticipants && cabinParticipants.length > 0) {
+        groups.push({ cabin, participants: cabinParticipants });
+      }
+    });
+
+    if (uncategorized.length > 0) {
+      groups.push({
+        cabin: { id: 'uncategorized', name: 'Uten hytte', sort_order: 999, created_at: null },
+        participants: uncategorized
+      });
+    }
+
+    return groups;
+  }, [filteredParticipants, cabins]);
 
   const arrivedCount = participants.filter((p) => p.has_arrived).length;
+
+  const toggleCabinExpanded = (cabinId: string) => {
+    const newExpanded = new Set(expandedCabins);
+    if (newExpanded.has(cabinId)) {
+      newExpanded.delete(cabinId);
+    } else {
+      newExpanded.add(cabinId);
+    }
+    setExpandedCabins(newExpanded);
+  };
 
   const addParticipant = async () => {
     if (!newName.trim()) {
@@ -241,9 +300,9 @@ export default function Passport() {
       <div className="space-y-6">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-12" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-32" />
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-40" />
           ))}
         </div>
       </div>
@@ -369,56 +428,97 @@ export default function Passport() {
         </Select>
       </div>
 
-      {/* Participants Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredParticipants.map((participant) => (
-          <Card 
-            key={participant.id}
-            className={`cursor-pointer transition-all hover:shadow-md ${
-              participant.has_arrived ? 'border-success/50 bg-success/5' : ''
-            }`}
-            onClick={() => {
-              setSelectedParticipant(participant);
-              setIsDetailDialogOpen(true);
-            }}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <Avatar className="w-14 h-14 shrink-0">
-                  <AvatarImage src={participant.image_url || undefined} />
-                  <AvatarFallback className="bg-muted text-muted-foreground">
-                    <User className="w-6 h-6" />
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-foreground truncate">
-                      {participant.name}
-                    </p>
-                    {participant.has_arrived ? (
-                      <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-muted-foreground shrink-0" />
-                    )}
-                  </div>
-                  {participant.cabins && (
-                    <Badge variant="secondary" className="mt-1">
-                      {participant.cabins.name}
-                    </Badge>
-                  )}
-                  {participant.birth_date && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(participant.birth_date), 'd. MMMM yyyy', { locale: nb })}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Grouped by Cabin */}
+      <div className="space-y-4">
+        {cabinGroups.map(({ cabin, participants: cabinParticipants }) => {
+          const cabinArrived = cabinParticipants.filter(p => p.has_arrived).length;
+          const isExpanded = expandedCabins.has(cabin.id);
+          
+          return (
+            <Collapsible 
+              key={cabin.id} 
+              open={isExpanded}
+              onOpenChange={() => toggleCabinExpanded(cabin.id)}
+            >
+              <Card>
+                <CollapsibleTrigger className="w-full">
+                  <CardHeader className="py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {isExpanded ? (
+                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                        )}
+                        <Home className="w-5 h-5 text-primary" />
+                        <CardTitle className="text-lg">{cabin.name}</CardTitle>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">
+                          {cabinArrived}/{cabinParticipants.length} ankommet
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {cabinParticipants.map((participant) => (
+                        <div
+                          key={participant.id}
+                          className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+                            participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
+                          }`}
+                          onClick={() => {
+                            setSelectedParticipant(participant);
+                            setIsDetailDialogOpen(true);
+                          }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <Avatar className="w-10 h-10 shrink-0">
+                              <AvatarImage src={participant.image_url || undefined} />
+                              <AvatarFallback className="bg-muted text-muted-foreground">
+                                <User className="w-4 h-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-foreground truncate text-sm">
+                                  {participant.name}
+                                </p>
+                                {participant.has_arrived ? (
+                                  <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                                ) : (
+                                  <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                {participant.room && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {participant.room}
+                                  </Badge>
+                                )}
+                                {(participant.times_attended ?? 0) > 0 && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {participant.times_attended} år
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          );
+        })}
       </div>
 
-      {filteredParticipants.length === 0 && (
+      {cabinGroups.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -445,16 +545,31 @@ export default function Passport() {
                   </Avatar>
                   <div>
                     <span>{selectedParticipant.name}</span>
-                    {selectedParticipant.cabins && (
-                      <Badge variant="secondary" className="ml-2">
-                        {selectedParticipant.cabins.name}
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      {selectedParticipant.cabins && (
+                        <Badge variant="secondary">
+                          {selectedParticipant.cabins.name}
+                        </Badge>
+                      )}
+                      {selectedParticipant.room && (
+                        <Badge variant="outline">
+                          {selectedParticipant.room}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </DialogTitle>
               </DialogHeader>
 
               <div className="space-y-6 pt-4">
+                {/* Times attended */}
+                {(selectedParticipant.times_attended ?? 0) > 0 && (
+                  <div className="p-3 rounded-lg bg-primary/10 text-primary text-sm">
+                    <Calendar className="w-4 h-4 inline mr-2" />
+                    Vært på Oksnøen {selectedParticipant.times_attended} {selectedParticipant.times_attended === 1 ? 'år' : 'år'}
+                  </div>
+                )}
+
                 {/* Upload image */}
                 <div className="flex items-center gap-4">
                   <input
@@ -505,46 +620,41 @@ export default function Passport() {
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Calendar className="w-4 h-4" />
                     <span>
-                      Født {format(new Date(selectedParticipant.birth_date), 'd. MMMM yyyy', { locale: nb })}
+                      {format(new Date(selectedParticipant.birth_date), 'd. MMMM yyyy', { locale: nb })}
                     </span>
                   </div>
                 )}
 
                 {/* Activities */}
                 <div className="space-y-3">
-                  <Label className="text-base font-medium">Aktiviteter denne uken</Label>
+                  <h4 className="font-medium text-foreground">Aktiviteter</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {(selectedParticipant.participant_activities || []).map((activity) => (
+                      <Badge key={activity.id} variant="outline">
+                        {activity.activity}
+                      </Badge>
+                    ))}
+                  </div>
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Legg til aktivitet..."
+                      placeholder="Legg til aktivitet"
                       value={newActivity}
                       onChange={(e) => setNewActivity(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && addActivity()}
                     />
-                    <Button onClick={addActivity} size="icon">
+                    <Button size="icon" onClick={addActivity}>
                       <Plus className="w-4 h-4" />
                     </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedParticipant.participant_activities?.map((activity) => (
-                      <Badge key={activity.id} variant="secondary">
-                        {activity.activity}
-                      </Badge>
-                    ))}
-                    {(!selectedParticipant.participant_activities || 
-                      selectedParticipant.participant_activities.length === 0) && (
-                      <p className="text-sm text-muted-foreground">Ingen aktiviteter registrert</p>
-                    )}
                   </div>
                 </div>
 
                 {/* Notes */}
                 <div className="space-y-2">
-                  <Label className="text-base font-medium">Notater</Label>
+                  <Label>Notater</Label>
                   <Textarea
-                    placeholder="Allergier, viktig info, etc."
+                    placeholder="Generelle notater..."
                     value={selectedParticipant.notes || ''}
                     onChange={(e) => updateNotes(e.target.value)}
-                    rows={4}
                   />
                 </div>
               </div>
