@@ -61,6 +61,16 @@ const getTeamStyles = (team: string | null): string => {
   return 'bg-muted text-muted-foreground border-border';
 };
 
+// Format team display: "1" -> "Team 1", "2f" -> "Team 2F", others unchanged
+const formatTeamDisplay = (team: string | null): string => {
+  if (!team) return '';
+  const teamLower = team.toLowerCase().trim();
+  if (['1', '2', '1f', '2f'].includes(teamLower)) {
+    return `Team ${team.toUpperCase()}`;
+  }
+  return team;
+};
+
 export default function Leaders() {
   const [leaders, setLeaders] = useState<LeaderWithContent[]>([]);
   const [extraFieldsConfig, setExtraFieldsConfig] = useState<ExtraFieldConfig[]>([]);
@@ -414,7 +424,7 @@ export default function Leaders() {
                   <div className="flex flex-wrap gap-1 mt-1.5">
                     {leader.team && (
                       <Badge className={`text-[10px] px-1.5 py-0 ${getTeamStyles(leader.team)}`}>
-                        {leader.team}
+                        {formatTeamDisplay(leader.team)}
                       </Badge>
                     )}
                     {leader.cabin && (
