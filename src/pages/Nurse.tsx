@@ -294,7 +294,8 @@ export default function Nurse() {
     return matchesSearch && matchesCabin;
   });
 
-  // Separate participants with health info from others
+  // Separate participants with ACTUAL health info from others
+  // NOTE: We only consider health-related data, NOT activity_notes
   const participantsWithHealthInfo = filteredParticipants.filter(p => 
     p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info
   );

@@ -50,6 +50,7 @@ interface Participant {
   pass_suggestion: string | null;
   pass_text: string | null;
   pass_written: boolean | null;
+  activity_notes: string | null;
   cabins?: { name: string } | null;
 }
 
@@ -127,6 +128,7 @@ export function CheckoutDetailDialog({
             age,
             cabin: participant.cabins?.name || 'Ukjent',
             activities: uniqueActivities,
+            activityNotes: participant.activity_notes || '',
             littleStyrkeprove: hasLilleStyrkprove(completedActivities),
             bigStyrkeprove: hasStoreStyrkprove(completedActivities),
           },
@@ -342,6 +344,19 @@ export function CheckoutDetailDialog({
                 <p className="text-sm text-muted-foreground">Ingen aktiviteter registrert</p>
               )}
             </div>
+
+            {/* Activity Notes from leaders */}
+            {participant.activity_notes && (
+              <div className="space-y-3">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-amber-600" />
+                  Aktivitetsnotater fra ledere
+                </h4>
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg text-sm">
+                  {participant.activity_notes}
+                </div>
+              </div>
+            )}
 
             {/* Pass Text */}
             <div className="space-y-3">

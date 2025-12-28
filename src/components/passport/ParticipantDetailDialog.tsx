@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Camera, CheckCircle, XCircle, Loader2, Stethoscope, Heart } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Loader2, Stethoscope, Heart, Trophy } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 
@@ -25,6 +25,7 @@ interface ParticipantWithCabin {
   room: string | null;
   has_arrived: boolean | null;
   notes: string | null;
+  activity_notes: string | null;
   image_url: string | null;
   times_attended: number | null;
   cabin?: { id: string; name: string } | null;
@@ -77,7 +78,7 @@ export const ParticipantDetailDialog = ({
   const [activities, setActivities] = useState<ParticipantActivity[]>([]);
   const [healthNotes, setHealthNotes] = useState<HealthNote[]>([]);
   const [healthInfo, setHealthInfo] = useState<HealthInfo | null>(null);
-  const [notes, setNotes] = useState('');
+  const [activityNotes, setActivityNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -98,7 +99,7 @@ export const ParticipantDetailDialog = ({
 
       if (participantError) throw participantError;
       setParticipant(participantData);
-      setNotes(participantData.notes || '');
+      setActivityNotes(participantData.activity_notes || '');
 
       // Load activities
       const { data: activitiesData, error: activitiesError } = await supabase
@@ -146,28 +147,28 @@ export const ParticipantDetailDialog = ({
     }
   }, [open, participantId]);
 
-  const handleSaveNotes = async () => {
+  const handleSaveActivityNotes = async () => {
     if (!participant) return;
 
     setIsSavingNotes(true);
     try {
       const { error } = await supabase
         .from('participants')
-        .update({ notes })
+        .update({ activity_notes: activityNotes })
         .eq('id', participant.id);
 
       if (error) throw error;
 
       toast({
         title: 'Lagret',
-        description: 'Notater er oppdatert',
+        description: 'Aktivitetsnotater er oppdatert',
       });
       onParticipantUpdated?.();
     } catch (error) {
-      console.error('Error saving notes:', error);
+      console.error('Error saving activity notes:', error);
       toast({
         title: 'Feil',
-        description: 'Kunne ikke lagre notater',
+        description: 'Kunne ikke lagre aktivitetsnotater',
         variant: 'destructive',
       });
     } finally {
@@ -381,19 +382,25 @@ export const ParticipantDetailDialog = ({
                   />
                 </div>
 
-                {/* Notes */}
+                {/* Activity Notes - for leaders to write achievements */}
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Notater</h4>
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Trophy className="h-4 w-4 text-amber-600" />
+                    <span>Aktivitetsnotater</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Skriv prestasjoner og kommentarer som kan brukes i pass (f.eks. "1. plass i svømming")
+                  </p>
                   <Textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Skriv notater her..."
+                    value={activityNotes}
+                    onChange={(e) => setActivityNotes(e.target.value)}
+                    placeholder="F.eks. '1. plass i svømmekonkurranse', 'Traff blink på bueskyting'..."
                     rows={3}
                   />
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleSaveNotes}
+                    onClick={handleSaveActivityNotes}
                     disabled={isSavingNotes}
                   >
                     {isSavingNotes ? (
@@ -402,7 +409,7 @@ export const ParticipantDetailDialog = ({
                         Lagrer...
                       </>
                     ) : (
-                      'Lagre notater'
+                      'Lagre aktivitetsnotater'
                     )}
                   </Button>
                 </div>
