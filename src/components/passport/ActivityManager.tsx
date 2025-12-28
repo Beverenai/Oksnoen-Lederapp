@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Check, Plus, Minus, Loader2, ChevronDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -182,39 +183,41 @@ export const ActivityManager = ({
             <ChevronDown className="h-4 w-4 ml-auto" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-64 p-2 max-h-64 overflow-y-auto" align="start">
-          <div className="space-y-1">
-            {ACTIVITIES.map((activity) => {
-              const count = getCount(activity.title);
-              const isCurrentlyLoading = isLoading === activity.title;
+        <PopoverContent className="w-64 p-0" align="start">
+          <ScrollArea className="h-[300px] p-2">
+            <div className="space-y-1 pr-2">
+              {ACTIVITIES.map((activity) => {
+                const count = getCount(activity.title);
+                const isCurrentlyLoading = isLoading === activity.title;
 
-              return (
-                <Button
-                  key={activity.title}
-                  variant="ghost"
-                  className="w-full justify-start text-left h-auto py-2"
-                  onClick={() => addActivity(activity.title)}
-                  disabled={isCurrentlyLoading}
-                >
-                  <div className="flex items-center gap-2 w-full">
-                    {isCurrentlyLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : count > 0 ? (
-                      <Check className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <Plus className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <span className="flex-1 text-sm">{activity.title}</span>
-                    {count > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        {count}
-                      </Badge>
-                    )}
-                  </div>
-                </Button>
-              );
-            })}
-          </div>
+                return (
+                  <Button
+                    key={activity.title}
+                    variant="ghost"
+                    className="w-full justify-start text-left h-auto py-2"
+                    onClick={() => addActivity(activity.title)}
+                    disabled={isCurrentlyLoading}
+                  >
+                    <div className="flex items-center gap-2 w-full">
+                      {isCurrentlyLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : count > 0 ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Plus className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <span className="flex-1 text-sm">{activity.title}</span>
+                      {count > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          {count}
+                        </Badge>
+                      )}
+                    </div>
+                  </Button>
+                );
+              })}
+            </div>
+          </ScrollArea>
         </PopoverContent>
       </Popover>
     </div>
