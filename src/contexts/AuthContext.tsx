@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -10,17 +10,26 @@ interface AuthContextType {
   isAdmin: boolean;
   isNurse: boolean;
   isLoading: boolean;
+  isProfileComplete: boolean;
   login: (phone: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  refreshLeader: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function checkProfileComplete(leader: Leader | null): boolean {
+  if (!leader) return false;
+  return !!(leader.profile_image_url && leader.age);
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [leader, setLeader] = useState<Leader | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isNurse, setIsNurse] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  const isProfileComplete = checkProfileComplete(leader);
 
   useEffect(() => {
     const storedLeaderId = localStorage.getItem('leaderId');
@@ -62,6 +71,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }
   };
+
+  const refreshLeader = useCallback(async () => {
+    if (!leader?.id) return;
+    
+    const { data: leaderData, error } = await supabase
+      .from('leaders')
+      .select('*')
+      .eq('id', leader.id)
+      .maybeSingle();
+
+    if (!error && leaderData) {
+      setLeader(leaderData);
+    }
+  }, [leader?.id]);
 
   const login = async (phone: string): Promise<{ success: boolean; error?: string }> => {
     const normalizedPhone = phone.replace(/\s/g, '');
@@ -109,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ leader, isAdmin, isNurse, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ leader, isAdmin, isNurse, isLoading, isProfileComplete, login, logout, refreshLeader }}>
       {children}
     </AuthContext.Provider>
   );
