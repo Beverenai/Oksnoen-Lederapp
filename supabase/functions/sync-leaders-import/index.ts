@@ -96,8 +96,7 @@ serve(async (req) => {
             name: leader.name,
             email: leader.email || null,
             team: leader.team || null,
-            cabin: leader.cabin || null,
-            cabin_info: leader.cabin_info || null,
+            cabin: leader.cabin || leader.cabin_info || null,
             ministerpost: leader.ministerpost || null,
             age: leader.age || null,
           })
@@ -123,8 +122,7 @@ serve(async (req) => {
         if (leader.name) updateData.name = leader.name;
         if (leader.email) updateData.email = leader.email;
         if (leader.team) updateData.team = leader.team;
-        if (leader.cabin) updateData.cabin = leader.cabin;
-        if (leader.cabin_info) updateData.cabin_info = leader.cabin_info;
+        if (leader.cabin || leader.cabin_info) updateData.cabin = leader.cabin || leader.cabin_info;
         if (leader.ministerpost) updateData.ministerpost = leader.ministerpost;
         if (leader.age) updateData.age = leader.age;
 
@@ -142,7 +140,7 @@ serve(async (req) => {
       }
 
       // Parse cabin names and create leader_cabins links
-      const cabinNames = parseCabinNames(leader.cabin);
+      const cabinNames = parseCabinNames(leader.cabin || leader.cabin_info);
       if (cabinNames.length > 0) {
         // Delete existing leader_cabins for this leader
         await supabase.from('leader_cabins').delete().eq('leader_id', leaderId);
