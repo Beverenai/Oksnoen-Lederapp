@@ -235,7 +235,7 @@ export function LeaderDashboard({ leaders, extraFieldsConfig, onLeaderUpdated, o
                 {/* Badges */}
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {leader.team && (
-                    <Badge className={`text-xs ${getTeamStyles(leader.team)}`}>
+                    <Badge className={cn("text-xs", getTeamStyles(leader.team))}>
                       {leader.team}
                     </Badge>
                   )}
