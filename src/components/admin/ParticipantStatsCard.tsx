@@ -60,8 +60,8 @@ export function ParticipantStatsCard() {
     loadData();
   }, []);
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     try {
       const [participantsRes, cabinsRes, activitiesRes] = await Promise.all([
         supabase.from('participants').select('id, name, first_name, birth_date, has_arrived, cabin_id'),
@@ -306,7 +306,7 @@ export function ParticipantStatsCard() {
         participantId={selectedParticipantId}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        onParticipantUpdated={loadData}
+        onParticipantUpdated={() => loadData(false)}
       />
     </div>
   );
