@@ -607,6 +607,8 @@ export default function Admin() {
           extra_3: leaderContent.extra_3 || null,
           extra_4: leaderContent.extra_4 || null,
           extra_5: leaderContent.extra_5 || null,
+        }, {
+          onConflict: 'leader_id'
         });
 
       if (error) throw error;
