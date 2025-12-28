@@ -198,6 +198,7 @@ export default function Admin() {
   const [isSavingExportWebhook, setIsSavingExportWebhook] = useState(false);
   const [lastExportSuccess, setLastExportSuccess] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [lastExportTime, setLastExportTime] = useState<string | null>(null);
   
   // Auto-export state
   const [pendingExport, setPendingExport] = useState(false);
@@ -210,6 +211,7 @@ export default function Admin() {
     loadWebhookUrl();
     loadExportWebhookUrl();
     loadLastSyncTime();
+    loadLastExportTime();
     loadSessionActivitiesText();
     
     // Cleanup timers on unmount
@@ -261,6 +263,18 @@ export default function Admin() {
     
     if (data?.value) {
       setLastSyncTime(data.value);
+    }
+  };
+
+  const loadLastExportTime = async () => {
+    const { data } = await supabase
+      .from('app_config')
+      .select('value')
+      .eq('key', 'last_export_timestamp')
+      .maybeSingle();
+    
+    if (data?.value) {
+      setLastExportTime(data.value);
     }
   };
 
@@ -379,6 +393,8 @@ export default function Admin() {
 
       if (data?.success) {
         setLastExportSuccess(true);
+        const exportTime = new Date().toISOString();
+        setLastExportTime(exportTime);
         toast.success(`Eksport fullført! ${data.leadersExported} ledere sendt til Google Sheets`);
       } else {
         setExportError(data?.error || 'Ukjent feil');
@@ -1633,6 +1649,13 @@ export default function Admin() {
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400">
                   <CheckCircle2 className="w-5 h-5" />
                   <span className="text-sm font-medium">Eksport fullført!</span>
+                </div>
+              )}
+
+              {lastExportTime && !pendingExport && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle2 className="w-4 h-4 text-green-600" />
+                  <span>Sist eksportert: {formatSyncTime(lastExportTime)}</span>
                 </div>
               )}
 
