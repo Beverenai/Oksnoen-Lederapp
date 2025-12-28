@@ -5,15 +5,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+interface N8nErrorResponse {
+  errorMessage?: string;
+  errorDetails?: Record<string, unknown>;
+  n8nDetails?: {
+    n8nVersion?: string;
+    stackTrace?: string[];
+  };
+  code?: number;
+  message?: string;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
-  try {
-    console.log('trigger-sync: Starting...')
+  const correlationId = Date.now().toString()
+  console.log(`trigger-sync [${correlationId}]: Starting...`)
 
+  try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
@@ -27,23 +39,23 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (configError) {
-      console.error('trigger-sync: Error fetching webhook URL:', configError)
+      console.error(`trigger-sync [${correlationId}]: Error fetching webhook URL:`, configError)
       return new Response(
-        JSON.stringify({ success: false, error: 'Could not fetch webhook URL' }),
+        JSON.stringify({ success: false, error: 'Could not fetch webhook URL', correlationId }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     if (!configData?.value) {
-      console.log('trigger-sync: No webhook URL configured')
+      console.log(`trigger-sync [${correlationId}]: No webhook URL configured`)
       return new Response(
-        JSON.stringify({ success: false, error: 'No webhook URL configured' }),
+        JSON.stringify({ success: false, error: 'No webhook URL configured', correlationId }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     const webhookUrl = configData.value
-    console.log('trigger-sync: Calling webhook:', webhookUrl)
+    console.log(`trigger-sync [${correlationId}]: Calling webhook:`, webhookUrl)
 
     // Call the n8n webhook from server-side (no CORS issues)
     const response = await fetch(webhookUrl, {
@@ -54,20 +66,38 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         timestamp: new Date().toISOString(),
         triggered_from: 'admin_panel_backend',
+        correlationId,
       }),
     })
 
     const responseText = await response.text()
-    console.log('trigger-sync: Webhook response status:', response.status)
-    console.log('trigger-sync: Webhook response body:', responseText)
+    console.log(`trigger-sync [${correlationId}]: Webhook response status:`, response.status)
+    console.log(`trigger-sync [${correlationId}]: Webhook response body:`, responseText)
+
+    // Try to parse as JSON for better error details
+    let parsedResponse: N8nErrorResponse | null = null
+    try {
+      parsedResponse = JSON.parse(responseText)
+    } catch {
+      // Not JSON, that's fine
+    }
 
     if (!response.ok) {
+      const errorDetails = {
+        success: false,
+        error: `Webhook returned ${response.status}`,
+        webhookStatus: response.status,
+        webhookUrl,
+        correlationId,
+        rawResponse: responseText,
+        n8nError: parsedResponse?.errorMessage || parsedResponse?.message || null,
+        n8nStackTrace: parsedResponse?.n8nDetails?.stackTrace?.slice(0, 3) || null,
+      }
+      
+      console.error(`trigger-sync [${correlationId}]: Webhook failed:`, errorDetails)
+      
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `Webhook returned ${response.status}`,
-          details: responseText 
-        }),
+        JSON.stringify(errorDetails),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -86,16 +116,18 @@ Deno.serve(async (req) => {
         success: true, 
         message: 'Sync triggered successfully',
         webhookStatus: response.status,
+        webhookUrl,
+        correlationId,
         webhookResponse: responseText
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('trigger-sync: Error:', error)
+    console.error(`trigger-sync [${correlationId}]: Error:`, error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: errorMessage, correlationId }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
