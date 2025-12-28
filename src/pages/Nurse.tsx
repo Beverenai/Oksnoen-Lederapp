@@ -31,7 +31,7 @@ import {
   Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -335,75 +335,52 @@ export default function Nurse() {
   }
 
   const ParticipantCard = ({ participant }: { participant: ParticipantWithHealth }) => {
-    const hasNotes = participant.healthNotes.length > 0;
-    const hasEvents = participant.healthEvents.length > 0;
-    const hasHealthInfo = !!participant.healthInfo?.info;
-    const latestEvent = participant.healthEvents[0];
-    const highSeverity = participant.healthEvents.some(e => e.severity === 'high');
+    const hasHealthData = participant.healthNotes.length > 0 || 
+      participant.healthEvents.length > 0 || 
+      !!participant.healthInfo?.info;
+    
+    const age = participant.birth_date 
+      ? differenceInYears(new Date(), new Date(participant.birth_date)) 
+      : null;
     
     return (
-      <Card 
-        className={`cursor-pointer transition-all hover:shadow-md ${highSeverity ? 'border-destructive/50' : ''}`}
+      <div
+        className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+          hasHealthData ? 'border-destructive/50 bg-destructive/5' : 'bg-card'
+        }`}
         onClick={() => openParticipantDetail(participant)}
       >
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar className="w-10 h-10">
-                <AvatarImage src={participant.image_url || undefined} alt={participant.name} />
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  {participant.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium text-foreground">{participant.name}</p>
-                {participant.cabin && (
-                  <p className="text-sm text-muted-foreground">{participant.cabin.name}</p>
-                )}
-              </div>
+        <div className="flex items-start gap-3">
+          <Avatar className="w-10 h-10 shrink-0">
+            <AvatarImage src={participant.image_url || undefined} alt={participant.name} />
+            <AvatarFallback className="bg-muted text-muted-foreground">
+              <User className="w-4 h-4" />
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-foreground truncate text-sm">
+                {participant.name}
+              </p>
+              {hasHealthData && (
+                <Heart className="w-4 h-4 text-destructive shrink-0" />
+              )}
             </div>
-            <div className="flex gap-1">
-              {hasHealthInfo && (
-                <Badge variant="outline" className="text-xs bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/30 dark:text-pink-300 dark:border-pink-800">
-                  <Heart className="w-3 h-3 mr-1" />
-                  Info
-                </Badge>
-              )}
-              {hasNotes && (
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+              {age && (
                 <Badge variant="outline" className="text-xs">
-                  <FileText className="w-3 h-3 mr-1" />
-                  Notat
+                  {age} år
                 </Badge>
               )}
-              {highSeverity && (
-                <Badge variant="destructive" className="text-xs">
-                  <AlertCircle className="w-3 h-3" />
-                </Badge>
+              {participant.cabin && (
+                <span className="text-xs text-muted-foreground truncate">
+                  {participant.cabin.name}
+                </span>
               )}
             </div>
           </div>
-          {hasHealthInfo && (
-            <div className="mt-3 pt-3 border-t border-border">
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {participant.healthInfo?.info}
-              </p>
-            </div>
-          )}
-          {hasEvents && latestEvent && !hasHealthInfo && (
-            <div className="mt-3 pt-3 border-t border-border">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="w-3 h-3" />
-                <span>
-                  {format(new Date(latestEvent.created_at), 'dd. MMM HH:mm', { locale: nb })}
-                </span>
-                <Badge variant="secondary" className="text-xs">
-                  {eventTypes.find(t => t.value === latestEvent.event_type)?.label || latestEvent.event_type}
-                </Badge>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   };
 
@@ -455,7 +432,7 @@ export default function Nurse() {
               Deltakere med helseinfo ({participantsWithHealthInfo.length})
             </h2>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {participantsWithHealthInfo.map((participant) => (
               <ParticipantCard key={participant.id} participant={participant} />
             ))}
@@ -472,7 +449,7 @@ export default function Nurse() {
               Alle deltakere ({participantsWithoutHealthInfo.length})
             </h2>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {participantsWithoutHealthInfo.map((participant) => (
               <ParticipantCard key={participant.id} participant={participant} />
             ))}
