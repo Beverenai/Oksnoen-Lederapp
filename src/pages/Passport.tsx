@@ -131,7 +131,11 @@ export default function Passport() {
 
   const filteredParticipants = useMemo(() => {
     return participants.filter((p) => {
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const query = searchQuery.toLowerCase();
+      const matchesName = p.name.toLowerCase().includes(query);
+      const cabinName = p.cabins?.name?.toLowerCase() || '';
+      const matchesCabinSearch = cabinName.includes(query);
+      const matchesSearch = matchesName || matchesCabinSearch;
       const matchesCabin = filterCabin === 'all' || p.cabin_id === filterCabin;
       const matchesArrival = 
         filterArrival === 'all' ||
@@ -379,71 +383,151 @@ export default function Passport() {
                   </CardHeader>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <CardContent className="pt-0">
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {cabinParticipants.map((participant) => {
-                        const completedActivities = (participant.participant_activities || []).map(a => a.activity);
-                        
-                        return (
-                          <div
-                            key={participant.id}
-                            className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-                              participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
-                            }`}
-                            onClick={() => {
-                              setSelectedParticipant(participant);
-                              setIsDetailDialogOpen(true);
-                            }}
-                          >
-                            <div className="flex items-start gap-3">
-                              <Avatar className="w-10 h-10 shrink-0">
-                                <AvatarImage src={participant.image_url || undefined} />
-                                <AvatarFallback className="bg-muted text-muted-foreground">
-                                  <User className="w-4 h-4" />
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-medium text-foreground truncate text-sm">
-                                    {participant.name}
-                                  </p>
-                                  {participant.has_arrived ? (
-                                    <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
-                                  ) : (
-                                    <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-1 mt-1 flex-wrap">
-                                  {participant.birth_date && (
-                                    <Badge variant="outline" className="text-xs">
-                                      {calculateAge(participant.birth_date)} år
-                                    </Badge>
-                                  )}
-                                  {participant.room && (
-                                    <Badge 
-                                      variant="secondary" 
-                                      className={`text-xs ${
-                                        participant.room === 'høyre' 
-                                          ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30' 
-                                          : participant.room === 'venstre'
-                                          ? 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30'
-                                          : ''
-                                      }`}
-                                    >
-                                      {participant.room}
-                                    </Badge>
-                                  )}
-                                  <StyrkeproveBadges 
-                                    completedActivities={completedActivities} 
-                                    showCount 
-                                  />
-                                </div>
-                              </div>
-                            </div>
+                  <CardContent className="pt-0 space-y-4">
+                    {/* Group by room: høyre first, then venstre, then others */}
+                    {(['høyre', 'venstre'] as const).map(roomSide => {
+                      const roomParticipants = cabinParticipants
+                        .filter(p => p.room === roomSide)
+                        .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+                      
+                      if (roomParticipants.length === 0) return null;
+                      
+                      return (
+                        <div key={roomSide}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge 
+                              variant="secondary" 
+                              className={`text-xs ${
+                                roomSide === 'høyre' 
+                                  ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30' 
+                                  : 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30'
+                              }`}
+                            >
+                              {roomSide} ({roomParticipants.length})
+                            </Badge>
                           </div>
-                        );
-                      })}
-                    </div>
+                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            {roomParticipants.map((participant) => {
+                              const completedActivities = (participant.participant_activities || []).map(a => a.activity);
+                              
+                              return (
+                                <div
+                                  key={participant.id}
+                                  className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+                                    participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
+                                  }`}
+                                  onClick={() => {
+                                    setSelectedParticipant(participant);
+                                    setIsDetailDialogOpen(true);
+                                  }}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <Avatar className="w-10 h-10 shrink-0">
+                                      <AvatarImage src={participant.image_url || undefined} />
+                                      <AvatarFallback className="bg-muted text-muted-foreground">
+                                        <User className="w-4 h-4" />
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-medium text-foreground truncate text-sm">
+                                          {participant.name}
+                                        </p>
+                                        {participant.has_arrived ? (
+                                          <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                                        ) : (
+                                          <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                        {participant.birth_date && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {calculateAge(participant.birth_date)} år
+                                          </Badge>
+                                        )}
+                                        <StyrkeproveBadges 
+                                          completedActivities={completedActivities} 
+                                          showCount 
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Participants without room assignment */}
+                    {(() => {
+                      const noRoomParticipants = cabinParticipants
+                        .filter(p => !p.room || (p.room !== 'høyre' && p.room !== 'venstre'))
+                        .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+                      
+                      if (noRoomParticipants.length === 0) return null;
+                      
+                      return (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline" className="text-xs">
+                              Uten rom ({noRoomParticipants.length})
+                            </Badge>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            {noRoomParticipants.map((participant) => {
+                              const completedActivities = (participant.participant_activities || []).map(a => a.activity);
+                              
+                              return (
+                                <div
+                                  key={participant.id}
+                                  className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+                                    participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
+                                  }`}
+                                  onClick={() => {
+                                    setSelectedParticipant(participant);
+                                    setIsDetailDialogOpen(true);
+                                  }}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <Avatar className="w-10 h-10 shrink-0">
+                                      <AvatarImage src={participant.image_url || undefined} />
+                                      <AvatarFallback className="bg-muted text-muted-foreground">
+                                        <User className="w-4 h-4" />
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-medium text-foreground truncate text-sm">
+                                          {participant.name}
+                                        </p>
+                                        {participant.has_arrived ? (
+                                          <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                                        ) : (
+                                          <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                        {participant.birth_date && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {calculateAge(participant.birth_date)} år
+                                          </Badge>
+                                        )}
+                                        <StyrkeproveBadges 
+                                          completedActivities={completedActivities} 
+                                          showCount 
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </CardContent>
                 </CollapsibleContent>
               </Card>
