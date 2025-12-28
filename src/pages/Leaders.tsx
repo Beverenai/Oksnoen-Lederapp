@@ -27,24 +27,33 @@ interface LeaderWithContent extends Leader {
 
 type SortOption = 'name' | 'activity' | 'team';
 
-// Team definitions with colors
-const TEAMS = [
+// Teams to show in filter chips (simplified list)
+const FILTER_TEAMS = [
   { key: 'team 1', label: 'Team 1', bg: 'bg-red-500', text: 'text-white', border: 'border-red-500' },
   { key: 'team 2', label: 'Team 2', bg: 'bg-orange-500', text: 'text-white', border: 'border-orange-500' },
   { key: 'team 1f', label: 'Team 1F', bg: 'bg-yellow-400', text: 'text-black', border: 'border-yellow-400' },
   { key: 'team 2f', label: 'Team 2F', bg: 'bg-blue-500', text: 'text-white', border: 'border-blue-500' },
   { key: 'kjøkken', label: 'Kjøkken', bg: 'bg-purple-500', text: 'text-white', border: 'border-purple-500' },
-  { key: 'joker', label: 'Joker', bg: 'bg-pink-500', text: 'text-white', border: 'border-pink-500' },
-  { key: 'sjef', label: 'Sjef', bg: 'bg-slate-600', text: 'text-white', border: 'border-slate-600' },
-  { key: 'nurse', label: 'Nurse', bg: 'bg-rose-600', text: 'text-white', border: 'border-rose-600' },
 ];
 
-// Team color mapping based on provided design
+// All team colors for badge styling (includes teams not in filter)
+const ALL_TEAM_STYLES: Record<string, { bg: string; text: string; border: string }> = {
+  'team 1': { bg: 'bg-red-500', text: 'text-white', border: 'border-red-500' },
+  'team 2': { bg: 'bg-orange-500', text: 'text-white', border: 'border-orange-500' },
+  'team 1f': { bg: 'bg-yellow-400', text: 'text-black', border: 'border-yellow-400' },
+  'team 2f': { bg: 'bg-blue-500', text: 'text-white', border: 'border-blue-500' },
+  'kjøkken': { bg: 'bg-purple-500', text: 'text-white', border: 'border-purple-500' },
+  'joker': { bg: 'bg-pink-500', text: 'text-white', border: 'border-pink-500' },
+  'sjef': { bg: 'bg-slate-600', text: 'text-white', border: 'border-slate-600' },
+  'nurse': { bg: 'bg-rose-600', text: 'text-white', border: 'border-rose-600' },
+};
+
+// Team color mapping for badges
 const getTeamStyles = (team: string | null): string => {
   const teamLower = team?.toLowerCase().trim();
-  const teamConfig = TEAMS.find(t => t.key === teamLower);
-  if (teamConfig) {
-    return `${teamConfig.bg} ${teamConfig.text} ${teamConfig.border}`;
+  if (teamLower && ALL_TEAM_STYLES[teamLower]) {
+    const style = ALL_TEAM_STYLES[teamLower];
+    return `${style.bg} ${style.text} ${style.border}`;
   }
   return 'bg-muted text-muted-foreground border-border';
 };
@@ -112,14 +121,14 @@ export default function Leaders() {
     }
   };
 
-  // Get unique teams from leaders for filter chips
+  // Get teams for filter chips (only show FILTER_TEAMS that are in use)
   const availableTeams = useMemo(() => {
     const teamsInUse = new Set(
       leaders
         .map(l => l.team?.toLowerCase().trim())
         .filter(Boolean)
     );
-    return TEAMS.filter(t => teamsInUse.has(t.key));
+    return FILTER_TEAMS.filter(t => teamsInUse.has(t.key));
   }, [leaders]);
 
   // Get unique cabins from leaders for filter chips
