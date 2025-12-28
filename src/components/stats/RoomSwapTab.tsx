@@ -130,14 +130,19 @@ export function RoomSwapTab() {
     return options;
   }, [cabins, roomCapacity, roomOccupancy]);
 
-  // Filter participants by search
+  // Filter participants by search (name or cabin name)
   const filteredParticipants = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
     return participants
-      .filter((p) => p.name.toLowerCase().includes(query))
+      .filter((p) => {
+        const nameMatch = p.name.toLowerCase().includes(query);
+        const cabinName = getCabinName(p.cabin_id).toLowerCase();
+        const cabinMatch = cabinName.includes(query);
+        return nameMatch || cabinMatch;
+      })
       .slice(0, 10);
-  }, [participants, searchQuery]);
+  }, [participants, searchQuery, cabins]);
 
   // Get cabin name by id
   function getCabinName(cabinId: string | null): string {
