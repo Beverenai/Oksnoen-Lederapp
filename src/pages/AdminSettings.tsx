@@ -476,7 +476,7 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="leaders" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
           <TabsTrigger value="leaders" className="gap-2">
             <Users className="w-4 h-4 hidden sm:block" />
             Ledere
@@ -492,6 +492,10 @@ export default function AdminSettings() {
           <TabsTrigger value="schedule" className="gap-2">
             <Calendar className="w-4 h-4 hidden sm:block" />
             Vaktplan
+          </TabsTrigger>
+          <TabsTrigger value="push" className="gap-2">
+            <Bell className="w-4 h-4 hidden sm:block" />
+            Push
           </TabsTrigger>
           <TabsTrigger value="sync" className="gap-2">
             <RefreshCw className="w-4 h-4 hidden sm:block" />
