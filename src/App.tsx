@@ -11,6 +11,7 @@ import Leaders from "@/pages/Leaders";
 import Passport from "@/pages/Passport";
 import Wall from "@/pages/Wall";
 import Admin from "@/pages/Admin";
+import Nurse from "@/pages/Nurse";
 import ComingSoon from "@/pages/ComingSoon";
 import NotFound from "@/pages/NotFound";
 
@@ -104,6 +105,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Wall />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/nurse"
+        element={
+          <ProtectedRoute>
+            <Nurse />
           </ProtectedRoute>
         }
       />
