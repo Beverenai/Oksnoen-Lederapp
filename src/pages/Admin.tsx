@@ -87,9 +87,76 @@ export default function Admin() {
   const [newAnnouncementTitle, setNewAnnouncementTitle] = useState('');
   const [newAnnouncementContent, setNewAnnouncementContent] = useState('');
 
+  // Sync webhook
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isSavingWebhook, setIsSavingWebhook] = useState(false);
+
   useEffect(() => {
     loadData();
+    loadWebhookUrl();
   }, []);
+
+  const loadWebhookUrl = async () => {
+    const { data } = await supabase
+      .from('app_config')
+      .select('value')
+      .eq('key', 'sync_webhook_url')
+      .maybeSingle();
+    
+    if (data?.value) {
+      setWebhookUrl(data.value);
+    }
+  };
+
+  const saveWebhookUrl = async () => {
+    setIsSavingWebhook(true);
+    try {
+      const { error } = await supabase
+        .from('app_config')
+        .update({ value: webhookUrl, updated_at: new Date().toISOString() })
+        .eq('key', 'sync_webhook_url');
+      
+      if (error) throw error;
+      toast.success('Webhook URL lagret!');
+    } catch (error) {
+      console.error('Error saving webhook URL:', error);
+      toast.error('Kunne ikke lagre webhook URL');
+    } finally {
+      setIsSavingWebhook(false);
+    }
+  };
+
+  const triggerSync = async () => {
+    if (!webhookUrl) {
+      toast.error('Legg inn webhook URL først');
+      return;
+    }
+
+    setIsSyncing(true);
+    console.log('Triggering n8n webhook:', webhookUrl);
+
+    try {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        mode: 'no-cors',
+        body: JSON.stringify({
+          timestamp: new Date().toISOString(),
+          triggered_from: 'admin_panel',
+        }),
+      });
+
+      toast.success('Synkronisering startet! Sjekk n8n for status.');
+    } catch (error) {
+      console.error('Error triggering sync:', error);
+      toast.error('Kunne ikke starte synkronisering');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -741,22 +808,70 @@ export default function Admin() {
 
         {/* Sync Tab */}
         <TabsContent value="sync" className="space-y-4">
-          {/* Sync from Google Sheets */}
+          {/* Webhook Sync Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <RefreshCw className="w-5 h-5" />
-                Synkroniser fra Google Sheets
+                Synkroniser fra Google Sheet
               </CardTitle>
               <CardDescription>
-                Hent aktiviteter, notater og ekstra-info fra Google Sheet
+                Koble til n8n webhook for å hente data fra Google Sheets
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button onClick={() => setShowSyncInstructions(!showSyncInstructions)}>
-                <FileSpreadsheet className="w-4 h-4 mr-2" />
-                {showSyncInstructions ? 'Skjul instruksjoner' : 'Vis synk-instruksjoner'}
+              <div className="space-y-2">
+                <Label htmlFor="webhookUrl">n8n Webhook URL</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="webhookUrl"
+                    placeholder="https://n8n.example.com/webhook/abc123"
+                    value={webhookUrl}
+                    onChange={(e) => setWebhookUrl(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button 
+                    onClick={saveWebhookUrl} 
+                    disabled={isSavingWebhook}
+                    variant="outline"
+                  >
+                    {isSavingWebhook ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <Button 
+                onClick={triggerSync} 
+                disabled={isSyncing || !webhookUrl}
+                className="w-full sm:w-auto"
+              >
+                {isSyncing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Synkroniserer...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Synk nå
+                  </>
+                )}
               </Button>
+
+              <div className="border-t pt-4 mt-4">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowSyncInstructions(!showSyncInstructions)}
+                  className="w-full justify-start"
+                >
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  {showSyncInstructions ? 'Skjul oppsett-instruksjoner' : 'Vis oppsett-instruksjoner'}
+                </Button>
+              </div>
 
               {showSyncInstructions && (
                 <div className="p-4 rounded-lg bg-muted/50 space-y-4">
@@ -773,7 +888,7 @@ export default function Admin() {
                     <p className="text-sm font-medium">2. n8n AI Builder prompt:</p>
                     <code className="block text-xs bg-background p-2 rounded whitespace-pre-wrap">
 {`Lag en workflow som:
-1. Starter med manuell trigger
+1. Starter med Webhook trigger
 2. Henter alle rader fra Google Sheets
 3. Transformerer hver rad til dette format:
    {
@@ -798,9 +913,10 @@ export default function Admin() {
                   <div className="space-y-2">
                     <p className="text-sm font-medium">3. Viktig:</p>
                     <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
+                      <li>Bruk <strong>Webhook trigger</strong> (ikke manuell trigger)</li>
+                      <li>Kopier webhook URL fra n8n og lim inn over</li>
                       <li>Telefonnummer brukes som ID for å matche ledere</li>
                       <li>Ledere må først være opprettet i appen</li>
-                      <li>Kjør workflowen manuelt i n8n når du vil synkronisere</li>
                     </ul>
                   </div>
                 </div>
