@@ -523,6 +523,106 @@ export type Database = {
           },
         ]
       }
+      room_capacity: {
+        Row: {
+          bed_count: number
+          cabin_id: string
+          created_at: string | null
+          id: string
+          room: string | null
+        }
+        Insert: {
+          bed_count?: number
+          cabin_id: string
+          created_at?: string | null
+          id?: string
+          room?: string | null
+        }
+        Update: {
+          bed_count?: number
+          cabin_id?: string
+          created_at?: string | null
+          id?: string
+          room?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_capacity_cabin_id_fkey"
+            columns: ["cabin_id"]
+            isOneToOne: false
+            referencedRelation: "cabins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_swaps: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          from_cabin_id: string | null
+          from_room: string | null
+          id: string
+          participant_id: string
+          status: string
+          to_cabin_id: string
+          to_room: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          from_cabin_id?: string | null
+          from_room?: string | null
+          id?: string
+          participant_id: string
+          status?: string
+          to_cabin_id: string
+          to_room?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          from_cabin_id?: string | null
+          from_room?: string | null
+          id?: string
+          participant_id?: string
+          status?: string
+          to_cabin_id?: string
+          to_room?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_swaps_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_swaps_from_cabin_id_fkey"
+            columns: ["from_cabin_id"]
+            isOneToOne: false
+            referencedRelation: "cabins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_swaps_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_swaps_to_cabin_id_fkey"
+            columns: ["to_cabin_id"]
+            isOneToOne: false
+            referencedRelation: "cabins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_activities: {
         Row: {
           created_at: string | null
