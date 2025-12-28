@@ -37,7 +37,43 @@ interface HomeScreenConfig {
   sort_order: number;
   title: string | null;
   icon: string | null;
+  bg_color: string | null;
+  text_size: string | null;
+  is_bold: boolean | null;
+  is_italic: boolean | null;
 }
+
+// Color styles for card backgrounds
+const colorStyles: Record<string, string> = {
+  default: 'bg-card border-border',
+  green: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800',
+  yellow: 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800',
+  blue: 'bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800',
+  red: 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800',
+  purple: 'bg-purple-50 border-purple-200 dark:bg-purple-950/30 dark:border-purple-800',
+  orange: 'bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800',
+};
+
+// Text size styles
+const textSizeStyles: Record<string, string> = {
+  sm: 'text-sm',
+  md: 'text-base',
+  lg: 'text-xl',
+};
+
+// Helper to get card class with styling
+const getCardStyle = (config: HomeScreenConfig | undefined) => {
+  const bgColor = config?.bg_color || 'default';
+  return colorStyles[bgColor] || colorStyles.default;
+};
+
+// Helper to get text class with styling
+const getTextStyle = (config: HomeScreenConfig | undefined) => {
+  const size = config?.text_size || 'md';
+  const bold = config?.is_bold ? 'font-bold' : '';
+  const italic = config?.is_italic ? 'italic' : '';
+  return `${textSizeStyles[size] || textSizeStyles.md} ${bold} ${italic}`.trim();
+};
 
 
 // Icon mapping for fields
@@ -267,82 +303,94 @@ export default function Home() {
       {/* Content Cards */}
       <div className="px-4 mt-6 space-y-4">
         {/* Main Activity - Large Display */}
-        {isElementVisible('current_activity') && (
-          <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
-            <CardContent className="pt-6 pb-6">
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-full bg-primary/20">
-                  <ActivityIcon className="w-5 h-5 text-primary" />
+        {isElementVisible('current_activity') && (() => {
+          const activityConfig = getConfigForElement('current_activity');
+          return (
+            <Card className={`border ${getCardStyle(activityConfig)}`}>
+              <CardContent className="pt-6 pb-6">
+                <div className="flex flex-col items-center text-center gap-3">
+                  <div className="p-2 rounded-full bg-primary/20">
+                    <ActivityIcon className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs uppercase tracking-wide text-primary font-medium mb-1">
+                      {getElementTitle('current_activity', 'Din aktivitet')}
+                    </p>
+                    <p className={`md:text-2xl font-heading text-foreground ${getTextStyle(activityConfig)}`}>
+                      {content?.current_activity || 'Ingen aktivitet tildelt'}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs uppercase tracking-wide text-primary font-medium mb-1">
-                    {getElementTitle('current_activity', 'Din aktivitet')}
-                  </p>
-                  <p className="text-xl md:text-2xl font-heading font-bold text-foreground">
-                    {content?.current_activity || 'Ingen aktivitet tildelt'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* OBS Alert Box */}
-        {isElementVisible('obs_message') && content?.obs_message && (
-          <Card className="border-success bg-success/10">
-            <CardContent className="py-4">
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-full bg-success/20">
-                  <ObsIcon className="w-5 h-5 text-success" />
+        {isElementVisible('obs_message') && content?.obs_message && (() => {
+          const obsConfig = getConfigForElement('obs_message');
+          return (
+            <Card className={`border ${getCardStyle(obsConfig)}`}>
+              <CardContent className="py-4">
+                <div className="flex flex-col items-center text-center gap-3">
+                  <div className="p-2 rounded-full bg-success/20">
+                    <ObsIcon className="w-5 h-5 text-success" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs uppercase tracking-wide text-success font-medium mb-1">
+                      {getElementTitle('obs_message', 'OBS')}
+                    </p>
+                    <p className={`text-foreground ${getTextStyle(obsConfig)}`}>{content.obs_message}</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs uppercase tracking-wide text-success font-medium mb-1">
-                    {getElementTitle('obs_message', 'OBS')}
-                  </p>
-                  <p className="text-foreground font-medium">{content.obs_message}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Extra Activity */}
-        {isElementVisible('extra_activity') && content?.extra_activity && (
-          <Card>
-            <CardContent className="py-4">
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-full bg-accent/20">
-                  <ExtraActivityIcon className="w-5 h-5 text-accent" />
+        {isElementVisible('extra_activity') && content?.extra_activity && (() => {
+          const extraConfig = getConfigForElement('extra_activity');
+          return (
+            <Card className={`border ${getCardStyle(extraConfig)}`}>
+              <CardContent className="py-4">
+                <div className="flex flex-col items-center text-center gap-3">
+                  <div className="p-2 rounded-full bg-accent/20">
+                    <ExtraActivityIcon className="w-5 h-5 text-accent" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs uppercase tracking-wide text-accent font-medium mb-1">
+                      {getElementTitle('extra_activity', 'Ekstra aktivitet')}
+                    </p>
+                    <p className={`text-foreground ${getTextStyle(extraConfig)}`}>{content.extra_activity}</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs uppercase tracking-wide text-accent font-medium mb-1">
-                    {getElementTitle('extra_activity', 'Ekstra aktivitet')}
-                  </p>
-                  <p className="text-foreground">{content.extra_activity}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Personal Notes */}
-        {isElementVisible('personal_notes') && content?.personal_notes && (
-          <Card className="border-primary/20">
-            <CardContent className="py-4">
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-full bg-primary/10">
-                  <NotesIcon className="w-5 h-5 text-primary" />
+        {isElementVisible('personal_notes') && content?.personal_notes && (() => {
+          const notesConfig = getConfigForElement('personal_notes');
+          return (
+            <Card className={`border ${getCardStyle(notesConfig)}`}>
+              <CardContent className="py-4">
+                <div className="flex flex-col items-center text-center gap-3">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <NotesIcon className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs uppercase tracking-wide text-primary font-medium mb-1">
+                      {getElementTitle('personal_notes', 'Notater til deg')}
+                    </p>
+                    <p className={`text-foreground ${getTextStyle(notesConfig)}`}>{content.personal_notes}</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs uppercase tracking-wide text-primary font-medium mb-1">
-                    {getElementTitle('personal_notes', 'Notater til deg')}
-                  </p>
-                  <p className="text-foreground">{content.personal_notes}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Extra Fields - now using home_screen_config for visibility */}
         {['extra_1', 'extra_2', 'extra_3', 'extra_4', 'extra_5'].map((fieldKey) => {
@@ -355,9 +403,9 @@ export default function Home() {
           const IconComponent = fieldConfig.icon && iconMap[fieldConfig.icon] ? iconMap[fieldConfig.icon] : Info;
           
           return (
-            <Card key={fieldKey}>
+            <Card key={fieldKey} className={`border ${getCardStyle(fieldConfig)}`}>
               <CardContent className="py-4">
-                <div className="flex items-start gap-3">
+                <div className="flex flex-col items-center text-center gap-3">
                   <div className="p-2 rounded-full bg-muted">
                     <IconComponent className="w-5 h-5 text-muted-foreground" />
                   </div>
@@ -365,7 +413,7 @@ export default function Home() {
                     <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">
                       {fieldConfig.title || fieldKey.replace('_', ' #')}
                     </p>
-                    <p className="text-foreground">{value}</p>
+                    <p className={`text-foreground ${getTextStyle(fieldConfig)}`}>{value}</p>
                   </div>
                 </div>
               </CardContent>
@@ -374,23 +422,26 @@ export default function Home() {
         })}
 
         {/* Session Activities Text */}
-        {isElementVisible('session_activities') && sessionActivitiesText && (
-          <Card>
-            <CardContent className="py-4">
-              <div className="flex items-start gap-3 mb-4">
-                <div className="p-2 rounded-full bg-primary/10">
-                  <SessionIcon className="w-5 h-5 text-primary" />
+        {isElementVisible('session_activities') && sessionActivitiesText && (() => {
+          const sessionConfig = getConfigForElement('session_activities');
+          return (
+            <Card className={`border ${getCardStyle(sessionConfig)}`}>
+              <CardContent className="py-4">
+                <div className="flex flex-col items-center text-center gap-3">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <SessionIcon className="w-5 h-5 text-primary" />
+                  </div>
+                  <p className="text-xs uppercase tracking-wide text-primary font-medium">
+                    {getElementTitle('session_activities', 'Aktiviteter denne økten')}
+                  </p>
                 </div>
-                <p className="text-xs uppercase tracking-wide text-primary font-medium pt-2">
-                  {getElementTitle('session_activities', 'Aktiviteter denne økten')}
-                </p>
-              </div>
-              <div className="ml-12">
-                <p className="text-foreground whitespace-pre-wrap">{sessionActivitiesText}</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                <div className="mt-4 text-center">
+                  <p className={`text-foreground whitespace-pre-wrap ${getTextStyle(sessionConfig)}`}>{sessionActivitiesText}</p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Empty State */}
         {!hasAnyContent && (
