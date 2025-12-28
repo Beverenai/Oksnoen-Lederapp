@@ -259,7 +259,7 @@ export const ParticipantDetailDialog = ({
                 <img
                   src={participant.image_url}
                   alt={participant.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-top"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/20">
