@@ -39,13 +39,36 @@ const allNavItems = [
   { to: '/fix', icon: Wrench, label: 'Rapporter' },
 ];
 
-// Bottom nav items for mobile (4 main items)
-const bottomNavItems = [
-  { to: '/', icon: Home, label: 'Hjem' },
-  { to: '/leaders', icon: Users, label: 'Ledere' },
-  { to: '/passport', icon: ClipboardCheck, label: 'Passkontor' },
-  { to: '/fix', icon: Wrench, label: 'Fix' },
-];
+// Base bottom nav items - will be adjusted based on role
+const getBottomNavItems = (isAdmin: boolean, isNurse: boolean) => {
+  if (isAdmin) {
+    // Admin gets Dashboard in the middle
+    return [
+      { to: '/', icon: Home, label: 'Hjem' },
+      { to: '/leaders', icon: Users, label: 'Ledere' },
+      { to: '/admin', icon: Settings, label: 'Dashboard' },
+      { to: '/passport', icon: ClipboardCheck, label: 'Passkontor' },
+      { to: '/fix', icon: Wrench, label: 'Fix' },
+    ];
+  } else if (isNurse) {
+    // Nurse gets Nurse in the middle
+    return [
+      { to: '/', icon: Home, label: 'Hjem' },
+      { to: '/leaders', icon: Users, label: 'Ledere' },
+      { to: '/nurse', icon: Heart, label: 'Nurse' },
+      { to: '/passport', icon: ClipboardCheck, label: 'Passkontor' },
+      { to: '/fix', icon: Wrench, label: 'Fix' },
+    ];
+  } else {
+    // Regular users get 4 items
+    return [
+      { to: '/', icon: Home, label: 'Hjem' },
+      { to: '/leaders', icon: Users, label: 'Ledere' },
+      { to: '/passport', icon: ClipboardCheck, label: 'Passkontor' },
+      { to: '/fix', icon: Wrench, label: 'Fix' },
+    ];
+  }
+};
 
 const nurseNavItems = [
   { to: '/nurse', icon: Heart, label: 'Sykepleier' },
@@ -265,7 +288,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
       {/* Mobile Bottom Navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-card border-t border-border z-50 flex items-center justify-around px-2 pb-safe">
-        {bottomNavItems.map((item) => {
+        {getBottomNavItems(isAdmin, isNurse).map((item) => {
           const isActive = location.pathname === item.to;
           return (
             <NavLink

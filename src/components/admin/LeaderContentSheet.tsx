@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil } from 'lucide-react';
 import { icons } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -74,6 +75,7 @@ export function LeaderContentSheet({
 }: LeaderContentSheetProps) {
   const [saving, setSaving] = useState(false);
   const [isExtraFieldsOpen, setIsExtraFieldsOpen] = useState(false);
+  const [editingField, setEditingField] = useState<'team' | 'cabin' | 'ministerpost' | null>(null);
 
   // Leader fields
   const [team, setTeam] = useState(leader?.team || '');
@@ -109,6 +111,8 @@ export function LeaderContentSheet({
       setExtra4(content?.extra_4 || '');
       setExtra5(content?.extra_5 || '');
     }
+    // Reset editing state when leader changes
+    setEditingField(null);
   }, [leader]);
 
   if (!leader) return null;
@@ -215,42 +219,94 @@ export function LeaderContentSheet({
         </SheetHeader>
 
         <div className="space-y-6">
-          {/* Quick edit fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Team</Label>
-              <Select value={team || "__none__"} onValueChange={(v) => setTeam(v === "__none__" ? "" : v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Velg team" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Ingen</SelectItem>
+          {/* Clickable badges for team, cabin, ministerpost */}
+          <div className="flex flex-wrap gap-2">
+            {/* Team Badge */}
+            <Popover open={editingField === 'team'} onOpenChange={(open) => setEditingField(open ? 'team' : null)}>
+              <PopoverTrigger asChild>
+                <Badge 
+                  className={`cursor-pointer hover:opacity-80 transition-opacity ${team ? getTeamStyles(team) : 'bg-muted text-muted-foreground'}`}
+                >
+                  {team || 'Velg team'}
+                  <Pencil className="w-3 h-3 ml-1" />
+                </Badge>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-2 bg-popover" align="start">
+                <div className="space-y-1">
+                  <button
+                    className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted"
+                    onClick={() => { setTeam(''); setEditingField(null); }}
+                  >
+                    Ingen
+                  </button>
                   {TEAM_OPTIONS.map(t => (
-                    <SelectItem key={t} value={t}>
-                      <Badge className={`${getTeamStyles(t)} mr-2`}>{t}</Badge>
-                    </SelectItem>
+                    <button
+                      key={t}
+                      className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted flex items-center gap-2"
+                      onClick={() => { setTeam(t); setEditingField(null); }}
+                    >
+                      <Badge className={`${getTeamStyles(t)} text-xs`}>{t}</Badge>
+                    </button>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
+                </div>
+              </PopoverContent>
+            </Popover>
 
-            <div className="space-y-2">
-              <Label>Hytte-ansvar</Label>
-              <Input
-                value={cabin}
-                onChange={(e) => setCabin(e.target.value)}
-                placeholder="f.eks. Fyansen"
-              />
-            </div>
-          </div>
+            {/* Cabin Badge */}
+            <Popover open={editingField === 'cabin'} onOpenChange={(open) => setEditingField(open ? 'cabin' : null)}>
+              <PopoverTrigger asChild>
+                <Badge 
+                  variant="outline"
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  {cabin || 'Hytte-ansvar'}
+                  <Pencil className="w-3 h-3 ml-1" />
+                </Badge>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-3 bg-popover" align="start">
+                <div className="space-y-2">
+                  <Label className="text-xs">Hytte-ansvar</Label>
+                  <Input
+                    value={cabin}
+                    onChange={(e) => setCabin(e.target.value)}
+                    placeholder="f.eks. Fyansen"
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
+                  />
+                  <Button size="sm" onClick={() => setEditingField(null)} className="w-full">
+                    Ferdig
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
 
-          <div className="space-y-2">
-            <Label>Ministerpost</Label>
-            <Input
-              value={ministerpost}
-              onChange={(e) => setMinisterpost(e.target.value)}
-              placeholder="f.eks. Statsminister"
-            />
+            {/* Ministerpost Badge */}
+            <Popover open={editingField === 'ministerpost'} onOpenChange={(open) => setEditingField(open ? 'ministerpost' : null)}>
+              <PopoverTrigger asChild>
+                <Badge 
+                  variant="secondary"
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  {ministerpost || 'Ministerpost'}
+                  <Pencil className="w-3 h-3 ml-1" />
+                </Badge>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-3 bg-popover" align="start">
+                <div className="space-y-2">
+                  <Label className="text-xs">Ministerpost</Label>
+                  <Input
+                    value={ministerpost}
+                    onChange={(e) => setMinisterpost(e.target.value)}
+                    placeholder="f.eks. Statsminister"
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
+                  />
+                  <Button size="sm" onClick={() => setEditingField(null)} className="w-full">
+                    Ferdig
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Current Activity */}
