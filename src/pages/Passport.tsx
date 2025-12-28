@@ -29,7 +29,7 @@ import {
   Users
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
 import { ActivitySelector } from '@/components/passport/ActivitySelector';
@@ -49,6 +49,10 @@ interface CabinGroup {
   cabin: Cabin;
   participants: ParticipantWithCabin[];
 }
+
+const calculateAge = (birthDate: string): number => {
+  return differenceInYears(new Date(), new Date(birthDate));
+};
 
 export default function Passport() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -410,6 +414,11 @@ export default function Passport() {
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                  {participant.birth_date && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {calculateAge(participant.birth_date)} år
+                                    </Badge>
+                                  )}
                                   {participant.room && (
                                     <Badge variant="secondary" className="text-xs">
                                       {participant.room}
