@@ -28,7 +28,8 @@ import {
   MessageSquare,
   User,
   Home,
-  Eye
+  Eye,
+  Trophy
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, differenceInYears } from 'date-fns';
@@ -694,6 +695,21 @@ export default function Nurse() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {/* Activity notes from leaders */}
+                  {selectedParticipant?.activity_notes && (
+                    <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Trophy className="w-4 h-4 text-amber-600" />
+                        <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                          Aktivitetsnotater fra ledere
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground whitespace-pre-wrap">
+                        {selectedParticipant.activity_notes}
+                      </p>
+                    </div>
+                  )}
+                  
                   {selectedParticipant?.activities && selectedParticipant.activities.length > 0 ? (
                     <div className="space-y-4">
                       <StyrkeproveBadges 
