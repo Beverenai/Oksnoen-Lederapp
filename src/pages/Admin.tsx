@@ -33,9 +33,11 @@ import {
   FileSpreadsheet,
   CheckCircle2,
   UserX,
-  UserCheck
+  UserCheck,
+  Search
 } from 'lucide-react';
 import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
+import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -44,6 +46,12 @@ type LeaderContent = Tables<'leader_content'>;
 type SessionActivity = Tables<'session_activities'>;
 type HomeScreenConfig = Tables<'home_screen_config'>;
 type Announcement = Tables<'announcements'>;
+type UserRole = Tables<'user_roles'>;
+type AppRole = 'admin' | 'nurse' | 'leader';
+
+interface LeaderWithRole extends Leader {
+  role: AppRole;
+}
 
 interface ExtraFieldConfig {
   id: string;
@@ -67,8 +75,11 @@ const availableIcons = [
 
 export default function Admin() {
   const { isAdmin } = useAuth();
-  const [leaders, setLeaders] = useState<Leader[]>([]);
+  const [leaders, setLeaders] = useState<LeaderWithRole[]>([]);
+  const [leaderRoles, setLeaderRoles] = useState<Map<string, AppRole>>(new Map());
   const [selectedLeader, setSelectedLeader] = useState<Leader | null>(null);
+  const [editingLeader, setEditingLeader] = useState<LeaderWithRole | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [leaderContent, setLeaderContent] = useState<Partial<LeaderContent>>({});
   const [sessionActivities, setSessionActivities] = useState<SessionActivity[]>([]);
   const [homeConfig, setHomeConfig] = useState<HomeScreenConfig[]>([]);
@@ -78,6 +89,8 @@ export default function Admin() {
   const [isSaving, setIsSaving] = useState(false);
   const [showSyncInstructions, setShowSyncInstructions] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
+  const [leaderSearch, setLeaderSearch] = useState('');
+  
   // New leader form
   const [newLeaderName, setNewLeaderName] = useState('');
   const [newLeaderPhone, setNewLeaderPhone] = useState('');
@@ -258,15 +271,29 @@ export default function Admin() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [leadersRes, activitiesRes, configRes, announcementsRes, extraConfigRes] = await Promise.all([
+      const [leadersRes, rolesRes, activitiesRes, configRes, announcementsRes, extraConfigRes] = await Promise.all([
         supabase.from('leaders').select('*').order('name'),
+        supabase.from('user_roles').select('*'),
         supabase.from('session_activities').select('*').order('sort_order'),
         supabase.from('home_screen_config').select('*').order('sort_order'),
         supabase.from('announcements').select('*').order('created_at', { ascending: false }),
         supabase.from('extra_fields_config').select('*').order('sort_order'),
       ]);
 
-      setLeaders(leadersRes.data || []);
+      // Create role map
+      const roleMap = new Map<string, AppRole>();
+      (rolesRes.data || []).forEach((r: UserRole) => {
+        roleMap.set(r.leader_id, r.role as AppRole);
+      });
+      setLeaderRoles(roleMap);
+
+      // Combine leaders with roles
+      const leadersWithRoles: LeaderWithRole[] = (leadersRes.data || []).map((leader) => ({
+        ...leader,
+        role: roleMap.get(leader.id) || 'leader',
+      }));
+
+      setLeaders(leadersWithRoles);
       setSessionActivities(activitiesRes.data || []);
       setHomeConfig(configRes.data || []);
       setAnnouncements(announcementsRes.data || []);
@@ -588,22 +615,62 @@ export default function Admin() {
           <Card>
             <CardHeader>
               <CardTitle>Alle ledere ({leaders.length})</CardTitle>
+              <CardDescription>
+                Klikk på en leder for å redigere profil og rolle
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Søk etter leder..."
+                  value={leaderSearch}
+                  onChange={(e) => setLeaderSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
               <div className="space-y-2">
-                {leaders.map((leader) => (
+                {leaders
+                  .filter((leader) =>
+                    leader.name.toLowerCase().includes(leaderSearch.toLowerCase()) ||
+                    leader.phone.includes(leaderSearch)
+                  )
+                  .map((leader) => (
                   <div
                     key={leader.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                    onClick={() => {
+                      setEditingLeader(leader);
+                      setIsEditDialogOpen(true);
+                    }}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
                   >
-                    <div>
-                      <p className="font-medium">{leader.name}</p>
-                      <p className="text-sm text-muted-foreground">{leader.phone}</p>
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{leader.name}</p>
+                          {leader.role === 'admin' && (
+                            <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">
+                              <Shield className="w-3 h-3 mr-1" />
+                              Admin
+                            </Badge>
+                          )}
+                          {leader.role === 'nurse' && (
+                            <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                              <Heart className="w-3 h-3 mr-1" />
+                              Sykepleier
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{leader.phone}</p>
+                      </div>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => deleteLeader(leader.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteLeader(leader.id);
+                      }}
                     >
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
@@ -617,6 +684,14 @@ export default function Admin() {
               </div>
             </CardContent>
           </Card>
+
+          <LeaderDetailDialog
+            leader={editingLeader}
+            open={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
+            onSaved={loadData}
+            currentRole={editingLeader?.role || 'leader'}
+          />
         </TabsContent>
 
         {/* Content Tab */}
@@ -1175,6 +1250,7 @@ export default function Admin() {
                     <tr className="border-b">
                       <th className="text-left py-2 px-3 font-medium">Status</th>
                       <th className="text-left py-2 px-3 font-medium">Navn</th>
+                      <th className="text-left py-2 px-3 font-medium">Rolle</th>
                       <th className="text-left py-2 px-3 font-medium">Telefon</th>
                       <th className="text-left py-2 px-3 font-medium hidden sm:table-cell">Team</th>
                       <th className="text-left py-2 px-3 font-medium hidden md:table-cell">Hytte</th>
@@ -1184,14 +1260,39 @@ export default function Admin() {
                   </thead>
                   <tbody className="divide-y">
                     {leaders.map((leader) => (
-                      <tr key={leader.id} className={`hover:bg-muted/50 ${leader.is_active === false ? 'opacity-50' : ''}`}>
+                      <tr 
+                        key={leader.id} 
+                        className={`hover:bg-muted/50 cursor-pointer ${leader.is_active === false ? 'opacity-50' : ''}`}
+                        onClick={() => {
+                          setEditingLeader(leader);
+                          setIsEditDialogOpen(true);
+                        }}
+                      >
                         <td className="py-2 px-3">
                           <Switch
                             checked={leader.is_active !== false}
                             onCheckedChange={() => toggleLeaderActive(leader)}
+                            onClick={(e) => e.stopPropagation()}
                           />
                         </td>
                         <td className="py-2 px-3 font-medium">{leader.name}</td>
+                        <td className="py-2 px-3">
+                          {leader.role === 'admin' && (
+                            <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">
+                              <Shield className="w-3 h-3 mr-1" />
+                              Admin
+                            </Badge>
+                          )}
+                          {leader.role === 'nurse' && (
+                            <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                              <Heart className="w-3 h-3 mr-1" />
+                              Sykepleier
+                            </Badge>
+                          )}
+                          {leader.role === 'leader' && (
+                            <span className="text-muted-foreground">Leder</span>
+                          )}
+                        </td>
                         <td className="py-2 px-3 text-muted-foreground">{leader.phone}</td>
                         <td className="py-2 px-3 text-muted-foreground hidden sm:table-cell">
                           {leader.team || '-'}
@@ -1206,7 +1307,10 @@ export default function Admin() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => deleteLeader(leader.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteLeader(leader.id);
+                            }}
                           >
                             <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>
