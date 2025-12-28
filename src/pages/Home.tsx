@@ -336,7 +336,7 @@ export default function Home() {
                   key={cabin.id}
                   variant="secondary" 
                   className="text-sm cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => navigate(`/passport?cabin=${cabin.id}`)}
+                  onClick={() => navigate('/my-cabins')}
                 >
                   <HomeIcon className="w-3 h-3 mr-1" />
                   {cabin.name}

@@ -95,7 +95,7 @@ export default function Passport() {
           .from('participants')
           .select('*, cabins(*), participant_activities(*)')
           .order('name'),
-        supabase.from('cabins').select('*').order('sort_order', { ascending: true }),
+        supabase.from('cabins').select('*').order('name', { ascending: true }),
       ]);
 
       setParticipants(participantsRes.data || []);

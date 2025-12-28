@@ -11,6 +11,7 @@ import Profile from "@/pages/Profile";
 import Leaders from "@/pages/Leaders";
 import Team from "@/pages/Team";
 import Passport from "@/pages/Passport";
+import MyCabins from "@/pages/MyCabins";
 import Wall from "@/pages/Wall";
 import Admin from "@/pages/Admin";
 import AdminSettings from "@/pages/AdminSettings";
@@ -94,6 +95,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Team />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my-cabins"
+        element={
+          <ProtectedRoute>
+            <MyCabins />
           </ProtectedRoute>
         }
       />
