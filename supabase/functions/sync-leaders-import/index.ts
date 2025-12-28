@@ -6,8 +6,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface LeaderContentImport {
+interface LeaderImport {
   phone: string;
+  name?: string;
+  email?: string;
+  team?: string;
+  cabin?: string;
+  age?: number;
   current_activity?: string;
   personal_notes?: string;
   personal_message?: string;
@@ -30,7 +35,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { leaders } = await req.json() as { leaders: LeaderContentImport[] };
+    const { leaders } = await req.json() as { leaders: LeaderImport[] };
 
     if (!leaders || !Array.isArray(leaders)) {
       return new Response(JSON.stringify({ error: 'Invalid leaders data' }), {
@@ -39,9 +44,9 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Syncing content for ${leaders.length} leaders`);
+    console.log(`Syncing ${leaders.length} leaders`);
 
-    const results = { updated: 0, skipped: 0, errors: [] as string[] };
+    const results = { created: 0, updated: 0, skipped: 0, errors: [] as string[] };
 
     for (const leader of leaders) {
       const phone = leader.phone?.replace(/\s/g, '');
@@ -51,23 +56,73 @@ serve(async (req) => {
         continue;
       }
 
-      // Find leader by phone number
+      // Check if leader exists
       const { data: existingLeader } = await supabase
         .from('leaders')
         .select('id')
         .eq('phone', phone)
         .maybeSingle();
 
+      let leaderId: string;
+
       if (!existingLeader) {
-        console.log(`Leader not found for phone: ${phone}`);
-        results.errors.push(`Leader not found: ${phone}`);
-        results.skipped++;
-        continue;
+        // Create new leader - name is required
+        if (!leader.name) {
+          console.log(`Skipped ${phone}: missing name for new leader`);
+          results.errors.push(`Skipped ${phone}: missing name`);
+          results.skipped++;
+          continue;
+        }
+
+        const { data: newLeader, error: createError } = await supabase
+          .from('leaders')
+          .insert({
+            phone,
+            name: leader.name,
+            email: leader.email || null,
+            team: leader.team || null,
+            cabin: leader.cabin || null,
+            age: leader.age || null,
+          })
+          .select('id')
+          .single();
+
+        if (createError || !newLeader) {
+          console.error(`Error creating leader ${phone}:`, createError);
+          results.errors.push(`Error creating ${phone}: ${createError?.message}`);
+          continue;
+        }
+
+        leaderId = newLeader.id;
+        results.created++;
+        console.log(`Created leader: ${leader.name} (${phone})`);
+      } else {
+        leaderId = existingLeader.id;
+
+        // Update leader info if provided
+        const updateData: Record<string, unknown> = {};
+        if (leader.name) updateData.name = leader.name;
+        if (leader.email) updateData.email = leader.email;
+        if (leader.team) updateData.team = leader.team;
+        if (leader.cabin) updateData.cabin = leader.cabin;
+        if (leader.age) updateData.age = leader.age;
+
+        if (Object.keys(updateData).length > 0) {
+          const { error: updateError } = await supabase
+            .from('leaders')
+            .update(updateData)
+            .eq('id', leaderId);
+
+          if (updateError) {
+            console.error(`Error updating leader ${phone}:`, updateError);
+          }
+        }
+        results.updated++;
       }
 
       // Upsert leader content
       const contentData = {
-        leader_id: existingLeader.id,
+        leader_id: leaderId,
         current_activity: leader.current_activity || null,
         personal_notes: leader.personal_notes || null,
         personal_message: leader.personal_message || null,
@@ -79,19 +134,17 @@ serve(async (req) => {
         extra_5: leader.extra_5 || null,
       };
 
-      const { error } = await supabase
+      const { error: contentError } = await supabase
         .from('leader_content')
         .upsert(contentData, { onConflict: 'leader_id' });
 
-      if (error) {
-        console.error(`Error updating content for ${phone}:`, error);
-        results.errors.push(`Error for ${phone}: ${error.message}`);
-      } else {
-        results.updated++;
+      if (contentError) {
+        console.error(`Error updating content for ${phone}:`, contentError);
+        results.errors.push(`Content error for ${phone}: ${contentError.message}`);
       }
     }
 
-    console.log(`Sync complete: ${results.updated} updated, ${results.skipped} skipped`);
+    console.log(`Sync complete: ${results.created} created, ${results.updated} updated, ${results.skipped} skipped`);
 
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
