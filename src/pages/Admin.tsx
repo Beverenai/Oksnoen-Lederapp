@@ -17,7 +17,6 @@ import {
   Plus, 
   Trash2, 
   Save, 
-  Megaphone,
   Settings,
   Loader2,
   Shield,
@@ -32,7 +31,6 @@ import {
   MessageSquare,
   FileSpreadsheet,
   CheckCircle2,
-  UserX,
   UserCheck,
   Search,
   Check,
@@ -45,8 +43,6 @@ import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
-type SessionActivity = Tables<'session_activities'>;
-type Announcement = Tables<'announcements'>;
 type UserRole = Tables<'user_roles'>;
 type AppRole = 'admin' | 'nurse' | 'leader';
 
@@ -94,9 +90,7 @@ export default function Admin() {
   const [editingLeader, setEditingLeader] = useState<LeaderWithRole | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [leaderContent, setLeaderContent] = useState<Partial<LeaderContent>>({});
-  const [sessionActivities, setSessionActivities] = useState<SessionActivity[]>([]);
   const [homeConfig, setHomeConfig] = useState<HomeScreenConfig[]>([]);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [extraFieldsConfig, setExtraFieldsConfig] = useState<ExtraFieldConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -109,13 +103,9 @@ export default function Admin() {
   const [newLeaderPhone, setNewLeaderPhone] = useState('');
   const [newLeaderIsAdmin, setNewLeaderIsAdmin] = useState(false);
 
-  // New activity form
-  const [newActivityTitle, setNewActivityTitle] = useState('');
-  const [newActivityTime, setNewActivityTime] = useState('');
-
-  // New announcement form
-  const [newAnnouncementTitle, setNewAnnouncementTitle] = useState('');
-  const [newAnnouncementContent, setNewAnnouncementContent] = useState('');
+  // Session activities text (single textarea)
+  const [sessionActivitiesText, setSessionActivitiesText] = useState('');
+  const [isSavingActivities, setIsSavingActivities] = useState(false);
 
   // Sync webhook
   const [webhookUrl, setWebhookUrl] = useState('');
@@ -138,7 +128,41 @@ export default function Admin() {
     loadData();
     loadWebhookUrl();
     loadLastSyncTime();
+    loadSessionActivitiesText();
   }, []);
+
+  const loadSessionActivitiesText = async () => {
+    const { data } = await supabase
+      .from('app_config')
+      .select('value')
+      .eq('key', 'session_activities_text')
+      .maybeSingle();
+    
+    if (data?.value) {
+      setSessionActivitiesText(data.value);
+    }
+  };
+
+  const saveSessionActivitiesText = async () => {
+    setIsSavingActivities(true);
+    try {
+      const { error } = await supabase
+        .from('app_config')
+        .upsert({ 
+          key: 'session_activities_text', 
+          value: sessionActivitiesText, 
+          updated_at: new Date().toISOString() 
+        }, { onConflict: 'key' });
+      
+      if (error) throw error;
+      toast.success('Aktiviteter lagret!');
+    } catch (error) {
+      console.error('Error saving activities text:', error);
+      toast.error('Kunne ikke lagre aktiviteter');
+    } finally {
+      setIsSavingActivities(false);
+    }
+  };
 
   const loadLastSyncTime = async () => {
     const { data } = await supabase
@@ -313,12 +337,10 @@ export default function Admin() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [leadersRes, rolesRes, activitiesRes, configRes, announcementsRes, extraConfigRes] = await Promise.all([
+      const [leadersRes, rolesRes, configRes, extraConfigRes] = await Promise.all([
         supabase.from('leaders').select('*').order('name'),
         supabase.from('user_roles').select('*'),
-        supabase.from('session_activities').select('*').order('sort_order'),
         supabase.from('home_screen_config').select('*').order('sort_order'),
-        supabase.from('announcements').select('*').order('created_at', { ascending: false }),
         supabase.from('extra_fields_config').select('*').order('sort_order'),
       ]);
 
@@ -336,9 +358,7 @@ export default function Admin() {
       }));
 
       setLeaders(leadersWithRoles);
-      setSessionActivities(activitiesRes.data || []);
       setHomeConfig(configRes.data || []);
-      setAnnouncements(announcementsRes.data || []);
       setExtraFieldsConfig((extraConfigRes.data || []) as ExtraFieldConfig[]);
     } catch (error) {
       console.error('Error loading admin data:', error);
@@ -417,66 +437,6 @@ export default function Admin() {
     }
   };
 
-  const deleteLeader = async (leaderId: string) => {
-    if (!confirm('Er du sikker på at du vil slette denne lederen?')) return;
-
-    try {
-      await supabase.from('leaders').delete().eq('id', leaderId);
-      if (selectedLeader?.id === leaderId) {
-        setSelectedLeader(null);
-        setLeaderContent({});
-      }
-      loadData();
-      toast.success('Leder slettet');
-    } catch (error) {
-      toast.error('Kunne ikke slette leder');
-    }
-  };
-
-  const addSessionActivity = async () => {
-    if (!newActivityTitle) {
-      toast.error('Skriv inn en tittel');
-      return;
-    }
-
-    try {
-      await supabase.from('session_activities').insert({
-        title: newActivityTitle,
-        time_slot: newActivityTime || null,
-        sort_order: sessionActivities.length,
-      });
-
-      setNewActivityTitle('');
-      setNewActivityTime('');
-      loadData();
-      toast.success('Aktivitet lagt til!');
-    } catch (error) {
-      toast.error('Kunne ikke legge til aktivitet');
-    }
-  };
-
-  const toggleActivityActive = async (activity: SessionActivity) => {
-    try {
-      await supabase
-        .from('session_activities')
-        .update({ is_active: !activity.is_active })
-        .eq('id', activity.id);
-      loadData();
-    } catch (error) {
-      toast.error('Kunne ikke oppdatere aktivitet');
-    }
-  };
-
-  const deleteActivity = async (activityId: string) => {
-    try {
-      await supabase.from('session_activities').delete().eq('id', activityId);
-      loadData();
-      toast.success('Aktivitet slettet');
-    } catch (error) {
-      toast.error('Kunne ikke slette aktivitet');
-    }
-  };
-
   const toggleHomeConfigVisibility = async (config: HomeScreenConfig) => {
     try {
       await supabase
@@ -486,49 +446,6 @@ export default function Admin() {
       loadData();
     } catch (error) {
       toast.error('Kunne ikke oppdatere konfigurasjon');
-    }
-  };
-
-  const addAnnouncement = async () => {
-    if (!newAnnouncementTitle) {
-      toast.error('Skriv inn en tittel');
-      return;
-    }
-
-    try {
-      await supabase.from('announcements').insert({
-        title: newAnnouncementTitle,
-        content: newAnnouncementContent || null,
-      });
-
-      setNewAnnouncementTitle('');
-      setNewAnnouncementContent('');
-      loadData();
-      toast.success('Beskjed lagt til!');
-    } catch (error) {
-      toast.error('Kunne ikke legge til beskjed');
-    }
-  };
-
-  const toggleAnnouncementActive = async (announcement: Announcement) => {
-    try {
-      await supabase
-        .from('announcements')
-        .update({ is_active: !announcement.is_active })
-        .eq('id', announcement.id);
-      loadData();
-    } catch (error) {
-      toast.error('Kunne ikke oppdatere beskjed');
-    }
-  };
-
-  const deleteAnnouncement = async (id: string) => {
-    try {
-      await supabase.from('announcements').delete().eq('id', id);
-      loadData();
-      toast.success('Beskjed slettet');
-    } catch (error) {
-      toast.error('Kunne ikke slette beskjed');
     }
   };
 
@@ -620,23 +537,11 @@ export default function Admin() {
         </div>
       </div>
 
-      <Tabs defaultValue="leaders" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
-          <TabsTrigger value="leaders" className="gap-2">
-            <Users className="w-4 h-4 hidden sm:block" />
-            Ledere
-          </TabsTrigger>
-          <TabsTrigger value="content" className="gap-2">
+      <Tabs defaultValue="dashboard" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+          <TabsTrigger value="dashboard" className="gap-2">
             <Home className="w-4 h-4 hidden sm:block" />
-            Innhold
-          </TabsTrigger>
-          <TabsTrigger value="activities" className="gap-2">
-            <Calendar className="w-4 h-4 hidden sm:block" />
-            Aktiviteter
-          </TabsTrigger>
-          <TabsTrigger value="announcements" className="gap-2">
-            <Megaphone className="w-4 h-4 hidden sm:block" />
-            Veggen
+            Dashboard
           </TabsTrigger>
           <TabsTrigger value="setup" className="gap-2">
             <Settings className="w-4 h-4 hidden sm:block" />
@@ -646,137 +551,44 @@ export default function Admin() {
             <RefreshCw className="w-4 h-4 hidden sm:block" />
             Synk
           </TabsTrigger>
+          <TabsTrigger value="leaders" className="gap-2">
+            <Users className="w-4 h-4 hidden sm:block" />
+            Ledere
+          </TabsTrigger>
         </TabsList>
 
-        {/* Leaders Tab */}
-        <TabsContent value="leaders" className="space-y-4">
+        {/* Admin Dashboard Tab */}
+        <TabsContent value="dashboard" className="space-y-4">
+          {/* Session Activities Text */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Legg til ny leder
+                <Calendar className="w-5 h-5" />
+                Aktiviteter denne økten
               </CardTitle>
+              <CardDescription>
+                Skriv tekst som vises på hjemskjermen til alle ledere under "Aktiviteter denne økten"
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Navn</Label>
-                  <Input
-                    id="name"
-                    placeholder="Ola Nordmann"
-                    value={newLeaderName}
-                    onChange={(e) => setNewLeaderName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefon</Label>
-                  <Input
-                    id="phone"
-                    placeholder="12345678"
-                    value={newLeaderPhone}
-                    onChange={(e) => setNewLeaderPhone(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="isAdmin"
-                  checked={newLeaderIsAdmin}
-                  onCheckedChange={setNewLeaderIsAdmin}
-                />
-                <Label htmlFor="isAdmin">Admin-tilgang</Label>
-              </div>
-              <Button onClick={addLeader}>
-                <Plus className="w-4 h-4 mr-2" />
-                Legg til leder
+              <Textarea
+                placeholder="Skriv aktiviteter for denne økten her...&#10;&#10;Eksempel:&#10;• 09:00 - Frokost&#10;• 10:00 - Morgensamling&#10;• 11:00 - Aktiviteter"
+                value={sessionActivitiesText}
+                onChange={(e) => setSessionActivitiesText(e.target.value)}
+                className="min-h-[150px]"
+              />
+              <Button onClick={saveSessionActivitiesText} disabled={isSavingActivities}>
+                {isSavingActivities ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Lagre aktiviteter
               </Button>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Alle ledere ({leaders.length})</CardTitle>
-              <CardDescription>
-                Klikk på en leder for å redigere profil og rolle
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Søk etter leder..."
-                  value={leaderSearch}
-                  onChange={(e) => setLeaderSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <div className="space-y-2">
-                {leaders
-                  .filter((leader) =>
-                    leader.name.toLowerCase().includes(leaderSearch.toLowerCase()) ||
-                    leader.phone.includes(leaderSearch)
-                  )
-                  .map((leader) => (
-                  <div
-                    key={leader.id}
-                    onClick={() => {
-                      setEditingLeader(leader);
-                      setIsEditDialogOpen(true);
-                    }}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{leader.name}</p>
-                          {leader.role === 'admin' && (
-                            <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">
-                              <Shield className="w-3 h-3 mr-1" />
-                              Admin
-                            </Badge>
-                          )}
-                          {leader.role === 'nurse' && (
-                            <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-                              <Heart className="w-3 h-3 mr-1" />
-                              Sykepleier
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">{leader.phone}</p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteLeader(leader.id);
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-                {leaders.length === 0 && (
-                  <p className="text-muted-foreground text-center py-4">
-                    Ingen ledere registrert enda
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <LeaderDetailDialog
-            leader={editingLeader}
-            open={isEditDialogOpen}
-            onOpenChange={setIsEditDialogOpen}
-            onSaved={loadData}
-            currentRole={editingLeader?.role || 'leader'}
-          />
-        </TabsContent>
-
-        {/* Content Tab */}
-        <TabsContent value="content" className="space-y-4">
+          {/* Leader Content */}
           <div className="grid gap-4 lg:grid-cols-3">
             {/* Leader list */}
             <Card className="lg:col-span-1">
@@ -786,7 +598,7 @@ export default function Admin() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                  {leaders.map((leader) => (
+                  {leaders.filter(l => l.is_active !== false).map((leader) => (
                     <button
                       key={leader.id}
                       onClick={() => loadLeaderContent(leader)}
@@ -940,168 +752,6 @@ export default function Admin() {
                     </div>
                   );
                 })}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Activities Tab */}
-        <TabsContent value="activities" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Ny aktivitet
-              </CardTitle>
-              <CardDescription>
-                Aktiviteter som vises under "Aktiviteter denne økten"
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Tittel</Label>
-                  <Input
-                    placeholder="F.eks. Frokost"
-                    value={newActivityTitle}
-                    onChange={(e) => setNewActivityTitle(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tidspunkt (valgfritt)</Label>
-                  <Input
-                    placeholder="F.eks. 08:00"
-                    value={newActivityTime}
-                    onChange={(e) => setNewActivityTime(e.target.value)}
-                  />
-                </div>
-              </div>
-              <Button onClick={addSessionActivity}>
-                <Plus className="w-4 h-4 mr-2" />
-                Legg til
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Alle aktiviteter</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {sessionActivities.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Switch
-                        checked={activity.is_active || false}
-                        onCheckedChange={() => toggleActivityActive(activity)}
-                      />
-                      <div>
-                        <p className="font-medium">{activity.title}</p>
-                        {activity.time_slot && (
-                          <Badge variant="secondary" className="mt-1">
-                            {activity.time_slot}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteActivity(activity.id)}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-                {sessionActivities.length === 0 && (
-                  <p className="text-muted-foreground text-center py-4">
-                    Ingen aktiviteter enda
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Announcements Tab */}
-        <TabsContent value="announcements" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Ny beskjed
-              </CardTitle>
-              <CardDescription>
-                Beskjeder som vises på "Den store veggen"
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Tittel</Label>
-                <Input
-                  placeholder="Overskrift på beskjeden"
-                  value={newAnnouncementTitle}
-                  onChange={(e) => setNewAnnouncementTitle(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Innhold (valgfritt)</Label>
-                <Textarea
-                  placeholder="Mer detaljer..."
-                  value={newAnnouncementContent}
-                  onChange={(e) => setNewAnnouncementContent(e.target.value)}
-                />
-              </div>
-              <Button onClick={addAnnouncement}>
-                <Plus className="w-4 h-4 mr-2" />
-                Publiser
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Alle beskjeder</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {announcements.map((announcement) => (
-                  <div
-                    key={announcement.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Switch
-                        checked={announcement.is_active || false}
-                        onCheckedChange={() => toggleAnnouncementActive(announcement)}
-                      />
-                      <div>
-                        <p className="font-medium">{announcement.title}</p>
-                        {announcement.content && (
-                          <p className="text-sm text-muted-foreground line-clamp-1">
-                            {announcement.content}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteAnnouncement(announcement.id)}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-                {announcements.length === 0 && (
-                  <p className="text-muted-foreground text-center py-4">
-                    Ingen beskjeder enda
-                  </p>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -1325,133 +975,6 @@ export default function Admin() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Leader Overview */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Leder-oversikt ({leaders.length})
-              </CardTitle>
-              <CardDescription className="flex flex-wrap gap-2 items-center">
-                <span>Aktive: {leaders.filter(l => l.is_active !== false).length}</span>
-                <span className="text-muted-foreground">•</span>
-                <span>Inaktive: {leaders.filter(l => l.is_active === false).length}</span>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={deactivateAllLeaders}
-                  disabled={isDeactivating}
-                >
-                  {isDeactivating ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                  )}
-                  Reset periode
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={activateAllLeaders}
-                  disabled={isDeactivating}
-                >
-                  {isDeactivating ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <UserCheck className="w-4 h-4 mr-2" />
-                  )}
-                  Aktiver alle
-                </Button>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 px-3 font-medium">Status</th>
-                      <th className="text-left py-2 px-3 font-medium">Navn</th>
-                      <th className="text-left py-2 px-3 font-medium">Rolle</th>
-                      <th className="text-left py-2 px-3 font-medium">Telefon</th>
-                      <th className="text-left py-2 px-3 font-medium hidden sm:table-cell">Team</th>
-                      <th className="text-left py-2 px-3 font-medium hidden md:table-cell">Hytte</th>
-                      <th className="text-left py-2 px-3 font-medium hidden lg:table-cell">Ministerpost</th>
-                      <th className="text-right py-2 px-3 font-medium">Handling</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {leaders.map((leader) => (
-                      <tr 
-                        key={leader.id} 
-                        className={`hover:bg-muted/50 cursor-pointer ${leader.is_active === false ? 'opacity-50' : ''}`}
-                        onClick={() => {
-                          setEditingLeader(leader);
-                          setIsEditDialogOpen(true);
-                        }}
-                      >
-                        <td className="py-2 px-3">
-                          <Switch
-                            checked={leader.is_active !== false}
-                            onCheckedChange={() => toggleLeaderActive(leader)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </td>
-                        <td className="py-2 px-3 font-medium">{leader.name}</td>
-                        <td className="py-2 px-3">
-                          {leader.role === 'admin' && (
-                            <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">
-                              <Shield className="w-3 h-3 mr-1" />
-                              Admin
-                            </Badge>
-                          )}
-                          {leader.role === 'nurse' && (
-                            <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-                              <Heart className="w-3 h-3 mr-1" />
-                              Sykepleier
-                            </Badge>
-                          )}
-                          {leader.role === 'leader' && (
-                            <span className="text-muted-foreground">Leder</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-muted-foreground">{leader.phone}</td>
-                        <td className="py-2 px-3 text-muted-foreground hidden sm:table-cell">
-                          {leader.team || '-'}
-                        </td>
-                        <td className="py-2 px-3 text-muted-foreground hidden md:table-cell">
-                          {leader.cabin_info || leader.cabin || '-'}
-                        </td>
-                        <td className="py-2 px-3 text-muted-foreground hidden lg:table-cell">
-                          {leader.ministerpost || '-'}
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteLeader(leader.id);
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {leaders.length === 0 && (
-                  <p className="text-muted-foreground text-center py-8">
-                    Ingen ledere importert enda. Sett opp webhook og kjør første synkronisering.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* Sync Tab */}
@@ -1475,23 +998,37 @@ export default function Admin() {
                 </div>
               )}
 
-              <Button 
-                onClick={triggerSync} 
-                disabled={isSyncing || !storedWebhookUrl}
-                className="w-full sm:w-auto"
-              >
-                {isSyncing ? (
-                  <>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  onClick={triggerSync} 
+                  disabled={isSyncing || !storedWebhookUrl}
+                >
+                  {isSyncing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Synkroniserer...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Synk nå
+                    </>
+                  )}
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  onClick={deactivateAllLeaders}
+                  disabled={isDeactivating}
+                >
+                  {isDeactivating ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Synkroniserer...
-                  </>
-                ) : (
-                  <>
+                  ) : (
                     <RefreshCw className="w-4 h-4 mr-2" />
-                    Synk nå
-                  </>
-                )}
-              </Button>
+                  )}
+                  Reset periode
+                </Button>
+              </div>
 
               {lastSyncSuccess && !syncError && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400">
@@ -1578,6 +1115,227 @@ export default function Admin() {
               )}
             </CardContent>
           </Card>
+
+          {/* Leader Overview in Sync Tab */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Leder-oversikt ({leaders.length})
+              </CardTitle>
+              <CardDescription className="flex flex-wrap gap-2 items-center">
+                <span>Aktive: {leaders.filter(l => l.is_active !== false).length}</span>
+                <span className="text-muted-foreground">•</span>
+                <span>Inaktive: {leaders.filter(l => l.is_active === false).length}</span>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={activateAllLeaders}
+                  disabled={isDeactivating}
+                >
+                  {isDeactivating ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <UserCheck className="w-4 h-4 mr-2" />
+                  )}
+                  Aktiver alle
+                </Button>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 px-3 font-medium">Status</th>
+                      <th className="text-left py-2 px-3 font-medium">Navn</th>
+                      <th className="text-left py-2 px-3 font-medium">Rolle</th>
+                      <th className="text-left py-2 px-3 font-medium">Telefon</th>
+                      <th className="text-left py-2 px-3 font-medium hidden sm:table-cell">Team</th>
+                      <th className="text-left py-2 px-3 font-medium hidden md:table-cell">Hytte</th>
+                      <th className="text-left py-2 px-3 font-medium hidden lg:table-cell">Ministerpost</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {leaders.map((leader) => (
+                      <tr 
+                        key={leader.id} 
+                        className={`hover:bg-muted/50 cursor-pointer ${leader.is_active === false ? 'opacity-50' : ''}`}
+                        onClick={() => {
+                          setEditingLeader(leader);
+                          setIsEditDialogOpen(true);
+                        }}
+                      >
+                        <td className="py-2 px-3">
+                          <Switch
+                            checked={leader.is_active !== false}
+                            onCheckedChange={() => toggleLeaderActive(leader)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </td>
+                        <td className="py-2 px-3 font-medium">{leader.name}</td>
+                        <td className="py-2 px-3">
+                          {leader.role === 'admin' && (
+                            <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">
+                              <Shield className="w-3 h-3 mr-1" />
+                              Admin
+                            </Badge>
+                          )}
+                          {leader.role === 'nurse' && (
+                            <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                              <Heart className="w-3 h-3 mr-1" />
+                              Sykepleier
+                            </Badge>
+                          )}
+                          {leader.role === 'leader' && (
+                            <span className="text-muted-foreground">Leder</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-muted-foreground">{leader.phone}</td>
+                        <td className="py-2 px-3 text-muted-foreground hidden sm:table-cell">
+                          {leader.team || '-'}
+                        </td>
+                        <td className="py-2 px-3 text-muted-foreground hidden md:table-cell">
+                          {leader.cabin_info || leader.cabin || '-'}
+                        </td>
+                        <td className="py-2 px-3 text-muted-foreground hidden lg:table-cell">
+                          {leader.ministerpost || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {leaders.length === 0 && (
+                  <p className="text-muted-foreground text-center py-8">
+                    Ingen ledere importert enda. Sett opp webhook og kjør første synkronisering.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Leaders Tab */}
+        <TabsContent value="leaders" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                Legg til ny leder
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Navn</Label>
+                  <Input
+                    id="name"
+                    placeholder="Ola Nordmann"
+                    value={newLeaderName}
+                    onChange={(e) => setNewLeaderName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telefon</Label>
+                  <Input
+                    id="phone"
+                    placeholder="12345678"
+                    value={newLeaderPhone}
+                    onChange={(e) => setNewLeaderPhone(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="isAdmin"
+                  checked={newLeaderIsAdmin}
+                  onCheckedChange={setNewLeaderIsAdmin}
+                />
+                <Label htmlFor="isAdmin">Admin-tilgang</Label>
+              </div>
+              <Button onClick={addLeader}>
+                <Plus className="w-4 h-4 mr-2" />
+                Legg til leder
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Alle ledere ({leaders.length})</CardTitle>
+              <CardDescription>
+                Klikk på en leder for å redigere profil og rolle
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Søk etter leder..."
+                  value={leaderSearch}
+                  onChange={(e) => setLeaderSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="space-y-2">
+                {leaders
+                  .filter((leader) =>
+                    leader.name.toLowerCase().includes(leaderSearch.toLowerCase()) ||
+                    leader.phone.includes(leaderSearch)
+                  )
+                  .map((leader) => (
+                  <div
+                    key={leader.id}
+                    onClick={() => {
+                      setEditingLeader(leader);
+                      setIsEditDialogOpen(true);
+                    }}
+                    className={`flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors ${leader.is_active === false ? 'opacity-50' : ''}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{leader.name}</p>
+                          {leader.is_active === false && (
+                            <Badge variant="outline" className="text-xs">Inaktiv</Badge>
+                          )}
+                          {leader.role === 'admin' && (
+                            <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">
+                              <Shield className="w-3 h-3 mr-1" />
+                              Admin
+                            </Badge>
+                          )}
+                          {leader.role === 'nurse' && (
+                            <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                              <Heart className="w-3 h-3 mr-1" />
+                              Sykepleier
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{leader.phone}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {leaders.length === 0 && (
+                  <p className="text-muted-foreground text-center py-4">
+                    Ingen ledere registrert enda
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <LeaderDetailDialog
+            leader={editingLeader}
+            open={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
+            onSaved={loadData}
+            currentRole={editingLeader?.role || 'leader'}
+          />
         </TabsContent>
       </Tabs>
     </div>

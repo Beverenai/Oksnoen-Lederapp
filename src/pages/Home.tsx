@@ -28,7 +28,6 @@ import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import oksnoenHeader from '@/assets/oksnoen-header.png';
 
 type LeaderContent = Tables<'leader_content'>;
-type SessionActivity = Tables<'session_activities'>;
 
 interface HomeScreenConfig {
   id: string;
@@ -68,7 +67,7 @@ const iconMap: Record<string, LucideIcon> = {
 export default function Home() {
   const { leader } = useAuth();
   const [content, setContent] = useState<LeaderContent | null>(null);
-  const [sessionActivities, setSessionActivities] = useState<SessionActivity[]>([]);
+  const [sessionActivitiesText, setSessionActivitiesText] = useState<string>('');
   const [config, setConfig] = useState<HomeScreenConfig[]>([]);
   const [extraFieldsConfig, setExtraFieldsConfig] = useState<ExtraFieldConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,17 +77,17 @@ export default function Home() {
 
     setIsLoading(true);
     try {
-      const [contentRes, activitiesRes, configRes, extraConfigRes] = await Promise.all([
+      const [contentRes, activitiesTextRes, configRes, extraConfigRes] = await Promise.all([
         supabase
           .from('leader_content')
           .select('*')
           .eq('leader_id', leader.id)
           .maybeSingle(),
         supabase
-          .from('session_activities')
-          .select('*')
-          .eq('is_active', true)
-          .order('sort_order'),
+          .from('app_config')
+          .select('value')
+          .eq('key', 'session_activities_text')
+          .maybeSingle(),
         supabase
           .from('home_screen_config')
           .select('*')
@@ -102,7 +101,7 @@ export default function Home() {
       ]);
 
       setContent(contentRes.data);
-      setSessionActivities(activitiesRes.data || []);
+      setSessionActivitiesText(activitiesTextRes.data?.value || '');
       setConfig((configRes.data || []) as HomeScreenConfig[]);
       setExtraFieldsConfig((extraConfigRes.data || []) as ExtraFieldConfig[]);
     } catch (error) {
@@ -131,7 +130,7 @@ export default function Home() {
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'session_activities'
+        table: 'app_config'
       }, () => loadData())
       .on('postgres_changes', { 
         event: '*', 
@@ -208,7 +207,7 @@ export default function Home() {
     content?.extra_activity || 
     content?.personal_notes || 
     content?.obs_message || 
-    sessionActivities.length > 0 ||
+    sessionActivitiesText ||
     hasExtraContent;
 
   const ActivityIcon = getElementIcon('current_activity', Activity);
@@ -389,8 +388,8 @@ export default function Home() {
           );
         })}
 
-        {/* Session Activities */}
-        {isElementVisible('session_activities') && sessionActivities.length > 0 && (
+        {/* Session Activities Text */}
+        {isElementVisible('session_activities') && sessionActivitiesText && (
           <Card>
             <CardContent className="py-4">
               <div className="flex items-start gap-3 mb-4">
@@ -398,28 +397,11 @@ export default function Home() {
                   <SessionIcon className="w-5 h-5 text-primary" />
                 </div>
                 <p className="text-xs uppercase tracking-wide text-primary font-medium pt-2">
-                  {getElementTitle('session_activities', 'Denne økten har du:')}
+                  {getElementTitle('session_activities', 'Aktiviteter denne økten')}
                 </p>
               </div>
-              <div className="space-y-3 ml-12">
-                {sessionActivities.map((activity) => (
-                  <div 
-                    key={activity.id} 
-                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
-                  >
-                    <Badge variant="secondary" className="shrink-0 font-mono">
-                      {activity.time_slot || 'Nå'}
-                    </Badge>
-                    <div>
-                      <p className="font-medium text-foreground">{activity.title}</p>
-                      {activity.description && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {activity.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
+              <div className="ml-12">
+                <p className="text-foreground whitespace-pre-wrap">{sessionActivitiesText}</p>
               </div>
             </CardContent>
           </Card>
