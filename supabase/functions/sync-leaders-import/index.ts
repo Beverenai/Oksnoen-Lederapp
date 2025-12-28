@@ -26,6 +26,20 @@ interface LeaderImport {
   extra_5?: string;
 }
 
+// Alias mapping for common cabin name variations
+const CABIN_ALIASES: Record<string, string[]> = {
+  'bedewinds': ['bedewins'],
+  'bedewins': ['bedewinds'],
+  'marcus bu': ['marcusbu bak', 'marcusbu front'],
+  'marcusbu': ['marcusbu bak', 'marcusbu front'],
+  'berit bu': ['beritbu bak', 'beritbu front'],
+  'beritbu': ['beritbu bak', 'beritbu front'],
+  'balder': ['balder bak', 'balder front'],
+  'kokk': ['kjøkkenhytte'],
+  'the kokk': ['kjøkkenhytte'],
+  'assisterende kokke': ['kjøkkenhytte'],
+};
+
 // Parse cabin field: "Bedewinds & Marcusbu bak" -> ["Bedewinds", "Marcusbu bak"]
 const parseCabinNames = (cabinStr: string | undefined): string[] => {
   if (!cabinStr) return [];
@@ -33,6 +47,42 @@ const parseCabinNames = (cabinStr: string | undefined): string[] => {
     .split(/\s*[&,]\s*|\s+og\s+/i)
     .map(c => c.trim())
     .filter(Boolean);
+};
+
+// Find matching cabin ID with fuzzy matching and aliases
+const findCabinId = (cabinName: string, cabinsByName: Map<string, string>): string | null => {
+  const normalized = cabinName.toLowerCase().trim();
+  
+  // 1. Exact match
+  if (cabinsByName.has(normalized)) {
+    return cabinsByName.get(normalized)!;
+  }
+  
+  // 2. Check aliases
+  const aliases = CABIN_ALIASES[normalized];
+  if (aliases) {
+    for (const alias of aliases) {
+      if (cabinsByName.has(alias)) {
+        return cabinsByName.get(alias)!;
+      }
+    }
+  }
+  
+  // 3. Partial match - find cabins that start with the given name
+  for (const [name, id] of cabinsByName.entries()) {
+    if (name.startsWith(normalized) || normalized.startsWith(name)) {
+      return id;
+    }
+  }
+  
+  // 4. Fuzzy match - check if cabin name contains the search term
+  for (const [name, id] of cabinsByName.entries()) {
+    if (name.includes(normalized) || normalized.includes(name)) {
+      return id;
+    }
+  }
+  
+  return null;
 };
 
 serve(async (req) => {
@@ -145,9 +195,9 @@ serve(async (req) => {
         // Delete existing leader_cabins for this leader
         await supabase.from('leader_cabins').delete().eq('leader_id', leaderId);
 
-        // Insert new leader_cabins links
+        // Insert new leader_cabins links using improved matching
         for (const cabinName of cabinNames) {
-          const cabinId = cabinsByName.get(cabinName.toLowerCase());
+          const cabinId = findCabinId(cabinName, cabinsByName);
           if (cabinId) {
             const { error: linkError } = await supabase.from('leader_cabins').insert({
               leader_id: leaderId,
@@ -155,10 +205,10 @@ serve(async (req) => {
             });
             if (!linkError) {
               results.cabinLinks++;
-              console.log(`Linked ${leader.name} to cabin: ${cabinName}`);
+              console.log(`Linked ${leader.name} to cabin: ${cabinName} -> ${cabinId}`);
             }
           } else {
-            console.log(`Cabin not found for ${leader.name}: ${cabinName}`);
+            console.log(`Cabin not found for ${leader.name}: ${cabinName} (tried fuzzy matching)`);
           }
         }
       }
