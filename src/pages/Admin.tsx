@@ -629,8 +629,8 @@ export default function Admin() {
                 <CardDescription>Klikk for å redigere innhold</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                  {leaders.filter(l => l.is_active !== false).map((leader) => (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {leaders.filter(l => l.is_active !== false && l.phone !== '12345678').map((leader) => (
                     <button
                       key={leader.id}
                       onClick={() => loadLeaderContent(leader)}
@@ -1274,12 +1274,12 @@ export default function Admin() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5" />
-                Leder-oversikt ({leaders.length})
+                Leder-oversikt ({leaders.filter(l => l.phone !== '12345678').length})
               </CardTitle>
               <CardDescription className="flex flex-wrap gap-2 items-center">
-                <span>Aktive: {leaders.filter(l => l.is_active !== false).length}</span>
+                <span>Aktive: {leaders.filter(l => l.is_active !== false && l.phone !== '12345678').length}</span>
                 <span className="text-muted-foreground">•</span>
-                <span>Inaktive: {leaders.filter(l => l.is_active === false).length}</span>
+                <span>Inaktive: {leaders.filter(l => l.is_active === false && l.phone !== '12345678').length}</span>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1313,7 +1313,7 @@ export default function Admin() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {leaders.map((leader) => (
+                    {leaders.filter(l => l.phone !== '12345678').map((leader) => (
                       <tr 
                         key={leader.id} 
                         className={`hover:bg-muted/50 cursor-pointer ${leader.is_active === false ? 'opacity-50' : ''}`}
@@ -1418,7 +1418,7 @@ export default function Admin() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Alle ledere ({leaders.length})</CardTitle>
+              <CardTitle>Alle ledere ({leaders.filter(l => l.phone !== '12345678').length})</CardTitle>
               <CardDescription>
                 Klikk på en leder for å redigere profil og rolle
               </CardDescription>
@@ -1436,8 +1436,9 @@ export default function Admin() {
               <div className="space-y-2">
                 {leaders
                   .filter((leader) =>
-                    leader.name.toLowerCase().includes(leaderSearch.toLowerCase()) ||
-                    leader.phone.includes(leaderSearch)
+                    leader.phone !== '12345678' &&
+                    (leader.name.toLowerCase().includes(leaderSearch.toLowerCase()) ||
+                    leader.phone.includes(leaderSearch))
                   )
                   .map((leader) => (
                   <div
@@ -1473,7 +1474,7 @@ export default function Admin() {
                     </div>
                   </div>
                 ))}
-                {leaders.length === 0 && (
+                {leaders.filter(l => l.phone !== '12345678').length === 0 && (
                   <p className="text-muted-foreground text-center py-4">
                     Ingen ledere registrert enda
                   </p>
