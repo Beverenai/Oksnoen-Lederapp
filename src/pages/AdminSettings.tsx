@@ -33,6 +33,7 @@ import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { CabinsTab } from '@/components/admin/CabinsTab';
 import { ParticipantImportTab } from '@/components/admin/ParticipantImportTab';
+import { CabinAssignmentStatus } from '@/components/admin/CabinAssignmentStatus';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -707,6 +708,9 @@ export default function AdminSettings() {
 
         {/* Sync Tab */}
         <TabsContent value="sync" className="space-y-4">
+          {/* Cabin Assignment Status */}
+          <CabinAssignmentStatus />
+
           {/* Import from Google Sheets */}
           <Card>
             <CardHeader>
