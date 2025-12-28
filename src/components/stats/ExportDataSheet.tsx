@@ -277,7 +277,7 @@ export const ExportDataSheet = ({ open, onOpenChange }: ExportDataSheetProps) =>
       html += `
   <div class="section">
     <div class="section-header">
-      <h2>📋 Helseinformasjon</h2>
+      <h2>📋 Info fra Nurse</h2>
       <span class="count">${healthInfo?.length || 0} stk</span>
     </div>
 `;
@@ -311,7 +311,7 @@ export const ExportDataSheet = ({ open, onOpenChange }: ExportDataSheetProps) =>
     </table>
 `;
       } else {
-        html += `<p class="empty">Ingen helseinformasjon registrert</p>`;
+        html += `<p class="empty">Ingen info fra nurse registrert</p>`;
       }
       html += `</div>`;
 
@@ -319,7 +319,7 @@ export const ExportDataSheet = ({ open, onOpenChange }: ExportDataSheetProps) =>
       html += `
   <div class="section">
     <div class="section-header">
-      <h2>📝 Sykepleier-notater</h2>
+      <h2>📝 Nurse Notater</h2>
       <span class="count">${healthNotes?.length || 0} stk</span>
     </div>
 `;
@@ -356,7 +356,7 @@ export const ExportDataSheet = ({ open, onOpenChange }: ExportDataSheetProps) =>
     </table>
 `;
       } else {
-        html += `<p class="empty">Ingen sykepleier-notater registrert</p>`;
+        html += `<p class="empty">Ingen nurse notater registrert</p>`;
       }
       html += `</div>`;
 
