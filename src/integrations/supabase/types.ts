@@ -56,6 +56,39 @@ export type Database = {
         }
         Relationships: []
       }
+      extra_fields_config: {
+        Row: {
+          created_at: string | null
+          field_key: string
+          icon: string
+          id: string
+          is_visible: boolean | null
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          field_key: string
+          icon?: string
+          id?: string
+          is_visible?: boolean | null
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          field_key?: string
+          icon?: string
+          id?: string
+          is_visible?: boolean | null
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       home_screen_config: {
         Row: {
           element_key: string
@@ -83,6 +116,11 @@ export type Database = {
       leader_content: {
         Row: {
           current_activity: string | null
+          extra_1: string | null
+          extra_2: string | null
+          extra_3: string | null
+          extra_4: string | null
+          extra_5: string | null
           extra_activity: string | null
           id: string
           leader_id: string
@@ -93,6 +131,11 @@ export type Database = {
         }
         Insert: {
           current_activity?: string | null
+          extra_1?: string | null
+          extra_2?: string | null
+          extra_3?: string | null
+          extra_4?: string | null
+          extra_5?: string | null
           extra_activity?: string | null
           id?: string
           leader_id: string
@@ -103,6 +146,11 @@ export type Database = {
         }
         Update: {
           current_activity?: string | null
+          extra_1?: string | null
+          extra_2?: string | null
+          extra_3?: string | null
+          extra_4?: string | null
+          extra_5?: string | null
           extra_activity?: string | null
           id?: string
           leader_id?: string
