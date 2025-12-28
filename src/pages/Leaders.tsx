@@ -36,6 +36,7 @@ const FILTER_TEAMS = [
   { key: '1f', label: '1F', bg: 'bg-yellow-400', text: 'text-black', border: 'border-yellow-400' },
   { key: '2f', label: '2F', bg: 'bg-blue-500', text: 'text-white', border: 'border-blue-500' },
   { key: 'kjøkken', label: 'Kjøkken', bg: 'bg-purple-500', text: 'text-white', border: 'border-purple-500' },
+  { key: 'kordinator', label: 'Kordinator', bg: 'bg-pink-500', text: 'text-white', border: 'border-pink-500' },
 ];
 
 // All team colors for badge styling (keys match database values)
@@ -45,7 +46,7 @@ const ALL_TEAM_STYLES: Record<string, { bg: string; text: string; border: string
   '1f': { bg: 'bg-yellow-400', text: 'text-black', border: 'border-yellow-400' },
   '2f': { bg: 'bg-blue-500', text: 'text-white', border: 'border-blue-500' },
   'kjøkken': { bg: 'bg-purple-500', text: 'text-white', border: 'border-purple-500' },
-  'joker': { bg: 'bg-pink-500', text: 'text-white', border: 'border-pink-500' },
+  'kordinator': { bg: 'bg-pink-500', text: 'text-white', border: 'border-pink-500' },
   'sjef': { bg: 'bg-slate-600', text: 'text-white', border: 'border-slate-600' },
   'nurse': { bg: 'bg-rose-600', text: 'text-white', border: 'border-rose-600' },
 };

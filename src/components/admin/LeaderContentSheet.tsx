@@ -41,24 +41,32 @@ interface LeaderContentSheetProps {
   onSaved: () => void;
 }
 
-const TEAM_OPTIONS = ['Team 1', 'Team 2', 'Team 1F', 'Team 2F', 'Kjøkken', 'Sjef'];
+const TEAM_OPTIONS = ['1', '2', '1F', '2F', 'Kjøkken', 'Sjef', 'Kordinator'];
 
-// Team color mapping
+// Team color mapping - supports both short (1, 2f) and long (Team 1, Team 2F) formats
 const getTeamStyles = (team: string | null): string => {
   const teamLower = team?.toLowerCase().trim();
   switch (teamLower) {
+    case '1':
     case 'team 1':
       return 'bg-red-500 text-white border-red-500';
+    case '2':
     case 'team 2':
       return 'bg-orange-500 text-white border-orange-500';
+    case '1f':
     case 'team 1f':
       return 'bg-yellow-400 text-black border-yellow-400';
+    case '2f':
     case 'team 2f':
       return 'bg-blue-500 text-white border-blue-500';
     case 'kjøkken':
       return 'bg-purple-500 text-white border-purple-500';
     case 'sjef':
-      return 'bg-slate-500 text-white border-slate-500';
+      return 'bg-slate-600 text-white border-slate-600';
+    case 'kordinator':
+      return 'bg-pink-500 text-white border-pink-500';
+    case 'nurse':
+      return 'bg-rose-600 text-white border-rose-600';
     default:
       return 'bg-muted text-muted-foreground border-border';
   }
