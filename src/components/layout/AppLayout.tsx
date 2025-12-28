@@ -42,6 +42,13 @@ const allNavItems = [
   { to: '/fix', icon: Wrench, label: 'Rapporter' },
 ];
 
+// Navigation items for mobile slide-out menu only (simplified)
+const mobileMenuItems = [
+  { to: '/profile', icon: User, label: 'Min Profil' },
+  { to: '/cabin', icon: Building2, label: 'Din Hytte' },
+  { to: '/schedule', icon: Calendar, label: 'Vaktplan' },
+];
+
 // Bottom nav items type
 type BottomNavItem = {
   to: string;
@@ -302,7 +309,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         )}
       >
         <nav className="p-4 space-y-1">
-          {allNavItems.map((item) => (
+          {mobileMenuItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
