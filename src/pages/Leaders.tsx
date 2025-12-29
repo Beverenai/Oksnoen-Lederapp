@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Users, Phone, Activity, Cross, ArrowUpDown, Check, Search, X, Home } from 'lucide-react';
-import { LeaderDetailSheet } from '@/components/leaders/LeaderDetailSheet';
+import { LeaderDetailDialog } from '@/components/leaders/LeaderDetailDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -247,16 +247,15 @@ export default function Leaders() {
     return result;
   }, [leaders, activeTeamFilter, activeCabinFilter, sortBy, searchQuery]);
   
-  // Get border color for a leader card
-  const getBorderClass = (leader: LeaderWithContent) => {
+  // Get avatar border color class based on leader status
+  const getAvatarBorderClass = (leader: LeaderWithContent) => {
     const isFri = leader.content?.current_activity?.toLowerCase().includes('fri');
     const isKitchen = leader.team?.toLowerCase() === 'kjøkken';
     
-    // Kjøkken = purple, FRI = blue, Admin/Nurse/has_read = green, else red
-    if (isKitchen) return 'ring-2 ring-purple-500';
-    if (isFri) return 'ring-2 ring-blue-500';
-    if (leader.isAdmin || leader.isNurse || leader.content?.has_read) return 'ring-2 ring-green-500';
-    return 'ring-2 ring-red-500';
+    if (isKitchen) return 'ring-4 ring-purple-500';
+    if (isFri) return 'ring-4 ring-blue-500';
+    if (leader.isAdmin || leader.isNurse || leader.content?.has_read) return 'ring-4 ring-green-500';
+    return 'ring-4 ring-red-500';
   };
 
   // Get first name only
@@ -408,16 +407,13 @@ export default function Leaders() {
         {filteredAndSortedLeaders.map((leader) => (
           <Card 
             key={leader.id} 
-            className={cn(
-              "cursor-pointer hover:bg-accent/50 transition-colors active:scale-[0.99]",
-              getBorderClass(leader)
-            )}
+            className="cursor-pointer hover:bg-accent/50 transition-colors active:scale-[0.99]"
             onClick={() => setSelectedLeader(leader)}
           >
             <CardContent className="p-3">
               <div className="flex items-center gap-3">
-                {/* Profile image */}
-                <Avatar className="w-12 h-12 shrink-0">
+                {/* Profile image with status ring */}
+                <Avatar className={cn("w-12 h-12 shrink-0", getAvatarBorderClass(leader))}>
                   {leader.profile_image_url && (
                     <AvatarImage src={leader.profile_image_url} alt={leader.name} />
                   )}
@@ -519,12 +515,11 @@ export default function Leaders() {
         </Card>
       )}
 
-      {/* Leader detail sheet */}
-      <LeaderDetailSheet
+      {/* Leader detail dialog */}
+      <LeaderDetailDialog
         leader={selectedLeader}
         open={!!selectedLeader}
         onOpenChange={(open) => !open && setSelectedLeader(null)}
-        extraFieldsConfig={extraFieldsConfig}
       />
     </div>
   );
