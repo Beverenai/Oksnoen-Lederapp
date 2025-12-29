@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, User, Car, Check, Upload, Bell } from 'lucide-react';
+import { Camera, User, Car, Check, Upload, Bell, Anchor, Mountain } from 'lucide-react';
 import { toast } from 'sonner';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
 import { compressImage } from '@/lib/imageUtils';
@@ -18,13 +18,19 @@ export default function Onboarding() {
   const { leader, refreshLeader } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Removed step state - notifications are now part of the profile step
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [imageUrl, setImageUrl] = useState(leader?.profile_image_url || '');
   const [age, setAge] = useState(leader?.age?.toString() || '');
   const [hasCar, setHasCar] = useState(leader?.has_car || false);
   const [hasDriversLicense, setHasDriversLicense] = useState(leader?.has_drivers_license || false);
+  
+  // Certification fields (optional)
+  const [hasBoatLicense, setHasBoatLicense] = useState(leader?.has_boat_license || false);
+  const [canRappelling, setCanRappelling] = useState(leader?.can_rappelling || false);
+  const [canClimbing, setCanClimbing] = useState(leader?.can_climbing || false);
+  const [canZipline, setCanZipline] = useState(leader?.can_zipline || false);
+  const [canRopeSetup, setCanRopeSetup] = useState(leader?.can_rope_setup || false);
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -92,6 +98,11 @@ export default function Onboarding() {
           age: parseInt(age),
           has_car: hasCar,
           has_drivers_license: hasDriversLicense,
+          has_boat_license: hasBoatLicense,
+          can_rappelling: canRappelling,
+          can_climbing: canClimbing,
+          can_zipline: canZipline,
+          can_rope_setup: canRopeSetup,
         })
         .eq('id', leader.id);
 
@@ -174,8 +185,8 @@ export default function Onboarding() {
               />
             </div>
 
-            {/* Checkboxes */}
-            <div className="space-y-4">
+            {/* Checkboxes - Required info */}
+            <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <Checkbox
                   id="driversLicense"
@@ -198,6 +209,74 @@ export default function Onboarding() {
                   <Car className="w-4 h-4 text-muted-foreground" />
                   Jeg har med bil på leiren
                 </Label>
+              </div>
+            </div>
+
+            {/* Certifications - Optional */}
+            <div className="space-y-3 pt-2 border-t">
+              <Label className="text-base font-medium">Kompetanse (valgfritt)</Label>
+              <p className="text-sm text-muted-foreground">Kryss av for det du har kurs/kompetanse i</p>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="boatLicense"
+                    checked={hasBoatLicense}
+                    onCheckedChange={(checked) => setHasBoatLicense(checked as boolean)}
+                  />
+                  <Label htmlFor="boatLicense" className="flex items-center gap-2 cursor-pointer text-sm">
+                    <Anchor className="w-4 h-4 text-muted-foreground" />
+                    Båt-lappen
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="rappelling"
+                    checked={canRappelling}
+                    onCheckedChange={(checked) => setCanRappelling(checked as boolean)}
+                  />
+                  <Label htmlFor="rappelling" className="flex items-center gap-2 cursor-pointer text-sm">
+                    <Mountain className="w-4 h-4 text-muted-foreground" />
+                    Rappellering
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="climbing"
+                    checked={canClimbing}
+                    onCheckedChange={(checked) => setCanClimbing(checked as boolean)}
+                  />
+                  <Label htmlFor="climbing" className="flex items-center gap-2 cursor-pointer text-sm">
+                    <Mountain className="w-4 h-4 text-muted-foreground" />
+                    Klatring
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="zipline"
+                    checked={canZipline}
+                    onCheckedChange={(checked) => setCanZipline(checked as boolean)}
+                  />
+                  <Label htmlFor="zipline" className="flex items-center gap-2 cursor-pointer text-sm">
+                    <Mountain className="w-4 h-4 text-muted-foreground" />
+                    Taubane (oppe)
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-3 col-span-2">
+                  <Checkbox
+                    id="ropeSetup"
+                    checked={canRopeSetup}
+                    onCheckedChange={(checked) => setCanRopeSetup(checked as boolean)}
+                  />
+                  <Label htmlFor="ropeSetup" className="flex items-center gap-2 cursor-pointer text-sm">
+                    <Mountain className="w-4 h-4 text-muted-foreground" />
+                    Taubane (oppsett)
+                  </Label>
+                </div>
               </div>
             </div>
 

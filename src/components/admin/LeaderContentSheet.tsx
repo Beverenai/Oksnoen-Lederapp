@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send } from 'lucide-react';
+import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send, Car, Anchor, Mountain, ArrowDown } from 'lucide-react';
 import { icons } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -364,6 +364,55 @@ export function LeaderContentSheet({
               </PopoverContent>
             </Popover>
           </div>
+
+          {/* Competency Badges */}
+          {(leader.has_drivers_license || leader.has_car || leader.has_boat_license || 
+            leader.can_rappelling || leader.can_climbing || leader.can_zipline || leader.can_rope_setup) && (
+            <div className="flex flex-wrap gap-1.5">
+              {leader.has_drivers_license && (
+                <Badge variant="outline" className="text-xs bg-background">
+                  <Car className="w-3 h-3 mr-1" />
+                  Førerkort
+                </Badge>
+              )}
+              {leader.has_car && (
+                <Badge variant="outline" className="text-xs bg-green-50 border-green-300 text-green-700">
+                  <Car className="w-3 h-3 mr-1" />
+                  Har bil
+                </Badge>
+              )}
+              {leader.has_boat_license && (
+                <Badge variant="outline" className="text-xs bg-blue-50 border-blue-300 text-blue-700">
+                  <Anchor className="w-3 h-3 mr-1" />
+                  Båt
+                </Badge>
+              )}
+              {leader.can_rappelling && (
+                <Badge variant="outline" className="text-xs bg-orange-50 border-orange-300 text-orange-700">
+                  <ArrowDown className="w-3 h-3 mr-1" />
+                  Rappis
+                </Badge>
+              )}
+              {leader.can_climbing && (
+                <Badge variant="outline" className="text-xs bg-amber-50 border-amber-300 text-amber-700">
+                  <Mountain className="w-3 h-3 mr-1" />
+                  Klatring
+                </Badge>
+              )}
+              {leader.can_zipline && (
+                <Badge variant="outline" className="text-xs bg-purple-50 border-purple-300 text-purple-700">
+                  <Mountain className="w-3 h-3 mr-1" />
+                  Taubane
+                </Badge>
+              )}
+              {leader.can_rope_setup && (
+                <Badge variant="outline" className="text-xs bg-indigo-50 border-indigo-300 text-indigo-700">
+                  <Mountain className="w-3 h-3 mr-1" />
+                  Oppsett
+                </Badge>
+              )}
+            </div>
+          )}
 
           {/* Current Activity */}
           <div className="space-y-2">
