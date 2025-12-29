@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Search, Check, X, Users } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +32,7 @@ export function BulkActivityRegistration({
   onComplete,
   onClose,
 }: BulkActivityRegistrationProps) {
+  const { leader } = useAuth();
   const [selectedActivity, setSelectedActivity] = useState<string>('');
   const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,6 +77,7 @@ export function BulkActivityRegistration({
       const inserts = Array.from(selectedParticipants).map((participantId) => ({
         participant_id: participantId,
         activity: selectedActivity,
+        registered_by: leader?.id,
       }));
 
       const { error } = await supabase.from('participant_activities').insert(inserts);

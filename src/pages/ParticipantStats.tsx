@@ -3,10 +3,11 @@ import { ParticipantStatsCard } from "@/components/admin/ParticipantStatsCard";
 import { RoomSwapTab } from "@/components/stats/RoomSwapTab";
 import { CabinReportsTab } from "@/components/stats/CabinReportsTab";
 import { CheckoutTab } from "@/components/stats/CheckoutTab";
+import { LeaderActivityStatsTab } from "@/components/stats/LeaderActivityStatsTab";
 import { ExportDataSheet } from "@/components/stats/ExportDataSheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { BarChart2, ArrowLeftRight, Home, Download, Sparkles } from "lucide-react";
+import { BarChart2, ArrowLeftRight, Home, Download, Sparkles, UserCheck } from "lucide-react";
 
 const ParticipantStats = () => {
   const [exportOpen, setExportOpen] = useState(false);
@@ -22,7 +23,7 @@ const ParticipantStats = () => {
       </div>
       
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList className="grid w-full grid-cols-5 mb-6">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart2 className="h-4 w-4" />
             <span className="hidden sm:inline">Oversikt</span>
@@ -38,6 +39,10 @@ const ParticipantStats = () => {
           <TabsTrigger value="checkout" className="flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
             <span className="hidden sm:inline">Utsjekk</span>
+          </TabsTrigger>
+          <TabsTrigger value="leader-activity" className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4" />
+            <span className="hidden sm:inline">Lederaktivitet</span>
           </TabsTrigger>
         </TabsList>
         
@@ -55,6 +60,10 @@ const ParticipantStats = () => {
         
         <TabsContent value="checkout">
           <CheckoutTab />
+        </TabsContent>
+        
+        <TabsContent value="leader-activity">
+          <LeaderActivityStatsTab />
         </TabsContent>
       </Tabs>
 
