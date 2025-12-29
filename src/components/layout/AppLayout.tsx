@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { 
   Home, 
   Users, 
-  Stamp, 
   Building2, 
   Calendar, 
   AlertTriangle, 
@@ -18,35 +17,44 @@ import {
   User,
   Wrench,
   Check,
-  BarChart2
+  BarChart2,
+  LucideIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
+import { PassIcon } from '@/components/icons/PassIcon';
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
+// Type for nav items that can use either Lucide icons or custom components
+type NavItem = {
+  to: string;
+  icon: LucideIcon | typeof PassIcon;
+  label: string;
+};
+
 // Navigation items that are always shown
-const baseNavItems = [
+const baseNavItems: NavItem[] = [
   { to: '/', icon: Home, label: 'Hjem' },
   { to: '/profile', icon: User, label: 'Min Profil' },
   { to: '/leaders', icon: Users, label: 'Ledere' },
-  { to: '/passport', icon: Stamp, label: 'Passkontroll' },
+  { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
   { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
 ];
 
 // Dynamic items that depend on state
-const scheduleNavItem = { to: '/schedule', icon: Calendar, label: 'Vaktplan' };
-const importantInfoNavItem = { to: '/important-info', icon: AlertTriangle, label: 'Viktig info' };
-const wallNavItem = { to: '/wall', icon: Megaphone, label: 'Den store veggen' };
-const fixNavItem = { to: '/fix', icon: Wrench, label: 'Rapporter' };
+const scheduleNavItem: NavItem = { to: '/schedule', icon: Calendar, label: 'Vaktplan' };
+const importantInfoNavItem: NavItem = { to: '/important-info', icon: AlertTriangle, label: 'Viktig info' };
+const wallNavItem: NavItem = { to: '/wall', icon: Megaphone, label: 'Den store veggen' };
+const fixNavItem: NavItem = { to: '/fix', icon: Wrench, label: 'Rapporter' };
 
 // Base navigation items for mobile slide-out menu (simplified)
-const baseMobileMenuItems = [
+const baseMobileMenuItems: NavItem[] = [
   { to: '/profile', icon: User, label: 'Min Profil' },
   { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
 ];
@@ -54,7 +62,7 @@ const baseMobileMenuItems = [
 // Bottom nav items type
 type BottomNavItem = {
   to: string;
-  icon: typeof Home;
+  icon: LucideIcon | typeof PassIcon;
   label: string;
   isHajolo?: boolean;
 };
@@ -67,7 +75,7 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
       { to: '/', icon: Home, label: 'Hjem' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
       { to: '/admin', icon: Settings, label: 'Dashboard' },
-      { to: '/passport', icon: Stamp, label: 'Passkontor' },
+      { to: '/passport', icon: PassIcon, label: 'Passkontor' },
       { to: '/fix', icon: Wrench, label: 'Fix' },
     ];
   } else if (isNurse) {
@@ -76,7 +84,7 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
       { to: '/', icon: Home, label: 'Hjem' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
       { to: '/nurse', icon: Heart, label: 'Nurse' },
-      { to: '/passport', icon: Stamp, label: 'Passkontor' },
+      { to: '/passport', icon: PassIcon, label: 'Passkontor' },
       { to: '/fix', icon: Wrench, label: 'Fix' },
     ];
   } else {
@@ -85,17 +93,17 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
       { to: '/', icon: Home, label: 'Hjem' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
       { to: '#', icon: Check, label: 'Hajolo', isHajolo: true },
-      { to: '/passport', icon: Stamp, label: 'Passkontor' },
+      { to: '/passport', icon: PassIcon, label: 'Passkontor' },
       { to: '/fix', icon: Wrench, label: 'Fix' },
     ];
   }
 };
 
-const nurseNavItems = [
+const nurseNavItems: NavItem[] = [
   { to: '/nurse', icon: Heart, label: 'Nurse' },
 ];
 
-const adminNavItems = [
+const adminNavItems: NavItem[] = [
   { to: '/participant-stats', icon: BarChart2, label: 'Deltagere' },
   { to: '/admin', icon: Settings, label: 'Admin' },
 ];
@@ -464,7 +472,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 'p-2 rounded-xl transition-colors',
                 isActive ? 'bg-primary/10' : ''
               )}>
-                <item.icon className={cn('w-6 h-6', isActive && 'text-primary')} />
+                <item.icon className={cn('w-6 h-6', isActive && 'text-primary')} size={24} />
               </div>
               <span className="text-xs font-medium">{item.label}</span>
             </NavLink>
