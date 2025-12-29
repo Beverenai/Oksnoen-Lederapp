@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -443,7 +444,50 @@ export default function Nurse() {
     return html;
   };
 
-  const handleExportNurseData = () => {
+  const generateNurseCsv = () => {
+    const participantsToExport = participants.filter(p => 
+      p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info
+    );
+    
+    const escapeCSV = (str: string) => {
+      if (!str) return '';
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+    
+    const headers = ['Navn', 'Hytte', 'Alder', 'Info for ledere', 'Nurse-notater', 'Hendelser'];
+    const rows = participantsToExport.map(p => {
+      const age = p.birth_date 
+        ? differenceInYears(new Date(), new Date(p.birth_date)).toString() 
+        : '';
+      
+      const nurseNotes = p.healthNotes.map(n => {
+        const date = format(new Date(n.created_at), "d.MM.yy HH:mm");
+        return `[${date}] ${n.content}`;
+      }).join(' | ');
+      
+      const events = p.healthEvents.map(e => {
+        const date = format(new Date(e.created_at), "d.MM.yy HH:mm");
+        const eventLabel = eventTypes.find(t => t.value === e.event_type)?.label || e.event_type;
+        return `[${date}] ${eventLabel} (${getSeverityText(e.severity)}): ${e.description}`;
+      }).join(' | ');
+      
+      return [
+        escapeCSV(p.name),
+        escapeCSV(p.cabin?.name || ''),
+        age,
+        escapeCSV(p.healthInfo?.info || ''),
+        escapeCSV(nurseNotes),
+        escapeCSV(events)
+      ].join(',');
+    });
+    
+    return [headers.join(','), ...rows].join('\n');
+  };
+
+  const handleExportHtml = () => {
     setIsExporting(true);
     try {
       const html = generateNurseReport();
@@ -456,6 +500,28 @@ export default function Nurse() {
     } catch (error) {
       console.error('Error exporting nurse data:', error);
       toast.error('Kunne ikke eksportere data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportCsv = () => {
+    setIsExporting(true);
+    try {
+      const csv = generateNurseCsv();
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `nurse-rapport-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('CSV lastet ned');
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      toast.error('Kunne ikke eksportere CSV');
     } finally {
       setIsExporting(false);
     }
@@ -555,18 +621,31 @@ export default function Nurse() {
             Helsenotater og hendelseslogg for deltakere
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={handleExportNurseData}
-          disabled={isExporting || participantsWithHealthInfo.length === 0}
-        >
-          {isExporting ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <Download className="w-4 h-4 mr-2" />
-          )}
-          Eksporter
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              disabled={isExporting || participantsWithHealthInfo.length === 0}
+            >
+              {isExporting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 mr-2" />
+              )}
+              Eksporter
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleExportHtml}>
+              <FileText className="w-4 h-4 mr-2" />
+              Eksporter som HTML
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportCsv}>
+              <Download className="w-4 h-4 mr-2" />
+              Eksporter som CSV
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Search and Filter */}
