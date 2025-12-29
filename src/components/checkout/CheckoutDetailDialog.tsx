@@ -29,6 +29,9 @@ import {
   hasStoreStyrkprove, 
   hasLilleStyrkprove, 
   getUniqueActivities,
+  checkRequirementWithOrLogic,
+  getStoreStyrkproveProgress,
+  getLilleStyrkproveProgress,
   STORE_STYRKEPROVE_REQUIREMENTS,
   LILLE_STYRKEPROVE_REQUIREMENTS
 } from '@/lib/activityUtils';
@@ -210,9 +213,11 @@ export function CheckoutDetailDialog({
   const uniqueActivities = getUniqueActivities(completedActivities);
   const hasStore = hasStoreStyrkprove(completedActivities);
   const hasLille = hasLilleStyrkprove(completedActivities);
+  const storeProgress = getStoreStyrkproveProgress(completedActivities);
+  const lilleProgress = getLilleStyrkproveProgress(completedActivities);
 
   const checkRequirement = (req: string) => {
-    return completedActivities.some(a => a.toLowerCase() === req.toLowerCase());
+    return checkRequirementWithOrLogic(completedActivities, req);
   };
 
   return (
@@ -291,7 +296,12 @@ export function CheckoutDetailDialog({
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="p-3 rounded-lg border bg-card">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Store Styrkeprøven</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-muted-foreground">Store Styrkeprøven</p>
+                    <Badge variant="outline" className="text-xs">
+                      {storeProgress.completed}/{storeProgress.total}
+                    </Badge>
+                  </div>
                   <div className="space-y-1">
                     {STORE_STYRKEPROVE_REQUIREMENTS.map(req => (
                       <div key={req} className="flex items-center gap-2 text-sm">
@@ -308,7 +318,12 @@ export function CheckoutDetailDialog({
                   </div>
                 </div>
                 <div className="p-3 rounded-lg border bg-card">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Lille Styrkeprøven</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-muted-foreground">Lille Styrkeprøven</p>
+                    <Badge variant="outline" className="text-xs">
+                      {lilleProgress.completed}/{lilleProgress.total}
+                    </Badge>
+                  </div>
                   <div className="space-y-1">
                     {LILLE_STYRKEPROVE_REQUIREMENTS.map(req => (
                       <div key={req} className="flex items-center gap-2 text-sm">

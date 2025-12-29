@@ -66,6 +66,19 @@ EKSEMPLER PÅ GODE PASS:
 
 "Charlotte har vært en fantastisk jente å ha på leir. Hun er en ekte glad og morsom jente man ikke kan unngå å bli glad i. Hun er med på overnatting, dramakurs med forestilling, klatrer i fjellveggen og stått på vannski. Håper å se deg neste år!"`;
 
+// Mapping of shortened/alternative activity names to canonical names
+const ACTIVITY_NAME_MAPPING: Record<string, string[]> = {
+  'tretten meter': ['tretten', '13 meter', '13m', 'trettenmeteren'],
+  'åtte meter': ['åtte', '8 meter', '8m', 'åttemeteren'],
+  'ti meter': ['ti', '10 meter', '10m', 'timeteren'],
+  'skrikeren begge veier': ['svømming begge veier', 'begge veier', 'svømming til skrikeren begge veier'],
+  'skrikeren en vei': ['svømming en vei', 'en vei', 'svømming til skrikeren en vei'],
+  'klatring': ['klatre', 'klatrevegg'],
+  'rappis': ['rappelering', 'rappell', 'rappelling'],
+  'taubane': ['zipline', 'zip-line'],
+  'triatlon': ['triathlon'],
+};
+
 // Store Styrkeprøven requirements (all must be completed)
 const STORE_STYRKEPROVE_REQUIREMENTS = [
   'Tretten meter',
@@ -74,11 +87,6 @@ const STORE_STYRKEPROVE_REQUIREMENTS = [
   'Taubane',
   'Rappis',
 ];
-
-// Alternative old names for backwards compatibility
-const STORE_ALTERNATIVES: Record<string, string[]> = {
-  'skrikeren begge veier': ['svømming til skrikeren begge veier'],
-};
 
 // Lille Styrkeprøven fixed requirements (all must be completed)
 const LILLE_FIXED_REQUIREMENTS = [
@@ -93,43 +101,51 @@ const LILLE_HEIGHT_ALTERNATIVES = ['Åtte meter', 'Ti meter'];
 // Swimming alternatives - at least one must be completed
 const LILLE_SWIMMING_ALTERNATIVES = ['Skrikeren en vei', 'Triatlon'];
 
-// Alternative old names for backwards compatibility
-const LILLE_ALTERNATIVES: Record<string, string[]> = {
-  'skrikeren en vei': ['svømming til skrikeren en vei'],
-};
-
-function matchesRequirement(activities: string[], requirement: string, alternatives: Record<string, string[]> = {}): boolean {
-  const normalizedReq = requirement.toLowerCase();
-  const altNames = alternatives[normalizedReq] || [];
+function matchesRequirement(activities: string[], requirement: string): boolean {
+  const normalizedReq = requirement.toLowerCase().trim();
+  const altNames = ACTIVITY_NAME_MAPPING[normalizedReq] || [];
   
   return activities.some(a => {
-    const normalized = a.toLowerCase();
-    return normalized === normalizedReq || altNames.includes(normalized);
+    const normalized = a.toLowerCase().trim();
+    
+    // Exact match with requirement
+    if (normalized === normalizedReq) return true;
+    
+    // Match with any alternative name
+    if (altNames.includes(normalized)) return true;
+    
+    // Partial match - activity starts with requirement or vice versa
+    if (normalized.startsWith(normalizedReq) || normalizedReq.startsWith(normalized)) return true;
+    
+    // Partial match with alternatives
+    if (altNames.some(alt => normalized.startsWith(alt) || alt.startsWith(normalized))) return true;
+    
+    return false;
   });
 }
 
-function hasAnyOf(activities: string[], alternatives: string[], altNamesMap: Record<string, string[]> = {}): boolean {
-  return alternatives.some(alt => matchesRequirement(activities, alt, altNamesMap));
+function hasAnyOf(activities: string[], alternatives: string[]): boolean {
+  return alternatives.some(alt => matchesRequirement(activities, alt));
 }
 
 function hasLilleStyrkprove(activities: string[]): boolean {
   // All fixed requirements must be met
   const hasAllFixed = LILLE_FIXED_REQUIREMENTS.every(req => 
-    matchesRequirement(activities, req, LILLE_ALTERNATIVES)
+    matchesRequirement(activities, req)
   );
   
   // At least one height alternative must be met (8 meter OR 10 meter)
   const hasHeight = hasAnyOf(activities, LILLE_HEIGHT_ALTERNATIVES);
   
   // At least one swimming alternative must be met (Skrikeren en vei OR Triatlon)
-  const hasSwimming = hasAnyOf(activities, LILLE_SWIMMING_ALTERNATIVES, LILLE_ALTERNATIVES);
+  const hasSwimming = hasAnyOf(activities, LILLE_SWIMMING_ALTERNATIVES);
   
   return hasAllFixed && hasHeight && hasSwimming;
 }
 
 function hasStoreStyrkprove(activities: string[]): boolean {
   return STORE_STYRKEPROVE_REQUIREMENTS.every(req => 
-    matchesRequirement(activities, req, STORE_ALTERNATIVES)
+    matchesRequirement(activities, req)
   );
 }
 
