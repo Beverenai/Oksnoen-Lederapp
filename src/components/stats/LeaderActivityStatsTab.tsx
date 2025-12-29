@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronDown, ChevronUp, Activity, Users, Clock } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronRight, Activity, Users, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 
@@ -15,11 +15,26 @@ interface LeaderActivity {
   activity: string;
   completed_at: string | null;
   registered_by: string | null;
+  participant_id: string;
   leaders: {
     id: string;
     name: string;
     profile_image_url: string | null;
   } | null;
+  participants: {
+    id: string;
+    name: string;
+    first_name: string | null;
+    cabin_id: string | null;
+    cabins: { name: string } | null;
+  } | null;
+}
+
+interface ActivityParticipant {
+  id: string;
+  name: string;
+  cabin: string | null;
+  completedAt: Date | null;
 }
 
 interface LeaderStats {
@@ -28,11 +43,13 @@ interface LeaderStats {
   profileImage: string | null;
   totalCount: number;
   activities: Map<string, number>;
+  activityParticipants: Map<string, ActivityParticipant[]>;
   lastRegistered: Date | null;
 }
 
 export function LeaderActivityStatsTab() {
   const [expandedLeader, setExpandedLeader] = useState<string | null>(null);
+  const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
 
   const { data: activities, isLoading } = useQuery({
     queryKey: ['leader-activity-stats'],
@@ -44,7 +61,9 @@ export function LeaderActivityStatsTab() {
           activity,
           completed_at,
           registered_by,
-          leaders:registered_by (id, name, profile_image_url)
+          participant_id,
+          leaders:registered_by (id, name, profile_image_url),
+          participants:participant_id (id, name, first_name, cabin_id, cabins:cabin_id (name))
         `)
         .not('registered_by', 'is', null);
 
@@ -71,6 +90,7 @@ export function LeaderActivityStatsTab() {
           profileImage: activity.leaders.profile_image_url,
           totalCount: 0,
           activities: new Map(),
+          activityParticipants: new Map(),
           lastRegistered: null,
         };
         statsMap.set(leaderId, stats);
@@ -81,6 +101,18 @@ export function LeaderActivityStatsTab() {
         activity.activity,
         (stats.activities.get(activity.activity) || 0) + 1
       );
+
+      // Store participant info
+      if (activity.participants) {
+        const participants = stats.activityParticipants.get(activity.activity) || [];
+        participants.push({
+          id: activity.participants.id,
+          name: activity.participants.first_name || activity.participants.name,
+          cabin: activity.participants.cabins?.name || null,
+          completedAt: activity.completed_at ? new Date(activity.completed_at) : null,
+        });
+        stats.activityParticipants.set(activity.activity, participants);
+      }
 
       if (activity.completed_at) {
         const date = new Date(activity.completed_at);
@@ -188,18 +220,48 @@ export function LeaderActivityStatsTab() {
 
                       {isExpanded && (
                         <div className="px-4 pb-4 pt-0 bg-muted/30">
-                          <div className="pl-13 space-y-1">
-                            {activityList.map(([activityName, count]) => (
-                              <div
-                                key={activityName}
-                                className="flex items-center justify-between py-1.5 text-sm"
-                              >
-                                <span className="text-muted-foreground">{activityName}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {count}
-                                </Badge>
-                              </div>
-                            ))}
+                        <div className="pl-13 space-y-1">
+                            {activityList.map(([activityName, count]) => {
+                              const activityKey = `${leader.id}-${activityName}`;
+                              const isActivityExpanded = expandedActivity === activityKey;
+                              const participants = leader.activityParticipants.get(activityName) || [];
+
+                              return (
+                                <div key={activityName}>
+                                  <button
+                                    className="w-full flex items-center justify-between py-1.5 text-sm hover:bg-muted/50 rounded px-2 -mx-2 transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setExpandedActivity(isActivityExpanded ? null : activityKey);
+                                    }}
+                                  >
+                                    <span className="text-muted-foreground flex items-center gap-1">
+                                      <ChevronRight className={`h-3 w-3 transition-transform ${isActivityExpanded ? 'rotate-90' : ''}`} />
+                                      {activityName}
+                                    </span>
+                                    <Badge variant="outline" className="text-xs">
+                                      {count}
+                                    </Badge>
+                                  </button>
+
+                                  {isActivityExpanded && participants.length > 0 && (
+                                    <div className="pl-4 py-1 space-y-1 border-l-2 border-muted ml-1.5 mb-2">
+                                      {participants.map((p) => (
+                                        <div
+                                          key={p.id}
+                                          className="flex items-center justify-between text-xs py-0.5"
+                                        >
+                                          <span>{p.name}</span>
+                                          {p.cabin && (
+                                            <span className="text-muted-foreground">{p.cabin}</span>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
