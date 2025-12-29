@@ -47,17 +47,16 @@ export default function Onboarding() {
     try {
       // Compress image before upload
       const compressedFile = await compressImage(file);
-      const fileName = `${leader.id}-${Date.now()}.jpg`;
-      const filePath = `profile-images/${fileName}`;
+      const filePath = `leader-profiles/${leader.id}-${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
-        .from('leaders')
+        .from('participant-images')
         .upload(filePath, compressedFile, { upsert: true, contentType: 'image/jpeg' });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('leaders')
+        .from('participant-images')
         .getPublicUrl(filePath);
 
       setImageUrl(publicUrl);
