@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,8 +27,9 @@ import { differenceInYears } from 'date-fns';
 import type { Tables } from '@/integrations/supabase/types';
 import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
 import { BulkActivityRegistration } from '@/components/passport/BulkActivityRegistration';
-import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
+import { ParticipantDetailDialog, fetchParticipantDetail, fetchParticipantActivities, fetchHealthInfo } from '@/components/passport/ParticipantDetailDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { CachedImage } from '@/components/ui/cached-image';
 
 type Cabin = Tables<'cabins'>;
 
@@ -121,6 +122,7 @@ async function fetchLeaderCabins(): Promise<Map<string, { id: string; name: stri
 
 export default function Passport() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { leader } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const cabinFilterFromUrl = searchParams.get('cabin');
@@ -204,6 +206,25 @@ export default function Passport() {
     setMyCabinsFilter(false);
     setSearchParams({});
   };
+
+  // Prefetch participant data on hover for faster dialog open
+  const prefetchParticipant = useCallback((participantId: string) => {
+    queryClient.prefetchQuery({
+      queryKey: ['participant-detail', participantId],
+      queryFn: () => fetchParticipantDetail(participantId),
+      staleTime: 30000,
+    });
+    queryClient.prefetchQuery({
+      queryKey: ['participant-activities', participantId],
+      queryFn: () => fetchParticipantActivities(participantId),
+      staleTime: 30000,
+    });
+    queryClient.prefetchQuery({
+      queryKey: ['participant-health-info', participantId],
+      queryFn: () => fetchHealthInfo(participantId),
+      staleTime: 30000,
+    });
+  }, [queryClient]);
 
   // Handler for opening participant detail dialog
   const handleParticipantClick = (participantId: string) => {
@@ -476,6 +497,8 @@ export default function Passport() {
                                     participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
                                   }`}
                                   onClick={() => handleParticipantClick(participant.id)}
+                                  onMouseEnter={() => prefetchParticipant(participant.id)}
+                                  onTouchStart={() => prefetchParticipant(participant.id)}
                                 >
                                   <div className="flex items-start gap-3">
                                     <Avatar className="w-10 h-10 shrink-0">
@@ -543,6 +566,8 @@ export default function Passport() {
                                     participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
                                   }`}
                                   onClick={() => handleParticipantClick(participant.id)}
+                                  onMouseEnter={() => prefetchParticipant(participant.id)}
+                                  onTouchStart={() => prefetchParticipant(participant.id)}
                                 >
                                   <div className="flex items-start gap-3">
                                     <Avatar className="w-10 h-10 shrink-0">

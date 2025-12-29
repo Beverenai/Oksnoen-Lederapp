@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -9,13 +10,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Camera, CheckCircle, XCircle, Loader2, Stethoscope, Heart, Trophy } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
 import { compressImage } from '@/lib/imageUtils';
+import { CachedImage } from '@/components/ui/cached-image';
 
 interface ParticipantWithCabin {
   id: string;
@@ -39,12 +40,6 @@ interface ParticipantActivity {
   completed_at: string | null;
 }
 
-interface HealthNote {
-  id: string;
-  content: string;
-  created_at: string;
-}
-
 interface HealthInfo {
   id: string;
   info: string;
@@ -56,6 +51,36 @@ interface ParticipantDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onParticipantUpdated?: () => void;
+}
+
+// Fetch functions for React Query
+async function fetchParticipantDetail(participantId: string): Promise<ParticipantWithCabin> {
+  const { data, error } = await supabase
+    .from('participants')
+    .select('*, cabin:cabins(id, name)')
+    .eq('id', participantId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function fetchParticipantActivities(participantId: string): Promise<ParticipantActivity[]> {
+  const { data, error } = await supabase
+    .from('participant_activities')
+    .select('id, activity, completed_at')
+    .eq('participant_id', participantId);
+  if (error) throw error;
+  return data || [];
+}
+
+async function fetchHealthInfo(participantId: string): Promise<HealthInfo | null> {
+  const { data, error } = await supabase
+    .from('participant_health_info')
+    .select('id, info, participant_id')
+    .eq('participant_id', participantId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 const calculateAge = (birthDate: string | null): number | null => {
@@ -70,6 +95,9 @@ const calculateAge = (birthDate: string | null): number | null => {
   return age;
 };
 
+// Export fetch functions for prefetching
+export { fetchParticipantDetail, fetchParticipantActivities, fetchHealthInfo };
+
 export const ParticipantDetailDialog = ({
   participantId,
   open,
@@ -77,78 +105,46 @@ export const ParticipantDetailDialog = ({
   onParticipantUpdated,
 }: ParticipantDetailDialogProps) => {
   const { isAdmin, isNurse } = useAuth();
-  const [participant, setParticipant] = useState<ParticipantWithCabin | null>(null);
-  const [activities, setActivities] = useState<ParticipantActivity[]>([]);
-  const [healthNotes, setHealthNotes] = useState<HealthNote[]>([]);
-  const [healthInfo, setHealthInfo] = useState<HealthInfo | null>(null);
+  const queryClient = useQueryClient();
   const [activityNotes, setActivityNotes] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isTogglingArrival, setIsTogglingArrival] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadParticipant = async (showLoading = true) => {
-    if (!participantId) return;
+  // Fetch participant detail with caching
+  const { data: participant, isLoading, refetch: refetchParticipant } = useQuery({
+    queryKey: ['participant-detail', participantId],
+    queryFn: () => fetchParticipantDetail(participantId!),
+    enabled: open && !!participantId,
+    staleTime: 30000, // 30 seconds
+    gcTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-    if (showLoading) setIsLoading(true);
-    try {
-      // Load participant data
-      const { data: participantData, error: participantError } = await supabase
-        .from('participants')
-        .select('*, cabin:cabins(id, name)')
-        .eq('id', participantId)
-        .single();
+  // Fetch activities with caching
+  const { data: activities = [], refetch: refetchActivities } = useQuery({
+    queryKey: ['participant-activities', participantId],
+    queryFn: () => fetchParticipantActivities(participantId!),
+    enabled: open && !!participantId,
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
+  });
 
-      if (participantError) throw participantError;
-      setParticipant(participantData);
-      setActivityNotes(participantData.activity_notes || '');
+  // Fetch health info with caching
+  const { data: healthInfo } = useQuery({
+    queryKey: ['participant-health-info', participantId],
+    queryFn: () => fetchHealthInfo(participantId!),
+    enabled: open && !!participantId,
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
+  });
 
-      // Load activities
-      const { data: activitiesData, error: activitiesError } = await supabase
-        .from('participant_activities')
-        .select('id, activity, completed_at')
-        .eq('participant_id', participantId);
-
-      if (activitiesError) throw activitiesError;
-      setActivities(activitiesData || []);
-
-      // Load health notes (nurse notes)
-      const { data: healthNotesData, error: healthNotesError } = await supabase
-        .from('participant_health_notes')
-        .select('id, content, created_at')
-        .eq('participant_id', participantId)
-        .order('created_at', { ascending: false });
-
-      if (healthNotesError) throw healthNotesError;
-      setHealthNotes(healthNotesData || []);
-
-      // Load health info (nurse public info for leaders)
-      const { data: healthInfoData, error: healthInfoError } = await supabase
-        .from('participant_health_info')
-        .select('id, info, participant_id')
-        .eq('participant_id', participantId)
-        .maybeSingle();
-
-      if (healthInfoError) throw healthInfoError;
-      setHealthInfo(healthInfoData || null);
-    } catch (error) {
-      console.error('Error loading participant:', error);
-      toast({
-        title: 'Feil',
-        description: 'Kunne ikke laste deltaker',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+  // Update activity notes when participant changes
+  useState(() => {
+    if (participant?.activity_notes !== undefined) {
+      setActivityNotes(participant.activity_notes || '');
     }
-  };
-
-  useEffect(() => {
-    if (open && participantId) {
-      loadParticipant();
-    }
-  }, [open, participantId]);
+  });
 
   const handleSaveActivityNotes = async () => {
     if (!participant) return;
@@ -185,7 +181,6 @@ export const ParticipantDetailDialog = ({
 
     setIsUploadingImage(true);
     try {
-      // Compress image before upload
       const compressedFile = await compressImage(file);
       const fileName = `${participant.id}.jpg`;
       const filePath = `${fileName}`;
@@ -209,7 +204,12 @@ export const ParticipantDetailDialog = ({
 
       if (updateError) throw updateError;
 
-      setParticipant({ ...participant, image_url: imageUrlWithTimestamp });
+      // Update cache
+      queryClient.setQueryData(['participant-detail', participant.id], {
+        ...participant,
+        image_url: imageUrlWithTimestamp,
+      });
+
       toast({
         title: 'Bilde lastet opp',
         description: 'Profilbildet er oppdatert',
@@ -240,7 +240,12 @@ export const ParticipantDetailDialog = ({
 
       if (error) throw error;
 
-      setParticipant({ ...participant, has_arrived: newStatus });
+      // Update cache
+      queryClient.setQueryData(['participant-detail', participant.id], {
+        ...participant,
+        has_arrived: newStatus,
+      });
+
       toast({
         title: newStatus ? 'Ankommet' : 'Ikke ankommet',
         description: `${participant.name} er markert som ${newStatus ? 'ankommet' : 'ikke ankommet'}`,
@@ -256,6 +261,10 @@ export const ParticipantDetailDialog = ({
     } finally {
       setIsTogglingArrival(false);
     }
+  };
+
+  const handleActivityChanged = () => {
+    refetchActivities();
   };
 
   const age = participant ? calculateAge(participant.birth_date) : null;
@@ -275,14 +284,19 @@ export const ParticipantDetailDialog = ({
           </div>
         ) : participant ? (
           <>
-            {/* Large hero image at top - reduced height on mobile */}
+            {/* Large hero image at top */}
             <div className="relative w-full h-32 sm:h-48 bg-muted">
               {participant.image_url ? (
-                <img
+                <CachedImage
                   src={participant.image_url}
                   alt={participant.name}
                   className="w-full h-full object-cover"
-                  loading="lazy"
+                  loading="eager"
+                  fallback={
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/20">
+                      <span className="text-4xl sm:text-6xl font-bold text-muted-foreground/50">{initials}</span>
+                    </div>
+                  }
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/20">
@@ -311,12 +325,11 @@ export const ParticipantDetailDialog = ({
               />
             </div>
 
-            {/* Content below image - reduced padding */}
+            {/* Content below image */}
             <div className="p-4 sm:p-6">
               <DialogHeader className="text-center mb-3">
                 <DialogTitle className="text-lg sm:text-xl">{participant.name}</DialogTitle>
 
-                {/* Age, cabin, room info + arrival badge inline */}
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground flex-wrap">
                   {age !== null && <span>{age} år</span>}
                   {age !== null && participant.cabin && <span>•</span>}
@@ -335,7 +348,7 @@ export const ParticipantDetailDialog = ({
               </DialogHeader>
 
               <div className="space-y-4">
-                {/* Info fra Nurse (public - visible to all) */}
+                {/* Info fra Nurse */}
                 {healthInfo?.info && (
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2 text-sm font-medium">
@@ -360,11 +373,11 @@ export const ParticipantDetailDialog = ({
                   <ActivityManager
                     participantId={participant.id}
                     completedActivities={activities}
-                    onActivityChanged={() => loadParticipant(false)}
+                    onActivityChanged={handleActivityChanged}
                   />
                 </div>
 
-                {/* Activity Notes - for leaders to write achievements */}
+                {/* Activity Notes */}
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <Trophy className="h-4 w-4 text-amber-600" />

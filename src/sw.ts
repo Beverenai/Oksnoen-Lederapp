@@ -1,6 +1,10 @@
 /// <reference lib="webworker" />
 import { precacheAndRoute } from 'workbox-precaching';
 import { clientsClaim } from 'workbox-core';
+import { registerRoute } from 'workbox-routing';
+import { CacheFirst } from 'workbox-strategies';
+import { ExpirationPlugin } from 'workbox-expiration';
+import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -19,6 +23,46 @@ self.addEventListener('install', () => {
 self.addEventListener('activate', () => {
   console.log('[SW] Service worker activated');
 });
+
+// === IMAGE CACHING ===
+
+// Cache participant images from Supabase Storage for 7 days
+registerRoute(
+  ({ url }) => 
+    url.hostname.includes('supabase.co') && 
+    url.pathname.includes('/storage/v1/object/public/participant-images'),
+  new CacheFirst({
+    cacheName: 'participant-images-cache',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 500, // Max 500 images
+        maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+      }),
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+    ],
+  })
+);
+
+// Cache fix-images as well
+registerRoute(
+  ({ url }) => 
+    url.hostname.includes('supabase.co') && 
+    url.pathname.includes('/storage/v1/object/public/fix-images'),
+  new CacheFirst({
+    cacheName: 'fix-images-cache',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 100,
+        maxAgeSeconds: 7 * 24 * 60 * 60,
+      }),
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+    ],
+  })
+);
 
 // === PUSH NOTIFICATION HANDLERS ===
 
