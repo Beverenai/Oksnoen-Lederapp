@@ -436,7 +436,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
       {/* Mobile Bottom Navigation */}
       <nav 
-        className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-card border-t border-border shadow-lg z-[60] flex items-center justify-around px-2 pb-safe"
+        className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-card border-t border-border shadow-lg z-30 flex items-center justify-around px-2 pb-safe"
         style={{ transform: 'translate3d(0,0,0)' }}
       >
         {getBottomNavItems(isAdmin, isNurse).map((item) => {
