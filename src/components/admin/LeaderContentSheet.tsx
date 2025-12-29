@@ -7,15 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send, Car, Anchor, Mountain, ArrowDown, Cable, Wrench } from 'lucide-react';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, Check, Home } from 'lucide-react';
 import { icons } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { useAuth } from '@/contexts/AuthContext';
-
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
 
@@ -89,9 +89,13 @@ export function LeaderContentSheet({
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
 
+  // Cabin multi-select state
+  const [cabins, setCabins] = useState<{ id: string; name: string }[]>([]);
+  const [selectedCabinIds, setSelectedCabinIds] = useState<string[]>([]);
+  const [cabinSearch, setCabinSearch] = useState('');
+
   // Leader fields
   const [team, setTeam] = useState(leader?.team || '');
-  const [cabin, setCabin] = useState(leader?.cabin || '');
   const [ministerpost, setMinisterpost] = useState(leader?.ministerpost || '');
 
   // Content fields
@@ -105,11 +109,35 @@ export function LeaderContentSheet({
   const [extra4, setExtra4] = useState('');
   const [extra5, setExtra5] = useState('');
 
+  // Load all cabins once
+  useEffect(() => {
+    const loadCabins = async () => {
+      const { data } = await supabase
+        .from('cabins')
+        .select('id, name')
+        .order('sort_order', { ascending: true });
+      setCabins(data || []);
+    };
+    loadCabins();
+  }, []);
+
+  // Load leader's existing cabin links when leader changes
+  useEffect(() => {
+    const loadLeaderCabins = async () => {
+      if (!leader) return;
+      const { data } = await supabase
+        .from('leader_cabins')
+        .select('cabin_id')
+        .eq('leader_id', leader.id);
+      setSelectedCabinIds(data?.map(d => d.cabin_id) || []);
+    };
+    loadLeaderCabins();
+  }, [leader?.id]);
+
   // Reset form when leader changes
   useEffect(() => {
     if (leader) {
       setTeam(leader.team || '');
-      setCabin(leader.cabin || '');
       setMinisterpost(leader.ministerpost || '');
 
       const content = leader.content;
@@ -129,7 +157,16 @@ export function LeaderContentSheet({
     }
     // Reset editing state when leader changes
     setEditingField(null);
+    setCabinSearch('');
   }, [leader]);
+
+  const toggleCabin = (cabinId: string) => {
+    setSelectedCabinIds(prev =>
+      prev.includes(cabinId)
+        ? prev.filter(id => id !== cabinId)
+        : [...prev, cabinId]
+    );
+  };
 
   const handleSendNotification = async () => {
     if (!leader || !notificationTitle.trim() || !currentLeader) return;
@@ -199,17 +236,44 @@ export function LeaderContentSheet({
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Get selected cabin names for the leaders.cabin field
+      const selectedCabinNames = cabins
+        .filter(c => selectedCabinIds.includes(c.id))
+        .map(c => c.name)
+        .join(', ');
+
       // Update leader info
       const { error: leaderError } = await supabase
         .from('leaders')
         .update({
           team: team || null,
-          cabin: cabin || null,
+          cabin: selectedCabinNames || null,
           ministerpost: ministerpost || null
         })
         .eq('id', leader.id);
 
       if (leaderError) throw leaderError;
+
+      // Update leader_cabins table - delete existing and insert new
+      const { error: deleteError } = await supabase
+        .from('leader_cabins')
+        .delete()
+        .eq('leader_id', leader.id);
+
+      if (deleteError) throw deleteError;
+
+      if (selectedCabinIds.length > 0) {
+        const { error: insertError } = await supabase
+          .from('leader_cabins')
+          .insert(
+            selectedCabinIds.map(cabinId => ({
+              leader_id: leader.id,
+              cabin_id: cabinId
+            }))
+          );
+
+        if (insertError) throw insertError;
+      }
 
       // Upsert content
       const contentData = {
@@ -304,29 +368,58 @@ export function LeaderContentSheet({
               </PopoverContent>
             </Popover>
 
-            {/* Cabin Badge */}
-            <Popover open={editingField === 'cabin'} onOpenChange={(open) => setEditingField(open ? 'cabin' : null)}>
+            {/* Cabin Badge - with searchable multi-select dropdown */}
+            <Popover open={editingField === 'cabin'} onOpenChange={(open) => {
+              setEditingField(open ? 'cabin' : null);
+              if (!open) setCabinSearch('');
+            }}>
               <PopoverTrigger asChild>
                 <button type="button" className="focus:outline-none">
                   <Badge 
                     variant="outline"
-                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                    className="cursor-pointer hover:opacity-80 transition-opacity max-w-[200px] truncate"
                   >
-                    {cabin || 'Hytte-ansvar'}
-                    <Pencil className="w-3 h-3 ml-1" />
+                    <Home className="w-3 h-3 mr-1 flex-shrink-0" />
+                    {selectedCabinIds.length > 0 
+                      ? cabins.filter(c => selectedCabinIds.includes(c.id)).map(c => c.name).join(', ')
+                      : 'Hytte-ansvar'}
+                    <Pencil className="w-3 h-3 ml-1 flex-shrink-0" />
                   </Badge>
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-56 p-3 bg-popover z-[100]" align="start" side="bottom" sideOffset={4}>
-                <div className="space-y-2">
-                  <Label className="text-xs">Hytte-ansvar</Label>
-                  <Input
-                    value={cabin}
-                    onChange={(e) => setCabin(e.target.value)}
-                    placeholder="f.eks. Fyansen"
-                    autoFocus
-                    onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
+              <PopoverContent className="w-72 p-0 bg-popover z-[100]" align="start" side="bottom" sideOffset={4}>
+                <Command shouldFilter={false}>
+                  <CommandInput 
+                    placeholder="Søk etter hytte..." 
+                    value={cabinSearch}
+                    onValueChange={setCabinSearch}
                   />
+                  <CommandList>
+                    <CommandEmpty>Ingen hytter funnet</CommandEmpty>
+                    <CommandGroup>
+                      <ScrollArea className="h-60">
+                        {cabins
+                          .filter(c => c.name.toLowerCase().includes(cabinSearch.toLowerCase()))
+                          .map(cabin => (
+                            <CommandItem
+                              key={cabin.id}
+                              onSelect={() => toggleCabin(cabin.id)}
+                              className="cursor-pointer"
+                            >
+                              <Check 
+                                className={`mr-2 h-4 w-4 ${
+                                  selectedCabinIds.includes(cabin.id) ? 'opacity-100' : 'opacity-0'
+                                }`}
+                              />
+                              <Home className="mr-2 h-4 w-4 text-muted-foreground" />
+                              {cabin.name}
+                            </CommandItem>
+                          ))}
+                      </ScrollArea>
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+                <div className="p-2 border-t">
                   <Button size="sm" onClick={() => setEditingField(null)} className="w-full">
                     Ferdig
                   </Button>
