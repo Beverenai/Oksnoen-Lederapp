@@ -51,6 +51,12 @@
     --sidebar-border: 220 15% 90%;
     --sidebar-ring: 152 60% 40%;
 
+    --chart-1: 152 60% 40%;
+    --chart-2: 35 95% 55%;
+    --chart-3: 200 70% 50%;
+    --chart-4: 280 60% 55%;
+    --chart-5: 340 75% 55%;
+
     --font-heading: 'Space Grotesk', sans-serif;
     --font-body: 'Inter', sans-serif;
   }
@@ -98,6 +104,12 @@
     --sidebar-accent-foreground: 220 10% 90%;
     --sidebar-border: 220 20% 18%;
     --sidebar-ring: 152 55% 45%;
+
+    --chart-1: 152 55% 50%;
+    --chart-2: 35 90% 55%;
+    --chart-3: 200 65% 55%;
+    --chart-4: 280 55% 60%;
+    --chart-5: 340 70% 60%;
   }
 }
 
