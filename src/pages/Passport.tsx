@@ -432,6 +432,7 @@ export default function Passport() {
                                         <StyrkeproveBadges 
                                           completedActivities={completedActivities} 
                                           showCount 
+                                          compact
                                         />
                                       </div>
                                     </div>
