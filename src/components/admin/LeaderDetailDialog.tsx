@@ -192,16 +192,16 @@ export function LeaderDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>Rediger leder</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">Rediger leder</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Profile Image - Clickable Avatar */}
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-2 sm:gap-3">
             <Label htmlFor="profile-image" className="cursor-pointer group relative">
-              <Avatar className="w-24 h-24 ring-2 ring-border group-hover:ring-primary transition-all">
+              <Avatar className="w-16 h-16 sm:w-24 sm:h-24 ring-2 ring-border group-hover:ring-primary transition-all">
                 <AvatarImage src={profileImageUrl} alt={name} />
                 <AvatarFallback className="text-xl">{getInitials(name)}</AvatarFallback>
               </Avatar>
@@ -227,7 +227,7 @@ export function LeaderDetailDialog({
           <Separator />
 
           {/* Basic Info */}
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="name">Navn</Label>
               <Input
@@ -265,7 +265,7 @@ export function LeaderDetailDialog({
           </div>
 
           {/* Team/Cabin Info */}
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="team">Team</Label>
               <Input
@@ -325,9 +325,9 @@ export function LeaderDetailDialog({
           <Separator />
 
           {/* Certifications */}
-          <div className="space-y-3">
-            <Label className="text-base font-semibold">Sertifiseringer og utstyr</Label>
-            <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2 sm:space-y-3">
+            <Label className="text-sm sm:text-base font-semibold">Sertifiseringer og utstyr</Label>
+            <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="hasCar"

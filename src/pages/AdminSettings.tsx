@@ -479,34 +479,34 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="leaders" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
-          <TabsTrigger value="leaders" className="gap-2">
-            <Users className="w-4 h-4 hidden sm:block" />
-            Ledere
+        <TabsList className="flex flex-wrap gap-1 w-full h-auto p-1 lg:w-auto lg:inline-flex">
+          <TabsTrigger value="leaders" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline sm:inline">Ledere</span>
           </TabsTrigger>
-          <TabsTrigger value="cabins" className="gap-2">
-            <Home className="w-4 h-4 hidden sm:block" />
-            Hytter
+          <TabsTrigger value="cabins" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <Home className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline sm:inline">Hytter</span>
           </TabsTrigger>
-          <TabsTrigger value="participants" className="gap-2">
-            <Users className="w-4 h-4 hidden sm:block" />
-            Deltakere
+          <TabsTrigger value="participants" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline sm:inline">Deltakere</span>
           </TabsTrigger>
-          <TabsTrigger value="schedule" className="gap-2">
-            <Calendar className="w-4 h-4 hidden sm:block" />
-            Vaktplan
+          <TabsTrigger value="schedule" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline sm:inline">Vakt</span>
           </TabsTrigger>
-          <TabsTrigger value="push" className="gap-2">
-            <Bell className="w-4 h-4 hidden sm:block" />
-            Push
+          <TabsTrigger value="push" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline sm:inline">Push</span>
           </TabsTrigger>
-          <TabsTrigger value="sync" className="gap-2">
-            <RefreshCw className="w-4 h-4 hidden sm:block" />
-            Synk
+          <TabsTrigger value="sync" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline sm:inline">Synk</span>
           </TabsTrigger>
-          <TabsTrigger value="setup" className="gap-2">
-            <Settings className="w-4 h-4 hidden sm:block" />
-            Oppsett
+          <TabsTrigger value="setup" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline sm:inline">Oppsett</span>
           </TabsTrigger>
         </TabsList>
 

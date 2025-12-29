@@ -283,7 +283,7 @@ export function LeaderContentSheet({
                   </Badge>
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-48 p-2 bg-popover" align="start">
+              <PopoverContent className="w-48 p-2 bg-popover z-[100]" align="start" side="bottom" sideOffset={4}>
                 <div className="space-y-1">
                   <button
                     className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted"
@@ -317,7 +317,7 @@ export function LeaderContentSheet({
                   </Badge>
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-56 p-3 bg-popover" align="start">
+              <PopoverContent className="w-56 p-3 bg-popover z-[100]" align="start" side="bottom" sideOffset={4}>
                 <div className="space-y-2">
                   <Label className="text-xs">Hytte-ansvar</Label>
                   <Input
@@ -347,7 +347,7 @@ export function LeaderContentSheet({
                   </Badge>
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-56 p-3 bg-popover" align="start">
+              <PopoverContent className="w-56 p-3 bg-popover z-[100]" align="start" side="bottom" sideOffset={4}>
                 <div className="space-y-2">
                   <Label className="text-xs">Ministerpost</Label>
                   <Input
