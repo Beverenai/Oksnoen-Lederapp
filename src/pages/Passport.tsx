@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { BulkActivityRegistration } from '@/components/passport/BulkActivityRegistration';
-import { ParticipantDetailDialog, fetchParticipantDetail, fetchParticipantActivities, fetchHealthInfo } from '@/components/passport/ParticipantDetailDialog';
+import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { VirtualizedParticipantList } from '@/components/passport/VirtualizedParticipantList';
 
@@ -52,28 +52,26 @@ interface CabinGroup {
   leaders: { id: string; name: string }[];
 }
 
-// Fetch participants with cabin info
-async function fetchParticipants(): Promise<ParticipantWithCabin[]> {
-  const { data, error } = await supabase
-    .from('participants')
-    .select('*, cabins(*)')
-    .order('name');
+// Fetch participants via edge function
+async function fetchParticipantsSecure(leaderId: string): Promise<ParticipantWithCabin[]> {
+  const { data, error } = await supabase.functions.invoke('get-participants', {
+    body: { leader_id: leaderId }
+  });
   if (error) throw error;
-  return (data || []) as ParticipantWithCabin[];
+  return (data?.participants || []) as ParticipantWithCabin[];
 }
 
-// Fetch all activities grouped by participant
-async function fetchActivitiesMap(): Promise<Map<string, string[]>> {
-  const { data, error } = await supabase
-    .from('participant_activities')
-    .select('participant_id, activity');
+// Fetch all activities grouped by participant via edge function
+async function fetchActivitiesMapSecure(leaderId: string): Promise<Map<string, string[]>> {
+  const { data, error } = await supabase.functions.invoke('get-participants', {
+    body: { leader_id: leaderId, include_activities: true }
+  });
   if (error) throw error;
   
   const map = new Map<string, string[]>();
-  (data || []).forEach(row => {
-    const existing = map.get(row.participant_id) || [];
-    existing.push(row.activity);
-    map.set(row.participant_id, existing);
+  const activitiesMap = data?.activitiesMap || {};
+  Object.entries(activitiesMap).forEach(([participantId, activities]) => {
+    map.set(participantId, (activities as any[]).map(a => a.activity));
   });
   return map;
 }
@@ -120,17 +118,19 @@ export default function Passport() {
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
   const [showBulkRegistration, setShowBulkRegistration] = useState(false);
 
-  // React Query for cached data fetching
+  // React Query for cached data fetching via edge function
   const { data: participants = [], isLoading: isLoadingParticipants, refetch: refetchParticipants } = useQuery({
-    queryKey: ['participants-with-cabins'],
-    queryFn: fetchParticipants,
+    queryKey: ['participants-with-cabins', leader?.id],
+    queryFn: () => fetchParticipantsSecure(leader!.id),
+    enabled: !!leader?.id,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
   });
 
   const { data: activitiesMap = new Map<string, string[]>(), refetch: refetchActivities } = useQuery({
-    queryKey: ['participant-activities-map'],
-    queryFn: fetchActivitiesMap,
+    queryKey: ['participant-activities-map', leader?.id],
+    queryFn: () => fetchActivitiesMapSecure(leader!.id),
+    enabled: !!leader?.id,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
   });
@@ -193,30 +193,16 @@ export default function Passport() {
     setSearchParams({});
   };
 
-  // Prefetch participant data on hover for faster dialog open
-  const prefetchParticipant = useCallback((participantId: string) => {
-    queryClient.prefetchQuery({
-      queryKey: ['participant-detail', participantId],
-      queryFn: () => fetchParticipantDetail(participantId),
-      staleTime: 30000,
-    });
-    queryClient.prefetchQuery({
-      queryKey: ['participant-activities', participantId],
-      queryFn: () => fetchParticipantActivities(participantId),
-      staleTime: 30000,
-    });
-    queryClient.prefetchQuery({
-      queryKey: ['participant-health-info', participantId],
-      queryFn: () => fetchHealthInfo(participantId),
-      staleTime: 30000,
-    });
-  }, [queryClient]);
-
   // Handler for opening participant detail dialog
   const handleParticipantClick = (participantId: string) => {
     setSelectedParticipantId(participantId);
     setIsDetailDialogOpen(true);
   };
+
+  // Prefetch is handled by the edge function now
+  const prefetchParticipant = useCallback((participantId: string) => {
+    // Optional: could prefetch via edge function if needed
+  }, []);
 
   // Get activities for a participant
   const getParticipantActivities = (participantId: string): string[] => {

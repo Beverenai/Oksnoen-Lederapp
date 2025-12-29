@@ -3,6 +3,9 @@ project_id = "noxnbtvxksgjsqzfdgcd"
 [functions.phone-login]
 verify_jwt = false
 
+[functions.get-participants]
+verify_jwt = false
+
 [functions.sync-leaders-export]
 verify_jwt = false
 

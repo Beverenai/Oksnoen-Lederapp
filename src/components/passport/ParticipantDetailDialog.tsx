@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -53,34 +53,26 @@ interface ParticipantDetailDialogProps {
   onParticipantUpdated?: () => void;
 }
 
-// Fetch functions for React Query
-async function fetchParticipantDetail(participantId: string): Promise<ParticipantWithCabin> {
-  const { data, error } = await supabase
-    .from('participants')
-    .select('*, cabin:cabins(id, name)')
-    .eq('id', participantId)
-    .single();
+// Fetch participant detail via edge function
+async function fetchParticipantDetailSecure(leaderId: string, participantId: string): Promise<{
+  participant: ParticipantWithCabin;
+  healthInfo: HealthInfo | null;
+  activities: ParticipantActivity[];
+}> {
+  const { data, error } = await supabase.functions.invoke('get-participants', {
+    body: { 
+      leader_id: leaderId, 
+      participant_id: participantId,
+      include_health_info: true,
+      include_activities: true
+    }
+  });
   if (error) throw error;
-  return data;
-}
-
-async function fetchParticipantActivities(participantId: string): Promise<ParticipantActivity[]> {
-  const { data, error } = await supabase
-    .from('participant_activities')
-    .select('id, activity, completed_at')
-    .eq('participant_id', participantId);
-  if (error) throw error;
-  return data || [];
-}
-
-async function fetchHealthInfo(participantId: string): Promise<HealthInfo | null> {
-  const { data, error } = await supabase
-    .from('participant_health_info')
-    .select('id, info, participant_id')
-    .eq('participant_id', participantId)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
+  return {
+    participant: data.participant,
+    healthInfo: data.healthInfo,
+    activities: data.activities || []
+  };
 }
 
 const calculateAge = (birthDate: string | null): number | null => {
@@ -95,16 +87,13 @@ const calculateAge = (birthDate: string | null): number | null => {
   return age;
 };
 
-// Export fetch functions for prefetching
-export { fetchParticipantDetail, fetchParticipantActivities, fetchHealthInfo };
-
 export const ParticipantDetailDialog = ({
   participantId,
   open,
   onOpenChange,
   onParticipantUpdated,
 }: ParticipantDetailDialogProps) => {
-  const { isAdmin, isNurse } = useAuth();
+  const { leader, isAdmin, isNurse } = useAuth();
   const queryClient = useQueryClient();
   const [activityNotes, setActivityNotes] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -112,49 +101,39 @@ export const ParticipantDetailDialog = ({
   const [isTogglingArrival, setIsTogglingArrival] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch participant detail with caching
-  const { data: participant, isLoading, refetch: refetchParticipant } = useQuery({
-    queryKey: ['participant-detail', participantId],
-    queryFn: () => fetchParticipantDetail(participantId!),
-    enabled: open && !!participantId,
-    staleTime: 30000, // 30 seconds
-    gcTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Fetch activities with caching
-  const { data: activities = [], refetch: refetchActivities } = useQuery({
-    queryKey: ['participant-activities', participantId],
-    queryFn: () => fetchParticipantActivities(participantId!),
-    enabled: open && !!participantId,
+  // Fetch participant detail with caching via edge function
+  const { data, isLoading, refetch: refetchParticipant } = useQuery({
+    queryKey: ['participant-detail-secure', leader?.id, participantId],
+    queryFn: () => fetchParticipantDetailSecure(leader!.id, participantId!),
+    enabled: open && !!participantId && !!leader?.id,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
   });
 
-  // Fetch health info with caching
-  const { data: healthInfo } = useQuery({
-    queryKey: ['participant-health-info', participantId],
-    queryFn: () => fetchHealthInfo(participantId!),
-    enabled: open && !!participantId,
-    staleTime: 30000,
-    gcTime: 5 * 60 * 1000,
-  });
+  const participant = data?.participant;
+  const healthInfo = data?.healthInfo;
+  const activities = data?.activities || [];
 
   // Update activity notes when participant changes
-  useState(() => {
+  useEffect(() => {
     if (participant?.activity_notes !== undefined) {
       setActivityNotes(participant.activity_notes || '');
     }
-  });
+  }, [participant?.activity_notes]);
 
   const handleSaveActivityNotes = async () => {
-    if (!participant) return;
+    if (!participant || !leader) return;
 
     setIsSavingNotes(true);
     try {
-      const { error } = await supabase
-        .from('participants')
-        .update({ activity_notes: activityNotes })
-        .eq('id', participant.id);
+      const { data, error } = await supabase.functions.invoke('get-participants', {
+        body: {
+          leader_id: leader.id,
+          participant_id: participant.id,
+          action: 'update',
+          update_data: { activity_notes: activityNotes }
+        }
+      });
 
       if (error) throw error;
 
@@ -162,6 +141,7 @@ export const ParticipantDetailDialog = ({
         title: 'Lagret',
         description: 'Aktivitetsnotater er oppdatert',
       });
+      refetchParticipant();
       onParticipantUpdated?.();
     } catch (error) {
       console.error('Error saving activity notes:', error);
@@ -177,7 +157,7 @@ export const ParticipantDetailDialog = ({
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !participant) return;
+    if (!file || !participant || !leader) return;
 
     setIsUploadingImage(true);
     try {
@@ -197,23 +177,23 @@ export const ParticipantDetailDialog = ({
 
       const imageUrlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
 
-      const { error: updateError } = await supabase
-        .from('participants')
-        .update({ image_url: imageUrlWithTimestamp })
-        .eq('id', participant.id);
+      // Update via edge function
+      const { error: updateError } = await supabase.functions.invoke('get-participants', {
+        body: {
+          leader_id: leader.id,
+          participant_id: participant.id,
+          action: 'update',
+          update_data: { image_url: imageUrlWithTimestamp }
+        }
+      });
 
       if (updateError) throw updateError;
-
-      // Update cache
-      queryClient.setQueryData(['participant-detail', participant.id], {
-        ...participant,
-        image_url: imageUrlWithTimestamp,
-      });
 
       toast({
         title: 'Bilde lastet opp',
         description: 'Profilbildet er oppdatert',
       });
+      refetchParticipant();
       onParticipantUpdated?.();
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -228,28 +208,28 @@ export const ParticipantDetailDialog = ({
   };
 
   const toggleArrival = async () => {
-    if (!participant) return;
+    if (!participant || !leader) return;
 
     setIsTogglingArrival(true);
     try {
       const newStatus = !participant.has_arrived;
-      const { error } = await supabase
-        .from('participants')
-        .update({ has_arrived: newStatus })
-        .eq('id', participant.id);
+      
+      const { error } = await supabase.functions.invoke('get-participants', {
+        body: {
+          leader_id: leader.id,
+          participant_id: participant.id,
+          action: 'update',
+          update_data: { has_arrived: newStatus }
+        }
+      });
 
       if (error) throw error;
-
-      // Update cache
-      queryClient.setQueryData(['participant-detail', participant.id], {
-        ...participant,
-        has_arrived: newStatus,
-      });
 
       toast({
         title: newStatus ? 'Ankommet' : 'Ikke ankommet',
         description: `${participant.name} er markert som ${newStatus ? 'ankommet' : 'ikke ankommet'}`,
       });
+      refetchParticipant();
       onParticipantUpdated?.();
     } catch (error) {
       console.error('Error toggling arrival:', error);
@@ -264,7 +244,7 @@ export const ParticipantDetailDialog = ({
   };
 
   const handleActivityChanged = () => {
-    refetchActivities();
+    refetchParticipant();
   };
 
   const age = participant ? calculateAge(participant.birth_date) : null;

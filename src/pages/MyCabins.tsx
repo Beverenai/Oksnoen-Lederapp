@@ -79,12 +79,17 @@ export default function MyCabins() {
 
       const cabinIds = leaderCabins.map(lc => lc.cabin_id);
       
-      // Get participants for these cabins
-      const { data: participants } = await supabase
-        .from('participants')
-        .select('*, cabins(*), participant_activities(*)')
-        .in('cabin_id', cabinIds)
-        .order('name');
+      // Get participants via edge function
+      const { data, error } = await supabase.functions.invoke('get-participants', {
+        body: { 
+          leader_id: leader.id,
+          cabin_ids: cabinIds 
+        }
+      });
+
+      if (error) throw error;
+
+      const participants = data?.participants || [];
 
       // Build cabin data with participants
       const cabinData: LeaderCabin[] = leaderCabins
@@ -92,7 +97,7 @@ export default function MyCabins() {
           const cabin = lc.cabins as Cabin;
           if (!cabin) return null;
           
-          const cabinParticipants = (participants || []).filter(p => p.cabin_id === cabin.id);
+          const cabinParticipants = participants.filter((p: ParticipantWithCabin) => p.cabin_id === cabin.id);
           return {
             ...cabin,
             participants: cabinParticipants
@@ -134,11 +139,19 @@ export default function MyCabins() {
   };
 
   const toggleArrival = async (participant: ParticipantWithCabin) => {
+    if (!leader) return;
+    
     try {
-      await supabase
-        .from('participants')
-        .update({ has_arrived: !participant.has_arrived })
-        .eq('id', participant.id);
+      const { error } = await supabase.functions.invoke('get-participants', {
+        body: {
+          leader_id: leader.id,
+          participant_id: participant.id,
+          action: 'update',
+          update_data: { has_arrived: !participant.has_arrived }
+        }
+      });
+      
+      if (error) throw error;
       
       loadData();
       toast.success(participant.has_arrived ? 'Ankomst fjernet' : 'Markert som ankommet!');
@@ -414,71 +427,59 @@ export default function MyCabins() {
       {/* Participant Detail Dialog */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{selectedParticipant?.name}</DialogTitle>
-          </DialogHeader>
           {selectedParticipant && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="w-16 h-16">
-                  <AvatarImage src={selectedParticipant.image_url || undefined} />
-                  <AvatarFallback className="bg-muted text-muted-foreground">
-                    <User className="w-6 h-6" />
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium text-foreground">{selectedParticipant.name}</p>
-                  {selectedParticipant.birth_date && (
-                    <p className="text-sm text-muted-foreground">
-                      {calculateAge(selectedParticipant.birth_date)} år
-                    </p>
-                  )}
-                  {selectedParticipant.room && (
-                    <Badge 
-                      variant="secondary" 
-                      className={`text-xs mt-1 ${
-                        selectedParticipant.room === 'høyre' 
-                          ? 'bg-green-500/20 text-green-700 dark:text-green-400' 
-                          : selectedParticipant.room === 'venstre'
-                            ? 'bg-red-500/20 text-red-700 dark:text-red-400'
-                            : ''
-                      }`}
-                    >
-                      {selectedParticipant.room.charAt(0).toUpperCase() + selectedParticipant.room.slice(1)}
-                    </Badge>
-                  )}
+            <>
+              <DialogHeader>
+                <DialogTitle>{selectedParticipant.name}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="w-16 h-16">
+                    <AvatarImage src={selectedParticipant.image_url || undefined} />
+                    <AvatarFallback className="bg-muted text-muted-foreground text-xl">
+                      <User className="w-8 h-8" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    {selectedParticipant.birth_date && (
+                      <p className="text-sm text-muted-foreground">
+                        {calculateAge(selectedParticipant.birth_date)} år
+                      </p>
+                    )}
+                    {selectedParticipant.room && (
+                      <Badge variant="secondary" className="mt-1">
+                        {selectedParticipant.room}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
+                
+                <StyrkeproveBadges 
+                  completedActivities={(selectedParticipant.participant_activities || []).map(a => a.activity)} 
+                />
+
+                <Button
+                  variant={selectedParticipant.has_arrived ? 'outline' : 'default'}
+                  className="w-full"
+                  onClick={() => {
+                    toggleArrival(selectedParticipant);
+                    setIsDetailDialogOpen(false);
+                  }}
+                >
+                  {selectedParticipant.has_arrived ? (
+                    <>
+                      <Circle className="w-4 h-4 mr-2" />
+                      Fjern ankomst
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Marker som ankommet
+                    </>
+                  )}
+                </Button>
               </div>
-
-              <Button
-                onClick={() => toggleArrival(selectedParticipant)}
-                variant={selectedParticipant.has_arrived ? 'outline' : 'default'}
-                className="w-full"
-              >
-                {selectedParticipant.has_arrived ? (
-                  <>
-                    <Circle className="w-4 h-4 mr-2" />
-                    Fjern ankomst
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Marker som ankommet
-                  </>
-                )}
-              </Button>
-
-              {selectedParticipant.notes && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Notater</p>
-                  <p className="text-sm text-foreground">{selectedParticipant.notes}</p>
-                </div>
-              )}
-
-              <StyrkeproveBadges 
-                completedActivities={(selectedParticipant.participant_activities || []).map(a => a.activity)} 
-              />
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
@@ -488,7 +489,6 @@ export default function MyCabins() {
         open={cabinReportOpen}
         onOpenChange={setCabinReportOpen}
         cabins={selectedCabinForReport}
-        leaderId={leader?.id}
       />
     </div>
   );
