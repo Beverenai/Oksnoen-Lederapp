@@ -13,64 +13,48 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "No authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
-    );
-
-    // Get user
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Get leader by phone
-    const { data: leader } = await supabaseClient
-      .from("leaders")
-      .select("id")
-      .eq("phone", user.phone?.replace("+47", "") || "")
-      .single();
-
-    if (!leader) {
-      return new Response(
-        JSON.stringify({ error: "Leader not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const body = await req.json();
-    const { endpoint } = body;
+    const { endpoint, leader_id } = body;
+
+    // Validate required fields
+    if (!leader_id) {
+      console.error("Missing leader_id in request");
+      return new Response(
+        JSON.stringify({ error: "Leader ID is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!endpoint) {
+      console.error("Missing endpoint in request");
       return new Response(
         JSON.stringify({ error: "Endpoint is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Removing push subscription for leader ${leader.id}`);
-
-    // Use service role to delete subscription
+    // Use service role to verify leader exists and delete subscription
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+
+    // Verify that the leader exists
+    const { data: leader, error: leaderError } = await supabaseAdmin
+      .from("leaders")
+      .select("id")
+      .eq("id", leader_id)
+      .single();
+
+    if (leaderError || !leader) {
+      console.error("Leader not found:", leader_id);
+      return new Response(
+        JSON.stringify({ error: "Leader not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Removing push subscription for leader ${leader.id}`);
 
     const { error: deleteError } = await supabaseAdmin
       .from("push_subscriptions")
