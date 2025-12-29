@@ -436,9 +436,9 @@ export default function Leaders() {
                   
                   {/* Activity - prominent */}
                   {leader.content?.current_activity && (
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <Activity className="w-4 h-4 text-primary shrink-0" />
-                      <span className="text-sm font-medium text-primary truncate">
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <Activity className="w-5 h-5 text-primary shrink-0" />
+                      <span className="text-base font-semibold text-primary truncate">
                         {leader.content.current_activity}
                       </span>
                     </div>
