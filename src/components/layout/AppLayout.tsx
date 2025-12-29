@@ -237,7 +237,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="h-full lg:min-h-screen lg:h-auto bg-background flex flex-col overflow-hidden lg:overflow-visible">
+    <div className="min-h-[100dvh] lg:min-h-screen bg-background flex flex-col">
       {/* Hajolo Success Overlay */}
       {showHajoloSuccess && (
         <div 
@@ -380,7 +380,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Mobile Slide-out Menu */}
       <div
         className={cn(
-          'lg:hidden fixed left-0 top-[calc(3.5rem+env(safe-area-inset-top,0px))] bottom-20 w-72 bg-card border-r border-border z-[60] transform transition-transform duration-200 overflow-y-auto',
+          'lg:hidden fixed left-0 top-[calc(3.5rem+env(safe-area-inset-top,0px))] bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] w-72 bg-card border-r border-border z-[60] transform transition-transform duration-200 overflow-y-auto',
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
@@ -540,7 +540,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </nav>
 
       {/* Main Content - mobile: scrollable content area; desktop: normal flow */}
-      <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] lg:pb-0 flex-1 overflow-y-auto lg:overflow-visible app-scroll lg:min-h-screen">
+      <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] lg:pb-0 flex-1 lg:min-h-screen">
         <div className="p-4 lg:p-8">
           {children}
         </div>
