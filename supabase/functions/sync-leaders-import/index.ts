@@ -106,28 +106,34 @@ const parseCabinNames = (cabinStr: string | undefined): string[] => {
   return parts.map(p => p.replace(/__PLUS__/g, '+'));
 };
 
-// Find matching cabin ID with fuzzy matching and aliases
-const findCabinId = (cabinName: string, cabinsByName: Map<string, string>): string | null => {
+// Find matching cabin IDs with fuzzy matching and aliases
+// Returnerer ALLE matchende hytter for hovedhyttenavn (f.eks. "Balder" -> ["balder bak", "balder front"])
+const findCabinIds = (cabinName: string, cabinsByName: Map<string, string>): string[] => {
   // Normaliser: lowercase, trim, fjern ekstra mellomrom
   const normalized = cabinName.toLowerCase().trim().replace(/\s+/g, ' ');
   
-  console.log(`Finding cabin for: "${cabinName}" -> normalized: "${normalized}"`);
+  console.log(`Finding cabin(s) for: "${cabinName}" -> normalized: "${normalized}"`);
   
-  // 1. Exact match
+  // 1. Exact match - returner som array
   if (cabinsByName.has(normalized)) {
     console.log(`  Exact match found: ${normalized}`);
-    return cabinsByName.get(normalized)!;
+    return [cabinsByName.get(normalized)!];
   }
   
-  // 2. Check aliases - hvis vi har en alias, prøv alle mulige matcher
+  // 2. Check aliases - returnerer ALLE matchende hytter fra alias-listen
   const aliases = CABIN_ALIASES[normalized];
   if (aliases) {
+    const matchedIds: string[] = [];
     for (const alias of aliases) {
       const aliasNormalized = alias.toLowerCase();
       if (cabinsByName.has(aliasNormalized)) {
+        matchedIds.push(cabinsByName.get(aliasNormalized)!);
         console.log(`  Alias match found: ${normalized} -> ${aliasNormalized}`);
-        return cabinsByName.get(aliasNormalized)!;
       }
+    }
+    if (matchedIds.length > 0) {
+      console.log(`  Total alias matches for "${normalized}": ${matchedIds.length} cabins`);
+      return matchedIds;
     }
   }
   
@@ -139,7 +145,7 @@ const findCabinId = (cabinName: string, cabinsByName: Map<string, string>): stri
         const aliasNormalized = aliasValue.toLowerCase();
         if (cabinsByName.has(aliasNormalized)) {
           console.log(`  Partial alias match: ${normalized} starts with ${aliasKey} -> ${aliasNormalized}`);
-          return cabinsByName.get(aliasNormalized)!;
+          return [cabinsByName.get(aliasNormalized)!];
         }
       }
     }
@@ -149,7 +155,7 @@ const findCabinId = (cabinName: string, cabinsByName: Map<string, string>): stri
   for (const [name, id] of cabinsByName.entries()) {
     if (name.startsWith(normalized) || normalized.startsWith(name)) {
       console.log(`  Partial match found: ${name}`);
-      return id;
+      return [id];
     }
   }
   
@@ -157,12 +163,12 @@ const findCabinId = (cabinName: string, cabinsByName: Map<string, string>): stri
   for (const [name, id] of cabinsByName.entries()) {
     if (name.includes(normalized) || normalized.includes(name)) {
       console.log(`  Fuzzy match found: ${name}`);
-      return id;
+      return [id];
     }
   }
   
   console.log(`  No match found for: ${normalized}`);
-  return null;
+  return [];
 };
 
 serve(async (req) => {
@@ -288,17 +294,20 @@ serve(async (req) => {
           await supabase.from('leader_cabins').delete().eq('leader_id', leaderId);
 
           // Insert new leader_cabins links using improved matching
+          // Returnerer ALLE matchende hytter for hovedhyttenavn
           for (const cabinName of cabinNames) {
-            const cabinId = findCabinId(cabinName, cabinsByName);
-            if (cabinId) {
-              const { error: linkError } = await supabase.from('leader_cabins').insert({
-                leader_id: leaderId,
-                cabin_id: cabinId,
-              });
-              if (!linkError) {
-                results.cabinLinks++;
-                console.log(`Linked ${leader.name} to cabin: ${cabinName} -> ${cabinId}`);
+            const cabinIds = findCabinIds(cabinName, cabinsByName);
+            if (cabinIds.length > 0) {
+              for (const cabinId of cabinIds) {
+                const { error: linkError } = await supabase.from('leader_cabins').insert({
+                  leader_id: leaderId,
+                  cabin_id: cabinId,
+                });
+                if (!linkError) {
+                  results.cabinLinks++;
+                }
               }
+              console.log(`Linked ${leader.name} to ${cabinIds.length} cabin(s) for: ${cabinName}`);
             } else {
               console.log(`Cabin not found for ${leader.name}: ${cabinName} (tried fuzzy matching)`);
             }
