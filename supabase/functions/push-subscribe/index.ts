@@ -14,7 +14,22 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { endpoint, keys, leader_id } = body;
+    // Support both nested keys and flat keys for iOS/Safari compatibility
+    const { endpoint, keys, p256dh: directP256dh, auth: directAuth, leader_id } = body;
+
+    // Extract keys - prefer direct keys, fall back to nested
+    const p256dh = directP256dh || keys?.p256dh;
+    const auth = directAuth || keys?.auth;
+
+    console.log("push-subscribe request received:", {
+      hasEndpoint: !!endpoint,
+      hasLeaderId: !!leader_id,
+      hasDirectP256dh: !!directP256dh,
+      hasDirectAuth: !!directAuth,
+      hasNestedKeys: !!keys,
+      hasNestedP256dh: !!keys?.p256dh,
+      hasNestedAuth: !!keys?.auth,
+    });
 
     // Validate required fields
     if (!leader_id) {
@@ -25,10 +40,18 @@ serve(async (req) => {
       );
     }
 
-    if (!endpoint || !keys?.p256dh || !keys?.auth) {
-      console.error("Invalid subscription data:", { endpoint: !!endpoint, keys: !!keys });
+    if (!endpoint) {
+      console.error("Missing endpoint in request");
       return new Response(
-        JSON.stringify({ error: "Invalid subscription data" }),
+        JSON.stringify({ error: "Endpoint is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!p256dh || !auth) {
+      console.error("Missing subscription keys:", { p256dh: !!p256dh, auth: !!auth });
+      return new Response(
+        JSON.stringify({ error: "Subscription keys (p256dh, auth) are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -63,8 +86,8 @@ serve(async (req) => {
         {
           leader_id: leader.id,
           endpoint,
-          p256dh: keys.p256dh,
-          auth: keys.auth,
+          p256dh,
+          auth,
           last_used_at: new Date().toISOString(),
         },
         { onConflict: "endpoint" }

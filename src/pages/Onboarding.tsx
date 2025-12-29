@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, User, Car, Check, Upload, Bell } from 'lucide-react';
 import { toast } from 'sonner';
-import { PushNotificationToggle } from '@/components/PushNotificationToggle';
+import { PushNotificationStatus } from '@/components/PushNotificationStatus';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -130,9 +130,8 @@ export default function Onboarding() {
                 </CardDescription>
               </div>
               <div className="space-y-3 pt-2">
-                <PushNotificationToggle 
+                <PushNotificationStatus 
                   variant="button" 
-                  className="w-full" 
                   onSuccess={handleFinish}
                 />
                 <Button variant="ghost" onClick={handleFinish} className="w-full text-muted-foreground">
