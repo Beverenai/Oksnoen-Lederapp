@@ -1,8 +1,8 @@
 // Predefined activities for Oksnøen
 export const ACTIVITIES = [
   { id: 'pil_bue', title: 'Pil & Bue' },
-  { id: 'svomming_en_vei', title: 'Svømming til Skrikeren en vei' },
-  { id: 'svomming_begge_veier', title: 'Svømming til Skrikeren begge veier' },
+  { id: 'svomming_en_vei', title: 'Skrikeren en vei' },
+  { id: 'svomming_begge_veier', title: 'Skrikeren begge veier' },
   { id: 'tube', title: 'Tube' },
   { id: 'tretten_meter', title: 'Tretten meter' },
   { id: 'atte_meter', title: 'Åtte meter' },
@@ -18,31 +18,52 @@ export const ACTIVITIES = [
   { id: 'outboard', title: 'Outboard' },
 ] as const;
 
-// Requirements for Store Styrkeprøven
+// Requirements for Store Styrkeprøven (accepts both old and new names)
 export const STORE_STYRKEPROVE_REQUIREMENTS = [
   'Tretten meter',
   'Taubane',
   'Klatring',
-  'Svømming til Skrikeren begge veier',
+  'Skrikeren begge veier',
 ];
 
-// Requirements for Lille Styrkeprøven
+// Alternative old names that also count (for backwards compatibility)
+const STORE_STYRKEPROVE_ALTERNATIVES: Record<string, string> = {
+  'skrikeren begge veier': 'svømming til skrikeren begge veier',
+};
+
+// Requirements for Lille Styrkeprøven (accepts both old and new names)
 export const LILLE_STYRKEPROVE_REQUIREMENTS = [
   'Åtte meter',
   'Taubane',
   'Klatring',
-  'Svømming til Skrikeren en vei',
+  'Skrikeren en vei',
 ];
+
+// Alternative old names that also count (for backwards compatibility)
+const LILLE_STYRKEPROVE_ALTERNATIVES: Record<string, string> = {
+  'skrikeren en vei': 'svømming til skrikeren en vei',
+};
+
+// Check if activity matches requirement (including old names)
+function matchesRequirement(completedActivities: string[], requirement: string, alternatives: Record<string, string>): boolean {
+  const normalizedReq = requirement.toLowerCase();
+  const altName = alternatives[normalizedReq];
+  
+  return completedActivities.some((a) => {
+    const normalized = a.toLowerCase();
+    return normalized === normalizedReq || (altName && normalized === altName);
+  });
+}
 
 export function hasStoreStyrkprove(completedActivities: string[]): boolean {
   return STORE_STYRKEPROVE_REQUIREMENTS.every((req) =>
-    completedActivities.some((a) => a.toLowerCase() === req.toLowerCase())
+    matchesRequirement(completedActivities, req, STORE_STYRKEPROVE_ALTERNATIVES)
   );
 }
 
 export function hasLilleStyrkprove(completedActivities: string[]): boolean {
   return LILLE_STYRKEPROVE_REQUIREMENTS.every((req) =>
-    completedActivities.some((a) => a.toLowerCase() === req.toLowerCase())
+    matchesRequirement(completedActivities, req, LILLE_STYRKEPROVE_ALTERNATIVES)
   );
 }
 

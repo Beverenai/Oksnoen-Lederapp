@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -18,13 +18,32 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { useActivities } from '@/hooks/useActivities';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ActivityManagerProps {
   participantId: string;
   completedActivities: { activity: string; id: string; completed_at: string | null }[];
   onActivityChanged: () => void;
 }
+
+// Detect touch device (includes iPad, tablets, phones)
+const useTouchDevice = () => {
+  const [isTouch, setIsTouch] = useState(false);
+  
+  useEffect(() => {
+    const checkTouch = () => {
+      const hasCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+      const hasTouchPoints = navigator.maxTouchPoints > 0;
+      setIsTouch(hasCoarsePointer || hasTouchPoints);
+    };
+    checkTouch();
+    // Also listen for changes (e.g., connecting a mouse to a tablet)
+    const mediaQuery = window.matchMedia('(pointer: coarse)');
+    mediaQuery.addEventListener('change', checkTouch);
+    return () => mediaQuery.removeEventListener('change', checkTouch);
+  }, []);
+  
+  return isTouch;
+};
 
 export const ActivityManager = ({
   participantId,
@@ -33,7 +52,7 @@ export const ActivityManager = ({
 }: ActivityManagerProps) => {
   const { leader } = useAuth();
   const { activities } = useActivities(true);
-  const isMobile = useIsMobile();
+  const isTouch = useTouchDevice();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -129,6 +148,42 @@ export const ActivityManager = ({
     return activityCounts.get(activityTitle.toLowerCase()) || 0;
   };
 
+  // Activity list content - shared between Drawer and Popover
+  const activityListContent = (
+    <div className="space-y-1">
+      {activities.map((activity) => {
+        const count = getCount(activity.title);
+        const isCurrentlyLoading = isLoading === activity.title;
+
+        return (
+          <Button
+            key={activity.id}
+            variant="ghost"
+            className="w-full justify-start text-left h-auto py-2"
+            onClick={() => addActivity(activity.title)}
+            disabled={isCurrentlyLoading}
+          >
+            <div className="flex items-center gap-2 w-full">
+              {isCurrentlyLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : count > 0 ? (
+                <Check className="h-4 w-4 text-green-600" />
+              ) : (
+                <Plus className="h-4 w-4 text-muted-foreground" />
+              )}
+              <span className="flex-1 text-sm">{activity.title}</span>
+              {count > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {count}
+                </Badge>
+              )}
+            </div>
+          </Button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="space-y-3">
       {uniqueActivities.length > 0 ? (
@@ -187,82 +242,42 @@ export const ActivityManager = ({
         <p className="text-sm text-muted-foreground">Ingen aktiviteter registrert ennå</p>
       )}
 
-      {/* Activity list - shared between Drawer and Popover */}
-      {(() => {
-        const activityList = (
-          <div className="space-y-1">
-            {activities.map((activity) => {
-              const count = getCount(activity.title);
-              const isCurrentlyLoading = isLoading === activity.title;
-
-              return (
-                <Button
-                  key={activity.id}
-                  variant="ghost"
-                  className="w-full justify-start text-left h-auto py-2"
-                  onClick={() => addActivity(activity.title)}
-                  disabled={isCurrentlyLoading}
-                >
-                  <div className="flex items-center gap-2 w-full">
-                    {isCurrentlyLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : count > 0 ? (
-                      <Check className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <Plus className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <span className="flex-1 text-sm">{activity.title}</span>
-                    {count > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        {count}
-                      </Badge>
-                    )}
-                  </div>
-                </Button>
-              );
-            })}
-          </div>
-        );
-
-        if (isMobile) {
-          return (
-            <Drawer open={isOpen} onOpenChange={setIsOpen}>
-              <DrawerTrigger asChild>
-                <Button variant="outline" className="w-full">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Legg til aktivitet
-                  <ChevronDown className="h-4 w-4 ml-auto" />
-                </Button>
-              </DrawerTrigger>
-              <DrawerContent>
-                <DrawerHeader>
-                  <DrawerTitle>Legg til aktivitet</DrawerTitle>
-                </DrawerHeader>
-                <div className="px-4 pb-6 max-h-[70dvh] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] touch-pan-y">
-                  {activityList}
-                </div>
-              </DrawerContent>
-            </Drawer>
-          );
-        }
-
-        return (
-          <Popover open={isOpen} onOpenChange={setIsOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Legg til aktivitet
-                <ChevronDown className="h-4 w-4 ml-auto" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-0 overflow-hidden" align="start">
-              <div className="max-h-[300px] overflow-y-auto p-2">
-                {activityList}
-              </div>
-            </PopoverContent>
-          </Popover>
-        );
-      })()}
+      {/* Touch devices: Use Drawer for better scroll handling */}
+      {isTouch ? (
+        <Drawer open={isOpen} onOpenChange={setIsOpen}>
+          <DrawerTrigger asChild>
+            <Button variant="outline" className="w-full">
+              <Plus className="h-4 w-4 mr-2" />
+              Legg til aktivitet
+              <ChevronDown className="h-4 w-4 ml-auto" />
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent className="max-h-[85dvh] flex flex-col">
+            <DrawerHeader className="flex-shrink-0">
+              <DrawerTitle>Legg til aktivitet</DrawerTitle>
+            </DrawerHeader>
+            <div className="flex-1 min-h-0 overflow-y-auto app-scroll px-4 pb-6 pb-safe">
+              {activityListContent}
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        /* Desktop: Use Popover */
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full">
+              <Plus className="h-4 w-4 mr-2" />
+              Legg til aktivitet
+              <ChevronDown className="h-4 w-4 ml-auto" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-0" align="start">
+            <div className="max-h-[60vh] overflow-y-auto app-scroll p-2">
+              {activityListContent}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
     </div>
   );
 };
