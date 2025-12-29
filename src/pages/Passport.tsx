@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,19 +30,29 @@ import { BulkActivityRegistration } from '@/components/passport/BulkActivityRegi
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 import { useAuth } from '@/contexts/AuthContext';
 
-type Participant = Tables<'participants'>;
 type Cabin = Tables<'cabins'>;
-type ParticipantActivity = Tables<'participant_activities'>;
-type Leader = Tables<'leaders'>;
 
-interface ParticipantWithCabin extends Participant {
-  cabins?: Cabin | null;
-  participant_activities?: ParticipantActivity[];
-}
-
-interface LeaderCabinLink {
-  cabin_id: string;
-  leaders: { id: string; name: string }[];
+interface ParticipantWithCabin {
+  id: string;
+  name: string;
+  first_name: string | null;
+  last_name: string | null;
+  birth_date: string | null;
+  room: string | null;
+  cabin_id: string | null;
+  image_url: string | null;
+  has_arrived: boolean | null;
+  notes: string | null;
+  activity_notes: string | null;
+  times_attended: number | null;
+  pass_written: boolean | null;
+  pass_text: string | null;
+  pass_suggestion: string | null;
+  pass_written_by: string | null;
+  pass_written_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  cabins: Cabin | null;
 }
 
 interface CabinGroup {
@@ -54,94 +65,155 @@ const calculateAge = (birthDate: string): number => {
   return differenceInYears(new Date(), new Date(birthDate));
 };
 
+// Fetch participants with cabin info
+async function fetchParticipants(): Promise<ParticipantWithCabin[]> {
+  const { data, error } = await supabase
+    .from('participants')
+    .select('*, cabins(*)')
+    .order('name');
+  if (error) throw error;
+  return (data || []) as ParticipantWithCabin[];
+}
+
+// Fetch all activities grouped by participant
+async function fetchActivitiesMap(): Promise<Map<string, string[]>> {
+  const { data, error } = await supabase
+    .from('participant_activities')
+    .select('participant_id, activity');
+  if (error) throw error;
+  
+  const map = new Map<string, string[]>();
+  (data || []).forEach(row => {
+    const existing = map.get(row.participant_id) || [];
+    existing.push(row.activity);
+    map.set(row.participant_id, existing);
+  });
+  return map;
+}
+
+// Fetch cabins
+async function fetchCabins(): Promise<Cabin[]> {
+  const { data, error } = await supabase
+    .from('cabins')
+    .select('*')
+    .order('name', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+// Fetch leader cabins map
+async function fetchLeaderCabins(): Promise<Map<string, { id: string; name: string }[]>> {
+  const { data, error } = await supabase
+    .from('leader_cabins')
+    .select('cabin_id, leaders(id, name)');
+  if (error) throw error;
+  
+  const map = new Map<string, { id: string; name: string }[]>();
+  (data || []).forEach((lc: any) => {
+    if (lc.cabin_id && lc.leaders) {
+      const existing = map.get(lc.cabin_id) || [];
+      existing.push({ id: lc.leaders.id, name: lc.leaders.name });
+      map.set(lc.cabin_id, existing);
+    }
+  });
+  return map;
+}
+
 export default function Passport() {
   const navigate = useNavigate();
   const { leader } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const cabinFilterFromUrl = searchParams.get('cabin');
   
-  const [participants, setParticipants] = useState<ParticipantWithCabin[]>([]);
-  const [cabins, setCabins] = useState<Cabin[]>([]);
-  const [leaderCabins, setLeaderCabins] = useState<Map<string, { id: string; name: string }[]>>(new Map());
   const [searchQuery, setSearchQuery] = useState('');
-  const [myCabinIds, setMyCabinIds] = useState<string[]>([]);
   const [myCabinsFilter, setMyCabinsFilter] = useState(false);
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
   const [showBulkRegistration, setShowBulkRegistration] = useState(false);
-  const [checkoutEnabled, setCheckoutEnabled] = useState(false);
 
+  // React Query for cached data fetching
+  const { data: participants = [], isLoading: isLoadingParticipants, refetch: refetchParticipants } = useQuery({
+    queryKey: ['participants-with-cabins'],
+    queryFn: fetchParticipants,
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
+  });
+
+  const { data: activitiesMap = new Map<string, string[]>(), refetch: refetchActivities } = useQuery({
+    queryKey: ['participant-activities-map'],
+    queryFn: fetchActivitiesMap,
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
+  });
+
+  const { data: cabins = [] } = useQuery({
+    queryKey: ['cabins'],
+    queryFn: fetchCabins,
+    staleTime: 60000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  const { data: leaderCabins = new Map<string, { id: string; name: string }[]>() } = useQuery({
+    queryKey: ['leader-cabins-map'],
+    queryFn: fetchLeaderCabins,
+    staleTime: 60000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  const { data: checkoutEnabled = false } = useQuery({
+    queryKey: ['checkout-enabled'],
+    queryFn: async () => {
+      const { data } = await supabase.from('app_config').select('value').eq('key', 'checkout_enabled').maybeSingle();
+      return data?.value === 'true';
+    },
+    staleTime: 60000,
+  });
+
+  const { data: myCabinIds = [] } = useQuery({
+    queryKey: ['my-cabin-ids', leader?.id],
+    queryFn: async () => {
+      if (!leader?.id) return [];
+      const { data } = await supabase
+        .from('leader_cabins')
+        .select('cabin_id')
+        .eq('leader_id', leader.id);
+      return (data || []).map(c => c.cabin_id);
+    },
+    enabled: !!leader?.id,
+    staleTime: 60000,
+  });
+
+  // Set expanded cabins when data loads
   useEffect(() => {
-    loadData();
-  }, [leader?.id]);
+    if (cabins.length > 0 && expandedCabins.size === 0) {
+      if (cabinFilterFromUrl) {
+        setExpandedCabins(new Set([cabinFilterFromUrl]));
+      } else {
+        setExpandedCabins(new Set(cabins.map(c => c.id)));
+      }
+    }
+  }, [cabins, cabinFilterFromUrl]);
+
+  const loadData = () => {
+    refetchParticipants();
+    refetchActivities();
+  };
 
   const clearCabinFilter = () => {
     setMyCabinsFilter(false);
     setSearchParams({});
   };
 
-  const loadData = async (showLoading = true) => {
-    if (showLoading) setIsLoading(true);
-    try {
-      const [participantsRes, cabinsRes, configRes, leaderCabinsRes] = await Promise.all([
-        supabase
-          .from('participants')
-          .select('*, cabins(*), participant_activities(*)')
-          .order('name'),
-        supabase.from('cabins').select('*').order('name', { ascending: true }),
-        supabase.from('app_config').select('value').eq('key', 'checkout_enabled').maybeSingle(),
-        supabase
-          .from('leader_cabins')
-          .select('cabin_id, leaders(id, name)')
-      ]);
-
-      // Fetch current leader's cabins if logged in (separate query to avoid type issues)
-      let myCabinsData: string[] = [];
-      if (leader?.id) {
-        const { data: myCabinsRes } = await supabase
-          .from('leader_cabins')
-          .select('cabin_id')
-          .eq('leader_id', leader.id);
-        myCabinsData = (myCabinsRes || []).map(c => c.cabin_id);
-      }
-      setMyCabinIds(myCabinsData);
-
-      // Build leader-cabin map
-      const leaderMap = new Map<string, { id: string; name: string }[]>();
-      (leaderCabinsRes.data || []).forEach((lc: any) => {
-        if (lc.cabin_id && lc.leaders) {
-          const existing = leaderMap.get(lc.cabin_id) || [];
-          existing.push({ id: lc.leaders.id, name: lc.leaders.name });
-          leaderMap.set(lc.cabin_id, existing);
-        }
-      });
-      setLeaderCabins(leaderMap);
-
-      setParticipants(participantsRes.data || []);
-      setCabins(cabinsRes.data || []);
-      setCheckoutEnabled(configRes.data?.value === 'true');
-      
-      // Expand all cabins by default, or just the filtered one
-      if (cabinsRes.data) {
-        if (cabinFilterFromUrl) {
-          setExpandedCabins(new Set([cabinFilterFromUrl]));
-        } else {
-          setExpandedCabins(new Set(cabinsRes.data.map(c => c.id)));
-        }
-      }
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast.error('Kunne ikke laste data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
   // Handler for opening participant detail dialog
   const handleParticipantClick = (participantId: string) => {
     setSelectedParticipantId(participantId);
     setIsDetailDialogOpen(true);
+  };
+
+  // Get activities for a participant
+  const getParticipantActivities = (participantId: string): string[] => {
+    return activitiesMap.get(participantId) || [];
   };
 
   const filteredParticipants = useMemo(() => {
@@ -211,7 +283,7 @@ export default function Passport() {
     setExpandedCabins(newExpanded);
   };
 
-  if (isLoading) {
+  if (isLoadingParticipants) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-48" />
@@ -395,7 +467,7 @@ export default function Passport() {
                           </div>
                           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             {roomParticipants.map((participant) => {
-                              const completedActivities = (participant.participant_activities || []).map(a => a.activity);
+                              const completedActivities = getParticipantActivities(participant.id);
                               
                               return (
                                 <div
@@ -462,7 +534,7 @@ export default function Passport() {
                           </div>
                           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             {noRoomParticipants.map((participant) => {
-                              const completedActivities = (participant.participant_activities || []).map(a => a.activity);
+                              const completedActivities = getParticipantActivities(participant.id);
                               
                               return (
                                 <div
@@ -535,7 +607,7 @@ export default function Passport() {
         participantId={selectedParticipantId}
         open={isDetailDialogOpen}
         onOpenChange={setIsDetailDialogOpen}
-        onParticipantUpdated={() => loadData(false)}
+        onParticipantUpdated={() => loadData()}
       />
     </div>
   );
