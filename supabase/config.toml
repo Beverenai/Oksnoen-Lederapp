@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.migrate-images]
 verify_jwt = false
+
+[functions.push-admin-alert]
+verify_jwt = false
