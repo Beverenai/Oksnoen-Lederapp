@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -265,8 +265,8 @@ export const ParticipantDetailDialog = ({
     .slice(0, 2) || '??';
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[85vh] overflow-y-auto p-0 mx-auto">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[85vh] overflow-y-auto p-0 mx-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -310,8 +310,8 @@ export const ParticipantDetailDialog = ({
 
             {/* Content below image */}
             <div className="p-6">
-              <DialogHeader className="text-center mb-4">
-                <DialogTitle className="text-xl">{participant.name}</DialogTitle>
+              <ResponsiveDialogHeader className="text-center mb-4">
+                <ResponsiveDialogTitle className="text-xl">{participant.name}</ResponsiveDialogTitle>
 
                 {/* Age, cabin, room info */}
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground flex-wrap">
@@ -332,7 +332,7 @@ export const ParticipantDetailDialog = ({
                     {participant.has_arrived ? 'Ankommet' : 'Ikke ankommet'}
                   </Badge>
                 </div>
-              </DialogHeader>
+              </ResponsiveDialogHeader>
 
               <div className="space-y-6">
                 {/* Info fra Nurse (public - visible to all) */}
@@ -420,7 +420,7 @@ export const ParticipantDetailDialog = ({
             Deltaker ikke funnet
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 };

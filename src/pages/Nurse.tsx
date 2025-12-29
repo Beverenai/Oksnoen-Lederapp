@@ -8,7 +8,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from '@/components/ui/responsive-dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -472,10 +478,10 @@ export default function Nurse() {
       )}
 
       {/* Participant Detail Dialog */}
-      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85vh] flex flex-col mx-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
+      <ResponsiveDialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <ResponsiveDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85vh] flex flex-col mx-auto">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="flex items-center gap-3">
               <div 
                 className="cursor-pointer"
                 onClick={() => setIsImageOpen(true)}
@@ -497,8 +503,8 @@ export default function Nurse() {
                   Klikk på bildet for å forstørre
                 </p>
               </div>
-            </DialogTitle>
-          </DialogHeader>
+            </ResponsiveDialogTitle>
+          </ResponsiveDialogHeader>
 
           <Tabs defaultValue="notes" className="flex-1 flex flex-col min-h-0">
             <TabsList className="grid w-full grid-cols-4">
@@ -769,8 +775,8 @@ export default function Nurse() {
               </Card>
             </TabsContent>
           </Tabs>
-        </DialogContent>
-      </Dialog>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
 
       {/* Large Image Dialog */}
       <Dialog open={isImageOpen} onOpenChange={setIsImageOpen}>
