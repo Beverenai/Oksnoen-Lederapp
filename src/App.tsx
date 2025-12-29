@@ -23,6 +23,7 @@ import AdminSettings from "@/pages/AdminSettings";
 import Nurse from "@/pages/Nurse";
 import Fix from "@/pages/Fix";
 import ComingSoon from "@/pages/ComingSoon";
+import ImportantInfo from "@/pages/ImportantInfo";
 import ParticipantStats from "@/pages/ParticipantStats";
 import Checkout from "@/pages/Checkout";
 import NotFound from "@/pages/NotFound";
@@ -185,7 +186,7 @@ function AppRoutes() {
         path="/important-info"
         element={
           <ProtectedRoute>
-            <ComingSoon title="Viktig info om deltagere" />
+            <ImportantInfo />
           </ProtectedRoute>
         }
       />
