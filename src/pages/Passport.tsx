@@ -32,15 +32,22 @@ import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetail
 type Participant = Tables<'participants'>;
 type Cabin = Tables<'cabins'>;
 type ParticipantActivity = Tables<'participant_activities'>;
+type Leader = Tables<'leaders'>;
 
 interface ParticipantWithCabin extends Participant {
   cabins?: Cabin | null;
   participant_activities?: ParticipantActivity[];
 }
 
+interface LeaderCabinLink {
+  cabin_id: string;
+  leaders: { id: string; name: string }[];
+}
+
 interface CabinGroup {
   cabin: Cabin;
   participants: ParticipantWithCabin[];
+  leaders: { id: string; name: string }[];
 }
 
 const calculateAge = (birthDate: string): number => {
@@ -54,6 +61,7 @@ export default function Passport() {
   
   const [participants, setParticipants] = useState<ParticipantWithCabin[]>([]);
   const [cabins, setCabins] = useState<Cabin[]>([]);
+  const [leaderCabins, setLeaderCabins] = useState<Map<string, { id: string; name: string }[]>>(new Map());
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCabin, setFilterCabin] = useState<string>(cabinFilterFromUrl || 'all');
   const [filterArrival, setFilterArrival] = useState<string>('all');
@@ -83,14 +91,28 @@ export default function Passport() {
   const loadData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
     try {
-      const [participantsRes, cabinsRes, configRes] = await Promise.all([
+      const [participantsRes, cabinsRes, configRes, leaderCabinsRes] = await Promise.all([
         supabase
           .from('participants')
           .select('*, cabins(*), participant_activities(*)')
           .order('name'),
         supabase.from('cabins').select('*').order('name', { ascending: true }),
         supabase.from('app_config').select('value').eq('key', 'checkout_enabled').maybeSingle(),
+        supabase
+          .from('leader_cabins')
+          .select('cabin_id, leaders(id, name)')
       ]);
+
+      // Build leader-cabin map
+      const leaderMap = new Map<string, { id: string; name: string }[]>();
+      (leaderCabinsRes.data || []).forEach((lc: any) => {
+        if (lc.cabin_id && lc.leaders) {
+          const existing = leaderMap.get(lc.cabin_id) || [];
+          existing.push({ id: lc.leaders.id, name: lc.leaders.name });
+          leaderMap.set(lc.cabin_id, existing);
+        }
+      });
+      setLeaderCabins(leaderMap);
 
       setParticipants(participantsRes.data || []);
       setCabins(cabinsRes.data || []);
@@ -153,19 +175,24 @@ export default function Passport() {
     cabins.forEach(cabin => {
       const cabinParticipants = cabinMap.get(cabin.id);
       if (cabinParticipants && cabinParticipants.length > 0) {
-        groups.push({ cabin, participants: cabinParticipants });
+        groups.push({ 
+          cabin, 
+          participants: cabinParticipants,
+          leaders: leaderCabins.get(cabin.id) || []
+        });
       }
     });
 
     if (uncategorized.length > 0) {
       groups.push({
         cabin: { id: 'uncategorized', name: 'Uten hytte', sort_order: 999, created_at: null },
-        participants: uncategorized
+        participants: uncategorized,
+        leaders: []
       });
     }
 
     return groups;
-  }, [filteredParticipants, cabins]);
+  }, [filteredParticipants, cabins, leaderCabins]);
 
   const arrivedCount = participants.filter((p) => p.has_arrived).length;
 
@@ -288,9 +315,12 @@ export default function Passport() {
 
       {/* Grouped by Cabin */}
       <div className="space-y-4">
-        {cabinGroups.map(({ cabin, participants: cabinParticipants }) => {
+        {cabinGroups.map(({ cabin, participants: cabinParticipants, leaders }) => {
           const cabinArrived = cabinParticipants.filter(p => p.has_arrived).length;
           const isExpanded = expandedCabins.has(cabin.id);
+          
+          // Get first names of leaders
+          const leaderFirstNames = leaders.map(l => l.name.split(' ')[0]);
           
           return (
             <Collapsible 
@@ -310,6 +340,20 @@ export default function Passport() {
                         )}
                         <Home className="w-5 h-5 text-primary" />
                         <CardTitle className="text-lg">{cabin.name}</CardTitle>
+                        {/* Leader badges */}
+                        {leaderFirstNames.length > 0 && (
+                          <div className="flex gap-1 flex-wrap">
+                            {leaderFirstNames.map((name, idx) => (
+                              <Badge 
+                                key={idx} 
+                                variant="secondary" 
+                                className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20"
+                              >
+                                {name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline">
