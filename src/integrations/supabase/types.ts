@@ -155,6 +155,82 @@ export type Database = {
         }
         Relationships: []
       }
+      fix_tasks: {
+        Row: {
+          admin_notes: string | null
+          assigned_at: string | null
+          assigned_to: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          fixed_at: string | null
+          fixed_by: string | null
+          id: string
+          image_url: string | null
+          location: string | null
+          status: string
+          title: string
+          updated_at: string | null
+          what_to_fix: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          assigned_at?: string | null
+          assigned_to?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          fixed_at?: string | null
+          fixed_by?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          status?: string
+          title: string
+          updated_at?: string | null
+          what_to_fix?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          assigned_at?: string | null
+          assigned_to?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          fixed_at?: string | null
+          fixed_by?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          status?: string
+          title?: string
+          updated_at?: string | null
+          what_to_fix?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fix_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fix_tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fix_tasks_fixed_by_fkey"
+            columns: ["fixed_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       home_screen_config: {
         Row: {
           bg_color: string | null

@@ -51,7 +51,7 @@ const baseNavItems: NavItem[] = [
 // Dynamic items that depend on state
 const scheduleNavItem: NavItem = { to: '/schedule', icon: Calendar, label: 'Vaktplan' };
 const importantInfoNavItem: NavItem = { to: '/important-info', icon: AlertTriangle, label: 'Viktig info' };
-const fixNavItem: NavItem = { to: '/fix', icon: Wrench, label: 'Rapporter' };
+const fixNavItem: NavItem = { to: '/fix', icon: Wrench, label: 'FIX' };
 
 // Note: Mobile hamburger menu now uses allNavItems (same as desktop sidebar)
 
