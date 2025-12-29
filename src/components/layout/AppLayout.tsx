@@ -21,7 +21,8 @@ import {
   Anchor,
   Map,
   BookOpen,
-  LucideIcon
+  LucideIcon,
+  ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -30,6 +31,11 @@ import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 import { PassIcon } from '@/components/icons/PassIcon';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -42,24 +48,30 @@ type NavItem = {
   label: string;
 };
 
-// Navigation items that are always shown
-const baseNavItems: NavItem[] = [
+// Navigation groups
+const mainNavItems: NavItem[] = [
   { to: '/', icon: Home, label: 'Hjem' },
   { to: '/profile', icon: User, label: 'Min Profil' },
-  { to: '/leaders', icon: Users, label: 'Ledere' },
-  { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
   { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
 ];
 
-// Dynamic items that depend on state
+const leaderNavItems: NavItem[] = [
+  { to: '/leaders', icon: Users, label: 'Ledere' },
+  { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
+  { to: '/rope-control', icon: Anchor, label: 'Tau Kontroll' },
+];
+
+// Dynamic content items
 const scheduleNavItem: NavItem = { to: '/schedule', icon: Calendar, label: 'Vaktplan' };
 const importantInfoNavItem: NavItem = { to: '/important-info', icon: AlertTriangle, label: 'Viktig info' };
 const fixNavItem: NavItem = { to: '/fix', icon: Wrench, label: 'FIX' };
-const ropeControlNavItem: NavItem = { to: '/rope-control', icon: Anchor, label: 'Tau Kontroll' };
 const skjaerNavItem: NavItem = { to: '/skjaer', icon: Map, label: 'Skjær' };
 const storiesNavItem: NavItem = { to: '/stories', icon: BookOpen, label: 'Historier' };
 
-// Note: Mobile hamburger menu now uses allNavItems (same as desktop sidebar)
+// Special access items
+const nurseNavItem: NavItem = { to: '/nurse', icon: Heart, label: 'Nurse' };
+const participantsNavItem: NavItem = { to: '/participant-stats', icon: BarChart2, label: 'Deltagere' };
+const adminNavItem: NavItem = { to: '/admin', icon: Settings, label: 'Admin' };
 
 // Bottom nav items type
 type BottomNavItem = {
@@ -72,7 +84,6 @@ type BottomNavItem = {
 // Base bottom nav items - will be adjusted based on role
 const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] => {
   if (isAdmin) {
-    // Admin gets Dashboard in the middle
     return [
       { to: '/', icon: Home, label: 'Hjem' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
@@ -81,7 +92,6 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
       { to: '/fix', icon: Wrench, label: 'Fix' },
     ];
   } else if (isNurse) {
-    // Nurse gets Nurse in the middle
     return [
       { to: '/', icon: Home, label: 'Hjem' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
@@ -90,7 +100,6 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
       { to: '/fix', icon: Wrench, label: 'Fix' },
     ];
   } else {
-    // Regular users get Hajolo in the middle
     return [
       { to: '/', icon: Home, label: 'Hjem' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
@@ -101,14 +110,61 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
   }
 };
 
-const nurseNavItems: NavItem[] = [
-  { to: '/nurse', icon: Heart, label: 'Nurse' },
-];
+// Helper component for rendering nav links
+const NavLinkItem = ({ 
+  item, 
+  onClick 
+}: { 
+  item: NavItem; 
+  onClick?: () => void;
+}) => (
+  <NavLink
+    to={item.to}
+    onClick={onClick}
+    className={({ isActive }) =>
+      cn(
+        'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+        isActive
+          ? 'bg-primary text-primary-foreground'
+          : 'text-foreground hover:bg-muted'
+      )
+    }
+  >
+    <item.icon className="w-5 h-5" />
+    {item.label}
+  </NavLink>
+);
 
-const adminNavItems: NavItem[] = [
-  { to: '/participant-stats', icon: BarChart2, label: 'Deltagere' },
-  { to: '/admin', icon: Settings, label: 'Admin' },
-];
+// Collapsible group component
+const NavGroup = ({
+  label,
+  items,
+  isOpen,
+  onOpenChange,
+  onItemClick,
+}: {
+  label: string;
+  items: NavItem[];
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  onItemClick?: () => void;
+}) => {
+  if (items.length === 0) return null;
+  
+  return (
+    <Collapsible open={isOpen} onOpenChange={onOpenChange}>
+      <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors">
+        {label}
+        <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", isOpen && "rotate-180")} />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-1">
+        {items.map((item) => (
+          <NavLinkItem key={item.to} item={item} onClick={onItemClick} />
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const { leader, isAdmin, isNurse, logout } = useAuth();
@@ -119,17 +175,41 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
   const location = useLocation();
 
-  // Build dynamic nav items based on schedule image availability
-  const allNavItems = [
-    ...baseNavItems,
+  // Collapsible group states
+  const [openGroups, setOpenGroups] = useState({
+    leader: true,
+    content: false,
+    special: false,
+  });
+
+  // Build dynamic content items based on schedule image availability
+  const contentNavItems = [
     ...(hasScheduleImage ? [scheduleNavItem] : []),
     importantInfoNavItem,
-    fixNavItem,
-    ropeControlNavItem,
     skjaerNavItem,
     storiesNavItem,
+    fixNavItem,
   ];
 
+  // Build special access items based on role (only for nurse, not admin)
+  const specialAccessItems = isNurse && !isAdmin ? [nurseNavItem] : [];
+
+  // Auto-expand groups based on current route
+  useEffect(() => {
+    const leaderPaths = leaderNavItems.map(i => i.to);
+    const contentPaths = contentNavItems.map(i => i.to);
+    const specialPaths = ['/nurse', '/participant-stats', '/admin'];
+
+    if (leaderPaths.includes(location.pathname)) {
+      setOpenGroups(prev => ({ ...prev, leader: true }));
+    }
+    if (contentPaths.includes(location.pathname)) {
+      setOpenGroups(prev => ({ ...prev, content: true }));
+    }
+    if (specialPaths.includes(location.pathname)) {
+      setOpenGroups(prev => ({ ...prev, special: true }));
+    }
+  }, [location.pathname, hasScheduleImage]);
 
   // Fetch schedule image availability and subscribe to changes
   useEffect(() => {
@@ -145,7 +225,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
     fetchScheduleImage();
 
-    // Subscribe to realtime changes for schedule_image_url
     const channel = supabase
       .channel('schedule-image-changes')
       .on(
@@ -184,7 +263,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
     fetchHasReadStatus();
 
-    // Subscribe to realtime changes
     const channel = supabase
       .channel('hajolo-status')
       .on(
@@ -223,16 +301,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
     setHasRead(true);
     setShowHajoloSuccess(true);
     
-    // Trigger confetti
     confetti({
       particleCount: 150,
       spread: 70,
       origin: { y: 0.6 }
     });
     
-    // Auto-hide after 3 seconds
     setTimeout(() => setShowHajoloSuccess(false), 3000);
   };
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
     <div className="min-h-[100dvh] lg:min-h-screen bg-background flex flex-col">
@@ -250,6 +328,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
         </div>
       )}
+
       {/* Mobile Header - hidden when menu is open */}
       {!mobileMenuOpen && (
         <header 
@@ -285,67 +364,50 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {allNavItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-foreground hover:bg-muted'
-                )
-              }
-            >
-              <item.icon className="w-5 h-5" />
-              {item.label}
-            </NavLink>
-          ))}
-          
-          {(isAdmin || isNurse) && (
-            <>
-              <div className="pt-4 pb-2">
-                <span className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Spesielle tilganger
-                </span>
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {/* Main navigation - always visible */}
+          <div className="space-y-1">
+            {mainNavItems.map((item) => (
+              <NavLinkItem key={item.to} item={item} />
+            ))}
+          </div>
+
+          {/* Leader functions - collapsible */}
+          <NavGroup
+            label="Lederfunksjoner"
+            items={leaderNavItems}
+            isOpen={openGroups.leader}
+            onOpenChange={(open) => setOpenGroups(prev => ({ ...prev, leader: open }))}
+          />
+
+          {/* Content - collapsible */}
+          <NavGroup
+            label="Innhold"
+            items={contentNavItems}
+            isOpen={openGroups.content}
+            onOpenChange={(open) => setOpenGroups(prev => ({ ...prev, content: open }))}
+          />
+
+          {/* Special access for nurse only (not admin) - collapsible */}
+          {isNurse && !isAdmin && (
+            <NavGroup
+              label="Spesielle tilganger"
+              items={specialAccessItems}
+              isOpen={openGroups.special}
+              onOpenChange={(open) => setOpenGroups(prev => ({ ...prev, special: open }))}
+            />
+          )}
+
+          {/* Admin items - always visible for admin */}
+          {isAdmin && (
+            <div className="pt-2 space-y-1">
+              <div className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Admin
               </div>
-              {(isAdmin || isNurse) && nurseNavItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-foreground hover:bg-muted'
-                    )
-                  }
-                >
-                  <item.icon className="w-5 h-5" />
-                  {item.label}
-                </NavLink>
-              ))}
-              {isAdmin && adminNavItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-foreground hover:bg-muted'
-                    )
-                  }
-                >
-                  <item.icon className="w-5 h-5" />
-                  {item.label}
-                </NavLink>
-              ))}
-            </>
+              <NavLinkItem item={nurseNavItem} />
+              <NavLinkItem item={participantsNavItem} />
+              <NavLinkItem item={adminNavItem} />
+            </div>
           )}
         </nav>
 
@@ -389,7 +451,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setMobileMenuOpen(false)}
+            onClick={closeMobileMenu}
             className="shrink-0"
           >
             <X className="w-5 h-5" />
@@ -398,70 +460,53 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
         {/* Menu Content - scrollable */}
         <nav className="pt-[calc(3.5rem+env(safe-area-inset-top,0px))] pb-safe overflow-y-auto h-full">
-          <div className="p-4 space-y-1">
-            {allNavItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={() => setMobileMenuOpen(false)}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-foreground hover:bg-muted'
-                  )
-                }
-              >
-                <item.icon className="w-5 h-5" />
-                {item.label}
-              </NavLink>
-            ))}
-            
-            {(isAdmin || isNurse) && (
-              <>
-                <div className="pt-4 pb-2">
-                  <span className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Spesielle tilganger
-                  </span>
+          <div className="p-4 space-y-2">
+            {/* Main navigation - always visible */}
+            <div className="space-y-1">
+              {mainNavItems.map((item) => (
+                <NavLinkItem key={item.to} item={item} onClick={closeMobileMenu} />
+              ))}
+            </div>
+
+            {/* Leader functions - collapsible */}
+            <NavGroup
+              label="Lederfunksjoner"
+              items={leaderNavItems}
+              isOpen={openGroups.leader}
+              onOpenChange={(open) => setOpenGroups(prev => ({ ...prev, leader: open }))}
+              onItemClick={closeMobileMenu}
+            />
+
+            {/* Content - collapsible */}
+            <NavGroup
+              label="Innhold"
+              items={contentNavItems}
+              isOpen={openGroups.content}
+              onOpenChange={(open) => setOpenGroups(prev => ({ ...prev, content: open }))}
+              onItemClick={closeMobileMenu}
+            />
+
+            {/* Special access for nurse only (not admin) - collapsible */}
+            {isNurse && !isAdmin && (
+              <NavGroup
+                label="Spesielle tilganger"
+                items={specialAccessItems}
+                isOpen={openGroups.special}
+                onOpenChange={(open) => setOpenGroups(prev => ({ ...prev, special: open }))}
+                onItemClick={closeMobileMenu}
+              />
+            )}
+
+            {/* Admin items - always visible for admin */}
+            {isAdmin && (
+              <div className="pt-2 space-y-1">
+                <div className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Admin
                 </div>
-                {(isAdmin || isNurse) && nurseNavItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                        isActive
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-foreground hover:bg-muted'
-                      )
-                    }
-                  >
-                    <item.icon className="w-5 h-5" />
-                    {item.label}
-                  </NavLink>
-                ))}
-                {isAdmin && adminNavItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                        isActive
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-foreground hover:bg-muted'
-                      )
-                    }
-                  >
-                    <item.icon className="w-5 h-5" />
-                    {item.label}
-                  </NavLink>
-                ))}
-              </>
+                <NavLinkItem item={nurseNavItem} onClick={closeMobileMenu} />
+                <NavLinkItem item={participantsNavItem} onClick={closeMobileMenu} />
+                <NavLinkItem item={adminNavItem} onClick={closeMobileMenu} />
+              </div>
             )}
             
             <div className="pt-4 space-y-1">
@@ -470,7 +515,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   variant="ghost"
                   className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
                   onClick={() => {
-                    setMobileMenuOpen(false);
+                    closeMobileMenu();
                     setNotificationSheetOpen(true);
                   }}
                 >
@@ -482,7 +527,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 variant="ghost"
                 className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
                 onClick={() => {
-                  setMobileMenuOpen(false);
+                  closeMobileMenu();
                   logout();
                 }}
               >
@@ -508,7 +553,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {getBottomNavItems(isAdmin, isNurse).map((item) => {
             const isActive = location.pathname === item.to;
             
-            // Hajolo button - larger, centered, floating above nav
             if (item.isHajolo) {
               return (
                 <button
@@ -529,7 +573,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
               );
             }
             
-            // Regular nav items - equal width, clean design
             return (
               <NavLink
                 key={item.to}
@@ -556,7 +599,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </nav>
       )}
 
-      {/* Main Content - mobile: scrollable content area; desktop: normal flow */}
+      {/* Main Content */}
       <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] lg:pb-0 flex-1 lg:min-h-screen">
         <div className="p-4 lg:p-8">
           {children}
