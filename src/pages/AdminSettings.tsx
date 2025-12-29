@@ -34,13 +34,16 @@ interface LeaderWithRole extends Leader {
   role: AppRole;
 }
 
-// Tab definitions
-const settingsTabs = [
+// Tab definitions - split into two rows
+const settingsTabsRow1 = [
   { id: 'leaders', label: 'Ledere', icon: Users },
   { id: 'participants', label: 'Deltakere', icon: Users },
   { id: 'cabins', label: 'Hytter', icon: Home },
   { id: 'schedule', label: 'Vaktplan', icon: Calendar },
   { id: 'activities', label: 'Aktiviteter', icon: Dumbbell },
+];
+
+const settingsTabsRow2 = [
   { id: 'skjaer', label: 'Skjær', icon: MapIcon },
   { id: 'stories', label: 'Historier', icon: BookOpen },
   { id: 'push', label: 'Push-varsler', icon: Bell },
@@ -603,23 +606,43 @@ export default function AdminSettings() {
           </div>
         </div>
 
-        {/* Tab navigation */}
+        {/* Tab navigation - two rows */}
         <Tabs value={activeSection} onValueChange={setActiveSection}>
-          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1 bg-muted/50">
-            {settingsTabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <TabsTrigger
-                  key={tab.id}
-                  value={tab.id}
-                  className="gap-2 shrink-0 data-[state=active]:bg-background"
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{tab.label}</span>
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
+          <div className="space-y-1">
+            {/* Row 1: Users and camp */}
+            <TabsList className="w-full justify-start h-auto p-1 bg-muted/50">
+              {settingsTabsRow1.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <TabsTrigger
+                    key={tab.id}
+                    value={tab.id}
+                    className="gap-1.5 data-[state=active]:bg-background text-xs sm:text-sm"
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{tab.label}</span>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+
+            {/* Row 2: Content and system */}
+            <TabsList className="w-full justify-start h-auto p-1 bg-muted/50">
+              {settingsTabsRow2.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <TabsTrigger
+                    key={tab.id}
+                    value={tab.id}
+                    className="gap-1.5 data-[state=active]:bg-background text-xs sm:text-sm"
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{tab.label}</span>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </div>
 
           <div className="mt-6">
             <AdminSettingsContent
