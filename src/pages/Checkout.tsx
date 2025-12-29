@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -13,10 +14,10 @@ import {
   Home,
   Sparkles
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { differenceInYears } from 'date-fns';
 import type { Tables } from '@/integrations/supabase/types';
 import { CheckoutDetailDialog } from '@/components/checkout/CheckoutDetailDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 type Participant = Tables<'participants'>;
 type Cabin = Tables<'cabins'>;
@@ -32,38 +33,36 @@ const calculateAge = (birthDate: string): number => {
 };
 
 export default function Checkout() {
-  const [participants, setParticipants] = useState<ParticipantWithCabin[]>([]);
-  const [cabins, setCabins] = useState<Cabin[]>([]);
+  const { leader } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCabin, setFilterCabin] = useState<string>('all');
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    setIsLoading(true);
-    try {
+  // Fetch participants via edge function
+  const { data: participantsData, isLoading, refetch } = useQuery({
+    queryKey: ['checkout-participants', leader?.id],
+    queryFn: async () => {
+      if (!leader?.id) return { participants: [], cabins: [] };
+      
       const [participantsRes, cabinsRes] = await Promise.all([
-        supabase
-          .from('participants')
-          .select('*, cabins(*), participant_activities(*)')
-          .order('name'),
-        supabase.from('cabins').select('*').order('name', { ascending: true }),
+        supabase.functions.invoke('get-participants', {
+          body: { leader_id: leader.id }
+        }),
+        supabase.from('cabins').select('*').order('name', { ascending: true })
       ]);
 
-      setParticipants(participantsRes.data || []);
-      setCabins(cabinsRes.data || []);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast.error('Kunne ikke laste data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return {
+        participants: (participantsRes.data?.participants || []) as ParticipantWithCabin[],
+        cabins: cabinsRes.data || []
+      };
+    },
+    enabled: !!leader?.id,
+    staleTime: 30000,
+  });
+
+  const participants = participantsData?.participants || [];
+  const cabins = participantsData?.cabins || [];
 
   const handleParticipantClick = (participantId: string) => {
     setSelectedParticipantId(participantId);
@@ -249,7 +248,7 @@ export default function Checkout() {
         participantId={selectedParticipantId}
         open={isDetailDialogOpen}
         onOpenChange={setIsDetailDialogOpen}
-        onComplete={loadData}
+        onComplete={refetch}
       />
     </div>
   );
