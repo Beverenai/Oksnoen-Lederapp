@@ -2,34 +2,24 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Search, 
-  CheckCircle2, 
-  Circle,
   User,
   Home,
-  ChevronDown,
-  ChevronRight,
   ArrowLeft,
   Users,
   Sparkles,
   AlertTriangle
 } from 'lucide-react';
-import { toast } from 'sonner';
-import { differenceInYears } from 'date-fns';
 import type { Tables } from '@/integrations/supabase/types';
-import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
 import { BulkActivityRegistration } from '@/components/passport/BulkActivityRegistration';
 import { ParticipantDetailDialog, fetchParticipantDetail, fetchParticipantActivities, fetchHealthInfo } from '@/components/passport/ParticipantDetailDialog';
 import { useAuth } from '@/contexts/AuthContext';
-import { CachedImage } from '@/components/ui/cached-image';
+import { VirtualizedParticipantList } from '@/components/passport/VirtualizedParticipantList';
 
 type Cabin = Tables<'cabins'>;
 
@@ -61,10 +51,6 @@ interface CabinGroup {
   participants: ParticipantWithCabin[];
   leaders: { id: string; name: string }[];
 }
-
-const calculateAge = (birthDate: string): number => {
-  return differenceInYears(new Date(), new Date(birthDate));
-};
 
 // Fetch participants with cabin info
 async function fetchParticipants(): Promise<ParticipantWithCabin[]> {
@@ -412,220 +398,15 @@ export default function Passport() {
         </Button>
       )}
 
-      {/* Grouped by Cabin */}
-      <div className="space-y-4">
-        {cabinGroups.map(({ cabin, participants: cabinParticipants, leaders }) => {
-          const cabinArrived = cabinParticipants.filter(p => p.has_arrived).length;
-          const isExpanded = expandedCabins.has(cabin.id);
-          
-          // Get first names of leaders
-          const leaderFirstNames = leaders.map(l => l.name.split(' ')[0]);
-          
-          return (
-            <Collapsible 
-              key={cabin.id} 
-              open={isExpanded}
-              onOpenChange={() => toggleCabinExpanded(cabin.id)}
-            >
-              <Card>
-                <CollapsibleTrigger className="w-full">
-                  <CardHeader className="py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {isExpanded ? (
-                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                        )}
-                        <Home className="w-5 h-5 text-primary" />
-                        <CardTitle className="text-lg">{cabin.name}</CardTitle>
-                        {/* Leader badges */}
-                        {leaderFirstNames.length > 0 && (
-                          <div className="flex gap-1 flex-wrap">
-                            {leaderFirstNames.map((name, idx) => (
-                              <Badge 
-                                key={idx} 
-                                variant="secondary" 
-                                className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20"
-                              >
-                                {name}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">
-                          {cabinArrived}/{cabinParticipants.length} ankommet
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="pt-0 space-y-4">
-                    {/* Group by room: høyre first, then venstre, then others */}
-                    {(['høyre', 'venstre'] as const).map(roomSide => {
-                      const roomParticipants = cabinParticipants
-                        .filter(p => p.room === roomSide)
-                        .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
-                      
-                      if (roomParticipants.length === 0) return null;
-                      
-                      return (
-                        <div key={roomSide}>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge 
-                              variant="secondary" 
-                              className={`text-xs ${
-                                roomSide === 'høyre' 
-                                  ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30' 
-                                  : 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30'
-                              }`}
-                            >
-                              {roomSide.charAt(0).toUpperCase() + roomSide.slice(1)} ({roomParticipants.length})
-                            </Badge>
-                          </div>
-                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                            {roomParticipants.map((participant) => {
-                              const completedActivities = getParticipantActivities(participant.id);
-                              
-                              return (
-                                <div
-                                  key={participant.id}
-                                  className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-                                    participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
-                                  }`}
-                                  onClick={() => handleParticipantClick(participant.id)}
-                                  onMouseEnter={() => prefetchParticipant(participant.id)}
-                                  onTouchStart={() => prefetchParticipant(participant.id)}
-                                >
-                                  <div className="flex items-start gap-3">
-                                    <Avatar className="w-10 h-10 shrink-0">
-                                      <AvatarImage src={participant.image_url || undefined} loading="lazy" />
-                                      <AvatarFallback className="bg-muted text-muted-foreground">
-                                        <User className="w-4 h-4" />
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <p className="font-medium text-foreground truncate text-sm">
-                                          {participant.name}
-                                        </p>
-                                        {participant.has_arrived ? (
-                                          <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
-                                        ) : (
-                                          <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-1 mt-1 flex-wrap">
-                                        {participant.birth_date && (
-                                          <Badge variant="outline" className="text-xs">
-                                            {calculateAge(participant.birth_date)} år
-                                          </Badge>
-                                        )}
-                                        <StyrkeproveBadges 
-                                          completedActivities={completedActivities} 
-                                          showCount 
-                                          compact
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                    
-                    {/* Participants without room assignment */}
-                    {(() => {
-                      const noRoomParticipants = cabinParticipants
-                        .filter(p => !p.room || (p.room !== 'høyre' && p.room !== 'venstre'))
-                        .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
-                      
-                      if (noRoomParticipants.length === 0) return null;
-                      
-                      return (
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline" className="text-xs">
-                              Uten rom ({noRoomParticipants.length})
-                            </Badge>
-                          </div>
-                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                            {noRoomParticipants.map((participant) => {
-                              const completedActivities = getParticipantActivities(participant.id);
-                              
-                              return (
-                                <div
-                                  key={participant.id}
-                                  className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-                                    participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
-                                  }`}
-                                  onClick={() => handleParticipantClick(participant.id)}
-                                  onMouseEnter={() => prefetchParticipant(participant.id)}
-                                  onTouchStart={() => prefetchParticipant(participant.id)}
-                                >
-                                  <div className="flex items-start gap-3">
-                                    <Avatar className="w-10 h-10 shrink-0">
-                                      <AvatarImage src={participant.image_url || undefined} loading="lazy" />
-                                      <AvatarFallback className="bg-muted text-muted-foreground">
-                                        <User className="w-4 h-4" />
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <p className="font-medium text-foreground truncate text-sm">
-                                          {participant.name}
-                                        </p>
-                                        {participant.has_arrived ? (
-                                          <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
-                                        ) : (
-                                          <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-1 mt-1 flex-wrap">
-                                        {participant.birth_date && (
-                                          <Badge variant="outline" className="text-xs">
-                                            {calculateAge(participant.birth_date)} år
-                                          </Badge>
-                                        )}
-                                        <StyrkeproveBadges 
-                                          completedActivities={completedActivities} 
-                                          showCount 
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-          );
-        })}
-      </div>
-
-      {cabinGroups.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground">Ingen deltakere funnet</h3>
-            <p className="text-muted-foreground mt-1">
-              {searchQuery ? 'Prøv et annet søk' : 'Ingen deltakere registrert ennå'}
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      {/* Virtualized Participant List */}
+      <VirtualizedParticipantList
+        cabinGroups={cabinGroups}
+        activitiesMap={activitiesMap}
+        expandedCabins={expandedCabins}
+        onToggleCabin={toggleCabinExpanded}
+        onParticipantClick={handleParticipantClick}
+        onPrefetchParticipant={prefetchParticipant}
+      />
 
       {/* Participant Detail Dialog */}
       <ParticipantDetailDialog
