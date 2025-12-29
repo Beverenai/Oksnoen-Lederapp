@@ -17,11 +17,12 @@ import {
   Anchor,
   Mountain,
   ArrowUpDown,
-  ArrowDown,
   Cable,
   Wrench,
-  Bell
+  Bell,
+  Palette
 } from 'lucide-react';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -377,6 +378,22 @@ export default function Profile() {
         </CardHeader>
         <CardContent>
           <PushNotificationStatus />
+        </CardContent>
+      </Card>
+
+      {/* Appearance */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="w-5 h-5" />
+            Utseende
+          </CardTitle>
+          <CardDescription>
+            Tilpass appens utseende
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ThemeSwitcher />
         </CardContent>
       </Card>
 
