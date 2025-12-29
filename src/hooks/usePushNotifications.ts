@@ -88,7 +88,7 @@ export function usePushNotifications() {
     setState(prev => ({ ...prev, isSyncing: true }));
 
     try {
-      const registration = await navigator.serviceWorker.getRegistration('/sw.js');
+      const registration = await navigator.serviceWorker.ready;
       if (!registration) {
         console.log('No service worker registration found');
         setState(prev => ({ ...prev, isSyncing: false }));
@@ -161,7 +161,7 @@ export function usePushNotifications() {
       let isEnabled = false;
       if (permission === 'granted') {
         try {
-          const registration = await navigator.serviceWorker.getRegistration('/sw.js');
+          const registration = await navigator.serviceWorker.ready;
           if (registration) {
             const subscription = await registration.pushManager.getSubscription();
             isEnabled = !!subscription;
@@ -224,9 +224,8 @@ export function usePushNotifications() {
         return false;
       }
 
-      // Register service worker
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      await navigator.serviceWorker.ready;
+      // Use the VitePWA-registered service worker
+      const registration = await navigator.serviceWorker.ready;
 
       // Get VAPID public key from edge function
       const { data: vapidData, error: vapidError } = await supabase.functions.invoke(
