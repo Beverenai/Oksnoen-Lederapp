@@ -8,20 +8,17 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { 
   Search, 
   CheckCircle2, 
   Circle,
   User,
   Home,
-  Filter,
   ChevronDown,
   ChevronRight,
   ArrowLeft,
   Users,
-  Sparkles,
-  Check
+  Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { differenceInYears } from 'date-fns';
@@ -29,6 +26,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
 import { BulkActivityRegistration } from '@/components/passport/BulkActivityRegistration';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 type Participant = Tables<'participants'>;
 type Cabin = Tables<'cabins'>;
@@ -57,6 +55,7 @@ const calculateAge = (birthDate: string): number => {
 
 export default function Passport() {
   const navigate = useNavigate();
+  const { leader } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const cabinFilterFromUrl = searchParams.get('cabin');
   
@@ -64,8 +63,8 @@ export default function Passport() {
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [leaderCabins, setLeaderCabins] = useState<Map<string, { id: string; name: string }[]>>(new Map());
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterCabin, setFilterCabin] = useState<string>(cabinFilterFromUrl || 'all');
-  const [filterArrival, setFilterArrival] = useState<string>('all');
+  const [myCabinIds, setMyCabinIds] = useState<string[]>([]);
+  const [myCabinsFilter, setMyCabinsFilter] = useState(false);
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
@@ -75,17 +74,10 @@ export default function Passport() {
 
   useEffect(() => {
     loadData();
-  }, []);
-
-  // Sync filterCabin with URL parameter
-  useEffect(() => {
-    if (cabinFilterFromUrl) {
-      setFilterCabin(cabinFilterFromUrl);
-    }
-  }, [cabinFilterFromUrl]);
+  }, [leader?.id]);
 
   const clearCabinFilter = () => {
-    setFilterCabin('all');
+    setMyCabinsFilter(false);
     setSearchParams({});
   };
 
@@ -103,6 +95,17 @@ export default function Passport() {
           .from('leader_cabins')
           .select('cabin_id, leaders(id, name)')
       ]);
+
+      // Fetch current leader's cabins if logged in (separate query to avoid type issues)
+      let myCabinsData: string[] = [];
+      if (leader?.id) {
+        const { data: myCabinsRes } = await supabase
+          .from('leader_cabins')
+          .select('cabin_id')
+          .eq('leader_id', leader.id);
+        myCabinsData = (myCabinsRes || []).map(c => c.cabin_id);
+      }
+      setMyCabinIds(myCabinsData);
 
       // Build leader-cabin map
       const leaderMap = new Map<string, { id: string; name: string }[]>();
@@ -147,15 +150,15 @@ export default function Passport() {
       const cabinName = p.cabins?.name?.toLowerCase() || '';
       const matchesCabinSearch = cabinName.includes(query);
       const matchesSearch = matchesName || matchesCabinSearch;
-      const matchesCabin = filterCabin === 'all' || p.cabin_id === filterCabin;
-      const matchesArrival = 
-        filterArrival === 'all' ||
-        (filterArrival === 'arrived' && p.has_arrived) ||
-        (filterArrival === 'not-arrived' && !p.has_arrived);
       
-      return matchesSearch && matchesCabin && matchesArrival;
+      // Filter by leader's cabins if "Min hytte" is active
+      const matchesCabin = myCabinsFilter 
+        ? myCabinIds.includes(p.cabin_id || '') 
+        : true;
+      
+      return matchesSearch && matchesCabin;
     });
-  }, [participants, searchQuery, filterCabin, filterArrival]);
+  }, [participants, searchQuery, myCabinsFilter, myCabinIds]);
 
   // Group participants by cabin
   const cabinGroups = useMemo((): CabinGroup[] => {
@@ -221,15 +224,16 @@ export default function Passport() {
     );
   }
 
-  // Get the filtered cabin name for display
-  const filteredCabinName = cabinFilterFromUrl 
-    ? cabins.find(c => c.id === cabinFilterFromUrl)?.name 
-    : null;
+  // Get the filtered cabin names for display
+  const myCabinNames = myCabinIds
+    .map(id => cabins.find(c => c.id === id)?.name)
+    .filter(Boolean)
+    .join(', ');
 
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Back button when filtered by cabin */}
-      {cabinFilterFromUrl && (
+      {(cabinFilterFromUrl || myCabinsFilter) && (
         <Button variant="ghost" onClick={clearCabinFilter} className="mb-2">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Tilbake til alle hytter
@@ -239,7 +243,7 @@ export default function Passport() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground">
-            {filteredCabinName ? `${filteredCabinName}` : 'Passkontroll'}
+            {myCabinsFilter && myCabinNames ? myCabinNames : 'Passkontroll'}
           </h1>
           <p className="text-muted-foreground mt-1">
             {arrivedCount} av {participants.length} deltakere har ankommet
@@ -257,82 +261,18 @@ export default function Passport() {
             {showBulkRegistration ? 'Skjul' : 'Aktivitet'}
           </Button>
           
-          {/* Cabin filter button with Sheet */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <Home className="w-4 h-4" />
-                {filterCabin === 'all' ? 'Hytte' : cabins.find(c => c.id === filterCabin)?.name}
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="max-h-[70vh]">
-              <SheetHeader>
-                <SheetTitle>Velg hytte</SheetTitle>
-              </SheetHeader>
-              <div className="grid gap-2 mt-4 max-h-[50vh] overflow-y-auto">
-                <Button
-                  variant={filterCabin === 'all' ? 'default' : 'ghost'}
-                  className="justify-start"
-                  onClick={() => setFilterCabin('all')}
-                >
-                  {filterCabin === 'all' && <Check className="w-4 h-4 mr-2" />}
-                  Alle hytter
-                </Button>
-                {cabins.map((cabin) => (
-                  <Button
-                    key={cabin.id}
-                    variant={filterCabin === cabin.id ? 'default' : 'ghost'}
-                    className="justify-start"
-                    onClick={() => setFilterCabin(cabin.id)}
-                  >
-                    {filterCabin === cabin.id && <Check className="w-4 h-4 mr-2" />}
-                    {cabin.name}
-                  </Button>
-                ))}
-              </div>
-            </SheetContent>
-          </Sheet>
-
-          {/* Arrival filter button with Sheet */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <Filter className="w-4 h-4" />
-                {filterArrival === 'all' ? 'Status' : filterArrival === 'arrived' ? 'Ankommet' : 'Ikke ank.'}
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom">
-              <SheetHeader>
-                <SheetTitle>Filtrer på status</SheetTitle>
-              </SheetHeader>
-              <div className="grid gap-2 mt-4">
-                <Button
-                  variant={filterArrival === 'all' ? 'default' : 'ghost'}
-                  className="justify-start"
-                  onClick={() => setFilterArrival('all')}
-                >
-                  {filterArrival === 'all' && <Check className="w-4 h-4 mr-2" />}
-                  Alle
-                </Button>
-                <Button
-                  variant={filterArrival === 'arrived' ? 'default' : 'ghost'}
-                  className="justify-start"
-                  onClick={() => setFilterArrival('arrived')}
-                >
-                  {filterArrival === 'arrived' && <Check className="w-4 h-4 mr-2" />}
-                  Ankommet
-                </Button>
-                <Button
-                  variant={filterArrival === 'not-arrived' ? 'default' : 'ghost'}
-                  className="justify-start"
-                  onClick={() => setFilterArrival('not-arrived')}
-                >
-                  {filterArrival === 'not-arrived' && <Check className="w-4 h-4 mr-2" />}
-                  Ikke ankommet
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
+          {/* My cabin filter button - only show if leader has assigned cabins */}
+          {myCabinIds.length > 0 && (
+            <Button
+              variant={myCabinsFilter ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMyCabinsFilter(!myCabinsFilter)}
+              className="gap-1.5"
+            >
+              <Home className="w-4 h-4" />
+              {myCabinsFilter ? 'Alle hytter' : 'Min hytte'}
+            </Button>
+          )}
         </div>
       </div>
 
