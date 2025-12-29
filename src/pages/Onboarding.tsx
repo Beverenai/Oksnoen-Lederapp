@@ -274,7 +274,7 @@ export default function Onboarding() {
                   />
                   <Label htmlFor="ropeSetup" className="flex items-center gap-2 cursor-pointer text-sm">
                     <Wrench className="w-4 h-4 text-muted-foreground" />
-                    Oppsett
+                    Taubane-Oppsett
                   </Label>
                 </div>
               </div>

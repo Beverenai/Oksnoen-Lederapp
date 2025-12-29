@@ -17,6 +17,9 @@ import {
   Anchor,
   Mountain,
   ArrowUpDown,
+  ArrowDown,
+  Cable,
+  Wrench,
   Bell
 } from 'lucide-react';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
@@ -342,8 +345,8 @@ export default function Profile() {
                 onCheckedChange={(checked) => setCanZipline(checked === true)}
               />
               <Label htmlFor="zipline" className="flex items-center gap-2">
-                <Mountain className="w-4 h-4" />
-                Taubane (oppe)
+                <Cable className="w-4 h-4" />
+                Taubane
               </Label>
             </div>
             <div className="flex items-center space-x-2">
@@ -353,8 +356,8 @@ export default function Profile() {
                 onCheckedChange={(checked) => setCanRopeSetup(checked === true)}
               />
               <Label htmlFor="ropeSetup" className="flex items-center gap-2">
-                <Mountain className="w-4 h-4" />
-                Taubane (oppsett)
+                <Wrench className="w-4 h-4" />
+                Taubane-Oppsett
               </Label>
             </div>
           </div>
