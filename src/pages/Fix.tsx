@@ -304,12 +304,7 @@ export default function Fix() {
           <div className="p-2 rounded-full bg-primary/10">
             <Wrench className="w-6 h-6 text-primary" />
           </div>
-          <div>
-            <h1 className="text-2xl font-heading font-bold text-foreground">FIX</h1>
-            <p className="text-sm text-muted-foreground">
-              Vedlikeholdsoppgaver
-            </p>
-          </div>
+          <h1 className="text-2xl font-heading font-bold text-foreground">FIX</h1>
         </div>
         <Button onClick={() => setShowNewForm(true)} size="sm">
           <Plus className="w-4 h-4 mr-1" />
