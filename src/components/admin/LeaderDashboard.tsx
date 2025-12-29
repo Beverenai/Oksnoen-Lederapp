@@ -230,11 +230,15 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
           const isAdminOrNurse = adminNurseIds.has(leader.id);
           
           const getBorderClass = () => {
-            // Admin og Nurse skal ALLTID være grønne - høyeste prioritet
-            if (isAdminOrNurse) return 'ring-green-500';
+            // Kjøkken har alltid lilla ring - høyeste prioritet for visuell identifikasjon
             if (isKitchen) return 'ring-purple-500';
+            // "Fri" aktivitet gir blå ring
             if (isFri) return 'ring-blue-500';
+            // Admin og Nurse skal være grønne
+            if (isAdminOrNurse) return 'ring-green-500';
+            // Har lest = grønn
             if (content?.has_read) return 'ring-green-500';
+            // Standard = rød
             return 'ring-red-500';
           };
 
