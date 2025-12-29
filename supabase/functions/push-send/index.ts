@@ -185,6 +185,22 @@ serve(async (req) => {
         }
       }
       
+      // Save to announcements (wall)
+      const { error: insertError } = await supabaseAdmin
+        .from('announcements')
+        .insert({
+          title: title,
+          content: message,
+          is_active: true,
+          target_group: 'Personlig melding',
+        });
+      
+      if (insertError) {
+        console.error('Failed to save announcement:', insertError);
+      } else {
+        console.log('Announcement saved to wall');
+      }
+      
       return new Response(
         JSON.stringify({ success: true, sent, failed }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -285,6 +301,34 @@ serve(async (req) => {
     }
 
     console.log(`Push complete: ${sent} sent, ${failed} failed`);
+
+    // Save to announcements (wall)
+    let targetGroup = 'Alle ledere';
+    if (target_activity === 'active') {
+      targetGroup = 'Ledere på aktivitet';
+    } else if (target_activity === 'free') {
+      targetGroup = 'Ledere med fri';
+    }
+    
+    // For wall display, use generalized message (replace {activity} placeholder)
+    const wallMessage = personalize_activity 
+      ? message.replace('{activity}', 'din aktivitet')
+      : message;
+    
+    const { error: insertError } = await supabaseAdmin
+      .from('announcements')
+      .insert({
+        title: title,
+        content: wallMessage,
+        is_active: true,
+        target_group: targetGroup,
+      });
+    
+    if (insertError) {
+      console.error('Failed to save announcement:', insertError);
+    } else {
+      console.log('Announcement saved to wall with target_group:', targetGroup);
+    }
 
     return new Response(
       JSON.stringify({ success: true, sent, failed, removed: deadSubscriptions.length }),

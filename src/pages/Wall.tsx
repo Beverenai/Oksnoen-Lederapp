@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Megaphone } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
-type Announcement = Tables<'announcements'>;
+type Announcement = Tables<'announcements'> & { target_group?: string };
 
 export default function Wall() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -77,14 +77,21 @@ export default function Wall() {
                 <Megaphone className="w-5 h-5 text-primary" />
                 {announcement.title}
               </CardTitle>
-              <Badge variant="secondary" className="w-fit">
-                {new Date(announcement.created_at!).toLocaleDateString('nb-NO', {
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </Badge>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="secondary" className="w-fit">
+                  {new Date(announcement.created_at!).toLocaleDateString('nb-NO', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Badge>
+                {announcement.target_group && (
+                  <Badge variant="outline" className="w-fit text-xs">
+                    {announcement.target_group}
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
             {announcement.content && (
               <CardContent>
