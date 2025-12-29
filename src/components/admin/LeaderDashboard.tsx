@@ -156,11 +156,13 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
     leader.cabin?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Sort leaders: Admin/Nurse first, then by team order, "Fri" at bottom
+  // Sort leaders: Admin/Nurse first, then Kordinator, then by team order
   const sortedLeaders = useMemo(() => {
     const getTeamSortOrder = (team: string | null): number => {
       const teamLower = team?.toLowerCase().trim();
       switch (teamLower) {
+        case 'kordinator':
+          return 1;
         case '1':
         case 'team 1':
           return 2;
@@ -188,20 +190,13 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
       if (aIsAdminNurse && !bIsAdminNurse) return -1;
       if (!aIsAdminNurse && bIsAdminNurse) return 1;
       
-      // 2. "Fri" aktivitet nederst
-      const aIsFri = a.content?.current_activity?.toLowerCase().includes('fri');
-      const bIsFri = b.content?.current_activity?.toLowerCase().includes('fri');
-      
-      if (aIsFri && !bIsFri) return 1;
-      if (!aIsFri && bIsFri) return -1;
-      
-      // 3. Sorter etter team-rekkefølge
+      // 2. Sorter etter team-rekkefølge (Kordinator → Team 1 → osv.)
       const aOrder = getTeamSortOrder(a.team);
       const bOrder = getTeamSortOrder(b.team);
       
       if (aOrder !== bOrder) return aOrder - bOrder;
       
-      // 4. Alfabetisk innenfor samme gruppe
+      // 3. Alfabetisk innenfor samme gruppe
       return a.name.localeCompare(b.name, 'nb');
     });
   }, [filteredLeaders, adminNurseIds]);
