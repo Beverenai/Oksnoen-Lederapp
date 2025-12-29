@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { 
   Upload, 
   FileSpreadsheet,
@@ -13,6 +14,16 @@ import {
   Users
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+interface ImportProgress {
+  status: 'idle' | 'running' | 'done' | 'error';
+  processed: number;
+  total: number;
+  created: number;
+  updated: number;
+  activitiesAdded: number;
+  errors: string[];
+}
 
 interface Cabin {
   id: string;
@@ -49,11 +60,69 @@ export function ParticipantImportTab() {
   const [isImporting, setIsImporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Poll import progress
+  const pollProgress = useCallback(async () => {
+    const { data } = await supabase
+      .from('app_config')
+      .select('value')
+      .eq('key', 'participant_import_progress')
+      .maybeSingle();
+
+    if (data?.value) {
+      try {
+        const progress = JSON.parse(data.value) as ImportProgress;
+        setImportProgress(progress);
+
+        if (progress.status === 'running') {
+          setIsImporting(true);
+        } else if (progress.status === 'done' || progress.status === 'error') {
+          setIsImporting(false);
+          // Convert to ImportResult for display
+          setImportResult({
+            created: progress.created,
+            updated: progress.updated,
+            activitiesAdded: progress.activitiesAdded,
+            errors: progress.errors
+          });
+          // Clear parsed data on success
+          if (progress.status === 'done' && progress.errors.length === 0) {
+            setParsedData([]);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            toast.success(`Import fullført! ${progress.created} nye, ${progress.updated} oppdatert, ${progress.activitiesAdded} aktiviteter`);
+          } else if (progress.status === 'error') {
+            toast.error('Import feilet');
+          } else {
+            toast.warning(`Import delvis fullført med ${progress.errors.length} feil`);
+          }
+          loadData();
+        }
+        return progress.status;
+      } catch (e) {
+        console.error('Failed to parse progress:', e);
+      }
+    }
+    return null;
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+    // Check if there's an ongoing import
+    pollProgress();
+  }, [pollProgress]);
+
+  // Polling interval when import is running
+  useEffect(() => {
+    if (!isImporting) return;
+
+    const interval = setInterval(() => {
+      pollProgress();
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isImporting, pollProgress]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -240,208 +309,64 @@ export function ParticipantImportTab() {
   };
 
   const importParticipants = async () => {
-    if (parsedData.length === 0) return;
+    const validParticipants = parsedData.filter(p => p.valid);
+    if (validParticipants.length === 0) return;
 
     setIsImporting(true);
     setImportResult(null);
-    const result: ImportResult = { created: 0, updated: 0, activitiesAdded: 0, errors: [] };
+    setImportProgress(null);
 
     try {
-      // Create a map of cabin names to IDs
-      const cabinMap = new Map(cabins.map(c => [c.name.toLowerCase(), c.id]));
-      
-      // Track cabins that need to be created
-      const missingCabins = new Set<string>();
-      parsedData.forEach(p => {
-        if (p.valid && !cabinMap.has(p.cabinName.toLowerCase())) {
-          missingCabins.add(p.cabinName);
-        }
+      // Reset progress in app_config
+      await supabase
+        .from('app_config')
+        .upsert({
+          key: 'participant_import_progress',
+          value: JSON.stringify({ 
+            status: 'idle', 
+            processed: 0, 
+            total: validParticipants.length,
+            created: 0,
+            updated: 0,
+            activitiesAdded: 0,
+            errors: []
+          }),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+
+      // Prepare data for edge function (only valid participants, without valid/error fields)
+      const participantsToImport = validParticipants.map(p => ({
+        firstName: p.firstName,
+        lastName: p.lastName,
+        birthDate: p.birthDate,
+        cabinName: p.cabinName,
+        room: p.room,
+        timesAttended: p.timesAttended,
+        info: p.info,
+        imageUrl: p.imageUrl,
+        hasArrived: p.hasArrived,
+        activities: p.activities
+      }));
+
+      // Call edge function to start background import
+      const { data, error } = await supabase.functions.invoke('import-participants-background', {
+        body: { participants: participantsToImport }
       });
 
-      // Create missing cabins
-      if (missingCabins.size > 0) {
-        const maxSortOrder = cabins.length > 0 
-          ? Math.max(...cabins.map(c => cabins.indexOf(c))) 
-          : 0;
-        
-        const cabinsToCreate = Array.from(missingCabins).map((name, idx) => ({
-          name,
-          sort_order: maxSortOrder + idx + 1
-        }));
-
-        const { data: newCabins, error } = await supabase
-          .from('cabins')
-          .insert(cabinsToCreate)
-          .select();
-
-        if (error) {
-          result.errors.push(`Kunne ikke opprette hytter: ${error.message}`);
-        } else if (newCabins) {
-          newCabins.forEach(c => cabinMap.set(c.name.toLowerCase(), c.id));
-        }
+      if (error) {
+        console.error('Error calling import function:', error);
+        toast.error('Kunne ikke starte import');
+        setIsImporting(false);
+        return;
       }
 
-      // Import participants
-      for (const participant of parsedData.filter(p => p.valid)) {
-        const cabinId = cabinMap.get(participant.cabinName.toLowerCase());
-        if (!cabinId) {
-          result.errors.push(`${participant.firstName} ${participant.lastName}: Fant ikke hytte "${participant.cabinName}"`);
-          continue;
-        }
-
-        const fullName = `${participant.firstName} ${participant.lastName}`.trim();
-        
-        // Check if participant exists - first try exact name match
-        let existingParticipant = null;
-        
-        // Try exact name match first (case-insensitive)
-        const { data: exactMatch } = await supabase
-          .from('participants')
-          .select('id, birth_date')
-          .ilike('name', fullName)
-          .maybeSingle();
-        
-        if (exactMatch) {
-          existingParticipant = exactMatch;
-        } else if (participant.birthDate) {
-          // If no exact match, try birth date + first name
-          const { data: birthDateMatch } = await supabase
-            .from('participants')
-            .select('id')
-            .eq('birth_date', participant.birthDate)
-            .ilike('name', `%${participant.firstName}%`)
-            .maybeSingle();
-          existingParticipant = birthDateMatch;
-        }
-
-        if (existingParticipant) {
-          // Update existing
-          const updateData = {
-            name: fullName,
-            first_name: participant.firstName,
-            last_name: participant.lastName,
-            cabin_id: cabinId,
-            room: participant.room,
-            times_attended: participant.timesAttended,
-            has_arrived: participant.hasArrived,
-            image_url: participant.imageUrl || undefined,
-            notes: participant.info || undefined
-          };
-
-          const { error } = await supabase
-            .from('participants')
-            .update(updateData)
-            .eq('id', existingParticipant.id);
-
-          if (error) {
-            result.errors.push(`${fullName}: ${error.message}`);
-          } else {
-            result.updated++;
-            
-            // Update or create health info
-            if (participant.info) {
-              await supabase
-                .from('participant_health_info')
-                .upsert({
-                  participant_id: existingParticipant.id,
-                  info: participant.info
-                }, { onConflict: 'participant_id' });
-            }
-
-            // Add activities
-            if (participant.activities.length > 0) {
-              // First delete existing activities
-              await supabase
-                .from('participant_activities')
-                .delete()
-                .eq('participant_id', existingParticipant.id);
-
-              // Insert new activities
-              const activitiesToInsert: { participant_id: string; activity: string }[] = [];
-              for (const act of participant.activities) {
-                for (let i = 0; i < act.count; i++) {
-                  activitiesToInsert.push({
-                    participant_id: existingParticipant.id,
-                    activity: act.activity
-                  });
-                }
-              }
-              if (activitiesToInsert.length > 0) {
-                await supabase.from('participant_activities').insert(activitiesToInsert);
-                result.activitiesAdded += activitiesToInsert.length;
-              }
-            }
-          }
-        } else {
-          // Create new
-          const insertData = {
-            name: fullName,
-            first_name: participant.firstName,
-            last_name: participant.lastName,
-            birth_date: participant.birthDate,
-            cabin_id: cabinId,
-            room: participant.room,
-            times_attended: participant.timesAttended,
-            has_arrived: participant.hasArrived,
-            image_url: participant.imageUrl || null,
-            notes: participant.info || null
-          };
-
-          const { data: newParticipant, error } = await supabase
-            .from('participants')
-            .insert(insertData)
-            .select('id')
-            .single();
-
-          if (error) {
-            result.errors.push(`${fullName}: ${error.message}`);
-          } else {
-            result.created++;
-            
-            // Create health info if provided
-            if (participant.info && newParticipant) {
-              await supabase
-                .from('participant_health_info')
-                .insert({
-                  participant_id: newParticipant.id,
-                  info: participant.info
-                });
-            }
-
-            // Add activities
-            if (participant.activities.length > 0 && newParticipant) {
-              const activitiesToInsert: { participant_id: string; activity: string }[] = [];
-              for (const act of participant.activities) {
-                for (let i = 0; i < act.count; i++) {
-                  activitiesToInsert.push({
-                    participant_id: newParticipant.id,
-                    activity: act.activity
-                  });
-                }
-              }
-              if (activitiesToInsert.length > 0) {
-                await supabase.from('participant_activities').insert(activitiesToInsert);
-                result.activitiesAdded += activitiesToInsert.length;
-              }
-            }
-          }
-        }
-      }
-
-      setImportResult(result);
-      loadData();
+      toast.info(`Import startet for ${validParticipants.length} deltakere. Du kan navigere bort - importen fortsetter i bakgrunnen.`);
       
-      if (result.errors.length === 0) {
-        toast.success(`Import fullført! ${result.created} nye, ${result.updated} oppdatert, ${result.activitiesAdded} aktiviteter`);
-        setParsedData([]);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      } else {
-        toast.warning(`Import delvis fullført med ${result.errors.length} feil`);
-      }
+      // Start polling for progress
+      pollProgress();
     } catch (error) {
       console.error('Import error:', error);
-      toast.error('Kunne ikke importere deltakere');
-    } finally {
+      toast.error('Kunne ikke starte import');
       setIsImporting(false);
     }
   };
@@ -546,8 +471,32 @@ export function ParticipantImportTab() {
             </div>
           </div>
 
+          {/* Progress indicator when importing */}
+          {isImporting && importProgress && (
+            <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 space-y-3">
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                <p className="font-medium text-blue-700 dark:text-blue-300">
+                  Importerer deltakere i bakgrunnen...
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Du kan navigere bort fra denne siden - importen fortsetter i bakgrunnen.
+              </p>
+              <Progress 
+                value={(importProgress.processed / importProgress.total) * 100} 
+                className="h-2"
+              />
+              <p className="text-sm text-muted-foreground">
+                {importProgress.processed} av {importProgress.total} deltakere prosessert
+                {importProgress.created > 0 && ` • ${importProgress.created} opprettet`}
+                {importProgress.updated > 0 && ` • ${importProgress.updated} oppdatert`}
+              </p>
+            </div>
+          )}
+
           {/* Preview */}
-          {parsedData.length > 0 && (
+          {parsedData.length > 0 && !isImporting && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
