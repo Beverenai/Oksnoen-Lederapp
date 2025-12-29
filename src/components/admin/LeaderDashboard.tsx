@@ -156,6 +156,56 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
     leader.cabin?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Sort leaders: Admin/Nurse first, then by team order, "Fri" at bottom
+  const sortedLeaders = useMemo(() => {
+    const getTeamSortOrder = (team: string | null): number => {
+      const teamLower = team?.toLowerCase().trim();
+      switch (teamLower) {
+        case '1':
+        case 'team 1':
+          return 2;
+        case '2':
+        case 'team 2':
+          return 3;
+        case '1f':
+        case 'team 1f':
+          return 4;
+        case '2f':
+        case 'team 2f':
+          return 5;
+        case 'kjøkken':
+          return 6;
+        default:
+          return 7;
+      }
+    };
+
+    return [...filteredLeaders].sort((a, b) => {
+      // 1. Admin og Nurse først
+      const aIsAdminNurse = adminNurseIds.has(a.id);
+      const bIsAdminNurse = adminNurseIds.has(b.id);
+      
+      if (aIsAdminNurse && !bIsAdminNurse) return -1;
+      if (!aIsAdminNurse && bIsAdminNurse) return 1;
+      
+      // 2. "Fri" aktivitet nederst
+      const aIsFri = a.content?.current_activity?.toLowerCase().includes('fri');
+      const bIsFri = b.content?.current_activity?.toLowerCase().includes('fri');
+      
+      if (aIsFri && !bIsFri) return 1;
+      if (!aIsFri && bIsFri) return -1;
+      
+      // 3. Sorter etter team-rekkefølge
+      const aOrder = getTeamSortOrder(a.team);
+      const bOrder = getTeamSortOrder(b.team);
+      
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      
+      // 4. Alfabetisk innenfor samme gruppe
+      return a.name.localeCompare(b.name, 'nb');
+    });
+  }, [filteredLeaders, adminNurseIds]);
+
   const handleEditClick = (leader: LeaderWithContent) => {
     setSelectedLeader(leader);
     setIsSheetOpen(true);
@@ -217,7 +267,7 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
 
       {/* Leader Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filteredLeaders.map(leader => {
+        {sortedLeaders.map(leader => {
           const content = leader.content;
           const hasObs = !!content?.obs_message;
           const hasActivity = !!content?.current_activity;
