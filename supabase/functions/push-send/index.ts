@@ -71,7 +71,6 @@ async function sendPushNotification(
     const jwt = `${unsignedToken}.${signatureB64}`;
 
     // Encrypt payload using Web Push encryption
-    // For simplicity, we'll send without encryption for now (works for most push services)
     const payloadBytes = encoder.encode(payload);
 
     // Generate local key pair for encryption
@@ -180,61 +179,57 @@ serve(async (req) => {
   }
 
   try {
-    // Check admin authorization
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    const body = await req.json();
+    const { title, message, url, leader_ids, broadcast, sender_leader_id } = body;
+
+    console.log("Push send request received:", { title, broadcast, sender_leader_id });
+
+    if (!title || !message) {
       return new Response(
-        JSON.stringify({ error: "No authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Title and message are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabaseClient = createClient(
+    // Use service role client for all operations
+    const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get user and check if admin
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
+    // Verify sender is an admin (using sender_leader_id from the request)
+    if (!sender_leader_id) {
+      console.log("No sender_leader_id provided");
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Sender leader ID is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Check admin role
-    const { data: leader } = await supabaseClient
-      .from("leaders")
-      .select("id")
-      .eq("phone", user.phone?.replace("+47", "") || "")
-      .single();
-
-    if (!leader) {
-      return new Response(
-        JSON.stringify({ error: "Leader not found" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const { data: roleData } = await supabaseClient
+    const { data: roleData, error: roleError } = await supabaseAdmin
       .from("user_roles")
       .select("role")
-      .eq("leader_id", leader.id)
+      .eq("leader_id", sender_leader_id)
       .eq("role", "admin")
-      .single();
+      .maybeSingle();
+
+    if (roleError) {
+      console.error("Error checking admin role:", roleError);
+      return new Response(
+        JSON.stringify({ error: "Failed to verify admin status" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!roleData) {
+      console.log("User is not an admin:", sender_leader_id);
       return new Response(
         JSON.stringify({ error: "Admin access required" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log("Admin verified:", sender_leader_id);
 
     // Get VAPID keys
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
@@ -247,22 +242,6 @@ serve(async (req) => {
         { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const body = await req.json();
-    const { title, message, url, leader_ids, broadcast } = body;
-
-    if (!title || !message) {
-      return new Response(
-        JSON.stringify({ error: "Title and message are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Use service role to get subscriptions
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
 
     // Get subscriptions
     let query = supabaseAdmin.from("push_subscriptions").select("*");
