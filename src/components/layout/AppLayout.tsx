@@ -55,11 +55,7 @@ const importantInfoNavItem: NavItem = { to: '/important-info', icon: AlertTriang
 const wallNavItem: NavItem = { to: '/wall', icon: Megaphone, label: 'Den store veggen' };
 const fixNavItem: NavItem = { to: '/fix', icon: Wrench, label: 'Rapporter' };
 
-// Base navigation items for mobile slide-out menu (simplified)
-const baseMobileMenuItems: NavItem[] = [
-  { to: '/profile', icon: User, label: 'Min Profil' },
-  { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
-];
+// Note: Mobile hamburger menu now uses allNavItems (same as desktop sidebar)
 
 // Bottom nav items type
 type BottomNavItem = {
@@ -128,10 +124,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
     fixNavItem,
   ];
 
-  const mobileMenuItems = [
-    ...baseMobileMenuItems,
-    ...(hasScheduleImage ? [scheduleNavItem] : []),
-  ];
 
   // Fetch schedule image availability and subscribe to changes
   useEffect(() => {
@@ -252,28 +244,30 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
         </div>
       )}
-      {/* Mobile Header - smaller, just menu + logo - with safe area for Dynamic Island */}
-      <header 
-        className="lg:hidden fixed top-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-b border-border z-50 px-4 pt-safe flex items-center justify-between h-[calc(3.5rem+env(safe-area-inset-top,0px))]"
-        style={{ transform: 'translate3d(0,0,0)', WebkitTransform: 'translate3d(0,0,0)' }}
-      >
-        <div className="flex items-center gap-3">
-          <img src={oksnoenLogo} alt="Oksnøen" className="h-8 w-8 object-contain" />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground truncate max-w-[140px]">
-            {leader?.name}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="shrink-0"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </Button>
-        </div>
-      </header>
+      {/* Mobile Header - hidden when menu is open */}
+      {!mobileMenuOpen && (
+        <header 
+          className="lg:hidden fixed top-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-b border-border z-50 px-4 pt-safe flex items-center justify-between h-[calc(3.5rem+env(safe-area-inset-top,0px))]"
+          style={{ transform: 'translate3d(0,0,0)', WebkitTransform: 'translate3d(0,0,0)' }}
+        >
+          <div className="flex items-center gap-3">
+            <img src={oksnoenLogo} alt="Oksnøen" className="h-8 w-8 object-contain" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground truncate max-w-[140px]">
+              {leader?.name}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(true)}
+              className="shrink-0"
+            >
+              <Menu className="w-5 h-5" />
+            </Button>
+          </div>
+        </header>
+      )}
 
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 bg-card border-r border-border flex-col">
@@ -371,125 +365,139 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       </aside>
 
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-foreground/20 z-[60]"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Mobile Slide-out Menu - Full screen from right */}
+      {/* Mobile Slide-out Menu - True fullscreen from right */}
       <div
         className={cn(
-          'lg:hidden fixed inset-x-0 top-[calc(3.5rem+env(safe-area-inset-top,0px))] bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] bg-card z-[60] transform transition-transform duration-300 ease-out overflow-y-auto',
+          'lg:hidden fixed inset-0 bg-card z-[70] transform transition-transform duration-300 ease-out',
           mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         )}
       >
-        <nav className="p-4 space-y-1">
-          {mobileMenuItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={() => setMobileMenuOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-foreground hover:bg-muted'
-                )
-              }
-            >
-              <item.icon className="w-5 h-5" />
-              {item.label}
-            </NavLink>
-          ))}
-          
-          {(isAdmin || isNurse) && (
-            <>
-              <div className="pt-4 pb-2">
-                <span className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Spesielle tilganger
-                </span>
-              </div>
-              {(isAdmin || isNurse) && nurseNavItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-foreground hover:bg-muted'
-                    )
-                  }
+        {/* Menu Header with close button */}
+        <header 
+          className="fixed top-0 left-0 right-0 bg-card border-b border-border px-4 pt-safe flex items-center justify-between h-[calc(3.5rem+env(safe-area-inset-top,0px))] z-10"
+        >
+          <div className="flex items-center gap-3">
+            <img src={oksnoenLogo} alt="Oksnøen" className="h-8 w-8 object-contain" />
+            <span className="font-heading font-bold text-foreground">Oksnøen</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileMenuOpen(false)}
+            className="shrink-0"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        </header>
+
+        {/* Menu Content - scrollable */}
+        <nav className="pt-[calc(3.5rem+env(safe-area-inset-top,0px))] pb-safe overflow-y-auto h-full">
+          <div className="p-4 space-y-1">
+            {allNavItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={() => setMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-muted'
+                  )
+                }
+              >
+                <item.icon className="w-5 h-5" />
+                {item.label}
+              </NavLink>
+            ))}
+            
+            {(isAdmin || isNurse) && (
+              <>
+                <div className="pt-4 pb-2">
+                  <span className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Spesielle tilganger
+                  </span>
+                </div>
+                {(isAdmin || isNurse) && nurseNavItems.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-foreground hover:bg-muted'
+                      )
+                    }
+                  >
+                    <item.icon className="w-5 h-5" />
+                    {item.label}
+                  </NavLink>
+                ))}
+                {isAdmin && adminNavItems.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-foreground hover:bg-muted'
+                      )
+                    }
+                  >
+                    <item.icon className="w-5 h-5" />
+                    {item.label}
+                  </NavLink>
+                ))}
+              </>
+            )}
+            
+            <div className="pt-4 space-y-1">
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setNotificationSheetOpen(true);
+                  }}
                 >
-                  <item.icon className="w-5 h-5" />
-                  {item.label}
-                </NavLink>
-              ))}
-              {isAdmin && adminNavItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-foreground hover:bg-muted'
-                    )
-                  }
-                >
-                  <item.icon className="w-5 h-5" />
-                  {item.label}
-                </NavLink>
-              ))}
-            </>
-          )}
-          
-          <div className="pt-4 space-y-1">
-            {isAdmin && (
+                  <Bell className="w-5 h-5" />
+                  Hurtigvarslinger
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  setNotificationSheetOpen(true);
+                  logout();
                 }}
               >
-                <Bell className="w-5 h-5" />
-                Hurtigvarslinger
+                <LogOut className="w-5 h-5" />
+                Logg ut
               </Button>
-            )}
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                logout();
-              }}
-            >
-              <LogOut className="w-5 h-5" />
-              Logg ut
-            </Button>
+            </div>
           </div>
         </nav>
       </div>
 
-      {/* Mobile Bottom Navigation - Apple Tab Bar Style */}
-      <nav 
-        className="lg:hidden mobile-bottom-nav fixed inset-x-0 bottom-0 bg-card/95 backdrop-blur-md border-t border-border shadow-lg z-30"
-        style={{ 
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          WebkitTransform: 'translate3d(0,0,0)',
-          transform: 'translate3d(0,0,0)'
-        }}
-      >
+      {/* Mobile Bottom Navigation - hidden when menu is open */}
+      {!mobileMenuOpen && (
+        <nav 
+          className="lg:hidden mobile-bottom-nav fixed inset-x-0 bottom-0 bg-card/95 backdrop-blur-md border-t border-border shadow-lg z-30"
+          style={{ 
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            WebkitTransform: 'translate3d(0,0,0)',
+            transform: 'translate3d(0,0,0)'
+          }}
+        >
         <div className="h-16 flex items-center justify-evenly">
           {getBottomNavItems(isAdmin, isNurse).map((item) => {
             const isActive = location.pathname === item.to;
@@ -537,9 +545,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 </span>
               </NavLink>
             );
-          })}
-        </div>
-      </nav>
+            })}
+          </div>
+        </nav>
+      )}
 
       {/* Main Content - mobile: scrollable content area; desktop: normal flow */}
       <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] lg:pb-0 flex-1 lg:min-h-screen">
