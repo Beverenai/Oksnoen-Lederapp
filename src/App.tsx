@@ -17,7 +17,7 @@ import Team from "@/pages/Team";
 import Passport from "@/pages/Passport";
 import MyCabins from "@/pages/MyCabins";
 import Schedule from "@/pages/Schedule";
-import Wall from "@/pages/Wall";
+
 import Admin from "@/pages/Admin";
 import AdminSettings from "@/pages/AdminSettings";
 import Nurse from "@/pages/Nurse";
@@ -187,14 +187,6 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ImportantInfo />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/wall"
-        element={
-          <ProtectedRoute>
-            <Wall />
           </ProtectedRoute>
         }
       />
