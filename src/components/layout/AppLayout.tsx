@@ -231,7 +231,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       )}
       {/* Mobile Header - smaller, just menu + logo - with safe area for Dynamic Island */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-b border-border z-50 px-4 pt-safe flex items-center justify-between h-[calc(3.5rem+env(safe-area-inset-top,0px))]">
+      <header 
+        className="lg:hidden fixed top-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-b border-border z-50 px-4 pt-safe flex items-center justify-between h-[calc(3.5rem+env(safe-area-inset-top,0px))]"
+        style={{ transform: 'translate3d(0,0,0)', WebkitTransform: 'translate3d(0,0,0)' }}
+      >
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -439,23 +442,23 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {getBottomNavItems(isAdmin, isNurse).map((item) => {
           const isActive = location.pathname === item.to;
           
-          // Special rendering for Hajolo button
+          // Special rendering for Hajolo button - larger and floating above nav
           if (item.isHajolo) {
             return (
               <button
                 key="hajolo"
                 onClick={handleHajoloClick}
-                className="flex flex-col items-center justify-center gap-1 px-4 py-2"
+                className="flex flex-col items-center justify-center gap-0.5 -mt-6"
               >
                 <div
                   className={cn(
-                    'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
+                    'w-14 h-14 rounded-full flex items-center justify-center transition-colors shadow-lg border-4 border-card',
                     hasRead ? 'bg-green-500' : 'bg-red-500'
                   )}
                 >
-                  <Check className="w-6 h-6 text-white" />
+                  <Check className="w-8 h-8 text-white" />
                 </div>
-                <span className="text-xs font-medium">{item.label}</span>
+                <span className="text-xs font-medium mt-1">{item.label}</span>
               </button>
             );
           }
