@@ -35,7 +35,8 @@ import {
   User,
   Home,
   Eye,
-  Trophy
+  Trophy,
+  Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, differenceInYears } from 'date-fns';
@@ -111,6 +112,7 @@ export default function Nurse() {
   const [newEventDescription, setNewEventDescription] = useState('');
   const [newEventSeverity, setNewEventSeverity] = useState('low');
   const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     loadParticipants();
@@ -310,6 +312,155 @@ export default function Nurse() {
     p.healthNotes.length === 0 && p.healthEvents.length === 0 && !p.healthInfo?.info
   );
 
+  const getSeverityText = (severity: string | null) => {
+    switch (severity) {
+      case "low": return "Lav";
+      case "medium": return "Middels";
+      case "high": return "Høy";
+      default: return severity || "Ukjent";
+    }
+  };
+
+  const generateNurseReport = () => {
+    const now = new Date();
+    const dateStr = format(now, "d. MMMM yyyy", { locale: nb });
+    
+    const participantsToExport = participants.filter(p => 
+      p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info
+    );
+    
+    let html = `
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <title>Nurse Rapport - Oksnøen</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; padding: 24px; max-width: 900px; margin: 0 auto; }
+    h1 { color: #1e293b; margin-bottom: 8px; }
+    .meta { color: #64748b; margin-bottom: 24px; }
+    .participant-card { 
+      background: #f8fafc; 
+      border: 1px solid #e2e8f0; 
+      border-radius: 8px; 
+      padding: 16px; 
+      margin-bottom: 16px;
+      page-break-inside: avoid;
+    }
+    .participant-header { 
+      display: flex; 
+      align-items: center; 
+      gap: 12px; 
+      margin-bottom: 12px; 
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 12px;
+    }
+    .participant-header h2 { margin: 0; color: #1e293b; font-size: 18px; }
+    .participant-header p { margin: 4px 0 0 0; color: #64748b; font-size: 14px; }
+    .section { margin-top: 12px; }
+    .section-title { font-weight: 600; color: #475569; margin-bottom: 6px; font-size: 14px; }
+    .content { background: white; padding: 10px; border-radius: 4px; font-size: 14px; line-height: 1.5; }
+    .event { padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+    .event:last-child { border-bottom: none; }
+    .severity-high { color: #dc2626; font-weight: 500; }
+    .severity-medium { color: #ca8a04; font-weight: 500; }
+    .severity-low { color: #16a34a; font-weight: 500; }
+    .note-entry { margin-bottom: 8px; }
+    .note-date { color: #64748b; font-size: 12px; }
+    @media print {
+      body { padding: 12px; }
+      .participant-card { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Nurse Rapport - Oksnøen</h1>
+  <p class="meta">Eksportert: ${dateStr} | Antall deltakere med helsedata: ${participantsToExport.length}</p>
+`;
+
+    participantsToExport.forEach(participant => {
+      const age = participant.birth_date 
+        ? differenceInYears(new Date(), new Date(participant.birth_date)) 
+        : null;
+      
+      html += `
+  <div class="participant-card">
+    <div class="participant-header">
+      <div>
+        <h2>${participant.name}</h2>
+        <p>${participant.cabin?.name || 'Ingen hytte'}${age ? ` | ${age} år` : ''}</p>
+      </div>
+    </div>
+`;
+
+      if (participant.healthInfo?.info) {
+        html += `
+    <div class="section">
+      <div class="section-title">📋 Info for ledere</div>
+      <div class="content">${participant.healthInfo.info}</div>
+    </div>
+`;
+      }
+
+      if (participant.healthNotes.length > 0) {
+        html += `
+    <div class="section">
+      <div class="section-title">🔒 Nurse-notater</div>
+      <div class="content">
+`;
+        participant.healthNotes.forEach(note => {
+          const date = format(new Date(note.created_at), "d. MMM HH:mm", { locale: nb });
+          html += `<div class="note-entry"><span class="note-date">${date}:</span> ${note.content}</div>`;
+        });
+        html += `</div></div>`;
+      }
+
+      if (participant.healthEvents.length > 0) {
+        html += `
+    <div class="section">
+      <div class="section-title">📝 Hendelser</div>
+      <div class="content">
+`;
+        participant.healthEvents.forEach(event => {
+          const date = format(new Date(event.created_at), "d. MMM HH:mm", { locale: nb });
+          const eventLabel = eventTypes.find(e => e.value === event.event_type)?.label || event.event_type;
+          const severityClass = `severity-${event.severity || 'low'}`;
+          html += `
+        <div class="event">
+          <strong>${date}</strong> - ${eventLabel}
+          <span class="${severityClass}">(${getSeverityText(event.severity)})</span>
+          <p style="margin: 4px 0 0 0;">${event.description}</p>
+        </div>
+`;
+        });
+        html += `</div></div>`;
+      }
+
+      html += `</div>`;
+    });
+
+    html += `</body></html>`;
+    return html;
+  };
+
+  const handleExportNurseData = () => {
+    setIsExporting(true);
+    try {
+      const html = generateNurseReport();
+      const newWindow = window.open("", "_blank");
+      if (newWindow) {
+        newWindow.document.write(html);
+        newWindow.document.close();
+      }
+      toast.success('Rapport åpnet i nytt vindu');
+    } catch (error) {
+      console.error('Error exporting nurse data:', error);
+      toast.error('Kunne ikke eksportere data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const hasAccess = isAdmin || isNurse;
 
   if (!hasAccess) {
@@ -394,14 +545,28 @@ export default function Nurse() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground flex items-center gap-2">
-          <Heart className="w-8 h-8 text-destructive" />
-          Nurse
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Helsenotater og hendelseslogg for deltakere
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground flex items-center gap-2">
+            <Heart className="w-8 h-8 text-destructive" />
+            Nurse
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Helsenotater og hendelseslogg for deltakere
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={handleExportNurseData}
+          disabled={isExporting || participantsWithHealthInfo.length === 0}
+        >
+          {isExporting ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4 mr-2" />
+          )}
+          Eksporter
+        </Button>
       </div>
 
       {/* Search and Filter */}
