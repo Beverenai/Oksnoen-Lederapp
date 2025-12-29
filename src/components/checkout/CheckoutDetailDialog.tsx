@@ -238,7 +238,7 @@ export function CheckoutDetailDialog({
   if (writeMode) {
     return (
       <div className="fixed inset-0 z-[100] bg-background flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b bg-card">
+        <div className="flex items-center justify-between p-4 border-b bg-card relative z-10">
           <div className="flex items-center gap-2">
             <PenLine className="w-5 h-5 text-primary" />
             <span className="font-semibold">{participant?.name}</span>
@@ -251,7 +251,7 @@ export function CheckoutDetailDialog({
               className="gap-2"
             >
               <RotateCw className="w-4 h-4" />
-              {isHorizontal ? 'Vertikal' : 'Roter'}
+              Roter
             </Button>
             <Button
               variant="ghost"
@@ -268,7 +268,7 @@ export function CheckoutDetailDialog({
         <div 
           className={cn(
             "flex-1 flex items-center justify-center p-6 overflow-auto",
-            isHorizontal && "origin-center"
+            isHorizontal && "origin-center pointer-events-none"
           )}
           style={isHorizontal ? {
             transform: 'rotate(90deg)',
@@ -283,7 +283,7 @@ export function CheckoutDetailDialog({
         >
           <div className={cn(
             "w-full max-w-2xl bg-card border rounded-lg p-6 shadow-lg",
-            isHorizontal && "max-w-none w-[80vh]"
+            isHorizontal && "max-w-none w-[80vh] pointer-events-auto"
           )}>
             <p className="text-xl md:text-2xl leading-relaxed whitespace-pre-wrap">
               {passText || 'Ingen pass-tekst ennå...'}
