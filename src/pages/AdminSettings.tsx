@@ -40,7 +40,6 @@ import { ParticipantImportTab } from '@/components/admin/ParticipantImportTab';
 import { CabinAssignmentStatus, CabinAssignmentStatusRef } from '@/components/admin/CabinAssignmentStatus';
 import { ScheduleTab } from '@/components/admin/ScheduleTab';
 import { PushNotificationsTab } from '@/components/admin/PushNotificationsTab';
-import { NumbersDataImportTab } from '@/components/admin/NumbersDataImportTab';
 import { RopeControlTab } from '@/components/admin/RopeControlTab';
 import { ActivitiesTab } from '@/components/admin/ActivitiesTab';
 import { toast } from 'sonner';
@@ -887,8 +886,6 @@ export default function AdminSettings() {
           {/* Cabin Assignment Status */}
           <CabinAssignmentStatus ref={cabinStatusRef} />
 
-          {/* Numbers Data Import */}
-          <NumbersDataImportTab />
 
           {/* Import from Google Sheets */}
           <Card>
