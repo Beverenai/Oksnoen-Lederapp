@@ -1,15 +1,3 @@
-import { useEffect } from 'react';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from '@/components/ui/sidebar';
 import {
   Collapsible,
   CollapsibleContent,
@@ -43,7 +31,7 @@ interface SettingsGroup {
   items: SettingsItem[];
 }
 
-const settingsGroups: SettingsGroup[] = [
+export const settingsGroups: SettingsGroup[] = [
   {
     id: 'brukere',
     label: 'Brukere',
@@ -91,73 +79,56 @@ export function AdminSettingsSidebar({
   openGroups,
   onToggleGroup,
 }: AdminSettingsSidebarProps) {
-  const { setOpenMobile } = useSidebar();
-
-  // Auto-expand group containing active section
-  useEffect(() => {
-    settingsGroups.forEach((group) => {
-      const hasActiveItem = group.items.some((item) => item.id === activeSection);
-      if (hasActiveItem && !openGroups[group.id]) {
-        onToggleGroup(group.id);
-      }
-    });
-  }, [activeSection]);
-
-  const handleItemClick = (sectionId: string) => {
-    onSectionChange(sectionId);
-    setOpenMobile(false);
-  };
-
   return (
-    <Sidebar collapsible="icon" className="border-r">
-      <SidebarContent className="pt-2">
+    <aside className="w-56 shrink-0 border-r bg-muted/30 hidden md:block overflow-y-auto">
+      <nav className="p-3 space-y-1">
         {settingsGroups.map((group) => (
           <Collapsible
             key={group.id}
             open={openGroups[group.id]}
             onOpenChange={() => onToggleGroup(group.id)}
           >
-            <SidebarGroup>
-              <CollapsibleTrigger asChild>
-                <SidebarGroupLabel className="cursor-pointer hover:bg-muted/50 rounded-md px-2 py-1.5 transition-colors flex items-center justify-between w-full group-data-[collapsible=icon]:justify-center">
-                  <span className="flex items-center gap-2">
-                    <group.icon className="h-4 w-4" />
-                    <span className="group-data-[collapsible=icon]:hidden">{group.label}</span>
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      'h-4 w-4 transition-transform group-data-[collapsible=icon]:hidden',
-                      openGroups[group.id] && 'rotate-180'
-                    )}
-                  />
-                </SidebarGroupLabel>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {group.items.map((item) => (
-                      <SidebarMenuItem key={item.id}>
-                        <SidebarMenuButton
-                          onClick={() => handleItemClick(item.id)}
-                          isActive={activeSection === item.id}
-                          tooltip={item.label}
-                          className={cn(
-                            'cursor-pointer transition-colors',
-                            activeSection === item.id && 'bg-primary/10 text-primary font-medium'
-                          )}
-                        >
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </SidebarGroup>
+            <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/50 rounded-md transition-colors">
+              <span className="flex items-center gap-2">
+                <group.icon className="h-4 w-4" />
+                <span>{group.label}</span>
+              </span>
+              <ChevronDown
+                className={cn(
+                  'h-4 w-4 transition-transform',
+                  openGroups[group.id] && 'rotate-180'
+                )}
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-1 ml-2 space-y-0.5">
+              {group.items.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => onSectionChange(item.id)}
+                  className={cn(
+                    'flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md transition-colors',
+                    activeSection === item.id
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </CollapsibleContent>
           </Collapsible>
         ))}
-      </SidebarContent>
-    </Sidebar>
+      </nav>
+    </aside>
   );
+}
+
+// Helper to get current section label
+export function getSectionLabel(sectionId: string): string {
+  for (const group of settingsGroups) {
+    const item = group.items.find(i => i.id === sectionId);
+    if (item) return item.label;
+  }
+  return 'Innstillinger';
 }

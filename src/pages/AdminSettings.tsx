@@ -5,12 +5,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Shield, ArrowLeft } from 'lucide-react';
+import { Shield, ArrowLeft, Menu } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { CabinAssignmentStatusRef } from '@/components/admin/CabinAssignmentStatus';
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { AdminSettingsSidebar } from '@/components/admin/settings/AdminSettingsSidebar';
+import { AdminSettingsSidebar, settingsGroups, getSectionLabel } from '@/components/admin/settings/AdminSettingsSidebar';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -566,9 +573,8 @@ export default function AdminSettings() {
   }
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      {/* Break out of AppLayout constraints with negative margins */}
-      <div className="flex min-h-[calc(100vh-3.5rem)] lg:min-h-screen w-[calc(100%+2rem)] lg:w-[calc(100%+4rem+16rem)] -m-4 lg:-m-8 lg:-ml-[calc(2rem+16rem)]">
+    <>
+      <div className="flex min-h-[calc(100vh-8rem)]">
         <AdminSettingsSidebar
           activeSection={activeSection}
           onSectionChange={setActiveSection}
@@ -576,9 +582,41 @@ export default function AdminSettings() {
           onToggleGroup={handleToggleGroup}
         />
         
-        <main className="flex-1 p-4 lg:p-6 overflow-auto">
+        <main className="flex-1 overflow-auto">
           <div className="flex items-center gap-4 mb-6">
-            <SidebarTrigger />
+            {/* Mobile dropdown menu */}
+            <div className="md:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Menu className="h-4 w-4 mr-2" />
+                    {getSectionLabel(activeSection)}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  {settingsGroups.map((group, idx) => (
+                    <div key={group.id}>
+                      {idx > 0 && <DropdownMenuSeparator />}
+                      <DropdownMenuLabel className="flex items-center gap-2">
+                        <group.icon className="h-4 w-4" />
+                        {group.label}
+                      </DropdownMenuLabel>
+                      {group.items.map((item) => (
+                        <DropdownMenuItem
+                          key={item.id}
+                          onClick={() => setActiveSection(item.id)}
+                          className={activeSection === item.id ? 'bg-primary/10 text-primary' : ''}
+                        >
+                          <item.icon className="h-4 w-4 mr-2" />
+                          {item.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            
             <Link to="/admin">
               <Button variant="ghost" size="icon">
                 <ArrowLeft className="h-5 w-5" />
@@ -648,6 +686,6 @@ export default function AdminSettings() {
         onOpenChange={setIsEditDialogOpen}
         onSaved={loadData}
       />
-    </SidebarProvider>
+    </>
   );
 }
