@@ -83,40 +83,43 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { leader, isLoading, isProfileComplete } = useAuth();
+  const { leader, isProfileComplete } = useAuth();
   const { isInstalled, hasDeclined, isIOS, isAndroid } = usePWAInstall();
-
-  if (isLoading) {
-    return <PageLoader />;
-  }
 
   const isMobile = isIOS || isAndroid;
   const shouldShowInstall = isMobile && !isInstalled && !hasDeclined;
 
+  // Determine redirect target once to avoid multiple redirects
+  const getAuthRedirect = () => (isProfileComplete ? "/" : "/onboarding");
+
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        {/* Install route */}
+        {/* Install route - simplified logic */}
         <Route 
           path="/install" 
           element={
-            leader 
-              ? <Navigate to={isProfileComplete ? "/" : "/onboarding"} replace />
-              : (!isMobile || hasDeclined || isInstalled) 
-                ? <Navigate to="/login" replace /> 
-                : <Install />
+            leader ? (
+              <Navigate to={getAuthRedirect()} replace />
+            ) : shouldShowInstall ? (
+              <Install />
+            ) : (
+              <Navigate to="/login" replace />
+            )
           } 
         />
         
-        {/* Login route */}
+        {/* Login route - simplified logic */}
         <Route 
           path="/login" 
           element={
-            leader 
-              ? <Navigate to={isProfileComplete ? "/" : "/onboarding"} replace />
-              : shouldShowInstall 
-                ? <Navigate to="/install" replace /> 
-                : <Login />
+            leader ? (
+              <Navigate to={getAuthRedirect()} replace />
+            ) : shouldShowInstall ? (
+              <Navigate to="/install" replace />
+            ) : (
+              <Login />
+            )
           } 
         />
 
