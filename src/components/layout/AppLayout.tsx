@@ -462,11 +462,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
       {/* Mobile Bottom Navigation - Apple Tab Bar Style */}
       <nav 
-        className="lg:hidden fixed left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border shadow-lg z-30"
+        className="lg:hidden mobile-bottom-nav fixed inset-x-0 bottom-0 bg-card/95 backdrop-blur-md border-t border-border shadow-lg z-30"
         style={{ 
-          bottom: 0,
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          transform: 'translate3d(0,0,0)' 
+          WebkitTransform: 'translate3d(0,0,0)',
+          transform: 'translate3d(0,0,0)'
         }}
       >
         <div className="h-16 flex items-center justify-evenly">
