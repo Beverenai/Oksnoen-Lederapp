@@ -29,7 +29,8 @@ import {
   ArrowLeft,
   Home,
   Calendar,
-  Bell
+  Bell,
+  Anchor
 } from 'lucide-react';
 import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
@@ -39,6 +40,7 @@ import { CabinAssignmentStatus } from '@/components/admin/CabinAssignmentStatus'
 import { ScheduleTab } from '@/components/admin/ScheduleTab';
 import { PushNotificationsTab } from '@/components/admin/PushNotificationsTab';
 import { NumbersDataImportTab } from '@/components/admin/NumbersDataImportTab';
+import { RopeControlTab } from '@/components/admin/RopeControlTab';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -500,6 +502,10 @@ export default function AdminSettings() {
             <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden xs:inline sm:inline">Push</span>
           </TabsTrigger>
+          <TabsTrigger value="rope-control" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <Anchor className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline sm:inline">Tau</span>
+          </TabsTrigger>
           <TabsTrigger value="sync" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
             <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden xs:inline sm:inline">Synk</span>
@@ -528,6 +534,11 @@ export default function AdminSettings() {
         {/* Push Notifications Tab */}
         <TabsContent value="push" className="space-y-4">
           <PushNotificationsTab />
+        </TabsContent>
+
+        {/* Rope Control Tab */}
+        <TabsContent value="rope-control" className="space-y-4">
+          <RopeControlTab />
         </TabsContent>
 
         {/* Setup Tab */}
