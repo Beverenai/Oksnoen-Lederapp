@@ -144,6 +144,18 @@ header, nav {
   }
 }
 
+/* Hide scrollbars on mobile but allow scrolling */
+@media (max-width: 1023px) {
+  * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  *::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer utilities {
   .font-heading {
     font-family: var(--font-heading);
