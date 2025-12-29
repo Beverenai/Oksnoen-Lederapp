@@ -268,15 +268,15 @@ export const ParticipantDetailDialog = ({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[85vh] overflow-y-auto p-0 mx-auto">
+        <ResponsiveDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[85vh] overflow-y-auto p-0 mx-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : participant ? (
           <>
-            {/* Large hero image at top */}
-            <div className="relative w-full h-48 sm:h-64 bg-muted">
+            {/* Large hero image at top - reduced height on mobile */}
+            <div className="relative w-full h-32 sm:h-48 bg-muted">
               {participant.image_url ? (
                 <img
                   src={participant.image_url}
@@ -286,20 +286,20 @@ export const ParticipantDetailDialog = ({
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/20">
-                  <span className="text-6xl font-bold text-muted-foreground/50">{initials}</span>
+                  <span className="text-4xl sm:text-6xl font-bold text-muted-foreground/50">{initials}</span>
                 </div>
               )}
               <Button
                 variant="secondary"
                 size="icon"
-                className="absolute bottom-3 right-3 rounded-full h-10 w-10 shadow-lg"
+                className="absolute bottom-2 right-2 rounded-full h-8 w-8 sm:h-10 sm:w-10 shadow-lg"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploadingImage}
               >
                 {isUploadingImage ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Camera className="h-5 w-5" />
+                  <Camera className="h-4 w-4" />
                 )}
               </Button>
               <input
@@ -311,12 +311,12 @@ export const ParticipantDetailDialog = ({
               />
             </div>
 
-            {/* Content below image */}
-            <div className="p-6">
-              <ResponsiveDialogHeader className="text-center mb-4">
-                <ResponsiveDialogTitle className="text-xl">{participant.name}</ResponsiveDialogTitle>
+            {/* Content below image - reduced padding */}
+            <div className="p-4 sm:p-6">
+              <ResponsiveDialogHeader className="text-center mb-3">
+                <ResponsiveDialogTitle className="text-lg sm:text-xl">{participant.name}</ResponsiveDialogTitle>
 
-                {/* Age, cabin, room info */}
+                {/* Age, cabin, room info + arrival badge inline */}
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground flex-wrap">
                   {age !== null && <span>{age} år</span>}
                   {age !== null && participant.cabin && <span>•</span>}
@@ -327,38 +327,35 @@ export const ParticipantDetailDialog = ({
                       <span>Rom {participant.room}</span>
                     </>
                   )}
-                </div>
-
-                {/* Arrival status badge */}
-                <div className="flex justify-center mt-2">
-                  <Badge variant={participant.has_arrived ? 'default' : 'secondary'}>
+                  <span>•</span>
+                  <Badge variant={participant.has_arrived ? 'default' : 'secondary'} className="text-xs">
                     {participant.has_arrived ? 'Ankommet' : 'Ikke ankommet'}
                   </Badge>
                 </div>
               </ResponsiveDialogHeader>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Info fra Nurse (public - visible to all) */}
                 {healthInfo?.info && (
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <Heart className="h-4 w-4 text-blue-600" />
                       <span>Info fra Nurse</span>
                     </div>
-                    <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg text-sm">
+                    <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg text-sm">
                       {healthInfo.info}
                     </div>
                   </div>
                 )}
 
                 {/* Styrkeprøve badges */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <h4 className="text-sm font-medium">Styrkeprøve</h4>
                   <StyrkeproveBadges completedActivities={activities.map((a) => a.activity)} />
                 </div>
 
                 {/* Activities */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <h4 className="text-sm font-medium">Aktiviteter</h4>
                   <ActivityManager
                     participantId={participant.id}
@@ -368,19 +365,20 @@ export const ParticipantDetailDialog = ({
                 </div>
 
                 {/* Activity Notes - for leaders to write achievements */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <Trophy className="h-4 w-4 text-amber-600" />
                     <span>Aktivitetsnotater</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Skriv prestasjoner og kommentarer som kan brukes i pass (f.eks. "1. plass i svømming")
+                    Skriv prestasjoner som kan brukes i pass
                   </p>
                   <Textarea
                     value={activityNotes}
                     onChange={(e) => setActivityNotes(e.target.value)}
-                    placeholder="F.eks. '1. plass i svømmekonkurranse', 'Traff blink på bueskyting'..."
-                    rows={3}
+                    placeholder="F.eks. '1. plass i svømming'..."
+                    rows={2}
+                    className="text-sm"
                   />
                   <Button
                     variant="outline"
@@ -394,7 +392,7 @@ export const ParticipantDetailDialog = ({
                         Lagrer...
                       </>
                     ) : (
-                      'Lagre aktivitetsnotater'
+                      'Lagre notater'
                     )}
                   </Button>
                 </div>
