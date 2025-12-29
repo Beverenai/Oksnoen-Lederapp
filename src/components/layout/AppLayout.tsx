@@ -133,7 +133,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     ...(hasScheduleImage ? [scheduleNavItem] : []),
   ];
 
-  // Fetch schedule image availability
+  // Fetch schedule image availability and subscribe to changes
   useEffect(() => {
     const fetchScheduleImage = async () => {
       const { data } = await supabase
@@ -146,6 +146,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
     };
 
     fetchScheduleImage();
+
+    // Subscribe to realtime changes for schedule_image_url
+    const channel = supabase
+      .channel('schedule-image-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'app_config',
+          filter: 'key=eq.schedule_image_url'
+        },
+        () => fetchScheduleImage()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Fetch has_read status for regular leaders
