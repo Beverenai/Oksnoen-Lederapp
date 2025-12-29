@@ -8,14 +8,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, User, Car, Check, Upload } from 'lucide-react';
+import { Camera, User, Car, Check, Upload, Bell } from 'lucide-react';
 import { toast } from 'sonner';
+import { PushNotificationToggle } from '@/components/PushNotificationToggle';
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const { leader, refreshLeader } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  const [step, setStep] = useState<'profile' | 'notifications'>('profile');
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [imageUrl, setImageUrl] = useState(leader?.profile_image_url || '');
@@ -96,7 +98,7 @@ export default function Onboarding() {
 
       await refreshLeader();
       toast.success('Profil fullført!');
-      navigate('/');
+      setStep('notifications');
     } catch (error) {
       console.error('Save error:', error);
       toast.error('Kunne ikke lagre profil');
@@ -106,6 +108,42 @@ export default function Onboarding() {
   };
 
   const isFormValid = imageUrl && age && parseInt(age) >= 15;
+
+  const handleFinish = () => {
+    navigate('/');
+  };
+
+  if (step === 'notifications') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-6">
+          <Card>
+            <CardContent className="pt-8 pb-6 space-y-6 text-center">
+              <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
+                <Bell className="w-10 h-10 text-primary" />
+              </div>
+              <div className="space-y-2">
+                <CardTitle className="text-xl">Slå på varsler</CardTitle>
+                <CardDescription className="text-base">
+                  Få varslinger om ny økt plan - endringer og viktig info
+                </CardDescription>
+              </div>
+              <div className="space-y-3 pt-2">
+                <PushNotificationToggle 
+                  variant="button" 
+                  className="w-full" 
+                  onSuccess={handleFinish}
+                />
+                <Button variant="ghost" onClick={handleFinish} className="w-full text-muted-foreground">
+                  Hopp over
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col items-center justify-center p-4">

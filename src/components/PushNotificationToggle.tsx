@@ -9,12 +9,14 @@ interface PushNotificationToggleProps {
   variant?: 'button' | 'switch';
   showLabel?: boolean;
   className?: string;
+  onSuccess?: () => void;
 }
 
 export function PushNotificationToggle({
   variant = 'switch',
   showLabel = true,
   className = '',
+  onSuccess,
 }: PushNotificationToggleProps) {
   const {
     isSupported,
@@ -29,6 +31,9 @@ export function PushNotificationToggle({
     const success = await togglePushNotifications();
     if (success) {
       toast.success(isEnabled ? 'Varsler deaktivert' : 'Varsler aktivert');
+      if (!isEnabled && onSuccess) {
+        onSuccess();
+      }
     } else if (error) {
       toast.error(error);
     }
