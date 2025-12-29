@@ -360,7 +360,7 @@ export default function Nurse() {
       >
         <div className="flex items-start gap-3">
           <Avatar className="w-10 h-10 shrink-0">
-            <AvatarImage src={participant.image_url || undefined} alt={participant.name} />
+            <AvatarImage src={participant.image_url || undefined} alt={participant.name} loading="lazy" />
             <AvatarFallback className="bg-muted text-muted-foreground">
               <User className="w-4 h-4" />
             </AvatarFallback>
