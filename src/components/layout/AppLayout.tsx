@@ -258,6 +258,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
         style={{ transform: 'translate3d(0,0,0)', WebkitTransform: 'translate3d(0,0,0)' }}
       >
         <div className="flex items-center gap-3">
+          <img src={oksnoenLogo} alt="Oksnøen" className="h-8 w-8 object-contain" />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground truncate max-w-[140px]">
+            {leader?.name}
+          </span>
           <Button
             variant="ghost"
             size="icon"
@@ -266,11 +272,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
-          <img src={oksnoenLogo} alt="Oksnøen" className="h-8 w-8 object-contain" />
         </div>
-        <span className="text-sm text-muted-foreground truncate max-w-[140px]">
-          {leader?.name}
-        </span>
       </header>
 
       {/* Desktop Sidebar */}
@@ -377,11 +379,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
         />
       )}
 
-      {/* Mobile Slide-out Menu */}
+      {/* Mobile Slide-out Menu - Full screen from right */}
       <div
         className={cn(
-          'lg:hidden fixed left-0 top-[calc(3.5rem+env(safe-area-inset-top,0px))] bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] w-72 bg-card border-r border-border z-[60] transform transition-transform duration-200 overflow-y-auto',
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          'lg:hidden fixed inset-x-0 top-[calc(3.5rem+env(safe-area-inset-top,0px))] bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] bg-card z-[60] transform transition-transform duration-300 ease-out overflow-y-auto',
+          mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         )}
       >
         <nav className="p-4 space-y-1">
