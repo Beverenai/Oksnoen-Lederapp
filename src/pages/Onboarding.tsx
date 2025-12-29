@@ -18,7 +18,7 @@ export default function Onboarding() {
   const { leader, refreshLeader } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [step, setStep] = useState<'profile' | 'notifications'>('profile');
+  // Removed step state - notifications are now part of the profile step
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [imageUrl, setImageUrl] = useState(leader?.profile_image_url || '');
@@ -99,7 +99,7 @@ export default function Onboarding() {
 
       await refreshLeader();
       toast.success('Profil fullført!');
-      setStep('notifications');
+      navigate('/');
     } catch (error) {
       console.error('Save error:', error);
       toast.error('Kunne ikke lagre profil');
@@ -109,43 +109,6 @@ export default function Onboarding() {
   };
 
   const isFormValid = imageUrl && age && parseInt(age) >= 15;
-
-  const handleFinish = () => {
-    navigate('/');
-  };
-
-  if (step === 'notifications') {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
-        <div className="min-h-screen flex flex-col items-center justify-center p-4 pt-safe">
-        <div className="w-full max-w-md space-y-6">
-          <Card>
-            <CardContent className="pt-8 pb-6 space-y-6 text-center">
-              <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-                <Bell className="w-10 h-10 text-primary" />
-              </div>
-              <div className="space-y-2">
-                <CardTitle className="text-xl">Slå på varsler</CardTitle>
-                <CardDescription className="text-base">
-                  Få varslinger om ny økt plan - endringer og viktig info
-                </CardDescription>
-              </div>
-              <div className="space-y-3 pt-2">
-                <PushNotificationStatus 
-                  variant="button" 
-                  onSuccess={handleFinish}
-                />
-                <Button variant="ghost" onClick={handleFinish} className="w-full text-muted-foreground">
-                  Hopp over
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
@@ -236,6 +199,18 @@ export default function Onboarding() {
                   Jeg har med bil på leiren
                 </Label>
               </div>
+            </div>
+
+            {/* Push Notifications */}
+            <div className="space-y-3 pt-2 border-t">
+              <Label className="text-base font-medium flex items-center gap-2">
+                <Bell className="w-4 h-4" />
+                Push-varsler
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Få varslinger om ny økt plan, endringer og viktig info
+              </p>
+              <PushNotificationStatus variant="inline" />
             </div>
 
             {/* Submit Button */}
