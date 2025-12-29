@@ -18,6 +18,9 @@ verify_jwt = false
 [functions.generate-pass]
 verify_jwt = false
 
+[functions.generate-all-passes]
+verify_jwt = false
+
 [functions.generate-vapid-keys]
 verify_jwt = false
 

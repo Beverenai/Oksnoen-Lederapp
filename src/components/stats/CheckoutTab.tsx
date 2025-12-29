@@ -1,140 +1,104 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, Sparkles, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { differenceInYears } from 'date-fns';
-import { hasStoreStyrkprove, hasLilleStyrkprove, getUniqueActivities } from '@/lib/activityUtils';
 
-interface Participant {
-  id: string;
-  name: string;
-  birth_date: string | null;
-  cabin_id: string | null;
-  pass_suggestion: string | null;
-  pass_written: boolean | null;
-}
-
-interface Cabin {
-  id: string;
-  name: string;
-}
-
-interface ParticipantActivity {
-  participant_id: string;
-  activity: string;
+interface CheckoutProgress {
+  status: 'idle' | 'starting' | 'running' | 'done' | 'error';
+  processed: number;
+  total: number;
+  error?: string;
 }
 
 export function CheckoutTab() {
-  const [isGenerating, setIsGenerating] = useState(false);
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] = useState<CheckoutProgress>({ status: 'idle', processed: 0, total: 0 });
   const [totalParticipants, setTotalParticipants] = useState(0);
-  const [processedCount, setProcessedCount] = useState(0);
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [cabins, setCabins] = useState<Cabin[]>([]);
-  const [activities, setActivities] = useState<ParticipantActivity[]>([]);
   const [passWrittenCount, setPassWrittenCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = useCallback(async () => {
     try {
-      const [configRes, participantsRes, cabinsRes, activitiesRes] = await Promise.all([
+      const [configRes, progressRes, participantsRes] = await Promise.all([
         supabase.from('app_config').select('*').eq('key', 'checkout_enabled').single(),
-        supabase.from('participants').select('id, name, birth_date, cabin_id, pass_suggestion, pass_written'),
-        supabase.from('cabins').select('id, name'),
-        supabase.from('participant_activities').select('participant_id, activity'),
+        supabase.from('app_config').select('*').eq('key', 'checkout_progress').single(),
+        supabase.from('participants').select('id, pass_written'),
       ]);
 
       setCheckoutEnabled(configRes.data?.value === 'true');
-      setParticipants(participantsRes.data || []);
-      setCabins(cabinsRes.data || []);
-      setActivities(activitiesRes.data || []);
       setTotalParticipants(participantsRes.data?.length || 0);
       setPassWrittenCount(participantsRes.data?.filter(p => p.pass_written).length || 0);
+
+      if (progressRes.data?.value) {
+        try {
+          const parsed = JSON.parse(progressRes.data.value) as CheckoutProgress;
+          setProgress(parsed);
+        } catch {
+          setProgress({ status: 'idle', processed: 0, total: 0 });
+        }
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const getCabinName = (cabinId: string | null): string => {
-    if (!cabinId) return 'Ukjent';
-    return cabins.find(c => c.id === cabinId)?.name || 'Ukjent';
-  };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  const getParticipantActivities = (participantId: string): string[] => {
-    return activities
-      .filter(a => a.participant_id === participantId)
-      .map(a => a.activity);
-  };
+  // Poll for progress when generation is running
+  useEffect(() => {
+    if (progress.status === 'starting' || progress.status === 'running') {
+      const interval = setInterval(async () => {
+        const { data } = await supabase
+          .from('app_config')
+          .select('value')
+          .eq('key', 'checkout_progress')
+          .single();
+
+        if (data?.value) {
+          try {
+            const parsed = JSON.parse(data.value) as CheckoutProgress;
+            setProgress(parsed);
+
+            if (parsed.status === 'done') {
+              setCheckoutEnabled(true);
+              toast.success('Utsjekk aktivert! Ledere kan nå skrive pass.');
+              loadData();
+            } else if (parsed.status === 'error') {
+              toast.error('Feil ved generering: ' + (parsed.error || 'Ukjent feil'));
+            }
+          } catch {
+            // ignore parse errors
+          }
+        }
+      }, 2000);
+
+      return () => clearInterval(interval);
+    }
+  }, [progress.status, loadData]);
 
   const handleStartCheckout = async () => {
-    setIsGenerating(true);
-    setProgress(0);
-    setProcessedCount(0);
-
     try {
-      // Prepare participant data for AI
-      const participantData = participants.map(p => {
-        const completedActivities = getParticipantActivities(p.id);
-        const uniqueActivities = getUniqueActivities(completedActivities);
-        const age = p.birth_date ? differenceInYears(new Date(), new Date(p.birth_date)) : undefined;
+      setProgress({ status: 'starting', processed: 0, total: 0 });
 
-        return {
-          id: p.id,
-          name: p.name,
-          age,
-          cabin: getCabinName(p.cabin_id),
-          activities: uniqueActivities,
-          littleStyrkeprove: hasLilleStyrkprove(completedActivities),
-          bigStyrkeprove: hasStoreStyrkprove(completedActivities),
-        };
-      });
+      const { error } = await supabase.functions.invoke('generate-all-passes');
 
-      // Process in batches of 5 to show progress
-      const batchSize = 5;
-      for (let i = 0; i < participantData.length; i += batchSize) {
-        const batch = participantData.slice(i, i + batchSize);
-        
-        const { error } = await supabase.functions.invoke('generate-pass', {
-          body: { participants: batch, single: false },
-        });
-
-        if (error) {
-          console.error('Error generating passes:', error);
-          toast.error('Feil ved generering av pass');
-          throw error;
-        }
-
-        const processed = Math.min(i + batchSize, participantData.length);
-        setProcessedCount(processed);
-        setProgress((processed / participantData.length) * 100);
+      if (error) {
+        console.error('Error starting pass generation:', error);
+        toast.error('Kunne ikke starte generering');
+        setProgress({ status: 'error', processed: 0, total: 0, error: error.message });
       }
-
-      // Enable checkout
-      await supabase
-        .from('app_config')
-        .update({ value: 'true' })
-        .eq('key', 'checkout_enabled');
-
-      setCheckoutEnabled(true);
-      toast.success('Utsjekk aktivert! Ledere kan nå skrive pass.');
-      await loadData();
     } catch (error) {
       console.error('Error starting checkout:', error);
       toast.error('Kunne ikke starte utsjekk');
-    } finally {
-      setIsGenerating(false);
+      setProgress({ status: 'error', processed: 0, total: 0 });
     }
   };
 
@@ -145,13 +109,21 @@ export function CheckoutTab() {
         .update({ value: 'false' })
         .eq('key', 'checkout_enabled');
       
+      await supabase
+        .from('app_config')
+        .upsert({ key: 'checkout_progress', value: JSON.stringify({ status: 'idle', processed: 0, total: 0 }) }, { onConflict: 'key' });
+      
       setCheckoutEnabled(false);
+      setProgress({ status: 'idle', processed: 0, total: 0 });
       toast.success('Utsjekk deaktivert');
     } catch (error) {
       console.error('Error disabling checkout:', error);
       toast.error('Kunne ikke deaktivere utsjekk');
     }
   };
+
+  const isGenerating = progress.status === 'starting' || progress.status === 'running';
+  const progressPercent = progress.total > 0 ? (progress.processed / progress.total) * 100 : 0;
 
   if (isLoading) {
     return (
@@ -171,7 +143,7 @@ export function CheckoutTab() {
           </CardTitle>
           <CardDescription>
             Start utsjekk for å generere AI-baserte passforslag for alle deltakere.
-            Når aktivert, vil ledere se en Utsjekk-knapp i Passkontroll.
+            Genereringen fortsetter i bakgrunnen selv om du navigerer bort.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -185,6 +157,11 @@ export function CheckoutTab() {
                 <>
                   <CheckCircle2 className="w-3 h-3 mr-1" />
                   Aktiv
+                </>
+              ) : isGenerating ? (
+                <>
+                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  Genererer...
                 </>
               ) : (
                 <>
@@ -204,10 +181,25 @@ export function CheckoutTab() {
           {isGenerating && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span>Genererer passforslag...</span>
-                <span>{processedCount} / {totalParticipants}</span>
+                <span className="flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Genererer passforslag i bakgrunnen...
+                </span>
+                <span>{progress.processed} / {progress.total || '?'}</span>
               </div>
-              <Progress value={progress} className="h-2" />
+              <Progress value={progressPercent} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                Du kan navigere bort fra denne siden. Genereringen fortsetter.
+              </p>
+            </div>
+          )}
+
+          {/* Error state */}
+          {progress.status === 'error' && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+              <p className="text-sm text-destructive">
+                Feil ved generering: {progress.error || 'Ukjent feil'}
+              </p>
             </div>
           )}
 
@@ -263,7 +255,7 @@ export function CheckoutTab() {
           </div>
 
           {/* Stats when enabled */}
-          {checkoutEnabled && (
+          {checkoutEnabled && !isGenerating && (
             <div className="pt-4 border-t">
               <h4 className="font-medium mb-3">Fremgang</h4>
               <div className="space-y-2">
@@ -283,10 +275,10 @@ export function CheckoutTab() {
           <CardTitle className="text-base">Hvordan fungerer utsjekk?</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
-          <p>1. <strong>Start Utsjekk</strong> - AI genererer passforslag for alle deltakere basert på aktiviteter og styrkeprøve.</p>
-          <p>2. <strong>Ledere skriver pass</strong> - I Passkontroll får ledere tilgang til Utsjekk-knappen og kan skrive pass.</p>
-          <p>3. <strong>AI-forslag</strong> - Hvert pass har et AI-generert forslag som kan redigeres eller brukes som det er.</p>
-          <p>4. <strong>Markér ferdig</strong> - Når passet er skrevet fysisk, markeres deltakeren som ferdig.</p>
+          <p>1. <strong>Start Utsjekk</strong> - AI genererer passforslag for alle deltakere i bakgrunnen.</p>
+          <p>2. <strong>Naviger fritt</strong> - Du kan gå til andre sider mens genereringen pågår.</p>
+          <p>3. <strong>Ledere skriver pass</strong> - I Passkontroll får ledere tilgang til Utsjekk-knappen.</p>
+          <p>4. <strong>AI-forslag</strong> - Hvert pass har et AI-generert forslag som kan redigeres.</p>
         </CardContent>
       </Card>
     </div>
