@@ -13,12 +13,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Loader2, Save, Upload, Shield, Users, Heart, Camera, Bell, Send } from 'lucide-react';
+import { Loader2, Save, Shield, Users, Heart, Camera } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { compressImage } from '@/lib/imageUtils';
-import { useAuth } from '@/contexts/AuthContext';
 
 type Leader = Tables<'leaders'>;
 type AppRole = 'admin' | 'nurse' | 'leader';
@@ -38,10 +36,8 @@ export function LeaderDetailDialog({
   onSaved,
   currentRole = 'leader'
 }: LeaderDetailDialogProps) {
-  const { leader: currentLeader } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isSendingNotification, setIsSendingNotification] = useState(false);
   
   // Form state
   const [name, setName] = useState('');
@@ -64,10 +60,6 @@ export function LeaderDetailDialog({
   
   // Role
   const [role, setRole] = useState<AppRole>('leader');
-  
-  // Notification state
-  const [notificationTitle, setNotificationTitle] = useState('');
-  const [notificationMessage, setNotificationMessage] = useState('');
 
   // Populate form when leader changes
   useEffect(() => {
@@ -184,38 +176,6 @@ export function LeaderDetailDialog({
       toast.error('Kunne ikke lagre endringer');
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleSendNotification = async () => {
-    if (!leader || !notificationTitle.trim() || !currentLeader) return;
-
-    setIsSendingNotification(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('push-send', {
-        body: {
-          title: notificationTitle,
-          message: notificationMessage || 'Du har en ny varsling',
-          url: '/',
-          single_leader_id: leader.id,
-          sender_leader_id: currentLeader.id,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.sent > 0) {
-        toast.success(`Varsling sendt til ${leader.name.split(' ')[0]}!`);
-        setNotificationTitle('');
-        setNotificationMessage('');
-      } else {
-        toast.info(`${leader.name.split(' ')[0]} har ikke aktivert push-varslinger`);
-      }
-    } catch (error) {
-      console.error('Error sending notification:', error);
-      toast.error('Kunne ikke sende varsling');
-    } finally {
-      setIsSendingNotification(false);
     }
   };
 
@@ -426,44 +386,6 @@ export function LeaderDetailDialog({
               </div>
             </div>
           </div>
-
-          <Separator />
-
-          {/* Send notification to this leader */}
-          <div className="space-y-3">
-            <Label className="text-base font-semibold flex items-center gap-2">
-              <Bell className="w-4 h-4" />
-              Send varsling til {name.split(' ')[0] || 'leder'}
-            </Label>
-            <div className="space-y-2">
-              <Input
-                placeholder="Tittel på varsling..."
-                value={notificationTitle}
-                onChange={(e) => setNotificationTitle(e.target.value)}
-              />
-              <Textarea
-                placeholder="Melding (valgfritt)..."
-                value={notificationMessage}
-                onChange={(e) => setNotificationMessage(e.target.value)}
-                rows={2}
-              />
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleSendNotification}
-                disabled={isSendingNotification || !notificationTitle.trim()}
-              >
-                {isSendingNotification ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4 mr-2" />
-                )}
-                Send varsling
-              </Button>
-            </div>
-          </div>
-
-          <Separator />
 
           {/* Save Button */}
           <div className="flex justify-end gap-2">
