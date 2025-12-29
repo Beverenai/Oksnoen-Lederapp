@@ -18,7 +18,8 @@ import {
   ChevronRight,
   ArrowLeft,
   Users,
-  Sparkles
+  Sparkles,
+  AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { differenceInYears } from 'date-fns';
@@ -259,6 +260,15 @@ export default function Passport() {
           >
             <Users className="w-4 h-4 mr-1.5" />
             {showBulkRegistration ? 'Skjul' : 'Aktivitet'}
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/important-info')}
+          >
+            <AlertTriangle className="w-4 h-4 mr-1.5" />
+            Viktig Info
           </Button>
           
           {/* My cabin filter button - only show if leader has assigned cabins */}
