@@ -220,12 +220,13 @@ export default function Leaders() {
 
     // Apply sorting - Priority roles at top, Kjøkken at the bottom
     result.sort((a, b) => {
-      // Priority order helper: Statsminister first, then Visestatsminister, then Nurse
+      // Priority order helper: Statsminister first, then Visestatsminister/Admin, then Nurse
       const getPriority = (leader: LeaderWithContent) => {
         const ministerpost = leader.ministerpost?.toLowerCase() || '';
         
         if (ministerpost === 'statsminister') return 0;
-        if (ministerpost === 'visestatsminister') return 1;
+        if (ministerpost === 'visestatsminister' || ministerpost === 'vise-statsminister') return 1;
+        if (leader.isAdmin) return 1; // Other admins at same level as visestatsminister
         if (leader.isNurse) return 2;
         return 10; // Normal priority
       };
