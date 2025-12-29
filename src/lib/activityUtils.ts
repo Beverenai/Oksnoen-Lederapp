@@ -18,6 +18,19 @@ export const ACTIVITIES = [
   { id: 'outboard', title: 'Outboard' },
 ] as const;
 
+// Mapping of shortened/alternative activity names to canonical names
+export const ACTIVITY_NAME_MAPPING: Record<string, string[]> = {
+  'tretten meter': ['tretten', '13 meter', '13m', 'trettenmeteren'],
+  'åtte meter': ['åtte', '8 meter', '8m', 'åttemeteren'],
+  'ti meter': ['ti', '10 meter', '10m', 'timeteren'],
+  'skrikeren begge veier': ['svømming begge veier', 'begge veier', 'svømming til skrikeren begge veier'],
+  'skrikeren en vei': ['svømming en vei', 'en vei', 'svømming til skrikeren en vei'],
+  'klatring': ['klatre', 'klatrevegg'],
+  'rappis': ['rappelering', 'rappell', 'rappelling'],
+  'taubane': ['zipline', 'zip-line'],
+  'triatlon': ['triathlon'],
+};
+
 // Requirements for Store Styrkeprøven
 // All of these must be completed
 export const STORE_STYRKEPROVE_REQUIREMENTS = [
@@ -27,11 +40,6 @@ export const STORE_STYRKEPROVE_REQUIREMENTS = [
   'Taubane',
   'Rappis',
 ];
-
-// Alternative old names that also count (for backwards compatibility)
-const STORE_STYRKEPROVE_ALTERNATIVES: Record<string, string[]> = {
-  'skrikeren begge veier': ['svømming til skrikeren begge veier'],
-};
 
 // Fixed requirements for Lille Styrkeprøven (all must be completed)
 export const LILLE_STYRKEPROVE_FIXED_REQUIREMENTS = [
@@ -52,46 +60,95 @@ export const LILLE_STYRKEPROVE_SWIMMING_ALTERNATIVES = [
   'Triatlon',
 ];
 
-// Alternative old names that also count (for backwards compatibility)
-const LILLE_STYRKEPROVE_ALTERNATIVES: Record<string, string[]> = {
-  'skrikeren en vei': ['svømming til skrikeren en vei'],
-};
-
-// Check if activity matches requirement (including old names)
-function matchesRequirement(completedActivities: string[], requirement: string, alternatives: Record<string, string[]> = {}): boolean {
-  const normalizedReq = requirement.toLowerCase();
-  const altNames = alternatives[normalizedReq] || [];
+// Check if activity matches requirement (including shortened names and alternatives)
+export function matchesRequirement(completedActivities: string[], requirement: string): boolean {
+  const normalizedReq = requirement.toLowerCase().trim();
+  const altNames = ACTIVITY_NAME_MAPPING[normalizedReq] || [];
   
   return completedActivities.some((a) => {
-    const normalized = a.toLowerCase();
-    return normalized === normalizedReq || altNames.includes(normalized);
+    const normalized = a.toLowerCase().trim();
+    
+    // Exact match with requirement
+    if (normalized === normalizedReq) return true;
+    
+    // Match with any alternative name
+    if (altNames.includes(normalized)) return true;
+    
+    // Partial match - activity starts with requirement or vice versa
+    if (normalized.startsWith(normalizedReq) || normalizedReq.startsWith(normalized)) return true;
+    
+    // Partial match with alternatives
+    if (altNames.some(alt => normalized.startsWith(alt) || alt.startsWith(normalized))) return true;
+    
+    return false;
   });
 }
 
 // Check if any of the alternatives are completed
-function hasAnyOf(completedActivities: string[], alternatives: string[], altNamesMap: Record<string, string[]> = {}): boolean {
-  return alternatives.some(alt => matchesRequirement(completedActivities, alt, altNamesMap));
+function hasAnyOf(completedActivities: string[], alternatives: string[]): boolean {
+  return alternatives.some(alt => matchesRequirement(completedActivities, alt));
 }
 
 export function hasStoreStyrkprove(completedActivities: string[]): boolean {
   return STORE_STYRKEPROVE_REQUIREMENTS.every((req) =>
-    matchesRequirement(completedActivities, req, STORE_STYRKEPROVE_ALTERNATIVES)
+    matchesRequirement(completedActivities, req)
   );
 }
 
 export function hasLilleStyrkprove(completedActivities: string[]): boolean {
   // All fixed requirements must be met
   const hasAllFixed = LILLE_STYRKEPROVE_FIXED_REQUIREMENTS.every((req) =>
-    matchesRequirement(completedActivities, req, LILLE_STYRKEPROVE_ALTERNATIVES)
+    matchesRequirement(completedActivities, req)
   );
   
   // At least one height alternative must be met (8 meter OR 10 meter)
   const hasHeight = hasAnyOf(completedActivities, LILLE_STYRKEPROVE_HEIGHT_ALTERNATIVES);
   
   // At least one swimming alternative must be met (Skrikeren en vei OR Triatlon)
-  const hasSwimming = hasAnyOf(completedActivities, LILLE_STYRKEPROVE_SWIMMING_ALTERNATIVES, LILLE_STYRKEPROVE_ALTERNATIVES);
+  const hasSwimming = hasAnyOf(completedActivities, LILLE_STYRKEPROVE_SWIMMING_ALTERNATIVES);
   
   return hasAllFixed && hasHeight && hasSwimming;
+}
+
+// Check a single requirement with OR logic (e.g., "Åtte meter eller Ti meter")
+export function checkRequirementWithOrLogic(completedActivities: string[], req: string): boolean {
+  // Handle "eller" requirements
+  if (req.toLowerCase().includes(' eller ')) {
+    const alternatives = req.split(/ eller /i);
+    return alternatives.some(alt => matchesRequirement(completedActivities, alt.trim()));
+  }
+  return matchesRequirement(completedActivities, req);
+}
+
+// Get progress for Store Styrkeprøven
+export function getStoreStyrkproveProgress(completedActivities: string[]): { completed: number; total: number } {
+  const completed = STORE_STYRKEPROVE_REQUIREMENTS.filter(req => 
+    matchesRequirement(completedActivities, req)
+  ).length;
+  return { completed, total: STORE_STYRKEPROVE_REQUIREMENTS.length };
+}
+
+// Get progress for Lille Styrkeprøven
+export function getLilleStyrkproveProgress(completedActivities: string[]): { completed: number; total: number } {
+  let completed = 0;
+  const total = LILLE_STYRKEPROVE_FIXED_REQUIREMENTS.length + 2; // Fixed + height + swimming
+  
+  // Count fixed requirements
+  completed += LILLE_STYRKEPROVE_FIXED_REQUIREMENTS.filter(req => 
+    matchesRequirement(completedActivities, req)
+  ).length;
+  
+  // Check height alternatives
+  if (hasAnyOf(completedActivities, LILLE_STYRKEPROVE_HEIGHT_ALTERNATIVES)) {
+    completed++;
+  }
+  
+  // Check swimming alternatives
+  if (hasAnyOf(completedActivities, LILLE_STYRKEPROVE_SWIMMING_ALTERNATIVES)) {
+    completed++;
+  }
+  
+  return { completed, total };
 }
 
 // Get count of unique activities completed (each activity counts as 1, regardless of how many times done)
