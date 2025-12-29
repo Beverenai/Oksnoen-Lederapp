@@ -30,6 +30,49 @@ function uint8ArrayToBase64url(bytes: Uint8Array): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
+// Convert VAPID keys from base64url to CryptoKeyPair using Web Crypto API
+async function importVapidKeysToCryptoKeyPair(
+  publicKeyBase64: string,
+  privateKeyBase64: string
+): Promise<CryptoKeyPair> {
+  const publicKeyBytes = base64urlToUint8Array(publicKeyBase64);
+  const x = publicKeyBytes.slice(1, 33);
+  const y = publicKeyBytes.slice(33, 65);
+
+  const publicJwk = {
+    kty: "EC",
+    crv: "P-256",
+    x: uint8ArrayToBase64url(x),
+    y: uint8ArrayToBase64url(y),
+  };
+
+  const privateJwk = {
+    kty: "EC",
+    crv: "P-256",
+    x: uint8ArrayToBase64url(x),
+    y: uint8ArrayToBase64url(y),
+    d: privateKeyBase64,
+  };
+
+  const publicKey = await crypto.subtle.importKey(
+    "jwk",
+    publicJwk,
+    { name: "ECDSA", namedCurve: "P-256" },
+    true,
+    ["verify"]
+  );
+
+  const privateKey = await crypto.subtle.importKey(
+    "jwk",
+    privateJwk,
+    { name: "ECDSA", namedCurve: "P-256" },
+    true,
+    ["sign"]
+  );
+
+  return { publicKey, privateKey };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -85,17 +128,14 @@ serve(async (req) => {
       );
     }
 
-    // Convert keys to JWK format
-    const publicKeyBytes = base64urlToUint8Array(vapidPublicKey);
-    const x = publicKeyBytes.slice(1, 33);
-    const y = publicKeyBytes.slice(33, 65);
-    
-    const jwkKeys = {
-      publicKey: { kty: "EC", crv: "P-256", x: uint8ArrayToBase64url(x), y: uint8ArrayToBase64url(y) },
-      privateKey: { kty: "EC", crv: "P-256", x: uint8ArrayToBase64url(x), y: uint8ArrayToBase64url(y), d: vapidPrivateKey }
-    };
+    console.log("Importing VAPID keys...");
+    const vapidKeys = await importVapidKeysToCryptoKeyPair(vapidPublicKey, vapidPrivateKey);
+    console.log("VAPID keys imported successfully");
 
-    const appServer = await ApplicationServer.new({ contactInformation: vapidSubject, vapidKeys: jwkKeys });
+    const appServer = await ApplicationServer.new({
+      contactInformation: vapidSubject,
+      vapidKeys: vapidKeys,
+    });
 
     let query = supabaseAdmin.from("push_subscriptions").select("*");
     if (!broadcast && leader_ids?.length > 0) {
