@@ -218,12 +218,28 @@ export default function Leaders() {
       );
     }
 
-    // Apply sorting - Kjøkken always at the bottom
+    // Apply sorting - Priority roles at top, Kjøkken at the bottom
     result.sort((a, b) => {
+      // Priority order helper: Statsminister first, then Visestatsminister, then Nurse
+      const getPriority = (leader: LeaderWithContent) => {
+        const ministerpost = leader.ministerpost?.toLowerCase() || '';
+        
+        if (ministerpost === 'statsminister') return 0;
+        if (ministerpost === 'visestatsminister') return 1;
+        if (leader.isNurse) return 2;
+        return 10; // Normal priority
+      };
+      
+      const aPriority = getPriority(a);
+      const bPriority = getPriority(b);
+      
+      // Priority leaders always at top
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      
       const aIsKitchen = a.team?.toLowerCase() === 'kjøkken';
       const bIsKitchen = b.team?.toLowerCase() === 'kjøkken';
       
-      // Kjøkken always at bottom
+      // Kjøkken always at bottom (only for non-priority leaders)
       if (aIsKitchen && !bIsKitchen) return 1;
       if (!aIsKitchen && bIsKitchen) return -1;
       
