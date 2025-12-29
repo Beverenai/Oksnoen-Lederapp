@@ -201,6 +201,8 @@ export default function Fix() {
 
   const handleAssign = async (taskId: string, leaderId: string) => {
     try {
+      const task = tasks.find(t => t.id === taskId);
+      
       const { error } = await supabase
         .from('fix_tasks')
         .update({
@@ -212,6 +214,22 @@ export default function Fix() {
         .eq('id', taskId);
 
       if (error) throw error;
+
+      // Send push notification to assigned leader
+      try {
+        await supabase.functions.invoke('push-send', {
+          body: {
+            title: '🔧 Ny Fix-oppgave',
+            message: `Du har fått tildelt: ${task?.title || 'En oppgave'}`,
+            url: '/fix',
+            single_leader_id: leaderId,
+            sender_leader_id: leader?.id
+          }
+        });
+        console.log('Push notification sent for Fix assignment');
+      } catch (pushError) {
+        console.error('Failed to send push notification:', pushError);
+      }
 
       toast.success('Oppgave tildelt!');
       setAssigningTaskId(null);
@@ -595,7 +613,7 @@ export default function Fix() {
                         <span className="truncate">{task.location}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
                       {task.status === 'assigned' ? (
                         <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                           Tildelt: {getLeaderName(task.assigned_to)}
@@ -605,6 +623,9 @@ export default function Fix() {
                           Venter
                         </span>
                       )}
+                      <span className="text-xs text-muted-foreground">
+                        Av: {getLeaderName(task.created_by)}
+                      </span>
                     </div>
                   </div>
                 </div>
