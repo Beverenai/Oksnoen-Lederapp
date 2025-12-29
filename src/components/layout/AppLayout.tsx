@@ -18,6 +18,7 @@ import {
   Wrench,
   Check,
   BarChart2,
+  Bell,
   LucideIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 import { PassIcon } from '@/components/icons/PassIcon';
+import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -114,6 +116,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [hasRead, setHasRead] = useState(false);
   const [showHajoloSuccess, setShowHajoloSuccess] = useState(false);
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
+  const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
   const location = useLocation();
 
   // Build dynamic nav items based on schedule image availability
@@ -325,7 +328,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
           )}
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-1">
+          {isAdmin && (
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
+              onClick={() => setNotificationSheetOpen(true)}
+            >
+              <Bell className="w-5 h-5" />
+              Hurtigvarslinger
+            </Button>
+          )}
           <Button
             variant="ghost"
             className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
@@ -418,7 +431,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </>
           )}
           
-          <div className="pt-4">
+          <div className="pt-4 space-y-1">
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setNotificationSheetOpen(true);
+                }}
+              >
+                <Bell className="w-5 h-5" />
+                Hurtigvarslinger
+              </Button>
+            )}
             <Button
               variant="ghost"
               className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
@@ -492,6 +518,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {children}
         </div>
       </main>
+
+      {/* Quick Notification Sheet for Admin */}
+      <QuickNotificationSheet 
+        open={notificationSheetOpen} 
+        onOpenChange={setNotificationSheetOpen} 
+      />
     </div>
   );
 }

@@ -80,9 +80,9 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { title, message, url, leader_ids, broadcast, sender_leader_id } = body;
+    const { title, message, url, leader_ids, broadcast, sender_leader_id, target_activity } = body;
 
-    console.log("Push send request received:", { title, broadcast, sender_leader_id });
+    console.log("Push send request received:", { title, broadcast, sender_leader_id, target_activity });
 
     if (!title || !message) {
       return new Response(
@@ -137,8 +137,39 @@ serve(async (req) => {
       vapidKeys: vapidKeys,
     });
 
+    // Handle activity-based targeting
+    let targetLeaderIds: string[] | null = null;
+    
+    if (target_activity === 'active' || target_activity === 'free') {
+      const { data: leaderContent } = await supabaseAdmin
+        .from('leader_content')
+        .select('leader_id, current_activity');
+      
+      targetLeaderIds = leaderContent
+        ?.filter(lc => {
+          if (target_activity === 'free') {
+            return lc.current_activity === 'Fri';
+          } else { // active
+            return lc.current_activity && lc.current_activity !== 'Fri' && lc.current_activity.trim() !== '';
+          }
+        })
+        .map(lc => lc.leader_id) || [];
+      
+      console.log(`Filtering by activity '${target_activity}': ${targetLeaderIds.length} leaders matched`);
+      
+      if (targetLeaderIds.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, sent: 0, message: `No leaders with activity status '${target_activity}'` }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     let query = supabaseAdmin.from("push_subscriptions").select("*");
-    if (!broadcast && leader_ids?.length > 0) {
+    
+    if (targetLeaderIds) {
+      query = query.in("leader_id", targetLeaderIds);
+    } else if (!broadcast && leader_ids?.length > 0) {
       query = query.in("leader_id", leader_ids);
     }
 
