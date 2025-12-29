@@ -274,6 +274,129 @@ export default function AdminSettings() {
     toast.info('Auto-eksport avbrutt');
   }, []);
 
+  // Cabin aliases for matching cabin names to actual cabins
+  const CABIN_ALIASES: Record<string, string[]> = {
+    'balder': ['balder bak', 'balder front'],
+    'hulder': ['hulder bak', 'hulder front'],
+    'seilern': ['seileren'],
+    'seileren': ['seileren'],
+  };
+
+  // Teams that don't have cabin responsibility
+  const TEAMS_WITHOUT_CABIN_RESPONSIBILITY = ['kjøkken', 'kitchen', 'tech'];
+  const ROLES_WITHOUT_CABIN_RESPONSIBILITY = ['admin', 'nurse'];
+
+  const syncLeaderCabins = async () => {
+    console.log('[syncLeaderCabins] Starting cabin sync...');
+    
+    try {
+      // Fetch all active leaders with cabin field set
+      const { data: leadersData, error: leadersError } = await supabase
+        .from('leaders')
+        .select('id, name, cabin, team')
+        .eq('is_active', true);
+      
+      if (leadersError) {
+        console.error('[syncLeaderCabins] Error fetching leaders:', leadersError);
+        return;
+      }
+
+      // Fetch all cabins
+      const { data: cabinsData, error: cabinsError } = await supabase
+        .from('cabins')
+        .select('id, name');
+      
+      if (cabinsError) {
+        console.error('[syncLeaderCabins] Error fetching cabins:', cabinsError);
+        return;
+      }
+
+      // Fetch user roles to check exempt roles
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('leader_id, role');
+      
+      if (rolesError) {
+        console.error('[syncLeaderCabins] Error fetching roles:', rolesError);
+        return;
+      }
+
+      // Build cabin name -> id map (lowercase)
+      const cabinsByName = new Map<string, string>();
+      cabinsData?.forEach(c => {
+        cabinsByName.set(c.name.toLowerCase(), c.id);
+      });
+
+      // Build leader_id -> roles map
+      const rolesMap = new Map<string, string[]>();
+      userRoles?.forEach(r => {
+        const existing = rolesMap.get(r.leader_id) || [];
+        rolesMap.set(r.leader_id, [...existing, r.role]);
+      });
+
+      let synced = 0;
+      let skipped = 0;
+
+      for (const leader of leadersData || []) {
+        // Skip if no cabin set
+        if (!leader.cabin?.trim()) {
+          skipped++;
+          continue;
+        }
+
+        // Skip exempt teams
+        const teamLower = leader.team?.toLowerCase() || '';
+        if (TEAMS_WITHOUT_CABIN_RESPONSIBILITY.some(t => teamLower.includes(t))) {
+          console.log(`[syncLeaderCabins] Skipping ${leader.name} - exempt team: ${leader.team}`);
+          skipped++;
+          continue;
+        }
+
+        // Skip exempt roles
+        const leaderRoles = rolesMap.get(leader.id) || [];
+        if (leaderRoles.some(r => ROLES_WITHOUT_CABIN_RESPONSIBILITY.includes(r))) {
+          console.log(`[syncLeaderCabins] Skipping ${leader.name} - exempt role`);
+          skipped++;
+          continue;
+        }
+
+        // Parse cabin names (split by & or ,)
+        const cabinNames = leader.cabin.split(/[&,]/).map(s => s.trim()).filter(Boolean);
+        
+        // Delete existing links for this leader
+        await supabase.from('leader_cabins').delete().eq('leader_id', leader.id);
+
+        // Create new links
+        for (const cabinName of cabinNames) {
+          const normalized = cabinName.toLowerCase();
+          
+          // Get aliases or use the normalized name
+          const aliasesToTry = CABIN_ALIASES[normalized] || [normalized];
+          
+          for (const alias of aliasesToTry) {
+            const cabinId = cabinsByName.get(alias);
+            if (cabinId) {
+              const { error: insertError } = await supabase
+                .from('leader_cabins')
+                .insert({ leader_id: leader.id, cabin_id: cabinId });
+              
+              if (insertError) {
+                console.error(`[syncLeaderCabins] Error inserting link for ${leader.name} -> ${alias}:`, insertError);
+              } else {
+                console.log(`[syncLeaderCabins] Linked ${leader.name} -> ${alias}`);
+              }
+            }
+          }
+        }
+        synced++;
+      }
+
+      console.log(`[syncLeaderCabins] Complete. Synced: ${synced}, Skipped: ${skipped}`);
+    } catch (error) {
+      console.error('[syncLeaderCabins] Unexpected error:', error);
+    }
+  };
+
   const triggerSync = async () => {
     if (!webhookUrl) {
       toast.error('Legg inn webhook URL først');
@@ -295,6 +418,9 @@ export default function AdminSettings() {
       }
 
       if (data?.success) {
+        // Sync leader_cabins based on leaders.cabin field
+        await syncLeaderCabins();
+        
         setLastSyncSuccess(true);
         setLastSyncTime(new Date().toISOString());
         toast.success(`Synkronisering fullført! (Status: ${data.webhookStatus})`);
