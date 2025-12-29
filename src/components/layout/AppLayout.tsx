@@ -460,60 +460,68 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </nav>
       </div>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation - Apple Tab Bar Style */}
       <nav 
-        className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-card border-t border-border shadow-lg z-30 flex items-center justify-around px-2 pb-safe"
-        style={{ transform: 'translate3d(0,0,0)' }}
+        className="lg:hidden fixed left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border shadow-lg z-30"
+        style={{ 
+          bottom: 0,
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          transform: 'translate3d(0,0,0)' 
+        }}
       >
-        {getBottomNavItems(isAdmin, isNurse).map((item) => {
-          const isActive = location.pathname === item.to;
-          
-          // Special rendering for Hajolo button - larger and floating above nav
-          if (item.isHajolo) {
-            return (
-              <button
-                key="hajolo"
-                onClick={handleHajoloClick}
-                className="flex flex-col items-center justify-center gap-0.5 -mt-6"
-              >
-                <div
-                  className={cn(
-                    'w-14 h-14 rounded-full flex items-center justify-center transition-colors shadow-lg border-4 border-card',
-                    hasRead ? 'bg-green-500' : 'bg-red-500'
-                  )}
+        <div className="h-16 flex items-center justify-evenly">
+          {getBottomNavItems(isAdmin, isNurse).map((item) => {
+            const isActive = location.pathname === item.to;
+            
+            // Hajolo button - larger, centered, floating above nav
+            if (item.isHajolo) {
+              return (
+                <button
+                  key="hajolo"
+                  onClick={handleHajoloClick}
+                  className="flex flex-col items-center justify-center -mt-5 w-16"
                 >
-                  <Check className="w-8 h-8 text-white" />
-                </div>
-                <span className="text-xs font-medium mt-1">{item.label}</span>
-              </button>
+                  <div
+                    className={cn(
+                      'w-14 h-14 rounded-full flex items-center justify-center transition-colors shadow-lg border-4 border-card',
+                      hasRead ? 'bg-green-500' : 'bg-red-500'
+                    )}
+                  >
+                    <Check className="w-7 h-7 text-white" />
+                  </div>
+                  <span className="text-[10px] font-medium mt-0.5">{item.label}</span>
+                </button>
+              );
+            }
+            
+            // Regular nav items - equal width, clean design
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className="flex flex-col items-center justify-center w-16"
+              >
+                <item.icon 
+                  className={cn(
+                    'w-6 h-6 transition-colors',
+                    isActive ? 'text-primary' : 'text-muted-foreground'
+                  )} 
+                  size={24} 
+                />
+                <span className={cn(
+                  'text-[10px] font-medium mt-1',
+                  isActive ? 'text-primary' : 'text-muted-foreground'
+                )}>
+                  {item.label}
+                </span>
+              </NavLink>
             );
-          }
-          
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={cn(
-                'flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-lg transition-colors min-w-[56px]',
-                isActive 
-                  ? 'text-primary' 
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <div className={cn(
-                'p-2 rounded-xl transition-colors',
-                isActive ? 'bg-primary/10' : ''
-              )}>
-                <item.icon className={cn('w-6 h-6', isActive && 'text-primary')} size={24} />
-              </div>
-              <span className="text-xs font-medium">{item.label}</span>
-            </NavLink>
-          );
-        })}
+          })}
+        </div>
       </nav>
 
       {/* Main Content - mobile: scrollable content area; desktop: normal flow */}
-      <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 pb-20 lg:pb-0 flex-1 overflow-y-auto lg:overflow-visible app-scroll lg:min-h-screen">
+      <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] lg:pb-0 flex-1 overflow-y-auto lg:overflow-visible app-scroll lg:min-h-screen">
         <div className="p-4 lg:p-8">
           {children}
         </div>
