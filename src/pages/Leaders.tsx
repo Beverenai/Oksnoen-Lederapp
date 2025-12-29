@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Users, Phone, Activity, Cross, ArrowUpDown, Check, Search, X, Home } from 'lucide-react';
+import { Users, Phone, Activity, Cross, ArrowUpDown, Check, Search, X, Home, Coffee } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/leaders/LeaderDetailDialog';
 import {
   DropdownMenu,
@@ -271,6 +271,14 @@ export default function Leaders() {
 
     return result;
   }, [leaders, activeTeamFilter, activeCabinFilter, sortBy, searchQuery]);
+
+  // Find index of first "Fri" leader for separator
+  const firstFriIndex = useMemo(() => {
+    return filteredAndSortedLeaders.findIndex(leader => 
+      leader.content?.current_activity?.toLowerCase().includes('fri') &&
+      leader.team?.toLowerCase() !== 'kjøkken' // Exclude Kjøkken from "Fri" section
+    );
+  }, [filteredAndSortedLeaders]);
   
   // Get avatar border color class based on leader status
   const getAvatarBorderClass = (leader: LeaderWithContent) => {
@@ -429,91 +437,106 @@ export default function Leaders() {
 
       {/* Leaders list */}
       <div className="grid gap-2">
-        {filteredAndSortedLeaders.map((leader) => (
-          <Card 
-            key={leader.id} 
-            className="cursor-pointer transition-colors active:scale-[0.99]"
-            onClick={() => setSelectedLeader(leader)}
-          >
-            <CardContent className="p-3">
-              <div className="flex items-center gap-3">
-                {/* Profile image with status ring */}
-                <Avatar className={cn("w-12 h-12 shrink-0", getAvatarBorderClass(leader))}>
-                  {leader.profile_image_url && (
-                    <AvatarImage src={leader.profile_image_url} alt={leader.name} />
-                  )}
-                  <AvatarFallback className="bg-primary/10 text-primary text-base">
-                    {getFirstName(leader.name).slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground">
-                    {getFirstName(leader.name)}
-                  </p>
-                  
-                  {leader.ministerpost && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {leader.ministerpost}
-                    </p>
-                  )}
-                  
-                  {/* Activity - prominent */}
-                  {leader.content?.current_activity && (
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <Activity className="w-5 h-5 text-primary shrink-0" />
-                      <span className="text-base font-semibold text-primary truncate">
-                        {leader.content.current_activity}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Badges */}
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {leader.team && (
-                      <Badge className={`text-[10px] px-1.5 py-0 ${getTeamStyles(leader.team)}`}>
-                        {formatTeamDisplay(leader.team)}
-                      </Badge>
-                    )}
-                    {leader.linkedCabins && leader.linkedCabins.length > 0 ? (
-                      <Badge 
-                        variant="outline" 
-                        className="text-[10px] px-1.5 py-0 flex items-center gap-1"
-                      >
-                        <Home className="w-3 h-3" />
-                        {formatCabinsDisplay(leader.linkedCabins)}
-                      </Badge>
-                    ) : leader.cabin && (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                        {leader.cabin}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {/* Nurse indicator */}
-                {leader.isNurse && (
-                  <span className="shrink-0 text-red-600 flex items-center" title="Sykepleier">
-                    <Cross className="w-6 h-6" fill="currentColor" />
+        {filteredAndSortedLeaders.map((leader, index) => (
+          <div key={leader.id}>
+            {/* Separator before first "Fri" leader */}
+            {index === firstFriIndex && firstFriIndex > 0 && (
+              <div className="flex items-center gap-3 py-3 mt-2 mb-2">
+                <div className="h-px flex-1 bg-blue-400/50" />
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                  <Coffee className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                    Ledere på fri
                   </span>
-                )}
-
-                {/* Call button - smaller */}
-                <Button
-                  variant="default"
-                  size="icon"
-                  className="shrink-0 bg-green-600 hover:bg-green-700 text-white rounded-full h-9 w-9"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.location.href = `tel:${leader.phone}`;
-                  }}
-                >
-                  <Phone className="w-4 h-4" />
-                </Button>
+                </div>
+                <div className="h-px flex-1 bg-blue-400/50" />
               </div>
-            </CardContent>
-          </Card>
+            )}
+            
+            <Card 
+              className="cursor-pointer transition-colors active:scale-[0.99]"
+              onClick={() => setSelectedLeader(leader)}
+            >
+              <CardContent className="p-3">
+                <div className="flex items-center gap-3">
+                  {/* Profile image with status ring */}
+                  <Avatar className={cn("w-12 h-12 shrink-0", getAvatarBorderClass(leader))}>
+                    {leader.profile_image_url && (
+                      <AvatarImage src={leader.profile_image_url} alt={leader.name} />
+                    )}
+                    <AvatarFallback className="bg-primary/10 text-primary text-base">
+                      {getFirstName(leader.name).slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-foreground">
+                      {getFirstName(leader.name)}
+                    </p>
+                    
+                    {leader.ministerpost && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {leader.ministerpost}
+                      </p>
+                    )}
+                    
+                    {/* Activity - prominent */}
+                    {leader.content?.current_activity && (
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <Activity className="w-5 h-5 text-primary shrink-0" />
+                        <span className="text-base font-semibold text-primary truncate">
+                          {leader.content.current_activity}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Badges */}
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {leader.team && (
+                        <Badge className={`text-[10px] px-1.5 py-0 ${getTeamStyles(leader.team)}`}>
+                          {formatTeamDisplay(leader.team)}
+                        </Badge>
+                      )}
+                      {leader.linkedCabins && leader.linkedCabins.length > 0 ? (
+                        <Badge 
+                          variant="outline" 
+                          className="text-[10px] px-1.5 py-0 flex items-center gap-1"
+                        >
+                          <Home className="w-3 h-3" />
+                          {formatCabinsDisplay(leader.linkedCabins)}
+                        </Badge>
+                      ) : leader.cabin && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          {leader.cabin}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Nurse indicator */}
+                  {leader.isNurse && (
+                    <span className="shrink-0 text-red-600 flex items-center" title="Sykepleier">
+                      <Cross className="w-6 h-6" fill="currentColor" />
+                    </span>
+                  )}
+
+                  {/* Call button - smaller */}
+                  <Button
+                    variant="default"
+                    size="icon"
+                    className="shrink-0 bg-green-600 hover:bg-green-700 text-white rounded-full h-9 w-9"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.location.href = `tel:${leader.phone}`;
+                    }}
+                  >
+                    <Phone className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         ))}
       </div>
 
