@@ -117,13 +117,28 @@ header, nav {
     -webkit-text-size-adjust: 100%;
   }
 
-  html, body {
-    overscroll-behavior: none;
-    -webkit-overflow-scrolling: touch;
+  html, body, #root {
+    height: 100%;
   }
 
   body {
     @apply bg-background text-foreground font-body antialiased;
+    overscroll-behavior: none;
+  }
+
+  /* Mobile: lock body scroll, let app content scroll */
+  @media (max-width: 1023px) {
+    body {
+      overflow: hidden;
+    }
+  }
+
+  /* Desktop: allow normal scroll */
+  @media (min-width: 1024px) {
+    html, body, #root {
+      height: auto;
+      min-height: 100%;
+    }
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -189,5 +204,12 @@ header, nav {
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* App scroll container - smooth iOS momentum scroll */
+  .app-scroll {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 }

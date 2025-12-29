@@ -215,7 +215,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-full lg:min-h-screen lg:h-auto bg-background flex flex-col overflow-hidden lg:overflow-visible">
       {/* Hajolo Success Overlay */}
       {showHajoloSuccess && (
         <div 
@@ -486,8 +486,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         })}
       </nav>
 
-      {/* Main Content - adjusted for safe area header */}
-      <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 pb-20 lg:pb-0 min-h-screen">
+      {/* Main Content - mobile: scrollable content area; desktop: normal flow */}
+      <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 pb-20 lg:pb-0 flex-1 overflow-y-auto lg:overflow-visible app-scroll lg:min-h-screen">
         <div className="p-4 lg:p-8">
           {children}
         </div>
