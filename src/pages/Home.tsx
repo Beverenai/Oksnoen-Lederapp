@@ -29,8 +29,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
 
-// Use public path for LCP optimization - preloaded in index.html
-const oksnoenHeader = '/oksnoen-header.png';
+// Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
+const oksnoenHeader = '/oksnoen-header.webp';
 
 interface FixTask {
   id: string;
