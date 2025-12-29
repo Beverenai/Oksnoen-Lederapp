@@ -337,7 +337,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Mobile Slide-out Menu */}
       <div
         className={cn(
-          'lg:hidden fixed left-0 top-14 bottom-20 w-72 bg-card border-r border-border z-40 transform transition-transform duration-200 overflow-y-auto',
+          'lg:hidden fixed left-0 top-[calc(3.5rem+env(safe-area-inset-top,0px))] bottom-20 w-72 bg-card border-r border-border z-40 transform transition-transform duration-200 overflow-y-auto',
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >

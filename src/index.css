@@ -104,6 +104,16 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  html, body {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
   }
 
   body {
@@ -112,6 +122,19 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
+  }
+
+  /* Disable iOS long-press context menu for PWA app-like experience */
+  a, button, [role="button"] {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Allow text selection on content areas */
+  p, span, h1, h2, h3, h4, h5, h6, li, td, th, label {
+    -webkit-user-select: text;
+    user-select: text;
   }
 }
 
