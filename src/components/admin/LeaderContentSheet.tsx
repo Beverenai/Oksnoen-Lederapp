@@ -10,10 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil } from 'lucide-react';
+import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send } from 'lucide-react';
 import { icons } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
@@ -80,9 +81,13 @@ export function LeaderContentSheet({
   homeConfig,
   onSaved
 }: LeaderContentSheetProps) {
+  const { leader: currentLeader } = useAuth();
   const [saving, setSaving] = useState(false);
   const [isExtraFieldsOpen, setIsExtraFieldsOpen] = useState(false);
   const [editingField, setEditingField] = useState<'team' | 'cabin' | 'ministerpost' | null>(null);
+  const [isSendingNotification, setIsSendingNotification] = useState(false);
+  const [notificationTitle, setNotificationTitle] = useState('');
+  const [notificationMessage, setNotificationMessage] = useState('');
 
   // Leader fields
   const [team, setTeam] = useState(leader?.team || '');
@@ -117,10 +122,46 @@ export function LeaderContentSheet({
       setExtra3(content?.extra_3 || '');
       setExtra4(content?.extra_4 || '');
       setExtra5(content?.extra_5 || '');
+      
+      // Reset notification state
+      setNotificationTitle('');
+      setNotificationMessage('');
     }
     // Reset editing state when leader changes
     setEditingField(null);
   }, [leader]);
+
+  const handleSendNotification = async () => {
+    if (!leader || !notificationTitle.trim() || !currentLeader) return;
+
+    setIsSendingNotification(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('push-send', {
+        body: {
+          title: notificationTitle,
+          message: notificationMessage || 'Du har en ny varsling',
+          url: '/',
+          single_leader_id: leader.id,
+          sender_leader_id: currentLeader.id,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.sent > 0) {
+        toast.success(`Varsling sendt til ${getFirstName(leader.name)}!`);
+        setNotificationTitle('');
+        setNotificationMessage('');
+      } else {
+        toast.info(`${getFirstName(leader.name)} har ikke aktivert push-varslinger`);
+      }
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      toast.error('Kunne ikke sende varsling');
+    } finally {
+      setIsSendingNotification(false);
+    }
+  };
 
   if (!leader) return null;
 
@@ -367,6 +408,38 @@ export function LeaderContentSheet({
               rows={2}
               className="border-destructive/50 focus-visible:ring-destructive"
             />
+          </div>
+
+          {/* Send notification to this leader */}
+          <div className="space-y-2 pt-2 border-t">
+            <Label className="flex items-center gap-2">
+              <Bell className="w-4 h-4" />
+              Send varsling til {getFirstName(leader.name)}
+            </Label>
+            <Input
+              placeholder="Tittel på varsling..."
+              value={notificationTitle}
+              onChange={(e) => setNotificationTitle(e.target.value)}
+            />
+            <Textarea
+              placeholder="Melding (valgfritt)..."
+              value={notificationMessage}
+              onChange={(e) => setNotificationMessage(e.target.value)}
+              rows={2}
+            />
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleSendNotification}
+              disabled={isSendingNotification || !notificationTitle.trim()}
+            >
+              {isSendingNotification ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              Send varsling
+            </Button>
           </div>
 
           {/* Extra Fields - Collapsible */}
