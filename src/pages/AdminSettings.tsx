@@ -37,7 +37,7 @@ import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { CabinsTab } from '@/components/admin/CabinsTab';
 import { ParticipantImportTab } from '@/components/admin/ParticipantImportTab';
-import { CabinAssignmentStatus } from '@/components/admin/CabinAssignmentStatus';
+import { CabinAssignmentStatus, CabinAssignmentStatusRef } from '@/components/admin/CabinAssignmentStatus';
 import { ScheduleTab } from '@/components/admin/ScheduleTab';
 import { PushNotificationsTab } from '@/components/admin/PushNotificationsTab';
 import { NumbersDataImportTab } from '@/components/admin/NumbersDataImportTab';
@@ -100,6 +100,7 @@ export default function AdminSettings() {
   const [exportCountdown, setExportCountdown] = useState(0);
   const exportTimerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const cabinStatusRef = useRef<CabinAssignmentStatusRef>(null);
 
   useEffect(() => {
     loadData();
@@ -297,6 +298,10 @@ export default function AdminSettings() {
         setLastSyncSuccess(true);
         setLastSyncTime(new Date().toISOString());
         toast.success(`Synkronisering fullført! (Status: ${data.webhookStatus})`);
+        
+        // Oppdater CabinAssignmentStatus og leder-listen
+        cabinStatusRef.current?.refresh();
+        loadData();
       } else {
         setSyncError({
           error: data?.error || 'Ukjent feil',
@@ -754,7 +759,7 @@ export default function AdminSettings() {
         {/* Sync Tab */}
         <TabsContent value="sync" className="space-y-4">
           {/* Cabin Assignment Status */}
-          <CabinAssignmentStatus />
+          <CabinAssignmentStatus ref={cabinStatusRef} />
 
           {/* Numbers Data Import */}
           <NumbersDataImportTab />
