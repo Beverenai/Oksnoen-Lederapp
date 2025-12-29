@@ -28,7 +28,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
-import oksnoenHeader from '@/assets/oksnoen-header.png';
+
+// Use public path for LCP optimization - preloaded in index.html
+const oksnoenHeader = '/oksnoen-header.png';
 
 interface FixTask {
   id: string;
@@ -331,6 +333,7 @@ export default function Home() {
           src={oksnoenHeader} 
           alt="Oksnøen" 
           className="w-full h-full object-cover"
+          fetchPriority="high"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
         
