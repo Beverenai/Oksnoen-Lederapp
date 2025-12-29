@@ -89,6 +89,7 @@ export default function Leaders() {
   const [sortBy, setSortBy] = useState<SortOption>('activity'); // Default to activity
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [showTeamFilters, setShowTeamFilters] = useState(false);
 
   useEffect(() => {
     loadLeaders();
@@ -400,38 +401,55 @@ export default function Leaders() {
         )}
       </div>
 
-      {/* Team filter chips - horizontal scroll */}
+      {/* Team filter section */}
       {availableTeams.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
-          {/* "Alle" chip */}
+        <div className="space-y-2">
+          {/* "Alle" button - always visible */}
           <button
-            onClick={() => setActiveTeamFilter(null)}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all
+            onClick={() => {
+              if (activeTeamFilter) {
+                // If a filter is active, clicking "Alle" clears it
+                setActiveTeamFilter(null);
+                setShowTeamFilters(false);
+              } else {
+                // If no filter, toggle the team chips visibility
+                setShowTeamFilters(!showTeamFilters);
+              }
+            }}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all
               ${!activeTeamFilter 
                 ? 'bg-foreground text-background' 
                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
               }`}
           >
-            Alle
+            Alle {!activeTeamFilter && (showTeamFilters ? '▲' : '▼')}
           </button>
           
-          {/* Team chips */}
-          {availableTeams.map((team) => (
-            <button
-              key={team.key}
-              onClick={() => handleTeamFilter(team.key)}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all border-2
-                ${activeTeamFilter === team.key
-                  ? `${team.bg} ${team.text} ${team.border}`
-                  : `bg-transparent ${team.border} hover:${team.bg}/20`
-                }`}
-              style={{
-                borderColor: activeTeamFilter !== team.key ? undefined : undefined,
-              }}
-            >
-              {team.label}
-            </button>
-          ))}
+          {/* Team chips - conditionally visible */}
+          {(showTeamFilters || activeTeamFilter) && (
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4 animate-fade-in">
+              {availableTeams.map((team) => (
+                <button
+                  key={team.key}
+                  onClick={() => {
+                    const isCurrentlyActive = activeTeamFilter === team.key;
+                    handleTeamFilter(team.key);
+                    if (isCurrentlyActive) {
+                      // Toggling off the current filter
+                      setShowTeamFilters(false);
+                    }
+                  }}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all border-2
+                    ${activeTeamFilter === team.key
+                      ? `${team.bg} ${team.text} ${team.border}`
+                      : `bg-transparent ${team.border} hover:${team.bg}/20`
+                    }`}
+                >
+                  {team.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
