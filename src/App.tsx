@@ -17,6 +17,8 @@ import Team from "@/pages/Team";
 import Passport from "@/pages/Passport";
 import MyCabins from "@/pages/MyCabins";
 import Schedule from "@/pages/Schedule";
+import Skjaer from "@/pages/Skjaer";
+import Stories from "@/pages/Stories";
 
 import Admin from "@/pages/Admin";
 import AdminSettings from "@/pages/AdminSettings";
@@ -248,6 +250,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <RopeControl />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/skjaer"
+        element={
+          <ProtectedRoute>
+            <Skjaer />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/stories"
+        element={
+          <ProtectedRoute>
+            <Stories />
           </ProtectedRoute>
         }
       />
