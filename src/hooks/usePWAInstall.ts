@@ -15,6 +15,10 @@ export function usePWAInstall() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [hasDeclined, setHasDeclined] = useState(false);
 
+  const syncDeclinedFromStorage = useCallback(() => {
+    setHasDeclined(!!localStorage.getItem('pwa-install-declined'));
+  }, []);
+
   useEffect(() => {
     // Check if already installed
     const checkInstalled = () => {
@@ -24,12 +28,7 @@ export function usePWAInstall() {
     };
 
     checkInstalled();
-
-    // Check if user has previously declined
-    const declined = localStorage.getItem('pwa-install-declined');
-    if (declined) {
-      setHasDeclined(true);
-    }
+    syncDeclinedFromStorage();
 
     // Listen for beforeinstallprompt event
     const handleBeforeInstall = (e: Event) => {
@@ -45,8 +44,21 @@ export function usePWAInstall() {
       setDeferredPrompt(null);
     };
 
+    // Keep hook instances in sync (Install page + App router use the hook separately)
+    const handleDeclinedEvent = () => {
+      syncDeclinedFromStorage();
+    };
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'pwa-install-declined') {
+        syncDeclinedFromStorage();
+      }
+    };
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
     window.addEventListener('appinstalled', handleAppInstalled);
+    window.addEventListener('pwa-install-declined', handleDeclinedEvent);
+    window.addEventListener('storage', handleStorage);
 
     // Listen for display mode changes
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
@@ -55,9 +67,11 @@ export function usePWAInstall() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      window.removeEventListener('pwa-install-declined', handleDeclinedEvent);
+      window.removeEventListener('storage', handleStorage);
       mediaQuery.removeEventListener('change', checkInstalled);
     };
-  }, []);
+  }, [syncDeclinedFromStorage]);
 
   const promptInstall = useCallback(async () => {
     if (!deferredPrompt) return false;
@@ -65,14 +79,14 @@ export function usePWAInstall() {
     try {
       await deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      
+
       if (outcome === 'accepted') {
         setIsInstalled(true);
       }
-      
+
       setDeferredPrompt(null);
       setIsInstallable(false);
-      
+
       return outcome === 'accepted';
     } catch (error) {
       console.error('Error prompting install:', error);
@@ -83,6 +97,8 @@ export function usePWAInstall() {
   const declineInstall = useCallback(() => {
     localStorage.setItem('pwa-install-declined', 'true');
     setHasDeclined(true);
+    // Notify other hook instances in the same tab (storage-event doesnt fire in same window)
+    window.dispatchEvent(new Event('pwa-install-declined'));
   }, []);
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);

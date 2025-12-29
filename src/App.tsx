@@ -79,7 +79,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   const { leader, isLoading, isProfileComplete } = useAuth();
-  const { isInstalled, hasDeclined } = usePWAInstall();
+  const { isInstalled, hasDeclined, isIOS, isAndroid } = usePWAInstall();
 
   if (isLoading) {
     return (
@@ -88,6 +88,8 @@ function AppRoutes() {
       </div>
     );
   }
+
+  const shouldGateToInstall = (isIOS || isAndroid) && !isInstalled && !hasDeclined;
 
   return (
     <Routes>
@@ -98,7 +100,10 @@ function AppRoutes() {
           leader ? (
             isProfileComplete ? <Navigate to="/" replace /> : <Navigate to="/onboarding" replace />
           ) : (
-            <Install />
+            // Desktop should never be blocked by install flow
+            !isIOS && !isAndroid ? <Navigate to="/login" replace /> : (
+              hasDeclined || isInstalled ? <Navigate to="/login" replace /> : <Install />
+            )
           )
         } 
       />
@@ -110,8 +115,7 @@ function AppRoutes() {
           leader ? (
             isProfileComplete ? <Navigate to="/" replace /> : <Navigate to="/onboarding" replace />
           ) : (
-            // Show install page first if not installed and not declined
-            !isInstalled && !hasDeclined ? <Navigate to="/install" replace /> : <Login />
+            shouldGateToInstall ? <Navigate to="/install" replace /> : <Login />
           )
         } 
       />
