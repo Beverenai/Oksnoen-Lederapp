@@ -4,8 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Sparkles, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { nb } from 'date-fns/locale';
 
 interface CheckoutProgress {
   status: 'idle' | 'starting' | 'running' | 'done' | 'error';
@@ -14,24 +17,52 @@ interface CheckoutProgress {
   error?: string;
 }
 
+interface PassWrittenEntry {
+  id: string;
+  name: string;
+  cabin_name: string;
+  written_at: string;
+  written_by_name: string;
+}
+
 export function CheckoutTab() {
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
   const [progress, setProgress] = useState<CheckoutProgress>({ status: 'idle', processed: 0, total: 0 });
   const [totalParticipants, setTotalParticipants] = useState(0);
   const [passWrittenCount, setPassWrittenCount] = useState(0);
+  const [passWrittenList, setPassWrittenList] = useState<PassWrittenEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = useCallback(async () => {
     try {
-      const [configRes, progressRes, participantsRes] = await Promise.all([
+      const [configRes, progressRes, participantsRes, writtenRes, leadersRes] = await Promise.all([
         supabase.from('app_config').select('*').eq('key', 'checkout_enabled').single(),
         supabase.from('app_config').select('*').eq('key', 'checkout_progress').single(),
         supabase.from('participants').select('id, pass_written'),
+        supabase.from('participants')
+          .select('id, name, first_name, last_name, pass_written_at, pass_written_by, cabin:cabins(name)')
+          .eq('pass_written', true)
+          .order('pass_written_at', { ascending: false }),
+        supabase.from('leaders').select('id, name'),
       ]);
 
       setCheckoutEnabled(configRes.data?.value === 'true');
       setTotalParticipants(participantsRes.data?.length || 0);
       setPassWrittenCount(participantsRes.data?.filter(p => p.pass_written).length || 0);
+
+      // Build leader name map
+      const leaderMap = new Map<string, string>();
+      leadersRes.data?.forEach(l => leaderMap.set(l.id, l.name));
+
+      // Build pass written list
+      const writtenList: PassWrittenEntry[] = (writtenRes.data || []).map(p => ({
+        id: p.id,
+        name: p.first_name && p.last_name ? `${p.first_name} ${p.last_name}` : p.name,
+        cabin_name: (p.cabin as any)?.name || 'Ukjent hytte',
+        written_at: p.pass_written_at || '',
+        written_by_name: p.pass_written_by ? (leaderMap.get(p.pass_written_by) || 'Ukjent') : 'Ukjent',
+      }));
+      setPassWrittenList(writtenList);
 
       if (progressRes.data?.value) {
         try {
@@ -256,14 +287,44 @@ export function CheckoutTab() {
 
           {/* Stats when enabled */}
           {checkoutEnabled && !isGenerating && (
-            <div className="pt-4 border-t">
-              <h4 className="font-medium mb-3">Fremgang</h4>
-              <div className="space-y-2">
-                <Progress value={(passWrittenCount / totalParticipants) * 100} className="h-3" />
-                <p className="text-sm text-muted-foreground">
-                  {passWrittenCount} av {totalParticipants} deltakere har fått pass skrevet
-                </p>
+            <div className="pt-4 border-t space-y-4">
+              <div>
+                <h4 className="font-medium mb-3">Fremgang</h4>
+                <div className="space-y-2">
+                  <Progress value={(passWrittenCount / totalParticipants) * 100} className="h-3" />
+                  <p className="text-sm text-muted-foreground">
+                    {passWrittenCount} av {totalParticipants} deltakere har fått pass skrevet
+                  </p>
+                </div>
               </div>
+
+              {/* Detailed list of written passes */}
+              {passWrittenList.length > 0 && (
+                <div className="pt-4 border-t">
+                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-success" />
+                    Pass skrevet ({passWrittenList.length})
+                  </h4>
+                  <ScrollArea className="max-h-64">
+                    <div className="space-y-2 pr-4">
+                      {passWrittenList.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm">
+                          <div>
+                            <span className="font-medium">{p.name}</span>
+                            <span className="text-muted-foreground ml-2">({p.cabin_name})</span>
+                          </div>
+                          <div className="text-right text-muted-foreground text-xs">
+                            <div>Av: {p.written_by_name}</div>
+                            {p.written_at && (
+                              <div>{format(new Date(p.written_at), 'dd.MM HH:mm', { locale: nb })}</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
