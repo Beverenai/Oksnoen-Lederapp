@@ -7,8 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { 
   Search, 
   CheckCircle2, 
@@ -20,7 +20,8 @@ import {
   ChevronRight,
   ArrowLeft,
   Users,
-  Sparkles
+  Sparkles,
+  Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { differenceInYears } from 'date-fns';
@@ -245,24 +246,93 @@ export default function Passport() {
           </p>
         </div>
 
-        <div className="flex gap-2">
-          {checkoutEnabled && (
-            <Button
-              variant="default"
-              onClick={() => navigate('/checkout')}
-              className="gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              Utsjekk
-            </Button>
-          )}
+        {/* Action buttons in a row */}
+        <div className="flex gap-2 flex-wrap">
           <Button
             variant={showBulkRegistration ? 'secondary' : 'outline'}
+            size="sm"
             onClick={() => setShowBulkRegistration(!showBulkRegistration)}
           >
-            <Users className="w-4 h-4 mr-2" />
-            {showBulkRegistration ? 'Skjul' : 'Registrer aktivitet'}
+            <Users className="w-4 h-4 mr-1.5" />
+            {showBulkRegistration ? 'Skjul' : 'Aktivitet'}
           </Button>
+          
+          {/* Cabin filter button with Sheet */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Home className="w-4 h-4" />
+                {filterCabin === 'all' ? 'Hytte' : cabins.find(c => c.id === filterCabin)?.name}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="max-h-[70vh]">
+              <SheetHeader>
+                <SheetTitle>Velg hytte</SheetTitle>
+              </SheetHeader>
+              <div className="grid gap-2 mt-4 max-h-[50vh] overflow-y-auto">
+                <Button
+                  variant={filterCabin === 'all' ? 'default' : 'ghost'}
+                  className="justify-start"
+                  onClick={() => setFilterCabin('all')}
+                >
+                  {filterCabin === 'all' && <Check className="w-4 h-4 mr-2" />}
+                  Alle hytter
+                </Button>
+                {cabins.map((cabin) => (
+                  <Button
+                    key={cabin.id}
+                    variant={filterCabin === cabin.id ? 'default' : 'ghost'}
+                    className="justify-start"
+                    onClick={() => setFilterCabin(cabin.id)}
+                  >
+                    {filterCabin === cabin.id && <Check className="w-4 h-4 mr-2" />}
+                    {cabin.name}
+                  </Button>
+                ))}
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          {/* Arrival filter button with Sheet */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Filter className="w-4 h-4" />
+                {filterArrival === 'all' ? 'Status' : filterArrival === 'arrived' ? 'Ankommet' : 'Ikke ank.'}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom">
+              <SheetHeader>
+                <SheetTitle>Filtrer på status</SheetTitle>
+              </SheetHeader>
+              <div className="grid gap-2 mt-4">
+                <Button
+                  variant={filterArrival === 'all' ? 'default' : 'ghost'}
+                  className="justify-start"
+                  onClick={() => setFilterArrival('all')}
+                >
+                  {filterArrival === 'all' && <Check className="w-4 h-4 mr-2" />}
+                  Alle
+                </Button>
+                <Button
+                  variant={filterArrival === 'arrived' ? 'default' : 'ghost'}
+                  className="justify-start"
+                  onClick={() => setFilterArrival('arrived')}
+                >
+                  {filterArrival === 'arrived' && <Check className="w-4 h-4 mr-2" />}
+                  Ankommet
+                </Button>
+                <Button
+                  variant={filterArrival === 'not-arrived' ? 'default' : 'ghost'}
+                  className="justify-start"
+                  onClick={() => setFilterArrival('not-arrived')}
+                >
+                  {filterArrival === 'not-arrived' && <Check className="w-4 h-4 mr-2" />}
+                  Ikke ankommet
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
 
@@ -275,43 +345,29 @@ export default function Passport() {
         />
       )}
 
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input
-            placeholder="Søk etter navn..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={filterCabin} onValueChange={setFilterCabin}>
-          <SelectTrigger className="w-full sm:w-40">
-            <Home className="w-4 h-4 mr-2" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Alle hytter</SelectItem>
-            {cabins.map((cabin) => (
-              <SelectItem key={cabin.id} value={cabin.id}>
-                {cabin.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterArrival} onValueChange={setFilterArrival}>
-          <SelectTrigger className="w-full sm:w-40">
-            <Filter className="w-4 h-4 mr-2" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Alle</SelectItem>
-            <SelectItem value="arrived">Ankommet</SelectItem>
-            <SelectItem value="not-arrived">Ikke ankommet</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Search Field */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        <Input
+          placeholder="Søk etter navn..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
       </div>
+
+      {/* Checkout button - prominent placement when enabled */}
+      {checkoutEnabled && (
+        <Button
+          variant="default"
+          size="lg"
+          onClick={() => navigate('/checkout')}
+          className="w-full gap-2 text-lg py-6"
+        >
+          <Sparkles className="w-5 h-5" />
+          Utsjekk
+        </Button>
+      )}
 
       {/* Grouped by Cabin */}
       <div className="space-y-4">
@@ -401,7 +457,7 @@ export default function Passport() {
                                 >
                                   <div className="flex items-start gap-3">
                                     <Avatar className="w-10 h-10 shrink-0">
-                                      <AvatarImage src={participant.image_url || undefined} />
+                                      <AvatarImage src={participant.image_url || undefined} loading="lazy" />
                                       <AvatarFallback className="bg-muted text-muted-foreground">
                                         <User className="w-4 h-4" />
                                       </AvatarFallback>
@@ -467,7 +523,7 @@ export default function Passport() {
                                 >
                                   <div className="flex items-start gap-3">
                                     <Avatar className="w-10 h-10 shrink-0">
-                                      <AvatarImage src={participant.image_url || undefined} />
+                                      <AvatarImage src={participant.image_url || undefined} loading="lazy" />
                                       <AvatarFallback className="bg-muted text-muted-foreground">
                                         <User className="w-4 h-4" />
                                       </AvatarFallback>

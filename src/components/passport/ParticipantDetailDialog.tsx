@@ -280,6 +280,7 @@ export const ParticipantDetailDialog = ({
                   src={participant.image_url}
                   alt={participant.name}
                   className="w-full h-full object-cover"
+                  loading="lazy"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/20">
