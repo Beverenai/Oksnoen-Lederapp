@@ -31,7 +31,9 @@ import {
   Calendar,
   Bell,
   Anchor,
-  Dumbbell
+  Dumbbell,
+  Map as MapIcon,
+  BookOpen
 } from 'lucide-react';
 import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
@@ -42,6 +44,8 @@ import { ScheduleTab } from '@/components/admin/ScheduleTab';
 import { PushNotificationsTab } from '@/components/admin/PushNotificationsTab';
 import { RopeControlTab } from '@/components/admin/RopeControlTab';
 import { ActivitiesTab } from '@/components/admin/ActivitiesTab';
+import { SkjaerTab } from '@/components/admin/SkjaerTab';
+import { StoriesTab } from '@/components/admin/StoriesTab';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -642,6 +646,14 @@ export default function AdminSettings() {
             <Dumbbell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden xs:inline sm:inline">Aktiviteter</span>
           </TabsTrigger>
+          <TabsTrigger value="skjaer" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <MapIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline sm:inline">Skjær</span>
+          </TabsTrigger>
+          <TabsTrigger value="stories" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline sm:inline">Historier</span>
+          </TabsTrigger>
           <TabsTrigger value="sync" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
             <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden xs:inline sm:inline">Synk</span>
@@ -680,6 +692,16 @@ export default function AdminSettings() {
         {/* Activities Tab */}
         <TabsContent value="activities" className="space-y-4">
           <ActivitiesTab />
+        </TabsContent>
+
+        {/* Skjaer Tab */}
+        <TabsContent value="skjaer" className="space-y-4">
+          <SkjaerTab />
+        </TabsContent>
+
+        {/* Stories Tab */}
+        <TabsContent value="stories" className="space-y-4">
+          <StoriesTab />
         </TabsContent>
 
         {/* Setup Tab */}
