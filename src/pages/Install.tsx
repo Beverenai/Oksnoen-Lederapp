@@ -21,7 +21,8 @@ export default function Install() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 pt-safe">
       <div className="w-full max-w-md space-y-6">
         {/* Logo */}
         <div className="flex flex-col items-center space-y-4">
@@ -127,6 +128,7 @@ export default function Install() {
           <p>✓ Fungerer offline</p>
           <p>✓ Raskere oppstart</p>
           <p>✓ Fullskjermsvisning</p>
+        </div>
         </div>
       </div>
     </div>
