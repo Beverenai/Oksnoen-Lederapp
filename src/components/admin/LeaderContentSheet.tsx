@@ -408,7 +408,7 @@ export function LeaderContentSheet({
               {leader.can_rope_setup && (
                 <Badge variant="outline" className="text-xs bg-indigo-50 border-indigo-300 text-indigo-700">
                   <Wrench className="w-3 h-3 mr-1" />
-                  Oppsett
+                  Taubane-Oppsett
                 </Badge>
               )}
             </div>

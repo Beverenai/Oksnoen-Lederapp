@@ -244,7 +244,7 @@ export function LeaderDetailSheet({
               )}
               {leader.can_rope_setup && (
                 <Badge variant="outline" className="gap-1">
-                  <Wrench className="w-3 h-3" /> Oppsett
+                  <Wrench className="w-3 h-3" /> Taubane-Oppsett
                 </Badge>
               )}
             </div>
