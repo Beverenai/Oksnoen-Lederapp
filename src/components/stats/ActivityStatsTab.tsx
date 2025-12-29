@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Activity, Users, TrendingUp, Home, Trophy, Medal, ChevronRight } from "lucide-react";
-
+import { normalizeActivityForStats } from "@/lib/activityUtils";
 const COLORS = [
   "hsl(var(--chart-1))",
   "hsl(var(--chart-2))",
@@ -83,9 +83,11 @@ export function ActivityStatsTab() {
   });
 
   // Calculate activity popularity
+  // Calculate activity popularity with normalization
   const activityCounts: Record<string, number> = {};
   activityData?.forEach((a) => {
-    activityCounts[a.activity] = (activityCounts[a.activity] || 0) + 1;
+    const normalizedActivity = normalizeActivityForStats(a.activity);
+    activityCounts[normalizedActivity] = (activityCounts[normalizedActivity] || 0) + 1;
   });
 
   const popularActivities = Object.entries(activityCounts)

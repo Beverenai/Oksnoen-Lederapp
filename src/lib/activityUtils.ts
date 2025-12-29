@@ -31,6 +31,47 @@ export const ACTIVITY_NAME_MAPPING: Record<string, string[]> = {
   'triatlon': ['triathlon'],
 };
 
+// Mapping for statistics - groups related activities for display
+// Note: This is separate from Styrkeprøven logic which needs distinctions
+export const STATS_ACTIVITY_GROUPING: Record<string, string> = {
+  // Åtte meter variants
+  'åtte': 'Åtte meter',
+  'åtte meter': 'Åtte meter',
+  '8 meter': 'Åtte meter',
+  '8m': 'Åtte meter',
+  'åttemeteren': 'Åtte meter',
+  
+  // Ti meter variants
+  'ti': 'Ti meter',
+  'ti meter': 'Ti meter',
+  '10 meter': 'Ti meter',
+  '10m': 'Ti meter',
+  'timeteren': 'Ti meter',
+  
+  // Tretten meter variants
+  'tretten': 'Tretten meter',
+  'tretten meter': 'Tretten meter',
+  '13 meter': 'Tretten meter',
+  '13m': 'Tretten meter',
+  'trettenmeteren': 'Tretten meter',
+  
+  // Skrikeren - all variants grouped to one for stats
+  'skrikeren': 'Skrikeren',
+  'skrikern': 'Skrikeren',
+  'skrikeren en vei': 'Skrikeren',
+  'skrikeren begge veier': 'Skrikeren',
+  'svømming en vei': 'Skrikeren',
+  'svømming begge veier': 'Skrikeren',
+  'svømming til skrikeren en vei': 'Skrikeren',
+  'svømming til skrikeren begge veier': 'Skrikeren',
+};
+
+// Normalize activity name for statistics display (groups similar activities)
+export function normalizeActivityForStats(activity: string): string {
+  const normalized = activity.toLowerCase().trim();
+  return STATS_ACTIVITY_GROUPING[normalized] || activity;
+}
+
 // Requirements for Store Styrkeprøven
 // All of these must be completed
 export const STORE_STYRKEPROVE_REQUIREMENTS = [
