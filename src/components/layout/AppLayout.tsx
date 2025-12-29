@@ -18,6 +18,7 @@ import {
   Check,
   BarChart2,
   Bell,
+  Anchor,
   LucideIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ const baseNavItems: NavItem[] = [
 const scheduleNavItem: NavItem = { to: '/schedule', icon: Calendar, label: 'Vaktplan' };
 const importantInfoNavItem: NavItem = { to: '/important-info', icon: AlertTriangle, label: 'Viktig info' };
 const fixNavItem: NavItem = { to: '/fix', icon: Wrench, label: 'FIX' };
+const ropeControlNavItem: NavItem = { to: '/rope-control', icon: Anchor, label: 'Tau Kontroll' };
 
 // Note: Mobile hamburger menu now uses allNavItems (same as desktop sidebar)
 
@@ -119,6 +121,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     ...(hasScheduleImage ? [scheduleNavItem] : []),
     importantInfoNavItem,
     fixNavItem,
+    ropeControlNavItem,
   ];
 
 
