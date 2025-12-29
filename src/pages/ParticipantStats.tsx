@@ -4,10 +4,11 @@ import { RoomSwapTab } from "@/components/stats/RoomSwapTab";
 import { CabinReportsTab } from "@/components/stats/CabinReportsTab";
 import { CheckoutTab } from "@/components/stats/CheckoutTab";
 import { LeaderActivityStatsTab } from "@/components/stats/LeaderActivityStatsTab";
+import { ActivityStatsTab } from "@/components/stats/ActivityStatsTab";
 import { ExportDataSheet } from "@/components/stats/ExportDataSheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { BarChart2, ArrowLeftRight, Home, Download, Sparkles, UserCheck } from "lucide-react";
+import { BarChart2, ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity } from "lucide-react";
 
 const ParticipantStats = () => {
   const [exportOpen, setExportOpen] = useState(false);
@@ -44,6 +45,10 @@ const ParticipantStats = () => {
             <UserCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Leder</span>
           </TabsTrigger>
+          <TabsTrigger value="activity-stats" className="flex-1 min-w-[4.5rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Aktiviteter</span>
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="overview">
@@ -64,6 +69,10 @@ const ParticipantStats = () => {
         
         <TabsContent value="leader-activity">
           <LeaderActivityStatsTab />
+        </TabsContent>
+        
+        <TabsContent value="activity-stats">
+          <ActivityStatsTab />
         </TabsContent>
       </Tabs>
 
