@@ -309,7 +309,7 @@ export function RopeControlTab() {
                   <TableHead className="text-center">Karabin</TableHead>
                   <TableHead className="text-center">Hjelm</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Kommentar</TableHead>
+                  <TableHead>Detaljer</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -322,8 +322,11 @@ export function RopeControlTab() {
                 ) : (
                   filteredControls.map((control) => {
                     const status = getOverallStatus(control);
-                    const hasComments = control.rope_comment || control.harness_comment || 
-                      control.carabiner_comment || control.helmet_comment || control.fix_comment;
+                    const rejectedItems: { name: string; comment: string | null }[] = [];
+                    if (control.rope_comment) rejectedItems.push({ name: 'Tau', comment: control.rope_comment });
+                    if (control.harness_comment) rejectedItems.push({ name: 'Sele', comment: control.harness_comment });
+                    if (control.carabiner_comment) rejectedItems.push({ name: 'Karabiner', comment: control.carabiner_comment });
+                    if (control.helmet_comment) rejectedItems.push({ name: 'Hjelm', comment: control.helmet_comment });
                     
                     return (
                       <TableRow key={control.id}>
@@ -358,15 +361,44 @@ export function RopeControlTab() {
                           {getEquipmentStatusIcon(control.helmet_status)}
                         </TableCell>
                         <TableCell>{getStatusBadge(status)}</TableCell>
-                        <TableCell className="max-w-[200px]">
-                          {hasComments && (
-                            <div className="text-xs text-muted-foreground truncate">
-                              {control.fix_comment || 
-                                control.rope_comment || 
-                                control.harness_comment || 
-                                control.carabiner_comment || 
-                                control.helmet_comment}
+                        <TableCell className="max-w-[300px]">
+                          {status === 'fixed' && (
+                            <div className="space-y-1">
+                              {rejectedItems.length > 0 && (
+                                <div className="text-xs">
+                                  <span className="text-destructive font-medium">Underkjent:</span>
+                                  {rejectedItems.map((item, i) => (
+                                    <span key={i} className="text-muted-foreground ml-1">
+                                      {item.name}{item.comment && ` (${item.comment.trim()})`}{i < rejectedItems.length - 1 && ','}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {control.fix_comment && (
+                                <div className="text-xs">
+                                  <span className="text-green-600 font-medium">Fiks:</span>
+                                  <span className="text-muted-foreground ml-1">{control.fix_comment}</span>
+                                </div>
+                              )}
+                              {control.fixed_by_leader?.name && control.fixed_at && (
+                                <div className="text-xs text-muted-foreground">
+                                  Fikset av {control.fixed_by_leader.name} - {format(new Date(control.fixed_at), 'dd. MMM HH:mm', { locale: nb })}
+                                </div>
+                              )}
                             </div>
+                          )}
+                          {status === 'rejected' && rejectedItems.length > 0 && (
+                            <div className="text-xs">
+                              <span className="text-destructive font-medium">Underkjent:</span>
+                              {rejectedItems.map((item, i) => (
+                                <span key={i} className="text-muted-foreground ml-1">
+                                  {item.name}{item.comment && ` (${item.comment.trim()})`}{i < rejectedItems.length - 1 && ','}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {status === 'approved' && (
+                            <span className="text-xs text-muted-foreground">Alt godkjent</span>
                           )}
                         </TableCell>
                       </TableRow>
