@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send, Car, Anchor, Mountain, ArrowDown } from 'lucide-react';
+import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send, Car, Anchor, Mountain, ArrowDown, Cable, Wrench } from 'lucide-react';
 import { icons } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -401,13 +401,13 @@ export function LeaderContentSheet({
               )}
               {leader.can_zipline && (
                 <Badge variant="outline" className="text-xs bg-purple-50 border-purple-300 text-purple-700">
-                  <Mountain className="w-3 h-3 mr-1" />
+                  <Cable className="w-3 h-3 mr-1" />
                   Taubane
                 </Badge>
               )}
               {leader.can_rope_setup && (
                 <Badge variant="outline" className="text-xs bg-indigo-50 border-indigo-300 text-indigo-700">
-                  <Mountain className="w-3 h-3 mr-1" />
+                  <Wrench className="w-3 h-3 mr-1" />
                   Oppsett
                 </Badge>
               )}
