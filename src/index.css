@@ -131,17 +131,12 @@ header, nav {
     height: 100%;
   }
 
-  /* Mobile: use dvh for correct viewport sizing and lock body scroll */
+  /* Mobile: use dvh for correct viewport sizing (allow normal scrolling) */
   @media (max-width: 1023px) {
     html, body, #root {
-      height: 100dvh;
-      height: -webkit-fill-available;
-    }
-    
-    body {
-      position: fixed;
-      width: 100%;
-      overflow: hidden;
+      height: auto;
+      min-height: 100dvh;
+      min-height: -webkit-fill-available;
     }
   }
 
