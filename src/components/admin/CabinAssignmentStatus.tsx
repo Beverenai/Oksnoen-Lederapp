@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +30,11 @@ const EXEMPT_TEAMS = ['kjøkken'];
 // Roles that are exempt from cabin responsibility
 const EXEMPT_ROLES = ['admin', 'nurse'];
 
-export function CabinAssignmentStatus() {
+export interface CabinAssignmentStatusRef {
+  refresh: () => void;
+}
+
+export const CabinAssignmentStatus = forwardRef<CabinAssignmentStatusRef>((_, ref) => {
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState<CabinAssignmentStats>({ total: 0, withCabins: 0, withoutCabins: 0, exempt: 0, percentage: 0 });
   const [leadersWithCabins, setLeadersWithCabins] = useState<LeaderCabinInfo[]>([]);
@@ -135,6 +139,10 @@ export function CabinAssignmentStatus() {
       setIsLoading(false);
     }
   };
+
+  useImperativeHandle(ref, () => ({
+    refresh: loadCabinAssignmentStats
+  }));
 
   useEffect(() => {
     loadCabinAssignmentStats();
@@ -306,4 +314,4 @@ export function CabinAssignmentStatus() {
       </CardContent>
     </Card>
   );
-}
+});
