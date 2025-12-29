@@ -35,7 +35,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen bg-background">
+      <div className="min-h-screen flex items-center justify-center p-4 pt-safe">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
           <img 
@@ -92,6 +93,7 @@ export default function Login() {
         <p className="text-center text-sm text-muted-foreground mt-6">
           Kontakt admin hvis du ikke finner deg selv i systemet
         </p>
+        </div>
       </div>
     </div>
   );

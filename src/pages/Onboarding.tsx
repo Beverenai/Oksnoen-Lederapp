@@ -115,7 +115,8 @@ export default function Onboarding() {
 
   if (step === 'notifications') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 pt-safe">
         <div className="w-full max-w-md space-y-6">
           <Card>
             <CardContent className="pt-8 pb-6 space-y-6 text-center">
@@ -140,13 +141,15 @@ export default function Onboarding() {
               </div>
             </CardContent>
           </Card>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 pt-safe">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -257,6 +260,7 @@ export default function Onboarding() {
         <p className="text-center text-xs text-muted-foreground">
           * Obligatoriske felt
         </p>
+        </div>
       </div>
     </div>
   );
