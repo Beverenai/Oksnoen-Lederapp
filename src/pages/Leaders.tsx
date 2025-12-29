@@ -245,13 +245,13 @@ export default function Leaders() {
       const aIsKitchen = a.team?.toLowerCase() === 'kjøkken';
       const bIsKitchen = b.team?.toLowerCase() === 'kjøkken';
       
-      // Kjøkken always at very bottom
-      if (aIsKitchen && !bIsKitchen) return 1;
-      if (!aIsKitchen && bIsKitchen) return -1;
-      
-      // "Fri" leaders should be at bottom (but above Kjøkken)
+      // "Fri" leaders should be at the very bottom
       if (aIsFri && !bIsFri) return 1;
       if (!aIsFri && bIsFri) return -1;
+      
+      // Kjøkken at bottom (but above "Fri")
+      if (aIsKitchen && !bIsKitchen) return 1;
+      if (!aIsKitchen && bIsKitchen) return -1;
       
       switch (sortBy) {
         case 'activity':
@@ -273,11 +273,10 @@ export default function Leaders() {
     return result;
   }, [leaders, activeTeamFilter, activeCabinFilter, sortBy, searchQuery]);
 
-  // Find index of first "Fri" leader for separator
+  // Find index of first "Fri" leader for separator (now at the very bottom, after Kjøkken)
   const firstFriIndex = useMemo(() => {
     return filteredAndSortedLeaders.findIndex(leader => 
-      leader.content?.current_activity?.toLowerCase().includes('fri') &&
-      leader.team?.toLowerCase() !== 'kjøkken' // Exclude Kjøkken from "Fri" section
+      leader.content?.current_activity?.toLowerCase().includes('fri')
     );
   }, [filteredAndSortedLeaders]);
   
@@ -464,7 +463,7 @@ export default function Leaders() {
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-full">
                   <Coffee className="w-4 h-4 text-blue-500" />
                   <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                    Ledere på fri
+                    Ledere som har Fri
                   </span>
                 </div>
                 <div className="h-px flex-1 bg-blue-400/50" />
