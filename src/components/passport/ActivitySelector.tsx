@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ACTIVITIES } from '@/lib/activityUtils';
+import { useActivities } from '@/hooks/useActivities';
 import { cn } from '@/lib/utils';
 
 interface ActivitySelectorProps {
@@ -18,6 +18,7 @@ export function ActivitySelector({
   completedActivities,
   onActivityChanged,
 }: ActivitySelectorProps) {
+  const { activities } = useActivities(true);
   const [isLoading, setIsLoading] = useState<string | null>(null);
 
   const isActivityCompleted = (activityTitle: string) => {
@@ -64,7 +65,7 @@ export function ActivitySelector({
 
   return (
     <div className="flex flex-wrap gap-2">
-      {ACTIVITIES.map((activity) => {
+      {activities.map((activity) => {
         const completed = isActivityCompleted(activity.title);
         const loading = isLoading === activity.title;
 

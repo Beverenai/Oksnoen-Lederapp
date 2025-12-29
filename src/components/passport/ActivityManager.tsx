@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Check, Plus, Minus, Loader2, ChevronDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -11,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ACTIVITIES } from '@/lib/activityUtils';
+import { useActivities } from '@/hooks/useActivities';
 
 interface ActivityManagerProps {
   participantId: string;
@@ -25,6 +24,7 @@ export const ActivityManager = ({
   onActivityChanged,
 }: ActivityManagerProps) => {
   const { leader } = useAuth();
+  const { activities } = useActivities(true);
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
@@ -186,16 +186,16 @@ export const ActivityManager = ({
             <ChevronDown className="h-4 w-4 ml-auto" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-64 p-0" align="start">
-          <ScrollArea className="h-[300px] p-2">
-            <div className="space-y-1 pr-2">
-              {ACTIVITIES.map((activity) => {
+        <PopoverContent className="w-64 p-0 overflow-hidden" align="start">
+          <div className="max-h-[300px] overflow-y-auto p-2">
+            <div className="space-y-1">
+              {activities.map((activity) => {
                 const count = getCount(activity.title);
                 const isCurrentlyLoading = isLoading === activity.title;
 
                 return (
                   <Button
-                    key={activity.title}
+                    key={activity.id}
                     variant="ghost"
                     className="w-full justify-start text-left h-auto py-2"
                     onClick={() => addActivity(activity.title)}
@@ -220,7 +220,7 @@ export const ActivityManager = ({
                 );
               })}
             </div>
-          </ScrollArea>
+          </div>
         </PopoverContent>
       </Popover>
     </div>
