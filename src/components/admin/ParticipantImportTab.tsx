@@ -262,7 +262,19 @@ export function ParticipantImportTab() {
     const lastNameIdx = headers.findIndex(h => h.includes('etternavn'));
     const birthDateIdx = headers.findIndex(h => h.includes('født') || h.includes('fodt') || h === 'dato');
     const cabinIdx = headers.findIndex(h => h.includes('hytte'));
-    const timesIdx = headers.findIndex(h => h.includes('deltatt') || h.includes('tidligere'));
+    const timesIdx = headers.findIndex(h => 
+      h.includes('deltatt') || 
+      h.includes('tidligere') || 
+      h.includes('ganger') ||
+      h.includes('antall') ||
+      h.includes('år på') ||
+      h === 'x' ||
+      h === 'gang'
+    );
+    
+    // Debug logging for column detection
+    console.log('CSV Headers found:', headers);
+    console.log('Times column index:', timesIdx, timesIdx >= 0 ? `(found: "${headers[timesIdx]}")` : '(not found)');
     const infoIdx = headers.findIndex(h => h === 'info' || h === 'kommentar' || h === 'kommentarer');
     const imageIdx = headers.findIndex(h => h === 'bilde' || h === 'image' || h === 'image_url');
     const arrivedIdx = headers.findIndex(h => h.includes('ankommet') || h.includes('arrived'));
@@ -699,7 +711,10 @@ export function ParticipantImportTab() {
                   <td className="py-2 px-3 text-muted-foreground">Hyttenavn (inkl. rom: "Marcusbu bak venstre") <Badge variant="destructive" className="ml-1 text-[10px]">Påkrevd</Badge></td>
                 </tr>
                 <tr>
-                  <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Deltatt tidligere</code></td>
+                  <td className="py-2 px-3">
+                    <code className="text-xs bg-muted px-1 rounded">Deltatt tidligere</code>
+                    <span className="text-muted-foreground text-xs ml-1">(eller "ganger", "antall", "år på", "x", "gang")</span>
+                  </td>
                   <td className="py-2 px-3 text-muted-foreground">Antall år deltakeren har vært på Oksnøen</td>
                 </tr>
                 <tr>
