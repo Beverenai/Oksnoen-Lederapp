@@ -1,4 +1,4 @@
-import { Phone, Activity, Car, Anchor, Mountain, Cable, AlertTriangle } from "lucide-react";
+import { Phone, Activity, Car, Anchor, Mountain, Cable, AlertTriangle, Wrench } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -135,8 +135,8 @@ export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailD
     { key: 'has_boat_license', label: 'Båtførerbevis', icon: Anchor, value: leader.has_boat_license },
     { key: 'can_rappelling', label: 'Rappellering', icon: Mountain, value: leader.can_rappelling },
     { key: 'can_climbing', label: 'Klatring', icon: Mountain, value: leader.can_climbing },
-    { key: 'can_zipline', label: 'Zipline', icon: Cable, value: leader.can_zipline },
-    { key: 'can_rope_setup', label: 'Tau-oppsett', icon: Cable, value: leader.can_rope_setup },
+    { key: 'can_zipline', label: 'Taubane', icon: Cable, value: leader.can_zipline },
+    { key: 'can_rope_setup', label: 'Taubane-Oppsett', icon: Wrench, value: leader.can_rope_setup },
   ].filter(c => c.value);
 
   const cabinsDisplay = formatCabinsDisplay();
