@@ -567,7 +567,8 @@ export default function AdminSettings() {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen w-full">
+      {/* Break out of AppLayout constraints with negative margins */}
+      <div className="flex min-h-[calc(100vh-3.5rem)] lg:min-h-screen w-[calc(100%+2rem)] lg:w-[calc(100%+4rem+16rem)] -m-4 lg:-m-8 lg:-ml-[calc(2rem+16rem)]">
         <AdminSettingsSidebar
           activeSection={activeSection}
           onSectionChange={setActiveSection}
@@ -577,7 +578,7 @@ export default function AdminSettings() {
         
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
           <div className="flex items-center gap-4 mb-6">
-            <SidebarTrigger className="lg:hidden" />
+            <SidebarTrigger />
             <Link to="/admin">
               <Button variant="ghost" size="icon">
                 <ArrowLeft className="h-5 w-5" />
