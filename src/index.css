@@ -101,6 +101,12 @@
   }
 }
 
+/* Ensure fixed positioning works correctly on iOS PWA */
+header, nav {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
 @layer base {
   * {
     @apply border-border;
