@@ -53,25 +53,27 @@ interface ParticipantDetailDialogProps {
   onParticipantUpdated?: () => void;
 }
 
-// Fetch participant detail via edge function
-async function fetchParticipantDetailSecure(leaderId: string, participantId: string): Promise<{
+// Fetch participant detail directly from Supabase
+async function fetchParticipantDetail(participantId: string): Promise<{
   participant: ParticipantWithCabin;
   healthInfo: HealthInfo | null;
   activities: ParticipantActivity[];
 }> {
-  const { data, error } = await supabase.functions.invoke('get-participants', {
-    body: { 
-      leader_id: leaderId, 
-      participant_id: participantId,
-      include_health_info: true,
-      include_activities: true
-    }
-  });
-  if (error) throw error;
+  const [participantRes, activitiesRes, healthRes] = await Promise.all([
+    supabase.from('participants').select('*, cabins:cabin_id(id, name)').eq('id', participantId).single(),
+    supabase.from('participant_activities').select('*').eq('participant_id', participantId),
+    supabase.from('participant_health_info').select('*').eq('participant_id', participantId).maybeSingle()
+  ]);
+
+  if (participantRes.error) throw participantRes.error;
+
   return {
-    participant: data.participant,
-    healthInfo: data.healthInfo,
-    activities: data.activities || []
+    participant: {
+      ...participantRes.data,
+      cabin: participantRes.data.cabins
+    } as ParticipantWithCabin,
+    healthInfo: healthRes.data as HealthInfo | null,
+    activities: (activitiesRes.data || []) as ParticipantActivity[]
   };
 }
 
@@ -101,11 +103,11 @@ export const ParticipantDetailDialog = ({
   const [isTogglingArrival, setIsTogglingArrival] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch participant detail with caching via edge function
+  // Fetch participant detail with caching
   const { data, isLoading, refetch: refetchParticipant } = useQuery({
-    queryKey: ['participant-detail-secure', leader?.id, participantId],
-    queryFn: () => fetchParticipantDetailSecure(leader!.id, participantId!),
-    enabled: open && !!participantId && !!leader?.id,
+    queryKey: ['participant-detail', participantId],
+    queryFn: () => fetchParticipantDetail(participantId!),
+    enabled: open && !!participantId,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
   });
@@ -122,18 +124,14 @@ export const ParticipantDetailDialog = ({
   }, [participant?.activity_notes]);
 
   const handleSaveActivityNotes = async () => {
-    if (!participant || !leader) return;
+    if (!participant) return;
 
     setIsSavingNotes(true);
     try {
-      const { data, error } = await supabase.functions.invoke('get-participants', {
-        body: {
-          leader_id: leader.id,
-          participant_id: participant.id,
-          action: 'update',
-          update_data: { activity_notes: activityNotes }
-        }
-      });
+      const { error } = await supabase
+        .from('participants')
+        .update({ activity_notes: activityNotes })
+        .eq('id', participant.id);
 
       if (error) throw error;
 
@@ -157,7 +155,7 @@ export const ParticipantDetailDialog = ({
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !participant || !leader) return;
+    if (!file || !participant) return;
 
     setIsUploadingImage(true);
     try {
@@ -177,15 +175,10 @@ export const ParticipantDetailDialog = ({
 
       const imageUrlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
 
-      // Update via edge function
-      const { error: updateError } = await supabase.functions.invoke('get-participants', {
-        body: {
-          leader_id: leader.id,
-          participant_id: participant.id,
-          action: 'update',
-          update_data: { image_url: imageUrlWithTimestamp }
-        }
-      });
+      const { error: updateError } = await supabase
+        .from('participants')
+        .update({ image_url: imageUrlWithTimestamp })
+        .eq('id', participant.id);
 
       if (updateError) throw updateError;
 
@@ -208,20 +201,16 @@ export const ParticipantDetailDialog = ({
   };
 
   const toggleArrival = async () => {
-    if (!participant || !leader) return;
+    if (!participant) return;
 
     setIsTogglingArrival(true);
     try {
       const newStatus = !participant.has_arrived;
       
-      const { error } = await supabase.functions.invoke('get-participants', {
-        body: {
-          leader_id: leader.id,
-          participant_id: participant.id,
-          action: 'update',
-          update_data: { has_arrived: newStatus }
-        }
-      });
+      const { error } = await supabase
+        .from('participants')
+        .update({ has_arrived: newStatus })
+        .eq('id', participant.id);
 
       if (error) throw error;
 

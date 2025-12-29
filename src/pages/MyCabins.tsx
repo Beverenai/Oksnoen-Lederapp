@@ -79,17 +79,14 @@ export default function MyCabins() {
 
       const cabinIds = leaderCabins.map(lc => lc.cabin_id);
       
-      // Get participants via edge function
-      const { data, error } = await supabase.functions.invoke('get-participants', {
-        body: { 
-          leader_id: leader.id,
-          cabin_ids: cabinIds 
-        }
-      });
+      // Get participants with activities directly
+      const { data: participants, error } = await supabase
+        .from('participants')
+        .select('*, cabins(*), participant_activities(*)')
+        .in('cabin_id', cabinIds)
+        .order('name', { ascending: true });
 
       if (error) throw error;
-
-      const participants = data?.participants || [];
 
       // Build cabin data with participants
       const cabinData: LeaderCabin[] = leaderCabins
@@ -97,7 +94,7 @@ export default function MyCabins() {
           const cabin = lc.cabins as Cabin;
           if (!cabin) return null;
           
-          const cabinParticipants = participants.filter((p: ParticipantWithCabin) => p.cabin_id === cabin.id);
+          const cabinParticipants = (participants || []).filter((p: ParticipantWithCabin) => p.cabin_id === cabin.id);
           return {
             ...cabin,
             participants: cabinParticipants
@@ -142,14 +139,10 @@ export default function MyCabins() {
     if (!leader) return;
     
     try {
-      const { error } = await supabase.functions.invoke('get-participants', {
-        body: {
-          leader_id: leader.id,
-          participant_id: participant.id,
-          action: 'update',
-          update_data: { has_arrived: !participant.has_arrived }
-        }
-      });
+      const { error } = await supabase
+        .from('participants')
+        .update({ has_arrived: !participant.has_arrived })
+        .eq('id', participant.id);
       
       if (error) throw error;
       
@@ -447,24 +440,24 @@ export default function MyCabins() {
                       </p>
                     )}
                     {selectedParticipant.room && (
-                      <Badge variant="secondary" className="mt-1">
-                        {selectedParticipant.room}
-                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        Rom: {selectedParticipant.room}
+                      </p>
                     )}
                   </div>
                 </div>
                 
-                <StyrkeproveBadges 
-                  completedActivities={(selectedParticipant.participant_activities || []).map(a => a.activity)} 
-                />
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Aktiviteter</h4>
+                  <StyrkeproveBadges 
+                    completedActivities={(selectedParticipant.participant_activities || []).map(a => a.activity)} 
+                  />
+                </div>
 
                 <Button
                   variant={selectedParticipant.has_arrived ? 'outline' : 'default'}
                   className="w-full"
-                  onClick={() => {
-                    toggleArrival(selectedParticipant);
-                    setIsDetailDialogOpen(false);
-                  }}
+                  onClick={() => toggleArrival(selectedParticipant)}
                 >
                   {selectedParticipant.has_arrived ? (
                     <>
@@ -486,9 +479,9 @@ export default function MyCabins() {
 
       {/* Cabin Report Sheet */}
       <CabinReportSheet
+        cabins={selectedCabinForReport}
         open={cabinReportOpen}
         onOpenChange={setCabinReportOpen}
-        cabins={selectedCabinForReport}
       />
     </div>
   );

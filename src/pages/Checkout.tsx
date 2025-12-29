@@ -17,15 +17,12 @@ import {
 import { differenceInYears } from 'date-fns';
 import type { Tables } from '@/integrations/supabase/types';
 import { CheckoutDetailDialog } from '@/components/checkout/CheckoutDetailDialog';
-import { useAuth } from '@/contexts/AuthContext';
 
 type Participant = Tables<'participants'>;
 type Cabin = Tables<'cabins'>;
-type ParticipantActivity = Tables<'participant_activities'>;
 
 interface ParticipantWithCabin extends Participant {
   cabins?: Cabin | null;
-  participant_activities?: ParticipantActivity[];
 }
 
 const calculateAge = (birthDate: string): number => {
@@ -33,31 +30,28 @@ const calculateAge = (birthDate: string): number => {
 };
 
 export default function Checkout() {
-  const { leader } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCabin, setFilterCabin] = useState<string>('all');
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
-  // Fetch participants via edge function
+  // Fetch participants directly from Supabase
   const { data: participantsData, isLoading, refetch } = useQuery({
-    queryKey: ['checkout-participants', leader?.id],
+    queryKey: ['checkout-participants'],
     queryFn: async () => {
-      if (!leader?.id) return { participants: [], cabins: [] };
-      
       const [participantsRes, cabinsRes] = await Promise.all([
-        supabase.functions.invoke('get-participants', {
-          body: { leader_id: leader.id }
-        }),
+        supabase
+          .from('participants')
+          .select('*, cabins(*)')
+          .order('name', { ascending: true }),
         supabase.from('cabins').select('*').order('name', { ascending: true })
       ]);
 
       return {
-        participants: (participantsRes.data?.participants || []) as ParticipantWithCabin[],
+        participants: (participantsRes.data || []) as ParticipantWithCabin[],
         cabins: cabinsRes.data || []
       };
     },
-    enabled: !!leader?.id,
     staleTime: 30000,
   });
 

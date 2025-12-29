@@ -52,26 +52,28 @@ interface CabinGroup {
   leaders: { id: string; name: string }[];
 }
 
-// Fetch participants via edge function
-async function fetchParticipantsSecure(leaderId: string): Promise<ParticipantWithCabin[]> {
-  const { data, error } = await supabase.functions.invoke('get-participants', {
-    body: { leader_id: leaderId }
-  });
+// Fetch participants with cabins directly from Supabase
+async function fetchParticipants(): Promise<ParticipantWithCabin[]> {
+  const { data, error } = await supabase
+    .from('participants')
+    .select('*, cabins(*)')
+    .order('name', { ascending: true });
   if (error) throw error;
-  return (data?.participants || []) as ParticipantWithCabin[];
+  return (data || []) as ParticipantWithCabin[];
 }
 
-// Fetch all activities grouped by participant via edge function
-async function fetchActivitiesMapSecure(leaderId: string): Promise<Map<string, string[]>> {
-  const { data, error } = await supabase.functions.invoke('get-participants', {
-    body: { leader_id: leaderId, include_activities: true }
-  });
+// Fetch all activities grouped by participant
+async function fetchActivitiesMap(): Promise<Map<string, string[]>> {
+  const { data, error } = await supabase
+    .from('participant_activities')
+    .select('participant_id, activity');
   if (error) throw error;
   
   const map = new Map<string, string[]>();
-  const activitiesMap = data?.activitiesMap || {};
-  Object.entries(activitiesMap).forEach(([participantId, activities]) => {
-    map.set(participantId, (activities as any[]).map(a => a.activity));
+  (data || []).forEach(a => {
+    const existing = map.get(a.participant_id) || [];
+    existing.push(a.activity);
+    map.set(a.participant_id, existing);
   });
   return map;
 }
@@ -118,19 +120,17 @@ export default function Passport() {
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
   const [showBulkRegistration, setShowBulkRegistration] = useState(false);
 
-  // React Query for cached data fetching via edge function
+  // React Query for cached data fetching
   const { data: participants = [], isLoading: isLoadingParticipants, refetch: refetchParticipants } = useQuery({
-    queryKey: ['participants-with-cabins', leader?.id],
-    queryFn: () => fetchParticipantsSecure(leader!.id),
-    enabled: !!leader?.id,
+    queryKey: ['participants-with-cabins'],
+    queryFn: fetchParticipants,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
   });
 
   const { data: activitiesMap = new Map<string, string[]>(), refetch: refetchActivities } = useQuery({
-    queryKey: ['participant-activities-map', leader?.id],
-    queryFn: () => fetchActivitiesMapSecure(leader!.id),
-    enabled: !!leader?.id,
+    queryKey: ['participant-activities-map'],
+    queryFn: fetchActivitiesMap,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
   });
@@ -199,10 +199,25 @@ export default function Passport() {
     setIsDetailDialogOpen(true);
   };
 
-  // Prefetch is handled by the edge function now
+  // Prefetch participant detail
   const prefetchParticipant = useCallback((participantId: string) => {
-    // Optional: could prefetch via edge function if needed
-  }, []);
+    queryClient.prefetchQuery({
+      queryKey: ['participant-detail', participantId],
+      queryFn: async () => {
+        const [participantRes, activitiesRes, healthRes] = await Promise.all([
+          supabase.from('participants').select('*, cabins(id, name)').eq('id', participantId).single(),
+          supabase.from('participant_activities').select('*').eq('participant_id', participantId),
+          supabase.from('participant_health_info').select('*').eq('participant_id', participantId).maybeSingle()
+        ]);
+        return {
+          participant: participantRes.data,
+          activities: activitiesRes.data || [],
+          healthInfo: healthRes.data
+        };
+      },
+      staleTime: 30000,
+    });
+  }, [queryClient]);
 
   // Get activities for a participant
   const getParticipantActivities = (participantId: string): string[] => {
