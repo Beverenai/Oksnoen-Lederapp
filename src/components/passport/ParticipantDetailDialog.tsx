@@ -266,7 +266,7 @@ export const ParticipantDetailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[85vh] overflow-y-auto p-0 mx-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -274,7 +274,7 @@ export const ParticipantDetailDialog = ({
         ) : participant ? (
           <>
             {/* Large hero image at top */}
-            <div className="relative w-full h-64 bg-muted">
+            <div className="relative w-full h-48 sm:h-64 bg-muted">
               {participant.image_url ? (
                 <img
                   src={participant.image_url}
