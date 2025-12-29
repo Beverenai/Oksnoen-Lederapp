@@ -56,10 +56,10 @@ const shouldHaveCabinAssignment = (
 // Nøkkelen er normalisert alias (lowercase), verdien er array av mulige hyttenavn å søke etter
 const CABIN_ALIASES: Record<string, string[]> = {
   // Bedewinds varianter
-  'bedewins': ['bedewinds'],
-  'bedewind': ['bedewinds'],
+  'bedewins': ['bedewins'],
+  'bedewind': ['bedewins'],
   
-  // Hytter med bak/front varianter - mapper til begge så matching kan velge
+  // Hytter med bak/front varianter - mapper til begge så matching kan velge første
   'balder': ['balder bak', 'balder front'],
   'hulder': ['hulder bak', 'hulder front'],
   'marcusbu': ['marcusbu bak', 'marcusbu front'],
@@ -71,8 +71,10 @@ const CABIN_ALIASES: Record<string, string[]> = {
   'bestefars': ['bestefars kro'],
   'bestefar': ['bestefars kro'],
   
-  // Seilern varianter - mapper til alle mulige
-  'seilern': ['seilern halua', 'seilern haui', 'seilern hawaii', 'seilern kauai', 'seilern lanai', 'seilern maui', 'seilern molokai', 'seilern oahu'],
+  // Seilern/Seileren varianter - mapper til hovedhytten Seileren
+  'seilern': ['seileren'],
+  'seiler': ['seileren'],
+  'seileren': ['seileren'],
   
   // Skyss varianter
   'skyss ii+iii': ['skyss ii + iii'],
