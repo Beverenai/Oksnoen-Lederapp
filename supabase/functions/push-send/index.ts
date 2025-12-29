@@ -80,9 +80,9 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { title, message, url, leader_ids, broadcast, sender_leader_id, target_activity } = body;
+    const { title, message, url, leader_ids, broadcast, sender_leader_id, target_activity, single_leader_id, personalize_activity } = body;
 
-    console.log("Push send request received:", { title, broadcast, sender_leader_id, target_activity });
+    console.log("Push send request received:", { title, broadcast, sender_leader_id, target_activity, single_leader_id, personalize_activity });
 
     if (!title || !message) {
       return new Response(
@@ -137,6 +137,60 @@ serve(async (req) => {
       vapidKeys: vapidKeys,
     });
 
+    // Build a map of leader_id -> current_activity for personalization
+    let leaderActivityMap: Record<string, string> = {};
+    if (personalize_activity) {
+      const { data: leaderContent } = await supabaseAdmin
+        .from('leader_content')
+        .select('leader_id, current_activity');
+      
+      leaderContent?.forEach(lc => {
+        leaderActivityMap[lc.leader_id] = lc.current_activity || 'Sjekk vaktplanen';
+      });
+      console.log(`Loaded activity map for ${Object.keys(leaderActivityMap).length} leaders`);
+    }
+
+    // Handle single leader targeting
+    if (single_leader_id) {
+      const { data: subscriptions } = await supabaseAdmin
+        .from("push_subscriptions")
+        .select("*")
+        .eq("leader_id", single_leader_id);
+      
+      if (!subscriptions || subscriptions.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, sent: 0, message: "Leader has no push subscriptions" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      console.log(`Sending to single leader ${single_leader_id}: ${subscriptions.length} subscriptions`);
+      
+      const payloadData = JSON.stringify({ title, body: message, url: url || "/" });
+      let sent = 0;
+      let failed = 0;
+      
+      for (const sub of subscriptions) {
+        try {
+          const pushSubscription: PushSubscription = {
+            endpoint: sub.endpoint,
+            keys: { p256dh: sub.p256dh, auth: sub.auth },
+          };
+          const subscriber = await appServer.subscribe(pushSubscription);
+          await subscriber.pushTextMessage(payloadData, { urgency: Urgency.Normal, ttl: 3600 });
+          sent++;
+        } catch (error: unknown) {
+          failed++;
+          console.error(`Error sending to ${sub.id}:`, error instanceof Error ? error.message : String(error));
+        }
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true, sent, failed }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Handle activity-based targeting
     let targetLeaderIds: string[] | null = null;
     
@@ -154,6 +208,13 @@ serve(async (req) => {
           }
         })
         .map(lc => lc.leader_id) || [];
+      
+      // Also update activityMap for personalization if needed
+      if (personalize_activity) {
+        leaderContent?.forEach(lc => {
+          leaderActivityMap[lc.leader_id] = lc.current_activity || 'Sjekk vaktplanen';
+        });
+      }
       
       console.log(`Filtering by activity '${target_activity}': ${targetLeaderIds.length} leaders matched`);
       
@@ -182,9 +243,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Sending push to ${subscriptions.length} subscriptions`);
-
-    const payloadData = JSON.stringify({ title, body: message, url: url || "/" });
+    console.log(`Sending push to ${subscriptions.length} subscriptions, personalize: ${personalize_activity}`);
 
     let sent = 0;
     let failed = 0;
@@ -192,6 +251,14 @@ serve(async (req) => {
 
     for (const sub of subscriptions) {
       try {
+        // Personalize message if requested
+        let finalMessage = message;
+        if (personalize_activity && leaderActivityMap[sub.leader_id]) {
+          finalMessage = message.replace('{activity}', leaderActivityMap[sub.leader_id]);
+        }
+        
+        const payloadData = JSON.stringify({ title, body: finalMessage, url: url || "/" });
+        
         const pushSubscription: PushSubscription = {
           endpoint: sub.endpoint,
           keys: { p256dh: sub.p256dh, auth: sub.auth },

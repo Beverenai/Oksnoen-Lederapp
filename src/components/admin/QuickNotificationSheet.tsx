@@ -30,6 +30,7 @@ interface QuickNotification {
   target: TargetActivity;
   url: string;
   color: string;
+  personalize?: boolean;
 }
 
 const quickNotifications: QuickNotification[] = [
@@ -37,12 +38,13 @@ const quickNotifications: QuickNotification[] = [
     id: 'new-session',
     icon: Calendar,
     title: 'Ny økt lagt ut',
-    description: 'Informer alle om at ny økt er tilgjengelig',
+    description: 'Hver leder får sin egen aktivitet i varslingen',
     notificationTitle: '🗓️ Ny økt er lagt ut!',
-    notificationMessage: 'Sjekk vaktplanen for å se din aktivitet denne økten.',
+    notificationMessage: 'Din aktivitet denne økten: {activity}',
     target: 'all',
     url: '/schedule',
     color: 'bg-blue-500',
+    personalize: true,
   },
   {
     id: 'session-started-active',
@@ -86,6 +88,7 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
           broadcast: notification.target === 'all',
           target_activity: notification.target !== 'all' ? notification.target : undefined,
           sender_leader_id: leader.id,
+          personalize_activity: notification.personalize || false,
         },
       });
 
