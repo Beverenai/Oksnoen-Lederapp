@@ -230,15 +230,13 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
           const isAdminOrNurse = adminNurseIds.has(leader.id);
           
           const getBorderClass = () => {
-            // Kjøkken har alltid lilla ring - høyeste prioritet for visuell identifikasjon
+            // Kjøkken har alltid lilla ring
             if (isKitchen) return 'ring-purple-500';
             // "Fri" aktivitet gir blå ring
             if (isFri) return 'ring-blue-500';
-            // Admin og Nurse skal være grønne
-            if (isAdminOrNurse) return 'ring-green-500';
-            // Har lest = grønn
+            // Har lest (trykket Hajolo) = grønn
             if (content?.has_read) return 'ring-green-500';
-            // Standard = rød
+            // Har ikke lest = rød
             return 'ring-red-500';
           };
 
@@ -247,8 +245,7 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
               key={leader.id} 
               className={cn(
                 'relative overflow-hidden transition-all hover:shadow-md cursor-pointer min-h-[220px] ring-2',
-                getBorderClass(),
-                hasObs && !isAdminOrNurse && 'border-l-4 border-l-destructive'
+                getBorderClass()
               )}
               onClick={() => handleEditClick(leader)}
             >
