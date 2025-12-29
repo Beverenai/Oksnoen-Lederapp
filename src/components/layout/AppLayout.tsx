@@ -7,8 +7,7 @@ import {
   Users, 
   Building2, 
   Calendar, 
-  AlertTriangle, 
-  Megaphone, 
+  AlertTriangle,
   Settings,
   LogOut,
   Menu,
@@ -52,7 +51,6 @@ const baseNavItems: NavItem[] = [
 // Dynamic items that depend on state
 const scheduleNavItem: NavItem = { to: '/schedule', icon: Calendar, label: 'Vaktplan' };
 const importantInfoNavItem: NavItem = { to: '/important-info', icon: AlertTriangle, label: 'Viktig info' };
-const wallNavItem: NavItem = { to: '/wall', icon: Megaphone, label: 'Den store veggen' };
 const fixNavItem: NavItem = { to: '/fix', icon: Wrench, label: 'Rapporter' };
 
 // Note: Mobile hamburger menu now uses allNavItems (same as desktop sidebar)
@@ -120,7 +118,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
     ...baseNavItems,
     ...(hasScheduleImage ? [scheduleNavItem] : []),
     importantInfoNavItem,
-    wallNavItem,
     fixNavItem,
   ];
 
