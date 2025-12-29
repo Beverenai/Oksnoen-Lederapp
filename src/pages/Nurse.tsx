@@ -473,14 +473,14 @@ export default function Nurse() {
 
       {/* Participant Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85vh] flex flex-col mx-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <div 
                 className="cursor-pointer"
                 onClick={() => setIsImageOpen(true)}
               >
-                <Avatar className="w-16 h-16 ring-2 ring-primary/20 hover:ring-primary/40 transition-all">
+                <Avatar className="w-12 h-12 sm:w-16 sm:h-16 ring-2 ring-primary/20 hover:ring-primary/40 transition-all">
                   <AvatarImage src={selectedParticipant?.image_url || undefined} alt={selectedParticipant?.name} />
                   <AvatarFallback className="bg-primary/10 text-primary text-xl">
                     {selectedParticipant?.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
