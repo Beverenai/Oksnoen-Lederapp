@@ -22,6 +22,7 @@ import {
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
+import { compressImage } from '@/lib/imageUtils';
 
 type Leader = Tables<'leaders'>;
 
@@ -118,22 +119,23 @@ export default function Profile() {
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Bildet må være mindre enn 5MB');
+    // Validate file size (max 10MB before compression)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Bildet må være mindre enn 10MB');
       return;
     }
 
     setIsUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${authLeader.id}-${Date.now()}.${fileExt}`;
+      // Compress image before upload
+      const compressedFile = await compressImage(file);
+      const fileName = `${authLeader.id}-${Date.now()}.jpg`;
       const filePath = `leader-profiles/${fileName}`;
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('participant-images')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, compressedFile, { upsert: true, contentType: 'image/jpeg' });
 
       if (uploadError) throw uploadError;
 

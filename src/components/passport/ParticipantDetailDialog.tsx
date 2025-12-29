@@ -15,6 +15,7 @@ import { Camera, CheckCircle, XCircle, Loader2, Stethoscope, Heart, Trophy } fro
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
+import { compressImage } from '@/lib/imageUtils';
 
 interface ParticipantWithCabin {
   id: string;
@@ -184,13 +185,14 @@ export const ParticipantDetailDialog = ({
 
     setIsUploadingImage(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${participant.id}.${fileExt}`;
+      // Compress image before upload
+      const compressedFile = await compressImage(file);
+      const fileName = `${participant.id}.jpg`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('participant-images')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, compressedFile, { upsert: true, contentType: 'image/jpeg' });
 
       if (uploadError) throw uploadError;
 

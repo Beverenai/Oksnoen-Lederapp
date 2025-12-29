@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Loader2, Save, Upload, Shield, Users, Heart, Camera } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import { compressImage } from '@/lib/imageUtils';
 
 type Leader = Tables<'leaders'>;
 type AppRole = 'admin' | 'nurse' | 'leader';
@@ -88,12 +89,13 @@ export function LeaderDetailDialog({
 
     setIsUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `leader-${leader.id}-${Date.now()}.${fileExt}`;
+      // Compress image before upload
+      const compressedFile = await compressImage(file);
+      const fileName = `leader-${leader.id}-${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from('participant-images')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, compressedFile, { upsert: true, contentType: 'image/jpeg' });
 
       if (uploadError) throw uploadError;
 

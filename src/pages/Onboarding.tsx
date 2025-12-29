@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, User, Car, Check, Upload, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
+import { compressImage } from '@/lib/imageUtils';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -35,22 +36,23 @@ export default function Onboarding() {
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Bildet må være mindre enn 5MB');
+    // Validate file size (max 10MB before compression)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Bildet må være mindre enn 10MB');
       return;
     }
 
     setIsUploading(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${leader.id}-${Date.now()}.${fileExt}`;
+      // Compress image before upload
+      const compressedFile = await compressImage(file);
+      const fileName = `${leader.id}-${Date.now()}.jpg`;
       const filePath = `profile-images/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('leaders')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, compressedFile, { upsert: true, contentType: 'image/jpeg' });
 
       if (uploadError) throw uploadError;
 
