@@ -424,7 +424,7 @@ export default function Leaders() {
         {filteredAndSortedLeaders.map((leader) => (
           <Card 
             key={leader.id} 
-            className="cursor-pointer hover:bg-accent/50 transition-colors active:scale-[0.99]"
+            className="cursor-pointer transition-colors active:scale-[0.99]"
             onClick={() => setSelectedLeader(leader)}
           >
             <CardContent className="p-3">
