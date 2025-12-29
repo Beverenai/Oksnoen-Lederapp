@@ -23,26 +23,26 @@ const ParticipantStats = () => {
       </div>
       
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-6">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <BarChart2 className="h-4 w-4" />
+        <TabsList className="flex flex-wrap gap-1 w-full h-auto p-1 mb-6">
+          <TabsTrigger value="overview" className="flex-1 min-w-[4.5rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <BarChart2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Oversikt</span>
           </TabsTrigger>
-          <TabsTrigger value="room-swap" className="flex items-center gap-2">
-            <ArrowLeftRight className="h-4 w-4" />
+          <TabsTrigger value="room-swap" className="flex-1 min-w-[4.5rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <ArrowLeftRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Rombytter</span>
           </TabsTrigger>
-          <TabsTrigger value="cabin-reports" className="flex items-center gap-2">
-            <Home className="h-4 w-4" />
-            <span className="hidden sm:inline">Hytterapport</span>
+          <TabsTrigger value="cabin-reports" className="flex-1 min-w-[4.5rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Hytte</span>
           </TabsTrigger>
-          <TabsTrigger value="checkout" className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4" />
+          <TabsTrigger value="checkout" className="flex-1 min-w-[4.5rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Utsjekk</span>
           </TabsTrigger>
-          <TabsTrigger value="leader-activity" className="flex items-center gap-2">
-            <UserCheck className="h-4 w-4" />
-            <span className="hidden sm:inline">Lederaktivitet</span>
+          <TabsTrigger value="leader-activity" className="flex-1 min-w-[4.5rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
+            <UserCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Leder</span>
           </TabsTrigger>
         </TabsList>
         

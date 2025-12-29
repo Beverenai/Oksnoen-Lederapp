@@ -250,7 +250,7 @@ export function CabinsTab() {
             return (
               <div
                 key={cabin.id}
-                className="border rounded-lg p-4 space-y-3"
+                className="border rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -273,7 +273,7 @@ export function CabinsTab() {
                 </div>
                 
                 {/* Room capacity rows */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
                   {rooms.map((room) => {
                     const key = `${cabin.id}-${room}`;
                     const currentBeds = getBedCount(cabin.id, room);

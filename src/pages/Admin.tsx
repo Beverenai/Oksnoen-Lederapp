@@ -520,28 +520,29 @@ export default function Admin() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-heading font-bold text-foreground">
             Admin
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Administrer ledere, aktiviteter og innhold
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-end gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link to="/admin/settings">
-            <Button variant="outline">
-              <Settings className="h-4 w-4 mr-2" />
-              Innstillinger
+            <Button variant="outline" size="sm" className="sm:size-default">
+              <Settings className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Innstillinger</span>
             </Button>
           </Link>
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-2">
             <Button
               onClick={triggerSync}
               disabled={isSyncing}
               variant={lastSyncSuccess ? "default" : "outline"}
-              className={lastSyncSuccess ? "bg-green-600 hover:bg-green-700" : ""}
+              size="sm"
+              className={`sm:size-default ${lastSyncSuccess ? "bg-green-600 hover:bg-green-700" : ""}`}
             >
               {isSyncing ? (
                 <RefreshCw className="h-4 w-4 animate-spin" />
@@ -554,12 +555,12 @@ export default function Admin() {
                 {isSyncing ? "Synkroniserer..." : lastSyncSuccess ? "Synket!" : "Synk ledere"}
               </span>
             </Button>
-            {lastSyncTime && (
-              <span className="text-xs text-muted-foreground">
-                Sist synket: {formatSyncTime(lastSyncTime)}
-              </span>
-            )}
           </div>
+          {lastSyncTime && (
+            <span className="text-xs text-muted-foreground w-full sm:w-auto text-right sm:text-left">
+              Sist synket: {formatSyncTime(lastSyncTime)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -667,30 +668,30 @@ export default function Admin() {
                       
                       return (
                         <SortableItem key={cfg.id} id={cfg.id}>
-                          <div className="p-4 rounded-lg bg-muted/50 space-y-4">
+                          <div className="p-3 sm:p-4 rounded-lg bg-muted/50 space-y-3 sm:space-y-4">
                             {/* Row 1: Toggle, icon, badge */}
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 sm:gap-3">
                               <Switch
                                 checked={cfg.is_visible || false}
                                 onCheckedChange={(checked) => 
                                   updateLocalHomeConfig(cfg.id, { is_visible: checked })
                                 }
                               />
-                              <div className="flex items-center gap-2">
-                                <IconComponent className="w-4 h-4 text-muted-foreground" />
-                                <Badge variant="outline">{cfg.label}</Badge>
+                              <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                                <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                                <Badge variant="outline" className="text-xs truncate">{cfg.label}</Badge>
                               </div>
                             </div>
                             
                             {/* Row 2: Title and icon selector */}
-                            <div className="flex flex-col sm:flex-row gap-2">
+                            <div className="flex flex-col gap-2">
                               <Input
                                 placeholder="Tittel"
                                 value={cfg.title || ''}
                                 onChange={(e) => 
                                   updateLocalHomeConfig(cfg.id, { title: e.target.value })
                                 }
-                                className="flex-1"
+                                className="flex-1 text-sm"
                               />
                               
                               <Select
@@ -699,7 +700,7 @@ export default function Admin() {
                                   updateLocalHomeConfig(cfg.id, { icon: value })
                                 }
                               >
-                                <SelectTrigger className="w-full sm:w-32">
+                                <SelectTrigger className="w-full">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -717,14 +718,14 @@ export default function Admin() {
                             
                             {/* Row 3: Color picker */}
                             <div className="flex items-center gap-2">
-                              <span className="text-sm text-muted-foreground min-w-[50px]">Farge:</span>
-                              <div className="flex gap-1.5">
+                              <span className="text-xs sm:text-sm text-muted-foreground min-w-[40px] sm:min-w-[50px]">Farge:</span>
+                              <div className="flex gap-1 sm:gap-1.5 flex-wrap">
                                 {availableColors.map((color) => (
                                   <button
                                     key={color.value}
                                     type="button"
                                     onClick={() => updateLocalHomeConfig(cfg.id, { bg_color: color.value })}
-                                    className={`w-6 h-6 rounded-full ${color.class} border-2 transition-all ${
+                                    className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full ${color.class} border-2 transition-all ${
                                       (cfg.bg_color || 'default') === color.value 
                                         ? 'border-foreground scale-110' 
                                         : 'border-transparent hover:scale-105'
@@ -736,9 +737,9 @@ export default function Admin() {
                             </div>
                             
                             {/* Row 4: Text size and bold/italic */}
-                            <div className="flex flex-wrap items-center gap-4">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm text-muted-foreground">Størrelse:</span>
+                                <span className="text-xs sm:text-sm text-muted-foreground">Størrelse:</span>
                                 <ToggleGroup 
                                   type="single" 
                                   value={cfg.text_size || 'md'}
@@ -754,7 +755,7 @@ export default function Admin() {
                               </div>
                               
                               <div className="flex items-center gap-2">
-                                <span className="text-sm text-muted-foreground">Stil:</span>
+                                <span className="text-xs sm:text-sm text-muted-foreground">Stil:</span>
                                 <ToggleGroup 
                                   type="multiple" 
                                   value={[
