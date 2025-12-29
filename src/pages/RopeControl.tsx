@@ -192,6 +192,28 @@ export default function RopeControl() {
     ));
   };
 
+  const sendAdminAlert = async (rejectedItemNames: string[]) => {
+    try {
+      const response = await supabase.functions.invoke('push-admin-alert', {
+        body: {
+          title: '⚠️ Tau utstyr underkjent',
+          message: `${leader?.name} har underkjent utstyr på ${activity}: ${rejectedItemNames.join(', ')}`,
+          url: '/admin-settings',
+          alert_type: 'rope_control_rejected',
+          sender_name: leader?.name,
+        },
+      });
+      
+      if (response.error) {
+        console.error('Failed to send admin alert:', response.error);
+      } else {
+        console.log('Admin alert sent:', response.data);
+      }
+    } catch (error) {
+      console.error('Error sending admin alert:', error);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!leader || !activity) {
       toast.error('Velg en aktivitet først');
@@ -234,6 +256,10 @@ export default function RopeControl() {
       if (error) throw error;
 
       if (hasRejected) {
+        // Send push notification to all admins
+        const rejectedItemNames = rejectedItems.map(e => e.title);
+        sendAdminAlert(rejectedItemNames);
+        
         toast.error('Fiks dette!', {
           description: `${rejectedItems.length} utstyr er underkjent og må fikses.`,
         });
