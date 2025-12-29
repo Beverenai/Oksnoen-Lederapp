@@ -1,14 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Sparkles, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Loader2, Sparkles, CheckCircle2, AlertCircle, RefreshCw, Search, ChevronDown, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
+import { CheckoutDetailDialog } from '@/components/checkout/CheckoutDetailDialog';
 
 interface CheckoutProgress {
   status: 'idle' | 'starting' | 'running' | 'done' | 'error';
@@ -23,6 +27,7 @@ interface PassWrittenEntry {
   cabin_name: string;
   written_at: string;
   written_by_name: string;
+  image_url: string | null;
 }
 
 export function CheckoutTab() {
@@ -32,6 +37,10 @@ export function CheckoutTab() {
   const [passWrittenCount, setPassWrittenCount] = useState(0);
   const [passWrittenList, setPassWrittenList] = useState<PassWrittenEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPassListOpen, setIsPassListOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -40,7 +49,7 @@ export function CheckoutTab() {
         supabase.from('app_config').select('*').eq('key', 'checkout_progress').single(),
         supabase.from('participants').select('id, pass_written'),
         supabase.from('participants')
-          .select('id, name, first_name, last_name, pass_written_at, pass_written_by, cabin:cabins(name)')
+          .select('id, name, first_name, last_name, image_url, pass_written_at, pass_written_by, cabin:cabins(name)')
           .eq('pass_written', true)
           .order('pass_written_at', { ascending: false }),
         supabase.from('leaders').select('id, name'),
@@ -61,6 +70,7 @@ export function CheckoutTab() {
         cabin_name: (p.cabin as any)?.name || 'Ukjent hytte',
         written_at: p.pass_written_at || '',
         written_by_name: p.pass_written_by ? (leaderMap.get(p.pass_written_by) || 'Ukjent') : 'Ukjent',
+        image_url: p.image_url || null,
       }));
       setPassWrittenList(writtenList);
 
@@ -155,6 +165,15 @@ export function CheckoutTab() {
 
   const isGenerating = progress.status === 'starting' || progress.status === 'running';
   const progressPercent = progress.total > 0 ? (progress.processed / progress.total) * 100 : 0;
+
+  const filteredPassWrittenList = useMemo(() => {
+    if (!searchQuery.trim()) return passWrittenList;
+    const query = searchQuery.toLowerCase();
+    return passWrittenList.filter(p => 
+      p.name.toLowerCase().includes(query) || 
+      p.cabin_name.toLowerCase().includes(query)
+    );
+  }, [passWrittenList, searchQuery]);
 
   if (isLoading) {
     return (
@@ -298,31 +317,63 @@ export function CheckoutTab() {
                 </div>
               </div>
 
-              {/* Detailed list of written passes */}
+              {/* Search and collapsible list of written passes */}
               {passWrittenList.length > 0 && (
                 <div className="pt-4 border-t">
-                  <h4 className="font-medium mb-3 flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-success" />
-                    Pass skrevet ({passWrittenList.length})
-                  </h4>
-                  <ScrollArea className="max-h-64">
-                    <div className="space-y-2 pr-4">
-                      {passWrittenList.map((p) => (
-                        <div key={p.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm">
-                          <div>
-                            <span className="font-medium">{p.name}</span>
-                            <span className="text-muted-foreground ml-2">({p.cabin_name})</span>
-                          </div>
-                          <div className="text-right text-muted-foreground text-xs">
-                            <div>Av: {p.written_by_name}</div>
-                            {p.written_at && (
-                              <div>{format(new Date(p.written_at), 'dd.MM HH:mm', { locale: nb })}</div>
-                            )}
-                          </div>
+                  {/* Search field */}
+                  <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Søk etter deltaker..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  
+                  {/* Collapsible list */}
+                  <Collapsible open={isPassListOpen} onOpenChange={setIsPassListOpen}>
+                    <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted/50 rounded-md">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-success" />
+                        Pass skrevet ({filteredPassWrittenList.length})
+                      </h4>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${isPassListOpen ? 'rotate-180' : ''}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <ScrollArea className="max-h-80 mt-2">
+                        <div className="space-y-2 pr-4">
+                          {filteredPassWrittenList.map((p) => (
+                            <div 
+                              key={p.id} 
+                              className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm cursor-pointer hover:bg-muted transition-colors"
+                              onClick={() => {
+                                setSelectedParticipantId(p.id);
+                                setIsDetailDialogOpen(true);
+                              }}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Avatar className="w-8 h-8">
+                                  <AvatarImage src={p.image_url || undefined} />
+                                  <AvatarFallback><User className="w-4 h-4" /></AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <span className="font-medium">{p.name}</span>
+                                  <span className="text-muted-foreground ml-2">({p.cabin_name})</span>
+                                </div>
+                              </div>
+                              <div className="text-right text-muted-foreground text-xs">
+                                <div>Av: {p.written_by_name}</div>
+                                {p.written_at && (
+                                  <div>{format(new Date(p.written_at), 'dd.MM HH:mm', { locale: nb })}</div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
+                      </ScrollArea>
+                    </CollapsibleContent>
+                  </Collapsible>
                 </div>
               )}
             </div>
@@ -342,6 +393,14 @@ export function CheckoutTab() {
           <p>4. <strong>AI-forslag</strong> - Hvert pass har et AI-generert forslag som kan redigeres.</p>
         </CardContent>
       </Card>
+
+      {/* Checkout Detail Dialog */}
+      <CheckoutDetailDialog
+        participantId={selectedParticipantId}
+        open={isDetailDialogOpen}
+        onOpenChange={setIsDetailDialogOpen}
+        onComplete={loadData}
+      />
     </div>
   );
 }
