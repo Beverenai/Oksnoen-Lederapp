@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -84,9 +84,17 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
   const [loading, setLoading] = useState(true);
   const [adminNurseIds, setAdminNurseIds] = useState<Set<string>>(new Set());
 
-  const activeLeaders = leaders.filter(l => l.is_active !== false && l.phone !== '12345678');
+  // Memoize activeLeaders to prevent new array reference on every render
+  const activeLeaders = useMemo(() => 
+    leaders.filter(l => l.is_active !== false && l.phone !== '12345678'),
+    [leaders]
+  );
 
-  // Fetch all leader content and roles - extracted to useCallback for reuse
+  // Use ref to access activeLeaders inside callback without adding it as dependency
+  const activeLeadersRef = useRef(activeLeaders);
+  activeLeadersRef.current = activeLeaders;
+
+  // Fetch all leader content and roles - stable callback with no dependencies
   const fetchContent = useCallback(async () => {
     setLoading(true);
     const { data: contentData } = await supabase
@@ -102,21 +110,23 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
     const adminNurseSet = new Set(rolesData?.map(r => r.leader_id) || []);
     setAdminNurseIds(adminNurseSet);
 
-    const leadersMap = activeLeaders.map(leader => ({
+    const leadersMap = activeLeadersRef.current.map(leader => ({
       ...leader,
       content: contentData?.find(c => c.leader_id === leader.id) || null
     }));
 
     setLeadersWithContent(leadersMap);
     setLoading(false);
-  }, [activeLeaders]);
+  }, []);
 
-  // Initial fetch
+  // Initial fetch when leaders change
   useEffect(() => {
-    fetchContent();
-  }, [fetchContent]);
+    if (leaders.length > 0) {
+      fetchContent();
+    }
+  }, [leaders, fetchContent]);
 
-  // Realtime subscription for has_read changes
+  // Realtime subscription - setup once
   useEffect(() => {
     const channel = supabase
       .channel('leader-content-changes')
@@ -128,7 +138,6 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
           table: 'leader_content'
         },
         () => {
-          // Refetch when any leader_content changes
           fetchContent();
         }
       )
