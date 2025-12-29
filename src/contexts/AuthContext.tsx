@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Check if leader is active
     if (data.is_active === false) {
-      return { success: false, error: 'Din bruker er ikke aktiv for denne sesjonen. Kontakt admin.' };
+      return { success: false, error: 'Du jobber ikke denne perioden. Hvis dette er feil, kontakt admin.' };
     }
 
     localStorage.setItem('leaderId', data.id);
