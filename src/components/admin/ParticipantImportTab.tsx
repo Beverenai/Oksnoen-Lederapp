@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Upload, 
   FileSpreadsheet,
@@ -11,9 +13,14 @@ import {
   AlertTriangle,
   CheckCircle2,
   Trash2,
-  Users
+  Users,
+  ChevronDown,
+  Search,
+  Edit2,
+  MapPin
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ParticipantEditDialog } from './ParticipantEditDialog';
 
 interface ImportProgress {
   status: 'idle' | 'running' | 'done' | 'error';
@@ -52,6 +59,32 @@ interface ImportResult {
   errors: string[];
 }
 
+interface ParticipantWithCabin {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  name: string;
+  birth_date: string | null;
+  cabin_id: string | null;
+  room: string | null;
+  times_attended: number | null;
+  notes: string | null;
+  has_arrived: boolean | null;
+  cabin: { id: string; name: string } | null;
+}
+
+function calculateAge(birthDate: string | null): number | null {
+  if (!birthDate) return null;
+  const birth = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 export function ParticipantImportTab() {
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,6 +95,14 @@ export function ParticipantImportTab() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Participant list state
+  const [allParticipants, setAllParticipants] = useState<ParticipantWithCabin[]>([]);
+  const [participantSearch, setParticipantSearch] = useState('');
+  const [selectedParticipant, setSelectedParticipant] = useState<ParticipantWithCabin | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
+  const [isLoadingParticipants, setIsLoadingParticipants] = useState(false);
 
   // Poll import progress
   const pollProgress = useCallback(async () => {
@@ -128,7 +169,7 @@ export function ParticipantImportTab() {
     setIsLoading(true);
     try {
       const [cabinsRes, participantsRes] = await Promise.all([
-        supabase.from('cabins').select('id, name'),
+        supabase.from('cabins').select('id, name').order('sort_order'),
         supabase.from('participants').select('*', { count: 'exact', head: true })
       ]);
 
@@ -139,6 +180,44 @@ export function ParticipantImportTab() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadAllParticipants = async () => {
+    setIsLoadingParticipants(true);
+    try {
+      const { data, error } = await supabase
+        .from('participants')
+        .select('id, first_name, last_name, name, birth_date, cabin_id, room, times_attended, notes, has_arrived, cabin:cabins(id, name)')
+        .order('name');
+
+      if (error) throw error;
+      setAllParticipants(data || []);
+    } catch (error) {
+      console.error('Error loading participants:', error);
+      toast.error('Kunne ikke laste deltakere');
+    } finally {
+      setIsLoadingParticipants(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isParticipantsOpen && allParticipants.length === 0) {
+      loadAllParticipants();
+    }
+  }, [isParticipantsOpen]);
+
+  const filteredParticipants = allParticipants.filter((p) => {
+    const searchLower = participantSearch.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(searchLower) ||
+      p.cabin?.name?.toLowerCase().includes(searchLower) ||
+      p.room?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const handleParticipantSaved = () => {
+    loadAllParticipants();
+    loadData();
   };
 
   const parseCabinField = (cabinField: string): { cabinName: string; room: string | null } => {
@@ -632,6 +711,110 @@ export function ParticipantImportTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* All Participants - Collapsible */}
+      <Collapsible open={isParticipantsOpen} onOpenChange={setIsParticipantsOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  Alle deltakere ({participantCount})
+                </div>
+                <ChevronDown className={`w-5 h-5 transition-transform ${isParticipantsOpen ? 'rotate-180' : ''}`} />
+              </CardTitle>
+              <CardDescription>
+                Klikk for å se og redigere alle deltakere
+              </CardDescription>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="space-y-4">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Søk etter navn eller hytte..."
+                  value={participantSearch}
+                  onChange={(e) => setParticipantSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {isLoadingParticipants ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="max-h-96 overflow-y-auto border rounded-lg divide-y">
+                  {filteredParticipants.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground">
+                      {participantSearch ? 'Ingen treff på søket' : 'Ingen deltakere registrert'}
+                    </div>
+                  ) : (
+                    filteredParticipants.map((p) => {
+                      const age = calculateAge(p.birth_date);
+                      return (
+                        <div
+                          key={p.id}
+                          className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setSelectedParticipant(p);
+                            setIsEditDialogOpen(true);
+                          }}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium truncate">{p.name}</span>
+                              {age !== null && (
+                                <span className="text-sm text-muted-foreground">({age} år)</span>
+                              )}
+                              {p.has_arrived && (
+                                <Badge variant="default" className="bg-green-500 text-[10px]">Ankommet</Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              {p.cabin && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {p.cabin.name}
+                                  {p.room && ` (${p.room})`}
+                                </span>
+                              )}
+                              {(p.times_attended ?? 0) > 0 && (
+                                <span>• {p.times_attended}x deltatt</span>
+                              )}
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon" className="shrink-0">
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+
+              {filteredParticipants.length > 0 && (
+                <p className="text-sm text-muted-foreground text-center">
+                  Viser {filteredParticipants.length} av {allParticipants.length} deltakere
+                </p>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
+
+      {/* Edit Dialog */}
+      <ParticipantEditDialog
+        participant={selectedParticipant}
+        cabins={cabins}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSaved={handleParticipantSaved}
+      />
     </div>
   );
 }
