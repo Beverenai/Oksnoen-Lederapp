@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -6,6 +6,7 @@ interface PushNotificationState {
   isSupported: boolean;
   isEnabled: boolean;
   isLoading: boolean;
+  isSyncing: boolean;
   permission: NotificationPermission | 'default';
   error: string | null;
 }
@@ -21,17 +22,123 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+// Convert ArrayBuffer to base64 string
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 export function usePushNotifications() {
   const { leader } = useAuth();
+  const hasSyncedRef = useRef(false);
   const [state, setState] = useState<PushNotificationState>({
     isSupported: false,
     isEnabled: false,
     isLoading: true,
+    isSyncing: false,
     permission: 'default',
     error: null,
   });
 
-  // Check if push notifications are supported
+  // Extract subscription keys robustly (handles iOS/Safari edge cases)
+  const extractSubscriptionKeys = useCallback((subscription: PushSubscription): { p256dh: string; auth: string } | null => {
+    // Try toJSON() first
+    const json = subscription.toJSON();
+    if (json.keys?.p256dh && json.keys?.auth) {
+      console.log('Keys extracted from toJSON()');
+      return { p256dh: json.keys.p256dh, auth: json.keys.auth };
+    }
+
+    // Fallback: use getKey() method for iOS/Safari
+    console.log('Falling back to getKey() method');
+    try {
+      const p256dhBuffer = subscription.getKey('p256dh');
+      const authBuffer = subscription.getKey('auth');
+      
+      if (p256dhBuffer && authBuffer) {
+        const p256dh = arrayBufferToBase64(p256dhBuffer);
+        const auth = arrayBufferToBase64(authBuffer);
+        console.log('Keys extracted from getKey()');
+        return { p256dh, auth };
+      }
+    } catch (e) {
+      console.error('Error extracting keys with getKey():', e);
+    }
+
+    console.error('Could not extract subscription keys');
+    return null;
+  }, []);
+
+  // Sync existing subscription to backend (auto-resync on mount/leader change)
+  const syncExistingSubscription = useCallback(async (): Promise<boolean> => {
+    if (!leader?.id) {
+      console.log('No leader, skipping sync');
+      return false;
+    }
+
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+      console.log('Permission not granted, skipping sync');
+      return false;
+    }
+
+    setState(prev => ({ ...prev, isSyncing: true }));
+
+    try {
+      const registration = await navigator.serviceWorker.getRegistration('/sw.js');
+      if (!registration) {
+        console.log('No service worker registration found');
+        setState(prev => ({ ...prev, isSyncing: false }));
+        return false;
+      }
+
+      const subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        console.log('No existing subscription to sync');
+        setState(prev => ({ ...prev, isSyncing: false, isEnabled: false }));
+        return false;
+      }
+
+      // Extract keys robustly
+      const keys = extractSubscriptionKeys(subscription);
+      if (!keys) {
+        console.error('Failed to extract subscription keys during sync');
+        setState(prev => ({ ...prev, isSyncing: false, error: 'Kunne ikke lese varslingsnøkler' }));
+        return false;
+      }
+
+      console.log('Syncing subscription to backend for leader:', leader.id);
+
+      // Sync to backend
+      const { error: syncError } = await supabase.functions.invoke('push-subscribe', {
+        body: {
+          endpoint: subscription.endpoint,
+          p256dh: keys.p256dh,
+          auth: keys.auth,
+          leader_id: leader.id,
+        },
+      });
+
+      if (syncError) {
+        console.error('Error syncing subscription:', syncError);
+        setState(prev => ({ ...prev, isSyncing: false, error: 'Kunne ikke synkronisere abonnement' }));
+        return false;
+      }
+
+      console.log('Subscription synced successfully');
+      setState(prev => ({ ...prev, isSyncing: false, isEnabled: true, error: null }));
+      return true;
+    } catch (error) {
+      console.error('Error in syncExistingSubscription:', error);
+      setState(prev => ({ ...prev, isSyncing: false, error: 'En feil oppstod ved synkronisering' }));
+      return false;
+    }
+  }, [leader?.id, extractSubscriptionKeys]);
+
+  // Check if push notifications are supported and auto-sync
   useEffect(() => {
     const checkSupport = async () => {
       const isSupported =
@@ -68,6 +175,7 @@ export function usePushNotifications() {
         isSupported: true,
         isEnabled,
         isLoading: false,
+        isSyncing: false,
         permission,
         error: null,
       });
@@ -75,6 +183,20 @@ export function usePushNotifications() {
 
     checkSupport();
   }, []);
+
+  // Auto-sync when leader becomes available and permission is granted
+  useEffect(() => {
+    if (
+      leader?.id &&
+      state.isSupported &&
+      !state.isLoading &&
+      state.permission === 'granted' &&
+      !hasSyncedRef.current
+    ) {
+      hasSyncedRef.current = true;
+      syncExistingSubscription();
+    }
+  }, [leader?.id, state.isSupported, state.isLoading, state.permission, syncExistingSubscription]);
 
   const enablePushNotifications = useCallback(async (): Promise<boolean> => {
     if (!leader) {
@@ -131,12 +253,23 @@ export function usePushNotifications() {
         applicationServerKey: applicationServerKey.buffer as ArrayBuffer,
       });
 
+      // Extract keys robustly (handles iOS/Safari)
+      const keys = extractSubscriptionKeys(subscription);
+      if (!keys) {
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: 'Kunne ikke lese varslingsnøkler fra nettleseren',
+        }));
+        return false;
+      }
+
       // Send subscription to backend with leader_id
-      const subscriptionJson = subscription.toJSON();
       const { error: subscribeError } = await supabase.functions.invoke('push-subscribe', {
         body: {
-          endpoint: subscriptionJson.endpoint,
-          keys: subscriptionJson.keys,
+          endpoint: subscription.endpoint,
+          p256dh: keys.p256dh,
+          auth: keys.auth,
           leader_id: leader.id,
         },
       });
@@ -168,75 +301,18 @@ export function usePushNotifications() {
       }));
       return false;
     }
-  }, [leader]);
+  }, [leader, extractSubscriptionKeys]);
 
-  const disablePushNotifications = useCallback(async (): Promise<boolean> => {
-    if (!leader) {
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: 'Du må være logget inn for å deaktivere varsler',
-      }));
-      return false;
-    }
-
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
-
-    try {
-      const registration = await navigator.serviceWorker.getRegistration('/sw.js');
-      if (!registration) {
-        setState((prev) => ({ ...prev, isLoading: false, isEnabled: false }));
-        return true;
-      }
-
-      const subscription = await registration.pushManager.getSubscription();
-      if (!subscription) {
-        setState((prev) => ({ ...prev, isLoading: false, isEnabled: false }));
-        return true;
-      }
-
-      // Unsubscribe from push
-      await subscription.unsubscribe();
-
-      // Remove subscription from backend with leader_id
-      await supabase.functions.invoke('push-unsubscribe', {
-        body: { 
-          endpoint: subscription.endpoint,
-          leader_id: leader.id,
-        },
-      });
-
-      setState((prev) => ({
-        ...prev,
-        isEnabled: false,
-        isLoading: false,
-        error: null,
-      }));
-
-      return true;
-    } catch (error) {
-      console.error('Error disabling push notifications:', error);
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: 'En feil oppstod ved deaktivering av varsler',
-      }));
-      return false;
-    }
-  }, [leader]);
-
-  const togglePushNotifications = useCallback(async (): Promise<boolean> => {
-    if (state.isEnabled) {
-      return disablePushNotifications();
-    } else {
-      return enablePushNotifications();
-    }
-  }, [state.isEnabled, enablePushNotifications, disablePushNotifications]);
+  // Re-sync function for retry button
+  const retrySync = useCallback(async (): Promise<boolean> => {
+    hasSyncedRef.current = false;
+    return syncExistingSubscription();
+  }, [syncExistingSubscription]);
 
   return {
     ...state,
     enablePushNotifications,
-    disablePushNotifications,
-    togglePushNotifications,
+    retrySync,
+    syncExistingSubscription,
   };
 }

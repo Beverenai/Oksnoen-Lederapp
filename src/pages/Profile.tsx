@@ -19,7 +19,7 @@ import {
   ArrowUpDown,
   Bell
 } from 'lucide-react';
-import { PushNotificationToggle } from '@/components/PushNotificationToggle';
+import { PushNotificationStatus } from '@/components/PushNotificationStatus';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -371,7 +371,7 @@ export default function Profile() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <PushNotificationToggle showLabel={true} />
+          <PushNotificationStatus />
         </CardContent>
       </Card>
 
