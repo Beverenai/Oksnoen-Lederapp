@@ -87,41 +87,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [leader?.id]);
 
   const login = async (phone: string): Promise<{ success: boolean; error?: string }> => {
-    const normalizedPhone = phone.replace(/\s/g, '');
-    
-    const { data, error } = await supabase
-      .from('leaders')
-      .select('*')
-      .eq('phone', normalizedPhone)
-      .maybeSingle();
+    try {
+      // Use edge function for login - hides phone lookup from client
+      const { data, error } = await supabase.functions.invoke('phone-login', {
+        body: { phone }
+      });
 
-    if (error) {
+      if (error) {
+        console.error('Login function error:', error);
+        return { success: false, error: 'Noe gikk galt. Prøv igjen.' };
+      }
+
+      if (!data.success) {
+        return { success: false, error: data.error || 'Innlogging feilet.' };
+      }
+
+      // Store leader ID and set state
+      localStorage.setItem('leaderId', data.leader.id);
+      setLeader(data.leader);
+
+      // Set roles from edge function response
+      const roles = data.roles || [];
+      setIsAdmin(roles.includes('admin'));
+      setIsNurse(roles.includes('nurse'));
+      
+      return { success: true };
+    } catch (err) {
+      console.error('Login error:', err);
       return { success: false, error: 'Noe gikk galt. Prøv igjen.' };
     }
-
-    if (!data) {
-      return { success: false, error: 'Fant ingen leder med dette telefonnummeret.' };
-    }
-
-    // Check if leader is active
-    if (data.is_active === false) {
-      return { success: false, error: 'Du jobber ikke denne perioden. Hvis dette er feil, kontakt admin.' };
-    }
-
-    localStorage.setItem('leaderId', data.id);
-    setLeader(data);
-
-    // Check roles
-    const { data: rolesData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('leader_id', data.id);
-
-    const roles = rolesData?.map(r => r.role) || [];
-    setIsAdmin(roles.includes('admin'));
-    setIsNurse(roles.includes('nurse'));
-    
-    return { success: true };
   };
 
   const logout = () => {
