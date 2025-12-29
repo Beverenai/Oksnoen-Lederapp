@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ACTIVITIES } from '@/lib/activityUtils';
+import { useActivities } from '@/hooks/useActivities';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Participant = Tables<'participants'>;
@@ -33,6 +33,7 @@ export function BulkActivityRegistration({
   onClose,
 }: BulkActivityRegistrationProps) {
   const { leader } = useAuth();
+  const { activities } = useActivities(true);
   const [selectedActivity, setSelectedActivity] = useState<string>('');
   const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,7 +119,7 @@ export function BulkActivityRegistration({
               <SelectValue placeholder="Velg en aktivitet..." />
             </SelectTrigger>
             <SelectContent>
-              {ACTIVITIES.map((activity) => (
+              {activities.map((activity) => (
                 <SelectItem key={activity.id} value={activity.title}>
                   {activity.title}
                 </SelectItem>

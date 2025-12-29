@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          sort_order: number | null
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          title?: string
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           content: string | null
