@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PushNotificationState {
   isSupported: boolean;
@@ -21,6 +22,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 export function usePushNotifications() {
+  const { leader } = useAuth();
   const [state, setState] = useState<PushNotificationState>({
     isSupported: false,
     isEnabled: false,
@@ -75,6 +77,15 @@ export function usePushNotifications() {
   }, []);
 
   const enablePushNotifications = useCallback(async (): Promise<boolean> => {
+    if (!leader) {
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: 'Du må være logget inn for å aktivere varsler',
+      }));
+      return false;
+    }
+
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
@@ -120,9 +131,14 @@ export function usePushNotifications() {
         applicationServerKey: applicationServerKey.buffer as ArrayBuffer,
       });
 
-      // Send subscription to backend
+      // Send subscription to backend with leader_id
+      const subscriptionJson = subscription.toJSON();
       const { error: subscribeError } = await supabase.functions.invoke('push-subscribe', {
-        body: subscription.toJSON(),
+        body: {
+          endpoint: subscriptionJson.endpoint,
+          keys: subscriptionJson.keys,
+          leader_id: leader.id,
+        },
       });
 
       if (subscribeError) {
@@ -152,9 +168,18 @@ export function usePushNotifications() {
       }));
       return false;
     }
-  }, []);
+  }, [leader]);
 
   const disablePushNotifications = useCallback(async (): Promise<boolean> => {
+    if (!leader) {
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: 'Du må være logget inn for å deaktivere varsler',
+      }));
+      return false;
+    }
+
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
@@ -173,9 +198,12 @@ export function usePushNotifications() {
       // Unsubscribe from push
       await subscription.unsubscribe();
 
-      // Remove subscription from backend
+      // Remove subscription from backend with leader_id
       await supabase.functions.invoke('push-unsubscribe', {
-        body: { endpoint: subscription.endpoint },
+        body: { 
+          endpoint: subscription.endpoint,
+          leader_id: leader.id,
+        },
       });
 
       setState((prev) => ({
@@ -195,7 +223,7 @@ export function usePushNotifications() {
       }));
       return false;
     }
-  }, []);
+  }, [leader]);
 
   const togglePushNotifications = useCallback(async (): Promise<boolean> => {
     if (state.isEnabled) {
