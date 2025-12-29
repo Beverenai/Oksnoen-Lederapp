@@ -268,7 +268,7 @@ export const ParticipantDetailDialog = ({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-        <ResponsiveDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[85vh] overflow-y-auto p-0 mx-auto">
+      <ResponsiveDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md sm:max-h-[85vh] sm:overflow-y-auto p-0 mx-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
