@@ -16,8 +16,10 @@ import {
   Car,
   Anchor,
   Mountain,
-  ArrowUpDown
+  ArrowUpDown,
+  Bell
 } from 'lucide-react';
+import { PushNotificationToggle } from '@/components/PushNotificationToggle';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -354,6 +356,22 @@ export default function Profile() {
               </Label>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Notifications */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="w-5 h-5" />
+            Varsler
+          </CardTitle>
+          <CardDescription>
+            Motta push-varsler om viktig informasjon
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PushNotificationToggle showLabel={true} />
         </CardContent>
       </Card>
 
