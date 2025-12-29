@@ -91,6 +91,11 @@ export function PushNotificationsTab() {
       return;
     }
 
+    if (!leader?.id) {
+      toast.error('Du må være logget inn');
+      return;
+    }
+
     setIsSending(true);
     try {
       const { data, error } = await supabase.functions.invoke('push-send', {
@@ -99,6 +104,7 @@ export function PushNotificationsTab() {
           message: message.trim(),
           url: url.trim() || '/',
           broadcast: true,
+          sender_leader_id: leader.id,
         },
       });
 
