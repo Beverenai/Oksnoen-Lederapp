@@ -5,19 +5,24 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Shield, ArrowLeft, Menu } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import {
+  Shield,
+  ArrowLeft,
+  Users,
+  Home,
+  Calendar,
+  Bell,
+  Anchor,
+  Dumbbell,
+  MapIcon,
+  BookOpen,
+  RefreshCw,
+  Settings,
+} from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { CabinAssignmentStatusRef } from '@/components/admin/CabinAssignmentStatus';
-import { AdminSettingsSidebar, settingsGroups, getSectionLabel } from '@/components/admin/settings/AdminSettingsSidebar';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -29,14 +34,24 @@ interface LeaderWithRole extends Leader {
   role: AppRole;
 }
 
+// Tab definitions
+const settingsTabs = [
+  { id: 'leaders', label: 'Ledere', icon: Users },
+  { id: 'participants', label: 'Deltakere', icon: Users },
+  { id: 'cabins', label: 'Hytter', icon: Home },
+  { id: 'schedule', label: 'Vaktplan', icon: Calendar },
+  { id: 'activities', label: 'Aktiviteter', icon: Dumbbell },
+  { id: 'skjaer', label: 'Skjær', icon: MapIcon },
+  { id: 'stories', label: 'Historier', icon: BookOpen },
+  { id: 'push', label: 'Push-varsler', icon: Bell },
+  { id: 'rope-control', label: 'Tau-kontroll', icon: Anchor },
+  { id: 'sync', label: 'Synkronisering', icon: RefreshCw },
+  { id: 'setup', label: 'Oppsett', icon: Settings },
+];
+
 export default function AdminSettings() {
   const { isAdmin } = useAuth();
   const [activeSection, setActiveSection] = useState('leaders');
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    brukere: true,
-    innhold: false,
-    system: false,
-  });
   
   const [leaders, setLeaders] = useState<LeaderWithRole[]>([]);
   const [editingLeader, setEditingLeader] = useState<LeaderWithRole | null>(null);
@@ -83,10 +98,6 @@ export default function AdminSettings() {
   const exportTimerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const cabinStatusRef = useRef<CabinAssignmentStatusRef>(null);
-
-  const handleToggleGroup = (groupId: string) => {
-    setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
-  };
 
   useEffect(() => {
     loadData();
@@ -574,110 +585,90 @@ export default function AdminSettings() {
 
   return (
     <>
-      <div className="flex min-h-[calc(100vh-8rem)]">
-        <AdminSettingsSidebar
-          activeSection={activeSection}
-          onSectionChange={setActiveSection}
-          openGroups={openGroups}
-          onToggleGroup={handleToggleGroup}
-        />
-        
-        <main className="flex-1 overflow-auto">
-          <div className="flex items-center gap-4 mb-6">
-            {/* Mobile dropdown menu */}
-            <div className="md:hidden">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Menu className="h-4 w-4 mr-2" />
-                    {getSectionLabel(activeSection)}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  {settingsGroups.map((group, idx) => (
-                    <div key={group.id}>
-                      {idx > 0 && <DropdownMenuSeparator />}
-                      <DropdownMenuLabel className="flex items-center gap-2">
-                        <group.icon className="h-4 w-4" />
-                        {group.label}
-                      </DropdownMenuLabel>
-                      {group.items.map((item) => (
-                        <DropdownMenuItem
-                          key={item.id}
-                          onClick={() => setActiveSection(item.id)}
-                          className={activeSection === item.id ? 'bg-primary/10 text-primary' : ''}
-                        >
-                          <item.icon className="h-4 w-4 mr-2" />
-                          {item.label}
-                        </DropdownMenuItem>
-                      ))}
-                    </div>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            
-            <Link to="/admin">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground">
-                Innstillinger
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Oppsett, synkronisering og lederadministrasjon
-              </p>
-            </div>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Link to="/admin">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground">
+              Innstillinger
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Oppsett, synkronisering og lederadministrasjon
+            </p>
           </div>
+        </div>
 
-          <AdminSettingsContent
-            activeSection={activeSection}
-            leaders={leaders}
-            leaderSearch={leaderSearch}
-            setLeaderSearch={setLeaderSearch}
-            isDeactivating={isDeactivating}
-            deactivateAllLeaders={deactivateAllLeaders}
-            activateAllLeaders={activateAllLeaders}
-            toggleLeaderActive={toggleLeaderActive}
-            onEditLeader={handleEditLeader}
-            newLeaderName={newLeaderName}
-            setNewLeaderName={setNewLeaderName}
-            newLeaderPhone={newLeaderPhone}
-            setNewLeaderPhone={setNewLeaderPhone}
-            newLeaderIsAdmin={newLeaderIsAdmin}
-            setNewLeaderIsAdmin={setNewLeaderIsAdmin}
-            addLeader={addLeader}
-            cabinStatusRef={cabinStatusRef}
-            isSyncing={isSyncing}
-            storedWebhookUrl={storedWebhookUrl}
-            lastSyncSuccess={lastSyncSuccess}
-            lastSyncTime={lastSyncTime}
-            syncError={syncError}
-            triggerSync={triggerSync}
-            formatSyncTime={formatSyncTime}
-            isExporting={isExporting}
-            storedExportWebhookUrl={storedExportWebhookUrl}
-            lastExportSuccess={lastExportSuccess}
-            lastExportTime={lastExportTime}
-            exportError={exportError}
-            pendingExport={pendingExport}
-            exportCountdown={exportCountdown}
-            triggerExport={triggerExport}
-            cancelPendingExport={cancelPendingExport}
-            webhookUrl={webhookUrl}
-            setWebhookUrl={setWebhookUrl}
-            isSavingWebhook={isSavingWebhook}
-            saveWebhookUrl={saveWebhookUrl}
-            exportWebhookUrl={exportWebhookUrl}
-            setExportWebhookUrl={setExportWebhookUrl}
-            isSavingExportWebhook={isSavingExportWebhook}
-            saveExportWebhookUrl={saveExportWebhookUrl}
-            showSyncInstructions={showSyncInstructions}
-            setShowSyncInstructions={setShowSyncInstructions}
-          />
-        </main>
+        {/* Tab navigation */}
+        <Tabs value={activeSection} onValueChange={setActiveSection}>
+          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1 bg-muted/50">
+            {settingsTabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger
+                  key={tab.id}
+                  value={tab.id}
+                  className="gap-2 shrink-0 data-[state=active]:bg-background"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+
+          <div className="mt-6">
+            <AdminSettingsContent
+              activeSection={activeSection}
+              leaders={leaders}
+              leaderSearch={leaderSearch}
+              setLeaderSearch={setLeaderSearch}
+              isDeactivating={isDeactivating}
+              deactivateAllLeaders={deactivateAllLeaders}
+              activateAllLeaders={activateAllLeaders}
+              toggleLeaderActive={toggleLeaderActive}
+              onEditLeader={handleEditLeader}
+              newLeaderName={newLeaderName}
+              setNewLeaderName={setNewLeaderName}
+              newLeaderPhone={newLeaderPhone}
+              setNewLeaderPhone={setNewLeaderPhone}
+              newLeaderIsAdmin={newLeaderIsAdmin}
+              setNewLeaderIsAdmin={setNewLeaderIsAdmin}
+              addLeader={addLeader}
+              cabinStatusRef={cabinStatusRef}
+              isSyncing={isSyncing}
+              storedWebhookUrl={storedWebhookUrl}
+              lastSyncSuccess={lastSyncSuccess}
+              lastSyncTime={lastSyncTime}
+              syncError={syncError}
+              triggerSync={triggerSync}
+              formatSyncTime={formatSyncTime}
+              isExporting={isExporting}
+              storedExportWebhookUrl={storedExportWebhookUrl}
+              lastExportSuccess={lastExportSuccess}
+              lastExportTime={lastExportTime}
+              exportError={exportError}
+              pendingExport={pendingExport}
+              exportCountdown={exportCountdown}
+              triggerExport={triggerExport}
+              cancelPendingExport={cancelPendingExport}
+              webhookUrl={webhookUrl}
+              setWebhookUrl={setWebhookUrl}
+              isSavingWebhook={isSavingWebhook}
+              saveWebhookUrl={saveWebhookUrl}
+              exportWebhookUrl={exportWebhookUrl}
+              setExportWebhookUrl={setExportWebhookUrl}
+              isSavingExportWebhook={isSavingExportWebhook}
+              saveExportWebhookUrl={saveExportWebhookUrl}
+              showSyncInstructions={showSyncInstructions}
+              setShowSyncInstructions={setShowSyncInstructions}
+            />
+          </div>
+        </Tabs>
       </div>
 
       <LeaderDetailDialog
