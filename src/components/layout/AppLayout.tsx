@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { 
   Home, 
   Users, 
-  ClipboardCheck, 
+  Stamp, 
   Building2, 
   Calendar, 
   AlertTriangle, 
@@ -35,7 +35,7 @@ const baseNavItems = [
   { to: '/', icon: Home, label: 'Hjem' },
   { to: '/profile', icon: User, label: 'Min Profil' },
   { to: '/leaders', icon: Users, label: 'Ledere' },
-  { to: '/passport', icon: ClipboardCheck, label: 'Passkontroll' },
+  { to: '/passport', icon: Stamp, label: 'Passkontroll' },
   { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
 ];
 
@@ -67,7 +67,7 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
       { to: '/', icon: Home, label: 'Hjem' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
       { to: '/admin', icon: Settings, label: 'Dashboard' },
-      { to: '/passport', icon: ClipboardCheck, label: 'Passkontor' },
+      { to: '/passport', icon: Stamp, label: 'Passkontor' },
       { to: '/fix', icon: Wrench, label: 'Fix' },
     ];
   } else if (isNurse) {
@@ -76,7 +76,7 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
       { to: '/', icon: Home, label: 'Hjem' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
       { to: '/nurse', icon: Heart, label: 'Nurse' },
-      { to: '/passport', icon: ClipboardCheck, label: 'Passkontor' },
+      { to: '/passport', icon: Stamp, label: 'Passkontor' },
       { to: '/fix', icon: Wrench, label: 'Fix' },
     ];
   } else {
@@ -85,7 +85,7 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
       { to: '/', icon: Home, label: 'Hjem' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
       { to: '#', icon: Check, label: 'Hajolo', isHajolo: true },
-      { to: '/passport', icon: ClipboardCheck, label: 'Passkontor' },
+      { to: '/passport', icon: Stamp, label: 'Passkontor' },
       { to: '/fix', icon: Wrench, label: 'Fix' },
     ];
   }
@@ -424,7 +424,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-card border-t border-border z-50 flex items-center justify-around px-2 pb-safe">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-card/95 backdrop-blur-sm border-t border-border shadow-lg z-50 flex items-center justify-around px-2 pb-safe">
         {getBottomNavItems(isAdmin, isNurse).map((item) => {
           const isActive = location.pathname === item.to;
           
@@ -454,13 +454,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
               key={item.to}
               to={item.to}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg transition-colors min-w-[60px]',
+                'flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-lg transition-colors min-w-[56px]',
                 isActive 
                   ? 'text-primary' 
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <item.icon className={cn('w-6 h-6', isActive && 'text-primary')} />
+              <div className={cn(
+                'p-2 rounded-xl transition-colors',
+                isActive ? 'bg-primary/10' : ''
+              )}>
+                <item.icon className={cn('w-6 h-6', isActive && 'text-primary')} />
+              </div>
               <span className="text-xs font-medium">{item.label}</span>
             </NavLink>
           );
