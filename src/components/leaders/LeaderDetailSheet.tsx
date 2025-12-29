@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Phone, AlertTriangle, Car, Anchor, Mountain, Cross, Home } from 'lucide-react';
+import { Phone, AlertTriangle, Car, Anchor, Mountain, Cross, Home, ArrowDown, Cable, Wrench } from 'lucide-react';
 import { icons } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
@@ -209,8 +209,14 @@ export function LeaderDetailSheet({
           </Button>
 
           {/* Certifications */}
-          {(leader.has_drivers_license || leader.has_boat_license || leader.can_rappelling || leader.can_climbing || leader.can_zipline) && (
+          {(leader.has_car || leader.has_drivers_license || leader.has_boat_license || 
+            leader.can_rappelling || leader.can_climbing || leader.can_zipline || leader.can_rope_setup) && (
             <div className="flex flex-wrap gap-2">
+              {leader.has_car && (
+                <Badge variant="outline" className="gap-1">
+                  <Car className="w-3 h-3" /> Bil
+                </Badge>
+              )}
               {leader.has_drivers_license && (
                 <Badge variant="outline" className="gap-1">
                   <Car className="w-3 h-3" /> Førerkort
@@ -221,9 +227,24 @@ export function LeaderDetailSheet({
                   <Anchor className="w-3 h-3" /> Båtførerbevis
                 </Badge>
               )}
-              {(leader.can_rappelling || leader.can_climbing || leader.can_zipline) && (
+              {leader.can_rappelling && (
                 <Badge variant="outline" className="gap-1">
-                  <Mountain className="w-3 h-3" /> Høydeaktiviteter
+                  <ArrowDown className="w-3 h-3" /> Rappellering
+                </Badge>
+              )}
+              {leader.can_climbing && (
+                <Badge variant="outline" className="gap-1">
+                  <Mountain className="w-3 h-3" /> Klatring
+                </Badge>
+              )}
+              {leader.can_zipline && (
+                <Badge variant="outline" className="gap-1">
+                  <Cable className="w-3 h-3" /> Taubane
+                </Badge>
+              )}
+              {leader.can_rope_setup && (
+                <Badge variant="outline" className="gap-1">
+                  <Wrench className="w-3 h-3" /> Oppsett
                 </Badge>
               )}
             </div>
