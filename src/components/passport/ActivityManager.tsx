@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,6 +24,7 @@ export const ActivityManager = ({
   completedActivities,
   onActivityChanged,
 }: ActivityManagerProps) => {
+  const { leader } = useAuth();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
@@ -53,6 +55,7 @@ export const ActivityManager = ({
       const { error } = await supabase.from('participant_activities').insert({
         participant_id: participantId,
         activity: activityTitle,
+        registered_by: leader?.id,
       });
 
       if (error) throw error;

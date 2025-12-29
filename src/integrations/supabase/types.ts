@@ -364,18 +364,21 @@ export type Database = {
           completed_at: string | null
           id: string
           participant_id: string
+          registered_by: string | null
         }
         Insert: {
           activity: string
           completed_at?: string | null
           id?: string
           participant_id: string
+          registered_by?: string | null
         }
         Update: {
           activity?: string
           completed_at?: string | null
           id?: string
           participant_id?: string
+          registered_by?: string | null
         }
         Relationships: [
           {
@@ -383,6 +386,13 @@ export type Database = {
             columns: ["participant_id"]
             isOneToOne: false
             referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_activities_registered_by_fkey"
+            columns: ["registered_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
             referencedColumns: ["id"]
           },
         ]
