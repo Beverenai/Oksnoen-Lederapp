@@ -82,7 +82,8 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
   const [selectedLeader, setSelectedLeader] = useState<LeaderWithContent | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [adminNurseIds, setAdminNurseIds] = useState<Set<string>>(new Set());
+  const [adminIds, setAdminIds] = useState<Set<string>>(new Set());
+  const [nurseIds, setNurseIds] = useState<Set<string>>(new Set());
 
   // Memoize activeLeaders to prevent new array reference on every render
   const activeLeaders = useMemo(() => 
@@ -101,14 +102,16 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
       .from('leader_content')
       .select('*');
 
-    // Fetch admin and nurse roles to know who should always be "green"
+    // Fetch admin and nurse roles separately for sorting and green border
     const { data: rolesData } = await supabase
       .from('user_roles')
       .select('leader_id, role')
       .in('role', ['admin', 'nurse']);
 
-    const adminNurseSet = new Set(rolesData?.map(r => r.leader_id) || []);
-    setAdminNurseIds(adminNurseSet);
+    const adminSet = new Set(rolesData?.filter(r => r.role === 'admin').map(r => r.leader_id) || []);
+    const nurseSet = new Set(rolesData?.filter(r => r.role === 'nurse').map(r => r.leader_id) || []);
+    setAdminIds(adminSet);
+    setNurseIds(nurseSet);
 
     const leadersMap = activeLeadersRef.current.map(leader => ({
       ...leader,
@@ -156,7 +159,7 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
     leader.cabin?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Sort leaders: Admin/Nurse first, then Kordinator, then by team order
+  // Sort leaders: Admin first, then Nurse, then Kordinator, then by team order
   const sortedLeaders = useMemo(() => {
     const getTeamSortOrder = (team: string | null): number => {
       const teamLower = team?.toLowerCase().trim();
@@ -183,23 +186,27 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
     };
 
     return [...filteredLeaders].sort((a, b) => {
-      // 1. Admin og Nurse først
-      const aIsAdminNurse = adminNurseIds.has(a.id);
-      const bIsAdminNurse = adminNurseIds.has(b.id);
+      // 1. Admin først (prioritet 0)
+      const aIsAdmin = adminIds.has(a.id);
+      const bIsAdmin = adminIds.has(b.id);
+      if (aIsAdmin && !bIsAdmin) return -1;
+      if (!aIsAdmin && bIsAdmin) return 1;
       
-      if (aIsAdminNurse && !bIsAdminNurse) return -1;
-      if (!aIsAdminNurse && bIsAdminNurse) return 1;
+      // 2. Nurse deretter (prioritet 1)
+      const aIsNurse = nurseIds.has(a.id);
+      const bIsNurse = nurseIds.has(b.id);
+      if (aIsNurse && !bIsNurse) return -1;
+      if (!aIsNurse && bIsNurse) return 1;
       
-      // 2. Sorter etter team-rekkefølge (Kordinator → Team 1 → osv.)
+      // 3. Sorter etter team-rekkefølge (Kordinator → Team 1 → osv.)
       const aOrder = getTeamSortOrder(a.team);
       const bOrder = getTeamSortOrder(b.team);
-      
       if (aOrder !== bOrder) return aOrder - bOrder;
       
-      // 3. Alfabetisk innenfor samme gruppe
+      // 4. Alfabetisk innenfor samme gruppe
       return a.name.localeCompare(b.name, 'nb');
     });
-  }, [filteredLeaders, adminNurseIds]);
+  }, [filteredLeaders, adminIds, nurseIds]);
 
   const handleEditClick = (leader: LeaderWithContent) => {
     setSelectedLeader(leader);
@@ -272,9 +279,11 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
           const isFri = content?.current_activity?.toLowerCase().includes('fri');
           const isKitchen = leader.team?.toLowerCase() === 'kjøkken';
           
-          const isAdminOrNurse = adminNurseIds.has(leader.id);
+          const isAdminOrNurse = adminIds.has(leader.id) || nurseIds.has(leader.id);
           
           const getBorderClass = () => {
+            // Admin og Nurse har alltid grønn ring (ingen Hajolo-knapp)
+            if (isAdminOrNurse) return 'ring-green-500';
             // Kjøkken har alltid lilla ring
             if (isKitchen) return 'ring-purple-500';
             // "Fri" aktivitet gir blå ring
