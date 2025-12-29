@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +20,10 @@ import {
   CheckCircle2,
   Loader2,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  PenLine,
+  RotateCw,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { differenceInYears } from 'date-fns';
@@ -35,6 +38,7 @@ import {
   STORE_STYRKEPROVE_REQUIREMENTS,
   LILLE_STYRKEPROVE_REQUIREMENTS
 } from '@/lib/activityUtils';
+import { cn } from '@/lib/utils';
 
 interface CheckoutDetailDialogProps {
   participantId: string | null;
@@ -74,12 +78,22 @@ export function CheckoutDetailDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [writeMode, setWriteMode] = useState(false);
+  const [isHorizontal, setIsHorizontal] = useState(false);
 
   useEffect(() => {
     if (participantId && open) {
       loadParticipant();
     }
   }, [participantId, open]);
+
+  // Reset write mode when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setWriteMode(false);
+      setIsHorizontal(false);
+    }
+  }, [open]);
 
   const loadParticipant = async () => {
     if (!participantId) return;
@@ -220,54 +234,114 @@ export function CheckoutDetailDialog({
     return checkRequirementWithOrLogic(completedActivities, req);
   };
 
+  // Write mode - fullscreen pass text view with rotation
+  if (writeMode) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b bg-card">
+          <div className="flex items-center gap-2">
+            <PenLine className="w-5 h-5 text-primary" />
+            <span className="font-semibold">{participant?.name}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsHorizontal(!isHorizontal)}
+              className="gap-2"
+            >
+              <RotateCw className="w-4 h-4" />
+              {isHorizontal ? 'Vertikal' : 'Roter'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setWriteMode(false)}
+              className="gap-2"
+            >
+              <X className="w-4 h-4" />
+              Lukk
+            </Button>
+          </div>
+        </div>
+        
+        <div 
+          className={cn(
+            "flex-1 flex items-center justify-center p-6 overflow-auto",
+            isHorizontal && "origin-center"
+          )}
+          style={isHorizontal ? {
+            transform: 'rotate(90deg)',
+            width: '100vh',
+            height: '100vw',
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            marginTop: '-50vw',
+            marginLeft: '-50vh',
+          } : undefined}
+        >
+          <div className={cn(
+            "w-full max-w-2xl bg-card border rounded-lg p-6 shadow-lg",
+            isHorizontal && "max-w-none w-[80vh]"
+          )}>
+            <p className="text-xl md:text-2xl leading-relaxed whitespace-pre-wrap">
+              {passText || 'Ingen pass-tekst ennå...'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent className="max-w-2xl">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
             Skriv pass
-          </DialogTitle>
-        </DialogHeader>
+          </ResponsiveDialogTitle>
+        </ResponsiveDialogHeader>
 
         {isLoading ? (
-          <div className="space-y-4">
+          <div className="space-y-4 p-4 md:p-0">
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-40 w-full" />
           </div>
         ) : participant ? (
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6 p-4 md:p-0">
             {/* Participant Info */}
-            <div className="flex items-start gap-4 p-4 bg-muted/50 rounded-lg">
-              <Avatar className="w-16 h-16">
+            <div className="flex items-start gap-3 md:gap-4 p-3 md:p-4 bg-muted/50 rounded-lg">
+              <Avatar className="w-12 h-12 md:w-16 md:h-16">
                 <AvatarImage src={participant.image_url || undefined} />
                 <AvatarFallback className="bg-primary/10">
-                  <User className="w-8 h-8 text-primary" />
+                  <User className="w-6 h-6 md:w-8 md:h-8 text-primary" />
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 space-y-2">
-                <h3 className="text-xl font-semibold">{participant.name}</h3>
-                <div className="flex flex-wrap gap-2">
+              <div className="flex-1 min-w-0 space-y-1.5 md:space-y-2">
+                <h3 className="text-lg md:text-xl font-semibold truncate">{participant.name}</h3>
+                <div className="flex flex-wrap gap-1.5 md:gap-2">
                   {participant.birth_date && (
-                    <Badge variant="outline" className="gap-1">
+                    <Badge variant="outline" className="gap-1 text-xs md:text-sm">
                       <Calendar className="w-3 h-3" />
                       {differenceInYears(new Date(), new Date(participant.birth_date))} år
                     </Badge>
                   )}
                   {participant.cabins && (
-                    <Badge variant="secondary" className="gap-1">
+                    <Badge variant="secondary" className="gap-1 text-xs md:text-sm">
                       <Home className="w-3 h-3" />
                       {participant.cabins.name}
                     </Badge>
                   )}
                   {participant.room && (
-                    <Badge variant="outline">{participant.room}</Badge>
+                    <Badge variant="outline" className="text-xs md:text-sm">{participant.room}</Badge>
                   )}
                 </div>
               </div>
               {participant.pass_written && (
-                <Badge className="bg-success hover:bg-success gap-1">
+                <Badge className="bg-success hover:bg-success gap-1 shrink-0 text-xs md:text-sm">
                   <CheckCircle2 className="w-3 h-3" />
                   Skrevet
                 </Badge>
@@ -275,64 +349,64 @@ export function CheckoutDetailDialog({
             </div>
 
             {/* Styrkeprøve Status */}
-            <div className="space-y-3">
-              <h4 className="font-semibold">Styrkeprøve</h4>
+            <div className="space-y-2 md:space-y-3">
+              <h4 className="font-semibold text-sm md:text-base">Styrkeprøve</h4>
               
               {hasStore && (
-                <Badge className="bg-amber-500 hover:bg-amber-600 text-white gap-1 mb-2">
-                  <Trophy className="w-4 h-4" />
+                <Badge className="bg-amber-500 hover:bg-amber-600 text-white gap-1 mb-2 text-xs md:text-sm">
+                  <Trophy className="w-3 h-3 md:w-4 md:h-4" />
                   Store Styrkeprøven ✅
                 </Badge>
               )}
               {hasLille && !hasStore && (
-                <Badge className="bg-slate-400 hover:bg-slate-500 text-white gap-1 mb-2">
-                  <Medal className="w-4 h-4" />
+                <Badge className="bg-slate-400 hover:bg-slate-500 text-white gap-1 mb-2 text-xs md:text-sm">
+                  <Medal className="w-3 h-3 md:w-4 md:h-4" />
                   Lille Styrkeprøven ✅
                 </Badge>
               )}
               {!hasStore && !hasLille && (
-                <p className="text-sm text-muted-foreground mb-2">Ingen styrkeprøve fullført</p>
+                <p className="text-xs md:text-sm text-muted-foreground mb-2">Ingen styrkeprøve fullført</p>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="p-3 rounded-lg border bg-card">
-                  <div className="flex items-center justify-between mb-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="p-2.5 md:p-3 rounded-lg border bg-card">
+                  <div className="flex items-center justify-between mb-1.5 md:mb-2">
                     <p className="text-xs font-medium text-muted-foreground">Store Styrkeprøven</p>
                     <Badge variant="outline" className="text-xs">
                       {storeProgress.completed}/{storeProgress.total}
                     </Badge>
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-0.5 md:space-y-1">
                     {STORE_STYRKEPROVE_REQUIREMENTS.map(req => (
-                      <div key={req} className="flex items-center gap-2 text-sm">
+                      <div key={req} className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm">
                         {checkRequirement(req) ? (
-                          <CheckCircle2 className="w-4 h-4 text-success" />
+                          <CheckCircle2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-success shrink-0" />
                         ) : (
-                          <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30" />
+                          <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
                         )}
-                        <span className={checkRequirement(req) ? '' : 'text-muted-foreground'}>
+                        <span className={cn("truncate", !checkRequirement(req) && 'text-muted-foreground')}>
                           {req}
                         </span>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="p-3 rounded-lg border bg-card">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="p-2.5 md:p-3 rounded-lg border bg-card">
+                  <div className="flex items-center justify-between mb-1.5 md:mb-2">
                     <p className="text-xs font-medium text-muted-foreground">Lille Styrkeprøven</p>
                     <Badge variant="outline" className="text-xs">
                       {lilleProgress.completed}/{lilleProgress.total}
                     </Badge>
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-0.5 md:space-y-1">
                     {LILLE_STYRKEPROVE_REQUIREMENTS.map(req => (
-                      <div key={req} className="flex items-center gap-2 text-sm">
+                      <div key={req} className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm">
                         {checkRequirement(req) ? (
-                          <CheckCircle2 className="w-4 h-4 text-success" />
+                          <CheckCircle2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-success shrink-0" />
                         ) : (
-                          <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30" />
+                          <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
                         )}
-                        <span className={checkRequirement(req) ? '' : 'text-muted-foreground'}>
+                        <span className={cn("truncate", !checkRequirement(req) && 'text-muted-foreground')}>
                           {req}
                         </span>
                       </div>
@@ -343,61 +417,74 @@ export function CheckoutDetailDialog({
             </div>
 
             {/* Activities */}
-            <div className="space-y-3">
-              <h4 className="font-semibold">
+            <div className="space-y-2 md:space-y-3">
+              <h4 className="font-semibold text-sm md:text-base">
                 Aktiviteter ({uniqueActivities.length} unike)
               </h4>
               {uniqueActivities.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 md:gap-2">
                   {uniqueActivities.map((activity, index) => (
-                    <Badge key={index} variant="secondary">
+                    <Badge key={index} variant="secondary" className="text-xs md:text-sm">
                       {activity}
                     </Badge>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Ingen aktiviteter registrert</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Ingen aktiviteter registrert</p>
               )}
             </div>
 
             {/* Activity Notes from leaders */}
             {participant.activity_notes && (
-              <div className="space-y-3">
-                <h4 className="font-semibold flex items-center gap-2">
+              <div className="space-y-2 md:space-y-3">
+                <h4 className="font-semibold text-sm md:text-base flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-amber-600" />
                   Aktivitetsnotater fra ledere
                 </h4>
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg text-sm">
+                <div className="p-2.5 md:p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg text-xs md:text-sm">
                   {participant.activity_notes}
                 </div>
               </div>
             )}
 
             {/* Pass Text */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold">Pass-tekst</h4>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRegeneratePass}
-                  disabled={isRegenerating}
-                  className="gap-1"
-                >
-                  {isRegenerating ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-3 h-3" />
-                  )}
-                  Nytt forslag
-                </Button>
+            <div className="space-y-2 md:space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="font-semibold text-sm md:text-base">Pass-tekst</h4>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setWriteMode(true)}
+                    className="gap-1 text-xs md:text-sm"
+                  >
+                    <PenLine className="w-3 h-3" />
+                    <span className="hidden sm:inline">Skriv i pass</span>
+                    <span className="sm:hidden">Skriv</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRegeneratePass}
+                    disabled={isRegenerating}
+                    className="gap-1 text-xs md:text-sm"
+                  >
+                    {isRegenerating ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-3 h-3" />
+                    )}
+                    <span className="hidden sm:inline">Nytt forslag</span>
+                    <span className="sm:hidden">Ny</span>
+                  </Button>
+                </div>
               </div>
               <Textarea
                 value={passText}
                 onChange={(e) => setPassText(e.target.value)}
                 placeholder="Skriv passet her..."
-                rows={4}
-                className="resize-none"
+                rows={3}
+                className="resize-none text-sm md:text-base"
               />
               <p className="text-xs text-muted-foreground">
                 Rediger teksten og trykk "Skrevet ferdig" når du har skrevet passet fysisk.
@@ -405,21 +492,21 @@ export function CheckoutDetailDialog({
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3 pt-4 border-t">
+            <div className="flex gap-2 md:gap-3 pt-3 md:pt-4 border-t">
               {participant.pass_written ? (
                 <>
                   <Button
                     variant="outline"
                     onClick={handleUnmarkWritten}
                     disabled={isSaving}
-                    className="flex-1"
+                    className="flex-1 text-xs md:text-sm"
                   >
                     Fjern markering
                   </Button>
                   <Button
                     onClick={handleMarkWritten}
                     disabled={isSaving}
-                    className="flex-1 gap-2"
+                    className="flex-1 gap-2 text-xs md:text-sm"
                   >
                     {isSaving ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -433,7 +520,7 @@ export function CheckoutDetailDialog({
                 <Button
                   onClick={handleMarkWritten}
                   disabled={isSaving}
-                  className="flex-1 gap-2 bg-success hover:bg-success/90"
+                  className="flex-1 gap-2 bg-success hover:bg-success/90 text-xs md:text-sm"
                 >
                   {isSaving ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -450,7 +537,7 @@ export function CheckoutDetailDialog({
             Kunne ikke laste deltaker
           </p>
         )}
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
