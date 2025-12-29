@@ -362,8 +362,11 @@ export function VirtualizedParticipantList({
     const updateHeight = () => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
-        // Leave some space for the bottom navigation
-        setListHeight(window.innerHeight - rect.top - 80);
+        // On desktop (lg: >= 1024px) there's no bottom navigation, use less padding
+        // On mobile we need space for bottom navigation (64px + safe-area)
+        const isDesktop = window.innerWidth >= 1024;
+        const bottomPadding = isDesktop ? 16 : 80;
+        setListHeight(window.innerHeight - rect.top - bottomPadding);
       }
     };
     
