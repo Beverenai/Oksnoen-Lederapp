@@ -1,4 +1,4 @@
-import { memo, useRef, useEffect, useMemo, useCallback, useState } from 'react';
+import { memo, useRef, useMemo, useCallback } from 'react';
 import { List, ListImperativeAPI } from 'react-window';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -292,8 +292,6 @@ export function VirtualizedParticipantList({
   onPrefetchParticipant,
 }: VirtualizedParticipantListProps) {
   const listRef = useRef<ListImperativeAPI>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [listHeight, setListHeight] = useState(600);
 
   // Flatten the data structure for virtualization
   const flattenedItems = useMemo((): VirtualizedItem[] => {
@@ -357,23 +355,10 @@ export function VirtualizedParticipantList({
     onPrefetchParticipant,
   }), [flattenedItems, onToggleCabin, onParticipantClick, onPrefetchParticipant]);
 
-  // Calculate list height (use available viewport height)
-  useEffect(() => {
-    const updateHeight = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        // On desktop (lg: >= 1024px) there's no bottom navigation, use less padding
-        // On mobile we need space for bottom navigation (64px + safe-area)
-        const isDesktop = window.innerWidth >= 1024;
-        const bottomPadding = isDesktop ? 16 : 80;
-        setListHeight(window.innerHeight - rect.top - bottomPadding);
-      }
-    };
-    
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
-  }, []);
+  // Calculate total height based on all items for natural page scrolling
+  const totalHeight = useMemo(() => {
+    return flattenedItems.reduce((sum, _, index) => sum + getItemSize(index), 0);
+  }, [flattenedItems, getItemSize]);
 
   if (flattenedItems.length === 0) {
     return (
@@ -390,17 +375,16 @@ export function VirtualizedParticipantList({
   }
 
   return (
-    <div ref={containerRef} className="space-y-2">
+    <div className="space-y-2">
       <List<RowData>
         listRef={listRef}
         rowCount={flattenedItems.length}
         rowHeight={getItemSize}
         rowComponent={Row}
         rowProps={rowProps}
-        defaultHeight={listHeight}
-        style={{ height: listHeight }}
-        className="scrollbar-thin"
-        overscanCount={5}
+        defaultHeight={totalHeight}
+        style={{ height: totalHeight, overflow: 'visible' }}
+        overscanCount={flattenedItems.length}
       />
     </div>
   );
