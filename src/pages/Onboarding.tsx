@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, User, Car, Check, Upload, Bell, Anchor, Mountain } from 'lucide-react';
+import { Camera, User, Car, Check, Upload, Bell, Anchor, Mountain, Cable, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
 import { compressImage } from '@/lib/imageUtils';
@@ -261,8 +261,8 @@ export default function Onboarding() {
                     onCheckedChange={(checked) => setCanZipline(checked as boolean)}
                   />
                   <Label htmlFor="zipline" className="flex items-center gap-2 cursor-pointer text-sm">
-                    <Mountain className="w-4 h-4 text-muted-foreground" />
-                    Taubane (oppe)
+                    <Cable className="w-4 h-4 text-muted-foreground" />
+                    Taubane
                   </Label>
                 </div>
 
@@ -273,8 +273,8 @@ export default function Onboarding() {
                     onCheckedChange={(checked) => setCanRopeSetup(checked as boolean)}
                   />
                   <Label htmlFor="ropeSetup" className="flex items-center gap-2 cursor-pointer text-sm">
-                    <Mountain className="w-4 h-4 text-muted-foreground" />
-                    Taubane (oppsett)
+                    <Wrench className="w-4 h-4 text-muted-foreground" />
+                    Oppsett
                   </Label>
                 </div>
               </div>
