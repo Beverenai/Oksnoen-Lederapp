@@ -2,50 +2,15 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  Users, 
-  Plus, 
-  Save, 
-  Settings,
-  Loader2,
-  Shield,
-  RefreshCw,
-  Heart,
-  FileSpreadsheet,
-  CheckCircle2,
-  Upload,
-  UserCheck,
-  Search,
-  Check,
-  ArrowLeft,
-  Home,
-  Calendar,
-  Bell,
-  Anchor,
-  Dumbbell,
-  Map as MapIcon,
-  BookOpen
-} from 'lucide-react';
-import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
+import { Shield, ArrowLeft } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
-import { CabinsTab } from '@/components/admin/CabinsTab';
-import { ParticipantImportTab } from '@/components/admin/ParticipantImportTab';
-import { CabinAssignmentStatus, CabinAssignmentStatusRef } from '@/components/admin/CabinAssignmentStatus';
-import { ScheduleTab } from '@/components/admin/ScheduleTab';
-import { PushNotificationsTab } from '@/components/admin/PushNotificationsTab';
-import { RopeControlTab } from '@/components/admin/RopeControlTab';
-import { ActivitiesTab } from '@/components/admin/ActivitiesTab';
-import { SkjaerTab } from '@/components/admin/SkjaerTab';
-import { StoriesTab } from '@/components/admin/StoriesTab';
+import { CabinAssignmentStatusRef } from '@/components/admin/CabinAssignmentStatus';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { AdminSettingsSidebar } from '@/components/admin/settings/AdminSettingsSidebar';
+import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -59,6 +24,13 @@ interface LeaderWithRole extends Leader {
 
 export default function AdminSettings() {
   const { isAdmin } = useAuth();
+  const [activeSection, setActiveSection] = useState('leaders');
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    brukere: true,
+    innhold: false,
+    system: false,
+  });
+  
   const [leaders, setLeaders] = useState<LeaderWithRole[]>([]);
   const [editingLeader, setEditingLeader] = useState<LeaderWithRole | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -104,6 +76,10 @@ export default function AdminSettings() {
   const exportTimerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const cabinStatusRef = useRef<CabinAssignmentStatusRef>(null);
+
+  const handleToggleGroup = (groupId: string) => {
+    setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
 
   useEffect(() => {
     loadData();
@@ -293,7 +269,6 @@ export default function AdminSettings() {
     console.log('[syncLeaderCabins] Starting cabin sync...');
     
     try {
-      // Fetch all active leaders with cabin field set
       const { data: leadersData, error: leadersError } = await supabase
         .from('leaders')
         .select('id, name, cabin, team')
@@ -304,7 +279,6 @@ export default function AdminSettings() {
         return;
       }
 
-      // Fetch all cabins
       const { data: cabinsData, error: cabinsError } = await supabase
         .from('cabins')
         .select('id, name');
@@ -314,7 +288,6 @@ export default function AdminSettings() {
         return;
       }
 
-      // Fetch user roles to check exempt roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('leader_id, role');
@@ -324,13 +297,11 @@ export default function AdminSettings() {
         return;
       }
 
-      // Build cabin name -> id map (lowercase)
       const cabinsByName = new Map<string, string>();
       cabinsData?.forEach(c => {
         cabinsByName.set(c.name.toLowerCase(), c.id);
       });
 
-      // Build leader_id -> roles map
       const rolesMap = new Map<string, string[]>();
       userRoles?.forEach(r => {
         const existing = rolesMap.get(r.leader_id) || [];
@@ -341,13 +312,11 @@ export default function AdminSettings() {
       let skipped = 0;
 
       for (const leader of leadersData || []) {
-        // Skip if no cabin set
         if (!leader.cabin?.trim()) {
           skipped++;
           continue;
         }
 
-        // Skip exempt teams
         const teamLower = leader.team?.toLowerCase() || '';
         if (TEAMS_WITHOUT_CABIN_RESPONSIBILITY.some(t => teamLower.includes(t))) {
           console.log(`[syncLeaderCabins] Skipping ${leader.name} - exempt team: ${leader.team}`);
@@ -355,7 +324,6 @@ export default function AdminSettings() {
           continue;
         }
 
-        // Skip exempt roles
         const leaderRoles = rolesMap.get(leader.id) || [];
         if (leaderRoles.some(r => ROLES_WITHOUT_CABIN_RESPONSIBILITY.includes(r))) {
           console.log(`[syncLeaderCabins] Skipping ${leader.name} - exempt role`);
@@ -363,17 +331,13 @@ export default function AdminSettings() {
           continue;
         }
 
-        // Parse cabin names (split by & or ,)
         const cabinNames = leader.cabin.split(/[&,]/).map(s => s.trim()).filter(Boolean);
         
-        // Delete existing links for this leader
         await supabase.from('leader_cabins').delete().eq('leader_id', leader.id);
 
-        // Create new links
         for (const cabinName of cabinNames) {
           const normalized = cabinName.toLowerCase();
           
-          // Get aliases or use the normalized name
           const aliasesToTry = CABIN_ALIASES[normalized] || [normalized];
           
           for (const alias of aliasesToTry) {
@@ -421,14 +385,12 @@ export default function AdminSettings() {
       }
 
       if (data?.success) {
-        // Sync leader_cabins based on leaders.cabin field
         await syncLeaderCabins();
         
         setLastSyncSuccess(true);
         setLastSyncTime(new Date().toISOString());
         toast.success(`Synkronisering fullført! (Status: ${data.webhookStatus})`);
         
-        // Oppdater CabinAssignmentStatus og leder-listen
         cabinStatusRef.current?.refresh();
         loadData();
       } else {
@@ -573,6 +535,11 @@ export default function AdminSettings() {
     }
   };
 
+  const handleEditLeader = (leader: LeaderWithRole) => {
+    setEditingLeader(leader);
+    setIsEditDialogOpen(true);
+  };
+
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -599,737 +566,87 @@ export default function AdminSettings() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-4">
-        <Link to="/admin">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground">
-            Innstillinger
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Oppsett, synkronisering og lederadministrasjon
-          </p>
-        </div>
+    <SidebarProvider defaultOpen={true}>
+      <div className="flex min-h-screen w-full">
+        <AdminSettingsSidebar
+          activeSection={activeSection}
+          onSectionChange={setActiveSection}
+          openGroups={openGroups}
+          onToggleGroup={handleToggleGroup}
+        />
+        
+        <main className="flex-1 p-4 lg:p-6 overflow-auto">
+          <div className="flex items-center gap-4 mb-6">
+            <SidebarTrigger className="lg:hidden" />
+            <Link to="/admin">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground">
+                Innstillinger
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Oppsett, synkronisering og lederadministrasjon
+              </p>
+            </div>
+          </div>
+
+          <AdminSettingsContent
+            activeSection={activeSection}
+            leaders={leaders}
+            leaderSearch={leaderSearch}
+            setLeaderSearch={setLeaderSearch}
+            isDeactivating={isDeactivating}
+            deactivateAllLeaders={deactivateAllLeaders}
+            activateAllLeaders={activateAllLeaders}
+            toggleLeaderActive={toggleLeaderActive}
+            onEditLeader={handleEditLeader}
+            newLeaderName={newLeaderName}
+            setNewLeaderName={setNewLeaderName}
+            newLeaderPhone={newLeaderPhone}
+            setNewLeaderPhone={setNewLeaderPhone}
+            newLeaderIsAdmin={newLeaderIsAdmin}
+            setNewLeaderIsAdmin={setNewLeaderIsAdmin}
+            addLeader={addLeader}
+            cabinStatusRef={cabinStatusRef}
+            isSyncing={isSyncing}
+            storedWebhookUrl={storedWebhookUrl}
+            lastSyncSuccess={lastSyncSuccess}
+            lastSyncTime={lastSyncTime}
+            syncError={syncError}
+            triggerSync={triggerSync}
+            formatSyncTime={formatSyncTime}
+            isExporting={isExporting}
+            storedExportWebhookUrl={storedExportWebhookUrl}
+            lastExportSuccess={lastExportSuccess}
+            lastExportTime={lastExportTime}
+            exportError={exportError}
+            pendingExport={pendingExport}
+            exportCountdown={exportCountdown}
+            triggerExport={triggerExport}
+            cancelPendingExport={cancelPendingExport}
+            webhookUrl={webhookUrl}
+            setWebhookUrl={setWebhookUrl}
+            isSavingWebhook={isSavingWebhook}
+            saveWebhookUrl={saveWebhookUrl}
+            exportWebhookUrl={exportWebhookUrl}
+            setExportWebhookUrl={setExportWebhookUrl}
+            isSavingExportWebhook={isSavingExportWebhook}
+            saveExportWebhookUrl={saveExportWebhookUrl}
+            showSyncInstructions={showSyncInstructions}
+            setShowSyncInstructions={setShowSyncInstructions}
+          />
+        </main>
       </div>
 
-      <Tabs defaultValue="leaders" className="space-y-4">
-        <TabsList className="flex flex-wrap gap-1 w-full h-auto p-1 lg:w-auto lg:inline-flex">
-          <TabsTrigger value="leaders" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline sm:inline">Ledere</span>
-          </TabsTrigger>
-          <TabsTrigger value="cabins" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <Home className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline sm:inline">Hytter</span>
-          </TabsTrigger>
-          <TabsTrigger value="participants" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline sm:inline">Deltakere</span>
-          </TabsTrigger>
-          <TabsTrigger value="schedule" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline sm:inline">Vakt</span>
-          </TabsTrigger>
-          <TabsTrigger value="push" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline sm:inline">Push</span>
-          </TabsTrigger>
-          <TabsTrigger value="rope-control" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <Anchor className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline sm:inline">Tau</span>
-          </TabsTrigger>
-          <TabsTrigger value="activities" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <Dumbbell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline sm:inline">Aktiviteter</span>
-          </TabsTrigger>
-          <TabsTrigger value="skjaer" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <MapIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline sm:inline">Skjær</span>
-          </TabsTrigger>
-          <TabsTrigger value="stories" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline sm:inline">Historier</span>
-          </TabsTrigger>
-          <TabsTrigger value="sync" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline sm:inline">Synk</span>
-          </TabsTrigger>
-          <TabsTrigger value="setup" className="flex-1 min-w-[4rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline sm:inline">Oppsett</span>
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Cabins Tab */}
-        <TabsContent value="cabins" className="space-y-4">
-          <CabinsTab />
-        </TabsContent>
-
-        {/* Participants Tab */}
-        <TabsContent value="participants" className="space-y-4">
-          <ParticipantImportTab />
-        </TabsContent>
-
-        {/* Schedule Tab */}
-        <TabsContent value="schedule" className="space-y-4">
-          <ScheduleTab />
-        </TabsContent>
-
-        {/* Push Notifications Tab */}
-        <TabsContent value="push" className="space-y-4">
-          <PushNotificationsTab />
-        </TabsContent>
-
-        {/* Rope Control Tab */}
-        <TabsContent value="rope-control" className="space-y-4">
-          <RopeControlTab />
-        </TabsContent>
-
-        {/* Activities Tab */}
-        <TabsContent value="activities" className="space-y-4">
-          <ActivitiesTab />
-        </TabsContent>
-
-        {/* Skjaer Tab */}
-        <TabsContent value="skjaer" className="space-y-4">
-          <SkjaerTab />
-        </TabsContent>
-
-        {/* Stories Tab */}
-        <TabsContent value="stories" className="space-y-4">
-          <StoriesTab />
-        </TabsContent>
-
-        {/* Setup Tab */}
-        <TabsContent value="setup" className="space-y-4">
-          {/* Import Webhook Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <RefreshCw className="w-5 h-5" />
-                Import Webhook (Google Sheets → App)
-              </CardTitle>
-              <CardDescription>
-                Konfigurer n8n webhook URL for import fra Google Sheets
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {storedWebhookUrl && (
-                <div className="p-3 rounded-lg bg-muted/50 text-sm">
-                  <p className="text-muted-foreground">Lagret URL:</p>
-                  <code className="text-xs break-all">{storedWebhookUrl}</code>
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                <Label htmlFor="webhookUrl">n8n Import Webhook URL</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="webhookUrl"
-                    placeholder="https://n8n.example.com/webhook/import"
-                    value={webhookUrl}
-                    onChange={(e) => setWebhookUrl(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button 
-                    onClick={saveWebhookUrl} 
-                    disabled={isSavingWebhook}
-                    variant="outline"
-                  >
-                    {isSavingWebhook ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Export Webhook Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="w-5 h-5" />
-                Eksport Webhook (App → Google Sheets)
-              </CardTitle>
-              <CardDescription>
-                Konfigurer n8n webhook URL for eksport til Google Sheets
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {storedExportWebhookUrl && (
-                <div className="p-3 rounded-lg bg-muted/50 text-sm">
-                  <p className="text-muted-foreground">Lagret URL:</p>
-                  <code className="text-xs break-all">{storedExportWebhookUrl}</code>
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                <Label htmlFor="exportWebhookUrl">n8n Eksport Webhook URL</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="exportWebhookUrl"
-                    placeholder="https://n8n.example.com/webhook/export"
-                    value={exportWebhookUrl}
-                    onChange={(e) => setExportWebhookUrl(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button 
-                    onClick={saveExportWebhookUrl} 
-                    disabled={isSavingExportWebhook}
-                    variant="outline"
-                  >
-                    {isSavingExportWebhook ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                <p className="text-sm text-blue-700 dark:text-blue-400">
-                  <strong>n8n eksport workflow:</strong> Lag en workflow som mottar data via webhook og oppdaterer Google Sheet basert på telefonnummer.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Field Mapping Documentation */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileSpreadsheet className="w-5 h-5" />
-                Felt-mapping fra Google Sheet
-              </CardTitle>
-              <CardDescription>
-                Forventet format i Google Sheet for leder-import
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Google Sheet-kolonner:</p>
-                <code className="block text-xs bg-muted p-3 rounded overflow-x-auto">
-                  Tlf | Navn | Hytte Ansvar | Ministerpost | Team | Aktivitet | Notater Til deg | OBS! | Ekstra #1 | Ekstra #2 | Ekstra #3 | Ekstra #4 | Ekstra #5
-                </code>
-              </div>
-              
-              <div className="space-y-3">
-                <p className="text-sm font-medium">Lederinfo (leaders-tabellen):</p>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2 px-3 font-medium">Google Sheet</th>
-                        <th className="text-left py-2 px-3 font-medium">JSON-felt</th>
-                        <th className="text-left py-2 px-3 font-medium">Beskrivelse</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      <tr>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Tlf</code></td>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">phone</code></td>
-                        <td className="py-2 px-3 text-muted-foreground">Unik ID for å matche ledere <Badge variant="destructive" className="ml-1 text-[10px]">Påkrevd</Badge></td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Navn</code></td>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">name</code></td>
-                        <td className="py-2 px-3 text-muted-foreground">Fullt navn <Badge variant="destructive" className="ml-1 text-[10px]">Påkrevd for nye</Badge></td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Hytte Ansvar</code></td>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">cabin_info</code></td>
-                        <td className="py-2 px-3 text-muted-foreground">Hvilken hytte lederen har ansvar for</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Ministerpost</code></td>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">ministerpost</code></td>
-                        <td className="py-2 px-3 text-muted-foreground">Lederens rolle/stilling</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Team</code></td>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">team</code></td>
-                        <td className="py-2 px-3 text-muted-foreground">Hvilket team lederen tilhører</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-sm font-medium">Innhold (leader_content-tabellen):</p>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2 px-3 font-medium">Google Sheet</th>
-                        <th className="text-left py-2 px-3 font-medium">JSON-felt</th>
-                        <th className="text-left py-2 px-3 font-medium">Beskrivelse</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      <tr>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Aktivitet</code></td>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">current_activity</code></td>
-                        <td className="py-2 px-3 text-muted-foreground">Nåværende aktivitet</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Notater Til deg</code></td>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">personal_notes</code></td>
-                        <td className="py-2 px-3 text-muted-foreground">Personlige notater</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">OBS!</code></td>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">obs_message</code></td>
-                        <td className="py-2 px-3 text-muted-foreground">OBS-melding</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Ekstra #1-5</code></td>
-                        <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">extra_1 - extra_5</code></td>
-                        <td className="py-2 px-3 text-muted-foreground">Ekstra felter</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Sync Tab */}
-        <TabsContent value="sync" className="space-y-4">
-          {/* Cabin Assignment Status */}
-          <CabinAssignmentStatus ref={cabinStatusRef} />
-
-
-          {/* Import from Google Sheets */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <RefreshCw className="w-5 h-5" />
-                Import fra Google Sheets
-              </CardTitle>
-              <CardDescription>
-                Hent ledere fra Google Sheets via n8n webhook
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  onClick={triggerSync}
-                  disabled={isSyncing || !storedWebhookUrl}
-                  variant={lastSyncSuccess ? "default" : "outline"}
-                  className={lastSyncSuccess ? "bg-green-600 hover:bg-green-700" : ""}
-                >
-                  {isSyncing ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : lastSyncSuccess ? (
-                    <Check className="w-4 h-4 mr-2" />
-                  ) : (
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                  )}
-                  {isSyncing ? 'Synkroniserer...' : lastSyncSuccess ? 'Synket!' : 'Start import'}
-                </Button>
-
-                <Button 
-                  variant="outline" 
-                  onClick={deactivateAllLeaders}
-                  disabled={isDeactivating}
-                >
-                  {isDeactivating ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Users className="w-4 h-4 mr-2" />
-                  )}
-                  Reset periode
-                </Button>
-              </div>
-
-              {!storedWebhookUrl && (
-                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-700 dark:text-yellow-400">
-                  <p className="text-sm">Konfigurer import webhook URL i Oppsett-fanen først.</p>
-                </div>
-              )}
-
-              {lastSyncTime && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  <span>Sist importert: {formatSyncTime(lastSyncTime)}</span>
-                </div>
-              )}
-
-              {syncError && (
-                <SyncErrorDetails
-                  error={syncError.error}
-                  webhookStatus={syncError.webhookStatus}
-                  webhookUrl={syncError.webhookUrl}
-                  correlationId={syncError.correlationId}
-                  rawResponse={syncError.rawResponse}
-                  n8nError={syncError.n8nError}
-                  n8nStackTrace={syncError.n8nStackTrace}
-                />
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Export to Google Sheets */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="w-5 h-5" />
-                Eksport til Google Sheets
-              </CardTitle>
-              <CardDescription>
-                Send lederdata tilbake til Google Sheets
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  onClick={() => triggerExport(false)}
-                  disabled={isExporting || !storedExportWebhookUrl}
-                  variant={lastExportSuccess ? "default" : "outline"}
-                  className={lastExportSuccess ? "bg-green-600 hover:bg-green-700" : ""}
-                >
-                  {isExporting ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : lastExportSuccess ? (
-                    <Check className="w-4 h-4 mr-2" />
-                  ) : (
-                    <Upload className="w-4 h-4 mr-2" />
-                  )}
-                  {isExporting ? 'Eksporterer...' : lastExportSuccess ? 'Eksportert!' : 'Start eksport'}
-                </Button>
-
-                {pendingExport && (
-                  <Button
-                    variant="outline"
-                    onClick={cancelPendingExport}
-                  >
-                    Avbryt auto-eksport ({exportCountdown}s)
-                  </Button>
-                )}
-              </div>
-
-              {!storedExportWebhookUrl && (
-                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-700 dark:text-yellow-400">
-                  <p className="text-sm">Konfigurer eksport webhook URL i Oppsett-fanen først.</p>
-                </div>
-              )}
-
-              {lastExportTime && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  <span>Sist eksportert: {formatSyncTime(lastExportTime)}</span>
-                </div>
-              )}
-
-              {exportError && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400">
-                  <p className="text-sm"><strong>Feil:</strong> {exportError}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* n8n Instructions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileSpreadsheet className="w-5 h-5" />
-                n8n Workflow instruksjoner
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button 
-                variant="ghost" 
-                onClick={() => setShowSyncInstructions(!showSyncInstructions)}
-                className="w-full justify-start"
-              >
-                <FileSpreadsheet className="w-4 h-4 mr-2" />
-                {showSyncInstructions ? 'Skjul instruksjoner' : 'Vis instruksjoner'}
-              </Button>
-
-              {showSyncInstructions && (
-                <div className="p-4 rounded-lg bg-muted/50 space-y-6">
-                  <div>
-                    <h4 className="font-semibold mb-3">Import Workflow (Google Sheets → App):</h4>
-                    
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">JSON-format for HTTP Request body:</p>
-                      <code className="block text-xs bg-background p-3 rounded whitespace-pre-wrap overflow-x-auto">
-{`{
-  "leaders": [
-    {
-      "phone": {{ $json['Tlf'].replace(/\\s/g, '') }},
-      "name": {{ $json['Navn'] }},
-      "cabin_info": {{ $json['Hytte Ansvar'] }},
-      "ministerpost": {{ $json['Ministerpost'] }},
-      "team": {{ $json['Team'] }},
-      "current_activity": {{ $json['Aktivitet'] }},
-      "personal_notes": {{ $json['Notater Til deg'] }},
-      "obs_message": {{ $json['OBS!'] }},
-      "extra_1": {{ $json['Ekstra #1'] }},
-      "extra_2": {{ $json['Ekstra #2'] }},
-      "extra_3": {{ $json['Ekstra #3'] }},
-      "extra_4": {{ $json['Ekstra #4'] }},
-      "extra_5": {{ $json['Ekstra #5'] }}
-    }
-  ]
-}`}
-                      </code>
-                    </div>
-
-                    <div className="space-y-2 mt-3">
-                      <p className="text-sm font-medium">Import Endpoint:</p>
-                      <code className="block text-xs bg-background p-2 rounded break-all">
-                        POST https://noxnbtvxksgjsqzfdgcd.supabase.co/functions/v1/sync-leaders-import
-                      </code>
-                    </div>
-                  </div>
-
-                  <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3">Eksport Workflow (App → Google Sheets):</h4>
-                    
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Mottatt data fra appen:</p>
-                      <code className="block text-xs bg-background p-3 rounded whitespace-pre-wrap overflow-x-auto">
-{`{
-  "timestamp": "2024-01-15T10:30:00Z",
-  "correlationId": "1234567890",
-  "leaders": [
-    {
-      "phone": "12345678",
-      "name": "Ola Nordmann",
-      "cabin_info": "Hytte 1",
-      "ministerpost": "Leder",
-      "team": "Team A",
-      "current_activity": "Frokost",
-      "personal_notes": "Husk møte kl 10",
-      "obs_message": "",
-      "extra_1": "", "extra_2": "", ...
-    }
-  ]
-}`}
-                      </code>
-                    </div>
-
-                    <div className="space-y-2 mt-3">
-                      <p className="text-sm font-medium">n8n workflow steg:</p>
-                      <ol className="text-sm list-decimal list-inside space-y-1 text-muted-foreground">
-                        <li>Webhook node: Motta data fra appen</li>
-                        <li>Loop: For hver leder i "leaders" array</li>
-                        <li>Google Sheets: Finn rad basert på telefonnummer</li>
-                        <li>Google Sheets: Oppdater celler med ny data</li>
-                      </ol>
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                    <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                      <strong>Tips:</strong> Telefonnummer brukes som unik nøkkel. Bruk Google Sheets "Lookup" for å finne riktig rad.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-        </TabsContent>
-
-        {/* Leaders Tab */}
-        <TabsContent value="leaders" className="space-y-4">
-          {/* Leader Overview Stats and Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Ledere ({leaders.filter(l => l.phone !== '12345678').length})
-              </CardTitle>
-              <CardDescription className="flex flex-wrap gap-2 items-center">
-                <span>Aktive: {leaders.filter(l => l.is_active !== false && l.phone !== '12345678').length}</span>
-                <span className="text-muted-foreground">•</span>
-                <span>Inaktive: {leaders.filter(l => l.is_active === false && l.phone !== '12345678').length}</span>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={deactivateAllLeaders}
-                  disabled={isDeactivating}
-                >
-                  {isDeactivating ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Users className="w-4 h-4 mr-2" />
-                  )}
-                  Deaktiver alle
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={activateAllLeaders}
-                  disabled={isDeactivating}
-                >
-                  {isDeactivating ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <UserCheck className="w-4 h-4 mr-2" />
-                  )}
-                  Aktiver alle
-                </Button>
-              </div>
-
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Søk etter leder..."
-                  value={leaderSearch}
-                  onChange={(e) => setLeaderSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              
-              {/* Leaders Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 px-3 font-medium">Status</th>
-                      <th className="text-left py-2 px-3 font-medium">Bilde</th>
-                      <th className="text-left py-2 px-3 font-medium">Navn</th>
-                      <th className="text-left py-2 px-3 font-medium">Rolle</th>
-                      <th className="text-left py-2 px-3 font-medium">Telefon</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {leaders
-                      .filter((leader) =>
-                        leader.phone !== '12345678' &&
-                        (leader.name.toLowerCase().includes(leaderSearch.toLowerCase()) ||
-                        leader.phone.includes(leaderSearch))
-                      )
-                      .map((leader) => (
-                      <tr 
-                        key={leader.id} 
-                        className={`hover:bg-muted/50 cursor-pointer ${leader.is_active === false ? 'opacity-50' : ''}`}
-                        onClick={() => {
-                          setEditingLeader(leader);
-                          setIsEditDialogOpen(true);
-                        }}
-                      >
-                        <td className="py-2 px-3">
-                          <Switch
-                            checked={leader.is_active !== false}
-                            onCheckedChange={() => toggleLeaderActive(leader)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </td>
-                        <td className="py-2 px-3">
-                          <Avatar className="h-8 w-8">
-                            {leader.profile_image_url ? (
-                              <AvatarImage src={leader.profile_image_url} alt={leader.name} />
-                            ) : null}
-                            <AvatarFallback className="text-xs">
-                              {leader.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                        </td>
-                        <td className="py-2 px-3 font-medium">{leader.name}</td>
-                        <td className="py-2 px-3">
-                          {leader.role === 'admin' && (
-                            <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">
-                              <Shield className="w-3 h-3 mr-1" />
-                              Admin
-                            </Badge>
-                          )}
-                          {leader.role === 'nurse' && (
-                            <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-                              <Heart className="w-3 h-3 mr-1" />
-                              Sykepleier
-                            </Badge>
-                          )}
-                          {leader.role === 'leader' && (
-                            <span className="text-muted-foreground">Leder</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-muted-foreground">{leader.phone}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {leaders.filter(l => l.phone !== '12345678').length === 0 && (
-                  <p className="text-muted-foreground text-center py-8">
-                    Ingen ledere registrert enda
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Add New Leader */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Legg til ny leder
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Navn</Label>
-                  <Input
-                    id="name"
-                    placeholder="Ola Nordmann"
-                    value={newLeaderName}
-                    onChange={(e) => setNewLeaderName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefon</Label>
-                  <Input
-                    id="phone"
-                    placeholder="12345678"
-                    value={newLeaderPhone}
-                    onChange={(e) => setNewLeaderPhone(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="isAdmin"
-                  checked={newLeaderIsAdmin}
-                  onCheckedChange={setNewLeaderIsAdmin}
-                />
-                <Label htmlFor="isAdmin">Admin-tilgang</Label>
-              </div>
-              <Button onClick={addLeader}>
-                <Plus className="w-4 h-4 mr-2" />
-                Legg til leder
-              </Button>
-            </CardContent>
-          </Card>
-
-          <LeaderDetailDialog
-            leader={editingLeader}
-            open={isEditDialogOpen}
-            onOpenChange={setIsEditDialogOpen}
-            onSaved={loadData}
-            currentRole={editingLeader?.role || 'leader'}
-          />
-        </TabsContent>
-      </Tabs>
-    </div>
+      <LeaderDetailDialog
+        leader={editingLeader}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSaved={loadData}
+      />
+    </SidebarProvider>
   );
 }
