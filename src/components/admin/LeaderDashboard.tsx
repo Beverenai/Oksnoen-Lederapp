@@ -248,7 +248,7 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
               className={cn(
                 'relative overflow-hidden transition-all hover:shadow-md cursor-pointer min-h-[220px] ring-2',
                 getBorderClass(),
-                hasObs && !isAdminOrNurse && 'ring-destructive/50'
+                hasObs && !isAdminOrNurse && 'border-l-4 border-l-destructive'
               )}
               onClick={() => handleEditClick(leader)}
             >
