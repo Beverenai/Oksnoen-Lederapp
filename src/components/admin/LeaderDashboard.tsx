@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -86,34 +86,58 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
 
   const activeLeaders = leaders.filter(l => l.is_active !== false && l.phone !== '12345678');
 
-  // Fetch all leader content and roles
+  // Fetch all leader content and roles - extracted to useCallback for reuse
+  const fetchContent = useCallback(async () => {
+    setLoading(true);
+    const { data: contentData } = await supabase
+      .from('leader_content')
+      .select('*');
+
+    // Fetch admin and nurse roles to know who should always be "green"
+    const { data: rolesData } = await supabase
+      .from('user_roles')
+      .select('leader_id, role')
+      .in('role', ['admin', 'nurse']);
+
+    const adminNurseSet = new Set(rolesData?.map(r => r.leader_id) || []);
+    setAdminNurseIds(adminNurseSet);
+
+    const leadersMap = activeLeaders.map(leader => ({
+      ...leader,
+      content: contentData?.find(c => c.leader_id === leader.id) || null
+    }));
+
+    setLeadersWithContent(leadersMap);
+    setLoading(false);
+  }, [activeLeaders]);
+
+  // Initial fetch
   useEffect(() => {
-    const fetchContent = async () => {
-      setLoading(true);
-      const { data: contentData } = await supabase
-        .from('leader_content')
-        .select('*');
-
-      // Fetch admin and nurse roles to know who should always be "green"
-      const { data: rolesData } = await supabase
-        .from('user_roles')
-        .select('leader_id, role')
-        .in('role', ['admin', 'nurse']);
-
-      const adminNurseSet = new Set(rolesData?.map(r => r.leader_id) || []);
-      setAdminNurseIds(adminNurseSet);
-
-      const leadersMap = activeLeaders.map(leader => ({
-        ...leader,
-        content: contentData?.find(c => c.leader_id === leader.id) || null
-      }));
-
-      setLeadersWithContent(leadersMap);
-      setLoading(false);
-    };
-
     fetchContent();
-  }, [leaders]);
+  }, [fetchContent]);
+
+  // Realtime subscription for has_read changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('leader-content-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'leader_content'
+        },
+        () => {
+          // Refetch when any leader_content changes
+          fetchContent();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchContent]);
 
   // Filter leaders based on search
   const filteredLeaders = leadersWithContent.filter(leader =>
