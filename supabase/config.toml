@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.push-admin-alert]
 verify_jwt = false
+
+[functions.import-participants-background]
+verify_jwt = false
