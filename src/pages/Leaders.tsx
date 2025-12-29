@@ -218,7 +218,7 @@ export default function Leaders() {
       );
     }
 
-    // Apply sorting - Priority roles at top, Kjøkken at the bottom
+    // Apply sorting - Priority roles at top, "Fri" and Kjøkken at the bottom
     result.sort((a, b) => {
       // Priority order helper: Statsminister first, then Visestatsminister/Admin, then Nurse
       const getPriority = (leader: LeaderWithContent) => {
@@ -237,12 +237,20 @@ export default function Leaders() {
       // Priority leaders always at top
       if (aPriority !== bPriority) return aPriority - bPriority;
       
+      // Check if leader has "Fri" as activity
+      const aIsFri = a.content?.current_activity?.toLowerCase().includes('fri');
+      const bIsFri = b.content?.current_activity?.toLowerCase().includes('fri');
+      
       const aIsKitchen = a.team?.toLowerCase() === 'kjøkken';
       const bIsKitchen = b.team?.toLowerCase() === 'kjøkken';
       
-      // Kjøkken always at bottom (only for non-priority leaders)
+      // Kjøkken always at very bottom
       if (aIsKitchen && !bIsKitchen) return 1;
       if (!aIsKitchen && bIsKitchen) return -1;
+      
+      // "Fri" leaders should be at bottom (but above Kjøkken)
+      if (aIsFri && !bIsFri) return 1;
+      if (!aIsFri && bIsFri) return -1;
       
       switch (sortBy) {
         case 'activity':
