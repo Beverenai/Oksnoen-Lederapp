@@ -21,6 +21,7 @@ import {
   Home as HomeIcon,
   Users,
   MapPin,
+  Anchor,
   Wrench,
   type LucideIcon
 } from 'lucide-react';
@@ -34,6 +35,13 @@ interface FixTask {
   title: string;
   assigned_to: string | null;
   status: string;
+}
+
+interface PendingRopeControl {
+  id: string;
+  activity: string;
+  assigned_to: string | null;
+  fixed_at: string | null;
 }
 
 interface LeaderCabin {
@@ -126,6 +134,7 @@ export default function Home() {
   const [hasRead, setHasRead] = useState(false);
   const [leaderCabins, setLeaderCabins] = useState<LeaderCabin[]>([]);
   const [assignedFixTasks, setAssignedFixTasks] = useState<FixTask[]>([]);
+  const [pendingRopeControls, setPendingRopeControls] = useState<PendingRopeControl[]>([]);
 
   // Fetch has_read status
   useEffect(() => {
@@ -148,7 +157,7 @@ export default function Home() {
 
     setIsLoading(true);
     try {
-      const [contentRes, activitiesTextRes, configRes, cabinsRes, fixTasksRes] = await Promise.all([
+      const [contentRes, activitiesTextRes, configRes, cabinsRes, fixTasksRes, ropeControlsRes] = await Promise.all([
         supabase
           .from('leader_content')
           .select('*')
@@ -173,6 +182,11 @@ export default function Home() {
           .select('id, title, assigned_to, status')
           .eq('assigned_to', leader.id)
           .neq('status', 'fixed'),
+        supabase
+          .from('rope_controls')
+          .select('id, activity, assigned_to, fixed_at')
+          .eq('assigned_to', leader.id)
+          .is('fixed_at', null),
       ]);
 
       setContent(contentRes.data);
@@ -187,6 +201,9 @@ export default function Home() {
       
       // Set assigned fix tasks
       setAssignedFixTasks((fixTasksRes.data || []) as FixTask[]);
+      
+      // Set pending rope controls
+      setPendingRopeControls((ropeControlsRes.data || []) as PendingRopeControl[]);
     } catch (error) {
       console.error('Error loading home data:', error);
     } finally {
@@ -224,6 +241,11 @@ export default function Home() {
         event: '*', 
         schema: 'public', 
         table: 'fix_tasks'
+      }, () => loadData())
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'rope_controls'
       }, () => loadData())
       .subscribe();
 
@@ -401,6 +423,30 @@ export default function Home() {
                   </p>
                   <p className="text-sm text-muted-foreground">
                     Trykk for å se oppgavene
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Rope Control Alert */}
+        {pendingRopeControls.length > 0 && (
+          <Card 
+            className="border border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors"
+            onClick={() => navigate('/rope-control')}
+          >
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-amber-500/20">
+                  <Anchor className="w-5 h-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-foreground">
+                    Du har {pendingRopeControls.length} utstyr som må fikses!
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Trykk for å se og godkjenne
                   </p>
                 </div>
               </div>

@@ -22,6 +22,7 @@ import Admin from "@/pages/Admin";
 import AdminSettings from "@/pages/AdminSettings";
 import Nurse from "@/pages/Nurse";
 import Fix from "@/pages/Fix";
+import RopeControl from "@/pages/RopeControl";
 import ComingSoon from "@/pages/ComingSoon";
 import ImportantInfo from "@/pages/ImportantInfo";
 import ParticipantStats from "@/pages/ParticipantStats";
@@ -235,6 +236,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Fix />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/rope-control"
+        element={
+          <ProtectedRoute>
+            <RopeControl />
           </ProtectedRoute>
         }
       />

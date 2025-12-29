@@ -809,6 +809,88 @@ export type Database = {
           },
         ]
       }
+      rope_controls: {
+        Row: {
+          activity: string
+          assigned_to: string | null
+          carabiner_comment: string | null
+          carabiner_status: string | null
+          created_at: string | null
+          fix_comment: string | null
+          fixed_at: string | null
+          fixed_by: string | null
+          harness_comment: string | null
+          harness_status: string | null
+          helmet_comment: string | null
+          helmet_status: string | null
+          id: string
+          leader_id: string
+          rope_comment: string | null
+          rope_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activity: string
+          assigned_to?: string | null
+          carabiner_comment?: string | null
+          carabiner_status?: string | null
+          created_at?: string | null
+          fix_comment?: string | null
+          fixed_at?: string | null
+          fixed_by?: string | null
+          harness_comment?: string | null
+          harness_status?: string | null
+          helmet_comment?: string | null
+          helmet_status?: string | null
+          id?: string
+          leader_id: string
+          rope_comment?: string | null
+          rope_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activity?: string
+          assigned_to?: string | null
+          carabiner_comment?: string | null
+          carabiner_status?: string | null
+          created_at?: string | null
+          fix_comment?: string | null
+          fixed_at?: string | null
+          fixed_by?: string | null
+          harness_comment?: string | null
+          harness_status?: string | null
+          helmet_comment?: string | null
+          helmet_status?: string | null
+          id?: string
+          leader_id?: string
+          rope_comment?: string | null
+          rope_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rope_controls_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rope_controls_fixed_by_fkey"
+            columns: ["fixed_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rope_controls_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_activities: {
         Row: {
           created_at: string | null
