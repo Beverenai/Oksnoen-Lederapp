@@ -66,34 +66,70 @@ EKSEMPLER PÅ GODE PASS:
 
 "Charlotte har vært en fantastisk jente å ha på leir. Hun er en ekte glad og morsom jente man ikke kan unngå å bli glad i. Hun er med på overnatting, dramakurs med forestilling, klatrer i fjellveggen og stått på vannski. Håper å se deg neste år!"`;
 
-// Activities that count toward Styrkeprøve
-const LILLE_STYRKEPROVE_ACTIVITIES = [
-  'Klatrevegg',
-  'Rappellering',
-  'Tarzanhopp',
+// Store Styrkeprøven requirements (all must be completed)
+const STORE_STYRKEPROVE_REQUIREMENTS = [
+  'Tretten meter',
+  'Skrikeren begge veier',
+  'Klatring',
   'Taubane',
-  'Skrikeren en vei',
-  'Svømming til Skrikeren en vei', // backwards compat
+  'Rappis',
 ];
 
-const STORE_STYRKEPROVE_ACTIVITIES = [
-  'Klatrevegg',
-  'Rappellering',
-  'Tarzanhopp',
+// Alternative old names for backwards compatibility
+const STORE_ALTERNATIVES: Record<string, string[]> = {
+  'skrikeren begge veier': ['svømming til skrikeren begge veier'],
+};
+
+// Lille Styrkeprøven fixed requirements (all must be completed)
+const LILLE_FIXED_REQUIREMENTS = [
+  'Klatring',
+  'Rappis',
   'Taubane',
-  'Skrikeren begge veier',
-  'Svømming til Skrikeren begge veier', // backwards compat
 ];
+
+// Height alternatives - at least one must be completed
+const LILLE_HEIGHT_ALTERNATIVES = ['Åtte meter', 'Ti meter'];
+
+// Swimming alternatives - at least one must be completed
+const LILLE_SWIMMING_ALTERNATIVES = ['Skrikeren en vei', 'Triatlon'];
+
+// Alternative old names for backwards compatibility
+const LILLE_ALTERNATIVES: Record<string, string[]> = {
+  'skrikeren en vei': ['svømming til skrikeren en vei'],
+};
+
+function matchesRequirement(activities: string[], requirement: string, alternatives: Record<string, string[]> = {}): boolean {
+  const normalizedReq = requirement.toLowerCase();
+  const altNames = alternatives[normalizedReq] || [];
+  
+  return activities.some(a => {
+    const normalized = a.toLowerCase();
+    return normalized === normalizedReq || altNames.includes(normalized);
+  });
+}
+
+function hasAnyOf(activities: string[], alternatives: string[], altNamesMap: Record<string, string[]> = {}): boolean {
+  return alternatives.some(alt => matchesRequirement(activities, alt, altNamesMap));
+}
 
 function hasLilleStyrkprove(activities: string[]): boolean {
-  return LILLE_STYRKEPROVE_ACTIVITIES.every(activity => 
-    activities.some(a => a === activity)
+  // All fixed requirements must be met
+  const hasAllFixed = LILLE_FIXED_REQUIREMENTS.every(req => 
+    matchesRequirement(activities, req, LILLE_ALTERNATIVES)
   );
+  
+  // At least one height alternative must be met (8 meter OR 10 meter)
+  const hasHeight = hasAnyOf(activities, LILLE_HEIGHT_ALTERNATIVES);
+  
+  // At least one swimming alternative must be met (Skrikeren en vei OR Triatlon)
+  const hasSwimming = hasAnyOf(activities, LILLE_SWIMMING_ALTERNATIVES, LILLE_ALTERNATIVES);
+  
+  return hasAllFixed && hasHeight && hasSwimming;
 }
 
 function hasStoreStyrkprove(activities: string[]): boolean {
-  return STORE_STYRKEPROVE_ACTIVITIES.every(activity => 
-    activities.some(a => a === activity)
+  return STORE_STYRKEPROVE_REQUIREMENTS.every(req => 
+    matchesRequirement(activities, req, STORE_ALTERNATIVES)
   );
 }
 

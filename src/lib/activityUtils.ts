@@ -18,41 +18,59 @@ export const ACTIVITIES = [
   { id: 'outboard', title: 'Outboard' },
 ] as const;
 
-// Requirements for Store Styrkeprøven (accepts both old and new names)
+// Requirements for Store Styrkeprøven
+// All of these must be completed
 export const STORE_STYRKEPROVE_REQUIREMENTS = [
   'Tretten meter',
-  'Taubane',
-  'Klatring',
   'Skrikeren begge veier',
+  'Klatring',
+  'Taubane',
+  'Rappis',
 ];
 
 // Alternative old names that also count (for backwards compatibility)
-const STORE_STYRKEPROVE_ALTERNATIVES: Record<string, string> = {
-  'skrikeren begge veier': 'svømming til skrikeren begge veier',
+const STORE_STYRKEPROVE_ALTERNATIVES: Record<string, string[]> = {
+  'skrikeren begge veier': ['svømming til skrikeren begge veier'],
 };
 
-// Requirements for Lille Styrkeprøven (accepts both old and new names)
-export const LILLE_STYRKEPROVE_REQUIREMENTS = [
-  'Åtte meter',
-  'Taubane',
+// Fixed requirements for Lille Styrkeprøven (all must be completed)
+export const LILLE_STYRKEPROVE_FIXED_REQUIREMENTS = [
   'Klatring',
+  'Rappis',
+  'Taubane',
+];
+
+// Height alternatives - at least one must be completed (8 meter OR 10 meter)
+export const LILLE_STYRKEPROVE_HEIGHT_ALTERNATIVES = [
+  'Åtte meter',
+  'Ti meter',
+];
+
+// Swimming alternatives - at least one must be completed (Skrikeren en vei OR Triatlon)
+export const LILLE_STYRKEPROVE_SWIMMING_ALTERNATIVES = [
   'Skrikeren en vei',
+  'Triatlon',
 ];
 
 // Alternative old names that also count (for backwards compatibility)
-const LILLE_STYRKEPROVE_ALTERNATIVES: Record<string, string> = {
-  'skrikeren en vei': 'svømming til skrikeren en vei',
+const LILLE_STYRKEPROVE_ALTERNATIVES: Record<string, string[]> = {
+  'skrikeren en vei': ['svømming til skrikeren en vei'],
 };
 
 // Check if activity matches requirement (including old names)
-function matchesRequirement(completedActivities: string[], requirement: string, alternatives: Record<string, string>): boolean {
+function matchesRequirement(completedActivities: string[], requirement: string, alternatives: Record<string, string[]> = {}): boolean {
   const normalizedReq = requirement.toLowerCase();
-  const altName = alternatives[normalizedReq];
+  const altNames = alternatives[normalizedReq] || [];
   
   return completedActivities.some((a) => {
     const normalized = a.toLowerCase();
-    return normalized === normalizedReq || (altName && normalized === altName);
+    return normalized === normalizedReq || altNames.includes(normalized);
   });
+}
+
+// Check if any of the alternatives are completed
+function hasAnyOf(completedActivities: string[], alternatives: string[], altNamesMap: Record<string, string[]> = {}): boolean {
+  return alternatives.some(alt => matchesRequirement(completedActivities, alt, altNamesMap));
 }
 
 export function hasStoreStyrkprove(completedActivities: string[]): boolean {
@@ -62,9 +80,18 @@ export function hasStoreStyrkprove(completedActivities: string[]): boolean {
 }
 
 export function hasLilleStyrkprove(completedActivities: string[]): boolean {
-  return LILLE_STYRKEPROVE_REQUIREMENTS.every((req) =>
+  // All fixed requirements must be met
+  const hasAllFixed = LILLE_STYRKEPROVE_FIXED_REQUIREMENTS.every((req) =>
     matchesRequirement(completedActivities, req, LILLE_STYRKEPROVE_ALTERNATIVES)
   );
+  
+  // At least one height alternative must be met (8 meter OR 10 meter)
+  const hasHeight = hasAnyOf(completedActivities, LILLE_STYRKEPROVE_HEIGHT_ALTERNATIVES);
+  
+  // At least one swimming alternative must be met (Skrikeren en vei OR Triatlon)
+  const hasSwimming = hasAnyOf(completedActivities, LILLE_STYRKEPROVE_SWIMMING_ALTERNATIVES, LILLE_STYRKEPROVE_ALTERNATIVES);
+  
+  return hasAllFixed && hasHeight && hasSwimming;
 }
 
 // Get count of unique activities completed (each activity counts as 1, regardless of how many times done)
@@ -97,3 +124,10 @@ export function getCompletedCount(completedActivities: string[]): number {
 export function getTotalActivities(): number {
   return ACTIVITIES.length;
 }
+
+// Export requirements for display purposes
+export const LILLE_STYRKEPROVE_REQUIREMENTS = [
+  ...LILLE_STYRKEPROVE_FIXED_REQUIREMENTS,
+  'Åtte meter eller Ti meter',
+  'Skrikeren en vei eller Triatlon',
+];
