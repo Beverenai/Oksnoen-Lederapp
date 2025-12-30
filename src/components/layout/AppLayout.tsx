@@ -587,15 +587,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
       {/* Mobile Bottom Navigation - Fixed iOS-style tab bar */}
       {!mobileMenuOpen && (
-        <nav className="lg:hidden bottom-nav bg-card/95 border-t border-border">
-          {/* Backdrop blur layer */}
-          <div 
-            className="absolute inset-0"
-            style={{ WebkitBackdropFilter: 'blur(20px)', backdropFilter: 'blur(20px)' }}
-          />
+        <nav className="lg:hidden bottom-nav">
           {/* Content container - allows center button overflow */}
-          <div className="relative h-[var(--nav-h)] flex items-center justify-evenly px-2 overflow-visible">
-              {getBottomNavItems(isAdmin, isNurse).map((item, index) => {
+          <div className="relative h-[var(--nav-h)] flex items-center justify-evenly px-1 overflow-visible">
+            {getBottomNavItems(isAdmin, isNurse).map((item, index) => {
                 const isActive = location.pathname === item.to;
                 const isCenterButton = index === 2; // Center position (3rd item)
                 
@@ -695,23 +690,23 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     key={item.to}
                     to={item.to}
                     onClick={() => hapticSelection()}
-                    className="flex flex-col items-center justify-center min-w-[64px] min-h-[56px] transition-all duration-150 active:scale-95 active:opacity-70 relative"
+                    className="flex flex-col items-center justify-center min-w-[52px] py-1 transition-all duration-150 active:scale-95 active:opacity-70 relative"
                   >
                     <div className="relative">
                       <item.icon 
                         className={cn(
-                          'w-6 h-6 transition-colors',
+                          'w-[22px] h-[22px] transition-colors',
                           isActive ? 'text-primary' : 'text-muted-foreground/70'
                         )} 
-                        size={24}
+                        size={22}
                         strokeWidth={isActive ? 2.5 : 1.75}
                       />
                       {isHomeWithUnread && (
-                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[hsl(0_65%_55%)] rounded-full border-2 border-card animate-pulse" />
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-[hsl(0_65%_55%)] rounded-full border border-background animate-pulse" />
                       )}
                     </div>
                     <span className={cn(
-                      'text-[11px] mt-1 transition-colors',
+                      'text-[10px] leading-tight transition-colors',
                       isActive ? 'text-primary font-semibold' : 'text-muted-foreground/70 font-medium'
                     )}>
                       {item.label}
