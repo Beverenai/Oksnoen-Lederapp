@@ -696,20 +696,27 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 }
                 
                 // Standard tab items (non-center)
+                const isHomeWithUnread = item.to === '/' && !hasRead && isRegularLeader;
+                
                 return (
                   <NavLink
                     key={item.to}
                     to={item.to}
-                    className="flex flex-col items-center justify-center min-w-[64px] min-h-[56px] transition-all duration-150 active:scale-95 active:opacity-70"
+                    className="flex flex-col items-center justify-center min-w-[64px] min-h-[56px] transition-all duration-150 active:scale-95 active:opacity-70 relative"
                   >
-                    <item.icon 
-                      className={cn(
-                        'w-6 h-6 transition-colors',
-                        isActive ? 'text-primary' : 'text-muted-foreground/70'
-                      )} 
-                      size={24}
-                      strokeWidth={isActive ? 2.5 : 1.75}
-                    />
+                    <div className="relative">
+                      <item.icon 
+                        className={cn(
+                          'w-6 h-6 transition-colors',
+                          isActive ? 'text-primary' : 'text-muted-foreground/70'
+                        )} 
+                        size={24}
+                        strokeWidth={isActive ? 2.5 : 1.75}
+                      />
+                      {isHomeWithUnread && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[hsl(0_65%_55%)] rounded-full border-2 border-card animate-pulse" />
+                      )}
+                    </div>
                     <span className={cn(
                       'text-[11px] mt-1 transition-colors',
                       isActive ? 'text-primary font-semibold' : 'text-muted-foreground/70 font-medium'
