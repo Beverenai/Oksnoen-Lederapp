@@ -528,8 +528,8 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
 
                 {/* OBS Message - hidden on mobile, at bottom on desktop */}
                 {hasObs && (
-                  <Alert variant="destructive" className="hidden sm:flex mt-3 py-2 px-3">
-                    <AlertTriangle className="h-3 w-3" />
+                  <Alert variant="destructive" className="hidden sm:flex mt-3 py-2 px-3 items-center justify-center text-center">
+                    <AlertTriangle className="h-3 w-3 shrink-0" />
                     <AlertDescription className="text-xs line-clamp-2">
                       {content?.obs_message}
                     </AlertDescription>
