@@ -20,8 +20,6 @@ import { BulkActivityRegistration } from '@/components/passport/BulkActivityRegi
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { VirtualizedParticipantList } from '@/components/passport/VirtualizedParticipantList';
-import { usePullToRefresh } from '@/hooks/usePullToRefresh';
-import { PullIndicator } from '@/components/ui/pull-indicator';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 
 type Cabin = Tables<'cabins'>;
@@ -191,10 +189,6 @@ export default function Passport() {
     refetchActivities();
   }, [refetchParticipants, refetchActivities]);
 
-  // Pull-to-refresh
-  const { pullRef, isPulling, pullProgress, isRefreshing } = usePullToRefresh({
-    onRefresh: async () => { loadData(); },
-  });
 
   const clearCabinFilter = () => {
     setMyCabinsFilter(false);
@@ -352,8 +346,7 @@ export default function Passport() {
     .join(', ');
 
   return (
-    <div ref={pullRef} className="space-y-6 animate-fade-in">
-      <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
+    <div className="space-y-6 animate-fade-in">
       {/* Back button when filtered by cabin */}
       {(cabinFilterFromUrl || myCabinsFilter) && (
         <Button variant="ghost" onClick={clearCabinFilter} className="mb-2">

@@ -225,6 +225,7 @@ header, nav {
   body {
     @apply bg-background text-foreground font-body antialiased;
     overscroll-behavior: none;
+    overscroll-behavior-y: none;
   }
 
   /* Desktop: allow normal scroll */
@@ -317,19 +318,18 @@ header, nav {
   border-top: 1px solid hsl(var(--border));
 }
 
-/* App content wrapper - adds bottom padding to avoid content behind nav */
+/* App content wrapper - adds bottom padding to avoid content behind floating nav */
 .app-content {
-  padding-bottom: calc(var(--nav-h) + var(--safe-b));
+  padding-bottom: calc(var(--nav-h) + var(--safe-b) + 24px);
 }
 
-/* Bottom nav container - iOS-style frosted glass tab bar */
+/* Bottom nav container - iOS26 floating glass tab bar */
 .bottom-nav {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: calc(var(--nav-h) + var(--safe-b));
-  padding-bottom: var(--safe-b);
+  left: 16px;
+  right: 16px;
+  bottom: calc(8px + var(--safe-b));
+  height: var(--nav-h);
   z-index: 50;
   overflow: visible;
   -webkit-backface-visibility: hidden;
@@ -338,12 +338,20 @@ header, nav {
   background: rgba(255, 255, 255, 0.72);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
-  border-top: 0.5px solid rgba(0, 0, 0, 0.12);
+  /* Floating pill style */
+  border-radius: 24px;
+  border: 0.5px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.08),
+    0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .dark .bottom-nav {
   background: rgba(30, 30, 30, 0.72);
-  border-top: 0.5px solid rgba(255, 255, 255, 0.1);
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.25),
+    0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
   /* App scroll container - smooth iOS momentum scroll */
