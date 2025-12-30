@@ -32,10 +32,13 @@ import {
   GripVertical,
   ChevronDown,
   ChevronUp,
-  Plus
+  Plus,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
+import { LeaderListView } from '@/components/admin/LeaderListView';
 
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -168,6 +171,9 @@ export default function Admin() {
 
   // Collapsible states for dashboard
   const [isHomeConfigOpen, setIsHomeConfigOpen] = useState(false);
+
+  // View mode for leader list
+  const [leaderViewMode, setLeaderViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     loadData();
@@ -569,16 +575,39 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Participant Stats */}
-      
+      {/* Leader View Toggle */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Lederoversikt</h2>
+        <ToggleGroup 
+          type="single" 
+          value={leaderViewMode} 
+          onValueChange={(value) => value && setLeaderViewMode(value as 'grid' | 'list')}
+          className="bg-muted rounded-lg p-1"
+        >
+          <ToggleGroupItem value="grid" aria-label="Rutenettvisning" className="px-3">
+            <LayoutGrid className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="list" aria-label="Listevisning" className="px-3">
+            <List className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
 
-      {/* Leader Dashboard */}
-      <LeaderDashboard
-        leaders={leaders}
-        homeConfig={localHomeConfig}
-        onLeaderUpdated={loadData}
-        onScheduleAutoExport={scheduleAutoExport}
-      />
+      {/* Leader Dashboard or List View */}
+      {leaderViewMode === 'grid' ? (
+        <LeaderDashboard
+          leaders={leaders}
+          homeConfig={localHomeConfig}
+          onLeaderUpdated={loadData}
+          onScheduleAutoExport={scheduleAutoExport}
+        />
+      ) : (
+        <LeaderListView
+          leaders={leaders}
+          homeConfig={localHomeConfig}
+          onLeaderUpdated={loadData}
+        />
+      )}
 
       {/* Session Activities Text */}
       <Card>
