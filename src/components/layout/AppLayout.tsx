@@ -540,69 +540,77 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </nav>
       </div>
 
-      {/* Mobile Bottom Navigation - hidden when menu is open */}
+      {/* Mobile Bottom Navigation - iOS-style floating tab bar */}
       {!mobileMenuOpen && (
         <nav 
-          className="lg:hidden mobile-bottom-nav fixed inset-x-0 bottom-0 bg-card/95 backdrop-blur-md border-t border-border shadow-lg z-30"
+          className="lg:hidden mobile-bottom-nav fixed bottom-0 left-0 right-0 z-30"
           style={{ 
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
             WebkitTransform: 'translate3d(0,0,0)',
             transform: 'translate3d(0,0,0)'
           }}
         >
-        <div className="h-16 flex items-center justify-evenly">
-          {getBottomNavItems(isAdmin, isNurse).map((item) => {
-            const isActive = location.pathname === item.to;
-            
-            if (item.isHajolo) {
-              return (
-                <button
-                  key="hajolo"
-                  onClick={handleHajoloClick}
-                  className="flex flex-col items-center justify-center -mt-5 w-16"
-                >
-                  <div
-                    className={cn(
-                      'w-14 h-14 rounded-full flex items-center justify-center transition-colors shadow-lg border-4 border-card',
-                      hasRead ? 'bg-green-500' : 'bg-red-500'
-                    )}
+          {/* Blurred background layer */}
+          <div 
+            className="absolute inset-0 bg-card/80 backdrop-blur-xl border-t border-border/50"
+            style={{ WebkitBackdropFilter: 'blur(20px)', backdropFilter: 'blur(20px)' }}
+          />
+          
+          {/* Tab bar content */}
+          <div className="relative h-[52px] flex items-center justify-evenly px-2">
+            {getBottomNavItems(isAdmin, isNurse).map((item) => {
+              const isActive = location.pathname === item.to;
+              
+              if (item.isHajolo) {
+                return (
+                  <button
+                    key="hajolo"
+                    onClick={handleHajoloClick}
+                    className="flex flex-col items-center justify-center min-w-[64px] min-h-[48px] -mt-3"
                   >
-                    <Check className="w-7 h-7 text-white" />
-                  </div>
-                  <span className="text-[10px] font-medium mt-0.5">{item.label}</span>
-                </button>
-              );
-            }
-            
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className="flex flex-col items-center justify-center w-16"
-              >
-                <item.icon 
-                  className={cn(
-                    'w-6 h-6 transition-colors',
+                    <div
+                      className={cn(
+                        'w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-elevated border-[3px] border-card',
+                        hasRead ? 'bg-success' : 'bg-destructive'
+                      )}
+                    >
+                      <Check className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-[10px] font-medium mt-0.5 text-foreground">{item.label}</span>
+                  </button>
+                );
+              }
+              
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className="flex flex-col items-center justify-center min-w-[64px] min-h-[48px] transition-colors"
+                >
+                  <item.icon 
+                    className={cn(
+                      'w-[22px] h-[22px] transition-colors',
+                      isActive ? 'text-primary' : 'text-muted-foreground'
+                    )} 
+                    size={22}
+                    strokeWidth={isActive ? 2.5 : 2}
+                  />
+                  <span className={cn(
+                    'text-[10px] font-medium mt-0.5 transition-colors',
                     isActive ? 'text-primary' : 'text-muted-foreground'
-                  )} 
-                  size={24} 
-                />
-                <span className={cn(
-                  'text-[10px] font-medium mt-1',
-                  isActive ? 'text-primary' : 'text-muted-foreground'
-                )}>
-                  {item.label}
-                </span>
-              </NavLink>
-            );
+                  )}>
+                    {item.label}
+                  </span>
+                </NavLink>
+              );
             })}
           </div>
         </nav>
       )}
 
       {/* Main Content */}
-      <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] lg:pb-0 flex-1 lg:min-h-screen">
-        <div className="p-4 lg:p-8">
+      <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 pb-[calc(52px+env(safe-area-inset-bottom,0px)+16px)] lg:pb-0 flex-1 lg:min-h-screen">
+        <div className="p-4 lg:p-6">
           {children}
         </div>
       </main>

@@ -71,9 +71,21 @@ export default {
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "var(--radius-card)",
+        md: "var(--radius-input)",
+        sm: "calc(var(--radius-input) - 4px)",
+        full: "var(--radius-chip)",
+      },
+      boxShadow: {
+        card: "var(--shadow-card)",
+        elevated: "var(--shadow-elevated)",
+      },
+      spacing: {
+        'ios-1': 'var(--spacing-1)',
+        'ios-2': 'var(--spacing-2)',
+        'ios-3': 'var(--spacing-3)',
+        'ios-4': 'var(--spacing-4)',
+        'ios-6': 'var(--spacing-6)',
       },
       keyframes: {
         "accordion-down": {
