@@ -6,6 +6,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: "/",
   server: {
     host: "::",
     port: 8080,
@@ -102,13 +103,6 @@ export default defineConfig(({ mode }) => ({
       }
     },
     rollupOptions: {
-      // Mark Capacitor packages as external - they're only available in native context
-      external: [
-        '@capacitor/core',
-        '@capacitor/haptics',
-        '@capacitor/camera',
-        '@capacitor/push-notifications',
-      ],
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],

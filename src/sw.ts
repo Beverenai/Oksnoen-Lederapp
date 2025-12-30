@@ -24,6 +24,14 @@ self.addEventListener('activate', () => {
   console.log('[SW] Service worker activated');
 });
 
+// Listen for skipWaiting message from client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[SW] Received SKIP_WAITING message');
+    self.skipWaiting();
+  }
+});
+
 // === IMAGE CACHING ===
 
 // Cache participant images from Supabase Storage for 7 days
