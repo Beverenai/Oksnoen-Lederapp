@@ -39,6 +39,7 @@ import {
   LILLE_STYRKEPROVE_REQUIREMENTS
 } from '@/lib/activityUtils';
 import { cn } from '@/lib/utils';
+import { hapticImpact, hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 interface CheckoutDetailDialogProps {
   participantId: string | null;
@@ -169,6 +170,7 @@ export function CheckoutDetailDialog({
   const handleMarkWritten = async () => {
     if (!participant || !leader) return;
 
+    hapticImpact('medium');
     setIsSaving(true);
     try {
       const { error } = await supabase
@@ -183,11 +185,13 @@ export function CheckoutDetailDialog({
 
       if (error) throw error;
 
+      hapticSuccess();
       toast.success('Pass markert som skrevet!');
       onComplete();
       onOpenChange(false);
     } catch (error) {
       console.error('Error marking pass as written:', error);
+      hapticError();
       toast.error('Kunne ikke lagre');
     } finally {
       setIsSaving(false);

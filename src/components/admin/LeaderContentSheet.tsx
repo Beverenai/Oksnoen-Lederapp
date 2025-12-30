@@ -26,7 +26,7 @@ import { icons } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
 
@@ -307,6 +307,7 @@ export function LeaderContentSheet({
   const handleSendNotification = async () => {
     if (!leader || !notificationTitle.trim() || !currentLeader) return;
 
+    hapticImpact('medium');
     setIsSendingNotification(true);
     try {
       const { data, error } = await supabase.functions.invoke('push-send', {
@@ -322,6 +323,7 @@ export function LeaderContentSheet({
       if (error) throw error;
 
       if (data?.sent > 0) {
+        hapticSuccess();
         toast.success(`Varsling sendt til ${getFirstName(leader.name)}!`);
         setNotificationTitle('');
         setNotificationMessage('');
@@ -330,6 +332,7 @@ export function LeaderContentSheet({
       }
     } catch (error) {
       console.error('Error sending notification:', error);
+      hapticError();
       toast.error('Kunne ikke sende varsling');
     } finally {
       setIsSendingNotification(false);

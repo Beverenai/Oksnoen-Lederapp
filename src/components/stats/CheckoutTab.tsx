@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { CheckoutDetailDialog } from '@/components/checkout/CheckoutDetailDialog';
+import { hapticImpact, hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 interface CheckoutProgress {
   status: 'idle' | 'starting' | 'running' | 'done' | 'error';
@@ -126,6 +127,7 @@ export function CheckoutTab() {
   }, [progress.status, loadData]);
 
   const handleStartCheckout = async () => {
+    hapticImpact('medium');
     try {
       setProgress({ status: 'starting', processed: 0, total: 0 });
 
@@ -133,17 +135,20 @@ export function CheckoutTab() {
 
       if (error) {
         console.error('Error starting pass generation:', error);
+        hapticError();
         toast.error('Kunne ikke starte generering');
         setProgress({ status: 'error', processed: 0, total: 0, error: error.message });
       }
     } catch (error) {
       console.error('Error starting checkout:', error);
+      hapticError();
       toast.error('Kunne ikke starte utsjekk');
       setProgress({ status: 'error', processed: 0, total: 0 });
     }
   };
 
   const handleDisableCheckout = async () => {
+    hapticImpact('medium');
     try {
       await supabase
         .from('app_config')
@@ -156,9 +161,11 @@ export function CheckoutTab() {
       
       setCheckoutEnabled(false);
       setProgress({ status: 'idle', processed: 0, total: 0 });
+      hapticSuccess();
       toast.success('Utsjekk deaktivert');
     } catch (error) {
       console.error('Error disabling checkout:', error);
+      hapticError();
       toast.error('Kunne ikke deaktivere utsjekk');
     }
   };
