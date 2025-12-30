@@ -59,6 +59,21 @@ const formatTeamDisplay = (team: string | null): string => {
   return team;
 };
 
+// Mobile team abbreviations - saves space
+const formatTeamDisplayMobile = (team: string | null, isAdmin?: boolean, isNurse?: boolean): string => {
+  if (isAdmin) return 'A';
+  if (isNurse) return 'N';
+  if (!team) return '';
+  const teamLower = team.toLowerCase().trim();
+  if (teamLower === '1' || teamLower === 'team 1') return '1';
+  if (teamLower === '2' || teamLower === 'team 2') return '2';
+  if (teamLower === '1f' || teamLower === 'team 1f') return '1F';
+  if (teamLower === '2f' || teamLower === 'team 2f') return '2F';
+  if (teamLower === 'kordinator') return 'K';
+  if (teamLower === 'kjokken' || teamLower === 'kjøkken') return 'KJ';
+  return team.substring(0, 2).toUpperCase();
+};
+
 // Team sorting order (same as LeaderDashboard)
 const getTeamSortOrder = (team: string | null): number => {
   const teamLower = team?.toLowerCase().trim();
@@ -492,11 +507,9 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
                   </div>
                 </TableCell>
                 <TableCell className="px-2">
-                  {leader.team && (
-                    <Badge variant="secondary" className={`text-xs w-16 justify-center ${getTeamStyles(leader.team)}`}>
-                      {formatTeamDisplay(leader.team)}
-                    </Badge>
-                  )}
+                  <Badge variant="secondary" className={`text-xs w-8 justify-center ${getTeamStyles(leader.team)}`}>
+                    {formatTeamDisplayMobile(leader.team, leader.isAdmin, leader.isNurse)}
+                  </Badge>
                 </TableCell>
                 <TableCell className="px-2 text-xs text-muted-foreground truncate max-w-[100px]">
                   {leader.content?.current_activity || '-'}
