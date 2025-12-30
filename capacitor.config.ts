@@ -16,9 +16,8 @@ const config: CapacitorConfig = {
       permissionType: 'prompt'
     },
     SplashScreen: {
-      launchShowDuration: 2000,
-      launchAutoHide: true,
-      launchFadeOutDuration: 500,
+      launchShowDuration: 1500,
+      launchAutoHide: false,
       backgroundColor: '#16a34a',
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
