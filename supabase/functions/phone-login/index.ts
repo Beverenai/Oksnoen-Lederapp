@@ -22,13 +22,20 @@ serve(async (req) => {
       );
     }
 
-    // Normalize phone number - remove spaces
-    const normalizedPhone = phone.replace(/\s/g, '');
+    // Normalize phone number - remove spaces and country code prefix
+    let normalizedPhone = phone.replace(/\s/g, '');
+    
+    // Remove +47 or 0047 prefix if present
+    if (normalizedPhone.startsWith('+47')) {
+      normalizedPhone = normalizedPhone.slice(3);
+    } else if (normalizedPhone.startsWith('0047')) {
+      normalizedPhone = normalizedPhone.slice(4);
+    }
 
-    // Validate phone format (basic validation)
-    if (!/^\d{8,15}$/.test(normalizedPhone)) {
+    // Validate phone format (8 digits for Norwegian numbers)
+    if (!/^\d{8}$/.test(normalizedPhone)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid phone number format' }),
+        JSON.stringify({ error: 'Ugyldig telefonnummer. Bruk 8 siffer.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
