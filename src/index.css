@@ -19,11 +19,21 @@ img, video {
   object-fit: contain;
 }
 
-/* Scroll container utility */
+/* Scroll container utility with iOS momentum scrolling */
 .scroll-area {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Subtle touch feedback for iOS native feel */
+button:active:not(:disabled),
+[role="button"]:active,
+.clickable-row:active {
+  transform: scale(0.99);
+  opacity: 0.9;
+  transition: transform 0.1s ease, opacity 0.1s ease;
 }
 
 /* Long text wrapping utility */
