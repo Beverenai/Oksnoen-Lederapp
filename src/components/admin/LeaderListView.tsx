@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Bell, Phone, Search, AlertTriangle } from 'lucide-react';
+import { Bell, Phone, Search, AlertTriangle, ChevronDown, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tables } from '@/integrations/supabase/types';
 import { LeaderContentSheet } from './LeaderContentSheet';
@@ -48,22 +48,58 @@ const getFirstName = (fullName: string): string => {
   return fullName.split(' ')[0];
 };
 
-const getTeamStyles = (team: string | null) => {
-  switch (team) {
+// Team sorting order (same as LeaderDashboard)
+const getTeamSortOrder = (team: string | null): number => {
+  const teamLower = team?.toLowerCase().trim();
+  switch (teamLower) {
+    case 'kordinator': return 1;
     case '1':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+    case 'team 1': return 2;
     case '2':
-      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-    case '3':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-    case '4':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
-    case '5':
-      return 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200';
+    case 'team 2': return 3;
+    case '1f':
+    case 'team 1f': return 4;
+    case '2f':
+    case 'team 2f': return 5;
+    case 'kjokken': return 6;
+    default: return 7;
+  }
+};
+
+// Team color styles
+const getTeamStyles = (team: string | null) => {
+  const teamLower = team?.toLowerCase().trim();
+  switch (teamLower) {
+    case '1':
+    case 'team 1':
+      return 'bg-red-500 text-white';
+    case '2':
+    case 'team 2':
+      return 'bg-orange-500 text-white';
+    case '1f':
+    case 'team 1f':
+      return 'bg-yellow-400 text-black';
+    case '2f':
+    case 'team 2f':
+      return 'bg-blue-500 text-white';
+    case 'kjokken':
+      return 'bg-purple-500 text-white';
+    case 'kordinator':
+      return 'bg-pink-500 text-white';
     default:
       return 'bg-muted text-muted-foreground';
   }
 };
+
+// Team filter options
+const TEAM_FILTERS = [
+  { value: '1', label: 'Team 1', color: 'bg-red-500' },
+  { value: '2', label: 'Team 2', color: 'bg-orange-500' },
+  { value: '1f', label: 'Team 1F', color: 'bg-yellow-400' },
+  { value: '2f', label: 'Team 2F', color: 'bg-blue-500' },
+  { value: 'kjokken', label: 'Kjøkken', color: 'bg-purple-500' },
+  { value: 'kordinator', label: 'Kordinator', color: 'bg-pink-500' },
+];
 
 export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderListViewProps) {
   const { leader: currentLeader } = useAuth();
@@ -74,6 +110,10 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
   const [sendingNotification, setSendingNotification] = useState<string | null>(null);
   const [adminIds, setAdminIds] = useState<string[]>([]);
   const [nurseIds, setNurseIds] = useState<string[]>([]);
+  
+  // Team filter state
+  const [activeTeamFilter, setActiveTeamFilter] = useState<string | null>(null);
+  const [showTeamFilters, setShowTeamFilters] = useState(false);
 
   // Fetch leader content and roles
   useEffect(() => {
@@ -124,23 +164,21 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
     };
   }, [leaders]);
 
-  // Filter leaders
-  const filteredLeaders = leadersWithContent.filter(leader =>
-    leader.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter leaders by search and team
+  const filteredLeaders = leadersWithContent.filter(leader => {
+    const matchesSearch = leader.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTeam = !activeTeamFilter || leader.team?.toLowerCase().trim() === activeTeamFilter.toLowerCase();
+    return matchesSearch && matchesTeam;
+  });
 
-  // Sort: Admin first, then Nurse, then by team
+  // Sort: by team order, then by name
   const sortedLeaders = [...filteredLeaders].sort((a, b) => {
-    if (a.isAdmin && !b.isAdmin) return -1;
-    if (!a.isAdmin && b.isAdmin) return 1;
-    if (a.isNurse && !b.isNurse) return -1;
-    if (!a.isNurse && b.isNurse) return 1;
+    // First by team order
+    const aTeamOrder = getTeamSortOrder(a.team);
+    const bTeamOrder = getTeamSortOrder(b.team);
+    if (aTeamOrder !== bTeamOrder) return aTeamOrder - bTeamOrder;
     
-    const teamOrder = ['1', '2', '3', '4', '5', null];
-    const aIndex = teamOrder.indexOf(a.team);
-    const bIndex = teamOrder.indexOf(b.team);
-    if (aIndex !== bIndex) return aIndex - bIndex;
-    
+    // Then by name
     return a.name.localeCompare(b.name, 'nb');
   });
 
@@ -201,6 +239,13 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
+  // Get active filter label
+  const getActiveFilterLabel = () => {
+    if (!activeTeamFilter) return 'Alle';
+    const filter = TEAM_FILTERS.find(f => f.value === activeTeamFilter);
+    return filter?.label || 'Alle';
+  };
+
   return (
     <div className="space-y-4">
       {/* Search */}
@@ -212,6 +257,49 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10"
         />
+      </div>
+
+      {/* Team Filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant={activeTeamFilter ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowTeamFilters(!showTeamFilters)}
+          className="gap-1"
+        >
+          {getActiveFilterLabel()}
+          {activeTeamFilter ? (
+            <X 
+              className="h-3 w-3 ml-1" 
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveTeamFilter(null);
+              }}
+            />
+          ) : (
+            <ChevronDown className={`h-3 w-3 transition-transform ${showTeamFilters ? 'rotate-180' : ''}`} />
+          )}
+        </Button>
+
+        {showTeamFilters && (
+          <div className="flex flex-wrap gap-1">
+            {TEAM_FILTERS.map((filter) => (
+              <Button
+                key={filter.value}
+                variant={activeTeamFilter === filter.value ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setActiveTeamFilter(activeTeamFilter === filter.value ? null : filter.value);
+                  setShowTeamFilters(false);
+                }}
+                className={`gap-1 ${activeTeamFilter === filter.value ? filter.color : ''}`}
+              >
+                <span className={`w-2 h-2 rounded-full ${filter.color}`} />
+                {filter.label}
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Desktop Table View */}
