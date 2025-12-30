@@ -46,7 +46,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
 
 type Leader = Tables<'leaders'>;
 type UserRole = Tables<'user_roles'>;
@@ -465,6 +465,7 @@ export default function Admin() {
   };
 
   const saveAllConfigChanges = async () => {
+    hapticImpact('medium');
     setIsSavingConfig(true);
     try {
       for (const cfg of localHomeConfig) {

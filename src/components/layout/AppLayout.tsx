@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
-import { hapticSuccess } from '@/lib/capacitorHaptics';
+import { hapticSuccess, hapticSelection } from '@/lib/capacitorHaptics';
 import { PassIcon } from '@/components/icons/PassIcon';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
 import {
@@ -607,7 +607,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       <Popover key="hajolo" open={showHajoloTooltip}>
                         <PopoverTrigger asChild>
                           <button
-                            onClick={handleHajoloClick}
+                            onClick={() => {
+                              hapticSelection();
+                              handleHajoloClick();
+                            }}
                             className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:scale-95"
                           >
                             <div
@@ -655,6 +658,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       <NavLink
                         key={item.to}
                         to={item.to}
+                        onClick={() => hapticSelection()}
                         className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:scale-95"
                       >
                         <div className="w-14 h-14 rounded-full flex items-center justify-center bg-slate-800 dark:bg-slate-700 shadow-[0_4px_16px_rgba(0,0,0,0.15)] border-[3px] border-card">
@@ -671,6 +675,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       <NavLink
                         key={item.to}
                         to={item.to}
+                        onClick={() => hapticSelection()}
                         className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:scale-95"
                       >
                         <div className="w-14 h-14 rounded-full flex items-center justify-center bg-rose-500 shadow-[0_4px_16px_rgba(0,0,0,0.15)] border-[3px] border-card">
@@ -689,6 +694,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   <NavLink
                     key={item.to}
                     to={item.to}
+                    onClick={() => hapticSelection()}
                     className="flex flex-col items-center justify-center min-w-[64px] min-h-[56px] transition-all duration-150 active:scale-95 active:opacity-70 relative"
                   >
                     <div className="relative">

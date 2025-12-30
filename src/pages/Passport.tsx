@@ -22,6 +22,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { VirtualizedParticipantList } from '@/components/passport/VirtualizedParticipantList';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullIndicator } from '@/components/ui/pull-indicator';
+import { hapticImpact } from '@/lib/capacitorHaptics';
 
 type Cabin = Tables<'cabins'>;
 
@@ -431,8 +432,11 @@ export default function Passport() {
         <Button
           variant="default"
           size="lg"
-          onClick={() => navigate('/checkout')}
-          className="w-full gap-2 text-lg py-6"
+          onClick={() => {
+            hapticImpact('medium');
+            navigate('/checkout');
+          }}
+          className="w-full gap-2 text-lg py-6 active:scale-[0.98] active:opacity-90 transition-transform"
         >
           <Sparkles className="w-5 h-5" />
           Utsjekk
