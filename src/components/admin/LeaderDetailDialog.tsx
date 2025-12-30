@@ -197,215 +197,217 @@ export function LeaderDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-        <DialogHeader>
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] p-0 flex flex-col">
+        <DialogHeader className="p-4 sm:p-6 pb-0">
           <DialogTitle className="text-lg sm:text-xl">Rediger leder</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 sm:space-y-6">
-          {/* Profile Image - Clickable Avatar */}
-          <div className="flex flex-col items-center gap-2 sm:gap-3">
-            <Label htmlFor="profile-image" className="cursor-pointer group relative">
-              <Avatar className="w-16 h-16 sm:w-24 sm:h-24 ring-2 ring-border group-hover:ring-primary transition-all">
-                <AvatarImage src={profileImageUrl} alt={name} />
-                <AvatarFallback className="text-xl">{getInitials(name)}</AvatarFallback>
-              </Avatar>
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                {isUploading ? (
-                  <Loader2 className="w-6 h-6 text-white animate-spin" />
-                ) : (
-                  <Camera className="w-6 h-6 text-white" />
-                )}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="space-y-4 sm:space-y-6">
+            {/* Profile Image - Clickable Avatar */}
+            <div className="flex flex-col items-center gap-2 sm:gap-3 pt-4">
+              <Label htmlFor="profile-image" className="cursor-pointer group relative">
+                <Avatar className="w-16 h-16 sm:w-24 sm:h-24 ring-2 ring-border group-hover:ring-primary transition-all">
+                  <AvatarImage src={profileImageUrl} alt={name} />
+                  <AvatarFallback className="text-xl">{getInitials(name)}</AvatarFallback>
+                </Avatar>
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                  {isUploading ? (
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  ) : (
+                    <Camera className="w-6 h-6 text-white" />
+                  )}
+                </div>
+              </Label>
+              <p className="text-xs text-muted-foreground">Klikk for å endre bilde</p>
+              <input
+                id="profile-image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                disabled={isUploading}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Basic Info */}
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="name">Navn</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
               </div>
-            </Label>
-            <p className="text-xs text-muted-foreground">Klikk for å endre bilde</p>
-            <input
-              id="profile-image"
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-              disabled={isUploading}
-            />
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefon</Label>
+                <Input
+                  id="phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">E-post</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="age">Alder</Label>
+                <Input
+                  id="age"
+                  type="number"
+                  value={age || ''}
+                  onChange={(e) => setAge(e.target.value ? parseInt(e.target.value) : null)}
+                />
+              </div>
+            </div>
+
+            {/* Team/Cabin Info */}
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="team">Team</Label>
+                <Input
+                  id="team"
+                  value={team}
+                  onChange={(e) => setTeam(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cabin">Hytte</Label>
+                <Input
+                  id="cabin"
+                  value={cabin}
+                  onChange={(e) => setCabin(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ministerpost">Ministerpost</Label>
+                <Input
+                  id="ministerpost"
+                  value={ministerpost}
+                  onChange={(e) => setMinisterpost(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Role Selection */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Rolle</Label>
+              <RadioGroup value={role} onValueChange={(value) => setRole(value as AppRole)}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="leader" id="role-leader" />
+                  <Label htmlFor="role-leader" className="flex items-center gap-2 cursor-pointer">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    Leder
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="admin" id="role-admin" />
+                  <Label htmlFor="role-admin" className="flex items-center gap-2 cursor-pointer">
+                    <Shield className="w-4 h-4 text-blue-500" />
+                    Admin
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="nurse" id="role-nurse" />
+                  <Label htmlFor="role-nurse" className="flex items-center gap-2 cursor-pointer">
+                    <Heart className="w-4 h-4 text-green-500" />
+                    Sykepleier
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <Separator />
+
+            {/* Certifications */}
+            <div className="space-y-2 sm:space-y-3">
+              <Label className="text-sm sm:text-base font-semibold">Sertifiseringer og utstyr</Label>
+              <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="hasCar"
+                    checked={hasCar}
+                    onCheckedChange={(checked) => setHasCar(checked === true)}
+                  />
+                  <Label htmlFor="hasCar" className="cursor-pointer">Har med bil</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="hasDriversLicense"
+                    checked={hasDriversLicense}
+                    onCheckedChange={(checked) => setHasDriversLicense(checked === true)}
+                  />
+                  <Label htmlFor="hasDriversLicense" className="cursor-pointer">Bil-lappen</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="hasBoatLicense"
+                    checked={hasBoatLicense}
+                    onCheckedChange={(checked) => setHasBoatLicense(checked === true)}
+                  />
+                  <Label htmlFor="hasBoatLicense" className="cursor-pointer">Båt-lappen</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="canRappelling"
+                    checked={canRappelling}
+                    onCheckedChange={(checked) => setCanRappelling(checked === true)}
+                  />
+                  <Label htmlFor="canRappelling" className="cursor-pointer">Rappis</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="canClimbing"
+                    checked={canClimbing}
+                    onCheckedChange={(checked) => setCanClimbing(checked === true)}
+                  />
+                  <Label htmlFor="canClimbing" className="cursor-pointer">Klatring</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="canZipline"
+                    checked={canZipline}
+                    onCheckedChange={(checked) => setCanZipline(checked === true)}
+                  />
+                  <Label htmlFor="canZipline" className="cursor-pointer">Taubane oppe</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="canRopeSetup"
+                    checked={canRopeSetup}
+                    onCheckedChange={(checked) => setCanRopeSetup(checked === true)}
+                  />
+                  <Label htmlFor="canRopeSetup" className="cursor-pointer">Taubane oppsett</Label>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
 
-          <Separator />
-
-          {/* Basic Info */}
-          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="name">Navn</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefon</Label>
-              <Input
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">E-post</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="age">Alder</Label>
-              <Input
-                id="age"
-                type="number"
-                value={age || ''}
-                onChange={(e) => setAge(e.target.value ? parseInt(e.target.value) : null)}
-              />
-            </div>
-          </div>
-
-          {/* Team/Cabin Info */}
-          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="team">Team</Label>
-              <Input
-                id="team"
-                value={team}
-                onChange={(e) => setTeam(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cabin">Hytte</Label>
-              <Input
-                id="cabin"
-                value={cabin}
-                onChange={(e) => setCabin(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ministerpost">Ministerpost</Label>
-              <Input
-                id="ministerpost"
-                value={ministerpost}
-                onChange={(e) => setMinisterpost(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Role Selection */}
-          <div className="space-y-3">
-            <Label className="text-base font-semibold">Rolle</Label>
-            <RadioGroup value={role} onValueChange={(value) => setRole(value as AppRole)}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="leader" id="role-leader" />
-                <Label htmlFor="role-leader" className="flex items-center gap-2 cursor-pointer">
-                  <Users className="w-4 h-4 text-muted-foreground" />
-                  Leder
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="admin" id="role-admin" />
-                <Label htmlFor="role-admin" className="flex items-center gap-2 cursor-pointer">
-                  <Shield className="w-4 h-4 text-blue-500" />
-                  Admin
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="nurse" id="role-nurse" />
-                <Label htmlFor="role-nurse" className="flex items-center gap-2 cursor-pointer">
-                  <Heart className="w-4 h-4 text-green-500" />
-                  Sykepleier
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          <Separator />
-
-          {/* Certifications */}
-          <div className="space-y-2 sm:space-y-3">
-            <Label className="text-sm sm:text-base font-semibold">Sertifiseringer og utstyr</Label>
-            <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hasCar"
-                  checked={hasCar}
-                  onCheckedChange={(checked) => setHasCar(checked === true)}
-                />
-                <Label htmlFor="hasCar" className="cursor-pointer">Har med bil</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hasDriversLicense"
-                  checked={hasDriversLicense}
-                  onCheckedChange={(checked) => setHasDriversLicense(checked === true)}
-                />
-                <Label htmlFor="hasDriversLicense" className="cursor-pointer">Bil-lappen</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hasBoatLicense"
-                  checked={hasBoatLicense}
-                  onCheckedChange={(checked) => setHasBoatLicense(checked === true)}
-                />
-                <Label htmlFor="hasBoatLicense" className="cursor-pointer">Båt-lappen</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="canRappelling"
-                  checked={canRappelling}
-                  onCheckedChange={(checked) => setCanRappelling(checked === true)}
-                />
-                <Label htmlFor="canRappelling" className="cursor-pointer">Rappis</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="canClimbing"
-                  checked={canClimbing}
-                  onCheckedChange={(checked) => setCanClimbing(checked === true)}
-                />
-                <Label htmlFor="canClimbing" className="cursor-pointer">Klatring</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="canZipline"
-                  checked={canZipline}
-                  onCheckedChange={(checked) => setCanZipline(checked === true)}
-                />
-                <Label htmlFor="canZipline" className="cursor-pointer">Taubane oppe</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="canRopeSetup"
-                  checked={canRopeSetup}
-                  onCheckedChange={(checked) => setCanRopeSetup(checked === true)}
-                />
-                <Label htmlFor="canRopeSetup" className="cursor-pointer">Taubane oppsett</Label>
-              </div>
-            </div>
-          </div>
-
-          {/* Save Button */}
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Avbryt
-            </Button>
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              Lagre
-            </Button>
-          </div>
+        {/* Sticky Bottom Bar */}
+        <div className="bottom-bar flex justify-end gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Avbryt
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
+            Lagre
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

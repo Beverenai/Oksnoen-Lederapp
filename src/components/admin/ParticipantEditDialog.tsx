@@ -133,111 +133,114 @@ export function ParticipantEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[90vh] p-0 flex flex-col">
+        <DialogHeader className="p-4 sm:p-6 pb-0">
           <DialogTitle>Rediger deltaker</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">Fornavn</Label>
+                <Input
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Fornavn"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Etternavn</Label>
+                <Input
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Etternavn"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="firstName">Fornavn</Label>
+              <Label htmlFor="birthDate" className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Fødselsdato {age !== null && <span className="text-muted-foreground">({age} år)</span>}
+              </Label>
               <Input
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Fornavn"
+                id="birthDate"
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cabin">Hytte</Label>
+                <Select value={cabinId} onValueChange={setCabinId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Velg hytte" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Ingen hytte</SelectItem>
+                    {cabins.map((cabin) => (
+                      <SelectItem key={cabin.id} value={cabin.id}>
+                        {cabin.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="room">Rom</Label>
+                <Select value={room} onValueChange={setRoom}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Velg rom" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Ikke spesifisert</SelectItem>
+                    <SelectItem value="venstre">Venstre</SelectItem>
+                    <SelectItem value="høyre">Høyre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="lastName">Etternavn</Label>
+              <Label htmlFor="timesAttended">Ganger deltatt</Label>
               <Input
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Etternavn"
+                id="timesAttended"
+                type="number"
+                min={0}
+                value={timesAttended}
+                onChange={(e) => setTimesAttended(parseInt(e.target.value) || 0)}
               />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="birthDate" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Fødselsdato {age !== null && <span className="text-muted-foreground">({age} år)</span>}
-            </Label>
-            <Input
-              id="birthDate"
-              type="date"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="cabin">Hytte</Label>
-              <Select value={cabinId} onValueChange={setCabinId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Velg hytte" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Ingen hytte</SelectItem>
-                  {cabins.map((cabin) => (
-                    <SelectItem key={cabin.id} value={cabin.id}>
-                      {cabin.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="notes">Notater</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Generelle notater om deltakeren..."
+                rows={3}
+              />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="room">Rom</Label>
-              <Select value={room} onValueChange={setRoom}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Velg rom" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Ikke spesifisert</SelectItem>
-                  <SelectItem value="venstre">Venstre</SelectItem>
-                  <SelectItem value="høyre">Høyre</SelectItem>
-                </SelectContent>
-              </Select>
+
+            <div className="flex items-center justify-between py-2">
+              <Label htmlFor="hasArrived">Har ankommet</Label>
+              <Switch
+                id="hasArrived"
+                checked={hasArrived}
+                onCheckedChange={setHasArrived}
+              />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="timesAttended">Ganger deltatt</Label>
-            <Input
-              id="timesAttended"
-              type="number"
-              min={0}
-              value={timesAttended}
-              onChange={(e) => setTimesAttended(parseInt(e.target.value) || 0)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notater</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Generelle notater om deltakeren..."
-              rows={3}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-2">
-            <Label htmlFor="hasArrived">Har ankommet</Label>
-            <Switch
-              id="hasArrived"
-              checked={hasArrived}
-              onCheckedChange={setHasArrived}
-            />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
+        {/* Sticky Bottom Bar */}
+        <div className="bottom-bar flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Avbryt
           </Button>
