@@ -14,9 +14,9 @@ initCapacitorPlugins().then((result) => {
 
 // Configure StatusBar for native platforms only
 if (Capacitor.isNativePlatform()) {
-  import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
     StatusBar.setOverlaysWebView({ overlay: true });
-    StatusBar.setStyle({ style: Style.Dark });
+    StatusBar.setStyle({ style: Style.Light });
     console.log('[Capacitor] StatusBar configured');
   }).catch((err) => {
     console.warn('[Capacitor] StatusBar not available:', err);
