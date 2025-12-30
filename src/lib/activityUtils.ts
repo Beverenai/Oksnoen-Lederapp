@@ -12,7 +12,6 @@ export const ACTIVITIES = [
   { id: 'triatlon', title: 'Triatlon' },
   { id: 'klatring', title: 'Klatring' },
   { id: 'skrikern', title: 'Skrikern' },
-  { id: 'andre_aktiviteter', title: 'Andre Aktiviteter' },
   { id: 'bruskasse', title: 'Bruskasse' },
   { id: 'rappis', title: 'Rappis' },
   { id: 'outboard', title: 'Outboard' },
