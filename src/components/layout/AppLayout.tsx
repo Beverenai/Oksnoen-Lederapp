@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useCallback } from 'react';
+import { ReactNode, useState, useEffect, useCallback, useRef } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -183,6 +183,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Collapsible header state (Facebook/Instagram-style)
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  const scrollContainerRef = useRef<HTMLElement>(null);
+
   // Collapsible group states
   const [openGroups, setOpenGroups] = useState({
     leader: true,
@@ -231,6 +236,35 @@ export default function AppLayout({ children }: AppLayoutProps) {
       setOpenGroups(prev => ({ ...prev, special: true }));
     }
   }, [location.pathname, hasScheduleImage]);
+
+  // Collapsible header scroll tracking (Facebook/Instagram-style)
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const SCROLL_THRESHOLD = 50; // Always show header when near top
+
+    const handleScroll = () => {
+      const currentScrollY = scrollContainer.scrollTop;
+      const delta = currentScrollY - lastScrollY.current;
+
+      if (currentScrollY < SCROLL_THRESHOLD) {
+        // Always show header when near top
+        setHeaderVisible(true);
+      } else if (delta > 10) {
+        // Scrolling down - hide header
+        setHeaderVisible(false);
+      } else if (delta < -10) {
+        // Scrolling up - show header
+        setHeaderVisible(true);
+      }
+
+      lastScrollY.current = currentScrollY;
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Fetch schedule image availability and subscribe to changes
   useEffect(() => {
@@ -374,11 +408,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       )}
 
-      {/* Mobile Header - hidden when menu is open */}
+      {/* Mobile Header - collapsible on scroll like Facebook/Instagram */}
       {!mobileMenuOpen && (
         <header 
-          className="lg:hidden fixed top-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-b border-border z-50 px-4 flex items-center justify-between h-14"
-          style={{ transform: 'translate3d(0,0,0)', WebkitTransform: 'translate3d(0,0,0)' }}
+          className={cn(
+            "lg:hidden fixed left-0 right-0 bg-card/95 backdrop-blur-sm border-b border-border z-50 px-4 flex items-center justify-between h-14",
+            "transition-transform duration-300 ease-out will-change-transform"
+          )}
+          style={{ 
+            top: 'var(--safe-top)',
+            transform: headerVisible ? 'translateY(0)' : 'translateY(calc(-100% - var(--safe-top)))',
+          }}
         >
           <div className="flex items-center gap-3">
             <img src={oksnoenLogo} alt="Oksnøen" className="h-8 w-8 object-contain" />
@@ -398,6 +438,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
         </header>
       )}
+
 
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 bg-card border-r border-border flex-col">
@@ -719,7 +760,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
       )}
 
       {/* Main Content */}
-      <main className="lg:ml-64 pt-14 lg:pt-0 flex-1 lg:min-h-screen app-content lg:pb-0 lg:overflow-y-auto">
+      <main 
+        ref={scrollContainerRef}
+        className="lg:ml-64 lg:pt-0 flex-1 lg:min-h-screen app-content lg:pb-0 lg:overflow-y-auto"
+      >
+        {/* Spacer for mobile header - animates with header visibility */}
+        <div 
+          className={cn(
+            "lg:hidden transition-all duration-300 ease-out shrink-0",
+            headerVisible ? "h-14" : "h-0"
+          )}
+        />
         <div className="p-4 lg:p-6">
           {children}
         </div>
