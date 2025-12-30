@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Search, AlertTriangle, Edit, MapPin, FileText } from 'lucide-react';
+import { Search, AlertTriangle, Edit, MapPin, FileText, ChevronDown, X } from 'lucide-react';
 import { LeaderContentSheet } from './LeaderContentSheet';
 import type { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
@@ -69,6 +69,16 @@ const formatTeamDisplay = (team: string | null): string => {
 
 const getFirstName = (fullName: string) => fullName.split(' ')[0];
 
+// Team filters for filtering UI
+const TEAM_FILTERS = [
+  { value: '1', label: 'Team 1', color: 'bg-red-500' },
+  { value: '2', label: 'Team 2', color: 'bg-orange-500' },
+  { value: '1f', label: 'Team 1F', color: 'bg-yellow-400 text-black' },
+  { value: '2f', label: 'Team 2F', color: 'bg-blue-500' },
+  { value: 'kjøkken', label: 'Kjøkken', color: 'bg-purple-500' },
+  { value: 'kordinator', label: 'Kordinator', color: 'bg-pink-500' },
+];
+
 interface LeaderDashboardProps {
   leaders: Leader[];
   homeConfig: HomeScreenConfigItem[];
@@ -83,6 +93,8 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [adminIds, setAdminIds] = useState<Set<string>>(new Set());
+  const [activeTeamFilter, setActiveTeamFilter] = useState<string | null>(null);
+  const [showTeamFilters, setShowTeamFilters] = useState(false);
   const [nurseIds, setNurseIds] = useState<Set<string>>(new Set());
 
   // Memoize activeLeaders to prevent new array reference on every render
@@ -151,13 +163,24 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
     };
   }, [fetchContent]);
 
-  // Filter leaders based on search
-  const filteredLeaders = leadersWithContent.filter(leader =>
-    leader.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    leader.ministerpost?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    leader.team?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    leader.cabin?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter leaders based on search and team filter
+  const filteredLeaders = leadersWithContent.filter(leader => {
+    const matchesSearch = leader.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      leader.ministerpost?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      leader.team?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      leader.cabin?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesTeam = !activeTeamFilter || 
+      leader.team?.toLowerCase().trim() === activeTeamFilter.toLowerCase();
+    
+    return matchesSearch && matchesTeam;
+  });
+
+  const getActiveFilterLabel = () => {
+    if (!activeTeamFilter) return 'Alle';
+    const filter = TEAM_FILTERS.find(f => f.value === activeTeamFilter);
+    return filter?.label || 'Alle';
+  };
 
   // Sort leaders: Admin first, then Nurse, then Kordinator, then by team order
   const sortedLeaders = useMemo(() => {
@@ -261,10 +284,56 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
         />
       </div>
 
+      {/* Team Filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant={activeTeamFilter ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowTeamFilters(!showTeamFilters)}
+          className="gap-1"
+        >
+          {getActiveFilterLabel()}
+          <ChevronDown className={cn("h-4 w-4 transition-transform", showTeamFilters && "rotate-180")} />
+        </Button>
+        
+        {showTeamFilters && (
+          <>
+            {TEAM_FILTERS.map(filter => (
+              <Button
+                key={filter.value}
+                variant={activeTeamFilter === filter.value ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setActiveTeamFilter(activeTeamFilter === filter.value ? null : filter.value);
+                }}
+                className={cn(
+                  "text-xs",
+                  activeTeamFilter === filter.value && filter.color,
+                  activeTeamFilter === filter.value && "text-white border-transparent"
+                )}
+              >
+                {filter.label}
+              </Button>
+            ))}
+            {activeTeamFilter && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveTeamFilter(null)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+
       {/* Stats */}
       <div className="flex gap-2 text-sm text-muted-foreground">
         <span>{filteredLeaders.length} av {activeLeaders.length} ledere</span>
         {searchQuery && <span>· Søk: "{searchQuery}"</span>}
+        {activeTeamFilter && <span>· Filter: {getActiveFilterLabel()}</span>}
       </div>
 
       {/* Leader Cards Grid */}
