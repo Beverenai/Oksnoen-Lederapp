@@ -14,6 +14,7 @@ interface CapacitorInitResult {
     push: boolean;
     camera: boolean;
     haptics: boolean;
+    splashScreen: boolean;
   };
 }
 
@@ -38,12 +39,25 @@ export const initCapacitorPlugins = async (): Promise<CapacitorInitResult> => {
         push: false,
         camera: false,
         haptics: false,
+        splashScreen: false,
       },
     };
     return initResult;
   }
   
   console.log('[Capacitor] Native context detected - initializing plugins...');
+  
+  // Hide splash screen after app is ready
+  let splashScreen = false;
+  try {
+    const { SplashScreen } = await import('@capacitor/splash-screen');
+    // Auto-hide is configured, but we can manually hide after a delay if needed
+    await SplashScreen.hide({ fadeOutDuration: 500 });
+    splashScreen = true;
+    console.log('[Capacitor] SplashScreen hidden');
+  } catch (error) {
+    console.log('[Capacitor] SplashScreen not available:', error);
+  }
   
   // Initialize all plugins in parallel
   const [push, camera, haptics] = await Promise.all([
@@ -58,6 +72,7 @@ export const initCapacitorPlugins = async (): Promise<CapacitorInitResult> => {
       push,
       camera,
       haptics,
+      splashScreen,
     },
   };
   
