@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Check, Plus, Minus, Loader2, ChevronDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -56,6 +57,8 @@ export const ActivityManager = ({
   const isTouch = useTouchDevice();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [customActivity, setCustomActivity] = useState('');
+  const [isAddingCustom, setIsAddingCustom] = useState(false);
 
   // Group activities by name and count occurrences
   const activityCounts = useMemo(() => {
@@ -107,6 +110,40 @@ export const ActivityManager = ({
       });
     } finally {
       setIsLoading(null);
+    }
+  };
+
+  const addCustomActivity = async () => {
+    const trimmed = customActivity.trim();
+    if (!trimmed) return;
+    
+    setIsAddingCustom(true);
+    try {
+      const { error } = await supabase.from('participant_activities').insert({
+        participant_id: participantId,
+        activity: trimmed,
+        registered_by: leader?.id,
+      });
+
+      if (error) throw error;
+
+      hapticSuccess();
+      toast({
+        title: 'Aktivitet lagt til',
+        description: `${trimmed} er registrert`,
+      });
+      setCustomActivity('');
+      onActivityChanged();
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Error adding custom activity:', error);
+      toast({
+        title: 'Feil',
+        description: 'Kunne ikke legge til aktivitet',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAddingCustom(false);
     }
   };
 
@@ -188,6 +225,37 @@ export const ActivityManager = ({
           </Button>
         );
       })}
+      
+      {/* Custom activity input */}
+      <div className="border-t pt-3 mt-3 space-y-2">
+        <p className="text-xs text-muted-foreground px-2">Andre aktiviteter</p>
+        <div className="flex gap-2 px-2">
+          <Input
+            placeholder="Skriv inn aktivitet..."
+            value={customActivity}
+            onChange={(e) => setCustomActivity(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addCustomActivity();
+              }
+            }}
+            className="flex-1 h-9 text-sm"
+          />
+          <Button
+            size="sm"
+            onClick={addCustomActivity}
+            disabled={!customActivity.trim() || isAddingCustom}
+            className="h-9"
+          >
+            {isAddingCustom ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 
