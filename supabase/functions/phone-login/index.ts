@@ -17,26 +17,30 @@ serve(async (req) => {
 
     if (!phone || typeof phone !== 'string') {
       return new Response(
-        JSON.stringify({ error: 'Phone number is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Skriv inn telefonnummeret ditt.' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Normalize phone number - remove spaces and country code prefix
-    let normalizedPhone = phone.replace(/\s/g, '');
-    
-    // Remove +47 or 0047 prefix if present
-    if (normalizedPhone.startsWith('+47')) {
-      normalizedPhone = normalizedPhone.slice(3);
-    } else if (normalizedPhone.startsWith('0047')) {
+    // Normalize phone number (supports +47 / 0047 / spaces / dashes)
+    // We only store Norwegian 8-digit numbers in the database.
+    let normalizedPhone = phone.replace(/\D/g, '');
+
+    // Remove 0047 prefix if present
+    if (normalizedPhone.startsWith('0047')) {
       normalizedPhone = normalizedPhone.slice(4);
+    }
+
+    // Remove 47 country code if present (e.g. +47XXXXXXXX or 47XXXXXXXX)
+    if (normalizedPhone.startsWith('47') && normalizedPhone.length === 10) {
+      normalizedPhone = normalizedPhone.slice(2);
     }
 
     // Validate phone format (8 digits for Norwegian numbers)
     if (!/^\d{8}$/.test(normalizedPhone)) {
       return new Response(
-        JSON.stringify({ error: 'Ugyldig telefonnummer. Bruk 8 siffer.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Ugyldig telefonnummer. Bruk 8 siffer (evt. +47 først).' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -62,11 +66,13 @@ serve(async (req) => {
       );
     }
 
+    const inactiveMessage = 'Du har ikke en aktiv bruker. Kontakt admin.';
+
     if (!leader) {
       console.log('No leader found for phone');
       return new Response(
-        JSON.stringify({ error: 'Fant ingen leder med dette telefonnummeret.' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: inactiveMessage }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -74,8 +80,8 @@ serve(async (req) => {
     if (leader.is_active === false) {
       console.log('Leader is not active');
       return new Response(
-        JSON.stringify({ error: 'Du jobber ikke denne perioden. Hvis dette er feil, kontakt admin.' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: inactiveMessage }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
