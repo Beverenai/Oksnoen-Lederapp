@@ -427,23 +427,23 @@ export default function Home() {
 
       {/* Content Cards - consistent spacing */}
       <div className="px-4 mt-4 sm:mt-6 space-y-3 sm:space-y-4">
-        {/* Fix Task Alert */}
+        {/* Fix Task Alert - consistent with secondary cards */}
         {assignedFixTasks.length > 0 && (
           <Card 
-            className="border border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors"
+            className="border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors shadow-sm"
             onClick={() => navigate('/fix')}
           >
             <CardContent className="py-3 sm:py-4">
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-full bg-amber-500/20">
-                  <Wrench className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
+              <div className="flex flex-col items-center text-center gap-2">
+                <div className="p-1.5 rounded-full bg-amber-500/15">
+                  <Wrench className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-500" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-foreground text-sm sm:text-base">
-                    Du har {assignedFixTasks.length} Fix-oppgave{assignedFixTasks.length > 1 ? 'r' : ''}!
+                  <p className="text-[10px] uppercase tracking-wide text-amber-600/80 dark:text-amber-500/80 font-medium mb-1">
+                    Fix-oppgave{assignedFixTasks.length > 1 ? 'r' : ''}
                   </p>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    Trykk for å se oppgavene
+                  <p className="font-medium text-foreground text-sm sm:text-base">
+                    Du har {assignedFixTasks.length} oppgave{assignedFixTasks.length > 1 ? 'r' : ''} som venter
                   </p>
                 </div>
               </div>
@@ -451,23 +451,23 @@ export default function Home() {
           </Card>
         )}
 
-        {/* Rope Control Alert */}
+        {/* Rope Control Alert - consistent with secondary cards */}
         {pendingRopeControls.length > 0 && (
           <Card 
-            className="border border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors"
+            className="border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors shadow-sm"
             onClick={() => navigate('/rope-control')}
           >
             <CardContent className="py-3 sm:py-4">
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-full bg-amber-500/20">
-                  <Anchor className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
+              <div className="flex flex-col items-center text-center gap-2">
+                <div className="p-1.5 rounded-full bg-amber-500/15">
+                  <Anchor className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-500" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-foreground text-sm sm:text-base">
-                    Du har {pendingRopeControls.length} utstyr som må fikses!
+                  <p className="text-[10px] uppercase tracking-wide text-amber-600/80 dark:text-amber-500/80 font-medium mb-1">
+                    Utstyr å fikse
                   </p>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    Trykk for å se og godkjenne
+                  <p className="font-medium text-foreground text-sm sm:text-base">
+                    Du har {pendingRopeControls.length} utstyr som må godkjennes
                   </p>
                 </div>
               </div>
