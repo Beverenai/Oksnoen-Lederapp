@@ -326,30 +326,30 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
   };
 
   return (
-    <div className="space-y-4">
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Søk på navn, aktivitet, hytte, team..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      {/* Team Filter and Unread Filter */}
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-2 sm:space-y-4">
+      {/* Combined Search + Filters row on mobile */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Søk..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 h-9 text-sm"
+          />
+        </div>
+        
+        {/* Compact filters */}
         <Button
           variant={activeTeamFilter ? "default" : "outline"}
           size="sm"
           onClick={() => setShowTeamFilters(!showTeamFilters)}
-          className="gap-1"
+          className="gap-1 h-9 px-2 sm:px-3 shrink-0"
         >
-          {getActiveFilterLabel()}
+          <span className="text-xs sm:text-sm">{getActiveFilterLabel()}</span>
           {activeTeamFilter ? (
             <X 
-              className="h-3 w-3 ml-1" 
+              className="h-3 w-3" 
               onClick={(e) => {
                 e.stopPropagation();
                 setActiveTeamFilter(null);
@@ -360,37 +360,37 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
           )}
         </Button>
 
-        {showTeamFilters && (
-          <div className="flex flex-wrap gap-1">
-            {TEAM_FILTERS.map((filter) => (
-              <Button
-                key={filter.value}
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setActiveTeamFilter(activeTeamFilter === filter.value ? null : filter.value);
-                  setShowTeamFilters(false);
-                }}
-                className={`gap-1 ${filter.color} hover:opacity-80 border-transparent ${activeTeamFilter === filter.value ? 'ring-2 ring-offset-1 ring-foreground' : ''}`}
-              >
-                {filter.label}
-              </Button>
-            ))}
-          </div>
-        )}
-
-        {/* Unread Filter */}
         <Button
           variant={showUnreadOnly ? "destructive" : "outline"}
           size="sm"
           onClick={() => setShowUnreadOnly(!showUnreadOnly)}
-          className="gap-1.5"
+          className="gap-1 h-9 px-2 sm:px-3 shrink-0"
         >
-          <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-          Ikke lest
-          {showUnreadOnly && <X className="h-3 w-3 ml-1" />}
+          <div className="w-2 h-2 rounded-full bg-red-500" />
+          <span className="hidden sm:inline text-sm">Ikke lest</span>
+          {showUnreadOnly && <X className="h-3 w-3" />}
         </Button>
       </div>
+
+      {/* Team filter dropdown - only shows when expanded */}
+      {showTeamFilters && (
+        <div className="flex flex-wrap gap-1">
+          {TEAM_FILTERS.map((filter) => (
+            <Button
+              key={filter.value}
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setActiveTeamFilter(activeTeamFilter === filter.value ? null : filter.value);
+                setShowTeamFilters(false);
+              }}
+              className={`gap-1 h-7 text-xs ${filter.color} hover:opacity-80 border-transparent ${activeTeamFilter === filter.value ? 'ring-2 ring-offset-1 ring-foreground' : ''}`}
+            >
+              {filter.label}
+            </Button>
+          ))}
+        </div>
+      )}
 
       {/* Desktop Table View */}
       <div className="hidden md:block rounded-md border">

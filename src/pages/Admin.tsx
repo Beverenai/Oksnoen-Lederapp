@@ -534,74 +534,81 @@ export default function Admin() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-heading font-bold text-foreground">
+    <div className="space-y-3 sm:space-y-6 animate-fade-in">
+      {/* Compact header on mobile */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-2xl lg:text-3xl font-heading font-bold text-foreground">
             Admin
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
+          <p className="hidden sm:block text-sm sm:text-base text-muted-foreground mt-1">
             Administrer ledere, aktiviteter og innhold
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <Link to="/admin/settings">
-            <Button variant="outline" size="sm" className="sm:size-default">
-              <Settings className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Innstillinger</span>
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4" />
+              <span className="hidden sm:inline sm:ml-2">Innstillinger</span>
             </Button>
           </Link>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={triggerSync}
-              disabled={isSyncing}
-              variant={lastSyncSuccess ? "default" : "outline"}
-              size="sm"
-              className={`sm:size-default ${lastSyncSuccess ? "bg-green-600 hover:bg-green-700" : ""}`}
-            >
-              {isSyncing ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : lastSyncSuccess ? (
-                <Check className="h-4 w-4" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-              <span className="ml-2 hidden sm:inline">
-                {isSyncing ? "Synkroniserer..." : lastSyncSuccess ? "Synket!" : "Synk ledere"}
-              </span>
-            </Button>
-          </div>
+          <Button
+            onClick={triggerSync}
+            disabled={isSyncing}
+            variant={lastSyncSuccess ? "default" : "outline"}
+            size="sm"
+            className={lastSyncSuccess ? "bg-green-600 hover:bg-green-700" : ""}
+          >
+            {isSyncing ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : lastSyncSuccess ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline sm:ml-2">
+              {isSyncing ? "Synkroniserer..." : lastSyncSuccess ? "Synket!" : "Synk ledere"}
+            </span>
+          </Button>
           {lastSyncTime && (
-            <span className="text-xs text-muted-foreground w-full sm:w-auto text-right sm:text-left">
-              Sist synket: {formatSyncTime(lastSyncTime)}
+            <span className="hidden sm:inline text-xs text-muted-foreground">
+              {formatSyncTime(lastSyncTime)}
             </span>
           )}
         </div>
       </div>
 
-      {/* Leader View Toggle */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-lg font-semibold">Lederoversikt</h2>
+      {/* Compact "Lederoversikt" header with toggle - combined row */}
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-semibold">Lederoversikt</h2>
+          {lastSyncTime && (
+            <span className="sm:hidden text-[10px] text-muted-foreground">
+              {formatSyncTime(lastSyncTime)}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsActivitiesSheetOpen(true)}
+            className="h-8 px-2 sm:px-3"
           >
-            <Calendar className="h-4 w-4 mr-2" />
-            Aktiviteter
+            <Calendar className="h-4 w-4" />
+            <span className="hidden sm:inline sm:ml-2">Aktiviteter</span>
           </Button>
           <ToggleGroup 
             type="single" 
             value={leaderViewMode} 
             onValueChange={(value) => value && setLeaderViewMode(value as 'grid' | 'list')}
-            className="bg-muted rounded-lg p-1"
+            className="bg-muted rounded-lg p-0.5 sm:p-1"
           >
-            <ToggleGroupItem value="grid" aria-label="Rutenettvisning" className="px-3">
-              <LayoutGrid className="h-4 w-4" />
+            <ToggleGroupItem value="grid" aria-label="Rutenettvisning" className="px-2 sm:px-3 h-7 sm:h-8">
+              <LayoutGrid className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </ToggleGroupItem>
-            <ToggleGroupItem value="list" aria-label="Listevisning" className="px-3">
-              <List className="h-4 w-4" />
+            <ToggleGroupItem value="list" aria-label="Listevisning" className="px-2 sm:px-3 h-7 sm:h-8">
+              <List className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
