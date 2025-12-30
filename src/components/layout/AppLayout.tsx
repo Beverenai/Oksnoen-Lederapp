@@ -719,7 +719,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       )}
 
       {/* Main Content */}
-      <main className="lg:ml-64 pt-14 lg:pt-0 flex-1 lg:min-h-screen app-content lg:pb-0">
+      <main className="lg:ml-64 pt-14 lg:pt-0 flex-1 lg:min-h-screen app-content lg:pb-0 lg:overflow-y-auto">
         <div className="p-4 lg:p-6">
           {children}
         </div>
