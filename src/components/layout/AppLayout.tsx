@@ -37,6 +37,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -174,6 +180,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [showHajoloSuccess, setShowHajoloSuccess] = useState(false);
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
+  const [showHajoloTooltip, setShowHajoloTooltip] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -265,11 +272,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
     
     const { data } = await supabase
       .from('leader_content')
-      .select('has_read')
+      .select('has_read, has_seen_hajolo_tooltip')
       .eq('leader_id', leader.id)
       .maybeSingle();
     
     setHasRead(data?.has_read ?? false);
+    // Show tooltip only if user hasn't seen it before
+    if (data && data.has_seen_hajolo_tooltip === false) {
+      setShowHajoloTooltip(true);
+    }
   }, [leader, isAdmin, isNurse]);
 
   // Fetch and subscribe to has_read status for regular leaders
@@ -304,12 +315,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
     // Check if button was red (unread) before updating
     const wasUnread = !hasRead;
 
+    // Mark tooltip as seen if it was showing
+    const updateData: { leader_id: string; has_read: boolean; has_seen_hajolo_tooltip?: boolean } = {
+      leader_id: leader.id,
+      has_read: true,
+    };
+    
+    if (showHajoloTooltip) {
+      updateData.has_seen_hajolo_tooltip = true;
+      setShowHajoloTooltip(false);
+    }
+
     const { error } = await supabase
       .from('leader_content')
-      .upsert(
-        { leader_id: leader.id, has_read: true },
-        { onConflict: 'leader_id' }
-      );
+      .upsert(updateData, { onConflict: 'leader_id' });
 
     if (error) {
       toast.error('Kunne ikke bekrefte');
@@ -599,25 +618,41 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   // Leader: Hajolo button with states
                   if (item.isHajolo) {
                     return (
-                      <button
-                        key="hajolo"
-                        onClick={handleHajoloClick}
-                        className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:scale-95"
-                      >
-                        <div
-                          className={cn(
-                            'w-14 h-14 rounded-full flex items-center justify-center border-[3px] border-card transition-all duration-300 ease-out',
-                            hasRead 
-                              ? 'bg-[hsl(152_55%_45%)] shadow-[0_2px_12px_rgba(0,0,0,0.1)]' 
-                              : 'bg-[hsl(0_65%_55%)] shadow-[0_4px_16px_rgba(0,0,0,0.18)]'
-                          )}
-                        >
-                          <Check className="w-7 h-7 text-white" strokeWidth={2.5} />
-                        </div>
-                        <span className="text-[10px] font-semibold mt-1.5 text-foreground">
-                          {hasRead ? 'Bekreftet' : 'Hajolo'}
-                        </span>
-                      </button>
+                      <TooltipProvider key="hajolo">
+                        <Tooltip open={showHajoloTooltip} onOpenChange={setShowHajoloTooltip}>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={handleHajoloClick}
+                              className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:scale-95"
+                            >
+                              <div
+                                className={cn(
+                                  'w-14 h-14 rounded-full flex items-center justify-center border-[3px] border-card transition-all duration-300 ease-out',
+                                  hasRead 
+                                    ? 'bg-[hsl(152_55%_45%)] shadow-[0_2px_12px_rgba(0,0,0,0.1)]' 
+                                    : 'bg-[hsl(0_65%_55%)] shadow-[0_4px_16px_rgba(0,0,0,0.18)]'
+                                )}
+                              >
+                                <Check className="w-7 h-7 text-white" strokeWidth={2.5} />
+                              </div>
+                              <span className="text-[10px] font-semibold mt-1.5 text-foreground">
+                                {hasRead ? 'Bekreftet' : 'Hajolo'}
+                              </span>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent 
+                            side="top" 
+                            className="max-w-[280px] text-center p-3 bg-card border border-border shadow-lg"
+                            sideOffset={8}
+                          >
+                            <p className="text-sm font-medium mb-1">Hva er Hajolo-knappen?</p>
+                            <p className="text-xs text-muted-foreground">
+                              Når det kommer ny info til deg i appen blir denne knappen rød. Admin ser hvem som ikke har lest ennå. 
+                              Når du har lest infoen på hjemskjermen, trykk på knappen for å bekrefte at du har sett beskjeden.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     );
                   }
                   

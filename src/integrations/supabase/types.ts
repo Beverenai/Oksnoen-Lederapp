@@ -343,6 +343,7 @@ export type Database = {
           extra_5: string | null
           extra_activity: string | null
           has_read: boolean | null
+          has_seen_hajolo_tooltip: boolean | null
           id: string
           leader_id: string
           obs_message: string | null
@@ -359,6 +360,7 @@ export type Database = {
           extra_5?: string | null
           extra_activity?: string | null
           has_read?: boolean | null
+          has_seen_hajolo_tooltip?: boolean | null
           id?: string
           leader_id: string
           obs_message?: string | null
@@ -375,6 +377,7 @@ export type Database = {
           extra_5?: string | null
           extra_activity?: string | null
           has_read?: boolean | null
+          has_seen_hajolo_tooltip?: boolean | null
           id?: string
           leader_id?: string
           obs_message?: string | null
