@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.5fbb2f6d0f084e4b8db1cf4c3cbc1881',
-  appName: 'Oksnoen',
+  appId: 'com.oksnoen.lederapp',
+  appName: 'Oksnøen LederApp',
   webDir: 'dist',
   plugins: {
     PushNotifications: {
