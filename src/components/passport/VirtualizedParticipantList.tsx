@@ -158,41 +158,59 @@ const CabinHeader = memo(({
   onToggle: () => void;
 }) => {
   const leaderFirstNames = leaders.map(l => l.name.split(' ')[0]);
+  const displayNames = leaderFirstNames.slice(0, 2);
+  const remainingCount = leaderFirstNames.length - 2;
   
   return (
     <Card className="mx-4 overflow-hidden">
       <CardHeader 
-        className="py-4 cursor-pointer hover:bg-muted/50 transition-colors"
+        className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
         onClick={onToggle}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
+          {/* Chevron - fixed width */}
+          <div className="w-5 shrink-0 flex items-center justify-center">
             {isExpanded ? (
               <ChevronDown className="w-5 h-5 text-muted-foreground" />
             ) : (
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             )}
+          </div>
+          {/* Home icon - fixed width */}
+          <div className="w-5 shrink-0 flex items-center justify-center">
             <Home className="w-5 h-5 text-primary" />
-            <CardTitle className="text-lg">{cabin.name}</CardTitle>
-            {leaderFirstNames.length > 0 && (
-              <div className="flex gap-1 flex-wrap">
-                {leaderFirstNames.map((name, idx) => (
-                  <Badge 
-                    key={idx} 
-                    variant="secondary" 
-                    className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20"
-                  >
-                    {name}
-                  </Badge>
-                ))}
-              </div>
-            )}
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline">
-              {arrivedCount}/{totalCount} ankommet
-            </Badge>
-          </div>
+          {/* Title - flexible, truncate */}
+          <CardTitle className="text-lg truncate flex-1 min-w-0">{cabin.name}</CardTitle>
+          {/* Leaders badges - limited width, one line */}
+          {displayNames.length > 0 && (
+            <div className="flex gap-1 max-w-[120px] overflow-hidden shrink-0">
+              {displayNames.map((name, idx) => (
+                <Badge 
+                  key={idx} 
+                  variant="secondary" 
+                  className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20 whitespace-nowrap"
+                >
+                  {name}
+                </Badge>
+              ))}
+              {remainingCount > 0 && (
+                <Badge 
+                  variant="secondary" 
+                  className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20 whitespace-nowrap"
+                >
+                  +{remainingCount}
+                </Badge>
+              )}
+            </div>
+          )}
+          {/* Status pill - fixed min-width, consistent height */}
+          <Badge 
+            variant="outline"
+            className="min-w-[90px] h-7 justify-center text-xs shrink-0"
+          >
+            {arrivedCount}/{totalCount} ankommet
+          </Badge>
         </div>
       </CardHeader>
     </Card>
