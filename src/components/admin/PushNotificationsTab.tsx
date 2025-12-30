@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Bell, Send, Users, Key, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 export function PushNotificationsTab() {
   const { leader } = useAuth();
@@ -69,6 +70,7 @@ export function PushNotificationsTab() {
       }
 
       if (data?.success) {
+        hapticSuccess();
         setGeneratedKeys({
           publicKey: data.publicKey,
           privateKey: data.privateKey,
@@ -79,6 +81,7 @@ export function PushNotificationsTab() {
       }
     } catch (error: any) {
       console.error('Error generating VAPID keys:', error);
+      hapticError();
       toast.error('Kunne ikke generere VAPID-nøkler: ' + (error.message || 'Ukjent feil'));
     } finally {
       setIsGeneratingKeys(false);
@@ -113,6 +116,7 @@ export function PushNotificationsTab() {
       }
 
       if (data?.success) {
+        hapticSuccess();
         toast.success(`Sendt til ${data.sent} mottakere`);
         setTitle('');
         setMessage('');
@@ -125,6 +129,7 @@ export function PushNotificationsTab() {
       }
     } catch (error: any) {
       console.error('Error sending broadcast:', error);
+      hapticError();
       toast.error('Kunne ikke sende varsel: ' + (error.message || 'Ukjent feil'));
     } finally {
       setIsSending(false);

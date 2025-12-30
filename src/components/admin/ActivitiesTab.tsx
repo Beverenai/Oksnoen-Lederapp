@@ -18,6 +18,7 @@ import {
   X
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
 
 export function ActivitiesTab() {
   const { activities, isLoading, refetch } = useActivities(false);
@@ -49,11 +50,13 @@ export function ActivitiesTab() {
 
       if (error) throw error;
 
+      hapticSuccess();
       setNewActivityTitle('');
       refetch();
       toast.success('Aktivitet lagt til');
     } catch (error) {
       console.error('Error adding activity:', error);
+      hapticError();
       toast.error('Kunne ikke legge til aktivitet');
     } finally {
       setIsAdding(false);
@@ -70,10 +73,12 @@ export function ActivitiesTab() {
 
       if (error) throw error;
 
+      hapticImpact('light');
       refetch();
       toast.success(currentActive ? 'Aktivitet deaktivert' : 'Aktivitet aktivert');
     } catch (error) {
       console.error('Error toggling activity:', error);
+      hapticError();
       toast.error('Kunne ikke oppdatere aktivitet');
     } finally {
       setUpdatingId(null);
@@ -102,12 +107,14 @@ export function ActivitiesTab() {
 
       if (error) throw error;
 
+      hapticSuccess();
       setEditingId(null);
       setEditingTitle('');
       refetch();
       toast.success('Aktivitet oppdatert');
     } catch (error) {
       console.error('Error updating activity:', error);
+      hapticError();
       toast.error('Kunne ikke oppdatere aktivitet');
     } finally {
       setUpdatingId(null);
@@ -128,10 +135,12 @@ export function ActivitiesTab() {
 
       if (error) throw error;
 
+      hapticSuccess();
       refetch();
       toast.success('Aktivitet slettet');
     } catch (error) {
       console.error('Error deleting activity:', error);
+      hapticError();
       toast.error('Kunne ikke slette aktivitet');
     } finally {
       setUpdatingId(null);
