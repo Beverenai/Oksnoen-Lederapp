@@ -181,13 +181,10 @@ header, nav {
   backface-visibility: hidden;
 }
 
-/* Force bottom nav to stick to actual screen bottom on iOS */
+/* Force bottom nav floating position on iOS */
 @supports (-webkit-touch-callout: none) {
   .mobile-bottom-nav {
     position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
   }
 }
 
