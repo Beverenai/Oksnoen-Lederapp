@@ -201,25 +201,23 @@ header, nav {
     -webkit-text-size-adjust: 100%;
   }
 
-  html, body, #root {
+  html, body {
     height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
     touch-action: manipulation;
   }
 
-  /* Apply safe-area padding to root container */
+  /* Root container - fixed viewport, no scrolling */
   #root {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
     padding-top: var(--safe-top);
-    padding-bottom: var(--safe-bottom);
+    padding-bottom: 0;
     box-sizing: border-box;
-  }
-
-  /* Mobile: use dvh for correct viewport sizing (allow normal scrolling) */
-  @media (max-width: 1023px) {
-    html, body, #root {
-      height: auto;
-      min-height: 100dvh;
-      min-height: -webkit-fill-available;
-    }
+    overflow: hidden;
   }
 
   body {
@@ -318,8 +316,12 @@ header, nav {
   border-top: 1px solid hsl(var(--border));
 }
 
-/* App content wrapper - adds bottom padding to avoid content behind floating nav */
+/* App content wrapper - scrollable container that respects safe areas */
 .app-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   padding-bottom: calc(var(--nav-h) + var(--safe-b) + 24px);
 }
 
