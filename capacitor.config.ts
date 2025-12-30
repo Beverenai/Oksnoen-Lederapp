@@ -18,7 +18,8 @@ const config: CapacitorConfig = {
     }
   },
   ios: {
-    contentInset: 'automatic'
+    contentInset: 'automatic',
+    preferredContentMode: 'mobile'
   },
   android: {
     allowMixedContent: true
