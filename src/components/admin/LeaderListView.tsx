@@ -207,12 +207,16 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
     
     const matchesTeam = !activeTeamFilter || leader.team?.toLowerCase().trim() === activeTeamFilter.toLowerCase();
     
-    // Unread filter: exclude Admin, Nurse, and Kitchen from red ring check
+    // Unread filter: exclude Admin, Nurse, Kitchen, and "Fri" activity from red ring check
     const isKitchen = leader.team?.toLowerCase() === 'kjokken' || leader.team?.toLowerCase() === 'kjøkken';
+    const hasFriActivity = 
+      leader.content?.current_activity?.toLowerCase().includes('fri') ||
+      leader.content?.extra_activity?.toLowerCase().includes('fri');
     const matchesUnread = !showUnreadOnly || (
       !leader.isAdmin && 
       !leader.isNurse && 
       !isKitchen &&
+      !hasFriActivity &&
       !leader.content?.has_read
     );
     
@@ -291,14 +295,17 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
   // Get avatar border class based on status
   const getAvatarBorderClass = (leader: LeaderWithContent) => {
     const isKitchen = leader.team?.toLowerCase() === 'kjokken' || leader.team?.toLowerCase() === 'kjøkken';
-    const isFri = leader.content?.current_activity?.toLowerCase().includes('fri');
+    // Check BOTH activity fields for "Fri"
+    const hasFriActivity = 
+      leader.content?.current_activity?.toLowerCase().includes('fri') ||
+      leader.content?.extra_activity?.toLowerCase().includes('fri');
     
     // Admin/Nurse = always green
     if (leader.isAdmin || leader.isNurse) return 'ring-2 ring-green-500';
     // Kitchen = always purple
     if (isKitchen) return 'ring-2 ring-purple-500';
-    // "Fri" activity = blue
-    if (isFri) return 'ring-2 ring-blue-500';
+    // "Fri" activity (in either field) = blue
+    if (hasFriActivity) return 'ring-2 ring-blue-500';
     // Has read = green
     if (leader.content?.has_read) return 'ring-2 ring-green-500';
     // Has not read = red

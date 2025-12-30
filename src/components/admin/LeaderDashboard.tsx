@@ -181,12 +181,16 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
     const matchesTeam = !activeTeamFilter || 
       leader.team?.toLowerCase().trim() === activeTeamFilter.toLowerCase();
     
-    // Unread filter: exclude Admin, Nurse, and Kitchen from red ring check
+    // Unread filter: exclude Admin, Nurse, Kitchen, and "Fri" activity from red ring check
     const isKitchen = leader.team?.toLowerCase() === 'kjøkken';
     const isAdminOrNurse = adminIds.has(leader.id) || nurseIds.has(leader.id);
+    const hasFriActivity = 
+      leader.content?.current_activity?.toLowerCase().includes('fri') ||
+      leader.content?.extra_activity?.toLowerCase().includes('fri');
     const matchesUnread = !showUnreadOnly || (
       !isAdminOrNurse && 
       !isKitchen &&
+      !hasFriActivity &&
       !leader.content?.has_read
     );
     
