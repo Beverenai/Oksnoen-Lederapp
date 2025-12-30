@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect, useCallback } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -175,6 +175,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Collapsible group states
   const [openGroups, setOpenGroups] = useState({
@@ -300,6 +301,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const handleHajoloClick = async () => {
     if (!leader) return;
 
+    // Check if button was red (unread) before updating
+    const wasUnread = !hasRead;
+
     const { error } = await supabase
       .from('leader_content')
       .upsert(
@@ -323,6 +327,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
       spread: 70,
       origin: { y: 0.6 }
     });
+    
+    // Navigate to home screen only if button was red (unread)
+    if (wasUnread) {
+      navigate('/');
+    }
     
     setTimeout(() => setShowHajoloSuccess(false), 3000);
   };
