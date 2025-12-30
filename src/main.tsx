@@ -2,6 +2,14 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { isCapacitor } from "./lib/capacitor";
+import { initCapacitorPlugins } from "./lib/capacitorInit";
+
+// Initialize Capacitor plugins if in native context
+initCapacitorPlugins().then((result) => {
+  if (result.isNative) {
+    console.log('[Capacitor] Plugins ready:', result.plugins);
+  }
+});
 
 // Disable PWA service worker registration in Capacitor native context
 // The native app handles offline/caching differently
