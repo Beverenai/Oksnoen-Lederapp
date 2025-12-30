@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
+import { hapticSuccess } from '@/lib/capacitorHaptics';
 import { PassIcon } from '@/components/icons/PassIcon';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
 import {
@@ -301,6 +302,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     setHasRead(true);
     setShowHajoloSuccess(true);
     
+    // Haptic feedback for native feel
+    hapticSuccess();
+    
     confetti({
       particleCount: 150,
       spread: 70,
@@ -543,73 +547,122 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Mobile Bottom Navigation - iOS-style floating tab bar */}
       {!mobileMenuOpen && (
         <nav 
-          className="lg:hidden mobile-bottom-nav fixed bottom-0 left-0 right-0 z-30"
+          className="lg:hidden mobile-bottom-nav fixed bottom-2 left-4 right-4 z-30"
           style={{ 
-            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
             WebkitTransform: 'translate3d(0,0,0)',
             transform: 'translate3d(0,0,0)'
           }}
         >
-          {/* Blurred background layer */}
+          {/* Floating glass container */}
           <div 
-            className="absolute inset-0 bg-card/80 backdrop-blur-xl border-t border-border/50"
-            style={{ WebkitBackdropFilter: 'blur(20px)', backdropFilter: 'blur(20px)' }}
-          />
-          
-          {/* Tab bar content */}
-          <div className="relative h-[52px] flex items-center justify-evenly px-2">
-            {getBottomNavItems(isAdmin, isNurse).map((item) => {
-              const isActive = location.pathname === item.to;
-              
-              if (item.isHajolo) {
+            className="relative rounded-[22px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] ring-1 ring-white/10 dark:ring-white/5 overflow-hidden"
+            style={{ 
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+            }}
+          >
+            {/* Blurred background layer */}
+            <div 
+              className="absolute inset-0 bg-card/75 dark:bg-card/80"
+              style={{ WebkitBackdropFilter: 'blur(24px)', backdropFilter: 'blur(24px)' }}
+            />
+            
+            {/* Tab bar content */}
+            <div className="relative h-[56px] flex items-center justify-evenly px-2">
+              {getBottomNavItems(isAdmin, isNurse).map((item, index) => {
+                const isActive = location.pathname === item.to;
+                const isCenterButton = index === 2; // Center position (3rd item)
+                
+                // Center action button (role-based)
+                if (isCenterButton) {
+                  // Leader: Hajolo button with states
+                  if (item.isHajolo) {
+                    return (
+                      <button
+                        key="hajolo"
+                        onClick={handleHajoloClick}
+                        className="flex flex-col items-center justify-center min-w-[64px] -mt-5 transition-all duration-150 active:scale-95"
+                      >
+                        <div
+                          className={cn(
+                            'w-14 h-14 rounded-full flex items-center justify-center border-[3px] border-card transition-all duration-300 ease-out',
+                            hasRead 
+                              ? 'bg-[hsl(152_55%_45%)] shadow-[0_2px_12px_rgba(0,0,0,0.1)]' 
+                              : 'bg-[hsl(0_65%_55%)] shadow-[0_4px_16px_rgba(0,0,0,0.18)]'
+                          )}
+                        >
+                          <Check className="w-7 h-7 text-white" strokeWidth={2.5} />
+                        </div>
+                        <span className="text-[10px] font-semibold mt-1.5 text-foreground">
+                          {hasRead ? 'Bekreftet' : 'Hajolo'}
+                        </span>
+                      </button>
+                    );
+                  }
+                  
+                  // Admin: Dashboard button
+                  if (isAdmin && item.to === '/admin') {
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        className="flex flex-col items-center justify-center min-w-[64px] -mt-5 transition-all duration-150 active:scale-95"
+                      >
+                        <div className="w-14 h-14 rounded-full flex items-center justify-center bg-slate-800 dark:bg-slate-700 shadow-[0_4px_16px_rgba(0,0,0,0.15)] border-[3px] border-card">
+                          <Settings className="w-7 h-7 text-white" strokeWidth={2} />
+                        </div>
+                        <span className="text-[10px] font-semibold mt-1.5 text-foreground">Admin</span>
+                      </NavLink>
+                    );
+                  }
+                  
+                  // Nurse: Nurse button
+                  if (isNurse && item.to === '/nurse') {
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        className="flex flex-col items-center justify-center min-w-[64px] -mt-5 transition-all duration-150 active:scale-95"
+                      >
+                        <div className="w-14 h-14 rounded-full flex items-center justify-center bg-rose-500 shadow-[0_4px_16px_rgba(0,0,0,0.15)] border-[3px] border-card">
+                          <Heart className="w-7 h-7 text-white" strokeWidth={2} />
+                        </div>
+                        <span className="text-[10px] font-semibold mt-1.5 text-foreground">Nurse</span>
+                      </NavLink>
+                    );
+                  }
+                }
+                
+                // Standard tab items (non-center)
                 return (
-                  <button
-                    key="hajolo"
-                    onClick={handleHajoloClick}
-                    className="flex flex-col items-center justify-center min-w-[64px] min-h-[48px] -mt-3"
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className="flex flex-col items-center justify-center min-w-[64px] min-h-[56px] transition-all duration-150 active:scale-95 active:opacity-70"
                   >
-                    <div
+                    <item.icon 
                       className={cn(
-                        'w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-elevated border-[3px] border-card',
-                        hasRead ? 'bg-success' : 'bg-destructive'
-                      )}
-                    >
-                      <Check className="w-6 h-6 text-white" />
-                    </div>
-                    <span className="text-[10px] font-medium mt-0.5 text-foreground">{item.label}</span>
-                  </button>
+                        'w-6 h-6 transition-colors',
+                        isActive ? 'text-primary' : 'text-muted-foreground/70'
+                      )} 
+                      size={24}
+                      strokeWidth={isActive ? 2.5 : 1.75}
+                    />
+                    <span className={cn(
+                      'text-[11px] mt-1 transition-colors',
+                      isActive ? 'text-primary font-semibold' : 'text-muted-foreground/70 font-medium'
+                    )}>
+                      {item.label}
+                    </span>
+                  </NavLink>
                 );
-              }
-              
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className="flex flex-col items-center justify-center min-w-[64px] min-h-[48px] transition-colors"
-                >
-                  <item.icon 
-                    className={cn(
-                      'w-[22px] h-[22px] transition-colors',
-                      isActive ? 'text-primary' : 'text-muted-foreground'
-                    )} 
-                    size={22}
-                    strokeWidth={isActive ? 2.5 : 2}
-                  />
-                  <span className={cn(
-                    'text-[10px] font-medium mt-0.5 transition-colors',
-                    isActive ? 'text-primary' : 'text-muted-foreground'
-                  )}>
-                    {item.label}
-                  </span>
-                </NavLink>
-              );
-            })}
+              })}
+            </div>
           </div>
         </nav>
       )}
 
       {/* Main Content */}
-      <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 pb-[calc(52px+env(safe-area-inset-bottom,0px)+16px)] lg:pb-0 flex-1 lg:min-h-screen">
+      <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 pb-[calc(80px+env(safe-area-inset-bottom,0px)+24px)] lg:pb-0 flex-1 lg:min-h-screen">
         <div className="p-4 lg:p-6">
           {children}
         </div>
