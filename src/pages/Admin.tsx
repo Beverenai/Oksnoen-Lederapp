@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { 
   Settings,
   Loader2,
@@ -174,6 +175,9 @@ export default function Admin() {
 
   // View mode for leader list
   const [leaderViewMode, setLeaderViewMode] = useState<'grid' | 'list'>('grid');
+
+  // Activities sheet state
+  const [isActivitiesSheetOpen, setIsActivitiesSheetOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -576,21 +580,31 @@ export default function Admin() {
       </div>
 
       {/* Leader View Toggle */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-lg font-semibold">Lederoversikt</h2>
-        <ToggleGroup 
-          type="single" 
-          value={leaderViewMode} 
-          onValueChange={(value) => value && setLeaderViewMode(value as 'grid' | 'list')}
-          className="bg-muted rounded-lg p-1"
-        >
-          <ToggleGroupItem value="grid" aria-label="Rutenettvisning" className="px-3">
-            <LayoutGrid className="h-4 w-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem value="list" aria-label="Listevisning" className="px-3">
-            <List className="h-4 w-4" />
-          </ToggleGroupItem>
-        </ToggleGroup>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsActivitiesSheetOpen(true)}
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            Aktiviteter
+          </Button>
+          <ToggleGroup 
+            type="single" 
+            value={leaderViewMode} 
+            onValueChange={(value) => value && setLeaderViewMode(value as 'grid' | 'list')}
+            className="bg-muted rounded-lg p-1"
+          >
+            <ToggleGroupItem value="grid" aria-label="Rutenettvisning" className="px-3">
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label="Listevisning" className="px-3">
+              <List className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
       </div>
 
       {/* Leader Dashboard or List View */}
@@ -609,34 +623,43 @@ export default function Admin() {
         />
       )}
 
-      {/* Session Activities Text */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Aktiviteter denne økten
-          </CardTitle>
-          <CardDescription>
-            Skriv tekst som vises på hjemskjermen til alle ledere under "Aktiviteter denne økten"
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Textarea
-            placeholder="Skriv aktiviteter for denne økten her...&#10;&#10;Eksempel:&#10;• 09:00 - Frokost&#10;• 10:00 - Morgensamling&#10;• 11:00 - Aktiviteter"
-            value={sessionActivitiesText}
-            onChange={(e) => setSessionActivitiesText(e.target.value)}
-            className="min-h-[150px]"
-          />
-          <Button onClick={saveSessionActivitiesText} disabled={isSavingActivities}>
-            {isSavingActivities ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4 mr-2" />
-            )}
-            Lagre aktiviteter
-          </Button>
-        </CardContent>
-      </Card>
+      {/* Activities Sheet */}
+      <Sheet open={isActivitiesSheetOpen} onOpenChange={setIsActivitiesSheetOpen}>
+        <SheetContent className="sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              Aktiviteter
+            </SheetTitle>
+            <SheetDescription>
+              Skriv tekst som vises på hjemskjermen under "Aktiviteter denne økten"
+            </SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 mt-4">
+            <Textarea
+              placeholder="Skriv aktiviteter for denne økten her...&#10;&#10;Eksempel:&#10;• 09:00 - Frokost&#10;• 10:00 - Morgensamling&#10;• 11:00 - Aktiviteter"
+              value={sessionActivitiesText}
+              onChange={(e) => setSessionActivitiesText(e.target.value)}
+              className="min-h-[250px]"
+            />
+            <Button 
+              onClick={() => {
+                saveSessionActivitiesText();
+                setIsActivitiesSheetOpen(false);
+              }} 
+              disabled={isSavingActivities}
+              className="w-full"
+            >
+              {isSavingActivities ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Lagre aktiviteter
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Home screen config - collapsible */}
       <Collapsible open={isHomeConfigOpen} onOpenChange={setIsHomeConfigOpen}>
