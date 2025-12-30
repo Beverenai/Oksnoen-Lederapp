@@ -555,14 +555,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
         >
           {/* Floating glass container */}
           <div 
-            className="relative rounded-[22px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] ring-1 ring-white/10 dark:ring-white/5 overflow-hidden"
+            className="relative rounded-[22px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] ring-1 ring-white/10 dark:ring-white/5 overflow-visible"
             style={{ 
               paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
             }}
           >
             {/* Blurred background layer */}
             <div 
-              className="absolute inset-0 bg-card/75 dark:bg-card/80"
+              className="absolute inset-0 bg-card/75 dark:bg-card/80 rounded-[22px]"
               style={{ WebkitBackdropFilter: 'blur(24px)', backdropFilter: 'blur(24px)' }}
             />
             
@@ -580,7 +580,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       <button
                         key="hajolo"
                         onClick={handleHajoloClick}
-                        className="flex flex-col items-center justify-center min-w-[64px] -mt-5 transition-all duration-150 active:scale-95"
+                        className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:scale-95"
                       >
                         <div
                           className={cn(
@@ -605,7 +605,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       <NavLink
                         key={item.to}
                         to={item.to}
-                        className="flex flex-col items-center justify-center min-w-[64px] -mt-5 transition-all duration-150 active:scale-95"
+                        className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:scale-95"
                       >
                         <div className="w-14 h-14 rounded-full flex items-center justify-center bg-slate-800 dark:bg-slate-700 shadow-[0_4px_16px_rgba(0,0,0,0.15)] border-[3px] border-card">
                           <Settings className="w-7 h-7 text-white" strokeWidth={2} />
@@ -621,7 +621,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       <NavLink
                         key={item.to}
                         to={item.to}
-                        className="flex flex-col items-center justify-center min-w-[64px] -mt-5 transition-all duration-150 active:scale-95"
+                        className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:scale-95"
                       >
                         <div className="w-14 h-14 rounded-full flex items-center justify-center bg-rose-500 shadow-[0_4px_16px_rgba(0,0,0,0.15)] border-[3px] border-card">
                           <Heart className="w-7 h-7 text-white" strokeWidth={2} />
