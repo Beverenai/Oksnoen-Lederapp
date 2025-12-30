@@ -17,6 +17,7 @@ import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
 import { compressImage } from '@/lib/imageUtils';
 import { CachedImage } from '@/components/ui/cached-image';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 interface ParticipantWithCabin {
   id: string;
@@ -135,6 +136,7 @@ export const ParticipantDetailDialog = ({
 
       if (error) throw error;
 
+      hapticSuccess();
       toast({
         title: 'Lagret',
         description: 'Aktivitetsnotater er oppdatert',
@@ -143,6 +145,7 @@ export const ParticipantDetailDialog = ({
       onParticipantUpdated?.();
     } catch (error) {
       console.error('Error saving activity notes:', error);
+      hapticError();
       toast({
         title: 'Feil',
         description: 'Kunne ikke lagre aktivitetsnotater',
@@ -182,6 +185,7 @@ export const ParticipantDetailDialog = ({
 
       if (updateError) throw updateError;
 
+      hapticSuccess();
       toast({
         title: 'Bilde lastet opp',
         description: 'Profilbildet er oppdatert',
@@ -190,6 +194,7 @@ export const ParticipantDetailDialog = ({
       onParticipantUpdated?.();
     } catch (error) {
       console.error('Error uploading image:', error);
+      hapticError();
       toast({
         title: 'Feil',
         description: 'Kunne ikke laste opp bilde',
@@ -214,6 +219,7 @@ export const ParticipantDetailDialog = ({
 
       if (error) throw error;
 
+      hapticSuccess();
       toast({
         title: newStatus ? 'Ankommet' : 'Ikke ankommet',
         description: `${participant.name} er markert som ${newStatus ? 'ankommet' : 'ikke ankommet'}`,
@@ -222,6 +228,7 @@ export const ParticipantDetailDialog = ({
       onParticipantUpdated?.();
     } catch (error) {
       console.error('Error toggling arrival:', error);
+      hapticError();
       toast({
         title: 'Feil',
         description: 'Kunne ikke oppdatere ankomststatus',

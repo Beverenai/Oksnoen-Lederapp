@@ -18,6 +18,7 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { useActivities } from '@/hooks/useActivities';
+import { hapticSuccess, hapticImpact } from '@/lib/capacitorHaptics';
 
 interface ActivityManagerProps {
   participantId: string;
@@ -88,6 +89,9 @@ export const ActivityManager = ({
 
       if (error) throw error;
 
+      // Haptic feedback for successful activity add
+      hapticSuccess();
+
       toast({
         title: 'Aktivitet lagt til',
         description: `${activityTitle} er registrert`,
@@ -125,6 +129,9 @@ export const ActivityManager = ({
           .eq('id', data.id);
 
         if (error) throw error;
+
+        // Light haptic for removal
+        hapticImpact('light');
 
         toast({
           title: 'Aktivitet fjernet',

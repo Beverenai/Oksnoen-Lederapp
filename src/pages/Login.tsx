@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Phone, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 export default function Login() {
   const [phone, setPhone] = useState('');
@@ -27,9 +28,11 @@ export default function Login() {
     setIsLoading(false);
 
     if (result.success) {
+      hapticSuccess();
       toast.success('Velkommen!');
       navigate('/');
     } else {
+      hapticError();
       toast.error(result.error || 'Innlogging feilet');
     }
   };
