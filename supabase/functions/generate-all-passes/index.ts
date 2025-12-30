@@ -203,9 +203,9 @@ async function processAllParticipants(supabase: any, LOVABLE_API_KEY: string) {
   console.log('Starting background pass generation...');
   
   try {
-    // Fetch all data
+    // Fetch all data - include pass_suggestion to check if already generated
     const [participantsRes, cabinsRes, activitiesRes] = await Promise.all([
-      supabase.from('participants').select('id, name, birth_date, cabin_id, activity_notes'),
+      supabase.from('participants').select('id, name, birth_date, cabin_id, activity_notes, pass_suggestion'),
       supabase.from('cabins').select('id, name'),
       supabase.from('participant_activities').select('participant_id, activity'),
     ]);
@@ -214,12 +214,16 @@ async function processAllParticipants(supabase: any, LOVABLE_API_KEY: string) {
     if (cabinsRes.error) throw cabinsRes.error;
     if (activitiesRes.error) throw activitiesRes.error;
 
-    const participants = participantsRes.data || [];
+    const allParticipants = participantsRes.data || [];
     const cabins = cabinsRes.data || [];
     const activities = activitiesRes.data || [];
 
+    // Filter out participants who already have a pass_suggestion
+    const participants = allParticipants.filter((p: any) => !p.pass_suggestion || p.pass_suggestion.trim() === '');
+    const skipped = allParticipants.length - participants.length;
+    
     const total = participants.length;
-    console.log(`Processing ${total} participants`);
+    console.log(`Processing ${total} participants (skipped ${skipped} with existing pass_suggestion)`);
 
     await updateProgress(supabase, 'running', 0, total);
 
