@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { PullIndicator } from '@/components/ui/pull-indicator';
 
 interface Story {
   id: string;
@@ -19,11 +21,7 @@ export default function Stories() {
   const [isLoading, setIsLoading] = useState(true);
   const [expandedStory, setExpandedStory] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadStories();
-  }, []);
-
-  const loadStories = async () => {
+  const loadStories = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -39,7 +37,16 @@ export default function Stories() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadStories();
+  }, [loadStories]);
+
+  // Pull-to-refresh
+  const { pullRef, isPulling, pullProgress, isRefreshing } = usePullToRefresh({
+    onRefresh: loadStories,
+  });
 
   const toggleStory = (id: string) => {
     setExpandedStory(expandedStory === id ? null : id);
@@ -73,7 +80,8 @@ export default function Stories() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div ref={pullRef} className="space-y-6 animate-fade-in overflow-y-auto">
+      <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
       <Button variant="ghost" onClick={() => navigate('/')} className="mb-2">
         <ArrowLeft className="w-4 h-4 mr-2" />
         Tilbake

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { PullIndicator } from '@/components/ui/pull-indicator';
 
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
@@ -95,7 +97,7 @@ export default function Leaders() {
     loadLeaders();
   }, []);
 
-  const loadLeaders = async () => {
+  const loadLeaders = useCallback(async () => {
     try {
       // Fetch leaders, content, roles, extra fields config, and leader_cabins in parallel
       const [leadersRes, contentRes, rolesRes, configRes, leaderCabinsRes] = await Promise.all([
@@ -164,7 +166,12 @@ export default function Leaders() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Pull-to-refresh
+  const { pullRef, isPulling, pullProgress, isRefreshing } = usePullToRefresh({
+    onRefresh: loadLeaders,
+  });
 
   // Format linked cabins display with "+" between them
   const formatCabinsDisplay = (cabins: CabinInfo[] | undefined): string => {
@@ -319,7 +326,8 @@ export default function Leaders() {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div ref={pullRef} className="space-y-4 animate-fade-in overflow-y-auto">
+      <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
       {/* Header with search and sort */}
       <div className="flex items-center justify-between gap-2">
         {isSearchOpen ? (

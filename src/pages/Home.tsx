@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +28,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { PullIndicator } from '@/components/ui/pull-indicator';
 
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
@@ -154,7 +156,7 @@ export default function Home() {
     fetchHasRead();
   }, [leader, content]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!leader) return;
 
     setIsLoading(true);
@@ -211,7 +213,12 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [leader]);
+
+  // Pull-to-refresh
+  const { pullRef, isPulling, pullProgress, isRefreshing } = usePullToRefresh({
+    onRefresh: loadData,
+  });
 
   useEffect(() => {
     loadData();
@@ -326,7 +333,8 @@ export default function Home() {
   const SessionIcon = getElementIcon('session_activities', Calendar);
 
   return (
-    <div className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 pb-24">
+    <div ref={pullRef} className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 pb-24 overflow-y-auto">
+      <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
       {/* Header with background image */}
       <div className="relative h-44 md:h-52 overflow-hidden">
         <img 
