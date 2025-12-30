@@ -125,6 +125,9 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
   // Team filter state
   const [activeTeamFilter, setActiveTeamFilter] = useState<string | null>(null);
   const [showTeamFilters, setShowTeamFilters] = useState(false);
+  
+  // Unread filter state
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
 
   // Fetch leader content and roles
   useEffect(() => {
@@ -177,11 +180,28 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
     };
   }, [leaders]);
 
-  // Filter leaders by search and team
+  // Filter leaders by search, team, and unread status
   const filteredLeaders = leadersWithContent.filter(leader => {
-    const matchesSearch = leader.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = 
+      leader.name.toLowerCase().includes(query) ||
+      leader.content?.current_activity?.toLowerCase().includes(query) ||
+      leader.content?.extra_activity?.toLowerCase().includes(query) ||
+      leader.cabin?.toLowerCase().includes(query) ||
+      leader.team?.toLowerCase().includes(query);
+    
     const matchesTeam = !activeTeamFilter || leader.team?.toLowerCase().trim() === activeTeamFilter.toLowerCase();
-    return matchesSearch && matchesTeam;
+    
+    // Unread filter: exclude Admin, Nurse, and Kitchen from red ring check
+    const isKitchen = leader.team?.toLowerCase() === 'kjokken' || leader.team?.toLowerCase() === 'kjøkken';
+    const matchesUnread = !showUnreadOnly || (
+      !leader.isAdmin && 
+      !leader.isNurse && 
+      !isKitchen &&
+      !leader.content?.has_read
+    );
+    
+    return matchesSearch && matchesTeam && matchesUnread;
   });
 
   // Sort: Admin -> Nurse -> Kordinator -> Team order -> Alphabetical
@@ -289,14 +309,14 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Søk etter leder..."
+          placeholder="Søk på navn, aktivitet, hytte, team..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10"
         />
       </div>
 
-      {/* Team Filter */}
+      {/* Team Filter and Unread Filter */}
       <div className="flex flex-wrap items-center gap-2">
         <Button
           variant={activeTeamFilter ? "default" : "outline"}
@@ -336,6 +356,18 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
             ))}
           </div>
         )}
+
+        {/* Unread Filter */}
+        <Button
+          variant={showUnreadOnly ? "destructive" : "outline"}
+          size="sm"
+          onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+          className="gap-1.5"
+        >
+          <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+          Ikke lest
+          {showUnreadOnly && <X className="h-3 w-3 ml-1" />}
+        </Button>
       </div>
 
       {/* Desktop Table View */}
@@ -424,59 +456,76 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
         </Table>
       </div>
 
-      {/* Mobile List View */}
-      <div className="md:hidden space-y-2">
-        {sortedLeaders.map((leader) => (
-          <div
-            key={leader.id}
-            className="flex items-center gap-3 p-3 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors"
-            onClick={() => handleRowClick(leader)}
-          >
-            <Avatar className={`h-10 w-10 ${getAvatarBorderClass(leader)}`}>
-              <AvatarImage src={leader.profile_image_url || undefined} alt={leader.name} />
-              <AvatarFallback>
-                {leader.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-              </AvatarFallback>
-            </Avatar>
-            
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-medium truncate">{getFirstName(leader.name)}</span>
-                {leader.team && (
-                  <Badge variant="secondary" className={`text-xs w-16 justify-center shrink-0 ${getTeamStyles(leader.team)}`}>
-                    {formatTeamDisplay(leader.team)}
-                  </Badge>
-                )}
-                {leader.content?.obs_message && (
-                  <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground truncate">
-                {leader.content?.current_activity || 'Ingen aktivitet'}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-1 shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9"
-                onClick={(e) => handleSendNotification(e, leader)}
-                disabled={sendingNotification === leader.id}
+      {/* Mobile Table View */}
+      <div className="md:hidden rounded-md border overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-10 px-2"></TableHead>
+              <TableHead className="px-2">Navn</TableHead>
+              <TableHead className="px-2">Team</TableHead>
+              <TableHead className="px-2">Aktivitet</TableHead>
+              <TableHead className="w-20 px-2"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedLeaders.map((leader) => (
+              <TableRow
+                key={leader.id}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleRowClick(leader)}
               >
-                <Bell className={`h-4 w-4 ${sendingNotification === leader.id ? 'animate-pulse' : ''}`} />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9"
-                onClick={(e) => handleCall(e, leader.phone)}
-              >
-                <Phone className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        ))}
+                <TableCell className="px-2">
+                  <Avatar className={`h-8 w-8 ${getAvatarBorderClass(leader)}`}>
+                    <AvatarImage src={leader.profile_image_url || undefined} alt={leader.name} />
+                    <AvatarFallback className="text-xs">
+                      {leader.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+                </TableCell>
+                <TableCell className="px-2">
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium text-sm">{getFirstName(leader.name)}</span>
+                    {leader.content?.obs_message && (
+                      <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="px-2">
+                  {leader.team && (
+                    <Badge variant="secondary" className={`text-xs w-16 justify-center ${getTeamStyles(leader.team)}`}>
+                      {formatTeamDisplay(leader.team)}
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell className="px-2 text-xs text-muted-foreground truncate max-w-[100px]">
+                  {leader.content?.current_activity || '-'}
+                </TableCell>
+                <TableCell className="px-2">
+                  <div className="flex items-center gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={(e) => handleSendNotification(e, leader)}
+                      disabled={sendingNotification === leader.id}
+                    >
+                      <Bell className={`h-3.5 w-3.5 ${sendingNotification === leader.id ? 'animate-pulse' : ''}`} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={(e) => handleCall(e, leader.phone)}
+                    >
+                      <Phone className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       {sortedLeaders.length === 0 && (

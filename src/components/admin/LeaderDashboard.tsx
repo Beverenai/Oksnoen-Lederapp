@@ -96,6 +96,7 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
   const [activeTeamFilter, setActiveTeamFilter] = useState<string | null>(null);
   const [showTeamFilters, setShowTeamFilters] = useState(false);
   const [nurseIds, setNurseIds] = useState<Set<string>>(new Set());
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
 
   // Memoize activeLeaders to prevent new array reference on every render - filter out superadmin
   const activeLeaders = useMemo(() => 
@@ -167,17 +168,29 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
     };
   }, [fetchContent]);
 
-  // Filter leaders based on search and team filter
+  // Filter leaders based on search, team filter, and unread status
   const filteredLeaders = leadersWithContent.filter(leader => {
-    const matchesSearch = leader.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      leader.ministerpost?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      leader.team?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      leader.cabin?.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = leader.name.toLowerCase().includes(query) ||
+      leader.ministerpost?.toLowerCase().includes(query) ||
+      leader.team?.toLowerCase().includes(query) ||
+      leader.cabin?.toLowerCase().includes(query) ||
+      leader.content?.current_activity?.toLowerCase().includes(query) ||
+      leader.content?.extra_activity?.toLowerCase().includes(query);
     
     const matchesTeam = !activeTeamFilter || 
       leader.team?.toLowerCase().trim() === activeTeamFilter.toLowerCase();
     
-    return matchesSearch && matchesTeam;
+    // Unread filter: exclude Admin, Nurse, and Kitchen from red ring check
+    const isKitchen = leader.team?.toLowerCase() === 'kjøkken';
+    const isAdminOrNurse = adminIds.has(leader.id) || nurseIds.has(leader.id);
+    const matchesUnread = !showUnreadOnly || (
+      !isAdminOrNurse && 
+      !isKitchen &&
+      !leader.content?.has_read
+    );
+    
+    return matchesSearch && matchesTeam && matchesUnread;
   });
 
   const getActiveFilterLabel = () => {
@@ -281,14 +294,14 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Søk etter leder, team, ministerpost..."
+          placeholder="Søk på navn, aktivitet, hytte, team..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10"
         />
       </div>
 
-      {/* Team Filter */}
+      {/* Team Filter and Unread Filter */}
       <div className="flex flex-wrap items-center gap-2">
         <Button
           variant={activeTeamFilter ? "default" : "outline"}
@@ -331,6 +344,18 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
             )}
           </>
         )}
+
+        {/* Unread Filter */}
+        <Button
+          variant={showUnreadOnly ? "destructive" : "outline"}
+          size="sm"
+          onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+          className="gap-1.5"
+        >
+          <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+          Ikke lest
+          {showUnreadOnly && <X className="h-3 w-3 ml-1" />}
+        </Button>
       </div>
 
       {/* Stats */}
