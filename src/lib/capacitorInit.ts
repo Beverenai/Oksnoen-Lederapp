@@ -47,14 +47,13 @@ export const initCapacitorPlugins = async (): Promise<CapacitorInitResult> => {
   
   console.log('[Capacitor] Native context detected - initializing plugins...');
   
-  // Hide splash screen after app is ready
+  // Hide native splash screen quickly to let React splash take over
   let splashScreen = false;
   try {
     const { SplashScreen } = await import('@capacitor/splash-screen');
-    // Auto-hide is configured, but we can manually hide after a delay if needed
-    await SplashScreen.hide({ fadeOutDuration: 500 });
+    await SplashScreen.hide({ fadeOutDuration: 200 });
     splashScreen = true;
-    console.log('[Capacitor] SplashScreen hidden');
+    console.log('[Capacitor] Native SplashScreen hidden - React splash taking over');
   } catch (error) {
     console.log('[Capacitor] SplashScreen not available:', error);
   }

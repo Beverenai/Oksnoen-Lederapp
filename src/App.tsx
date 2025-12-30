@@ -8,6 +8,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { SplashScreen } from "@/components/SplashScreen";
 import AppLayout from "@/components/layout/AppLayout";
 
 // Critical path - load immediately
@@ -161,6 +162,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
+        <SplashScreen />
         <Toaster />
         <Sonner />
         <OfflineIndicator />
