@@ -102,14 +102,14 @@ const getTeamStyles = (team: string | null) => {
   }
 };
 
-// Team filter options
+// Team filter options with proper text colors
 const TEAM_FILTERS = [
-  { value: '1', label: 'Team 1', color: 'bg-red-500' },
-  { value: '2', label: 'Team 2', color: 'bg-orange-500' },
-  { value: '1f', label: 'Team 1F', color: 'bg-yellow-400' },
-  { value: '2f', label: 'Team 2F', color: 'bg-blue-500' },
-  { value: 'kjokken', label: 'Kjøkken', color: 'bg-purple-500' },
-  { value: 'kordinator', label: 'Kordinator', color: 'bg-pink-500' },
+  { value: '1', label: 'Team 1', color: 'bg-red-500 text-white' },
+  { value: '2', label: 'Team 2', color: 'bg-orange-500 text-white' },
+  { value: '1f', label: 'Team 1F', color: 'bg-yellow-400 text-black' },
+  { value: '2f', label: 'Team 2F', color: 'bg-blue-500 text-white' },
+  { value: 'kjokken', label: 'Kjøkken', color: 'bg-purple-500 text-white' },
+  { value: 'kordinator', label: 'Kordinator', color: 'bg-pink-500 text-white' },
 ];
 
 export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderListViewProps) {
@@ -144,16 +144,18 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
       setAdminIds(admins);
       setNurseIds(nurses);
 
-      // Merge content with leaders
-      const merged = leaders.map(leader => {
-        const content = contentData?.find(c => c.leader_id === leader.id);
-        return {
-          ...leader,
-          content,
-          isAdmin: admins.includes(leader.id),
-          isNurse: nurses.includes(leader.id),
-        };
-      });
+      // Merge content with leaders - filter out superadmin
+      const merged = leaders
+        .filter(leader => leader.name.toLowerCase() !== 'superadmin')
+        .map(leader => {
+          const content = contentData?.find(c => c.leader_id === leader.id);
+          return {
+            ...leader,
+            content,
+            isAdmin: admins.includes(leader.id),
+            isNurse: nurses.includes(leader.id),
+          };
+        });
 
       setLeadersWithContent(merged);
     };
@@ -182,14 +184,28 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
     return matchesSearch && matchesTeam;
   });
 
-  // Sort: by team order, then by name
+  // Sort: Admin -> Nurse -> Kordinator -> Team order -> Alphabetical
   const sortedLeaders = [...filteredLeaders].sort((a, b) => {
-    // First by team order
-    const aTeamOrder = getTeamSortOrder(a.team);
-    const bTeamOrder = getTeamSortOrder(b.team);
-    if (aTeamOrder !== bTeamOrder) return aTeamOrder - bTeamOrder;
+    // 1. Admin først (prioritet 0)
+    if (a.isAdmin && !b.isAdmin) return -1;
+    if (!a.isAdmin && b.isAdmin) return 1;
     
-    // Then by name
+    // 2. Nurse deretter (prioritet 1)
+    if (a.isNurse && !b.isNurse) return -1;
+    if (!a.isNurse && b.isNurse) return 1;
+    
+    // 3. Kordinator (prioritet 2)
+    const aIsKord = a.team?.toLowerCase().trim() === 'kordinator';
+    const bIsKord = b.team?.toLowerCase().trim() === 'kordinator';
+    if (aIsKord && !bIsKord) return -1;
+    if (!aIsKord && bIsKord) return 1;
+    
+    // 4. Team-rekkefølge (Team 1 → Team 2 → Team 1F → Team 2F → Kjøkken)
+    const aOrder = getTeamSortOrder(a.team);
+    const bOrder = getTeamSortOrder(b.team);
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    
+    // 5. Alfabetisk innenfor samme gruppe
     return a.name.localeCompare(b.name, 'nb');
   });
 
@@ -307,15 +323,14 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
             {TEAM_FILTERS.map((filter) => (
               <Button
                 key={filter.value}
-                variant={activeTeamFilter === filter.value ? "default" : "outline"}
+                variant="outline"
                 size="sm"
                 onClick={() => {
                   setActiveTeamFilter(activeTeamFilter === filter.value ? null : filter.value);
                   setShowTeamFilters(false);
                 }}
-                className={`gap-1 ${activeTeamFilter === filter.value ? filter.color : ''}`}
+                className={`gap-1 ${filter.color} hover:opacity-80 border-transparent ${activeTeamFilter === filter.value ? 'ring-2 ring-offset-1 ring-foreground' : ''}`}
               >
-                <span className={`w-2 h-2 rounded-full ${filter.color}`} />
                 {filter.label}
               </Button>
             ))}
@@ -329,7 +344,8 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
           <TableHeader>
             <TableRow>
               <TableHead className="w-12"></TableHead>
-              <TableHead>Navn</TableHead>
+              <TableHead className="w-28">Navn</TableHead>
+              <TableHead className="w-24">Team</TableHead>
               <TableHead>Aktivitet</TableHead>
               <TableHead>Ekstra aktivitet</TableHead>
               <TableHead>Notater</TableHead>
@@ -353,14 +369,14 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
                   </Avatar>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium">{getFirstName(leader.name)}</span>
-                    {leader.team && (
-                      <Badge variant="secondary" className={`text-xs w-20 justify-center ${getTeamStyles(leader.team)}`}>
-                        {formatTeamDisplay(leader.team)}
-                      </Badge>
-                    )}
-                  </div>
+                  <span className="font-medium">{getFirstName(leader.name)}</span>
+                </TableCell>
+                <TableCell>
+                  {leader.team && (
+                    <Badge variant="secondary" className={`text-xs w-20 justify-center ${getTeamStyles(leader.team)}`}>
+                      {formatTeamDisplay(leader.team)}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {leader.content?.current_activity || '-'}

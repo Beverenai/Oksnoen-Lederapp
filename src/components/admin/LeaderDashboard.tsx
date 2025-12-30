@@ -69,14 +69,14 @@ const formatTeamDisplay = (team: string | null): string => {
 
 const getFirstName = (fullName: string) => fullName.split(' ')[0];
 
-// Team filters for filtering UI
+// Team filters for filtering UI with proper text colors
 const TEAM_FILTERS = [
-  { value: '1', label: 'Team 1', color: 'bg-red-500' },
-  { value: '2', label: 'Team 2', color: 'bg-orange-500' },
+  { value: '1', label: 'Team 1', color: 'bg-red-500 text-white' },
+  { value: '2', label: 'Team 2', color: 'bg-orange-500 text-white' },
   { value: '1f', label: 'Team 1F', color: 'bg-yellow-400 text-black' },
-  { value: '2f', label: 'Team 2F', color: 'bg-blue-500' },
-  { value: 'kjøkken', label: 'Kjøkken', color: 'bg-purple-500' },
-  { value: 'kordinator', label: 'Kordinator', color: 'bg-pink-500' },
+  { value: '2f', label: 'Team 2F', color: 'bg-blue-500 text-white' },
+  { value: 'kjøkken', label: 'Kjøkken', color: 'bg-purple-500 text-white' },
+  { value: 'kordinator', label: 'Kordinator', color: 'bg-pink-500 text-white' },
 ];
 
 interface LeaderDashboardProps {
@@ -97,9 +97,13 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
   const [showTeamFilters, setShowTeamFilters] = useState(false);
   const [nurseIds, setNurseIds] = useState<Set<string>>(new Set());
 
-  // Memoize activeLeaders to prevent new array reference on every render
+  // Memoize activeLeaders to prevent new array reference on every render - filter out superadmin
   const activeLeaders = useMemo(() => 
-    leaders.filter(l => l.is_active !== false && l.phone !== '12345678'),
+    leaders.filter(l => 
+      l.is_active !== false && 
+      l.phone !== '12345678' && 
+      l.name.toLowerCase() !== 'superadmin'
+    ),
     [leaders]
   );
 
@@ -301,15 +305,15 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
             {TEAM_FILTERS.map(filter => (
               <Button
                 key={filter.value}
-                variant={activeTeamFilter === filter.value ? "default" : "outline"}
+                variant="outline"
                 size="sm"
                 onClick={() => {
                   setActiveTeamFilter(activeTeamFilter === filter.value ? null : filter.value);
                 }}
                 className={cn(
-                  "text-xs",
-                  activeTeamFilter === filter.value && filter.color,
-                  activeTeamFilter === filter.value && "text-white border-transparent"
+                  "text-xs border-transparent hover:opacity-80",
+                  filter.color,
+                  activeTeamFilter === filter.value && "ring-2 ring-offset-1 ring-foreground"
                 )}
               >
                 {filter.label}
