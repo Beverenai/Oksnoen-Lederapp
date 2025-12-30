@@ -276,34 +276,42 @@ export default function MyCabins() {
             >
               <Card>
                 <CollapsibleTrigger className="w-full">
-                  <CardHeader className="py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                  <CardHeader className="p-3">
+                    <div className="flex items-center gap-3">
+                      {/* Chevron - fixed width */}
+                      <div className="w-5 shrink-0 flex items-center justify-center">
                         {isExpanded ? (
                           <ChevronDown className="w-5 h-5 text-muted-foreground" />
                         ) : (
                           <ChevronRight className="w-5 h-5 text-muted-foreground" />
                         )}
+                      </div>
+                      {/* Home icon - fixed width */}
+                      <div className="w-5 shrink-0 flex items-center justify-center">
                         <Home className="w-5 h-5 text-primary" />
-                        <CardTitle className="text-lg">{cabin.name}</CardTitle>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openCabinReport(cabin);
-                          }}
-                        >
-                          <FileText className="w-4 h-4" />
-                          Rapport
-                        </Button>
-                        <Badge variant="outline">
-                          {cabinArrived}/{cabin.participants.length} ankommet
-                        </Badge>
-                      </div>
+                      {/* Title - flexible, truncate */}
+                      <CardTitle className="text-lg truncate flex-1 min-w-0 text-left">{cabin.name}</CardTitle>
+                      {/* Report button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openCabinReport(cabin);
+                        }}
+                      >
+                        <FileText className="w-4 h-4" />
+                        Rapport
+                      </Button>
+                      {/* Status pill - fixed min-width, consistent height */}
+                      <Badge 
+                        variant="outline"
+                        className="min-w-[90px] h-7 justify-center text-xs shrink-0"
+                      >
+                        {cabinArrived}/{cabin.participants.length} ankommet
+                      </Badge>
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
