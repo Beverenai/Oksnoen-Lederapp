@@ -167,14 +167,50 @@ export default function MyCabins() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-12" />
-        <div className="space-y-4">
-          {[...Array(2)].map((_, i) => (
-            <Skeleton key={i} className="h-40" />
-          ))}
+      <div className="space-y-6 animate-fade-in">
+        {/* Back button skeleton */}
+        <Skeleton className="h-9 w-28 rounded-md" />
+        {/* Header skeleton */}
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-36" />
+          <Skeleton className="h-4 w-48" />
         </div>
+        {/* Search skeleton */}
+        <Skeleton className="h-10 w-full rounded-md" />
+        {/* Cabin cards skeleton */}
+        {[...Array(2)].map((_, cabinIdx) => (
+          <div key={cabinIdx} className="rounded-lg border bg-card">
+            {/* Cabin header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-5 w-5" />
+                <Skeleton className="h-5 w-5" />
+                <Skeleton className="h-6 w-24" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-20 rounded-md" />
+                <Skeleton className="h-6 w-28 rounded-full" />
+              </div>
+            </div>
+            {/* Participants */}
+            <div className="p-4 space-y-3">
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {[...Array(4)].map((_, pIdx) => (
+                  <div key={pIdx} className="flex items-start gap-3 p-3 rounded-lg border">
+                    <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-24" />
+                      <div className="flex gap-1">
+                        <Skeleton className="h-5 w-12 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
