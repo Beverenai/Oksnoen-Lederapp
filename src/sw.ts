@@ -1,8 +1,8 @@
 /// <reference lib="webworker" />
-import { precacheAndRoute } from 'workbox-precaching';
+import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { clientsClaim } from 'workbox-core';
-import { registerRoute } from 'workbox-routing';
-import { CacheFirst } from 'workbox-strategies';
+import { registerRoute, NavigationRoute } from 'workbox-routing';
+import { CacheFirst, NetworkFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
@@ -20,8 +20,29 @@ self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
-self.addEventListener('activate', () => {
+// Clean up old caches on activation
+self.addEventListener('activate', (event: ExtendableEvent) => {
   console.log('[SW] Service worker activated');
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames
+          .filter((name) => {
+            // Keep workbox precache and our named caches
+            const keepCaches = [
+              'participant-images-cache',
+              'fix-images-cache',
+              'js-runtime-cache',
+            ];
+            return !name.startsWith('workbox-precache') && !keepCaches.includes(name);
+          })
+          .map((name) => {
+            console.log('[SW] Deleting old cache:', name);
+            return caches.delete(name);
+          })
+      );
+    })
+  );
 });
 
 // Listen for skipWaiting message from client
@@ -31,6 +52,33 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
+// === SPA NAVIGATION FALLBACK ===
+// This ensures that all navigation requests return index.html for client-side routing
+const handler = createHandlerBoundToURL('/index.html');
+const navigationRoute = new NavigationRoute(handler, {
+  // Don't handle API routes or direct file requests
+  denylist: [/^\/_/, /\/[^/?]+\.[^/]+$/],
+});
+registerRoute(navigationRoute);
+
+// === JS CHUNKS - NETWORK FIRST ===
+// Ensure we always get fresh JS chunks after deployments
+registerRoute(
+  ({ request }) => request.destination === 'script',
+  new NetworkFirst({
+    cacheName: 'js-runtime-cache',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 50,
+        maxAgeSeconds: 24 * 60 * 60, // 1 day
+      }),
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+    ],
+  })
+);
 
 // === IMAGE CACHING ===
 
