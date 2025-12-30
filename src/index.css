@@ -332,4 +332,9 @@ header, nav {
   .animate-splash-fade-out {
     animation: splash-fade-out 0.5s ease-out forwards;
   }
+
+  .animate-splash-text {
+    animation: splash-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.4s forwards;
+    opacity: 0;
+  }
 }
