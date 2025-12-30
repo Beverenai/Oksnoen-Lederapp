@@ -11,6 +11,7 @@ import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { SplashScreen } from "@/components/SplashScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AppLayout from "@/components/layout/AppLayout";
+import { useStatusBarTheme } from "@/hooks/useStatusBarTheme";
 
 // Critical path - load immediately
 import Login from "@/pages/Login";
@@ -159,10 +160,17 @@ function AppRoutes() {
   );
 }
 
+// Component that syncs status bar with theme
+function StatusBarSync() {
+  useStatusBarTheme();
+  return null;
+}
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <StatusBarSync />
         <TooltipProvider>
           <SplashScreen />
           <Toaster />

@@ -17,10 +17,10 @@ initCapacitorPlugins().then((result) => {
 });
 
 // Configure StatusBar for native platforms only (dynamic import)
+// Note: Style is set dynamically by useStatusBarTheme hook based on theme
 if (isCapacitor()) {
-  import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+  import('@capacitor/status-bar').then(({ StatusBar }) => {
     StatusBar.setOverlaysWebView({ overlay: true }); // WebView går under Dynamic Island
-    StatusBar.setStyle({ style: Style.Dark }); // Hvit tekst på mørk bakgrunn
     StatusBar.setBackgroundColor({ color: '#00000000' }); // Transparent
     console.log('[Capacitor] StatusBar configured for edge-to-edge');
   }).catch((err) => {
