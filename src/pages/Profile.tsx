@@ -416,6 +416,11 @@ export default function Profile() {
         )}
         {isSaving ? 'Lagrer...' : 'Lagre profil'}
       </Button>
+
+      {/* Version label */}
+      <div className="text-center pt-4 pb-8 text-xs text-muted-foreground/60">
+        v{import.meta.env.VITE_APP_VERSION || '1.0.0'} • {import.meta.env.MODE}
+      </div>
     </div>
   );
 }
