@@ -351,7 +351,7 @@ export default function Passport() {
     .join(', ');
 
   return (
-    <div ref={pullRef} className="space-y-6 animate-fade-in overflow-y-auto">
+    <div ref={pullRef} className="space-y-6 animate-fade-in">
       <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
       {/* Back button when filtered by cabin */}
       {(cabinFilterFromUrl || myCabinsFilter) && (

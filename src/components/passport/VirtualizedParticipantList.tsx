@@ -167,7 +167,7 @@ const CabinHeader = memo(({
         className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
         onClick={onToggle}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Chevron - fixed width */}
           <div className="w-5 shrink-0 flex items-center justify-center">
             {isExpanded ? (
@@ -181,10 +181,10 @@ const CabinHeader = memo(({
             <Home className="w-5 h-5 text-primary" />
           </div>
           {/* Title - flexible, truncate */}
-          <CardTitle className="text-lg truncate flex-1 min-w-0">{cabin.name}</CardTitle>
-          {/* Leaders badges - limited width, one line */}
+          <CardTitle className="text-base sm:text-lg truncate flex-1 min-w-0">{cabin.name}</CardTitle>
+          {/* Leaders badges - hidden on mobile, limited width on tablet+ */}
           {displayNames.length > 0 && (
-            <div className="flex gap-1 max-w-[120px] overflow-hidden shrink-0">
+            <div className="hidden sm:flex gap-1 max-w-[100px] overflow-hidden shrink-0">
               {displayNames.map((name, idx) => (
                 <Badge 
                   key={idx} 
@@ -204,12 +204,13 @@ const CabinHeader = memo(({
               )}
             </div>
           )}
-          {/* Status pill - fixed min-width, consistent height */}
+          {/* Status pill - responsive sizing, always visible */}
           <Badge 
             variant="outline"
-            className="min-w-[90px] h-7 justify-center text-xs shrink-0"
+            className="min-w-[70px] sm:min-w-[90px] h-7 justify-center text-xs shrink-0 whitespace-nowrap"
           >
-            {arrivedCount}/{totalCount} ankommet
+            <span className="sm:hidden">{arrivedCount}/{totalCount}</span>
+            <span className="hidden sm:inline">{arrivedCount}/{totalCount} ankommet</span>
           </Badge>
         </div>
       </CardHeader>
@@ -399,8 +400,7 @@ export function VirtualizedParticipantList({
     <div 
       className="space-y-2" 
       style={{ 
-        height: 'calc(100vh - 200px)', 
-        overflow: 'hidden' 
+        height: 'calc(100dvh - 280px - env(safe-area-inset-bottom, 0px))'
       }}
     >
       <List<RowData>
