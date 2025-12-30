@@ -184,6 +184,7 @@ header, nav {
 
   html, body, #root {
     height: 100%;
+    touch-action: manipulation;
   }
 
   /* Mobile: use dvh for correct viewport sizing (allow normal scrolling) */
