@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -80,9 +81,6 @@ const formatTeamDisplay = (team: string | null): string => {
 };
 
 export default function Leaders() {
-  const [leaders, setLeaders] = useState<LeaderWithContent[]>([]);
-  const [extraFieldsConfig, setExtraFieldsConfig] = useState<ExtraFieldConfig[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedLeader, setSelectedLeader] = useState<LeaderWithContent | null>(null);
   
   // Filter, sort and search state
@@ -93,12 +91,10 @@ export default function Leaders() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showTeamFilters, setShowTeamFilters] = useState(false);
 
-  useEffect(() => {
-    loadLeaders();
-  }, []);
-
-  const loadLeaders = useCallback(async () => {
-    try {
+  // Fetch leaders with React Query for caching
+  const { data: leadersData, isLoading, refetch } = useQuery({
+    queryKey: ['leaders-with-content'],
+    queryFn: async () => {
       // Fetch leaders, content, roles, extra fields config, and leader_cabins in parallel
       const [leadersRes, contentRes, rolesRes, configRes, leaderCabinsRes] = await Promise.all([
         supabase
@@ -128,7 +124,7 @@ export default function Leaders() {
           `)
       ]);
 
-      const leadersData = leadersRes.data || [];
+      const leadersRaw = leadersRes.data || [];
       const contentData = contentRes.data || [];
       const rolesData = rolesRes.data || [];
       const configData = configRes.data || [];
@@ -149,7 +145,7 @@ export default function Leaders() {
         }
       });
 
-      const leadersWithContent: LeaderWithContent[] = leadersData
+      const leadersWithContent: LeaderWithContent[] = leadersRaw
         .filter((leader) => leader.name.toLowerCase() !== 'superadmin')
         .map((leader) => ({
           ...leader,
@@ -159,18 +155,18 @@ export default function Leaders() {
           linkedCabins: leaderCabinsMap.get(leader.id) || [],
         }));
 
-      setLeaders(leadersWithContent);
-      setExtraFieldsConfig(configData);
-    } catch (error) {
-      console.error('Error loading leaders:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      return { leaders: leadersWithContent, extraFieldsConfig: configData };
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh
+    gcTime: 30 * 60 * 1000, // 30 minutes cache
+  });
+
+  const leaders = leadersData?.leaders || [];
+  const extraFieldsConfig = leadersData?.extraFieldsConfig || [];
 
   // Pull-to-refresh
   const { pullRef, isPulling, pullProgress, isRefreshing } = usePullToRefresh({
-    onRefresh: loadLeaders,
+    onRefresh: async () => { await refetch(); },
   });
 
   // Format linked cabins display with "+" between them

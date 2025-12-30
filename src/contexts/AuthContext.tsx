@@ -42,27 +42,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadLeader = async (leaderId: string) => {
     try {
-      const { data: leaderData, error } = await supabase
-        .from('leaders')
-        .select('*')
-        .eq('id', leaderId)
-        .maybeSingle();
+      // Run both queries in parallel for faster loading
+      const [leaderResult, rolesResult] = await Promise.all([
+        supabase.from('leaders').select('*').eq('id', leaderId).maybeSingle(),
+        supabase.from('user_roles').select('role').eq('leader_id', leaderId)
+      ]);
 
-      if (error || !leaderData) {
+      if (leaderResult.error || !leaderResult.data) {
         localStorage.removeItem('leaderId');
+        localStorage.removeItem('leaderName');
         setIsLoading(false);
         return;
       }
 
-      setLeader(leaderData);
+      setLeader(leaderResult.data);
+      // Cache leader name for splash screen
+      localStorage.setItem('leaderName', leaderResult.data.name);
 
-      // Check roles
-      const { data: rolesData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('leader_id', leaderId);
-
-      const roles = rolesData?.map(r => r.role) || [];
+      const roles = rolesResult.data?.map(r => r.role) || [];
       setIsAdmin(roles.includes('admin'));
       setIsNurse(roles.includes('nurse'));
     } catch (error) {
@@ -102,8 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: data.error || 'Innlogging feilet.' };
       }
 
-      // Store leader ID and set state
+      // Store leader ID and name, set state
       localStorage.setItem('leaderId', data.leader.id);
+      localStorage.setItem('leaderName', data.leader.name);
       setLeader(data.leader);
 
       // Set roles from edge function response
