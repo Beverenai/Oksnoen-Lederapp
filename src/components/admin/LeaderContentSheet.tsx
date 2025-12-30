@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,6 +11,16 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, Check, Home } from 'lucide-react';
 import { icons } from 'lucide-react';
 import { toast } from 'sonner';
@@ -90,6 +100,14 @@ export function LeaderContentSheet({
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
 
+  // Change notification dialog state
+  const [showNotifyDialog, setShowNotifyDialog] = useState(false);
+  const [detectedChanges, setDetectedChanges] = useState<string[]>([]);
+  const [isSendingChangeNotification, setIsSendingChangeNotification] = useState(false);
+  
+  // Store original values to detect changes
+  const originalValuesRef = useRef<Record<string, any>>({});
+
   // Cabin multi-select state
   const [cabins, setCabins] = useState<{ id: string; name: string }[]>([]);
   const [selectedCabinIds, setSelectedCabinIds] = useState<string[]>([]);
@@ -130,7 +148,10 @@ export function LeaderContentSheet({
         .from('leader_cabins')
         .select('cabin_id')
         .eq('leader_id', leader.id);
-      setSelectedCabinIds(data?.map(d => d.cabin_id) || []);
+      const cabinIds = data?.map(d => d.cabin_id) || [];
+      setSelectedCabinIds(cabinIds);
+      // Store original cabin IDs
+      originalValuesRef.current.selectedCabinIds = cabinIds;
     };
     loadLeaderCabins();
   }, [leader?.id]);
@@ -152,6 +173,21 @@ export function LeaderContentSheet({
       setExtra4(content?.extra_4 || '');
       setExtra5(content?.extra_5 || '');
       
+      // Store original values for change detection
+      originalValuesRef.current = {
+        team: leader.team || '',
+        ministerpost: leader.ministerpost || '',
+        currentActivity: content?.current_activity || '',
+        extraActivity: content?.extra_activity || '',
+        personalNotes: content?.personal_notes || '',
+        obsMessage: content?.obs_message || '',
+        extra1: content?.extra_1 || '',
+        extra2: content?.extra_2 || '',
+        extra3: content?.extra_3 || '',
+        extra4: content?.extra_4 || '',
+        extra5: content?.extra_5 || '',
+      };
+      
       // Reset notification state
       setNotificationTitle('');
       setNotificationMessage('');
@@ -167,6 +203,105 @@ export function LeaderContentSheet({
         ? prev.filter(id => id !== cabinId)
         : [...prev, cabinId]
     );
+  };
+
+  // Get changes for notification
+  const getChanges = (): string[] => {
+    const changes: string[] = [];
+    const orig = originalValuesRef.current;
+    
+    if (currentActivity !== orig.currentActivity && currentActivity) {
+      changes.push(`Ny aktivitet: "${currentActivity}"`);
+    }
+    if (extraActivity !== orig.extraActivity && extraActivity) {
+      changes.push(`Ny ekstra aktivitet: "${extraActivity}"`);
+    }
+    if (team !== orig.team && team) {
+      changes.push(`Nytt team: ${team}`);
+    }
+    if (ministerpost !== orig.ministerpost && ministerpost) {
+      changes.push(`Ny ministerpost: "${ministerpost}"`);
+    }
+    if (obsMessage !== orig.obsMessage && obsMessage) {
+      changes.push(`Ny OBS-melding fra admin`);
+    }
+    if (personalNotes !== orig.personalNotes && personalNotes) {
+      changes.push(`Nye notater`);
+    }
+    
+    // Check cabin changes
+    const origCabinIds = orig.selectedCabinIds || [];
+    const cabinIdsChanged = JSON.stringify([...selectedCabinIds].sort()) !== JSON.stringify([...origCabinIds].sort());
+    if (cabinIdsChanged && selectedCabinIds.length > 0) {
+      const cabinNames = cabins.filter(c => selectedCabinIds.includes(c.id)).map(c => c.name).join(', ');
+      changes.push(`Nytt hytte-ansvar: ${cabinNames}`);
+    }
+    
+    // Check extra fields (only show if there's actual new content)
+    if (extra1 !== orig.extra1 && extra1) {
+      const fieldConfig = homeConfig.find(c => c.element_key === 'extra_1');
+      changes.push(`Ny info: ${fieldConfig?.title || 'Ekstra 1'}`);
+    }
+    if (extra2 !== orig.extra2 && extra2) {
+      const fieldConfig = homeConfig.find(c => c.element_key === 'extra_2');
+      changes.push(`Ny info: ${fieldConfig?.title || 'Ekstra 2'}`);
+    }
+    if (extra3 !== orig.extra3 && extra3) {
+      const fieldConfig = homeConfig.find(c => c.element_key === 'extra_3');
+      changes.push(`Ny info: ${fieldConfig?.title || 'Ekstra 3'}`);
+    }
+    if (extra4 !== orig.extra4 && extra4) {
+      const fieldConfig = homeConfig.find(c => c.element_key === 'extra_4');
+      changes.push(`Ny info: ${fieldConfig?.title || 'Ekstra 4'}`);
+    }
+    if (extra5 !== orig.extra5 && extra5) {
+      const fieldConfig = homeConfig.find(c => c.element_key === 'extra_5');
+      changes.push(`Ny info: ${fieldConfig?.title || 'Ekstra 5'}`);
+    }
+    
+    return changes;
+  };
+
+  const handleSendChangeNotification = async () => {
+    if (!leader || !currentLeader) return;
+    
+    setIsSendingChangeNotification(true);
+    try {
+      const firstName = getFirstName(leader.name);
+      const changesText = detectedChanges.map(c => `• ${c}`).join('\n');
+      
+      const { data, error } = await supabase.functions.invoke('push-send', {
+        body: {
+          title: `Hei ${firstName}! Du har fått oppdateringer`,
+          message: changesText,
+          single_leader_id: leader.id,
+          sender_leader_id: currentLeader.id,
+          url: '/'
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.sent > 0) {
+        hapticSuccess();
+        toast.success('Varsling sendt!');
+      } else {
+        toast.info(`${firstName} har ikke aktivert push-varslinger`);
+      }
+    } catch (error) {
+      console.error('Error sending change notification:', error);
+      hapticError();
+      toast.error('Kunne ikke sende varsling');
+    } finally {
+      setIsSendingChangeNotification(false);
+      setShowNotifyDialog(false);
+      onOpenChange(false);
+    }
+  };
+
+  const handleSkipNotification = () => {
+    setShowNotifyDialog(false);
+    onOpenChange(false);
   };
 
   const handleSendNotification = async () => {
@@ -301,6 +436,15 @@ export function LeaderContentSheet({
       hapticSuccess();
       toast.success('Lagret!');
       onSaved();
+      
+      // Check for changes and show notification dialog
+      const changes = getChanges();
+      if (changes.length > 0) {
+        setDetectedChanges(changes);
+        setShowNotifyDialog(true);
+      } else {
+        onOpenChange(false);
+      }
     } catch (error) {
       console.error('Error saving:', error);
       hapticError();
@@ -311,326 +455,363 @@ export function LeaderContentSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader className="pb-4">
-          <div className="flex items-start gap-4">
-            <Avatar className="w-16 h-16 border-2 border-primary/20">
-              {leader.profile_image_url && (
-                <AvatarImage src={leader.profile_image_url} alt={leader.name} />
-              )}
-              <AvatarFallback className="bg-primary/10 text-primary text-lg">
-                {getFirstName(leader.name).slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <SheetTitle className="text-xl">{leader.name}</SheetTitle>
-              <Button asChild variant="link" className="h-auto p-0 text-sm">
-                <a href={`tel:${leader.phone}`}>
-                  <Phone className="w-3 h-3 mr-1" />
-                  {leader.phone}
-                </a>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader className="pb-4">
+            <div className="flex items-start gap-4">
+              <Avatar className="w-16 h-16 border-2 border-primary/20">
+                {leader.profile_image_url && (
+                  <AvatarImage src={leader.profile_image_url} alt={leader.name} />
+                )}
+                <AvatarFallback className="bg-primary/10 text-primary text-lg">
+                  {getFirstName(leader.name).slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <SheetTitle className="text-xl">{leader.name}</SheetTitle>
+                <Button asChild variant="link" className="h-auto p-0 text-sm">
+                  <a href={`tel:${leader.phone}`}>
+                    <Phone className="w-3 h-3 mr-1" />
+                    {leader.phone}
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </SheetHeader>
+
+          <div className="space-y-6">
+            {/* Clickable badges for team, cabin, ministerpost */}
+            <div className="flex flex-wrap gap-2">
+              {/* Team Badge */}
+              <Popover open={editingField === 'team'} onOpenChange={(open) => setEditingField(open ? 'team' : null)}>
+                <PopoverTrigger asChild>
+                  <button type="button" className="focus:outline-none">
+                    <Badge 
+                      className={`cursor-pointer hover:opacity-80 transition-opacity ${team ? getTeamStyles(team) : 'bg-muted text-muted-foreground'}`}
+                    >
+                      {team || 'Velg team'}
+                      <Pencil className="w-3 h-3 ml-1" />
+                    </Badge>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-2 bg-popover z-[100]" align="start" side="bottom" sideOffset={4}>
+                  <div className="space-y-1">
+                    <button
+                      className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted"
+                      onClick={() => { setTeam(''); setEditingField(null); }}
+                    >
+                      Ingen
+                    </button>
+                    {TEAM_OPTIONS.map(t => (
+                      <button
+                        key={t}
+                        className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted flex items-center gap-2"
+                        onClick={() => { setTeam(t); setEditingField(null); }}
+                      >
+                        <Badge className={`${getTeamStyles(t)} text-xs`}>{t}</Badge>
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Cabin Badge - with searchable multi-select dropdown */}
+              <Popover open={editingField === 'cabin'} onOpenChange={(open) => {
+                setEditingField(open ? 'cabin' : null);
+                if (!open) setCabinSearch('');
+              }}>
+                <PopoverTrigger asChild>
+                  <button type="button" className="focus:outline-none">
+                    <Badge 
+                      variant="outline"
+                      className="cursor-pointer hover:opacity-80 transition-opacity max-w-[200px] truncate"
+                    >
+                      <Home className="w-3 h-3 mr-1 flex-shrink-0" />
+                      {selectedCabinIds.length > 0 
+                        ? cabins.filter(c => selectedCabinIds.includes(c.id)).map(c => c.name).join(', ')
+                        : 'Hytte-ansvar'}
+                      <Pencil className="w-3 h-3 ml-1 flex-shrink-0" />
+                    </Badge>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-0 bg-popover z-[100]" align="start" side="bottom" sideOffset={4}>
+                  <Command shouldFilter={false}>
+                    <CommandInput 
+                      placeholder="Søk etter hytte..." 
+                      value={cabinSearch}
+                      onValueChange={setCabinSearch}
+                    />
+                    <CommandList>
+                      <CommandEmpty>Ingen hytter funnet</CommandEmpty>
+                      <CommandGroup>
+                        <ScrollArea className="h-60">
+                          {cabins
+                            .filter(c => c.name.toLowerCase().includes(cabinSearch.toLowerCase()))
+                            .map(cabin => (
+                              <CommandItem
+                                key={cabin.id}
+                                onSelect={() => toggleCabin(cabin.id)}
+                                className="cursor-pointer"
+                              >
+                                <Check 
+                                  className={`mr-2 h-4 w-4 ${
+                                    selectedCabinIds.includes(cabin.id) ? 'opacity-100' : 'opacity-0'
+                                  }`}
+                                />
+                                <Home className="mr-2 h-4 w-4 text-muted-foreground" />
+                                {cabin.name}
+                              </CommandItem>
+                            ))}
+                        </ScrollArea>
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                  <div className="p-2 border-t">
+                    <Button size="sm" onClick={() => setEditingField(null)} className="w-full">
+                      Ferdig
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Ministerpost Badge */}
+              <Popover open={editingField === 'ministerpost'} onOpenChange={(open) => setEditingField(open ? 'ministerpost' : null)}>
+                <PopoverTrigger asChild>
+                  <button type="button" className="focus:outline-none">
+                    <Badge 
+                      variant="secondary"
+                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                    >
+                      {ministerpost || 'Ministerpost'}
+                      <Pencil className="w-3 h-3 ml-1" />
+                    </Badge>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-3 bg-popover z-[100]" align="start" side="bottom" sideOffset={4}>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Ministerpost</Label>
+                    <Input
+                      value={ministerpost}
+                      onChange={(e) => setMinisterpost(e.target.value)}
+                      placeholder="f.eks. Statsminister"
+                      autoFocus
+                      onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
+                    />
+                    <Button size="sm" onClick={() => setEditingField(null)} className="w-full">
+                      Ferdig
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Competency Badges */}
+            {(leader.has_drivers_license || leader.has_car || leader.has_boat_license || 
+              leader.can_rappelling || leader.can_climbing || leader.can_zipline || leader.can_rope_setup) && (
+              <div className="flex flex-wrap gap-1.5">
+                {leader.has_drivers_license && (
+                  <Badge variant="outline" className="text-xs bg-background">
+                    <Car className="w-3 h-3 mr-1" />
+                    Førerkort
+                  </Badge>
+                )}
+                {leader.has_car && (
+                  <Badge variant="outline" className="text-xs bg-green-50 border-green-300 text-green-700">
+                    <Car className="w-3 h-3 mr-1" />
+                    Har bil
+                  </Badge>
+                )}
+                {leader.has_boat_license && (
+                  <Badge variant="outline" className="text-xs bg-blue-50 border-blue-300 text-blue-700">
+                    <Anchor className="w-3 h-3 mr-1" />
+                    Båt
+                  </Badge>
+                )}
+                {leader.can_rappelling && (
+                  <Badge variant="outline" className="text-xs bg-orange-50 border-orange-300 text-orange-700">
+                    <ArrowDown className="w-3 h-3 mr-1" />
+                    Rappis
+                  </Badge>
+                )}
+                {leader.can_climbing && (
+                  <Badge variant="outline" className="text-xs bg-amber-50 border-amber-300 text-amber-700">
+                    <Mountain className="w-3 h-3 mr-1" />
+                    Klatring
+                  </Badge>
+                )}
+                {leader.can_zipline && (
+                  <Badge variant="outline" className="text-xs bg-purple-50 border-purple-300 text-purple-700">
+                    <Cable className="w-3 h-3 mr-1" />
+                    Taubane
+                  </Badge>
+                )}
+                {leader.can_rope_setup && (
+                  <Badge variant="outline" className="text-xs bg-indigo-50 border-indigo-300 text-indigo-700">
+                    <Wrench className="w-3 h-3 mr-1" />
+                    Taubane-Oppsett
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {/* Current Activity */}
+            <div className="space-y-2">
+              <Label>Nåværende aktivitet</Label>
+              <Input
+                value={currentActivity}
+                onChange={(e) => setCurrentActivity(e.target.value)}
+                placeholder="Hva gjør lederen nå?"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Ekstra aktivitet</Label>
+              <Input
+                value={extraActivity}
+                onChange={(e) => setExtraActivity(e.target.value)}
+                placeholder="Tilleggsinfo om aktivitet"
+              />
+            </div>
+
+            {/* Personal Notes */}
+            <div className="space-y-2">
+              <Label>Notater til lederen</Label>
+              <Textarea
+                value={personalNotes}
+                onChange={(e) => setPersonalNotes(e.target.value)}
+                placeholder="Private notater..."
+                rows={3}
+              />
+            </div>
+
+            {/* OBS Message */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="w-4 h-4" />
+                OBS-melding
+              </Label>
+              <Textarea
+                value={obsMessage}
+                onChange={(e) => setObsMessage(e.target.value)}
+                placeholder="Viktig melding som vises fremhevet..."
+                rows={2}
+                className="border-destructive/50 focus-visible:ring-destructive"
+              />
+            </div>
+
+            {/* Send notification to this leader */}
+            <div className="space-y-2 pt-2 border-t">
+              <Label className="flex items-center gap-2">
+                <Bell className="w-4 h-4" />
+                Send varsling til {getFirstName(leader.name)}
+              </Label>
+              <Input
+                placeholder="Tittel på varsling..."
+                value={notificationTitle}
+                onChange={(e) => setNotificationTitle(e.target.value)}
+              />
+              <Textarea
+                placeholder="Melding (valgfritt)..."
+                value={notificationMessage}
+                onChange={(e) => setNotificationMessage(e.target.value)}
+                rows={2}
+              />
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleSendNotification}
+                disabled={isSendingNotification || !notificationTitle.trim()}
+              >
+                {isSendingNotification ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4 mr-2" />
+                )}
+                Send varsling
               </Button>
             </div>
-          </div>
-        </SheetHeader>
 
-        <div className="space-y-6">
-          {/* Clickable badges for team, cabin, ministerpost */}
-          <div className="flex flex-wrap gap-2">
-            {/* Team Badge */}
-            <Popover open={editingField === 'team'} onOpenChange={(open) => setEditingField(open ? 'team' : null)}>
-              <PopoverTrigger asChild>
-                <button type="button" className="focus:outline-none">
-                  <Badge 
-                    className={`cursor-pointer hover:opacity-80 transition-opacity ${team ? getTeamStyles(team) : 'bg-muted text-muted-foreground'}`}
-                  >
-                    {team || 'Velg team'}
-                    <Pencil className="w-3 h-3 ml-1" />
-                  </Badge>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 p-2 bg-popover z-[100]" align="start" side="bottom" sideOffset={4}>
-                <div className="space-y-1">
-                  <button
-                    className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted"
-                    onClick={() => { setTeam(''); setEditingField(null); }}
-                  >
-                    Ingen
-                  </button>
-                  {TEAM_OPTIONS.map(t => (
-                    <button
-                      key={t}
-                      className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted flex items-center gap-2"
-                      onClick={() => { setTeam(t); setEditingField(null); }}
-                    >
-                      <Badge className={`${getTeamStyles(t)} text-xs`}>{t}</Badge>
-                    </button>
+            {/* Extra Fields - Collapsible */}
+            {visibleExtraFields.length > 0 && (
+              <Collapsible open={isExtraFieldsOpen} onOpenChange={setIsExtraFieldsOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between">
+                    <span>Ekstra info ({visibleExtraFields.length} felt)</span>
+                    {isExtraFieldsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 pt-2">
+                  {visibleExtraFields.map(field => (
+                    <div key={field.id} className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        {getIcon(field.icon || 'info')}
+                        {field.title || field.label || field.element_key}
+                      </Label>
+                      <Textarea
+                        value={getExtraFieldValue(field.element_key)}
+                        onChange={(e) => setExtraFieldValue(field.element_key, e.target.value)}
+                        placeholder={`Skriv ${field.title?.toLowerCase() || 'info'}...`}
+                        rows={2}
+                      />
+                    </div>
                   ))}
-                </div>
-              </PopoverContent>
-            </Popover>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
-            {/* Cabin Badge - with searchable multi-select dropdown */}
-            <Popover open={editingField === 'cabin'} onOpenChange={(open) => {
-              setEditingField(open ? 'cabin' : null);
-              if (!open) setCabinSearch('');
-            }}>
-              <PopoverTrigger asChild>
-                <button type="button" className="focus:outline-none">
-                  <Badge 
-                    variant="outline"
-                    className="cursor-pointer hover:opacity-80 transition-opacity max-w-[200px] truncate"
-                  >
-                    <Home className="w-3 h-3 mr-1 flex-shrink-0" />
-                    {selectedCabinIds.length > 0 
-                      ? cabins.filter(c => selectedCabinIds.includes(c.id)).map(c => c.name).join(', ')
-                      : 'Hytte-ansvar'}
-                    <Pencil className="w-3 h-3 ml-1 flex-shrink-0" />
-                  </Badge>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72 p-0 bg-popover z-[100]" align="start" side="bottom" sideOffset={4}>
-                <Command shouldFilter={false}>
-                  <CommandInput 
-                    placeholder="Søk etter hytte..." 
-                    value={cabinSearch}
-                    onValueChange={setCabinSearch}
-                  />
-                  <CommandList>
-                    <CommandEmpty>Ingen hytter funnet</CommandEmpty>
-                    <CommandGroup>
-                      <ScrollArea className="h-60">
-                        {cabins
-                          .filter(c => c.name.toLowerCase().includes(cabinSearch.toLowerCase()))
-                          .map(cabin => (
-                            <CommandItem
-                              key={cabin.id}
-                              onSelect={() => toggleCabin(cabin.id)}
-                              className="cursor-pointer"
-                            >
-                              <Check 
-                                className={`mr-2 h-4 w-4 ${
-                                  selectedCabinIds.includes(cabin.id) ? 'opacity-100' : 'opacity-0'
-                                }`}
-                              />
-                              <Home className="mr-2 h-4 w-4 text-muted-foreground" />
-                              {cabin.name}
-                            </CommandItem>
-                          ))}
-                      </ScrollArea>
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-                <div className="p-2 border-t">
-                  <Button size="sm" onClick={() => setEditingField(null)} className="w-full">
-                    Ferdig
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            {/* Ministerpost Badge */}
-            <Popover open={editingField === 'ministerpost'} onOpenChange={(open) => setEditingField(open ? 'ministerpost' : null)}>
-              <PopoverTrigger asChild>
-                <button type="button" className="focus:outline-none">
-                  <Badge 
-                    variant="secondary"
-                    className="cursor-pointer hover:opacity-80 transition-opacity"
-                  >
-                    {ministerpost || 'Ministerpost'}
-                    <Pencil className="w-3 h-3 ml-1" />
-                  </Badge>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56 p-3 bg-popover z-[100]" align="start" side="bottom" sideOffset={4}>
-                <div className="space-y-2">
-                  <Label className="text-xs">Ministerpost</Label>
-                  <Input
-                    value={ministerpost}
-                    onChange={(e) => setMinisterpost(e.target.value)}
-                    placeholder="f.eks. Statsminister"
-                    autoFocus
-                    onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
-                  />
-                  <Button size="sm" onClick={() => setEditingField(null)} className="w-full">
-                    Ferdig
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Competency Badges */}
-          {(leader.has_drivers_license || leader.has_car || leader.has_boat_license || 
-            leader.can_rappelling || leader.can_climbing || leader.can_zipline || leader.can_rope_setup) && (
-            <div className="flex flex-wrap gap-1.5">
-              {leader.has_drivers_license && (
-                <Badge variant="outline" className="text-xs bg-background">
-                  <Car className="w-3 h-3 mr-1" />
-                  Førerkort
-                </Badge>
-              )}
-              {leader.has_car && (
-                <Badge variant="outline" className="text-xs bg-green-50 border-green-300 text-green-700">
-                  <Car className="w-3 h-3 mr-1" />
-                  Har bil
-                </Badge>
-              )}
-              {leader.has_boat_license && (
-                <Badge variant="outline" className="text-xs bg-blue-50 border-blue-300 text-blue-700">
-                  <Anchor className="w-3 h-3 mr-1" />
-                  Båt
-                </Badge>
-              )}
-              {leader.can_rappelling && (
-                <Badge variant="outline" className="text-xs bg-orange-50 border-orange-300 text-orange-700">
-                  <ArrowDown className="w-3 h-3 mr-1" />
-                  Rappis
-                </Badge>
-              )}
-              {leader.can_climbing && (
-                <Badge variant="outline" className="text-xs bg-amber-50 border-amber-300 text-amber-700">
-                  <Mountain className="w-3 h-3 mr-1" />
-                  Klatring
-                </Badge>
-              )}
-              {leader.can_zipline && (
-                <Badge variant="outline" className="text-xs bg-purple-50 border-purple-300 text-purple-700">
-                  <Cable className="w-3 h-3 mr-1" />
-                  Taubane
-                </Badge>
-              )}
-              {leader.can_rope_setup && (
-                <Badge variant="outline" className="text-xs bg-indigo-50 border-indigo-300 text-indigo-700">
-                  <Wrench className="w-3 h-3 mr-1" />
-                  Taubane-Oppsett
-                </Badge>
-              )}
-            </div>
-          )}
-
-          {/* Current Activity */}
-          <div className="space-y-2">
-            <Label>Nåværende aktivitet</Label>
-            <Input
-              value={currentActivity}
-              onChange={(e) => setCurrentActivity(e.target.value)}
-              placeholder="Hva gjør lederen nå?"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Ekstra aktivitet</Label>
-            <Input
-              value={extraActivity}
-              onChange={(e) => setExtraActivity(e.target.value)}
-              placeholder="Tilleggsinfo om aktivitet"
-            />
-          </div>
-
-          {/* Personal Notes */}
-          <div className="space-y-2">
-            <Label>Notater til lederen</Label>
-            <Textarea
-              value={personalNotes}
-              onChange={(e) => setPersonalNotes(e.target.value)}
-              placeholder="Private notater..."
-              rows={3}
-            />
-          </div>
-
-          {/* OBS Message */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="w-4 h-4" />
-              OBS-melding
-            </Label>
-            <Textarea
-              value={obsMessage}
-              onChange={(e) => setObsMessage(e.target.value)}
-              placeholder="Viktig melding som vises fremhevet..."
-              rows={2}
-              className="border-destructive/50 focus-visible:ring-destructive"
-            />
-          </div>
-
-          {/* Send notification to this leader */}
-          <div className="space-y-2 pt-2 border-t">
-            <Label className="flex items-center gap-2">
-              <Bell className="w-4 h-4" />
-              Send varsling til {getFirstName(leader.name)}
-            </Label>
-            <Input
-              placeholder="Tittel på varsling..."
-              value={notificationTitle}
-              onChange={(e) => setNotificationTitle(e.target.value)}
-            />
-            <Textarea
-              placeholder="Melding (valgfritt)..."
-              value={notificationMessage}
-              onChange={(e) => setNotificationMessage(e.target.value)}
-              rows={2}
-            />
+            {/* Save Button */}
             <Button
-              variant="outline"
+              onClick={handleSave}
+              disabled={saving}
               className="w-full"
-              onClick={handleSendNotification}
-              disabled={isSendingNotification || !notificationTitle.trim()}
+              size="lg"
             >
-              {isSendingNotification ? (
+              {saving ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
-                <Send className="w-4 h-4 mr-2" />
+                <Save className="w-4 h-4 mr-2" />
               )}
-              Send varsling
+              Lagre endringer
             </Button>
           </div>
+        </SheetContent>
+      </Sheet>
 
-          {/* Extra Fields - Collapsible */}
-          {visibleExtraFields.length > 0 && (
-            <Collapsible open={isExtraFieldsOpen} onOpenChange={setIsExtraFieldsOpen}>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-between">
-                  <span>Ekstra info ({visibleExtraFields.length} felt)</span>
-                  {isExtraFieldsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-4 pt-2">
-                {visibleExtraFields.map(field => (
-                  <div key={field.id} className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      {getIcon(field.icon || 'info')}
-                      {field.title || field.label || field.element_key}
-                    </Label>
-                    <Textarea
-                      value={getExtraFieldValue(field.element_key)}
-                      onChange={(e) => setExtraFieldValue(field.element_key, e.target.value)}
-                      placeholder={`Skriv ${field.title?.toLowerCase() || 'info'}...`}
-                      rows={2}
-                    />
-                  </div>
-                ))}
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-
-          {/* Save Button */}
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full"
-            size="lg"
-          >
-            {saving ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4 mr-2" />
-            )}
-            Lagre endringer
-          </Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+      {/* Change Notification Dialog */}
+      <AlertDialog open={showNotifyDialog} onOpenChange={setShowNotifyDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sende varsling om endringer?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>Vil du varsle {getFirstName(leader.name)} om disse endringene?</p>
+                <ul className="text-sm bg-muted p-3 rounded-md space-y-1">
+                  {detectedChanges.map((change, i) => (
+                    <li key={i} className="text-foreground">{change}</li>
+                  ))}
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleSkipNotification}>
+              Nei, hopp over
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleSendChangeNotification}
+              disabled={isSendingChangeNotification}
+            >
+              {isSendingChangeNotification ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Bell className="w-4 h-4 mr-2" />
+              )}
+              Ja, send varsling
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
