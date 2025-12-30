@@ -67,6 +67,21 @@ const formatTeamDisplay = (team: string | null): string => {
   return team;
 };
 
+// Compact team display for mobile: "1", "2F", "KJ", "K" etc.
+const formatTeamDisplayMobile = (team: string | null, isAdmin?: boolean, isNurse?: boolean): string => {
+  if (isAdmin) return 'A';
+  if (isNurse) return 'N';
+  if (!team) return '';
+  const teamLower = team.toLowerCase().trim();
+  if (teamLower === '1' || teamLower === 'team 1') return '1';
+  if (teamLower === '2' || teamLower === 'team 2') return '2';
+  if (teamLower === '1f' || teamLower === 'team 1f') return '1F';
+  if (teamLower === '2f' || teamLower === 'team 2f') return '2F';
+  if (teamLower === 'kordinator') return 'K';
+  if (teamLower === 'kjøkken') return 'KJ';
+  return team.substring(0, 2).toUpperCase();
+};
+
 const getFirstName = (fullName: string) => fullName.split(' ')[0];
 
 // Team filters for filtering UI with proper text colors
@@ -369,19 +384,22 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
         {activeTeamFilter && <span>· Filter: {getActiveFilterLabel()}</span>}
       </div>
 
-      {/* Leader Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* Leader Cards Grid - 2 columns on mobile, 3-4 on larger screens */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4">
         {sortedLeaders.map(leader => {
           const content = leader.content;
           const hasObs = !!content?.obs_message;
           const hasActivity = !!content?.current_activity;
+          const hasExtraActivity = !!content?.extra_activity;
           const hasNotes = !!content?.personal_notes;
           
           // Border color logic: Kjøkken=purple, FRI=blue, Admin/Nurse/has_read=green, else red
           const isFri = content?.current_activity?.toLowerCase().includes('fri');
           const isKitchen = leader.team?.toLowerCase() === 'kjøkken';
           
-          const isAdminOrNurse = adminIds.has(leader.id) || nurseIds.has(leader.id);
+          const isAdmin = adminIds.has(leader.id);
+          const isNurse = nurseIds.has(leader.id);
+          const isAdminOrNurse = isAdmin || isNurse;
           
           const getBorderClass = () => {
             // Admin og Nurse har alltid grønn ring (ingen Hajolo-knapp)
@@ -400,36 +418,55 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
             <Card 
               key={leader.id} 
               className={cn(
-                'relative overflow-hidden transition-all hover:shadow-md cursor-pointer min-h-[220px] ring-2',
+                'relative overflow-hidden transition-all hover:shadow-md cursor-pointer ring-2',
+                // Fixed height on mobile, min-height on desktop
+                'h-[100px] sm:h-auto sm:min-h-[220px]',
                 getBorderClass()
               )}
               onClick={() => handleEditClick(leader)}
             >
-              <CardContent className="p-4 h-full flex flex-col">
-                {/* Header with avatar and name */}
-                <div className="flex items-start gap-3 mb-3">
-                  <Avatar className="w-12 h-12 border-2 border-primary/20">
+              <CardContent className="p-2 sm:p-4 h-full flex flex-col">
+                {/* Header with avatar and name - compact on mobile */}
+                <div className="flex items-center sm:items-start gap-2 sm:gap-3 sm:mb-3">
+                  <Avatar className="w-8 h-8 sm:w-12 sm:h-12 border-2 border-primary/20 shrink-0">
                     {leader.profile_image_url && (
                       <AvatarImage src={leader.profile_image_url} alt={leader.name} />
                     )}
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs sm:text-sm font-medium">
                       {getFirstName(leader.name).slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground truncate">
+                    <h3 className="font-semibold text-foreground text-xs sm:text-base truncate">
                       {getFirstName(leader.name)}
                     </h3>
+                    {/* Ministerpost - hidden on mobile */}
                     {leader.ministerpost && (
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="hidden sm:block text-xs text-muted-foreground truncate">
                         {leader.ministerpost}
                       </p>
                     )}
                   </div>
+                  
+                  {/* Team badge - compact on mobile, full on desktop */}
+                  {(leader.team || isAdmin || isNurse) && (
+                    <>
+                      {/* Mobile: Compact badge */}
+                      <Badge className={cn("sm:hidden text-[10px] px-1.5 py-0 shrink-0", getTeamStyles(isAdmin ? 'sjef' : isNurse ? 'nurse' : leader.team))}>
+                        {formatTeamDisplayMobile(leader.team, isAdmin, isNurse)}
+                      </Badge>
+                      {/* Desktop: Full badge */}
+                      <Badge className={cn("hidden sm:inline-flex text-xs", getTeamStyles(leader.team))}>
+                        {formatTeamDisplay(leader.team)}
+                      </Badge>
+                    </>
+                  )}
+                  
+                  {/* Edit button - hidden on mobile (whole card is clickable) */}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 shrink-0"
+                    className="hidden sm:flex h-8 w-8 shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleEditClick(leader);
@@ -439,13 +476,44 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
                   </Button>
                 </div>
 
-                {/* Badges */}
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {leader.team && (
-                    <Badge className={cn("text-xs", getTeamStyles(leader.team))}>
-                      {formatTeamDisplay(leader.team)}
-                    </Badge>
-                  )}
+                {/* Activities - compact on mobile */}
+                <div className="flex-1 mt-1 sm:mt-0 space-y-0.5 sm:space-y-2 min-h-0">
+                  {/* Current Activity */}
+                  <div className="flex items-center sm:items-start gap-1 sm:gap-2">
+                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-primary shrink-0 sm:mt-0.5" />
+                    <p className={cn(
+                      "text-xs sm:text-sm truncate",
+                      hasActivity ? 'text-foreground' : 'text-muted-foreground italic'
+                    )}>
+                      {hasActivity ? content?.current_activity : '—'}
+                    </p>
+                  </div>
+
+                  {/* Extra Activity - always show line on mobile for consistent height */}
+                  <div className="flex items-center sm:items-start gap-1 sm:gap-2">
+                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0 sm:mt-0.5" />
+                    <p className={cn(
+                      "text-xs sm:text-sm truncate",
+                      hasExtraActivity ? 'text-muted-foreground' : 'text-transparent'
+                    )}>
+                      {hasExtraActivity ? content?.extra_activity : '—'}
+                    </p>
+                  </div>
+
+                  {/* Notes - hidden on mobile */}
+                  <div className="hidden sm:flex items-start gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <p className={cn(
+                      "text-sm line-clamp-2",
+                      hasNotes ? 'text-foreground' : 'text-muted-foreground italic'
+                    )}>
+                      {hasNotes ? content?.personal_notes : 'Ingen notater'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Badges - hidden on mobile, shown on desktop */}
+                <div className="hidden sm:flex flex-wrap gap-1.5 mb-3">
                   {leader.cabin && (
                     <Badge variant="outline" className="text-xs">
                       {leader.cabin}
@@ -453,28 +521,9 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
                   )}
                 </div>
 
-                {/* Content section - flex-1 to push content evenly */}
-                <div className="flex-1 space-y-2">
-                  {/* Activity - first priority */}
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                    <p className={`text-sm ${hasActivity ? 'text-foreground' : 'text-muted-foreground italic'}`}>
-                      {hasActivity ? content?.current_activity : 'Ingen aktivitet'}
-                    </p>
-                  </div>
-
-                  {/* Notes - second priority */}
-                  <div className="flex items-start gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                    <p className={`text-sm line-clamp-2 ${hasNotes ? 'text-foreground' : 'text-muted-foreground italic'}`}>
-                      {hasNotes ? content?.personal_notes : 'Ingen notater'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* OBS Message - at bottom, only if exists */}
+                {/* OBS Message - hidden on mobile, at bottom on desktop */}
                 {hasObs && (
-                  <Alert variant="destructive" className="mt-3 py-2 px-3">
+                  <Alert variant="destructive" className="hidden sm:flex mt-3 py-2 px-3">
                     <AlertTriangle className="h-3 w-3" />
                     <AlertDescription className="text-xs line-clamp-2">
                       {content?.obs_message}
