@@ -1,5 +1,4 @@
-import { memo, useRef, useMemo, useCallback } from 'react';
-import { List, ListImperativeAPI } from 'react-window';
+import { memo, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -52,22 +51,10 @@ type VirtualizedItem =
   | { type: 'room-header'; roomName: string; participantCount: number; roomSide: 'høyre' | 'venstre' | 'none' }
   | { type: 'participant'; participant: ParticipantWithCabin; completedActivities: string[] };
 
-const CABIN_HEADER_HEIGHT = 72;
-const ROOM_HEADER_HEIGHT = 40;
-const PARTICIPANT_ROW_HEIGHT = 88;
-
 interface VirtualizedParticipantListProps {
   cabinGroups: CabinGroup[];
   activitiesMap: Map<string, string[]>;
   expandedCabins: Set<string>;
-  onToggleCabin: (cabinId: string) => void;
-  onParticipantClick: (participantId: string) => void;
-  onPrefetchParticipant: (participantId: string) => void;
-}
-
-// Row props interface (what we pass via rowProps)
-interface RowData {
-  items: VirtualizedItem[];
   onToggleCabin: (cabinId: string) => void;
   onParticipantClick: (participantId: string) => void;
   onPrefetchParticipant: (participantId: string) => void;
@@ -244,72 +231,6 @@ const RoomHeader = memo(({ roomName, participantCount, roomSide }: {
 
 RoomHeader.displayName = 'RoomHeader';
 
-// Row component for the list - must return ReactElement
-function Row({ 
-  index, 
-  style,
-  items,
-  onToggleCabin,
-  onParticipantClick,
-  onPrefetchParticipant,
-}: { 
-  ariaAttributes: {
-    "aria-posinset": number;
-    "aria-setsize": number;
-    role: "listitem";
-  };
-  index: number; 
-  style: React.CSSProperties;
-  items: VirtualizedItem[];
-  onToggleCabin: (cabinId: string) => void;
-  onParticipantClick: (participantId: string) => void;
-  onPrefetchParticipant: (participantId: string) => void;
-}) {
-  const item = items[index];
-  
-  if (item.type === 'cabin-header') {
-    return (
-      <div style={style}>
-        <CabinHeader
-          cabin={item.cabin}
-          arrivedCount={item.arrivedCount}
-          totalCount={item.totalCount}
-          leaders={item.leaders}
-          isExpanded={item.isExpanded}
-          onToggle={() => onToggleCabin(item.cabin.id)}
-        />
-      </div>
-    );
-  }
-  
-  if (item.type === 'room-header') {
-    return (
-      <div style={style}>
-        <RoomHeader 
-          roomName={item.roomName} 
-          participantCount={item.participantCount}
-          roomSide={item.roomSide}
-        />
-      </div>
-    );
-  }
-  
-  if (item.type === 'participant') {
-    return (
-      <div style={style}>
-        <ParticipantCard
-          participant={item.participant}
-          completedActivities={item.completedActivities}
-          onClick={() => onParticipantClick(item.participant.id)}
-          onPrefetch={() => onPrefetchParticipant(item.participant.id)}
-        />
-      </div>
-    );
-  }
-  
-  return <div style={style} />;
-}
-
 export function VirtualizedParticipantList({
   cabinGroups,
   activitiesMap,
@@ -318,9 +239,7 @@ export function VirtualizedParticipantList({
   onParticipantClick,
   onPrefetchParticipant,
 }: VirtualizedParticipantListProps) {
-  const listRef = useRef<ListImperativeAPI>(null);
-
-  // Flatten the data structure for virtualization
+  // Flatten the data structure for rendering
   const flattenedItems = useMemo((): VirtualizedItem[] => {
     const items: VirtualizedItem[] = [];
     
@@ -363,25 +282,6 @@ export function VirtualizedParticipantList({
     return items;
   }, [cabinGroups, expandedCabins, activitiesMap]);
 
-  // Get item size based on type (function for variable row heights)
-  const getItemSize = useCallback((index: number): number => {
-    const item = flattenedItems[index];
-    switch (item.type) {
-      case 'cabin-header': return CABIN_HEADER_HEIGHT;
-      case 'room-header': return ROOM_HEADER_HEIGHT;
-      case 'participant': return PARTICIPANT_ROW_HEIGHT;
-      default: return PARTICIPANT_ROW_HEIGHT;
-    }
-  }, [flattenedItems]);
-
-  // Row props to pass to the row component (without index, style, ariaAttributes)
-  const rowProps = useMemo((): RowData => ({
-    items: flattenedItems,
-    onToggleCabin,
-    onParticipantClick,
-    onPrefetchParticipant,
-  }), [flattenedItems, onToggleCabin, onParticipantClick, onPrefetchParticipant]);
-
   if (flattenedItems.length === 0) {
     return (
       <Card>
@@ -396,22 +296,50 @@ export function VirtualizedParticipantList({
     );
   }
 
+  // Render items directly without virtualization for single-scroll behavior
   return (
-    <div 
-      className="space-y-2" 
-      style={{ 
-        height: 'calc(100dvh - 280px - env(safe-area-inset-bottom, 0px))'
-      }}
-    >
-      <List<RowData>
-        listRef={listRef}
-        rowCount={flattenedItems.length}
-        rowHeight={getItemSize}
-        rowComponent={Row}
-        rowProps={rowProps}
-        overscanCount={8}
-        style={{ WebkitOverflowScrolling: 'touch' }}
-      />
+    <div className="space-y-2">
+      {flattenedItems.map((item, index) => {
+        if (item.type === 'cabin-header') {
+          return (
+            <CabinHeader
+              key={`cabin-${item.cabin.id}`}
+              cabin={item.cabin}
+              arrivedCount={item.arrivedCount}
+              totalCount={item.totalCount}
+              leaders={item.leaders}
+              isExpanded={item.isExpanded}
+              onToggle={() => onToggleCabin(item.cabin.id)}
+            />
+          );
+        }
+        
+        if (item.type === 'room-header') {
+          return (
+            <RoomHeader 
+              key={`room-${item.roomName}-${index}`}
+              roomName={item.roomName} 
+              participantCount={item.participantCount}
+              roomSide={item.roomSide}
+            />
+          );
+        }
+        
+        if (item.type === 'participant') {
+          const completedActivities = item.completedActivities;
+          return (
+            <ParticipantCard
+              key={`participant-${item.participant.id}`}
+              participant={item.participant}
+              completedActivities={completedActivities}
+              onClick={() => onParticipantClick(item.participant.id)}
+              onPrefetch={() => onPrefetchParticipant(item.participant.id)}
+            />
+          );
+        }
+        
+        return null;
+      })}
     </div>
   );
 }
