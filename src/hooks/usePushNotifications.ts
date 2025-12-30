@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { isCapacitor } from '@/lib/capacitor';
+import {
+  isNativePushAvailable,
+  requestNativePushPermission,
+  registerNativePush,
+} from '@/lib/capacitorPush';
 
 interface PushNotificationState {
   isSupported: boolean;
@@ -9,6 +15,7 @@ interface PushNotificationState {
   isSyncing: boolean;
   permission: NotificationPermission | 'default';
   error: string | null;
+  isNative: boolean;
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -42,6 +49,7 @@ export function usePushNotifications() {
     isSyncing: false,
     permission: 'default',
     error: null,
+    isNative: isCapacitor(),
   });
 
   // Extract subscription keys robustly (handles iOS/Safari edge cases)
@@ -141,6 +149,22 @@ export function usePushNotifications() {
   // Check if push notifications are supported and auto-sync
   useEffect(() => {
     const checkSupport = async () => {
+      // Check for native push first
+      if (isCapacitor() && isNativePushAvailable()) {
+        console.log('[Push] Native push available');
+        setState({
+          isSupported: true,
+          isEnabled: false, // Will be updated after registration
+          isLoading: false,
+          isSyncing: false,
+          permission: 'default',
+          error: null,
+          isNative: true,
+        });
+        return;
+      }
+
+      // Web push support check
       const isSupported =
         'serviceWorker' in navigator &&
         'PushManager' in window &&
@@ -151,6 +175,7 @@ export function usePushNotifications() {
           ...prev,
           isSupported: false,
           isLoading: false,
+          isNative: false,
         }));
         return;
       }
@@ -178,6 +203,7 @@ export function usePushNotifications() {
         isSyncing: false,
         permission,
         error: null,
+        isNative: false,
       });
     };
 
@@ -211,7 +237,66 @@ export function usePushNotifications() {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      // Request notification permission
+      // Native push flow (Capacitor)
+      if (isCapacitor() && isNativePushAvailable()) {
+        console.log('[Push] Using native push flow');
+        
+        const permission = await requestNativePushPermission();
+        if (permission !== 'granted') {
+          setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            permission,
+            error: 'Varslingstillatelse ble avslått',
+          }));
+          return false;
+        }
+
+        const token = await registerNativePush();
+        if (!token) {
+          setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            error: 'Kunne ikke registrere for push-varsler',
+          }));
+          return false;
+        }
+
+        // Send native token to backend
+        // Note: Backend needs to support FCM/APNS tokens separately
+        const { error: subscribeError } = await supabase.functions.invoke('push-subscribe', {
+          body: {
+            endpoint: `native://${token}`,
+            p256dh: 'native',
+            auth: 'native',
+            leader_id: leader.id,
+            is_native: true,
+            native_token: token,
+          },
+        });
+
+        if (subscribeError) {
+          console.error('Error saving native subscription:', subscribeError);
+          setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            error: 'Kunne ikke lagre abonnement',
+          }));
+          return false;
+        }
+
+        setState((prev) => ({
+          ...prev,
+          isEnabled: true,
+          isLoading: false,
+          permission: 'granted',
+          error: null,
+        }));
+
+        return true;
+      }
+
+      // Web push flow
       const permission = await Notification.requestPermission();
       setState((prev) => ({ ...prev, permission }));
 
