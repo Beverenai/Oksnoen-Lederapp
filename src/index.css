@@ -12,7 +12,7 @@
   --safe-right: env(safe-area-inset-right);
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
-  --nav-h: 49px;
+  --nav-h: 56px;
 }
 
 /* Responsive media defaults */
@@ -214,7 +214,7 @@ header, nav {
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding-top: var(--safe-top);
+    padding-top: 0;
     padding-bottom: 0;
     box-sizing: border-box;
     overflow: hidden;

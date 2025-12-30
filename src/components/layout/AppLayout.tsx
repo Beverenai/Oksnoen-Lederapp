@@ -412,12 +412,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {!mobileMenuOpen && (
         <header 
           className={cn(
-            "lg:hidden fixed left-0 right-0 bg-card/95 backdrop-blur-sm border-b border-border z-50 px-4 flex items-center justify-between h-14",
+            "lg:hidden fixed left-0 right-0 bg-card/95 backdrop-blur-sm border-b border-border z-50 px-4 flex items-end justify-between",
             "transition-transform duration-300 ease-out will-change-transform"
           )}
           style={{ 
-            top: 'var(--safe-top)',
-            transform: headerVisible ? 'translateY(0)' : 'translateY(calc(-100% - var(--safe-top)))',
+            top: '0',
+            paddingTop: 'var(--safe-top)',
+            height: 'calc(56px + var(--safe-top))',
+            transform: headerVisible ? 'translateY(0)' : 'translateY(calc(-100%))',
           }}
         >
           <div className="flex items-center gap-3">
@@ -768,8 +770,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <div 
           className={cn(
             "lg:hidden transition-all duration-300 ease-out shrink-0",
-            headerVisible ? "h-14" : "h-0"
           )}
+          style={{
+            height: headerVisible ? 'calc(56px + var(--safe-top))' : '0'
+          }}
         />
         <div className="p-4 lg:p-6">
           {children}
