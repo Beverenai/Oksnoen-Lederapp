@@ -48,6 +48,17 @@ const getFirstName = (fullName: string): string => {
   return fullName.split(' ')[0];
 };
 
+// Format team display name
+const formatTeamDisplay = (team: string | null): string => {
+  if (!team) return '';
+  const teamLower = team.toLowerCase().trim();
+  if (['1', '2', '1f', '2f'].includes(teamLower)) {
+    return `Team ${team.toUpperCase()}`;
+  }
+  if (teamLower === 'kjokken') return 'Kjøkken';
+  return team;
+};
+
 // Team sorting order (same as LeaderDashboard)
 const getTeamSortOrder = (team: string | null): number => {
   const teamLower = team?.toLowerCase().trim();
@@ -226,11 +237,21 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
     setSheetOpen(true);
   };
 
-  // Get avatar border class
+  // Get avatar border class based on status
   const getAvatarBorderClass = (leader: LeaderWithContent) => {
-    if (leader.isAdmin) return 'ring-2 ring-green-500';
-    if (leader.isNurse) return 'ring-2 ring-green-500';
-    return '';
+    const isKitchen = leader.team?.toLowerCase() === 'kjokken' || leader.team?.toLowerCase() === 'kjøkken';
+    const isFri = leader.content?.current_activity?.toLowerCase().includes('fri');
+    
+    // Admin/Nurse = always green
+    if (leader.isAdmin || leader.isNurse) return 'ring-2 ring-green-500';
+    // Kitchen = always purple
+    if (isKitchen) return 'ring-2 ring-purple-500';
+    // "Fri" activity = blue
+    if (isFri) return 'ring-2 ring-blue-500';
+    // Has read = green
+    if (leader.content?.has_read) return 'ring-2 ring-green-500';
+    // Has not read = red
+    return 'ring-2 ring-red-500';
   };
 
   // Truncate text
@@ -332,11 +353,11 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
                   </Avatar>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <span className="font-medium">{getFirstName(leader.name)}</span>
                     {leader.team && (
-                      <Badge variant="secondary" className={`text-xs ${getTeamStyles(leader.team)}`}>
-                        {leader.team}
+                      <Badge variant="secondary" className={`text-xs w-20 justify-center ${getTeamStyles(leader.team)}`}>
+                        {formatTeamDisplay(leader.team)}
                       </Badge>
                     )}
                   </div>
@@ -406,8 +427,8 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
               <div className="flex items-center gap-2">
                 <span className="font-medium truncate">{getFirstName(leader.name)}</span>
                 {leader.team && (
-                  <Badge variant="secondary" className={`text-xs shrink-0 ${getTeamStyles(leader.team)}`}>
-                    {leader.team}
+                  <Badge variant="secondary" className={`text-xs w-16 justify-center shrink-0 ${getTeamStyles(leader.team)}`}>
+                    {formatTeamDisplay(leader.team)}
                   </Badge>
                 )}
                 {leader.content?.obs_message && (
