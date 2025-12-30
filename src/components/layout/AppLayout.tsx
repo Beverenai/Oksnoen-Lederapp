@@ -377,7 +377,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Mobile Header - hidden when menu is open */}
       {!mobileMenuOpen && (
         <header 
-          className="lg:hidden fixed top-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-b border-border z-50 px-4 pt-safe flex items-center justify-between h-[calc(3.5rem+env(safe-area-inset-top,0px))]"
+          className="lg:hidden fixed top-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-b border-border z-50 px-4 flex items-center justify-between h-14"
           style={{ transform: 'translate3d(0,0,0)', WebkitTransform: 'translate3d(0,0,0)' }}
         >
           <div className="flex items-center gap-3">
@@ -724,7 +724,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       )}
 
       {/* Main Content */}
-      <main className="lg:ml-64 pt-[calc(3.5rem+var(--safe-t))] lg:pt-0 flex-1 lg:min-h-screen app-content lg:pb-0">
+      <main className="lg:ml-64 pt-14 lg:pt-0 flex-1 lg:min-h-screen app-content lg:pb-0">
         <div className="p-4 lg:p-6">
           {children}
         </div>

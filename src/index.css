@@ -206,6 +206,13 @@ header, nav {
     touch-action: manipulation;
   }
 
+  /* Apply safe-area padding to root container */
+  #root {
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+    box-sizing: border-box;
+  }
+
   /* Mobile: use dvh for correct viewport sizing (allow normal scrolling) */
   @media (max-width: 1023px) {
     html, body, #root {
