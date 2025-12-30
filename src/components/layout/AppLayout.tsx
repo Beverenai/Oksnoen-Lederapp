@@ -358,7 +358,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
-    <div className="min-h-[100dvh] lg:min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Hajolo Success Overlay */}
       {showHajoloSuccess && (
         <div 
@@ -585,30 +585,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </nav>
       </div>
 
-      {/* Mobile Bottom Navigation - iOS-style floating tab bar */}
+      {/* Mobile Bottom Navigation - Fixed iOS-style tab bar */}
       {!mobileMenuOpen && (
-        <nav 
-          className="lg:hidden mobile-bottom-nav fixed bottom-2 left-4 right-4 z-30"
-          style={{ 
-            WebkitTransform: 'translate3d(0,0,0)',
-            transform: 'translate3d(0,0,0)'
-          }}
-        >
-          {/* Floating glass container */}
+        <nav className="lg:hidden bottom-nav bg-card/95 border-t border-border">
+          {/* Backdrop blur layer */}
           <div 
-            className="relative rounded-[22px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] ring-1 ring-white/10 dark:ring-white/5 overflow-visible"
-            style={{ 
-              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
-            }}
-          >
-            {/* Blurred background layer */}
-            <div 
-              className="absolute inset-0 bg-card/75 dark:bg-card/80 rounded-[22px]"
-              style={{ WebkitBackdropFilter: 'blur(24px)', backdropFilter: 'blur(24px)' }}
-            />
-            
-            {/* Tab bar content */}
-            <div className="relative h-[56px] flex items-center justify-evenly px-2">
+            className="absolute inset-0"
+            style={{ WebkitBackdropFilter: 'blur(20px)', backdropFilter: 'blur(20px)' }}
+          />
+          {/* Content container - allows center button overflow */}
+          <div className="relative h-[var(--nav-h)] flex items-center justify-evenly px-2 overflow-visible">
               {getBottomNavItems(isAdmin, isNurse).map((item, index) => {
                 const isActive = location.pathname === item.to;
                 const isCenterButton = index === 2; // Center position (3rd item)
@@ -728,12 +714,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 );
               })}
             </div>
-          </div>
         </nav>
       )}
 
       {/* Main Content */}
-      <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] lg:pt-0 pb-[calc(80px+env(safe-area-inset-bottom,0px)+24px)] lg:pb-0 flex-1 lg:min-h-screen">
+      <main className="lg:ml-64 pt-[calc(3.5rem+var(--safe-t))] lg:pt-0 flex-1 lg:min-h-screen app-content lg:pb-0">
         <div className="p-4 lg:p-6">
           {children}
         </div>

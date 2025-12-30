@@ -4,12 +4,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* iOS/Capacitor Safe Area Variables */
+/* iOS/Capacitor Safe Area Variables & Navigation Tokens */
 :root {
   --safe-top: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-bottom);
   --safe-left: env(safe-area-inset-left);
   --safe-right: env(safe-area-inset-right);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --nav-h: 64px;
 }
 
 /* Responsive media defaults */
@@ -305,6 +308,25 @@ header, nav {
   padding-bottom: calc(12px + var(--safe-bottom));
   background: hsl(var(--background));
   border-top: 1px solid hsl(var(--border));
+}
+
+/* App content wrapper - adds bottom padding to avoid content behind nav */
+.app-content {
+  padding-bottom: calc(var(--nav-h) + var(--safe-b));
+}
+
+/* Bottom nav container - true fixed positioning like native iOS tab bar */
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--nav-h) + var(--safe-b));
+  padding-bottom: var(--safe-b);
+  z-index: 50;
+  overflow: visible;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
   /* App scroll container - smooth iOS momentum scroll */
