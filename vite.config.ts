@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => ({
       srcDir: "src",
       filename: "sw.ts",
       registerType: "autoUpdate",
+      injectRegister: null, // Manual registration to support Capacitor
       includeAssets: ["oksnoen-logo.png", "apple-touch-icon.png"],
       injectManifest: {
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,

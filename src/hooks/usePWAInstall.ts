@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { isCapacitor, isNativeIOS, isNativeAndroid } from '@/lib/capacitor';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -10,9 +11,12 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function usePWAInstall() {
+  // Early return for Capacitor native context - app IS installed
+  const inCapacitor = isCapacitor();
+  
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(inCapacitor);
   const [hasDeclined, setHasDeclined] = useState(false);
 
   const syncDeclinedFromStorage = useCallback(() => {
@@ -20,6 +24,11 @@ export function usePWAInstall() {
   }, []);
 
   useEffect(() => {
+    // Skip all PWA install logic in Capacitor native context
+    if (inCapacitor) {
+      return;
+    }
+
     // Check if already installed
     const checkInstalled = () => {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
@@ -71,10 +80,10 @@ export function usePWAInstall() {
       window.removeEventListener('storage', handleStorage);
       mediaQuery.removeEventListener('change', checkInstalled);
     };
-  }, [syncDeclinedFromStorage]);
+  }, [syncDeclinedFromStorage, inCapacitor]);
 
   const promptInstall = useCallback(async () => {
-    if (!deferredPrompt) return false;
+    if (!deferredPrompt || inCapacitor) return false;
 
     try {
       await deferredPrompt.prompt();
@@ -92,22 +101,23 @@ export function usePWAInstall() {
       console.error('Error prompting install:', error);
       return false;
     }
-  }, [deferredPrompt]);
+  }, [deferredPrompt, inCapacitor]);
 
   const declineInstall = useCallback(() => {
+    if (inCapacitor) return;
     localStorage.setItem('pwa-install-declined', 'true');
     setHasDeclined(true);
-    // Notify other hook instances in the same tab (storage-event doesnt fire in same window)
+    // Notify other hook instances in the same tab (storage-event doesnt fire in same window)
     window.dispatchEvent(new Event('pwa-install-declined'));
-  }, []);
+  }, [inCapacitor]);
 
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isAndroid = /Android/.test(navigator.userAgent);
+  const isIOS = inCapacitor ? isNativeIOS() : /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = inCapacitor ? isNativeAndroid() : /Android/.test(navigator.userAgent);
 
   return {
-    isInstallable,
+    isInstallable: inCapacitor ? false : isInstallable,
     isInstalled,
-    hasDeclined,
+    hasDeclined: inCapacitor ? false : hasDeclined,
     promptInstall,
     declineInstall,
     isIOS,
