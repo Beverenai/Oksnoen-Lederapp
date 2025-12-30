@@ -38,11 +38,10 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -308,6 +307,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
     };
   }, [leader, isAdmin, isNurse, fetchHasReadStatus]);
 
+  // Handle dismissing the Hajolo tooltip
+  const handleDismissTooltip = async () => {
+    if (!leader?.id) return;
+    
+    await supabase
+      .from('leader_content')
+      .upsert({ leader_id: leader.id, has_seen_hajolo_tooltip: true }, { onConflict: 'leader_id' });
+    
+    setShowHajoloTooltip(false);
+  };
+
   // Handle Hajolo click
   const handleHajoloClick = async () => {
     if (!leader) return;
@@ -315,20 +325,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     // Check if button was red (unread) before updating
     const wasUnread = !hasRead;
 
-    // Mark tooltip as seen if it was showing
-    const updateData: { leader_id: string; has_read: boolean; has_seen_hajolo_tooltip?: boolean } = {
-      leader_id: leader.id,
-      has_read: true,
-    };
-    
-    if (showHajoloTooltip) {
-      updateData.has_seen_hajolo_tooltip = true;
-      setShowHajoloTooltip(false);
-    }
-
     const { error } = await supabase
       .from('leader_content')
-      .upsert(updateData, { onConflict: 'leader_id' });
+      .upsert({ leader_id: leader.id, has_read: true }, { onConflict: 'leader_id' });
 
     if (error) {
       toast.error('Kunne ikke bekrefte');
@@ -618,41 +617,48 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   // Leader: Hajolo button with states
                   if (item.isHajolo) {
                     return (
-                      <TooltipProvider key="hajolo">
-                        <Tooltip open={showHajoloTooltip} onOpenChange={setShowHajoloTooltip}>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={handleHajoloClick}
-                              className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:scale-95"
-                            >
-                              <div
-                                className={cn(
-                                  'w-14 h-14 rounded-full flex items-center justify-center border-[3px] border-card transition-all duration-300 ease-out',
-                                  hasRead 
-                                    ? 'bg-[hsl(152_55%_45%)] shadow-[0_2px_12px_rgba(0,0,0,0.1)]' 
-                                    : 'bg-[hsl(0_65%_55%)] shadow-[0_4px_16px_rgba(0,0,0,0.18)]'
-                                )}
-                              >
-                                <Check className="w-7 h-7 text-white" strokeWidth={2.5} />
-                              </div>
-                              <span className="text-[10px] font-semibold mt-1.5 text-foreground">
-                                {hasRead ? 'Bekreftet' : 'Hajolo'}
-                              </span>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent 
-                            side="top" 
-                            className="max-w-[280px] text-center p-3 bg-card border border-border shadow-lg"
-                            sideOffset={8}
+                      <Popover key="hajolo" open={showHajoloTooltip}>
+                        <PopoverTrigger asChild>
+                          <button
+                            onClick={handleHajoloClick}
+                            className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:scale-95"
                           >
-                            <p className="text-sm font-medium mb-1">Hva er Hajolo-knappen?</p>
-                            <p className="text-xs text-muted-foreground">
-                              Når det kommer ny info til deg i appen blir denne knappen rød. Admin ser hvem som ikke har lest ennå. 
-                              Når du har lest infoen på hjemskjermen, trykk på knappen for å bekrefte at du har sett beskjeden.
+                            <div
+                              className={cn(
+                                'w-14 h-14 rounded-full flex items-center justify-center border-[3px] border-card transition-all duration-300 ease-out',
+                                hasRead 
+                                  ? 'bg-[hsl(152_55%_45%)] shadow-[0_2px_12px_rgba(0,0,0,0.1)]' 
+                                  : 'bg-[hsl(0_65%_55%)] shadow-[0_4px_16px_rgba(0,0,0,0.18)]'
+                              )}
+                            >
+                              <Check className="w-7 h-7 text-white" strokeWidth={2.5} />
+                            </div>
+                            <span className="text-[10px] font-semibold mt-1.5 text-foreground">
+                              {hasRead ? 'Bekreftet' : 'Hajolo'}
+                            </span>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent 
+                          side="top" 
+                          className="max-w-[280px] p-4"
+                          sideOffset={12}
+                        >
+                          <div className="text-center space-y-3">
+                            <p className="text-sm font-semibold">Hva er Hajolo-knappen?</p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              Når det kommer ny info til deg blir denne knappen rød. Admin ser hvem som ikke har lest ennå. 
+                              Trykk på knappen for å bekrefte at du har sett infoen.
                             </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                            <Button 
+                              size="sm" 
+                              onClick={handleDismissTooltip}
+                              className="w-full"
+                            >
+                              Forstått
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     );
                   }
                   
