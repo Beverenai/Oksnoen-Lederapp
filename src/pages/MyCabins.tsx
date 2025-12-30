@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +26,8 @@ import { differenceInYears } from 'date-fns';
 import type { Tables } from '@/integrations/supabase/types';
 import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
 import { CabinReportSheet } from '@/components/leaders/CabinReportSheet';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { PullIndicator } from '@/components/ui/pull-indicator';
 
 type Participant = Tables<'participants'>;
 type Cabin = Tables<'cabins'>;
@@ -60,7 +62,7 @@ export default function MyCabins() {
     loadData();
   }, [leader]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!leader) return;
     
     setIsLoading(true);
@@ -111,7 +113,12 @@ export default function MyCabins() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [leader]);
+
+  // Pull-to-refresh
+  const { pullRef, isPulling, pullProgress, isRefreshing } = usePullToRefresh({
+    onRefresh: loadData,
+  });
 
   const filteredCabins = useMemo(() => {
     if (!searchQuery) return cabins;
@@ -192,7 +199,8 @@ export default function MyCabins() {
   const arrivedCount = cabins.reduce((sum, c) => sum + c.participants.filter(p => p.has_arrived).length, 0);
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div ref={pullRef} className="space-y-6 animate-fade-in overflow-y-auto">
+      <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
       <Button variant="ghost" onClick={() => navigate('/')} className="mb-2">
         <ArrowLeft className="w-4 h-4 mr-2" />
         Tilbake
