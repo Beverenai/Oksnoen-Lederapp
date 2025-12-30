@@ -102,6 +102,13 @@ export default defineConfig(({ mode }) => ({
       }
     },
     rollupOptions: {
+      // Mark Capacitor packages as external - they're only available in native context
+      external: [
+        '@capacitor/core',
+        '@capacitor/haptics',
+        '@capacitor/camera',
+        '@capacitor/push-notifications',
+      ],
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
