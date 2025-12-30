@@ -183,6 +183,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     special: false,
   });
 
+  // For regular leaders, filter out items that are already in bottom nav
+  const isRegularLeader = !isAdmin && !isNurse;
+
   // Build dynamic content items based on schedule image availability
   const contentNavItems = [
     ...(hasScheduleImage ? [scheduleNavItem] : []),
@@ -194,6 +197,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   // Build special access items based on role (only for nurse, not admin)
   const specialAccessItems = isNurse && !isAdmin ? [nurseNavItem] : [];
+
+  // Leader nav items for hamburger menu - filter for regular leaders (they have these in bottom nav)
+  const mobileLeaderNavItems = isRegularLeader 
+    ? leaderNavItems.filter(item => item.to !== '/leaders' && item.to !== '/passport')
+    : leaderNavItems;
+
+  // Content nav items for hamburger menu - filter out FIX for regular leaders (they have it in bottom nav)
+  const mobileContentNavItems = isRegularLeader
+    ? contentNavItems.filter(item => item.to !== '/fix')
+    : contentNavItems;
 
   // Auto-expand groups based on current route
   useEffect(() => {
@@ -473,19 +486,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
               ))}
             </div>
 
-            {/* Leader functions - collapsible */}
+            {/* Leader functions - collapsible (filtered for regular leaders) */}
             <NavGroup
               label="Lederfunksjoner"
-              items={leaderNavItems}
+              items={mobileLeaderNavItems}
               isOpen={openGroups.leader}
               onOpenChange={(open) => setOpenGroups(prev => ({ ...prev, leader: open }))}
               onItemClick={closeMobileMenu}
             />
 
-            {/* Content - collapsible */}
+            {/* Content - collapsible (filtered for regular leaders) */}
             <NavGroup
               label="Innhold"
-              items={contentNavItems}
+              items={mobileContentNavItems}
               isOpen={openGroups.content}
               onOpenChange={(open) => setOpenGroups(prev => ({ ...prev, content: open }))}
               onItemClick={closeMobileMenu}
