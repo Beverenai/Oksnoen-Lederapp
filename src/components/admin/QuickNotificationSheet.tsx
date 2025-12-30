@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Play, Coffee, Send, Loader2 } from 'lucide-react';
+import { Calendar, Play, Coffee, Send, Loader2, Bell } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -19,7 +19,7 @@ interface QuickNotificationSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type TargetActivity = 'all' | 'active' | 'free';
+type TargetActivity = 'all' | 'active' | 'free' | 'unread_with_content';
 
 interface QuickNotification {
   id: string;
@@ -69,6 +69,17 @@ const quickNotifications: QuickNotification[] = [
     url: '/',
     color: 'bg-orange-500',
   },
+  {
+    id: 'remind-unread',
+    icon: Bell,
+    title: 'Påminnelse: Les oppdatering',
+    description: 'Til ledere med ulest info (rød Hajolo)',
+    notificationTitle: '👀 Du har ulest info i appen',
+    notificationMessage: 'Husk å sjekke hva du skal gjøre denne økten. Trykk Hajolo når du har lest!',
+    target: 'unread_with_content',
+    url: '/',
+    color: 'bg-red-500',
+  },
 ];
 
 export function QuickNotificationSheet({ open, onOpenChange }: QuickNotificationSheetProps) {
@@ -87,7 +98,8 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
           message: notification.notificationMessage,
           url: notification.url,
           broadcast: notification.target === 'all',
-          target_activity: notification.target !== 'all' ? notification.target : undefined,
+          target_activity: ['active', 'free'].includes(notification.target) ? notification.target : undefined,
+          target_unread_with_content: notification.target === 'unread_with_content',
           sender_leader_id: leader.id,
           personalize_activity: notification.personalize || false,
         },
