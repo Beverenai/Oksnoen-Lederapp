@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Map, Upload, Trash2, Loader2, Image, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 export function SkjaerTab() {
   const [imageUrl, setImageUrl] = useState('');
@@ -86,9 +87,11 @@ export function SkjaerTab() {
 
       setStoredImageUrl(publicUrl);
       setImageUrl(publicUrl);
+      hapticSuccess();
       toast.success('Skjærkart lastet opp!');
     } catch (error) {
       console.error('Error uploading skjaer map:', error);
+      hapticError();
       toast.error('Kunne ikke laste opp skjærkart');
     } finally {
       setIsUploading(false);
@@ -117,9 +120,11 @@ export function SkjaerTab() {
       if (error) throw error;
 
       setStoredImageUrl(imageUrl);
+      hapticSuccess();
       toast.success('Skjærkart-URL lagret!');
     } catch (error) {
       console.error('Error saving skjaer URL:', error);
+      hapticError();
       toast.error('Kunne ikke lagre URL');
     } finally {
       setIsSaving(false);

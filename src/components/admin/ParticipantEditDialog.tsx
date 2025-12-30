@@ -21,6 +21,7 @@ import {
 import { Loader2, Save, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 interface Cabin {
   id: string;
@@ -115,11 +116,13 @@ export function ParticipantEditDialog({
 
       if (error) throw error;
 
+      hapticSuccess();
       toast.success('Deltaker oppdatert');
       onSaved();
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving participant:', error);
+      hapticError();
       toast.error('Kunne ikke lagre endringer');
     } finally {
       setIsSaving(false);

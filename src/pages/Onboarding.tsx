@@ -12,6 +12,7 @@ import { Camera, User, Car, Check, Upload, Bell, Anchor, Mountain, Cable, Wrench
 import { toast } from 'sonner';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
 import { compressImage } from '@/lib/imageUtils';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -109,10 +110,12 @@ export default function Onboarding() {
       if (error) throw error;
 
       await refreshLeader();
+      hapticSuccess();
       toast.success('Profil fullført!');
       navigate('/');
     } catch (error) {
       console.error('Save error:', error);
+      hapticError();
       toast.error('Kunne ikke lagre profil');
     } finally {
       setIsSaving(false);

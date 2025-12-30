@@ -16,6 +16,7 @@ import { icons } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
 
@@ -297,10 +298,12 @@ export function LeaderContentSheet({
 
       if (contentError) throw contentError;
 
+      hapticSuccess();
       toast.success('Lagret!');
       onSaved();
     } catch (error) {
       console.error('Error saving:', error);
+      hapticError();
       toast.error('Kunne ikke lagre');
     } finally {
       setSaving(false);

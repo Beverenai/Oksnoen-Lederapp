@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useActivities } from '@/hooks/useActivities';
 import type { Tables } from '@/integrations/supabase/types';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 type Participant = Tables<'participants'>;
 type Cabin = Tables<'cabins'>;
@@ -85,12 +86,14 @@ export function BulkActivityRegistration({
 
       if (error) throw error;
 
+      hapticSuccess();
       toast.success(`${selectedActivity} registrert for ${selectedParticipants.size} deltakere!`);
       setSelectedParticipants(new Set());
       setSelectedActivity('');
       onComplete();
     } catch (error) {
       console.error('Error registering activities:', error);
+      hapticError();
       toast.error('Kunne ikke registrere aktiviteter');
     } finally {
       setIsSubmitting(false);

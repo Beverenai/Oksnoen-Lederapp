@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ParticipantEditDialog } from './ParticipantEditDialog';
+import { hapticSuccess, hapticWarning, hapticError } from '@/lib/capacitorHaptics';
 
 interface ImportProgress {
   status: 'idle' | 'running' | 'done' | 'error';
@@ -132,10 +133,13 @@ export function ParticipantImportTab() {
           if (progress.status === 'done' && progress.errors.length === 0) {
             setParsedData([]);
             if (fileInputRef.current) fileInputRef.current.value = '';
+            hapticSuccess();
             toast.success(`Import fullført! ${progress.created} nye, ${progress.updated} oppdatert, ${progress.activitiesAdded} aktiviteter`);
           } else if (progress.status === 'error') {
+            hapticError();
             toast.error('Import feilet');
           } else {
+            hapticWarning();
             toast.warning(`Import delvis fullført med ${progress.errors.length} feil`);
           }
           loadData();
@@ -463,6 +467,7 @@ export function ParticipantImportTab() {
   };
 
   const deleteAllParticipants = async () => {
+    hapticWarning();
     if (!confirm('⚠️ ADVARSEL: Dette vil slette ALLE deltakere og tilhørende data (aktiviteter, helsenotater, etc.).\n\nDette kan ikke angres. Er du sikker?')) return;
     if (!confirm('Siste sjanse: Er du HELT sikker på at du vil slette alle deltakere?')) return;
 
@@ -476,9 +481,11 @@ export function ParticipantImportTab() {
       if (error) throw error;
       
       loadData();
+      hapticSuccess();
       toast.success('Alle deltakere er slettet');
     } catch (error) {
       console.error('Error deleting participants:', error);
+      hapticError();
       toast.error('Kunne ikke slette deltakere');
     } finally {
       setIsDeleting(false);

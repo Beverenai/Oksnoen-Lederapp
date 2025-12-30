@@ -19,6 +19,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { hapticSuccess, hapticWarning, hapticError } from '@/lib/capacitorHaptics';
 
 interface Story {
   id: string;
@@ -84,9 +85,11 @@ export function StoriesTab() {
       setNewStory({ title: '', content: '' });
       setShowNewForm(false);
       loadStories();
+      hapticSuccess();
       toast.success('Historie lagt til!');
     } catch (error) {
       console.error('Error adding story:', error);
+      hapticError();
       toast.error('Kunne ikke legge til historie');
     } finally {
       setIsSaving(false);
@@ -115,9 +118,11 @@ export function StoriesTab() {
 
       setEditingStory(null);
       loadStories();
+      hapticSuccess();
       toast.success('Historie oppdatert!');
     } catch (error) {
       console.error('Error updating story:', error);
+      hapticError();
       toast.error('Kunne ikke oppdatere historie');
     } finally {
       setIsSaving(false);
@@ -142,6 +147,7 @@ export function StoriesTab() {
   };
 
   const deleteStory = async (id: string) => {
+    hapticWarning();
     if (!confirm('Er du sikker på at du vil slette denne historien?')) return;
 
     try {
@@ -153,9 +159,11 @@ export function StoriesTab() {
       if (error) throw error;
 
       loadStories();
+      hapticSuccess();
       toast.success('Historie slettet!');
     } catch (error) {
       console.error('Error deleting story:', error);
+      hapticError();
       toast.error('Kunne ikke slette historie');
     }
   };

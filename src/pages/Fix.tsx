@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { compressImage } from '@/lib/imageUtils';
+import { hapticSuccess, hapticWarning, hapticError } from '@/lib/capacitorHaptics';
 
 interface FixTask {
   id: string;
@@ -179,11 +180,13 @@ export default function Fix() {
 
       if (error) throw error;
 
+      hapticSuccess();
       toast.success('Fix-oppgave opprettet!');
       resetForm();
       setShowNewForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
+      hapticError();
       toast.error('Kunne ikke opprette oppgave');
     } finally {
       setIsSubmitting(false);
@@ -231,11 +234,13 @@ export default function Fix() {
         console.error('Failed to send push notification:', pushError);
       }
 
+      hapticSuccess();
       toast.success('Oppgave tildelt!');
       setAssigningTaskId(null);
       setAdminNotes('');
     } catch (error) {
       console.error('Error assigning task:', error);
+      hapticError();
       toast.error('Kunne ikke tildele oppgave');
     }
   };
@@ -253,15 +258,18 @@ export default function Fix() {
 
       if (error) throw error;
 
+      hapticSuccess();
       toast.success('Markert som fikset!');
       setSelectedTask(null);
     } catch (error) {
       console.error('Error marking as fixed:', error);
+      hapticError();
       toast.error('Kunne ikke markere som fikset');
     }
   };
 
   const handleDelete = async (taskId: string) => {
+    hapticWarning();
     if (!confirm('Er du sikker på at du vil slette denne oppgaven?')) return;
 
     try {
@@ -272,10 +280,12 @@ export default function Fix() {
 
       if (error) throw error;
 
+      hapticSuccess();
       toast.success('Oppgave slettet');
       setSelectedTask(null);
     } catch (error) {
       console.error('Error deleting task:', error);
+      hapticError();
       toast.error('Kunne ikke slette oppgave');
     }
   };

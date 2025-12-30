@@ -27,6 +27,7 @@ import { PushNotificationStatus } from '@/components/PushNotificationStatus';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { compressImage } from '@/lib/imageUtils';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 type Leader = Tables<'leaders'>;
 
@@ -104,9 +105,11 @@ export default function Profile() {
         .eq('id', authLeader.id);
 
       if (error) throw error;
+      hapticSuccess();
       toast.success('Profil lagret!');
     } catch (error) {
       console.error('Error saving profile:', error);
+      hapticError();
       toast.error('Kunne ikke lagre profil');
     } finally {
       setIsSaving(false);
@@ -158,9 +161,11 @@ export default function Profile() {
 
       // Update local state
       setLeader(prev => prev ? { ...prev, profile_image_url: publicUrl } : null);
+      hapticSuccess();
       toast.success('Profilbilde oppdatert!');
     } catch (error) {
       console.error('Error uploading image:', error);
+      hapticError();
       toast.error('Kunne ikke laste opp bilde');
     } finally {
       setIsUploading(false);

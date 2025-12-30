@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
+import { hapticSuccess, hapticError, hapticWarning } from '@/lib/capacitorHaptics';
 
 interface RopeControl {
   id: string;
@@ -260,10 +261,12 @@ export default function RopeControl() {
         const rejectedItemNames = rejectedItems.map(e => e.title);
         sendAdminAlert(rejectedItemNames);
         
+        hapticWarning();
         toast.error('Fiks dette!', {
           description: `${rejectedItems.length} utstyr er underkjent og må fikses.`,
         });
       } else {
+        hapticSuccess();
         toast.success('Kontroll lagret!', {
           description: 'Alt utstyr er godkjent.',
         });
@@ -275,6 +278,7 @@ export default function RopeControl() {
       loadData();
     } catch (error) {
       console.error('Error saving rope control:', error);
+      hapticError();
       toast.error('Kunne ikke lagre kontrollen');
     } finally {
       setIsSubmitting(false);
@@ -306,12 +310,14 @@ export default function RopeControl() {
 
       if (error) throw error;
 
+      hapticSuccess();
       toast.success('Utstyr godkjent!');
       setSelectedFix(null);
       setFixComment('');
       loadData();
     } catch (error) {
       console.error('Error fixing rope control:', error);
+      hapticError();
       toast.error('Kunne ikke godkjenne');
     } finally {
       setIsFixing(false);
