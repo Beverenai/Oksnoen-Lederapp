@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { Loader2, Save, Shield, Users, Heart, Camera } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { compressImage } from '@/lib/imageUtils';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 type Leader = Tables<'leaders'>;
 type AppRole = 'admin' | 'nurse' | 'leader';
@@ -114,9 +115,11 @@ export function LeaderDetailDialog({
       
       if (updateError) throw updateError;
       
+      hapticSuccess();
       toast.success('Bilde lagret!');
     } catch (error) {
       console.error('Error uploading image:', error);
+      hapticError();
       toast.error('Kunne ikke laste opp bilde');
     } finally {
       setIsUploading(false);
@@ -168,11 +171,13 @@ export function LeaderDetailDialog({
         if (roleError) throw roleError;
       }
 
+      hapticSuccess();
       toast.success('Leder oppdatert!');
       onSaved();
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving leader:', error);
+      hapticError();
       toast.error('Kunne ikke lagre endringer');
     } finally {
       setIsSaving(false);

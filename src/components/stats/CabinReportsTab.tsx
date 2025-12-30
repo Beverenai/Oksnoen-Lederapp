@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Home, Save, Loader2, Search, Users } from "lucide-react";
+import { hapticSuccess, hapticError } from "@/lib/capacitorHaptics";
 
 interface Cabin {
   id: string;
@@ -131,9 +132,11 @@ export const CabinReportsTab = () => {
         prev.map(c => c.id === cabinId ? { ...c, report: content, updated_at: new Date().toISOString() } : c)
       );
       
+      hapticSuccess();
       toast.success("Hytterapport lagret");
     } catch (error) {
       console.error("Error saving cabin report:", error);
+      hapticError();
       toast.error("Kunne ikke lagre hytterapport");
     } finally {
       setSavingCabin(null);

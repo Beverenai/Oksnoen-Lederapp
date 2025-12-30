@@ -43,6 +43,7 @@ import { toast } from 'sonner';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 type Participant = Tables<'participants'>;
 
@@ -213,11 +214,13 @@ export default function Nurse() {
           });
       }
 
+      hapticSuccess();
       toast.success('Helsenotat lagret');
       await loadParticipantDetails(selectedParticipant);
       loadParticipants();
     } catch (error) {
       console.error('Error saving health note:', error);
+      hapticError();
       toast.error('Kunne ikke lagre notat');
     } finally {
       setIsSaving(false);
@@ -250,11 +253,13 @@ export default function Nurse() {
           });
       }
 
+      hapticSuccess();
       toast.success('Info for ledere lagret');
       await loadParticipantDetails(selectedParticipant);
       loadParticipants();
     } catch (error) {
       console.error('Error saving public health note:', error);
+      hapticError();
       toast.error('Kunne ikke lagre info');
     } finally {
       setIsSaving(false);
@@ -277,6 +282,7 @@ export default function Nurse() {
         created_by: leader?.id,
       });
 
+      hapticSuccess();
       toast.success('Hendelse registrert');
       setNewEventDescription('');
       setNewEventType('observation');
@@ -285,6 +291,7 @@ export default function Nurse() {
       loadParticipants();
     } catch (error) {
       console.error('Error adding health event:', error);
+      hapticError();
       toast.error('Kunne ikke registrere hendelse');
     } finally {
       setIsSaving(false);

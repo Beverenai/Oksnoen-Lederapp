@@ -42,6 +42,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 type Leader = Tables<'leaders'>;
 type UserRole = Tables<'user_roles'>;
@@ -204,9 +205,11 @@ export default function Admin() {
         }, { onConflict: 'key' });
       
       if (error) throw error;
+      hapticSuccess();
       toast.success('Aktiviteter lagret!');
     } catch (error) {
       console.error('Error saving activities text:', error);
+      hapticError();
       toast.error('Kunne ikke lagre aktiviteter');
     } finally {
       setIsSavingActivities(false);
@@ -484,9 +487,11 @@ export default function Admin() {
 
       setHasUnsavedConfigChanges(false);
       await loadData();
+      hapticSuccess();
       toast.success('Konfigurasjon lagret!');
     } catch (error) {
       console.error('Error saving config:', error);
+      hapticError();
       toast.error('Kunne ikke lagre konfigurasjon');
     } finally {
       setIsSavingConfig(false);
