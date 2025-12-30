@@ -19,7 +19,7 @@ initCapacitorPlugins().then((result) => {
 // Configure StatusBar for native platforms only (dynamic import)
 if (isCapacitor()) {
   import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
-    StatusBar.setOverlaysWebView({ overlay: true });
+    StatusBar.setOverlaysWebView({ overlay: false });
     StatusBar.setStyle({ style: Style.Light });
     console.log('[Capacitor] StatusBar configured');
   }).catch((err) => {
