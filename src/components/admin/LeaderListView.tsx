@@ -265,7 +265,7 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
           title: 'Melding fra admin',
           message: 'Sjekk appen for oppdateringer',
           url: '/',
-          target_leader_ids: [leader.id],
+          single_leader_id: leader.id,
           sender_leader_id: currentLeader.id,
         },
       });
