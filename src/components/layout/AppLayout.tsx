@@ -346,9 +346,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
       origin: { y: 0.6 }
     });
     
-    // Navigate to home screen only if button was red (unread)
-    if (wasUnread) {
-      navigate('/');
+      // Navigate to home screen only if button was red (unread)
+      // Include forceRefresh state to ensure Home reloads data
+      if (wasUnread) {
+        navigate('/', { state: { forceRefresh: Date.now() } });
     }
     
     setTimeout(() => setShowHajoloSuccess(false), 3000);
