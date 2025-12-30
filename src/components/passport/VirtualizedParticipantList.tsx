@@ -14,6 +14,7 @@ import {
 import { differenceInYears } from 'date-fns';
 import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
 import type { Tables } from '@/integrations/supabase/types';
+import { hapticImpact } from '@/lib/capacitorHaptics';
 
 type Cabin = Tables<'cabins'>;
 
@@ -87,15 +88,21 @@ const ParticipantCard = memo(({
   completedActivities: string[];
   onClick: () => void;
   onPrefetch: () => void;
-}) => (
-  <div
-    className={`mx-4 p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-      participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
-    }`}
-    onClick={onClick}
-    onMouseEnter={onPrefetch}
-    onTouchStart={onPrefetch}
-  >
+}) => {
+  const handleClick = () => {
+    hapticImpact('light');
+    onClick();
+  };
+
+  return (
+    <div
+      className={`mx-4 p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+        participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
+      }`}
+      onClick={handleClick}
+      onMouseEnter={onPrefetch}
+      onTouchStart={onPrefetch}
+    >
     <div className="flex items-start gap-3">
       <Avatar className="w-10 h-10 shrink-0">
         <AvatarImage src={participant.image_url || undefined} loading="lazy" />
@@ -127,9 +134,10 @@ const ParticipantCard = memo(({
           />
         </div>
       </div>
+      </div>
     </div>
-  </div>
-));
+  );
+});
 
 ParticipantCard.displayName = 'ParticipantCard';
 
@@ -355,11 +363,6 @@ export function VirtualizedParticipantList({
     onPrefetchParticipant,
   }), [flattenedItems, onToggleCabin, onParticipantClick, onPrefetchParticipant]);
 
-  // Calculate total height based on all items for natural page scrolling
-  const totalHeight = useMemo(() => {
-    return flattenedItems.reduce((sum, _, index) => sum + getItemSize(index), 0);
-  }, [flattenedItems, getItemSize]);
-
   if (flattenedItems.length === 0) {
     return (
       <Card>
@@ -375,16 +378,21 @@ export function VirtualizedParticipantList({
   }
 
   return (
-    <div className="space-y-2">
+    <div 
+      className="space-y-2" 
+      style={{ 
+        height: 'calc(100vh - 200px)', 
+        overflow: 'hidden' 
+      }}
+    >
       <List<RowData>
         listRef={listRef}
         rowCount={flattenedItems.length}
         rowHeight={getItemSize}
         rowComponent={Row}
         rowProps={rowProps}
-        defaultHeight={totalHeight}
-        style={{ height: totalHeight, overflow: 'visible' }}
-        overscanCount={flattenedItems.length}
+        overscanCount={8}
+        style={{ WebkitOverflowScrolling: 'touch' }}
       />
     </div>
   );
