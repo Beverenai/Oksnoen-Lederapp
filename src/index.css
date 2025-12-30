@@ -79,11 +79,26 @@ button:active:not(:disabled),
     --warning: 35 95% 55%;
     --warning-foreground: 220 30% 10%;
 
-    --border: 220 15% 88%;
-    --input: 220 15% 88%;
+    --border: 220 10% 90%;
+    --input: 220 10% 90%;
     --ring: 152 60% 40%;
 
+    /* iOS-style spacing scale: 4/8/12/16/24 */
+    --spacing-1: 0.25rem;   /* 4px */
+    --spacing-2: 0.5rem;    /* 8px */
+    --spacing-3: 0.75rem;   /* 12px */
+    --spacing-4: 1rem;      /* 16px */
+    --spacing-6: 1.5rem;    /* 24px */
+
+    /* iOS-style radius tokens */
+    --radius-card: 1rem;      /* 16px - cards */
+    --radius-input: 0.75rem;  /* 12px - inputs, buttons */
+    --radius-chip: 9999px;    /* full - badges, chips */
     --radius: 1rem;
+
+    /* iOS-style shadow - subtle */
+    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+    --shadow-elevated: 0 4px 12px 0 rgb(0 0 0 / 0.08);
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 30% 20%;
@@ -135,9 +150,13 @@ button:active:not(:disabled),
     --warning: 35 90% 50%;
     --warning-foreground: 220 25% 8%;
 
-    --border: 220 20% 20%;
-    --input: 220 20% 20%;
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
     --ring: 152 55% 45%;
+
+    /* iOS-style shadow - dark mode */
+    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.2), 0 1px 2px -1px rgb(0 0 0 / 0.2);
+    --shadow-elevated: 0 4px 12px 0 rgb(0 0 0 / 0.3);
 
     --sidebar-background: 220 25% 10%;
     --sidebar-foreground: 220 10% 90%;
