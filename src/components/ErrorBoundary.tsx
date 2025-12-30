@@ -1,6 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -22,11 +22,41 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    console.error('[ErrorBoundary] Caught error:', error);
+    console.error('[ErrorBoundary] Error info:', errorInfo);
+    console.error('[ErrorBoundary] Stack trace:', error.stack);
   }
 
   private handleReload = () => {
     window.location.reload();
+  };
+
+  private handleClearCacheAndReload = async () => {
+    try {
+      // Unregister all service workers
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+        console.log('[ErrorBoundary] Service workers unregistered');
+      }
+
+      // Clear all caches
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        for (const cacheName of cacheNames) {
+          await caches.delete(cacheName);
+        }
+        console.log('[ErrorBoundary] Caches cleared');
+      }
+
+      // Force reload from server
+      window.location.reload();
+    } catch (err) {
+      console.error('[ErrorBoundary] Error clearing cache:', err);
+      window.location.reload();
+    }
   };
 
   public render() {
@@ -45,17 +75,30 @@ export class ErrorBoundary extends Component<Props, State> {
                 Beklager, det oppsto en uventet feil. Prøv å laste siden på nytt.
               </p>
             </div>
-            <Button onClick={this.handleReload} size="lg" className="gap-2">
-              <RefreshCw className="w-4 h-4" />
-              Last inn på nytt
-            </Button>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            <div className="flex flex-col gap-3">
+              <Button onClick={this.handleReload} size="lg" className="gap-2">
+                <RefreshCw className="w-4 h-4" />
+                Last inn på nytt
+              </Button>
+              <Button 
+                onClick={this.handleClearCacheAndReload} 
+                variant="outline" 
+                size="lg" 
+                className="gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Tøm cache og last på nytt
+              </Button>
+            </div>
+            {this.state.error && (
               <details className="text-left mt-4 p-4 bg-muted rounded-lg text-xs">
                 <summary className="cursor-pointer text-muted-foreground">
                   Tekniske detaljer
                 </summary>
                 <pre className="mt-2 whitespace-pre-wrap break-words text-destructive">
                   {this.state.error.message}
+                  {'\n\n'}
+                  {this.state.error.stack}
                 </pre>
               </details>
             )}
