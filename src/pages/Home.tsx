@@ -366,41 +366,41 @@ export default function Home() {
         </Button>
       </div>
 
-      {/* Profile Section - overlapping header */}
-      <div className="relative px-4 -mt-16">
+      {/* Profile Section - overlapping header (reduced visual weight) */}
+      <div className="relative px-4 -mt-14">
         <div className="flex flex-col items-center text-center">
           {/* User name at the very top */}
-          <h1 className="text-2xl font-heading font-bold text-white mb-4 drop-shadow-lg">
+          <h1 className="text-xl font-heading font-bold text-white mb-3 drop-shadow-lg">
             Hei, {leader?.name?.split(' ')[0]}!
           </h1>
           
           <Avatar className={cn(
-            "h-28 w-28 border-4 shadow-xl ring-4",
+            "h-20 w-20 sm:h-24 sm:w-24 border-2 shadow-lg ring-2",
             (isAdmin || isNurse || hasRead) 
-              ? "border-green-500 ring-green-500/30" 
-              : "border-red-500 ring-red-500/30"
+              ? "border-green-500 ring-green-500/20" 
+              : "border-red-500 ring-red-500/20"
           )}>
             <AvatarImage src={leader?.profile_image_url || ''} alt={leader?.name} />
-            <AvatarFallback className="bg-primary text-primary-foreground font-heading text-2xl">
+            <AvatarFallback className="bg-primary text-primary-foreground font-heading text-xl">
               {leader?.name ? getInitials(leader.name) : '?'}
             </AvatarFallback>
           </Avatar>
           
-          <p className="text-lg font-medium text-foreground mt-3">
+          <p className="text-base font-medium text-foreground mt-2">
             {leader?.name}
           </p>
           
           {leader?.ministerpost && (
-            <p className="text-muted-foreground mt-1">{leader.ministerpost}</p>
+            <p className="text-sm text-muted-foreground mt-0.5">{leader.ministerpost}</p>
           )}
           
-          <div className="flex flex-wrap gap-2 mt-3 justify-center">
+          <div className="flex flex-wrap gap-1.5 mt-2 justify-center">
             {leaderCabins.length > 0 ? (
               leaderCabins.map(cabin => (
                 <Badge 
                   key={cabin.id}
                   variant="secondary" 
-                  className="text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                  className="text-xs cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => navigate('/my-cabins')}
                 >
                   <HomeIcon className="w-3 h-3 mr-1" />
@@ -408,14 +408,14 @@ export default function Home() {
                 </Badge>
               ))
             ) : leader?.cabin_info && (
-              <Badge variant="secondary" className="text-sm">
+              <Badge variant="secondary" className="text-xs">
                 <HomeIcon className="w-3 h-3 mr-1" />
                 {leader.cabin_info}
               </Badge>
             )}
             {leader?.team && (
               <Link to={`/team/${leader.team.toLowerCase()}`}>
-                <Badge variant="outline" className="text-sm cursor-pointer hover:opacity-80 transition-opacity">
+                <Badge variant="outline" className="text-xs cursor-pointer hover:opacity-80 transition-opacity">
                   <Users className="w-3 h-3 mr-1" />
                   {formatTeamDisplay(leader.team)}
                 </Badge>
@@ -425,24 +425,24 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Content Cards */}
-      <div className="px-4 mt-6 space-y-4">
+      {/* Content Cards - consistent spacing */}
+      <div className="px-4 mt-4 sm:mt-6 space-y-3 sm:space-y-4">
         {/* Fix Task Alert */}
         {assignedFixTasks.length > 0 && (
           <Card 
             className="border border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors"
             onClick={() => navigate('/fix')}
           >
-            <CardContent className="py-4">
+            <CardContent className="py-3 sm:py-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-amber-500/20">
-                  <Wrench className="w-5 h-5 text-amber-600" />
+                <div className="p-1.5 rounded-full bg-amber-500/20">
+                  <Wrench className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-foreground">
+                  <p className="font-bold text-foreground text-sm sm:text-base">
                     Du har {assignedFixTasks.length} Fix-oppgave{assignedFixTasks.length > 1 ? 'r' : ''}!
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Trykk for å se oppgavene
                   </p>
                 </div>
@@ -457,16 +457,16 @@ export default function Home() {
             className="border border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors"
             onClick={() => navigate('/rope-control')}
           >
-            <CardContent className="py-4">
+            <CardContent className="py-3 sm:py-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-amber-500/20">
-                  <Anchor className="w-5 h-5 text-amber-600" />
+                <div className="p-1.5 rounded-full bg-amber-500/20">
+                  <Anchor className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-foreground">
+                  <p className="font-bold text-foreground text-sm sm:text-base">
                     Du har {pendingRopeControls.length} utstyr som må fikses!
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Trykk for å se og godkjenne
                   </p>
                 </div>
@@ -475,21 +475,27 @@ export default function Home() {
           </Card>
         )}
 
-        {/* Main Activity - Large Display */}
+        {/* HERO: Main Activity - Large Display with premium styling */}
         {isElementVisible('current_activity') && (() => {
           const activityConfig = getConfigForElement('current_activity');
           return (
-            <Card className={`border ${getCardStyle(activityConfig)}`}>
-              <CardContent className="pt-6 pb-6">
-                <div className="flex flex-col items-center text-center gap-3">
-                  <div className="p-2 rounded-full bg-primary/20">
-                    <ActivityIcon className="w-5 h-5 text-primary" />
+            <Card className={cn(
+              "border-2 border-primary/20 bg-primary/5 dark:bg-primary/10 shadow-lg",
+              getCardStyle(activityConfig)
+            )}>
+              <CardContent className="py-8 sm:py-10">
+                <div className="flex flex-col items-center text-center gap-4">
+                  <div className="p-3 rounded-full bg-primary/20">
+                    <ActivityIcon className="w-6 h-6 text-primary" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs uppercase tracking-wide text-primary font-medium mb-1">
+                    <p className="text-[10px] uppercase tracking-widest text-primary/70 font-medium mb-2">
                       {getElementTitle('current_activity', 'Din aktivitet')}
                     </p>
-                    <p className={`md:text-2xl font-heading text-foreground ${getTextStyle(activityConfig)}`}>
+                    <p className={cn(
+                      "text-2xl sm:text-3xl font-bold font-heading text-foreground",
+                      activityConfig?.is_italic && "italic"
+                    )}>
                       {content?.current_activity || 'Ingen aktivitet tildelt'}
                     </p>
                   </div>
@@ -499,21 +505,24 @@ export default function Home() {
           );
         })()}
 
-        {/* OBS Alert Box */}
+        {/* OBS Alert Box - Secondary styling */}
         {isElementVisible('obs_message') && content?.obs_message && (() => {
           const obsConfig = getConfigForElement('obs_message');
           return (
-            <Card className={`border ${getCardStyle(obsConfig)}`}>
-              <CardContent className="py-4">
-                <div className="flex flex-col items-center text-center gap-3">
-                  <div className="p-2 rounded-full bg-success/20">
-                    <ObsIcon className="w-5 h-5 text-success" />
+            <Card className={cn(
+              "border border-border/50",
+              getCardStyle(obsConfig)
+            )}>
+              <CardContent className="py-3 sm:py-4">
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="p-1.5 rounded-full bg-success/15">
+                    <ObsIcon className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs uppercase tracking-wide text-success font-medium mb-1">
+                    <p className="text-[10px] uppercase tracking-wide text-success/80 font-medium mb-1">
                       {getElementTitle('obs_message', 'OBS')}
                     </p>
-                    <p className={`text-foreground ${getTextStyle(obsConfig)}`}>{content.obs_message}</p>
+                    <p className={cn("text-foreground", getTextStyle(obsConfig))}>{content.obs_message}</p>
                   </div>
                 </div>
               </CardContent>
@@ -521,21 +530,24 @@ export default function Home() {
           );
         })()}
 
-        {/* Extra Activity */}
+        {/* Extra Activity - Secondary styling */}
         {isElementVisible('extra_activity') && content?.extra_activity && (() => {
           const extraConfig = getConfigForElement('extra_activity');
           return (
-            <Card className={`border ${getCardStyle(extraConfig)}`}>
-              <CardContent className="py-4">
-                <div className="flex flex-col items-center text-center gap-3">
-                  <div className="p-2 rounded-full bg-accent/20">
-                    <ExtraActivityIcon className="w-5 h-5 text-accent" />
+            <Card className={cn(
+              "border border-border/50",
+              getCardStyle(extraConfig)
+            )}>
+              <CardContent className="py-3 sm:py-4">
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="p-1.5 rounded-full bg-accent/15">
+                    <ExtraActivityIcon className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs uppercase tracking-wide text-accent font-medium mb-1">
+                    <p className="text-[10px] uppercase tracking-wide text-accent/80 font-medium mb-1">
                       {getElementTitle('extra_activity', 'Ekstra aktivitet')}
                     </p>
-                    <p className={`text-foreground ${getTextStyle(extraConfig)}`}>{content.extra_activity}</p>
+                    <p className={cn("text-foreground", getTextStyle(extraConfig))}>{content.extra_activity}</p>
                   </div>
                 </div>
               </CardContent>
@@ -543,21 +555,24 @@ export default function Home() {
           );
         })()}
 
-        {/* Personal Notes */}
+        {/* Personal Notes - Secondary styling */}
         {isElementVisible('personal_notes') && content?.personal_notes && (() => {
           const notesConfig = getConfigForElement('personal_notes');
           return (
-            <Card className={`border ${getCardStyle(notesConfig)}`}>
-              <CardContent className="py-4">
-                <div className="flex flex-col items-center text-center gap-3">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <NotesIcon className="w-5 h-5 text-primary" />
+            <Card className={cn(
+              "border border-border/50",
+              getCardStyle(notesConfig)
+            )}>
+              <CardContent className="py-3 sm:py-4">
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="p-1.5 rounded-full bg-primary/10">
+                    <NotesIcon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs uppercase tracking-wide text-primary font-medium mb-1">
+                    <p className="text-[10px] uppercase tracking-wide text-primary/80 font-medium mb-1">
                       {getElementTitle('personal_notes', 'Notater til deg')}
                     </p>
-                    <p className={`text-foreground ${getTextStyle(notesConfig)}`}>{content.personal_notes}</p>
+                    <p className={cn("text-foreground", getTextStyle(notesConfig))}>{content.personal_notes}</p>
                   </div>
                 </div>
               </CardContent>
@@ -565,7 +580,7 @@ export default function Home() {
           );
         })()}
 
-        {/* Extra Fields - now using home_screen_config for visibility */}
+        {/* Extra Fields - Secondary styling */}
         {['extra_1', 'extra_2', 'extra_3', 'extra_4', 'extra_5'].map((fieldKey) => {
           const fieldConfig = config.find(c => c.element_key === fieldKey);
           if (!fieldConfig) return null;
@@ -576,17 +591,20 @@ export default function Home() {
           const IconComponent = fieldConfig.icon && iconMap[fieldConfig.icon] ? iconMap[fieldConfig.icon] : Info;
           
           return (
-            <Card key={fieldKey} className={`border ${getCardStyle(fieldConfig)}`}>
-              <CardContent className="py-4">
-                <div className="flex flex-col items-center text-center gap-3">
-                  <div className="p-2 rounded-full bg-muted">
-                    <IconComponent className="w-5 h-5 text-muted-foreground" />
+            <Card key={fieldKey} className={cn(
+              "border border-border/50",
+              getCardStyle(fieldConfig)
+            )}>
+              <CardContent className="py-3 sm:py-4">
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="p-1.5 rounded-full bg-muted">
+                    <IconComponent className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground/80 font-medium mb-1">
                       {fieldConfig.title || fieldKey.replace('_', ' #')}
                     </p>
-                    <p className={`text-foreground ${getTextStyle(fieldConfig)}`}>{value}</p>
+                    <p className={cn("text-foreground", getTextStyle(fieldConfig))}>{value}</p>
                   </div>
                 </div>
               </CardContent>
@@ -594,22 +612,25 @@ export default function Home() {
           );
         })}
 
-        {/* Session Activities Text */}
+        {/* Session Activities Text - Secondary styling */}
         {isElementVisible('session_activities') && sessionActivitiesText && (() => {
           const sessionConfig = getConfigForElement('session_activities');
           return (
-            <Card className={`border ${getCardStyle(sessionConfig)}`}>
-              <CardContent className="py-4">
-                <div className="flex flex-col items-center text-center gap-3">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <SessionIcon className="w-5 h-5 text-primary" />
+            <Card className={cn(
+              "border border-border/50",
+              getCardStyle(sessionConfig)
+            )}>
+              <CardContent className="py-3 sm:py-4">
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="p-1.5 rounded-full bg-primary/10">
+                    <SessionIcon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                   </div>
-                  <p className="text-xs uppercase tracking-wide text-primary font-medium">
+                  <p className="text-[10px] uppercase tracking-wide text-primary/80 font-medium">
                     {getElementTitle('session_activities', 'Aktiviteter denne økten')}
                   </p>
                 </div>
-                <div className="mt-4 text-center">
-                  <p className={`text-foreground whitespace-pre-wrap ${getTextStyle(sessionConfig)}`}>{sessionActivitiesText}</p>
+                <div className="mt-3 text-center">
+                  <p className={cn("text-foreground whitespace-pre-wrap", getTextStyle(sessionConfig))}>{sessionActivitiesText}</p>
                 </div>
               </CardContent>
             </Card>
@@ -618,11 +639,11 @@ export default function Home() {
 
         {/* Empty State */}
         {!hasAnyContent && (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground">Alt klart!</h3>
-              <p className="text-muted-foreground mt-1">
+          <Card className="border border-border/50">
+            <CardContent className="py-10 text-center">
+              <Activity className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <h3 className="text-base font-medium text-foreground">Alt klart!</h3>
+              <p className="text-sm text-muted-foreground mt-1">
                 Ingen aktiviteter eller beskjeder akkurat nå
               </p>
             </CardContent>
