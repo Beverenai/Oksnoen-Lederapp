@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -131,6 +131,7 @@ const formatTeamDisplay = (team: string | null): string => {
 export default function Home() {
   const { leader, isAdmin, isNurse } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [content, setContent] = useState<LeaderContent | null>(null);
   const [sessionActivitiesText, setSessionActivitiesText] = useState<string>('');
   const [config, setConfig] = useState<HomeScreenConfig[]>([]);
@@ -140,7 +141,6 @@ export default function Home() {
   const [assignedFixTasks, setAssignedFixTasks] = useState<FixTask[]>([]);
   const [pendingRopeControls, setPendingRopeControls] = useState<PendingRopeControl[]>([]);
 
-  // Fetch has_read status
   useEffect(() => {
     if (!leader) return;
     
@@ -223,6 +223,16 @@ export default function Home() {
   useEffect(() => {
     loadData();
   }, [leader]);
+
+  // Force refresh when navigated from Hajolo with red status
+  useEffect(() => {
+    if (location.state?.forceRefresh) {
+      console.log('Force refreshing home screen from Hajolo navigation');
+      loadData();
+      // Clear the state to prevent refresh on back navigation
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state?.forceRefresh]);
 
   // Real-time updates
   useEffect(() => {
