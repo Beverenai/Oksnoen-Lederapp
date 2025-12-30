@@ -448,6 +448,11 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
                     )}
                   </div>
                   
+                  {/* OBS indicator - red dot on mobile only */}
+                  {hasObs && (
+                    <span className="sm:hidden w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 animate-pulse" title="OBS-melding" />
+                  )}
+                  
                   {/* Team badge - compact on mobile, full on desktop */}
                   {(leader.team || isAdmin || isNurse) && (
                     <>
