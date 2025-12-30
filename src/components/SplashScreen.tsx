@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { isCapacitor } from '@/lib/capacitor';
-import { supabase } from '@/integrations/supabase/client';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 
 export function SplashScreen() {
@@ -15,25 +14,11 @@ export function SplashScreen() {
       return;
     }
 
-    // Try to get user's first name from stored leader
-    const loadUserName = async () => {
-      const leaderId = localStorage.getItem('leaderId');
-      if (leaderId) {
-        const { data } = await supabase
-          .from('leaders')
-          .select('name')
-          .eq('id', leaderId)
-          .maybeSingle();
-        
-        if (data?.name) {
-          // Extract first name from full name
-          const name = data.name.split(' ')[0];
-          setFirstName(name);
-        }
-      }
-    };
-    
-    loadUserName();
+    // Get user's name from localStorage (cached during login/load)
+    const storedName = localStorage.getItem('leaderName');
+    if (storedName) {
+      setFirstName(storedName.split(' ')[0]);
+    }
 
     // Start fade out after animation completes
     const fadeTimer = setTimeout(() => {

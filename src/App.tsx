@@ -40,6 +40,14 @@ const Checkout = lazy(() => import("@/pages/Checkout"));
 
 const queryClient = new QueryClient();
 
+// Preload frequently accessed pages after initial render
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    import("@/pages/Leaders");
+    import("@/pages/Profile");
+  }, 2000);
+}
+
 // Loading fallback for lazy-loaded pages
 function PageLoader() {
   return (
