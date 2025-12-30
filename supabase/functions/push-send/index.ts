@@ -80,9 +80,9 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { title, message, url, leader_ids, broadcast, sender_leader_id, target_activity, single_leader_id, personalize_activity } = body;
+    const { title, message, url, leader_ids, broadcast, sender_leader_id, target_activity, single_leader_id, personalize_activity, target_unread_with_content } = body;
 
-    console.log("Push send request received:", { title, broadcast, sender_leader_id, target_activity, single_leader_id, personalize_activity });
+    console.log("Push send request received:", { title, broadcast, sender_leader_id, target_activity, single_leader_id, personalize_activity, target_unread_with_content });
 
     if (!title || !message) {
       return new Response(
@@ -210,7 +210,29 @@ serve(async (req) => {
     // Handle activity-based targeting
     let targetLeaderIds: string[] | null = null;
     
-    if (target_activity === 'active' || target_activity === 'free') {
+    // Handle unread with content targeting (red status)
+    if (target_unread_with_content) {
+      const { data: leaderContent } = await supabaseAdmin
+        .from('leader_content')
+        .select('leader_id, current_activity, extra_activity, personal_notes, obs_message')
+        .eq('has_read', false);
+      
+      // Filter to only those with actual content to read (red status)
+      const leadersWithContent = leaderContent?.filter(lc => 
+        lc.current_activity || lc.extra_activity || lc.personal_notes || lc.obs_message
+      ) || [];
+      
+      targetLeaderIds = leadersWithContent.map(lc => lc.leader_id);
+      
+      console.log(`Targeting unread with content (red status): ${targetLeaderIds.length} leaders`);
+      
+      if (targetLeaderIds.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, sent: 0, message: "Ingen ledere med ulest info!" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else if (target_activity === 'active' || target_activity === 'free') {
       const { data: leaderContent } = await supabaseAdmin
         .from('leader_content')
         .select('leader_id, current_activity');
@@ -304,7 +326,9 @@ serve(async (req) => {
 
     // Save to announcements (wall)
     let targetGroup = 'Alle ledere';
-    if (target_activity === 'active') {
+    if (target_unread_with_content) {
+      targetGroup = 'Ledere med ulest info';
+    } else if (target_activity === 'active') {
       targetGroup = 'Ledere på aktivitet';
     } else if (target_activity === 'free') {
       targetGroup = 'Ledere med fri';
