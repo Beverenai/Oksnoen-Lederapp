@@ -439,6 +439,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           'lg:hidden fixed inset-0 bg-card z-[70] transform transition-transform duration-300 ease-out',
           mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         )}
+        style={{ overscrollBehavior: 'contain' }}
       >
         {/* Menu Header with close button */}
         <header 
