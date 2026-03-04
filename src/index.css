@@ -331,9 +331,8 @@ header, nav {
   position: fixed;
   left: 16px;
   right: 16px;
-  bottom: 8px;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   height: var(--nav-h);
-  padding-bottom: env(safe-area-inset-bottom);
   z-index: 50;
   overflow: visible;
   -webkit-backface-visibility: hidden;
