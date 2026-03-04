@@ -7,6 +7,7 @@ import { isCapacitor } from './capacitor';
 import { initCapacitorPush } from './capacitorPush';
 import { initCapacitorCamera } from './capacitorCamera';
 import { initCapacitorHaptics } from './capacitorHaptics';
+import { initWidgetBridge } from './capacitorWidget';
 
 interface CapacitorInitResult {
   isNative: boolean;
@@ -15,6 +16,7 @@ interface CapacitorInitResult {
     camera: boolean;
     haptics: boolean;
     splashScreen: boolean;
+    widget: boolean;
   };
 }
 
@@ -40,6 +42,7 @@ export const initCapacitorPlugins = async (): Promise<CapacitorInitResult> => {
         camera: false,
         haptics: false,
         splashScreen: false,
+        widget: false,
       },
     };
     return initResult;
@@ -59,10 +62,11 @@ export const initCapacitorPlugins = async (): Promise<CapacitorInitResult> => {
   }
   
   // Initialize all plugins in parallel
-  const [push, camera, haptics] = await Promise.all([
+  const [push, camera, haptics, widget] = await Promise.all([
     initCapacitorPush(),
     initCapacitorCamera(),
     initCapacitorHaptics(),
+    initWidgetBridge(),
   ]);
   
   initResult = {
@@ -72,6 +76,7 @@ export const initCapacitorPlugins = async (): Promise<CapacitorInitResult> => {
       camera,
       haptics,
       splashScreen,
+      widget,
     },
   };
   

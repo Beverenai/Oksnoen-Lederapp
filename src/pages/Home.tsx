@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullIndicator } from '@/components/ui/pull-indicator';
+import { updateWidgetData } from '@/lib/capacitorWidget';
 
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
@@ -194,6 +195,11 @@ export default function Home() {
       ]);
 
       setContent(contentRes.data);
+      updateWidgetData({
+        currentActivity: contentRes.data?.current_activity ?? null,
+        extraActivity: contentRes.data?.extra_activity ?? null,
+        obsMessage: contentRes.data?.obs_message ?? null,
+      });
       setSessionActivitiesText(activitiesTextRes.data?.value || '');
       setConfig((configRes.data || []) as HomeScreenConfig[]);
       
