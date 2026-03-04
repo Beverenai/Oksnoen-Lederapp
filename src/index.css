@@ -320,6 +320,7 @@ header, nav {
 .app-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   padding-bottom: calc(var(--nav-h) + var(--safe-b) + 24px);
@@ -330,8 +331,9 @@ header, nav {
   position: fixed;
   left: 16px;
   right: 16px;
-  bottom: calc(8px + var(--safe-b));
+  bottom: 8px;
   height: var(--nav-h);
+  padding-bottom: env(safe-area-inset-bottom);
   z-index: 50;
   overflow: visible;
   -webkit-backface-visibility: hidden;
