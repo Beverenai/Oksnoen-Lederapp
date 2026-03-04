@@ -1,59 +1,37 @@
 
 
-## iOS Native Layout Fix - Safe Areas & Overflow
+## Fix: Toast Safe Area + Bottom Nav Position
 
-### Problem
-Several layout issues when running via Capacitor on iOS:
-1. Header/bottom nav don't fully respect safe areas
-2. Bottom nav cut off by home indicator
-3. Content cards overflow horizontally
-4. StatusBar style not set correctly on startup
+### 1. Toast overlapping Dynamic Island
 
-### Changes
+The Sonner toaster in `src/components/ui/sonner.tsx` uses `position="top-center"` but has no offset for the iOS safe area. Sonner supports an `offset` prop that controls the distance from the edge.
 
-#### 1. `index.html` - Viewport meta tag
-Already has `viewport-fit=cover` - no change needed.
+**File: `src/components/ui/sonner.tsx`**
+- Add `offset="calc(env(safe-area-inset-top, 0px) + 12px)"` prop to the `<Sonner>` component, or use the `style` prop with `--offset` CSS variable.
+- Alternatively, add a `top` style via `toastOptions.style` to push toasts below the Dynamic Island.
 
-#### 2. `src/main.tsx` - StatusBar default to Dark
-Change the StatusBar initialization to explicitly set `Style.Dark` on startup (the theme hook will override later, but this prevents a flash of wrong style).
+Since Sonner's `offset` prop accepts a string, the simplest fix:
+```tsx
+<Sonner
+  offset="calc(env(safe-area-inset-top, 0px) + 12px)"
+  ...
+/>
+```
 
-#### 3. `src/index.css` - Bottom nav & content overflow fixes
+### 2. Bottom nav too low
 
-- **`.bottom-nav`**: Add `padding-bottom: env(safe-area-inset-bottom)` so the tab bar content sits above the home indicator. Adjust `bottom` from `calc(8px + var(--safe-b))` to just `8px` since padding now handles the safe area internally, or keep the current approach but ensure the nav pills are above the indicator.
-- **`.app-content`**: Add `overflow-x: hidden` to prevent horizontal overflow from cards.
-- Add a global `overflow-x: hidden` on the scroll containers.
+Current CSS has `bottom: 8px` with `padding-bottom: env(safe-area-inset-bottom)` which adds padding *inside* the nav, pushing the height taller but keeping it at 8px from the screen bottom. The problem is the nav background doesn't extend to the screen edge — the pill floats but sits too low.
 
-#### 4. `src/components/layout/AppLayout.tsx` - Three fixes
+**Fix in `src/index.css` `.bottom-nav`:**
+- Change `bottom: 8px` → `bottom: calc(8px + env(safe-area-inset-bottom, 0px))`
+- Remove `padding-bottom: env(safe-area-inset-bottom)` — the safe area offset should lift the entire nav up, not pad inside it (since it's a floating pill, not edge-to-edge)
 
-| Line | Current | Change |
-|------|---------|--------|
-| 395 | Root div | Add `pl-safe pr-safe` for left/right safe areas |
-| 633 | `<nav className="lg:hidden bottom-nav">` | Add `pb-safe` class for bottom safe area padding inside the nav |
-| 767 | `<main>` className | Add `overflow-x-hidden` to prevent card overflow |
-| 778 | Content wrapper `<div className="p-4 lg:p-6">` | No change needed |
-
-### Detailed changes
-
-**`src/index.css`** - Update `.bottom-nav`:
-- Change `bottom: calc(8px + var(--safe-b))` to `bottom: 8px` 
-- Add `padding-bottom: env(safe-area-inset-bottom)` so internal content respects the home indicator
-- This way the floating pill extends down to cover the home indicator area
-
-**`src/index.css`** - Update `.app-content`:
-- Add `overflow-x: hidden` to prevent horizontal bleed
-
-**`src/components/layout/AppLayout.tsx`**:
-- Line 767 main: add `overflow-x-hidden`
-- Line 633 nav: the bottom-nav CSS class already handles positioning; add inline padding for safe area
-
-**`src/main.tsx`**:
-- Import `Style` and set `StatusBar.setStyle({ style: Style.Dark })` during init
+This keeps the floating pill design but positions it above the home indicator instead of overlapping it.
 
 ### Files changed
 
-| File | What |
-|------|------|
-| `src/index.css` | Bottom nav safe area padding, app-content overflow-x |
-| `src/components/layout/AppLayout.tsx` | overflow-x-hidden on main, safe area classes |
-| `src/main.tsx` | Set StatusBar style to Dark on init |
+| File | Change |
+|------|--------|
+| `src/components/ui/sonner.tsx` | Add `offset` prop for safe area top |
+| `src/index.css` | Move bottom-nav up using safe-area in `bottom`, remove internal padding-bottom |
 
