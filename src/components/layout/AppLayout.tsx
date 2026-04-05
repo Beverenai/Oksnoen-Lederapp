@@ -22,7 +22,8 @@ import {
   Map,
   BookOpen,
   LucideIcon,
-  ChevronDown
+  ChevronDown,
+  ArrowLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -92,26 +93,26 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
   if (isAdmin) {
     return [
       { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '/admin', icon: Settings, label: 'Dashboard' },
       { to: '/passport', icon: PassIcon, label: 'Passkontor' },
-      { to: '/fix', icon: Wrench, label: 'Fix' },
+      { to: '/admin', icon: Settings, label: 'Dashboard' },
+      { to: '/leaders', icon: Users, label: 'Ledere' },
+      { to: '/profile', icon: User, label: 'Profil' },
     ];
   } else if (isNurse) {
     return [
       { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '/nurse', icon: Heart, label: 'Nurse' },
       { to: '/passport', icon: PassIcon, label: 'Passkontor' },
-      { to: '/fix', icon: Wrench, label: 'Fix' },
+      { to: '/nurse', icon: Heart, label: 'Nurse' },
+      { to: '/leaders', icon: Users, label: 'Ledere' },
+      { to: '/profile', icon: User, label: 'Profil' },
     ];
   } else {
     return [
       { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '#', icon: Check, label: 'Hajolo', isHajolo: true },
       { to: '/passport', icon: PassIcon, label: 'Passkontor' },
-      { to: '/fix', icon: Wrench, label: 'Fix' },
+      { to: '#', icon: Check, label: 'Hajolo', isHajolo: true },
+      { to: '/leaders', icon: Users, label: 'Ledere' },
+      { to: '/profile', icon: User, label: 'Profil' },
     ];
   }
 };
@@ -198,6 +199,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // For regular leaders, filter out items that are already in bottom nav
   const isRegularLeader = !isAdmin && !isNurse;
 
+  // Determine if current route is a sub-page (not one of the main tab routes)
+  const mainTabRoutes = getBottomNavItems(isAdmin, isNurse).map(item => item.to).filter(to => to !== '#');
+  const isSubPage = !mainTabRoutes.includes(location.pathname);
+
   // Build dynamic content items based on schedule image availability
   const contentNavItems = [
     ...(hasScheduleImage ? [scheduleNavItem] : []),
@@ -210,15 +215,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Build special access items based on role (only for nurse, not admin)
   const specialAccessItems = isNurse && !isAdmin ? [nurseNavItem] : [];
 
-  // Leader nav items for hamburger menu - filter for regular leaders (they have these in bottom nav)
-  const mobileLeaderNavItems = isRegularLeader 
-    ? leaderNavItems.filter(item => item.to !== '/leaders' && item.to !== '/passport')
-    : leaderNavItems;
+  // Leader nav items for hamburger menu - filter items already in bottom nav
+  const mobileLeaderNavItems = leaderNavItems.filter(item => 
+    !mainTabRoutes.includes(item.to)
+  );
 
-  // Content nav items for hamburger menu - filter out FIX for regular leaders (they have it in bottom nav)
-  const mobileContentNavItems = isRegularLeader
-    ? contentNavItems.filter(item => item.to !== '/fix')
-    : contentNavItems;
+  // Content nav items for hamburger menu
+  const mobileContentNavItems = contentNavItems;
 
   // Auto-expand groups based on current route
   useEffect(() => {
@@ -422,8 +425,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
             transform: headerVisible ? 'translateY(0)' : 'translateY(calc(-100%))',
           }}
         >
-          <div className="flex items-center gap-3">
-            <img src={oksnoenLogo} alt="Oksnøen" className="h-8 w-8 object-contain" />
+          <div className="flex items-center gap-2">
+            {isSubPage ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(-1)}
+                className="shrink-0 -ml-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            ) : (
+              <img src={oksnoenLogo} alt="Oksnøen" className="h-8 w-8 object-contain" />
+            )}
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground truncate max-w-[140px]">
