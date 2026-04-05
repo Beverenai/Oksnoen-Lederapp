@@ -199,6 +199,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // For regular leaders, filter out items that are already in bottom nav
   const isRegularLeader = !isAdmin && !isNurse;
 
+  // Determine if current route is a sub-page (not one of the main tab routes)
+  const mainTabRoutes = getBottomNavItems(isAdmin, isNurse).map(item => item.to).filter(to => to !== '#');
+  const isSubPage = !mainTabRoutes.includes(location.pathname);
+
   // Build dynamic content items based on schedule image availability
   const contentNavItems = [
     ...(hasScheduleImage ? [scheduleNavItem] : []),
@@ -211,15 +215,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Build special access items based on role (only for nurse, not admin)
   const specialAccessItems = isNurse && !isAdmin ? [nurseNavItem] : [];
 
-  // Leader nav items for hamburger menu - filter for regular leaders (they have these in bottom nav)
-  const mobileLeaderNavItems = isRegularLeader 
-    ? leaderNavItems.filter(item => item.to !== '/leaders' && item.to !== '/passport')
-    : leaderNavItems;
+  // Leader nav items for hamburger menu - filter items already in bottom nav
+  const mobileLeaderNavItems = leaderNavItems.filter(item => 
+    !mainTabRoutes.includes(item.to)
+  );
 
-  // Content nav items for hamburger menu - filter out FIX for regular leaders (they have it in bottom nav)
-  const mobileContentNavItems = isRegularLeader
-    ? contentNavItems.filter(item => item.to !== '/fix')
-    : contentNavItems;
+  // Content nav items for hamburger menu
+  const mobileContentNavItems = contentNavItems;
 
   // Auto-expand groups based on current route
   useEffect(() => {
