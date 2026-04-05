@@ -1,0 +1,25 @@
+import type { Tables } from '@/integrations/supabase/types';
+
+export type Leader = Tables<'leaders'>;
+export type Participant = Tables<'participants'>;
+export type Cabin = Tables<'cabins'>;
+export type Activity = Tables<'activities'>;
+export type Announcement = Tables<'announcements'>;
+export type AppConfig = Tables<'app_config'>;
+export type CabinReport = Tables<'cabin_reports'>;
+export type ExtraFieldsConfig = Tables<'extra_fields_config'>;
+export type FixTask = Tables<'fix_tasks'>;
+export type HomeScreenConfig = Tables<'home_screen_config'>;
+export type LeaderCabin = Tables<'leader_cabins'>;
+export type LeaderContent = Tables<'leader_content'>;
+export type ParticipantActivity = Tables<'participant_activities'>;
+export type ParticipantHealthEvent = Tables<'participant_health_events'>;
+export type ParticipantHealthInfo = Tables<'participant_health_info'>;
+export type ParticipantHealthNote = Tables<'participant_health_notes'>;
+export type PushSubscription = Tables<'push_subscriptions'>;
+export type RoomCapacity = Tables<'room_capacity'>;
+export type RoomSwap = Tables<'room_swaps'>;
+export type RopeControl = Tables<'rope_controls'>;
+export type SessionActivity = Tables<'session_activities'>;
+export type Story = Tables<'stories'>;
+export type UserRole = Tables<'user_roles'>;
