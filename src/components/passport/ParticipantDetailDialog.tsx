@@ -2,11 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -252,8 +252,8 @@ export const ParticipantDetailDialog = ({
     .slice(0, 2) || '??';
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[85vh] overflow-y-auto app-scroll p-0">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent className="sm:max-w-md">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -261,7 +261,7 @@ export const ParticipantDetailDialog = ({
         ) : participant ? (
           <>
             {/* Large hero image at top */}
-            <div className="relative w-full h-32 sm:h-48 bg-muted">
+            <div className="relative w-full h-32 sm:h-48 bg-muted flex-shrink-0">
               {participant.image_url ? (
                 <CachedImage
                   src={participant.image_url}
@@ -303,8 +303,8 @@ export const ParticipantDetailDialog = ({
 
             {/* Content below image */}
             <div className="p-4 sm:p-6">
-              <DialogHeader className="text-center mb-3">
-                <DialogTitle className="text-lg sm:text-xl">{participant.name}</DialogTitle>
+              <ResponsiveDialogHeader className="text-center mb-3">
+                <ResponsiveDialogTitle className="text-lg sm:text-xl">{participant.name}</ResponsiveDialogTitle>
 
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground flex-wrap">
                   {age !== null && <span>{age} år</span>}
@@ -321,7 +321,7 @@ export const ParticipantDetailDialog = ({
                     {participant.has_arrived ? 'Ankommet' : 'Ikke ankommet'}
                   </Badge>
                 </div>
-              </DialogHeader>
+              </ResponsiveDialogHeader>
 
               <div className="space-y-4">
                 {/* Info fra Nurse */}
@@ -404,7 +404,7 @@ export const ParticipantDetailDialog = ({
                 </Button>
               </div>
             </div>
-            {/* Safe area spacer for iOS home indicator */}
+            {/* Safe area spacer for iOS */}
             <div className="pb-safe" />
           </>
         ) : (
@@ -412,7 +412,7 @@ export const ParticipantDetailDialog = ({
             Deltaker ikke funnet
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 };

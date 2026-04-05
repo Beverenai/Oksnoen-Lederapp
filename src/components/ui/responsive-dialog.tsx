@@ -74,9 +74,9 @@ export function ResponsiveDialogContent({
 
   if (isMobile) {
     return (
-      <DrawerContent className="max-h-[80dvh] overflow-hidden">
+      <DrawerContent className="max-h-[85dvh] overflow-hidden flex flex-col">
         <div className={cn(
-          "overflow-y-auto overscroll-contain max-h-[calc(80dvh-2rem)] pb-safe",
+          "flex-1 min-h-0 overflow-y-auto overscroll-contain pb-safe",
           className
         )}>
           {children}
