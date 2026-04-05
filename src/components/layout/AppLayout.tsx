@@ -438,6 +438,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             ) : (
               <img src={oksnoenLogo} alt="Oksnøen" className="h-8 w-8 object-contain" />
             )}
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground truncate max-w-[140px]">
               {leader?.name}
