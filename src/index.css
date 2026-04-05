@@ -311,7 +311,7 @@ header, nav {
   left: 0;
   right: 0;
   padding: 12px 16px;
-  padding-bottom: calc(12px + var(--safe-bottom));
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   background: hsl(var(--background));
   border-top: 1px solid hsl(var(--border));
 }
@@ -323,7 +323,7 @@ header, nav {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  padding-bottom: calc(var(--nav-h) + var(--safe-b) + 24px);
+  padding-bottom: calc(var(--nav-h) + var(--safe-b) + 32px);
 }
 
 /* Bottom nav container - iOS26 floating glass tab bar */
