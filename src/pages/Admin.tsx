@@ -167,8 +167,8 @@ export default function Admin() {
   // Auto-export state
   const [pendingExport, setPendingExport] = useState(false);
   const [exportCountdown, setExportCountdown] = useState(0);
-  const exportTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const exportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Collapsible states for dashboard
   const [isHomeConfigOpen, setIsHomeConfigOpen] = useState(false);
