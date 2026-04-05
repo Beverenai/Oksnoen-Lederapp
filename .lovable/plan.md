@@ -1,55 +1,94 @@
 
 
-## Already Implemented — Minor Adjustments Needed
+## Codebase Refactor and Cleanup
 
-The app **already has** a persistent bottom tab bar navigation and a mobile header. Here's what exists vs. what you're requesting:
+This is a significant refactoring effort. Here's a pragmatic plan that delivers real value without breaking the app.
 
-### Current State
+### 1. Remove `ComingSoon.tsx`
 
-| Feature | Status |
-|---------|--------|
-| Bottom tab bar with 5 tabs | ✅ Already exists (lines 631-761 of AppLayout.tsx) |
-| Home tab (House icon) | ✅ Present |
-| Passport tab (custom PassIcon) | ✅ Present |
-| Leaders tab (Users icon) | ✅ Present |
-| Active tab highlighted with green | ✅ `text-primary` uses Oksnøen green |
-| iOS safe area on bottom nav | ✅ `.bottom-nav` CSS handles this |
-| Lucide icons | ✅ Already using Lucide |
+`ComingSoon` is only referenced within its own file — no imports anywhere. Safe to delete.
 
-### What's Different from Your Request
-
-1. **Tabs are role-based** — The 5 tabs change depending on whether the user is admin, nurse, or regular leader. Regular leaders get: Home, Leaders, Hajolo (center action button), Passport, Fix. You're requesting: Home, Passport, Schedule, Leaders, Profile.
-
-2. **No Schedule tab** in the bottom bar — Schedule is only in the side menu.
-
-3. **No Profile tab** in the bottom bar — Profile is accessed via the hamburger menu.
-
-4. **No back-arrow button** on sub-pages — The header shows a logo and hamburger menu, not a back button.
-
-### Proposed Changes
-
-#### 1. Update `getBottomNavItems()` in `AppLayout.tsx`
-
-Change the default (non-admin, non-nurse) bottom nav to:
-- Home (Home icon)
-- Passport (PassIcon)
-- Schedule (Calendar icon) — or keep Hajolo as center
-- Leaders (Users icon)
-- Profile (User icon)
-
-For admin/nurse, keep their specialized layouts but swap Fix for Profile.
-
-#### 2. Add back-arrow to mobile header on sub-pages
-
-In the mobile header section (~line 411-440), detect if the current route is not `/` (home). If on a sub-page, show a `ChevronLeft` / `ArrowLeft` back button on the left side instead of (or alongside) the logo. Tapping it calls `navigate(-1)`.
-
-Sub-pages = any route other than the 5 main tab routes.
-
-#### 3. Files changed
-
-| File | Change |
+| File | Action |
 |------|--------|
-| `src/components/layout/AppLayout.tsx` | Update `getBottomNavItems()` for all roles; add back button logic to mobile header |
+| `src/pages/ComingSoon.tsx` | Delete |
 
-No CSS changes needed — the bottom nav styling and safe areas are already handled.
+### 2. Group admin pages under `pages/admin/`
+
+Move admin-specific pages into a subfolder. Update lazy imports in `App.tsx`.
+
+| Current | New |
+|---------|-----|
+| `src/pages/Admin.tsx` | `src/pages/admin/Admin.tsx` |
+| `src/pages/AdminSettings.tsx` | `src/pages/admin/AdminSettings.tsx` |
+| `src/pages/ParticipantStats.tsx` | `src/pages/admin/ParticipantStats.tsx` |
+| `src/pages/Checkout.tsx` | `src/pages/admin/Checkout.tsx` |
+
+Update `App.tsx` lazy imports to point to `@/pages/admin/...`.
+
+### 3. Extract reusable data hooks
+
+The Supabase queries for leaders, participants, and cabins are repeated across 10+ files with varying select columns. Create hooks using **React Query** (already installed) that cover the most common patterns:
+
+**New file: `src/hooks/useLeaders.ts`**
+- `useLeaders()` — fetches all active leaders (used in Leaders, Fix, CheckoutTab, AdminSettings)
+- `useAllLeaders()` — fetches all leaders including inactive (used in Admin)
+
+**New file: `src/hooks/useParticipants.ts`**
+- `useParticipants(cabinIds?)` — fetches participants with cabin join, optionally filtered by cabin
+- `useParticipantCount()` — head-only count query
+
+**New file: `src/hooks/useCabins.ts`**
+- `useCabins()` — fetches all cabins ordered by sort_order
+
+Each hook returns `{ data, isLoading, error, refetch }` via `useQuery`. Components that need specialized queries (e.g. checkout with pass_written fields) keep their inline queries — only the repeated common patterns get extracted.
+
+### 4. Add TypeScript interfaces
+
+**New file: `src/types/database.ts`**
+
+Export convenience type aliases derived from the auto-generated Supabase types:
+
+```typescript
+import type { Tables } from '@/integrations/supabase/types';
+
+export type Leader = Tables<'leaders'>;
+export type Participant = Tables<'participants'>;
+export type Cabin = Tables<'cabins'>;
+export type Activity = Tables<'activities'>;
+// ... etc for all tables
+```
+
+Update components to import from `@/types/database` instead of repeating `Tables<'...'>` inline.
+
+### 5. Add `React.memo` to list item components
+
+Wrap these list-item / card components in `React.memo`:
+
+| Component | File |
+|-----------|------|
+| `VirtualizedParticipantList` item renderer | `src/components/passport/VirtualizedParticipantList.tsx` |
+| Leader card in `LeaderListView` | `src/components/admin/LeaderListView.tsx` |
+| `StyrkeproveBadges` | `src/components/passport/StyrkeproveBadges.tsx` |
+| `ParticipantStatsCard` | `src/components/admin/ParticipantStatsCard.tsx` |
+
+### 6. Remove unused imports and dead code
+
+Scan all changed files for unused imports. Also:
+- Remove `Index.tsx` if unused (check routes — not referenced in `App.tsx`)
+- Clean up any `console.log` statements left from debugging
+
+### Files changed summary
+
+| Action | File |
+|--------|------|
+| Delete | `src/pages/ComingSoon.tsx` |
+| Delete | `src/pages/Index.tsx` (if unused) |
+| Move | 4 admin pages to `src/pages/admin/` |
+| Create | `src/types/database.ts` |
+| Create | `src/hooks/useLeaders.ts` |
+| Create | `src/hooks/useParticipants.ts` |
+| Create | `src/hooks/useCabins.ts` |
+| Edit | `src/App.tsx` (update imports) |
+| Edit | ~8-10 components to use new hooks and type imports |
+| Edit | ~4 list components to add `React.memo` |
 
