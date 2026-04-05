@@ -1,37 +1,55 @@
 
 
-## Fix: Toast Safe Area + Bottom Nav Position
+## Already Implemented — Minor Adjustments Needed
 
-### 1. Toast overlapping Dynamic Island
+The app **already has** a persistent bottom tab bar navigation and a mobile header. Here's what exists vs. what you're requesting:
 
-The Sonner toaster in `src/components/ui/sonner.tsx` uses `position="top-center"` but has no offset for the iOS safe area. Sonner supports an `offset` prop that controls the distance from the edge.
+### Current State
 
-**File: `src/components/ui/sonner.tsx`**
-- Add `offset="calc(env(safe-area-inset-top, 0px) + 12px)"` prop to the `<Sonner>` component, or use the `style` prop with `--offset` CSS variable.
-- Alternatively, add a `top` style via `toastOptions.style` to push toasts below the Dynamic Island.
+| Feature | Status |
+|---------|--------|
+| Bottom tab bar with 5 tabs | ✅ Already exists (lines 631-761 of AppLayout.tsx) |
+| Home tab (House icon) | ✅ Present |
+| Passport tab (custom PassIcon) | ✅ Present |
+| Leaders tab (Users icon) | ✅ Present |
+| Active tab highlighted with green | ✅ `text-primary` uses Oksnøen green |
+| iOS safe area on bottom nav | ✅ `.bottom-nav` CSS handles this |
+| Lucide icons | ✅ Already using Lucide |
 
-Since Sonner's `offset` prop accepts a string, the simplest fix:
-```tsx
-<Sonner
-  offset="calc(env(safe-area-inset-top, 0px) + 12px)"
-  ...
-/>
-```
+### What's Different from Your Request
 
-### 2. Bottom nav too low
+1. **Tabs are role-based** — The 5 tabs change depending on whether the user is admin, nurse, or regular leader. Regular leaders get: Home, Leaders, Hajolo (center action button), Passport, Fix. You're requesting: Home, Passport, Schedule, Leaders, Profile.
 
-Current CSS has `bottom: 8px` with `padding-bottom: env(safe-area-inset-bottom)` which adds padding *inside* the nav, pushing the height taller but keeping it at 8px from the screen bottom. The problem is the nav background doesn't extend to the screen edge — the pill floats but sits too low.
+2. **No Schedule tab** in the bottom bar — Schedule is only in the side menu.
 
-**Fix in `src/index.css` `.bottom-nav`:**
-- Change `bottom: 8px` → `bottom: calc(8px + env(safe-area-inset-bottom, 0px))`
-- Remove `padding-bottom: env(safe-area-inset-bottom)` — the safe area offset should lift the entire nav up, not pad inside it (since it's a floating pill, not edge-to-edge)
+3. **No Profile tab** in the bottom bar — Profile is accessed via the hamburger menu.
 
-This keeps the floating pill design but positions it above the home indicator instead of overlapping it.
+4. **No back-arrow button** on sub-pages — The header shows a logo and hamburger menu, not a back button.
 
-### Files changed
+### Proposed Changes
+
+#### 1. Update `getBottomNavItems()` in `AppLayout.tsx`
+
+Change the default (non-admin, non-nurse) bottom nav to:
+- Home (Home icon)
+- Passport (PassIcon)
+- Schedule (Calendar icon) — or keep Hajolo as center
+- Leaders (Users icon)
+- Profile (User icon)
+
+For admin/nurse, keep their specialized layouts but swap Fix for Profile.
+
+#### 2. Add back-arrow to mobile header on sub-pages
+
+In the mobile header section (~line 411-440), detect if the current route is not `/` (home). If on a sub-page, show a `ChevronLeft` / `ArrowLeft` back button on the left side instead of (or alongside) the logo. Tapping it calls `navigate(-1)`.
+
+Sub-pages = any route other than the 5 main tab routes.
+
+#### 3. Files changed
 
 | File | Change |
 |------|--------|
-| `src/components/ui/sonner.tsx` | Add `offset` prop for safe area top |
-| `src/index.css` | Move bottom-nav up using safe-area in `bottom`, remove internal padding-bottom |
+| `src/components/layout/AppLayout.tsx` | Update `getBottomNavItems()` for all roles; add back button logic to mobile header |
+
+No CSS changes needed — the bottom nav styling and safe areas are already handled.
 
