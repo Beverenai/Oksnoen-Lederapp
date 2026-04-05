@@ -93,26 +93,26 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
   if (isAdmin) {
     return [
       { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '/admin', icon: Settings, label: 'Dashboard' },
       { to: '/passport', icon: PassIcon, label: 'Passkontor' },
-      { to: '/fix', icon: Wrench, label: 'Fix' },
+      { to: '/admin', icon: Settings, label: 'Dashboard' },
+      { to: '/leaders', icon: Users, label: 'Ledere' },
+      { to: '/profile', icon: User, label: 'Profil' },
     ];
   } else if (isNurse) {
     return [
       { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '/nurse', icon: Heart, label: 'Nurse' },
       { to: '/passport', icon: PassIcon, label: 'Passkontor' },
-      { to: '/fix', icon: Wrench, label: 'Fix' },
+      { to: '/nurse', icon: Heart, label: 'Nurse' },
+      { to: '/leaders', icon: Users, label: 'Ledere' },
+      { to: '/profile', icon: User, label: 'Profil' },
     ];
   } else {
     return [
       { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '#', icon: Check, label: 'Hajolo', isHajolo: true },
       { to: '/passport', icon: PassIcon, label: 'Passkontor' },
-      { to: '/fix', icon: Wrench, label: 'Fix' },
+      { to: '#', icon: Check, label: 'Hajolo', isHajolo: true },
+      { to: '/leaders', icon: Users, label: 'Ledere' },
+      { to: '/profile', icon: User, label: 'Profil' },
     ];
   }
 };
