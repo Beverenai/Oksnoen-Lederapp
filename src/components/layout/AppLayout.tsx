@@ -425,9 +425,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
             transform: headerVisible ? 'translateY(0)' : 'translateY(calc(-100%))',
           }}
         >
-          <div className="flex items-center gap-3">
-            <img src={oksnoenLogo} alt="Oksnøen" className="h-8 w-8 object-contain" />
-          </div>
+          <div className="flex items-center gap-2">
+            {isSubPage ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(-1)}
+                className="shrink-0 -ml-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            ) : (
+              <img src={oksnoenLogo} alt="Oksnøen" className="h-8 w-8 object-contain" />
+            )}
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground truncate max-w-[140px]">
               {leader?.name}
