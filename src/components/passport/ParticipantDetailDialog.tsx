@@ -404,6 +404,8 @@ export const ParticipantDetailDialog = ({
                 </Button>
               </div>
             </div>
+            {/* Safe area spacer for iOS home indicator */}
+            <div className="pb-safe" />
           </>
         ) : (
           <div className="text-center py-8 text-muted-foreground">

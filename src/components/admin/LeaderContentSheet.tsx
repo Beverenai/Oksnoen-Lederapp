@@ -777,6 +777,8 @@ export function LeaderContentSheet({
               )}
               Lagre endringer
             </Button>
+            {/* Safe area spacer for iOS home indicator */}
+            <div className="pb-safe" />
           </div>
         </SheetContent>
       </Sheet>
