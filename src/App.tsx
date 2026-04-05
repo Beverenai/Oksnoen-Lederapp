@@ -29,14 +29,14 @@ const MyCabins = lazy(() => import("@/pages/MyCabins"));
 const Schedule = lazy(() => import("@/pages/Schedule"));
 const Skjaer = lazy(() => import("@/pages/Skjaer"));
 const Stories = lazy(() => import("@/pages/Stories"));
-const Admin = lazy(() => import("@/pages/Admin"));
-const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
+const Admin = lazy(() => import("@/pages/admin/Admin"));
+const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 const Nurse = lazy(() => import("@/pages/Nurse"));
 const Fix = lazy(() => import("@/pages/Fix"));
 const RopeControl = lazy(() => import("@/pages/RopeControl"));
 const ImportantInfo = lazy(() => import("@/pages/ImportantInfo"));
-const ParticipantStats = lazy(() => import("@/pages/ParticipantStats"));
-const Checkout = lazy(() => import("@/pages/Checkout"));
+const ParticipantStats = lazy(() => import("@/pages/admin/ParticipantStats"));
+const Checkout = lazy(() => import("@/pages/admin/Checkout"));
 
 const queryClient = new QueryClient();
 
