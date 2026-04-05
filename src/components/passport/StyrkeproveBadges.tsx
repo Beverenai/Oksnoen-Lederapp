@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Medal } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -10,7 +11,7 @@ interface StyrkeproveBadgesProps {
   className?: string;
 }
 
-export function StyrkeproveBadges({
+export const StyrkeproveBadges = memo(function StyrkeproveBadges({
   completedActivities,
   showCount = false,
   compact = false,
@@ -87,4 +88,4 @@ export function StyrkeproveBadges({
       )}
     </div>
   );
-}
+});
