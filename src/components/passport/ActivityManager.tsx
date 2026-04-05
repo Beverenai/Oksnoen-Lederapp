@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { useActivities } from '@/hooks/useActivities';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { hapticSuccess, hapticImpact } from '@/lib/capacitorHaptics';
 
 interface ActivityManagerProps {
@@ -26,26 +27,6 @@ interface ActivityManagerProps {
   onActivityChanged: () => void;
 }
 
-// Detect touch device (includes iPad, tablets, phones)
-const useTouchDevice = () => {
-  const [isTouch, setIsTouch] = useState(false);
-  
-  useEffect(() => {
-    const checkTouch = () => {
-      const hasCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
-      const hasTouchPoints = navigator.maxTouchPoints > 0;
-      setIsTouch(hasCoarsePointer || hasTouchPoints);
-    };
-    checkTouch();
-    // Also listen for changes (e.g., connecting a mouse to a tablet)
-    const mediaQuery = window.matchMedia('(pointer: coarse)');
-    mediaQuery.addEventListener('change', checkTouch);
-    return () => mediaQuery.removeEventListener('change', checkTouch);
-  }, []);
-  
-  return isTouch;
-};
-
 export const ActivityManager = ({
   participantId,
   completedActivities,
@@ -53,7 +34,7 @@ export const ActivityManager = ({
 }: ActivityManagerProps) => {
   const { leader } = useAuth();
   const { activities } = useActivities(true);
-  const isTouch = useTouchDevice();
+  const isMobile = useIsMobile();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -89,7 +70,6 @@ export const ActivityManager = ({
 
       if (error) throw error;
 
-      // Haptic feedback for successful activity add
       hapticSuccess();
 
       toast({
@@ -110,11 +90,9 @@ export const ActivityManager = ({
     }
   };
 
-
   const removeOneActivity = async (activityTitle: string) => {
     setIsLoading(activityTitle);
     try {
-      // Find one instance of this activity to remove
       const { data } = await supabase
         .from('participant_activities')
         .select('id')
@@ -131,7 +109,6 @@ export const ActivityManager = ({
 
         if (error) throw error;
 
-        // Light haptic for removal
         hapticImpact('light');
 
         toast({
@@ -189,7 +166,6 @@ export const ActivityManager = ({
           </Button>
         );
       })}
-      
     </div>
   );
 
@@ -251,8 +227,8 @@ export const ActivityManager = ({
         <p className="text-sm text-muted-foreground">Ingen aktiviteter registrert ennå</p>
       )}
 
-      {/* Touch devices: Use Drawer for better scroll handling */}
-      {isTouch ? (
+      {/* Mobile: Drawer, Desktop: Popover */}
+      {isMobile ? (
         <Drawer open={isOpen} onOpenChange={setIsOpen}>
           <DrawerTrigger asChild>
             <Button variant="outline" className="w-full">
@@ -261,17 +237,16 @@ export const ActivityManager = ({
               <ChevronDown className="h-4 w-4 ml-auto" />
             </Button>
           </DrawerTrigger>
-          <DrawerContent className="max-h-[85dvh] flex flex-col">
+          <DrawerContent className="max-h-[70dvh] flex flex-col">
             <DrawerHeader className="flex-shrink-0">
               <DrawerTitle>Legg til aktivitet</DrawerTitle>
             </DrawerHeader>
-            <div className="flex-1 min-h-0 overflow-y-auto app-scroll px-4 pb-6 pb-safe">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-6 pb-safe">
               {activityListContent}
             </div>
           </DrawerContent>
         </Drawer>
       ) : (
-        /* Desktop: Use Popover */
         <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full">
@@ -281,7 +256,7 @@ export const ActivityManager = ({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-64 p-0" align="start">
-            <div className="max-h-[60vh] overflow-y-auto app-scroll p-2">
+            <div className="max-h-[50vh] overflow-y-auto overscroll-contain p-2">
               {activityListContent}
             </div>
           </PopoverContent>
