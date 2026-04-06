@@ -1,70 +1,26 @@
 
 
-## Fix: @-mention nesting + flagg deltaker med helseinfo
+## Fix: Fjern duplikat placeholder, behold permanent skriveområde øverst
 
 ### Problem
-When typing `@` inside an existing participant section, the new section gets inserted INSIDE that section (nested). Also, participants with nurse notes are not flagged in `participant_health_info`.
+1. Det vises **to** placeholder-tekster — én manuell `div` (linje 803-809) OG CSS `::before` på `data-placeholder` (linje 832)
+2. Placeholder-div forsvinner når innhold legges til — men brukeren vil ha en permanent "skriveområde"-linje øverst som alltid er synlig
 
-### Solution
+### Løsning
 
-**1. Fix nesting — `insertParticipantSection` in `NurseReportEditor.tsx`**
+**I `NurseReportEditor.tsx` (render-delen):**
 
-Before inserting via `insertHTML`, check if the cursor is inside a `.participant-content` div. If so:
-- Move cursor AFTER the parent `.participant-section` div
-- Then insert the new section there
+1. **Fjern den manuelle placeholder-div** (linje 803-809) — den er redundant med CSS `::before` og skaper dobbel tekst
+2. **Behold CSS `::before` placeholder** på den tomme editoren — dette er standard oppførsel og forsvinner når man begynner å skrive (riktig)
+3. **Endre placeholder-teksten** til: `Legg til deltaker med "@navn"` — kortere og tydeligere
+4. **Fjern `data-placeholder`-attributtet** fra editoren og bruk bare CSS `::before` basert på `:empty`
+5. **Legg til en fast "instruksjons-linje"** over editoren (ikke inne i den) — en enkel liten tekst som alltid vises: `Legg til deltaker med @` — denne er ikke redigerbar, bare visuell veiledning
 
-This ensures sections are always siblings, never nested.
+Resultatet: Én ren editor med én placeholder når tom, og en liten fast instruksjonstekst over som aldri forsvinner.
 
-```typescript
-// Before inserting, escape from any existing participant section
-const currentSection = range.startContainer.parentElement?.closest('.participant-section');
-if (currentSection && editorRef.current) {
-  const afterSection = document.createRange();
-  afterSection.setStartAfter(currentSection);
-  afterSection.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(afterSection);
-}
-```
+### Fil som endres
 
-**2. Flag participant with health info on save — `syncToParticipantNotes`**
-
-After syncing notes to `participant_health_notes`, also upsert into `participant_health_info` for each mentioned participant. This makes them appear on the "Viktig Info" page and be flagged in participant lists.
-
-```typescript
-// Check if participant_health_info exists, if not create one
-const { data: existingInfo } = await supabase
-  .from('participant_health_info')
-  .select('id')
-  .eq('participant_id', pid)
-  .limit(1);
-
-if (!existingInfo || existingInfo.length === 0) {
-  await supabase.from('participant_health_info').insert({
-    participant_id: pid,
-    info: `[Nurse] ${text}`,
-  });
-} else {
-  // Update existing with nurse note appended
-  await supabase.from('participant_health_info')
-    .update({ info: `[Nurse] ${text}`, updated_at: new Date().toISOString() })
-    .eq('id', existingInfo[0].id);
-}
-```
-
-**3. Also fix @-detection inside participant-content**
-
-The `handleInput` function needs to work correctly when the cursor is inside a `.participant-content` div — the mention popup position calculation should still use the editor's bounding rect.
-
-### Files changed
-
-| File | Change |
-|------|--------|
-| `src/components/nurse/NurseReportEditor.tsx` | Fix section nesting on insert, add `participant_health_info` upsert on save |
-
-### What stays the same
-- Database schema (no migrations needed — `participant_health_info` table already exists)
-- RLS policies
-- Editor look and feel (still feels like a doc)
-- PDF export, search, paste handling
+| Fil | Endring |
+|-----|--------|
+| `src/components/nurse/NurseReportEditor.tsx` | Fjern duplikat placeholder-div, oppdater placeholder-tekst, legg til fast instruksjonslinje over editor |
 
