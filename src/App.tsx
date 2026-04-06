@@ -194,13 +194,14 @@ const App = () => (
         <StatusBarSync />
         <TooltipProvider>
           <StatusPopupProvider>
-          <SplashScreen />
-          <OfflineIndicator />
-          <BrowserRouter>
-            <AuthProvider>
-              <AppRoutes />
-            </AuthProvider>
-          </BrowserRouter>
+            <SplashScreen />
+            <OfflineIndicator />
+            <BrowserRouter>
+              <AuthProvider>
+                <AppRoutes />
+              </AuthProvider>
+            </BrowserRouter>
+          </StatusPopupProvider>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
