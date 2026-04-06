@@ -218,7 +218,7 @@ export default function Passport() {
   // Prefetch participant detail
   const prefetchParticipant = useCallback((participantId: string) => {
     queryClient.prefetchQuery({
-      queryKey: ['participant-detail', participantId],
+      queryKey: ['participant-detail-v2', participantId],
       queryFn: async () => {
         const [participantRes, activitiesRes, healthRes] = await Promise.all([
           supabase.from('participants').select('*, cabins(id, name)').eq('id', participantId).single(),
@@ -226,7 +226,12 @@ export default function Passport() {
           supabase.from('participant_health_info').select('*').eq('participant_id', participantId).maybeSingle()
         ]);
         return {
-          participant: participantRes.data,
+          participant: participantRes.data
+            ? {
+                ...participantRes.data,
+                cabin: participantRes.data.cabins,
+              }
+            : participantRes.data,
           activities: activitiesRes.data || [],
           healthInfo: healthRes.data
         };

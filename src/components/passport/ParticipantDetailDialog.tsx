@@ -108,7 +108,7 @@ export const ParticipantDetailDialog = ({
 
   // Fetch participant detail with caching
   const { data, isLoading, refetch: refetchParticipant } = useQuery({
-    queryKey: ['participant-detail', participantId],
+    queryKey: ['participant-detail-v2', participantId],
     queryFn: () => fetchParticipantDetail(participantId!),
     enabled: open && !!participantId,
     staleTime: 30000,
