@@ -19,8 +19,8 @@ export function useLeaderRoles() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_all_leader_roles');
       if (error) throw error;
-      const adminIds = new Set(data?.filter(r => r.role === 'admin').map(r => r.leader_id) || []);
-      const nurseIds = new Set(data?.filter(r => r.role === 'nurse').map(r => r.leader_id) || []);
+      const adminIds = data?.filter(r => r.role === 'admin').map(r => r.leader_id) || [];
+      const nurseIds = data?.filter(r => r.role === 'nurse').map(r => r.leader_id) || [];
       return { adminIds, nurseIds };
     },
     staleTime: 60000,
@@ -43,8 +43,8 @@ export function useLeaderDashboardData(leaders: Leader[]) {
   const { data: roles, isLoading: rolesLoading } = useLeaderRoles();
   const { data: contentData, isLoading: contentLoading, refetch: refetchContent } = useLeaderContent();
 
-  const adminIds = roles?.adminIds ?? new Set<string>();
-  const nurseIds = roles?.nurseIds ?? new Set<string>();
+  const adminIds = useMemo(() => new Set(roles?.adminIds ?? []), [roles?.adminIds]);
+  const nurseIds = useMemo(() => new Set(roles?.nurseIds ?? []), [roles?.nurseIds]);
 
   // Filter out superadmin and inactive
   const activeLeaders = useMemo(() =>
