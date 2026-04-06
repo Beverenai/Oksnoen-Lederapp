@@ -1,47 +1,27 @@
 
 
-## Fiks: Suksessmeldinger som toast + minimal bunn-gap
+## Fiks: Innhold kuttes av på kantene
 
-### To problemer
+### Rotårsak
+I `src/pages/Leaders.tsx` linje 484 har leader-griden `overflow-hidden`. Avatarene har `ring-4` (4px ring utenfor elementet) som strekker seg utenfor kortets kant. Kombinert med `overflow-hidden` på griden blir venstre og høyre kant av ringene kuttet av.
 
-**1. StatusPopup er for intrusiv for suksessmeldinger**
-`StatusPopup` viser en fullskjerm-overlay med backdrop, stor ikon, og OK-knapp — midt på skjermen. For suksess og info er dette overkill. Feilmeldinger kan fortsatt bruke denne stilen (de krever oppmerksomhet).
-
-**2. For mye plass under pill-menyen**
-`bottom: calc(4px + env(safe-area-inset-bottom))` — safe-area er 34px på Face ID-iPhoner, så pillen sitter 38px over bunnen. Vi reduserer til `2px + safe-area` for minimal gap.
+Samme problem kan oppstå i `AppLayout.tsx` linje 835 der `<main>` har `overflow-x-hidden`.
 
 ### Endringer
 
-**1. `src/hooks/useStatusPopup.tsx` — Suksess/info bruker sonner toast i stedet**
+**1. `src/pages/Leaders.tsx` linje 484 — Fjern `overflow-hidden` fra grid**
+- Endre `<div className="grid gap-2 overflow-hidden">` til `<div className="grid gap-2">`
+- Overflyt håndteres allerede av `overflow-x-hidden` på wrapper-div (linje 349) og `<main>` i AppLayout
 
-`showSuccess` og `showInfo` kaller `toast.success()` / `toast()` fra sonner i stedet for å sette `popup`-state. Sonner er allerede konfigurert med `position="top-center"` og safe-area offset.
-
-- `showSuccess` → `toast.success(title, { description: message, duration: 2000 })`
-- `showInfo` → `toast(title, { description: message, duration: autoClose ?? 3000 })`
-- `showError` beholdes som StatusPopup (krever brukerinteraksjon)
-- Haptic feedback beholdes for alle
-
-**2. `src/components/ui/sonner.tsx` — Flytt toast-posisjon**
-
-Endre `position` fra `"top-center"` til `"bottom-center"` med offset som plasserer toasten rett over pill-menyen. Da unngår vi at den kuttes av på toppen.
-
-```
-offset="calc(80px + env(safe-area-inset-bottom, 0px))"
-position="bottom-center"
-```
-
-**3. `src/index.css` — Reduser pill-gap**
-
-`.bottom-nav` `bottom`: `calc(4px + ...)` → `calc(2px + env(safe-area-inset-bottom, 0px))`
+**2. `src/pages/Leaders.tsx` linje 349 — Legg til litt ekstra padding for ring-overflow**
+- Wrapper-div har allerede `overflow-x-hidden w-full min-w-0`
+- Det holder som fallback — selve griden trenger bare ikke å klippe innholdet sitt
 
 ### Filer som endres
-- `src/hooks/useStatusPopup.tsx`
-- `src/components/ui/sonner.tsx`
-- `src/index.css`
+- `src/pages/Leaders.tsx` — fjern `overflow-hidden` fra grid-containeren
 
 ### Resultat
-- Suksessmeldinger vises som diskret toast over menyen, forsvinner etter 2 sek
-- Feilmeldinger forblir fullskjerm-popup som krever OK/handling
-- Toasts kuttes ikke av på toppen
-- Pill-menyen sitter tettere mot bunnen
+- Avatar-ringer og kortskygger kuttes ikke av på venstre/høyre kant
+- Ingen horisontal scroll oppstår (håndteres av parent)
+- Alle andre sider påvirkes ikke
 
