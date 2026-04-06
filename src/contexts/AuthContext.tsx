@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import type { Session } from '@supabase/supabase-js';
 
 type Leader = Tables<'leaders'>;
 type AppRole = 'superadmin' | 'admin' | 'leader' | 'nurse';
@@ -32,6 +33,7 @@ function checkProfileComplete(leader: Leader | null): boolean {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
   const [leader, setLeader] = useState<Leader | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -42,45 +44,114 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [viewAsLeader, setViewAsLeader] = useState<Leader | null>(null);
   const loginInProgressRef = useRef(false);
-  const initInProgressRef = useRef(false);
+  const resolveInProgressRef = useRef(false);
+  const lastResolvedUserId = useRef<string | null>(null);
 
   const isProfileComplete = checkProfileComplete(leader);
   const effectiveLeader = viewAsLeader ?? leader;
 
-  const loadRolesViaRpc = async (): Promise<AppRole[]> => {
-    try {
-      const { data, error } = await supabase.rpc('get_my_roles');
-      if (error) {
-        console.warn('[Auth] get_my_roles RPC error:', error.message);
-        return [];
+  // Step 1: Set up auth listener — NO async work here, just sync state updates
+  useEffect(() => {
+    console.log('[Auth] Setting up auth listener');
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, newSession) => {
+        console.log('[Auth] onAuthStateChange:', event, 'hasSession:', !!newSession);
+
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setLeader(null);
+          setIsSuperAdmin(false);
+          setIsAdmin(false);
+          setIsNurse(false);
+          setViewAsLeader(null);
+          setDeactivatedMessage(null);
+          lastResolvedUserId.current = null;
+          localStorage.removeItem('leaderName');
+          if (!isInitialized) {
+            setIsLoading(false);
+            setIsInitialized(true);
+          }
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('[Auth] Token refreshed — session updated');
+          setSession(newSession);
+        } else {
+          // INITIAL_SESSION, SIGNED_IN
+          setSession(newSession);
+        }
       }
-      return (data as { role: AppRole }[])?.map(r => r.role) || [];
-    } catch (err) {
-      console.warn('[Auth] get_my_roles exception:', err);
-      return [];
+    );
+
+    // Kick off initial session restore
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      console.log('[Auth] getSession: hasSession=', !!initialSession);
+      setSession(initialSession);
+      if (!initialSession) {
+        // No session — mark ready immediately
+        setIsLoading(false);
+        setIsInitialized(true);
+        localStorage.removeItem('leaderName');
+      }
+    }).catch((err) => {
+      console.error('[Auth] getSession error:', err);
+      setAuthError('Kunne ikke koble til serveren. Prøv igjen.');
+      setIsLoading(false);
+      setIsInitialized(true);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Step 2: When session.user.id changes, resolve leader + roles in a separate effect
+  useEffect(() => {
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      // No user — if we had a leader, clear it
+      if (leader) {
+        setLeader(null);
+        setIsSuperAdmin(false);
+        setIsAdmin(false);
+        setIsNurse(false);
+        setViewAsLeader(null);
+        lastResolvedUserId.current = null;
+      }
+      return;
     }
-  };
 
-  const applyRoles = (roles: AppRole[]) => {
-    const sa = roles.includes('superadmin');
-    setIsSuperAdmin(sa);
-    setIsAdmin(sa || roles.includes('admin'));
-    setIsNurse(roles.includes('nurse'));
-    return sa;
-  };
+    // Skip if already resolved for this user (avoid re-resolving on token refresh)
+    if (lastResolvedUserId.current === userId && leader) {
+      console.log('[Auth] Already resolved for user:', userId);
+      return;
+    }
 
-  const performLogout = async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem('leaderName');
-    setLeader(null);
-    setIsSuperAdmin(false);
-    setIsAdmin(false);
-    setIsNurse(false);
-  };
+    // Skip if login is manually handling resolution
+    if (loginInProgressRef.current) {
+      console.log('[Auth] Login in progress — skipping auto-resolve');
+      return;
+    }
 
-  const loadLeaderFromSession = async (authUserId: string): Promise<boolean> => {
+    resolveLeaderAndRoles(userId);
+  }, [session?.user?.id]);
+
+  const resolveLeaderAndRoles = async (authUserId: string, retryCount = 0) => {
+    if (resolveInProgressRef.current) return;
+    resolveInProgressRef.current = true;
+
+    console.log('[Auth] Resolving leader for auth user:', authUserId);
+
+    const timeoutId = setTimeout(() => {
+      console.warn('[Auth] Resolve timeout — forcing ready state');
+      setAuthError('Innlasting tok for lang tid. Prøv å laste siden på nytt.');
+      setIsLoading(false);
+      setIsInitialized(true);
+      resolveInProgressRef.current = false;
+    }, 10000);
+
     try {
-      console.log('[Auth] loadLeaderFromSession:', authUserId);
+      // 1. Load leader
       const { data: leaderData, error: leaderError } = await supabase
         .from('leaders')
         .select('*')
@@ -89,107 +160,85 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (leaderError) {
         console.error('[Auth] Leader query error:', leaderError.message);
-        return false;
+        if (retryCount < 2) {
+          console.log('[Auth] Retrying leader resolve... attempt', retryCount + 1);
+          clearTimeout(timeoutId);
+          resolveInProgressRef.current = false;
+          await new Promise(r => setTimeout(r, 1000));
+          return resolveLeaderAndRoles(authUserId, retryCount + 1);
+        }
+        setAuthError('Kunne ikke laste profilen din. Prøv igjen.');
+        return;
       }
 
       if (!leaderData) {
         console.warn('[Auth] No leader found for auth user:', authUserId);
-        return false;
+        if (retryCount < 2) {
+          console.log('[Auth] Retrying leader resolve... attempt', retryCount + 1);
+          clearTimeout(timeoutId);
+          resolveInProgressRef.current = false;
+          await new Promise(r => setTimeout(r, 1000));
+          return resolveLeaderAndRoles(authUserId, retryCount + 1);
+        }
+        console.warn('[Auth] Stale session — signing out');
+        await supabase.auth.signOut();
+        return;
       }
 
       console.log('[Auth] Leader found:', leaderData.name);
 
-      const roles = await loadRolesViaRpc();
-      console.log('[Auth] Roles:', roles);
-      const isSA = applyRoles(roles);
+      // 2. Load roles
+      let roles: AppRole[] = [];
+      try {
+        const { data: roleData, error: roleError } = await supabase.rpc('get_my_roles');
+        if (roleError) {
+          console.warn('[Auth] get_my_roles RPC error:', roleError.message);
+        } else {
+          roles = (roleData as { role: AppRole }[])?.map(r => r.role) || [];
+        }
+      } catch (err) {
+        console.warn('[Auth] get_my_roles exception:', err);
+      }
 
-      // Session protection: if inactive and not superadmin, auto-logout
+      console.log('[Auth] Roles:', roles);
+
+      const isSA = roles.includes('superadmin');
+      const isAdm = isSA || roles.includes('admin');
+      const isNrs = roles.includes('nurse');
+
+      // 3. Check active status
       if (leaderData.is_active === false && !isSA) {
         console.warn('[Auth] Inactive leader detected — signing out');
         setDeactivatedMessage('Kontoen din ble deaktivert. Kontakt leirledelsen.');
-        await performLogout();
-        return false;
-      }
-
-      setDeactivatedMessage(null);
-      setLeader(leaderData);
-      localStorage.setItem('leaderName', leaderData.name);
-      return true;
-    } catch (error) {
-      console.error('[Auth] loadLeaderFromSession exception:', error);
-      return false;
-    }
-  };
-
-  const initAuth = useCallback(async () => {
-    if (initInProgressRef.current) return;
-    initInProgressRef.current = true;
-    console.log('[Auth] initAuth started');
-    setAuthError(null);
-
-    const timeoutId = setTimeout(() => {
-      console.warn('[Auth] initAuth timeout — forcing isLoading=false');
-      setIsLoading(false);
-      setIsInitialized(true);
-      setAuthError('Innlasting tok for lang tid. Prøv å laste siden på nytt.');
-    }, 10000);
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('[Auth] getSession: hasSession=', !!session);
-
-      if (session) {
-        const found = await loadLeaderFromSession(session.user.id);
-        if (!found && !deactivatedMessage) {
-          console.warn('[Auth] Stale session — signing out');
-          await supabase.auth.signOut();
-          localStorage.removeItem('leaderName');
-        }
-      } else {
+        await supabase.auth.signOut();
         localStorage.removeItem('leaderName');
+        return;
       }
+
+      // 4. Apply state
+      setDeactivatedMessage(null);
+      setAuthError(null);
+      setLeader(leaderData);
+      setIsSuperAdmin(isSA);
+      setIsAdmin(isAdm);
+      setIsNurse(isNrs);
+      lastResolvedUserId.current = authUserId;
+      localStorage.setItem('leaderName', leaderData.name);
+      console.log('[Auth] ✓ Auth ready — leader:', leaderData.name, 'roles:', roles);
     } catch (error) {
-      console.error('[Auth] initAuth error:', error);
+      console.error('[Auth] resolveLeaderAndRoles error:', error);
       setAuthError('Kunne ikke koble til serveren. Prøv igjen.');
     } finally {
       clearTimeout(timeoutId);
       setIsLoading(false);
       setIsInitialized(true);
-      initInProgressRef.current = false;
-      console.log('[Auth] initAuth complete');
+      resolveInProgressRef.current = false;
     }
-  }, []);
-
-  useEffect(() => {
-    // Set up auth state listener FIRST (before getSession)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[Auth] onAuthStateChange:', event);
-      if (event === 'SIGNED_OUT') {
-        setLeader(null);
-        setIsSuperAdmin(false);
-        setIsAdmin(false);
-        setIsNurse(false);
-        localStorage.removeItem('leaderName');
-      } else if (event === 'TOKEN_REFRESHED' && session) {
-        console.log('[Auth] Token refreshed successfully');
-        // Token was refreshed — leader data is still valid, no action needed
-      } else if (event === 'SIGNED_IN' && session) {
-        if (loginInProgressRef.current || initInProgressRef.current) return;
-        await loadLeaderFromSession(session.user.id);
-      }
-    });
-
-    // Then initialize auth
-    initAuth();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [initAuth]);
+  };
 
   const refreshLeader = useCallback(async () => {
     if (!leader?.id) return;
-    
+
     const { data: leaderData, error } = await supabase
       .from('leaders')
       .select('*')
@@ -205,12 +254,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     setAuthError(null);
     setDeactivatedMessage(null);
-    initAuth();
-  }, [initAuth]);
+    lastResolvedUserId.current = null;
+    resolveInProgressRef.current = false;
+
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      if (!s) {
+        setIsLoading(false);
+        setIsInitialized(true);
+      }
+    });
+  }, []);
 
   const login = async (phone: string): Promise<{ success: boolean; error?: string; message?: string }> => {
     loginInProgressRef.current = true;
     setDeactivatedMessage(null);
+    setAuthError(null);
     try {
       const { data, error } = await supabase.functions.invoke('phone-login', {
         body: { phone }
@@ -240,19 +299,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Kunne ikke opprette sesjon. Prøv igjen.' };
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const found = await loadLeaderFromSession(session.user.id);
-        if (!found) {
-          await new Promise(r => setTimeout(r, 500));
-          const retryFound = await loadLeaderFromSession(session.user.id);
-          if (!retryFound) {
-            console.error('[Auth] Could not load leader after login');
-            return { success: false, error: 'Kunne ikke laste profilen din. Prøv igjen.' };
-          }
-        }
+      // Now resolve leader manually since we blocked the auto-resolve
+      const { data: { session: newSession } } = await supabase.auth.getSession();
+      if (!newSession) {
+        return { success: false, error: 'Kunne ikke opprette sesjon. Prøv igjen.' };
       }
-      
+
+      // Resolve leader + roles directly
+      await resolveLeaderAndRoles(newSession.user.id);
+
+      if (!leader) {
+        // Give a tiny bit more time for state to settle
+        await new Promise(r => setTimeout(r, 300));
+      }
+
       return { success: true };
     } catch (err) {
       console.error('[Auth] Login error:', err);
@@ -264,7 +324,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     setDeactivatedMessage(null);
-    await performLogout();
+    setViewAsLeader(null);
+    await supabase.auth.signOut();
+    localStorage.removeItem('leaderName');
+    setLeader(null);
+    setIsSuperAdmin(false);
+    setIsAdmin(false);
+    setIsNurse(false);
   };
 
   return (

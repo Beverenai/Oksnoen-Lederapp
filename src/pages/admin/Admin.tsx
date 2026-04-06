@@ -82,6 +82,7 @@ export default function Admin() {
   const [isActivitiesSheetOpen, setIsActivitiesSheetOpen] = useState(false);
 
   useEffect(() => {
+    if (!isAdmin) return;
     loadData();
     loadLastSyncTime();
     loadSessionActivitiesText();
@@ -91,7 +92,7 @@ export default function Admin() {
       if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     };
-  }, []);
+  }, [isAdmin]);
 
 
   const loadSessionActivitiesText = async () => {
