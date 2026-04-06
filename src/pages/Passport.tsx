@@ -115,7 +115,7 @@ async function fetchLeaderCabins(): Promise<Map<string, { id: string; name: stri
 export default function Passport() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { leader, effectiveLeader } = useAuth();
+  const { leader, effectiveLeader, isAdmin } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const cabinFilterFromUrl = searchParams.get('cabin');
   
