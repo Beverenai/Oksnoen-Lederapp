@@ -1,58 +1,43 @@
 
+Mål: få tilbake glassmorfisk pill-meny, men uten “dødplass” under den i installert iPhone-PWA.
 
-## Fullskjerm-fiks: Dekk hele iPhone-skjermen uten gap
+Diagnose:
+- `index.html` er allerede riktig for edge-to-edge PWA: `viewport-fit=cover` og Apple PWA-meta finnes allerede.
+- Problemet er at `.bottom-nav` nå er gjort om til en full bred tab bar med `bottom: 0` og `padding-bottom: env(safe-area-inset-bottom)`. I en installert iPhone-PWA blir derfor hele safe-area nederst synlig som en høy, tom bar.
+- Safe area brukes feil sted akkurat nå: den bør beskytte innholdet i menyen, ikke bli til visuell luft under en flytende meny.
+- `main`/`.app-content` er også justert for en full-width bar, så innholdet stopper for tidlig og forsterker følelsen av dødplass.
 
-### Hva er galt
+Plan:
+1. Gjeninnfør pill-menyen i `src/index.css`
+   - Bytt `.bottom-nav` tilbake til flytende pill med `left/right: 8px`, `border-radius: 20px`, blur og shadow.
+   - Fjern dagens full-width tab bar-stil som fyller hele bunnen.
 
-1. **Bunnavigasjonen** har `bottom: calc(2px + env(safe-area-inset-bottom))` + `left: 8px` + `right: 8px` + `border-radius: 20px`. Dette gir en pill som flyter over bunnen — men bakgrunnen under pillen er svart/tom fordi ingenting dekker det området.
+2. Skill mellom installert PWA og vanlig browser
+   - Legg egne regler for `@media (display-mode: standalone)` og eventuelt native/Capacitor-tilfeller.
+   - I installert PWA skal pillen ligge nesten helt nederst (`bottom: 2px` eller tilsvarende minimal offset).
+   - I vanlig browser kan vi beholde litt tryggere offset hvis browser-UI krever det.
 
-2. **Dupliserte CSS-regler** for `html, body, #root` — finnes på linje 58-65 (utenfor `@layer`) OG linje 234-262 (inne i `@layer base`). De konflikter og gjør at `height` og `overflow` ikke oppfører seg konsistent.
+3. Bruk safe area inni menyen, ikke som gap under menyen
+   - Juster den indre nav-containeren slik at ikon/tekst fortsatt ligger trygt over swipe-området.
+   - Selve pillen skal visuelt ligge tett mot bunnen i stedet for å flyte en hel safe-area over den.
+   - Midtknappen (Hajolo/Admin/Nurse) beholdes som nå, med samme prominente FAB-oppsett og lest/ulest-status.
 
-3. **Main content** har `pb-[calc(var(--nav-h)+env(safe-area-inset-bottom,0px)+24px)]` — den `24px` er for mye padding for en pill som sitter tett på bunnen.
+4. Reduser bunnpadding for innhold i `AppLayout.tsx`
+   - Oppdater `<main>` og/eller `.app-content` slik at padding nederst matcher faktisk høyde på pillen, ikke en full bred dock.
+   - Dette gjør at innholdet kan bruke mer av den nederste delen av skjermen.
 
-### Brukerens ønske
+5. Behold fullskjerm-app uten svarte striper
+   - La full-height-oppsettet for `html`, `body` og `#root` stå, så appens bakgrunn fortsatt dekker hele skjermen.
+   - Ikke endre funksjonaliteten i header, navigasjon eller Hajolo-logikk — kun layout/CSS og eventuell standalone-detektering.
 
-Brukeren vil ha en **standard iOS tab bar** som strekker seg helt ned til bunnen — INGEN pill, INGEN gap, INGEN border-radius. Bakgrunnsfargen skal gå helt til bunnen av skjermen.
+Filer som endres:
+- `src/index.css`
+- `src/components/layout/AppLayout.tsx`
+- eventuelt `src/main.tsx` hvis vi trenger en enkel `standalone/native` klasse på `<body>` for presis styling
 
-### Endringer
-
-**1. `index.html` — viewport meta er allerede korrekt** (har `viewport-fit=cover`). Apple PWA meta-tags er også på plass. Ingen endring nødvendig.
-
-**2. `src/index.css` — Konsolider og fiks**
-
-- **Fjern** dupliserte `html, body, #root`-regler på linje 57-65 (beholdes kun i `@layer base`)
-- **Oppdater `@layer base`-reglene** (linje 234-262) til brukerens eksakte kode
-- **Erstatt `.bottom-nav`** (linje 370-391) med flat tab bar:
-```css
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: hsla(var(--card), 0.92);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  border-top: 0.5px solid hsl(var(--border));
-  border-radius: 0;
-  z-index: 50;
-}
-```
-- **Oppdater `.app-content`** padding-bottom til `calc(var(--nav-h) + env(safe-area-inset-bottom, 0px))`
-
-**3. `src/components/layout/AppLayout.tsx`**
-
-- Linje 835: Endre main `pb-[...]` fra `calc(var(--nav-h)+env(safe-area-inset-bottom,0px)+24px)` til `calc(var(--nav-h)+env(safe-area-inset-bottom,0px))` — fjerner de ekstra 24px
-
-### Filer som endres
-- `src/index.css` — konsolider html/body/root, flat tab bar, riktig content padding
-- `src/components/layout/AppLayout.tsx` — fjern overflødig bottom-padding
-
-### Resultat
-- Tab bar strekker seg helt ned til bunnen av skjermen
-- Bakgrunnsfargen fortsetter under home indicator via `padding-bottom: env(safe-area-inset-bottom)`
-- Ingen svart/hvit stripe under navigasjonen
-- Midtknappen (Hajolo/Admin/Nurse FAB) beholdes som den er — den stikker fortsatt opp over tab bar
-- Glassmorfisk bakgrunn beholdes (blur + transparency) men uten border-radius
-
+Forventet resultat:
+- Pill-menyen kommer tilbake
+- Den sitter nesten helt ned mot bunnen i installert PWA
+- Ingen stor tom sone under menyen
+- Innholdet bruker mer av skjermen nederst
+- Hajolo-knappen ser ut og oppfører seg som før
