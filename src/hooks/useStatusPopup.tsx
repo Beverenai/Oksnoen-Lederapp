@@ -42,7 +42,7 @@ export function StatusPopupProvider({ children }: { children: ReactNode }) {
   return (
     <StatusPopupContext.Provider value={{ showSuccess, showError, showInfo }}>
       {children}
-      {popup && (
+      {popup && createPortal(
         <StatusPopup
           type={popup.type}
           title={popup.title}
@@ -50,7 +50,8 @@ export function StatusPopupProvider({ children }: { children: ReactNode }) {
           autoClose={popup.autoClose}
           onClose={close}
           action={popup.action}
-        />
+        />,
+        document.body
       )}
     </StatusPopupContext.Provider>
   );
