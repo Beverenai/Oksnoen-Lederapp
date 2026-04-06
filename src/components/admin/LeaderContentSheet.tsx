@@ -562,7 +562,11 @@ export function LeaderContentSheet({
                       className="h-8 border-0 p-0 shadow-none focus-visible:ring-0"
                     />
                   </div>
-                  <div className="max-h-60 overflow-y-auto p-1">
+                  <div 
+                    className="max-h-60 overflow-y-scroll p-1 overscroll-contain"
+                    onWheel={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
+                  >
                     {cabins.filter(c => c.name.toLowerCase().includes(cabinSearch.toLowerCase())).length === 0 ? (
                       <div className="py-6 text-center text-sm text-muted-foreground">Ingen hytter funnet</div>
                     ) : (
