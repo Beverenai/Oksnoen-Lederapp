@@ -40,9 +40,10 @@ interface NoteEntry {
 
 interface NurseReportEditorProps {
   participants: Participant[];
+  onDataChange?: () => void;
 }
 
-export function NurseReportEditor({ participants }: NurseReportEditorProps) {
+export function NurseReportEditor({ participants, onDataChange }: NurseReportEditorProps) {
   const { leader } = useAuth();
   const [reportId, setReportId] = useState<string | null>(null);
   const [entries, setEntries] = useState<NoteEntry[]>([]);
