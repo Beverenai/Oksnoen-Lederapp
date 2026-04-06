@@ -58,9 +58,10 @@ function PageLoader() {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { leader, isLoading, isProfileComplete, authError, retryAuth } = useAuth();
+  const { leader, isLoading, isInitialized, isProfileComplete, authError, deactivatedMessage, retryAuth } = useAuth();
 
-  if (isLoading) {
+  // Only show full-page loader during initial app load, never between page navigations
+  if (!isInitialized && isLoading) {
     return <PageLoader />;
   }
 
@@ -71,6 +72,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
         <button onClick={retryAuth} className="px-4 py-2 rounded bg-primary text-primary-foreground">Prøv igjen</button>
       </div>
     );
+  }
+
+  if (deactivatedMessage) {
+    return <Navigate to="/login" replace />;
   }
 
   if (!leader) {
@@ -85,9 +90,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function OnboardingRoute({ children }: { children: React.ReactNode }) {
-  const { leader, isLoading, isProfileComplete } = useAuth();
+  const { leader, isLoading, isInitialized, isProfileComplete } = useAuth();
 
-  if (isLoading) {
+  if (!isInitialized && isLoading) {
     return <PageLoader />;
   }
 
