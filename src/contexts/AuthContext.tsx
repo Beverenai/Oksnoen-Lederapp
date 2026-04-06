@@ -12,7 +12,7 @@ interface AuthContextType {
   isLoading: boolean;
   isProfileComplete: boolean;
   authError: string | null;
-  login: (phone: string) => Promise<{ success: boolean; error?: string }>;
+  login: (phone: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   logout: () => void;
   refreshLeader: () => Promise<void>;
   retryAuth: () => void;
@@ -165,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
   }, [initAuth]);
 
-  const login = async (phone: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (phone: string): Promise<{ success: boolean; error?: string; message?: string }> => {
     loginInProgressRef.current = true;
     try {
       const { data, error } = await supabase.functions.invoke('phone-login', {
@@ -178,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!data.success) {
-        return { success: false, error: data.error || 'Innlogging feilet.' };
+        return { success: false, error: data.error || 'Innlogging feilet.', message: data.message };
       }
 
       if (!data.session?.access_token || !data.session?.refresh_token) {
