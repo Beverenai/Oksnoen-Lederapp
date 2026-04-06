@@ -1,5 +1,5 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -24,10 +24,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Save, Shield, Users, Heart, Camera, Bell } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Shield, Users, Heart, Camera, Bell, Check } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { compressImage } from '@/lib/imageUtils';
-import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { hapticSuccess } from '@/lib/capacitorHaptics';
 import { useAuth } from '@/contexts/AuthContext';
 
 type Leader = Tables<'leaders'>;
@@ -50,8 +51,8 @@ export function LeaderDetailDialog({
 }: LeaderDetailDialogProps) {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader: currentLeader } = useAuth();
-  const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   
   // Change notification state
   const [showNotifyDialog, setShowNotifyDialog] = useState(false);
@@ -60,6 +61,10 @@ export function LeaderDetailDialog({
   
   // Store original values for change detection
   const originalValuesRef = useRef<Record<string, any>>({});
+  // Track if initial load is done (skip auto-save on mount)
+  const isInitializedRef = useRef(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const roleSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Form state
   const [name, setName] = useState('');
@@ -86,6 +91,7 @@ export function LeaderDetailDialog({
   // Populate form when leader changes
   useEffect(() => {
     if (leader) {
+      isInitializedRef.current = false;
       setName(leader.name || '');
       setPhone(leader.phone || '');
       setEmail(leader.email || '');
@@ -102,8 +108,8 @@ export function LeaderDetailDialog({
       setCanZipline(leader.can_zipline || false);
       setCanRopeSetup(leader.can_rope_setup || false);
       setRole(currentRole);
+      setAutoSaveStatus('idle');
       
-      // Store original values for change detection
       originalValuesRef.current = {
         name: leader.name || '',
         phone: leader.phone || '',
@@ -121,8 +127,93 @@ export function LeaderDetailDialog({
         canRopeSetup: leader.can_rope_setup || false,
         role: currentRole,
       };
+      
+      // Mark as initialized after a tick so the first useEffect cycle doesn't trigger save
+      setTimeout(() => { isInitializedRef.current = true; }, 100);
     }
   }, [leader, currentRole]);
+
+  // Cleanup timers
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      if (roleSaveTimerRef.current) clearTimeout(roleSaveTimerRef.current);
+    };
+  }, []);
+
+  const saveLeaderFields = useCallback(async () => {
+    if (!leader) return;
+    setAutoSaveStatus('saving');
+    try {
+      const { error } = await supabase
+        .from('leaders')
+        .update({
+          name,
+          phone: phone.replace(/\s/g, ''),
+          email: email || null,
+          age: age || null,
+          team: team || null,
+          cabin: cabin || null,
+          ministerpost: ministerpost || null,
+          profile_image_url: profileImageUrl || null,
+          has_car: hasCar,
+          has_drivers_license: hasDriversLicense,
+          has_boat_license: hasBoatLicense,
+          can_rappelling: canRappelling,
+          can_climbing: canClimbing,
+          can_zipline: canZipline,
+          can_rope_setup: canRopeSetup,
+        })
+        .eq('id', leader.id);
+
+      if (error) throw error;
+      
+      setAutoSaveStatus('saved');
+      hapticSuccess();
+      onSaved();
+      
+      // Reset status after 2s
+      setTimeout(() => setAutoSaveStatus('idle'), 2000);
+    } catch (error) {
+      console.error('Auto-save error:', error);
+      setAutoSaveStatus('idle');
+      showError('Kunne ikke lagre');
+    }
+  }, [leader, name, phone, email, age, team, cabin, ministerpost, profileImageUrl, hasCar, hasDriversLicense, hasBoatLicense, canRappelling, canClimbing, canZipline, canRopeSetup, onSaved, showError]);
+
+  // Debounced auto-save for all fields (1s debounce)
+  useEffect(() => {
+    if (!isInitializedRef.current || !leader) return;
+    
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      saveLeaderFields();
+    }, 1000);
+  }, [name, phone, email, age, team, cabin, ministerpost, hasCar, hasDriversLicense, hasBoatLicense, canRappelling, canClimbing, canZipline, canRopeSetup, saveLeaderFields, leader]);
+
+  // Auto-save role changes (separate because it uses edge function)
+  useEffect(() => {
+    if (!isInitializedRef.current || !leader) return;
+    
+    if (roleSaveTimerRef.current) clearTimeout(roleSaveTimerRef.current);
+    roleSaveTimerRef.current = setTimeout(async () => {
+      setAutoSaveStatus('saving');
+      try {
+        const { error } = await supabase.functions.invoke('manage-roles', {
+          body: { action: 'set', leader_id: leader.id, role }
+        });
+        if (error) throw error;
+        setAutoSaveStatus('saved');
+        hapticSuccess();
+        onSaved();
+        setTimeout(() => setAutoSaveStatus('idle'), 2000);
+      } catch (err) {
+        console.error('Role save error:', err);
+        setAutoSaveStatus('idle');
+        showError('Kunne ikke lagre rolle');
+      }
+    }, 500);
+  }, [role, leader, onSaved, showError]);
 
   const getFirstName = (fullName: string) => fullName.split(' ')[0];
 
@@ -131,51 +222,39 @@ export function LeaderDetailDialog({
     const changes: string[] = [];
     const orig = originalValuesRef.current;
     
-    if (team !== orig.team && team) {
-      changes.push(`Nytt team: ${team}`);
-    }
-    if (cabin !== orig.cabin && cabin) {
-      changes.push(`Ny hytte: ${cabin}`);
-    }
-    if (ministerpost !== orig.ministerpost && ministerpost) {
-      changes.push(`Ny ministerpost: "${ministerpost}"`);
-    }
+    if (team !== orig.team && team) changes.push(`Nytt team: ${team}`);
+    if (cabin !== orig.cabin && cabin) changes.push(`Ny hytte: ${cabin}`);
+    if (ministerpost !== orig.ministerpost && ministerpost) changes.push(`Ny ministerpost: "${ministerpost}"`);
     
-    // Check certification changes (only additions)
-    if (hasCar && !orig.hasCar) {
-      changes.push(`Lagt til: Har med bil`);
-    }
-    if (hasDriversLicense && !orig.hasDriversLicense) {
-      changes.push(`Lagt til: Førerkort`);
-    }
-    if (hasBoatLicense && !orig.hasBoatLicense) {
-      changes.push(`Lagt til: Båtførerbevis`);
-    }
-    if (canRappelling && !orig.canRappelling) {
-      changes.push(`Lagt til sertifisering: Rappellering`);
-    }
-    if (canClimbing && !orig.canClimbing) {
-      changes.push(`Lagt til sertifisering: Klatring`);
-    }
-    if (canZipline && !orig.canZipline) {
-      changes.push(`Lagt til sertifisering: Taubane`);
-    }
-    if (canRopeSetup && !orig.canRopeSetup) {
-      changes.push(`Lagt til sertifisering: Taubane-oppsett`);
-    }
+    if (hasCar && !orig.hasCar) changes.push(`Lagt til: Har med bil`);
+    if (hasDriversLicense && !orig.hasDriversLicense) changes.push(`Lagt til: Førerkort`);
+    if (hasBoatLicense && !orig.hasBoatLicense) changes.push(`Lagt til: Båtførerbevis`);
+    if (canRappelling && !orig.canRappelling) changes.push(`Lagt til sertifisering: Rappellering`);
+    if (canClimbing && !orig.canClimbing) changes.push(`Lagt til sertifisering: Klatring`);
+    if (canZipline && !orig.canZipline) changes.push(`Lagt til sertifisering: Taubane`);
+    if (canRopeSetup && !orig.canRopeSetup) changes.push(`Lagt til sertifisering: Taubane-oppsett`);
     
-    // Check role changes
     if (role !== orig.role) {
       const roleNames: Record<AppRole, string> = {
-        superadmin: 'Superadmin',
-        admin: 'Admin',
-        nurse: 'Sykepleier',
-        leader: 'Leder'
+        superadmin: 'Superadmin', admin: 'Admin', nurse: 'Sykepleier', leader: 'Leder'
       };
       changes.push(`Din rolle er endret til: ${roleNames[role]}`);
     }
     
     return changes;
+  };
+
+  // When dialog closes, check for changes and offer notification
+  const handleClose = (isOpen: boolean) => {
+    if (!isOpen && leader) {
+      const changes = getChanges();
+      if (changes.length > 0) {
+        setDetectedChanges(changes);
+        setShowNotifyDialog(true);
+        return; // Don't close yet — wait for notification decision
+      }
+    }
+    onOpenChange(isOpen);
   };
 
   const handleSendChangeNotification = async () => {
@@ -224,7 +303,6 @@ export function LeaderDetailDialog({
 
     setIsUploading(true);
     try {
-      // Compress image before upload
       const compressedFile = await compressImage(file);
       const fileName = `leader-${leader.id}-${Date.now()}.jpg`;
 
@@ -238,10 +316,8 @@ export function LeaderDetailDialog({
         .from('participant-images')
         .getPublicUrl(fileName);
 
-      // Update local state
       setProfileImageUrl(publicUrl);
       
-      // Save directly to database to ensure it persists
       const { error: updateError } = await supabase
         .from('leaders')
         .update({ profile_image_url: publicUrl })
@@ -258,61 +334,6 @@ export function LeaderDetailDialog({
     }
   };
 
-  const handleSave = async () => {
-    if (!leader) return;
-
-    setIsSaving(true);
-    try {
-      // Update leader profile
-      const { error: leaderError } = await supabase
-        .from('leaders')
-        .update({
-          name,
-          phone: phone.replace(/\s/g, ''),
-          email: email || null,
-          age: age || null,
-          team: team || null,
-          cabin: cabin || null,
-          ministerpost: ministerpost || null,
-          profile_image_url: profileImageUrl || null,
-          has_car: hasCar,
-          has_drivers_license: hasDriversLicense,
-          has_boat_license: hasBoatLicense,
-          can_rappelling: canRappelling,
-          can_climbing: canClimbing,
-          can_zipline: canZipline,
-          can_rope_setup: canRopeSetup,
-        })
-        .eq('id', leader.id);
-
-      if (leaderError) throw leaderError;
-
-      // Update role via server-side function (no client writes to user_roles)
-      const { error: roleError } = await supabase.functions.invoke('manage-roles', {
-        body: { action: 'set', leader_id: leader.id, role }
-      });
-
-      if (roleError) throw roleError;
-
-      showSuccess('Leder oppdatert!');
-      onSaved();
-      
-      // Check for changes and show notification dialog
-      const changes = getChanges();
-      if (changes.length > 0) {
-        setDetectedChanges(changes);
-        setShowNotifyDialog(true);
-      } else {
-        onOpenChange(false);
-      }
-    } catch (error) {
-      console.error('Error saving leader:', error);
-      showError('Kunne ikke lagre endringer');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const getInitials = (nameStr: string) => {
     return nameStr
       .split(' ')
@@ -326,15 +347,29 @@ export function LeaderDetailDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] p-0 flex flex-col">
           <DialogHeader className="p-4 sm:p-6 pb-0">
-            <DialogTitle className="text-lg sm:text-xl">Rediger leder</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg sm:text-xl">Rediger leder</DialogTitle>
+              {autoSaveStatus === 'saving' && (
+                <Badge variant="secondary" className="text-xs gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Lagrer...
+                </Badge>
+              )}
+              {autoSaveStatus === 'saved' && (
+                <Badge variant="secondary" className="text-xs gap-1 text-primary">
+                  <Check className="w-3 h-3" />
+                  Lagret
+                </Badge>
+              )}
+            </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
             <div className="space-y-4 sm:space-y-6">
-              {/* Profile Image - Clickable Avatar */}
+              {/* Profile Image */}
               <div className="flex flex-col items-center gap-2 sm:gap-3 pt-4">
                 <Label htmlFor="profile-image" className="cursor-pointer group relative">
                   <Avatar className="w-16 h-16 sm:w-24 sm:h-24 ring-2 ring-border group-hover:ring-primary transition-all">
@@ -366,37 +401,19 @@ export function LeaderDetailDialog({
               <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">Navn</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
+                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefon</Label>
-                  <Input
-                    id="phone"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
+                  <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">E-post</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="age">Alder</Label>
-                  <Input
-                    id="age"
-                    type="number"
-                    value={age || ''}
-                    onChange={(e) => setAge(e.target.value ? parseInt(e.target.value) : null)}
-                  />
+                  <Input id="age" type="number" value={age || ''} onChange={(e) => setAge(e.target.value ? parseInt(e.target.value) : null)} />
                 </div>
               </div>
 
@@ -404,27 +421,15 @@ export function LeaderDetailDialog({
               <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="team">Team</Label>
-                  <Input
-                    id="team"
-                    value={team}
-                    onChange={(e) => setTeam(e.target.value)}
-                  />
+                  <Input id="team" value={team} onChange={(e) => setTeam(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="cabin">Hytte</Label>
-                  <Input
-                    id="cabin"
-                    value={cabin}
-                    onChange={(e) => setCabin(e.target.value)}
-                  />
+                  <Input id="cabin" value={cabin} onChange={(e) => setCabin(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="ministerpost">Ministerpost</Label>
-                  <Input
-                    id="ministerpost"
-                    value={ministerpost}
-                    onChange={(e) => setMinisterpost(e.target.value)}
-                  />
+                  <Input id="ministerpost" value={ministerpost} onChange={(e) => setMinisterpost(e.target.value)} />
                 </div>
               </div>
 
@@ -465,59 +470,31 @@ export function LeaderDetailDialog({
                 <Label className="text-sm sm:text-base font-semibold">Sertifiseringer og utstyr</Label>
                 <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
                   <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasCar"
-                      checked={hasCar}
-                      onCheckedChange={(checked) => setHasCar(checked === true)}
-                    />
+                    <Checkbox id="hasCar" checked={hasCar} onCheckedChange={(c) => setHasCar(c === true)} />
                     <Label htmlFor="hasCar" className="cursor-pointer">Har med bil</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasDriversLicense"
-                      checked={hasDriversLicense}
-                      onCheckedChange={(checked) => setHasDriversLicense(checked === true)}
-                    />
+                    <Checkbox id="hasDriversLicense" checked={hasDriversLicense} onCheckedChange={(c) => setHasDriversLicense(c === true)} />
                     <Label htmlFor="hasDriversLicense" className="cursor-pointer">Bil-lappen</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasBoatLicense"
-                      checked={hasBoatLicense}
-                      onCheckedChange={(checked) => setHasBoatLicense(checked === true)}
-                    />
+                    <Checkbox id="hasBoatLicense" checked={hasBoatLicense} onCheckedChange={(c) => setHasBoatLicense(c === true)} />
                     <Label htmlFor="hasBoatLicense" className="cursor-pointer">Båt-lappen</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="canRappelling"
-                      checked={canRappelling}
-                      onCheckedChange={(checked) => setCanRappelling(checked === true)}
-                    />
+                    <Checkbox id="canRappelling" checked={canRappelling} onCheckedChange={(c) => setCanRappelling(c === true)} />
                     <Label htmlFor="canRappelling" className="cursor-pointer">Rappis</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="canClimbing"
-                      checked={canClimbing}
-                      onCheckedChange={(checked) => setCanClimbing(checked === true)}
-                    />
+                    <Checkbox id="canClimbing" checked={canClimbing} onCheckedChange={(c) => setCanClimbing(c === true)} />
                     <Label htmlFor="canClimbing" className="cursor-pointer">Klatring</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="canZipline"
-                      checked={canZipline}
-                      onCheckedChange={(checked) => setCanZipline(checked === true)}
-                    />
+                    <Checkbox id="canZipline" checked={canZipline} onCheckedChange={(c) => setCanZipline(c === true)} />
                     <Label htmlFor="canZipline" className="cursor-pointer">Taubane oppe</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="canRopeSetup"
-                      checked={canRopeSetup}
-                      onCheckedChange={(checked) => setCanRopeSetup(checked === true)}
-                    />
+                    <Checkbox id="canRopeSetup" checked={canRopeSetup} onCheckedChange={(c) => setCanRopeSetup(c === true)} />
                     <Label htmlFor="canRopeSetup" className="cursor-pointer">Taubane oppsett</Label>
                   </div>
                 </div>
@@ -525,18 +502,10 @@ export function LeaderDetailDialog({
             </div>
           </div>
 
-          {/* Sticky Bottom Bar */}
-          <div className="bottom-bar flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Avbryt
-            </Button>
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              Lagre
+          {/* Bottom bar - just close button now */}
+          <div className="bottom-bar flex justify-end">
+            <Button variant="outline" onClick={() => handleClose(false)}>
+              Lukk
             </Button>
           </div>
         </DialogContent>
