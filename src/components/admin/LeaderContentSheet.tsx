@@ -127,7 +127,32 @@ export function LeaderContentSheet({
   const [extra4, setExtra4] = useState('');
   const [extra5, setExtra5] = useState('');
 
-  // Load all cabins once
+  // Auto-save for activity fields
+  const autoSaveField = useCallback(async (field: 'current_activity' | 'extra_activity', value: string) => {
+    if (!leader) return;
+    const orig = originalValuesRef.current;
+    const origKey = field === 'current_activity' ? 'currentActivity' : 'extraActivity';
+    if (value === (orig[origKey] || '')) return;
+
+    try {
+      const { error } = await supabase
+        .from('leader_content')
+        .upsert({
+          leader_id: leader.id,
+          [field]: value || null,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'leader_id' });
+
+      if (error) throw error;
+      orig[origKey] = value;
+      toast.success('Auto-lagret', { duration: 1500 });
+      onSaved();
+    } catch (err) {
+      console.error('Auto-save error:', err);
+      toast.error('Kunne ikke auto-lagre');
+    }
+  }, [leader, onSaved]);
+
   useEffect(() => {
     const loadCabins = async () => {
       const { data } = await supabase
