@@ -812,7 +812,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             height: headerVisible ? 'calc(56px + var(--safe-top))' : '0'
           }}
         />
-        <div className="p-4 lg:p-6">
+        <div className="p-4 lg:p-6 lg:max-w-screen-xl lg:mx-auto lg:w-full">
           {children}
         </div>
       </main>
