@@ -36,9 +36,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [deactivatedMessage, setDeactivatedMessage] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const loginInProgressRef = useRef(false);
   const initInProgressRef = useRef(false);
-  const isInitializedRef = useRef(false);
 
   const isProfileComplete = checkProfileComplete(leader);
 
