@@ -50,7 +50,7 @@ button:active:not(:disabled),
 }
 
 /* Prevent ANY element from causing horizontal overflow */
-html, body, #root, main, section, article, div, form {
+html, body, #root, main, section, article, form {
   max-width: 100%;
 }
 
