@@ -701,7 +701,16 @@ export function LeaderContentSheet({
                     onWheel={(e) => e.stopPropagation()}
                     onTouchMove={(e) => e.stopPropagation()}
                   >
-                    {cabins.filter(c => c.name.toLowerCase().includes(cabinSearch.toLowerCase())).length === 0 ? (
+                    {isLoadingCabins ? (
+                      <div className="py-6 text-center text-sm text-muted-foreground">Laster hytter...</div>
+                    ) : cabinsLoadError ? (
+                      <div className="p-3 space-y-2">
+                        <div className="text-center text-sm text-destructive">{cabinsLoadError}</div>
+                        <Button variant="outline" size="sm" className="w-full" onClick={() => void loadCabins()}>
+                          Prøv igjen
+                        </Button>
+                      </div>
+                    ) : cabins.filter(c => c.name.toLowerCase().includes(cabinSearch.toLowerCase())).length === 0 ? (
                       <div className="py-6 text-center text-sm text-muted-foreground">Ingen hytter funnet</div>
                     ) : (
                       cabins
