@@ -252,9 +252,16 @@ export function LeaderDetailDialog({
     return changes;
   };
 
-  // When dialog closes, check for changes and offer notification
+  // When dialog closes, flush pending save and check for notification
   const handleClose = (isOpen: boolean) => {
     if (!isOpen && leader) {
+      // Cancel pending timer and flush save immediately
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+        saveLeaderFieldsRef.current?.();
+      }
+      
       const changes = getChanges();
       if (changes.length > 0) {
         setDetectedChanges(changes);
