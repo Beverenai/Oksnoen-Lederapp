@@ -1,92 +1,74 @@
 
-## Fiks: autentisering må bli deterministisk, ikke “best effort”
 
-### Hva som faktisk er galt
-Dette er ikke primært et loading-problem. Rotfeilen er at appen av og til ikke får koblet den aktive auth-sesjonen til riktig rad i `leaders`, og da “vet” resten av appen ikke hvem brukeren er.
+## Diagnose og fiks: Bunnavigasjon + scroll
 
-Jeg vet hva hovedproblemet er:
-1. `src/contexts/AuthContext.tsx` bruker `async` direkte inne i `supabase.auth.onAuthStateChange(...)`
-2. Der inne kalles nye Supabase-forespørsler (`loadLeaderFromSession`, RPC for roller, ev. signOut)
-3. Dette matcher en kjent deadlock/race-condition i Supabase-klienten, som kan gjøre at neste kall henger eller at auth-state blir inkonsistent
-4. I tillegg ignoreres `INITIAL_SESSION`, og auth-init + auth-listener konkurrerer delvis med hverandre
-5. Flere sider antar at bruker/roller allerede er klare, og fyrer egne queries for tidlig
+### DIAGNOSE 1: Bunnavigasjon og safe area
 
-RLS ser ikke ut som hovedårsaken her. Problemet ligger i hvordan klienten gjenoppretter og bruker sesjonen.
+1. **Bunnavigasjonen renderes i `AppLayout.tsx` linje 667-798** — en `<nav className="lg:hidden bottom-nav">` med CSS-klassen `.bottom-nav` definert i `index.css` linje 360-381.
 
-### Endringer
-**1. Bygg om `AuthContext.tsx` til en trygg auth-flyt**
-- Fjern `await`-basert Supabase-logikk direkte fra `onAuthStateChange`
-- La listeneren kun oppdatere enkel lokal auth-state synkront
-- Flytt lasting av `leader` + roller til en separat effekt/funksjon som trigges etter at session/user-id er satt
-- Håndter `INITIAL_SESSION`, `SIGNED_IN`, `TOKEN_REFRESHED` og `SIGNED_OUT` konsekvent
+2. **Safe area er allerede håndtert korrekt**: `.bottom-nav` har `bottom: calc(8px + env(safe-area-inset-bottom, 0px))` — den flyter som en iOS-pill OVER safe area. Dette er riktig design.
 
-**2. Skill mellom tre ting som i dag blandes sammen**
-- auth-sesjon finnes / finnes ikke
-- lederprofil er lastet / ikke lastet ennå
-- roller er lastet / ikke lastet ennå
+3. **`html, body, #root` har `max-width: 100%`** (linje 53-55 i index.css), men **mangler `min-height: 100dvh`**. Det er ingen eksplisitt `min-height` eller `height` satt på disse elementene.
 
-Det betyr at contexten bør få en tydelig “ready”-modell, f.eks.:
-```text
-booting -> session restored -> leader resolved -> roles resolved -> app ready
-```
+4. **`viewport-fit=cover`** er satt i `index.html` linje 5 ✓
 
-**3. Gjør “hvem er brukeren?” robust**
-- Når session finnes, last `leaders` via `auth_user_id`
-- Hvis leder ikke finnes med én gang, prøv kort retry før brukeren logges ut
-- Ikke kall sesjonen “stale” for tidlig
-- Nullstill `viewAsLeader` ved logout eller når auth-bruker endres
+5. **Den svarte stripen** under navigasjonen skyldes sannsynligvis at `body` / `#root` ikke fyller hele skjermhøyden. Appen stopper før bunnen av viewport, og den mørke bakgrunnen under body vises.
 
-**4. Ikke la sider hente data før auth faktisk er klar**
-- `Home.tsx`, `Profile.tsx` og `Admin.tsx` skal vente på ferdig auth-resolusjon før de kjører egne queries
-- `Admin.tsx` skal ikke kjøre `loadData()` før admin-status er ferdig avklart
-- Eksisterende timeout/retry kan beholdes, men som fallback — ikke som hovedløsning
+### DIAGNOSE 2: Scroll som låser seg på Ledere
 
-**5. Forbedre login-flyten**
-- Etter `phone-login` og `setSession`, bruk samme sentrale auth-sync som resten av appen
-- Unngå parallell “manuell” profilopplasting + auth-listener som prøver å gjøre samme jobb samtidig
-- Bruk én sannhetskilde for innlogget leder
+1. **Scroll-container**: `<main>` med klassen `app-content` (linje 801-804) er den faktiske scroll-containeren. Leaders-innholdet ligger inni den. I tillegg har Leaders-komponenten `pullRef` på sin wrapper-div (linje 349) som registrerer touch-events.
 
-**6. Legg inn tydeligere auth-diagnostikk**
-- Logg stegvis:
-  - session restored
-  - auth user id funnet
-  - leader funnet / ikke funnet
-  - roller lastet
-  - auth ready
-- Dette gjør at vi kan se nøyaktig hvor det stopper hvis det skjer igjen
+2. **`active:scale`**: Ingen forekomster i hele kodebasen ✓
 
-### Filer som bør endres
-- `src/contexts/AuthContext.tsx` — hovedfiks
-- `src/App.tsx` — ev. justere route-gating mot ny auth-ready-state
-- `src/pages/admin/Admin.tsx` — ikke fetch før auth/rolle er klar
-- `src/pages/Home.tsx` — behold datafetch, men gate på klar auth
-- `src/pages/Profile.tsx` — behold datafetch, men gate på klar auth
+3. **Global `:active` CSS**: Kun `opacity: 0.85`, ingen transform ✓
 
-### Teknisk retning
-```text
-Før:
-onAuthStateChange(async () => {
-  await supabase query
-  await rpc
-  await signOut
-})
-=> race/deadlock / feil brukeroppløsning
+4. **`usePullToRefresh` og `preventDefault()`**: Ja — linje 56 kaller `e.preventDefault()` på touchmove. Den sjekker `scrollTop > 0` (linje 34, 45) og `diff > 0` (linje 55), men **problemet er at `pullRef` peker på Leaders' wrapper-div, som IKKE er scroll-containeren**. `element.scrollTop` er alltid 0 fordi det er `<main>` som scroller, ikke pullRef-diven. Dermed kalles `preventDefault()` på ALLE nedover-touches, som kan blokkere scroll-oppover etter bounce.
 
-Etter:
-onAuthStateChange(() => {
-  set raw auth state only
-})
+5. **`position: sticky`**: Ikke inne i Leaders scroll-listen.
 
-useEffect([sessionUserId]) => {
-  resolve leader
-  resolve roles
-  mark auth ready
+6. **`-webkit-overflow-scrolling: touch`**: Satt på `.app-content` ✓
+
+### ROTÅRSAK SCROLL-LOCK
+`usePullToRefresh` sjekker `element.scrollTop` på pullRef-elementet, men pullRef er Leaders' indre div — ikke scroll-containeren (`<main>`). Dermed tror hooken alltid at vi er på toppen, og kaller `preventDefault()` på touchmove-events som skulle latt brukeren scrolle opp.
+
+---
+
+### FIKSER
+
+**1. `src/index.css` — Fyll hele viewport-høyden**
+Legg til på `html, body, #root`:
+```css
+html, body, #root {
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+body {
+  background: hsl(var(--background));
 }
 ```
+Dette fjerner den svarte stripen ved at body-bakgrunnen matcher appen og hele viewport fylles.
+
+**2. `src/hooks/usePullToRefresh.ts` — Fikse scroll-deteksjon**
+Problemet: `pullRef.current.scrollTop` er alltid 0 fordi pullRef ikke er scroll-containeren.
+
+Løsning: La hooken finne nærmeste scrollbare forelder (`<main>`) og sjekke `scrollTop` der i stedet:
+```ts
+// I handleTouchStart og handleTouchMove:
+// Finn scroll-parent (nærmeste element med overflow-y: auto/scroll)
+const scrollParent = element.closest('main') || element.closest('[class*="overflow-y"]') || element;
+if (scrollParent.scrollTop > 0) return;
+```
+
+**3. `src/pages/Leaders.tsx` — Ingen endring nødvendig**
+Scroll-containeren er `<main>`, og det er korrekt. Leaders-komponentens `overflow-x-hidden` og `overscrollBehavior: contain` er fine.
+
+### Filer som endres
+- `src/index.css` — `min-height: 100dvh` + body bakgrunnsfarge
+- `src/hooks/usePullToRefresh.ts` — bruk scroll-parent for scrollTop-sjekk
 
 ### Resultat
-- Appen skjønner konsekvent hvem brukeren er
-- Refresh/PWA-reopen mister ikke profilkoblingen tilfeldig
-- Admin/status/rolle blir riktig etter sesjonsgjenoppretting
-- Sider som Home, Profil og Admin starter ikke for tidlig
-- “Prøv igjen” blir backup, ikke selve autentiseringsstrategien
+- Ingen svart stripe under bunnavigasjonen på iPhone
+- Scroll på Ledere-siden låser seg ikke lenger
+- Pull-to-refresh fungerer fortsatt korrekt (kun fra toppen)
+- Ingen visuell endring på desktop
+
