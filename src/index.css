@@ -54,6 +54,16 @@ html, body, #root, main, section, article, form {
   max-width: 100%;
 }
 
+/* Fill entire viewport height and set background */
+html, body, #root {
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
+body {
+  background: hsl(var(--background));
+}
+
 /* Force flex/grid children to respect parent bounds */
 * {
   min-width: 0;

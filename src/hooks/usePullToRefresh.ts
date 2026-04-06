@@ -14,6 +14,10 @@ interface UsePullToRefreshReturn {
   isRefreshing: boolean;
 }
 
+function getScrollParent(el: HTMLElement): HTMLElement {
+  return el.closest('main') as HTMLElement || el;
+}
+
 export function usePullToRefresh({
   onRefresh,
   threshold = 80,
@@ -31,7 +35,8 @@ export function usePullToRefresh({
     const element = pullRef.current;
     if (!element || isRefreshing) return;
     
-    if (element.scrollTop > 0) return;
+    const scrollParent = getScrollParent(element);
+    if (scrollParent.scrollTop > 0) return;
     
     startY.current = e.touches[0].clientY;
     hasTriggeredHaptic.current = false;
@@ -42,7 +47,8 @@ export function usePullToRefresh({
     if (!element || isRefreshing) return;
     if (startY.current === 0) return;
     
-    if (element.scrollTop > 0) {
+    const scrollParent = getScrollParent(element);
+    if (scrollParent.scrollTop > 0) {
       startY.current = 0;
       setIsPulling(false);
       setPullProgress(0);
