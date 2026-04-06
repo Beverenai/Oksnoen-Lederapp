@@ -1,68 +1,44 @@
 
 
-## Fiks: Standard iOS tab bar (ingen flytende pill)
+## Gjenopprett pill-meny med minimal gap + prominent Hajolo-knapp
 
-### Endringer
+### Hva endres
 
-**1. CSS: `.bottom-nav` i `src/index.css` (linje 370-399)**
-
-Erstatt hele `.bottom-nav` og `.dark .bottom-nav` med standard iOS tab bar-stil:
+**1. `src/index.css` — `.bottom-nav` tilbake til pill med minimal gap**
 
 ```css
 .bottom-nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: calc(4px + env(safe-area-inset-bottom, 0px)); /* Minimal gap — bare 4px over safe area */
+  left: 8px;
+  right: 8px;
   z-index: 50;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: hsla(var(--card), 0.85);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
   border-top: 0.5px solid hsl(var(--border));
-  border-radius: 0;
-  box-shadow: none;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-}
-
-.dark .bottom-nav {
-  background: hsla(var(--card), 0.85);
-  border-top: 0.5px solid hsl(var(--border));
-  box-shadow: none;
+  border-radius: 20px;              /* Pill-form tilbake */
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.08);
 }
 ```
 
-Nøkkelendringer:
-- `bottom: 0` — klistret til bunnen, ingen gap
-- `left: 0; right: 0` — full bredde, ingen `16px` innrykk
-- `padding-bottom: env(safe-area-inset-bottom)` — bakgrunnen strekker seg under home indicator, innholdet skyves opp
-- `border-radius: 0` — ingen pill-avrunding
-- Ingen `box-shadow` — ekte tab bars har bare en tynn `border-top`
+Nøkkelforskjell fra før: `bottom: calc(4px + safe-area)` i stedet for `calc(8px + safe-area)` — halvparten av gapet, akkurat nok til å se pill-formen.
 
-**2. CSS: `.app-content` padding-bottom (linje 360-368)**
+**2. `src/components/layout/AppLayout.tsx` — Hajolo/Admin/Nurse tilbake til prominent midtknapp**
 
-Oppdater padding-bottom for å matche ny tab bar uten ekstra gap:
-
-```css
-padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
-```
-
-**3. Fjern FAB-stil fra midtknappen i `AppLayout.tsx` (linje 677-761)**
-
-Alle tre center-knappene (Hajolo, Admin, Nurse) har `-mt-6`, en stor `w-14 h-14` sirkel med `border-[3px]` og skygge som stikker opp over tab baren. Endre disse til standard tab-ikoner på lik linje med de andre:
-
-- Fjern `-mt-6`, `w-14 h-14 rounded-full`, `border-[3px]`, `shadow-*`
-- Bruk samme layout som de vanlige tab-ikonene (linje 767-793): `w-[22px] h-[22px]` ikon + `text-[10px]` label under
-- Behold ikonfargen (primary/active-farge) for å skille dem visuelt
+Gjenopprett FAB-stilen på midtknappen:
+- `w-14 h-14 rounded-full` med bakgrunnsfarge
+- `-mt-6` for å stikke litt opp over pill-en
+- Rød/grønn farge som viser om meldingen er lest eller ikke
+- Hajolo: rød sirkel med puls når ulest, grønn med check når bekreftet
+- Admin/Nurse: tilsvarende prominent sirkel
 
 ### Filer som endres
-- `src/index.css` — `.bottom-nav`, `.dark .bottom-nav`, `.app-content`
-- `src/components/layout/AppLayout.tsx` — center-knappene (Hajolo, Admin, Nurse)
+- `src/index.css` — pill-stil med minimal gap
+- `src/components/layout/AppLayout.tsx` — midtknappen tilbake til FAB
 
 ### Resultat
-- Tab bar ser ut som Safari, Apple Music, Instagram: helt ned til bunnen, ingen gap, ingen pill
-- Bakgrunnsfargen fortsetter under home indicator
-- Ingen svart stripe
-- Midtknappen er et vanlig ikon, ikke en FAB som stikker opp
+- Pill-meny med så vidt litt plass under (4px + safe area)
+- Hajolo-knappen er prominent og viser tydelig lest/ulest-status
+- Ingen overdreven svart stripe under menyen
 
