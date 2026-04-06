@@ -13,8 +13,11 @@ export default function Login() {
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [inactiveState, setInactiveState] = useState(false);
-  const { login } = useAuth();
+  const { login, deactivatedMessage } = useAuth();
   const navigate = useNavigate();
+
+  // Show deactivated message if user was auto-logged out
+  const showDeactivated = inactiveState || !!deactivatedMessage;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
