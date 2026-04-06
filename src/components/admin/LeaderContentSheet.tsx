@@ -306,8 +306,6 @@ export function LeaderContentSheet({
   };
 
   const handleClearAllFields = () => {
-    setTeam('');
-    setMinisterpost('');
     setCurrentActivity('');
     setExtraActivity('');
     setPersonalNotes('');
@@ -317,10 +315,9 @@ export function LeaderContentSheet({
     setExtra3('');
     setExtra4('');
     setExtra5('');
-    setSelectedCabinIds([]);
     setShowClearConfirm(false);
     hapticImpact('medium');
-    toast.info('Alle felt tømt — husk å lagre');
+    toast.info('Innholdsfelt tømt — husk å lagre');
   };
 
   const handleSendNotification = async () => {
@@ -817,7 +814,7 @@ export function LeaderContentSheet({
           <AlertDialogHeader>
             <AlertDialogTitle>Tøm alle felt?</AlertDialogTitle>
             <AlertDialogDescription>
-              Dette tømmer alle felt for {getFirstName(leader.name)} (team, hytte, aktiviteter, notater, OBS-melding og ekstra-felt). Du må trykke «Lagre» etterpå for å bekrefte.
+              Dette tømmer aktiviteter, notater, OBS-melding og ekstra-felt for {getFirstName(leader.name)}. Team, hytte og ministerpost beholdes. Du må trykke «Lagre» etterpå.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
