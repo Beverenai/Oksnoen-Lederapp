@@ -34,7 +34,7 @@ import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
-type AppRole = 'admin' | 'nurse' | 'leader';
+type AppRole = 'superadmin' | 'admin' | 'nurse' | 'leader';
 
 interface LeaderWithRole extends Leader {
   role: AppRole;

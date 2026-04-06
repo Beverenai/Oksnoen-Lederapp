@@ -28,7 +28,7 @@ import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
 type UserRole = Tables<'user_roles'>;
-type AppRole = 'admin' | 'nurse' | 'leader';
+type AppRole = 'superadmin' | 'admin' | 'nurse' | 'leader';
 
 interface LeaderWithRole extends Leader {
   role: AppRole;

@@ -31,7 +31,7 @@ import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { useAuth } from '@/contexts/AuthContext';
 
 type Leader = Tables<'leaders'>;
-type AppRole = 'admin' | 'nurse' | 'leader';
+type AppRole = 'superadmin' | 'admin' | 'nurse' | 'leader';
 
 interface LeaderDetailDialogProps {
   leader: Leader | null;
@@ -166,6 +166,7 @@ export function LeaderDetailDialog({
     // Check role changes
     if (role !== orig.role) {
       const roleNames: Record<AppRole, string> = {
+        superadmin: 'Superadmin',
         admin: 'Admin',
         nurse: 'Sykepleier',
         leader: 'Leder'

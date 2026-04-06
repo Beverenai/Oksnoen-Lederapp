@@ -3,10 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
-type AppRole = 'admin' | 'leader' | 'nurse';
+type AppRole = 'superadmin' | 'admin' | 'leader' | 'nurse';
 
 interface AuthContextType {
   leader: Leader | null;
+  isSuperAdmin: boolean;
   isAdmin: boolean;
   isNurse: boolean;
   isLoading: boolean;
@@ -27,6 +28,7 @@ function checkProfileComplete(leader: Leader | null): boolean {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [leader, setLeader] = useState<Leader | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isNurse, setIsNurse] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +50,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn('[Auth] get_my_roles exception:', err);
       return [];
     }
+  };
+
+  const applyRoles = (roles: AppRole[]) => {
+    const superAdmin = roles.includes('superadmin');
+    setIsSuperAdmin(superAdmin);
+    setIsAdmin(superAdmin || roles.includes('admin'));
+    setIsNurse(roles.includes('nurse'));
   };
 
   const loadLeaderFromSession = async (authUserId: string): Promise<boolean> => {
@@ -75,8 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const roles = await loadRolesViaRpc();
       console.log('[Auth] Roles:', roles);
-      setIsAdmin(roles.includes('admin'));
-      setIsNurse(roles.includes('nurse'));
+      applyRoles(roles);
       return true;
     } catch (error) {
       console.error('[Auth] loadLeaderFromSession exception:', error);
@@ -128,13 +136,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[Auth] onAuthStateChange:', event);
       if (event === 'SIGNED_OUT') {
         setLeader(null);
+        setIsSuperAdmin(false);
         setIsAdmin(false);
         setIsNurse(false);
         localStorage.removeItem('leaderName');
       } else if (event === 'TOKEN_REFRESHED' && session) {
         // Session refreshed, leader data is still valid
       } else if (event === 'SIGNED_IN' && session) {
-        // Skip if login or init is already handling this
         if (loginInProgressRef.current || initInProgressRef.current) return;
         await loadLeaderFromSession(session.user.id);
       }
@@ -196,12 +204,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Kunne ikke opprette sesjon. Prøv igjen.' };
       }
 
-      // Load full leader + roles from DB now that session is active
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const found = await loadLeaderFromSession(session.user.id);
         if (!found) {
-          // Retry once after a short delay (session propagation race)
           await new Promise(r => setTimeout(r, 500));
           const retryFound = await loadLeaderFromSession(session.user.id);
           if (!retryFound) {
@@ -224,12 +230,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     localStorage.removeItem('leaderName');
     setLeader(null);
+    setIsSuperAdmin(false);
     setIsAdmin(false);
     setIsNurse(false);
   };
 
   return (
-    <AuthContext.Provider value={{ leader, isAdmin, isNurse, isLoading, isProfileComplete, authError, login, logout, refreshLeader, retryAuth }}>
+    <AuthContext.Provider value={{ leader, isSuperAdmin, isAdmin, isNurse, isLoading, isProfileComplete, authError, login, logout, refreshLeader, retryAuth }}>
       {children}
     </AuthContext.Provider>
   );

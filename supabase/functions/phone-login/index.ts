@@ -80,7 +80,10 @@ serve(async (req) => {
       );
     }
 
-    if (leader.is_active === false) {
+    // Superadmin (August) can ALWAYS log in, even if accidentally deactivated
+    const isSuperadminPhone = normalizedPhone === '90076299';
+
+    if (leader.is_active === false && !isSuperadminPhone) {
       console.log('Leader is not active');
       return new Response(
         JSON.stringify({ success: false, error: 'INACTIVE_LEADER', message: 'Du jobber ikke denne perioden.' }),
