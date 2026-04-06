@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ParticipantStatsCard } from "@/components/admin/ParticipantStatsCard";
 import { RoomSwapTab } from "@/components/stats/RoomSwapTab";
 import { CabinReportsTab } from "@/components/stats/CabinReportsTab";
@@ -6,75 +7,82 @@ import { CheckoutTab } from "@/components/stats/CheckoutTab";
 import { LeaderActivityStatsTab } from "@/components/stats/LeaderActivityStatsTab";
 import { ActivityStatsTab } from "@/components/stats/ActivityStatsTab";
 import { ExportDataSheet } from "@/components/stats/ExportDataSheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { BarChart2, ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity, ArrowLeft } from "lucide-react";
+
+const navItems = [
+  { key: "room-swap", label: "Rombytter", desc: "Bytt rom mellom deltakere", icon: ArrowLeftRight, color: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
+  { key: "cabin-reports", label: "Hytterapporter", desc: "Se rapporter per hytte", icon: Home, color: "bg-green-500/15 text-green-600 dark:text-green-400" },
+  { key: "checkout", label: "Utsjekk", desc: "Håndter utsjekk av deltakere", icon: Sparkles, color: "bg-purple-500/15 text-purple-600 dark:text-purple-400" },
+  { key: "leader-activity", label: "Lederaktivitet", desc: "Se ledernes aktivitetsregistrering", icon: UserCheck, color: "bg-orange-500/15 text-orange-600 dark:text-orange-400" },
+  { key: "activity-stats", label: "Aktiviteter", desc: "Statistikk over alle aktiviteter", icon: Activity, color: "bg-pink-500/15 text-pink-600 dark:text-pink-400" },
+];
+
+const tabComponents: Record<string, React.FC> = {
+  "room-swap": RoomSwapTab,
+  "cabin-reports": CabinReportsTab,
+  "checkout": CheckoutTab,
+  "leader-activity": LeaderActivityStatsTab,
+  "activity-stats": ActivityStatsTab,
+};
+
+const tabLabels: Record<string, string> = {
+  "room-swap": "Rombytter",
+  "cabin-reports": "Hytterapporter",
+  "checkout": "Utsjekk",
+  "leader-activity": "Lederaktivitet",
+  "activity-stats": "Aktiviteter",
+};
 
 const ParticipantStats = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [exportOpen, setExportOpen] = useState(false);
+  const currentTab = searchParams.get("tab");
+
+  const ActiveComponent = currentTab ? tabComponents[currentTab] : null;
+
+  if (currentTab && ActiveComponent) {
+    return (
+      <div className="container mx-auto py-6 px-4 max-w-4xl">
+        <div className="flex items-center gap-3 mb-6">
+          <Button variant="ghost" size="icon" onClick={() => setSearchParams({})}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-2xl font-bold">{tabLabels[currentTab] || "Deltakere"}</h1>
+        </div>
+        <ActiveComponent />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6 px-4 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Deltakerstatistikk</h1>
-        <Button variant="outline" onClick={() => setExportOpen(true)}>
-          <Download className="h-4 w-4 mr-2" />
-          Eksporter rapport
-        </Button>
+      <h1 className="text-2xl font-bold mb-6">Deltakerstatistikk</h1>
+
+      <ParticipantStatsCard />
+
+      <div className="grid grid-cols-2 gap-3 mt-6">
+        {navItems.map(({ key, label, desc, icon: Icon, color }) => (
+          <Card
+            key={key}
+            className={`p-4 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${color}`}
+            onClick={() => setSearchParams({ tab: key })}
+          >
+            <Icon className="h-7 w-7 mb-2" />
+            <p className="font-semibold text-sm">{label}</p>
+            <p className="text-xs opacity-70 mt-0.5">{desc}</p>
+          </Card>
+        ))}
+        <Card
+          className="p-4 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform bg-muted/50 text-muted-foreground"
+          onClick={() => setExportOpen(true)}
+        >
+          <Download className="h-7 w-7 mb-2" />
+          <p className="font-semibold text-sm">Eksporter</p>
+          <p className="text-xs opacity-70 mt-0.5">Last ned rapport</p>
+        </Card>
       </div>
-      
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="flex flex-wrap gap-1 w-full h-auto p-1 mb-6">
-          <TabsTrigger value="overview" className="flex-1 min-w-[4.5rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <BarChart2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Oversikt</span>
-          </TabsTrigger>
-          <TabsTrigger value="room-swap" className="flex-1 min-w-[4.5rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <ArrowLeftRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Rombytter</span>
-          </TabsTrigger>
-          <TabsTrigger value="cabin-reports" className="flex-1 min-w-[4.5rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Hytte</span>
-          </TabsTrigger>
-          <TabsTrigger value="checkout" className="flex-1 min-w-[4.5rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Utsjekk</span>
-          </TabsTrigger>
-          <TabsTrigger value="leader-activity" className="flex-1 min-w-[4.5rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <UserCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Leder</span>
-          </TabsTrigger>
-          <TabsTrigger value="activity-stats" className="flex-1 min-w-[4.5rem] gap-1 text-xs sm:text-sm px-2 py-1.5">
-            <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Aktiviteter</span>
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview">
-          <ParticipantStatsCard />
-        </TabsContent>
-        
-        <TabsContent value="room-swap">
-          <RoomSwapTab />
-        </TabsContent>
-        
-        <TabsContent value="cabin-reports">
-          <CabinReportsTab />
-        </TabsContent>
-        
-        <TabsContent value="checkout">
-          <CheckoutTab />
-        </TabsContent>
-        
-        <TabsContent value="leader-activity">
-          <LeaderActivityStatsTab />
-        </TabsContent>
-        
-        <TabsContent value="activity-stats">
-          <ActivityStatsTab />
-        </TabsContent>
-      </Tabs>
 
       <ExportDataSheet open={exportOpen} onOpenChange={setExportOpen} />
     </div>
