@@ -13,6 +13,7 @@ export function useCabins() {
       if (error) throw error;
       return data || [];
     },
-    staleTime: 120000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
   });
 }

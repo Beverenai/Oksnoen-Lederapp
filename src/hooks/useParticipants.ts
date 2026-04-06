@@ -23,6 +23,7 @@ export function useParticipants(cabinIds?: string[]) {
       if (error) throw error;
       return (data || []) as ParticipantWithCabin[];
     },
-    staleTime: 30000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
   });
 }
