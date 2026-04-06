@@ -1,64 +1,39 @@
 
 
-## Fix: Global overflow-containment, fullscreen-fill og pull-to-refresh
+## Fix: Vis fullt romnavn (hytte + side) i deltagerdetaljer
 
 ### Problem
-Forrige runde la til mange av de rette reglene, men overflow lekker fortsatt fra barn-elementer (tabeller, flex-rader, lange tekster). Enkeltfiks per komponent skalerer ikke — vi trenger aggressivere globale regler.
+Når en leder trykker på en deltager vises bare "Rom høyre" eller "Rom venstre" uten hyttenavn. Det bør stå f.eks. "Babord Høyre" eller "Beritbu bak Venstre".
 
-### Endringer
+### Datastruktur
+- De fleste hytter har `room` = "høyre" / "venstre"
+- Seileren har fulle romnavn (Seilern Hawaii, Maui, etc.)
+- Hyttenavnet finnes allerede i `participant.cabin.name`
 
-| Fil | Endring |
-|-----|--------|
-| `src/index.css` | Legg til globale overflow-containment-regler som fanger ALT innhold |
+### Løsning
+Lag en hjelpefunksjon `formatFullRoom(cabinName, room)` som:
+- Hvis `room` er "høyre" eller "venstre": returner `"{cabinName} {Room}"`  (med stor forbokstav)
+- Ellers: returner `room` som det er (allerede fullt navn)
 
-### Konkrete CSS-endringer i `src/index.css`
+Oppdater alle steder som viser rom:
 
-**1. Global overflow-clipping for alle elementer (legg til etter box-sizing-regelen linje 44-46):**
-```css
-/* Prevent ANY element from causing horizontal overflow */
-html, body, #root, main, section, article, div, form {
-  max-width: 100%;
-}
+| Fil | Linje | Nåværende | Nytt |
+|-----|-------|-----------|------|
+| `src/components/passport/ParticipantDetailDialog.tsx` | ~290 | `Rom {participant.room}` | `formatFullRoom(cabin.name, room)` |
+| `src/components/checkout/CheckoutDetailDialog.tsx` | ~342 | `{participant.room}` | `formatFullRoom(cabin.name, room)` |
+| `src/pages/MyCabins.tsx` | ~497 | `Rom: {participant.room}` | `formatFullRoom(cabin.name, room)` |
+| `src/pages/ImportantInfo.tsx` | ~241 | `{participant.room}` | `formatFullRoom(cabin.name, room)` |
 
-/* Force flex/grid children to respect parent bounds */
-* {
-  min-width: 0;
-}
-```
-
-Denne `min-width: 0` er den viktigste endringen — den overskriver nettlesernes standard `min-width: auto` på flex/grid-barn, som er den vanligste årsaken til at innhold strekker seg utenfor skjermen.
-
-**2. Oppdater `html, body`-regelen (linje 210-216) for å inkludere `100dvh`:**
-```css
-html, body {
-  height: 100%;
-  min-height: 100dvh;
-  min-height: -webkit-fill-available;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  overflow-x: hidden;
-  touch-action: manipulation;
-  width: 100%;
-  max-width: 100vw;
+Hjelpefunksjonen legges i `src/lib/utils.ts` eller inline der den brukes:
+```typescript
+function formatFullRoom(cabinName: string | null, room: string | null): string | null {
+  if (!room) return null;
+  const lower = room.toLowerCase();
+  if (lower === 'høyre' || lower === 'venstre') {
+    const capitalized = room.charAt(0).toUpperCase() + room.slice(1).toLowerCase();
+    return cabinName ? `${cabinName} ${capitalized}` : capitalized;
+  }
+  return room;
 }
 ```
-
-**3. Sikre tabeller scroller innenfor sin container — legg til i utilities:**
-```css
-table {
-  max-width: 100%;
-}
-```
-
-### Hva dette fikser
-- `min-width: 0` på alle elementer → flex/grid-barn kan ikke tvinge forelder bredere enn skjermen
-- `max-width: 100%` på container-elementer → ingen container kan strekke seg ut
-- `100dvh` + `-webkit-fill-available` på html/body → eliminerer svart stripe nederst på iOS
-- Pull-to-refresh og PullIndicator er allerede fikset fra forrige runde (timeout + smooth collapse)
-
-### Hva endres IKKE
-- Ingen komponent-filer endres
-- Pull-to-refresh er allerede fikset
-- Bunnnavigasjon, layout-struktur forblir som før
 
