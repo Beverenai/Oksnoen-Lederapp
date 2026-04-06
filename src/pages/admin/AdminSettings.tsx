@@ -310,8 +310,7 @@ export default function AdminSettings() {
       }
 
       const { data: userRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('leader_id, role');
+        .rpc('get_all_leader_roles');
       
       if (rolesError) {
         console.error('[syncLeaderCabins] Error fetching roles:', rolesError);
