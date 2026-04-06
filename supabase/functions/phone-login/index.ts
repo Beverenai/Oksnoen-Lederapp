@@ -60,7 +60,7 @@ serve(async (req) => {
     // Look up leader by phone number
     const { data: leader, error } = await supabase
       .from('leaders')
-      .select('id, name, is_active, profile_image_url, age, team, cabin, ministerpost, email, has_car, has_drivers_license, has_boat_license, can_climbing, can_rappelling, can_zipline, can_rope_setup, cabin_info, auth_user_id')
+      .select('*')
       .eq('phone', normalizedPhone)
       .maybeSingle();
 
