@@ -289,21 +289,12 @@ export function LeaderDetailDialog({
 
       if (leaderError) throw leaderError;
 
-      // Update role
-      // First, remove existing roles for this leader
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('leader_id', leader.id);
+      // Update role via server-side function (no client writes to user_roles)
+      const { error: roleError } = await supabase.functions.invoke('manage-roles', {
+        body: { action: 'set', leader_id: leader.id, role }
+      });
 
-      // If role is admin or nurse, insert into user_roles
-      if (role === 'admin' || role === 'nurse') {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({ leader_id: leader.id, role: role });
-
-        if (roleError) throw roleError;
-      }
+      if (roleError) throw roleError;
 
       hapticSuccess();
       toast.success('Leder oppdatert!');

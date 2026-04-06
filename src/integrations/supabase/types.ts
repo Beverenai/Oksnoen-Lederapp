@@ -398,6 +398,7 @@ export type Database = {
       leaders: {
         Row: {
           age: number | null
+          auth_user_id: string | null
           cabin: string | null
           cabin_info: string | null
           can_climbing: boolean | null
@@ -420,6 +421,7 @@ export type Database = {
         }
         Insert: {
           age?: number | null
+          auth_user_id?: string | null
           cabin?: string | null
           cabin_info?: string | null
           can_climbing?: boolean | null
@@ -442,6 +444,7 @@ export type Database = {
         }
         Update: {
           age?: number | null
+          auth_user_id?: string | null
           cabin?: string | null
           cabin_info?: string | null
           can_climbing?: boolean | null
@@ -1009,6 +1012,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_leader_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _leader_id: string
@@ -1016,6 +1020,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: never; Returns: boolean }
+      is_nurse: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "leader" | "nurse"

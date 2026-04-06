@@ -32,40 +32,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isProfileComplete = checkProfileComplete(leader);
 
   useEffect(() => {
-    const storedLeaderId = localStorage.getItem('leaderId');
-    if (storedLeaderId) {
-      loadLeader(storedLeaderId);
-    } else {
-      setIsLoading(false);
-    }
+    // Check for existing Supabase auth session
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await loadLeaderFromSession(session.user.id);
+        } else {
+          // Check for legacy localStorage session and clear it
+          localStorage.removeItem('leaderId');
+          localStorage.removeItem('leaderName');
+        }
+      } catch (error) {
+        console.error('Error checking auth session:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initAuth();
+
+    // Listen for auth state changes (session refresh, sign out, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setLeader(null);
+        setIsAdmin(false);
+        setIsNurse(false);
+        localStorage.removeItem('leaderName');
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        // Session refreshed, leader data is still valid
+      } else if (event === 'SIGNED_IN' && session && !leader) {
+        // New sign in (not from our login flow which already sets leader)
+        await loadLeaderFromSession(session.user.id);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const loadLeader = async (leaderId: string) => {
+  const loadLeaderFromSession = async (authUserId: string) => {
     try {
-      // Run both queries in parallel for faster loading
-      const [leaderResult, rolesResult] = await Promise.all([
-        supabase.from('leaders').select('*').eq('id', leaderId).maybeSingle(),
-        supabase.from('user_roles').select('role').eq('leader_id', leaderId)
-      ]);
+      // Find leader by auth_user_id
+      const { data: leaderData, error: leaderError } = await supabase
+        .from('leaders')
+        .select('*')
+        .eq('auth_user_id', authUserId)
+        .maybeSingle();
 
-      if (leaderResult.error || !leaderResult.data) {
-        localStorage.removeItem('leaderId');
-        localStorage.removeItem('leaderName');
-        setIsLoading(false);
+      if (leaderError || !leaderData) {
+        console.error('Could not find leader for auth user:', authUserId);
+        await supabase.auth.signOut();
         return;
       }
 
-      setLeader(leaderResult.data);
-      // Cache leader name for splash screen
-      localStorage.setItem('leaderName', leaderResult.data.name);
+      setLeader(leaderData);
+      localStorage.setItem('leaderName', leaderData.name);
 
-      const roles = rolesResult.data?.map(r => r.role) || [];
+      // Load roles
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('leader_id', leaderData.id);
+
+      const roles = rolesData?.map(r => r.role) || [];
       setIsAdmin(roles.includes('admin'));
       setIsNurse(roles.includes('nurse'));
     } catch (error) {
-      console.error('Error loading leader:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Error loading leader from session:', error);
     }
   };
 
@@ -85,7 +120,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (phone: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Use edge function for login - hides phone lookup from client
       const { data, error } = await supabase.functions.invoke('phone-login', {
         body: { phone }
       });
@@ -99,12 +133,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: data.error || 'Innlogging feilet.' };
       }
 
-      // Store leader ID and name, set state
-      localStorage.setItem('leaderId', data.leader.id);
+      // Set the Supabase auth session with the tokens from the edge function
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
+
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        return { success: false, error: 'Kunne ikke opprette sesjon. Prøv igjen.' };
+      }
+
+      // Store leader data and roles
       localStorage.setItem('leaderName', data.leader.name);
       setLeader(data.leader);
 
-      // Set roles from edge function response
       const roles = data.roles || [];
       setIsAdmin(roles.includes('admin'));
       setIsNurse(roles.includes('nurse'));
@@ -116,8 +159,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('leaderId');
+  const logout = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem('leaderName');
     setLeader(null);
     setIsAdmin(false);
     setIsNurse(false);
