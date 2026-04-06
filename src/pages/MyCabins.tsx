@@ -494,7 +494,7 @@ export default function MyCabins() {
                     )}
                     {selectedParticipant.room && (
                       <p className="text-sm text-muted-foreground">
-                        Rom: {selectedParticipant.room}
+                        {formatFullRoom(selectedCabin?.name, selectedParticipant.room)}
                       </p>
                     )}
                   </div>

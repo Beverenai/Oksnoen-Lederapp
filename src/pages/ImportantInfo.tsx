@@ -238,7 +238,7 @@ export default function ImportantInfo() {
                                   )}
                                   {participant.room && (
                                     <Badge variant="secondary" className="text-xs">
-                                      {participant.room}
+                                      {formatFullRoom(participant.cabin_name, participant.room)}
                                     </Badge>
                                   )}
                                 </div>

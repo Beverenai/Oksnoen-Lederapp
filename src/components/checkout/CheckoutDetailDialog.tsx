@@ -339,7 +339,7 @@ export function CheckoutDetailDialog({
                     </Badge>
                   )}
                   {participant.room && (
-                    <Badge variant="outline" className="text-xs md:text-sm">{participant.room}</Badge>
+                    <Badge variant="outline" className="text-xs md:text-sm">{formatFullRoom(participant.cabins?.name, participant.room)}</Badge>
                   )}
                 </div>
               </div>
