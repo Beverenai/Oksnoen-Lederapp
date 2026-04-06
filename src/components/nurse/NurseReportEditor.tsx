@@ -610,7 +610,7 @@ ${sectionsHtml}
       </div>
 
       {/* Scrollable content area */}
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pb-4">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-4 p-1 pb-4">
         {/* Free-writing input area */}
         <div className="relative">
           {activeParticipant && (
