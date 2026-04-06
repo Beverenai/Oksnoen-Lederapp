@@ -125,29 +125,29 @@ export default function Passport() {
   const { data: participants = [], isLoading: isLoadingParticipants, refetch: refetchParticipants } = useQuery({
     queryKey: ['participants-with-cabins'],
     queryFn: fetchParticipants,
-    staleTime: 30000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
   });
 
   const { data: activitiesMap = new Map<string, string[]>(), refetch: refetchActivities } = useQuery({
     queryKey: ['participant-activities-map'],
     queryFn: fetchActivitiesMap,
-    staleTime: 30000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
   });
 
   const { data: cabins = [] } = useQuery({
     queryKey: ['cabins'],
     queryFn: fetchCabins,
-    staleTime: 60000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
   });
 
   const { data: leaderCabins = new Map<string, { id: string; name: string }[]>() } = useQuery({
     queryKey: ['leader-cabins-map'],
     queryFn: fetchLeaderCabins,
-    staleTime: 60000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
   });
 
   const { data: checkoutEnabled = false } = useQuery({

@@ -1,7 +1,9 @@
 import { Suspense, lazy } from "react";
 import { StatusPopupProvider } from "@/hooks/useStatusPopup";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { queryPersister } from "@/lib/queryPersistence";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -37,7 +39,25 @@ const ImportantInfo = lazy(() => import("@/pages/ImportantInfo"));
 const ParticipantStats = lazy(() => import("@/pages/admin/ParticipantStats"));
 const Checkout = lazy(() => import("@/pages/admin/Checkout"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 24 * 60 * 60 * 1000,
+      networkMode: 'offlineFirst',
+      retry: (failureCount) => {
+        if (!navigator.onLine) return false;
+        return failureCount < 2;
+      },
+    },
+  },
+});
+
+const persistOptions = {
+  persister: queryPersister,
+  maxAge: 24 * 60 * 60 * 1000, // 24h
+  buster: 'v1',
+};
 
 // Preload frequently accessed pages after initial render
 if (typeof window !== 'undefined') {
@@ -189,7 +209,7 @@ function StatusBarSync() {
 
 const App = () => (
   <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <StatusBarSync />
         <TooltipProvider>
@@ -204,7 +224,7 @@ const App = () => (
           </StatusPopupProvider>
         </TooltipProvider>
       </ThemeProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   </ErrorBoundary>
 );
 
