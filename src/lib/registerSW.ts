@@ -18,6 +18,23 @@ export const registerServiceWorker = async (): Promise<void> => {
     return;
   }
 
+  // Skip in iframes (Lovable preview)
+  try {
+    if (window.self !== window.top) {
+      console.log('[SW] Iframe detected, skipping service worker registration');
+      // Unregister any existing SW in iframe context
+      navigator.serviceWorker?.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+      return;
+    }
+  } catch { /* cross-origin — assume iframe */ return; }
+
+  // Skip on preview hosts
+  if (window.location.hostname.includes('id-preview--') || window.location.hostname.includes('lovableproject.com')) {
+    console.log('[SW] Preview host detected, skipping service worker registration');
+    navigator.serviceWorker?.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+    return;
+  }
+
   // Check if service workers are supported
   if (!('serviceWorker' in navigator)) {
     console.log('[SW] Service workers not supported');

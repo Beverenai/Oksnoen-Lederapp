@@ -14,7 +14,10 @@ export function useLeaders() {
       if (error) throw error;
       return data || [];
     },
-    staleTime: 60000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: 'always',
   });
 }
 
@@ -29,6 +32,9 @@ export function useAllLeaders() {
       if (error) throw error;
       return data || [];
     },
-    staleTime: 60000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: 'always',
   });
 }
