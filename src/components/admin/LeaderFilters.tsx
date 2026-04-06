@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, ChevronDown, X } from 'lucide-react';
@@ -13,35 +14,10 @@ interface LeaderFiltersProps {
   onUnreadFilterChange: (show: boolean) => void;
   totalCount: number;
   filteredCount: number;
-  /** Compact layout for list view */
   compact?: boolean;
 }
 
 export function LeaderFilters({
-  searchQuery,
-  onSearchChange,
-  activeTeamFilter,
-  onTeamFilterChange,
-  showUnreadOnly,
-  onUnreadFilterChange,
-  totalCount,
-  filteredCount,
-  compact,
-}: LeaderFiltersProps) {
-  const [showTeamFilters, setShowTeamFilters] = import('react').then ? false : false;
-  // Use local state for dropdown
-  const { useState } = require('react');
-
-  return <LeaderFiltersInner {...{
-    searchQuery, onSearchChange, activeTeamFilter, onTeamFilterChange,
-    showUnreadOnly, onUnreadFilterChange, totalCount, filteredCount, compact,
-  }} />;
-}
-
-// Actual component with proper React hooks
-import { useState } from 'react';
-
-function LeaderFiltersInner({
   searchQuery,
   onSearchChange,
   activeTeamFilter,
@@ -62,7 +38,7 @@ function LeaderFiltersInner({
 
   return (
     <div className="space-y-2">
-      <div className={cn("flex items-center gap-2", compact && "")}>
+      <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -93,7 +69,7 @@ function LeaderFiltersInner({
           onClick={() => onUnreadFilterChange(!showUnreadOnly)}
           className={cn("gap-1.5 shrink-0", compact && "h-9 px-2 sm:px-3")}
         >
-          <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+          <div className="w-2.5 h-2.5 rounded-full bg-destructive" />
           <span className={compact ? "hidden sm:inline text-sm" : undefined}>Ikke lest</span>
           {showUnreadOnly && <X className="h-3 w-3 ml-1" />}
         </Button>
@@ -127,10 +103,9 @@ function LeaderFiltersInner({
         </div>
       )}
 
-      {/* Stats line */}
       <div className="flex gap-2 text-sm text-muted-foreground">
         <span>{filteredCount} av {totalCount} ledere</span>
-        {searchQuery && <span>· Søk: "{searchQuery}"</span>}
+        {searchQuery && <span>· Søk: &quot;{searchQuery}&quot;</span>}
         {activeTeamFilter && <span>· Filter: {getActiveFilterLabel()}</span>}
       </div>
     </div>
