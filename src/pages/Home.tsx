@@ -137,6 +137,7 @@ export default function Home() {
   const [sessionActivitiesText, setSessionActivitiesText] = useState<string>('');
   const [config, setConfig] = useState<HomeScreenConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [hasRead, setHasRead] = useState(false);
   const [leaderCabins, setLeaderCabins] = useState<LeaderCabin[]>([]);
   const [assignedFixTasks, setAssignedFixTasks] = useState<FixTask[]>([]);
@@ -161,6 +162,7 @@ export default function Home() {
     if (!effectiveLeader) return;
 
     setIsLoading(true);
+    setLoadFailed(false);
     try {
       const [contentRes, activitiesTextRes, configRes, cabinsRes, fixTasksRes, ropeControlsRes] = await Promise.all([
         supabase
@@ -216,10 +218,11 @@ export default function Home() {
       setPendingRopeControls((ropeControlsRes.data || []) as PendingRopeControl[]);
     } catch (error) {
       console.error('Error loading home data:', error);
+      setLoadFailed(true);
     } finally {
       setIsLoading(false);
     }
-  }, [leader]);
+  }, [effectiveLeader]);
 
   // Pull-to-refresh
   const { pullRef, isPulling, pullProgress, isRefreshing } = usePullToRefresh({
@@ -227,7 +230,15 @@ export default function Home() {
   });
 
   useEffect(() => {
+    if (!effectiveLeader) return;
+    const timeout = setTimeout(() => {
+      setIsLoading(prev => {
+        if (prev) setLoadFailed(true);
+        return false;
+      });
+    }, 8000);
     loadData();
+    return () => clearTimeout(timeout);
   }, [effectiveLeader]);
 
   // Force refresh when navigated from Hajolo with red status
@@ -319,7 +330,7 @@ export default function Home() {
       .slice(0, 2);
   };
 
-  if (isLoading) {
+  if (isLoading && !loadFailed) {
     return (
       <div className="space-y-6 animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8">
         <Skeleton className="h-48 w-full" />
@@ -327,6 +338,18 @@ export default function Home() {
           <Skeleton className="h-24" />
           <Skeleton className="h-40" />
         </div>
+      </div>
+    );
+  }
+
+  if (loadFailed && !content) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 animate-fade-in">
+        <p className="text-muted-foreground">Kunne ikke laste data</p>
+        <Button onClick={loadData} variant="outline" size="sm">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Prøv igjen
+        </Button>
       </div>
     );
   }
