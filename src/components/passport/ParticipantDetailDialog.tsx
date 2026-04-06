@@ -286,7 +286,7 @@ export const ParticipantDetailDialog = ({
                   {participant.room && (
                     <>
                       <span>•</span>
-                      <span>{formatFullRoom(participant.cabin?.name, participant.room)}</span>
+                      <span>{formatFullRoom(participant.cabin?.name ?? null, participant.room) || participant.room}</span>
                     </>
                   )}
                   {!participant.room && participant.cabin && (
