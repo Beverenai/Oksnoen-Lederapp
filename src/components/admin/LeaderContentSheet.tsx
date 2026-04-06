@@ -814,7 +814,7 @@ export function LeaderContentSheet({
           <AlertDialogHeader>
             <AlertDialogTitle>Tøm alle felt?</AlertDialogTitle>
             <AlertDialogDescription>
-              Dette tømmer alle felt for {getFirstName(leader.name)} (team, hytte, aktiviteter, notater, OBS-melding og ekstra-felt). Du må trykke «Lagre» etterpå for å bekrefte.
+              Dette tømmer aktiviteter, notater, OBS-melding og ekstra-felt for {getFirstName(leader.name)}. Team, hytte og ministerpost beholdes. Du må trykke «Lagre» etterpå.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
