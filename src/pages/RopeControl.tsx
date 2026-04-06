@@ -263,13 +263,9 @@ export default function RopeControl() {
         sendAdminAlert(rejectedItemNames);
         
         hapticWarning();
-        showError('Fiks dette!', {
-          description: `${rejectedItems.length} utstyr er underkjent og må fikses.`,
-        });
+        showError('Fiks dette!', `${rejectedItems.length} utstyr er underkjent og må fikses.`);
       } else {
-        showSuccess('Kontroll lagret!', {
-          description: 'Alt utstyr er godkjent.',
-        });
+        showSuccess('Kontroll lagret!', 'Alt utstyr er godkjent.');
       }
 
       // Reset form
