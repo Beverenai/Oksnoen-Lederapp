@@ -108,12 +108,10 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
 
       if (error) throw error;
 
-      hapticSuccess();
       showSuccess(`Varsling sendt til ${data.sent} mottakere`);
       onOpenChange(false);
     } catch (error) {
       console.error('Error sending notification:', error);
-      hapticError();
       showError('Kunne ikke sende varsling');
     } finally {
       setSendingId(null);

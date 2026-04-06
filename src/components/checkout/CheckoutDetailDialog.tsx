@@ -186,13 +186,11 @@ export function CheckoutDetailDialog({
 
       if (error) throw error;
 
-      hapticSuccess();
       showSuccess('Pass markert som skrevet!');
       onComplete();
       onOpenChange(false);
     } catch (error) {
       console.error('Error marking pass as written:', error);
-      hapticError();
       showError('Kunne ikke lagre');
     } finally {
       setIsSaving(false);

@@ -199,14 +199,12 @@ export function LeaderDetailDialog({
       if (error) throw error;
       
       if (data?.sent > 0) {
-        hapticSuccess();
         showSuccess('Varsling sendt!');
       } else {
         showInfo(`${firstName} har ikke aktivert push-varslinger`);
       }
     } catch (error) {
       console.error('Error sending change notification:', error);
-      hapticError();
       showError('Kunne ikke sende varsling');
     } finally {
       setIsSendingNotification(false);
@@ -251,11 +249,9 @@ export function LeaderDetailDialog({
       
       if (updateError) throw updateError;
       
-      hapticSuccess();
       showSuccess('Bilde lagret!');
     } catch (error) {
       console.error('Error uploading image:', error);
-      hapticError();
       showError('Kunne ikke laste opp bilde');
     } finally {
       setIsUploading(false);
@@ -298,7 +294,6 @@ export function LeaderDetailDialog({
 
       if (roleError) throw roleError;
 
-      hapticSuccess();
       showSuccess('Leder oppdatert!');
       onSaved();
       
@@ -312,7 +307,6 @@ export function LeaderDetailDialog({
       }
     } catch (error) {
       console.error('Error saving leader:', error);
-      hapticError();
       showError('Kunne ikke lagre endringer');
     } finally {
       setIsSaving(false);

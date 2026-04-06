@@ -111,12 +111,10 @@ export default function Onboarding() {
       if (error) throw error;
 
       await refreshLeader();
-      hapticSuccess();
       showSuccess('Profil fullført!');
       navigate('/');
     } catch (error) {
       console.error('Save error:', error);
-      hapticError();
       showError('Kunne ikke lagre profil');
     } finally {
       setIsSaving(false);

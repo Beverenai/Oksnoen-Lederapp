@@ -117,13 +117,11 @@ export function ParticipantEditDialog({
 
       if (error) throw error;
 
-      hapticSuccess();
       showSuccess('Deltaker oppdatert');
       onSaved();
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving participant:', error);
-      hapticError();
       showError('Kunne ikke lagre endringer');
     } finally {
       setIsSaving(false);

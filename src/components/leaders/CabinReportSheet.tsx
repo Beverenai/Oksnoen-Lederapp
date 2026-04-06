@@ -85,11 +85,9 @@ export const CabinReportSheet = ({
         });
 
       if (error) throw error;
-      hapticSuccess();
       showSuccess("Hytterapport lagret");
     } catch (error) {
       console.error("Error saving cabin report:", error);
-      hapticError();
       showError("Kunne ikke lagre hytterapport");
     } finally {
       setSaving(null);

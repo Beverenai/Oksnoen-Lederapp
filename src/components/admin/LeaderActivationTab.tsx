@@ -100,11 +100,9 @@ export function LeaderActivationTab({ leaders, onLeaderUpdated, isSuperAdmin }: 
     try {
       const { error } = await supabase.from('leaders').update({ is_active: newActive }).eq('id', leader.id);
       if (error) throw error;
-      hapticSuccess();
       showSuccess(`${leader.name} er nå ${newActive ? 'aktiv' : 'deaktivert'}`);
       onLeaderUpdated();
     } catch {
-      hapticError();
       showError(`Kunne ikke oppdatere ${leader.name}`);
     } finally {
       setUpdatingIds(prev => { const s = new Set(prev); s.delete(leader.id); return s; });
@@ -131,11 +129,9 @@ export function LeaderActivationTab({ leaders, onLeaderUpdated, isSuperAdmin }: 
         }
       });
       if (error) throw error;
-      hapticSuccess();
       showSuccess(action === 'grant' ? `${leader.name} er nå admin` : `Admin-rolle fjernet fra ${leader.name}`);
       onLeaderUpdated();
     } catch {
-      hapticError();
       showError('Kunne ikke endre rolle');
     } finally {
       setUpdatingIds(prev => { const s = new Set(prev); s.delete(leader.id); return s; });
@@ -159,11 +155,9 @@ export function LeaderActivationTab({ leaders, onLeaderUpdated, isSuperAdmin }: 
 
       const { error } = await supabase.from('leaders').update({ is_active: activate }).in('id', targetIds);
       if (error) throw error;
-      hapticSuccess();
       showSuccess(`${targetIds.length} ledere ${activate ? 'aktivert' : 'deaktivert'}`);
       onLeaderUpdated();
     } catch {
-      hapticError();
       showError('Kunne ikke oppdatere ledere');
     } finally {
       setIsBulkUpdating(false);

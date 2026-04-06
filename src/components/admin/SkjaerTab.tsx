@@ -88,11 +88,9 @@ export function SkjaerTab() {
 
       setStoredImageUrl(publicUrl);
       setImageUrl(publicUrl);
-      hapticSuccess();
       showSuccess('Skjærkart lastet opp!');
     } catch (error) {
       console.error('Error uploading skjaer map:', error);
-      hapticError();
       showError('Kunne ikke laste opp skjærkart');
     } finally {
       setIsUploading(false);
@@ -121,11 +119,9 @@ export function SkjaerTab() {
       if (error) throw error;
 
       setStoredImageUrl(imageUrl);
-      hapticSuccess();
       showSuccess('Skjærkart-URL lagret!');
     } catch (error) {
       console.error('Error saving skjaer URL:', error);
-      hapticError();
       showError('Kunne ikke lagre URL');
     } finally {
       setIsSaving(false);

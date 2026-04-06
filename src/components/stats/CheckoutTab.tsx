@@ -136,20 +136,17 @@ export function CheckoutTab() {
 
       if (error) {
         console.error('Error starting pass generation:', error);
-        hapticError();
         showError('Kunne ikke starte generering');
         setProgress({ status: 'error', processed: 0, total: 0, error: error.message });
       }
     } catch (error) {
       console.error('Error starting checkout:', error);
-      hapticError();
       showError('Kunne ikke starte utsjekk');
       setProgress({ status: 'error', processed: 0, total: 0 });
     }
   };
 
   const handleDisableCheckout = async () => {
-    hapticImpact('medium');
     try {
       await supabase
         .from('app_config')
@@ -162,11 +159,9 @@ export function CheckoutTab() {
       
       setCheckoutEnabled(false);
       setProgress({ status: 'idle', processed: 0, total: 0 });
-      hapticSuccess();
       showSuccess('Utsjekk deaktivert');
     } catch (error) {
       console.error('Error disabling checkout:', error);
-      hapticError();
       showError('Kunne ikke deaktivere utsjekk');
     }
   };

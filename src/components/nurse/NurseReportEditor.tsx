@@ -609,7 +609,6 @@ ${sectionsHtml}
         }
       }
       setLastSaved(new Date());
-      hapticSuccess();
       showSuccess(`${foundPairs.length} notat(er) lagt til`);
       onDataChange?.();
     };

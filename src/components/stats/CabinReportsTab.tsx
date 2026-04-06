@@ -133,11 +133,9 @@ export const CabinReportsTab = () => {
         prev.map(c => c.id === cabinId ? { ...c, report: content, updated_at: new Date().toISOString() } : c)
       );
       
-      hapticSuccess();
       showSuccess("Hytterapport lagret");
     } catch (error) {
       console.error("Error saving cabin report:", error);
-      hapticError();
       showError("Kunne ikke lagre hytterapport");
     } finally {
       setSavingCabin(null);

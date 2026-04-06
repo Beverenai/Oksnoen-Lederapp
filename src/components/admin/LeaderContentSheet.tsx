@@ -308,14 +308,12 @@ export function LeaderContentSheet({
       if (error) throw error;
       
       if (data?.sent > 0) {
-        hapticSuccess();
         showSuccess('Varsling sendt!');
       } else {
         showInfo(`${firstName} har ikke aktivert push-varslinger`);
       }
     } catch (error) {
       console.error('Error sending change notification:', error);
-      hapticError();
       showError('Kunne ikke sende varsling');
     } finally {
       setIsSendingChangeNotification(false);
@@ -340,14 +338,12 @@ export function LeaderContentSheet({
     setExtra4('');
     setExtra5('');
     setShowClearConfirm(false);
-    hapticImpact('medium');
     showInfo('Innholdsfelt tømt — husk å lagre');
   };
 
   const handleSendNotification = async () => {
     if (!leader || !notificationTitle.trim() || !currentLeader) return;
 
-    hapticImpact('medium');
     setIsSendingNotification(true);
     try {
       const { data, error } = await supabase.functions.invoke('push-send', {
@@ -363,7 +359,6 @@ export function LeaderContentSheet({
       if (error) throw error;
 
       if (data?.sent > 0) {
-        hapticSuccess();
         showSuccess(`Varsling sendt til ${getFirstName(leader.name)}!`);
         setNotificationTitle('');
         setNotificationMessage('');
@@ -372,7 +367,6 @@ export function LeaderContentSheet({
       }
     } catch (error) {
       console.error('Error sending notification:', error);
-      hapticError();
       showError('Kunne ikke sende varsling');
     } finally {
       setIsSendingNotification(false);
@@ -476,7 +470,6 @@ export function LeaderContentSheet({
 
       if (contentError) throw contentError;
 
-      hapticSuccess();
       showSuccess('Lagret!');
       onSaved();
       
@@ -490,7 +483,6 @@ export function LeaderContentSheet({
       }
     } catch (error) {
       console.error('Error saving:', error);
-      hapticError();
       showError('Kunne ikke lagre');
     } finally {
       setSaving(false);

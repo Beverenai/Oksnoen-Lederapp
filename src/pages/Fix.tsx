@@ -181,13 +181,11 @@ export default function Fix() {
 
       if (error) throw error;
 
-      hapticSuccess();
       showSuccess('Fix-oppgave opprettet!');
       resetForm();
       setShowNewForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
-      hapticError();
       showError('Kunne ikke opprette oppgave');
     } finally {
       setIsSubmitting(false);
@@ -235,13 +233,11 @@ export default function Fix() {
         console.error('Failed to send push notification:', pushError);
       }
 
-      hapticSuccess();
       showSuccess('Oppgave tildelt!');
       setAssigningTaskId(null);
       setAdminNotes('');
     } catch (error) {
       console.error('Error assigning task:', error);
-      hapticError();
       showError('Kunne ikke tildele oppgave');
     }
   };
@@ -259,12 +255,10 @@ export default function Fix() {
 
       if (error) throw error;
 
-      hapticSuccess();
       showSuccess('Markert som fikset!');
       setSelectedTask(null);
     } catch (error) {
       console.error('Error marking as fixed:', error);
-      hapticError();
       showError('Kunne ikke markere som fikset');
     }
   };
@@ -281,12 +275,10 @@ export default function Fix() {
 
       if (error) throw error;
 
-      hapticSuccess();
       showSuccess('Oppgave slettet');
       setSelectedTask(null);
     } catch (error) {
       console.error('Error deleting task:', error);
-      hapticError();
       showError('Kunne ikke slette oppgave');
     }
   };

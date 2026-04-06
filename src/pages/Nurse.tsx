@@ -216,13 +216,11 @@ export default function Nurse() {
           });
       }
 
-      hapticSuccess();
       showSuccess('Helsenotat lagret');
       await loadParticipantDetails(selectedParticipant);
       loadParticipants();
     } catch (error) {
       console.error('Error saving health note:', error);
-      hapticError();
       showError('Kunne ikke lagre notat');
     } finally {
       setIsSaving(false);
@@ -255,13 +253,11 @@ export default function Nurse() {
           });
       }
 
-      hapticSuccess();
       showSuccess('Info for ledere lagret');
       await loadParticipantDetails(selectedParticipant);
       loadParticipants();
     } catch (error) {
       console.error('Error saving public health note:', error);
-      hapticError();
       showError('Kunne ikke lagre info');
     } finally {
       setIsSaving(false);
@@ -284,7 +280,6 @@ export default function Nurse() {
         created_by: leader?.id,
       });
 
-      hapticSuccess();
       showSuccess('Hendelse registrert');
       setNewEventDescription('');
       setNewEventType('observation');
@@ -293,7 +288,6 @@ export default function Nurse() {
       loadParticipants();
     } catch (error) {
       console.error('Error adding health event:', error);
-      hapticError();
       showError('Kunne ikke registrere hendelse');
     } finally {
       setIsSaving(false);

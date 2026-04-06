@@ -87,14 +87,12 @@ export function BulkActivityRegistration({
 
       if (error) throw error;
 
-      hapticSuccess();
       showSuccess(`${selectedActivity} registrert for ${selectedParticipants.size} deltakere!`);
       setSelectedParticipants(new Set());
       setSelectedActivity('');
       onComplete();
     } catch (error) {
       console.error('Error registering activities:', error);
-      hapticError();
       showError('Kunne ikke registrere aktiviteter');
     } finally {
       setIsSubmitting(false);

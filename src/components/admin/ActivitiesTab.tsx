@@ -57,7 +57,6 @@ export function ActivitiesTab() {
       showSuccess('Aktivitet lagt til');
     } catch (error) {
       console.error('Error adding activity:', error);
-      hapticError();
       showError('Kunne ikke legge til aktivitet');
     } finally {
       setIsAdding(false);
@@ -74,12 +73,10 @@ export function ActivitiesTab() {
 
       if (error) throw error;
 
-      hapticImpact('light');
       refetch();
       showSuccess(currentActive ? 'Aktivitet deaktivert' : 'Aktivitet aktivert');
     } catch (error) {
       console.error('Error toggling activity:', error);
-      hapticError();
       showError('Kunne ikke oppdatere aktivitet');
     } finally {
       setUpdatingId(null);
@@ -108,14 +105,12 @@ export function ActivitiesTab() {
 
       if (error) throw error;
 
-      hapticSuccess();
       setEditingId(null);
       setEditingTitle('');
       refetch();
       showSuccess('Aktivitet oppdatert');
     } catch (error) {
       console.error('Error updating activity:', error);
-      hapticError();
       showError('Kunne ikke oppdatere aktivitet');
     } finally {
       setUpdatingId(null);
@@ -136,12 +131,10 @@ export function ActivitiesTab() {
 
       if (error) throw error;
 
-      hapticSuccess();
       refetch();
       showSuccess('Aktivitet slettet');
     } catch (error) {
       console.error('Error deleting activity:', error);
-      hapticError();
       showError('Kunne ikke slette aktivitet');
     } finally {
       setUpdatingId(null);

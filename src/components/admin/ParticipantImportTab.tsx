@@ -134,10 +134,8 @@ export function ParticipantImportTab() {
           if (progress.status === 'done' && progress.errors.length === 0) {
             setParsedData([]);
             if (fileInputRef.current) fileInputRef.current.value = '';
-            hapticSuccess();
             showSuccess(`Import fullført! ${progress.created} nye, ${progress.updated} oppdatert, ${progress.activitiesAdded} aktiviteter`);
           } else if (progress.status === 'error') {
-            hapticError();
             showError('Import feilet');
           } else {
             hapticWarning();
@@ -482,11 +480,9 @@ export function ParticipantImportTab() {
       if (error) throw error;
       
       loadData();
-      hapticSuccess();
       showSuccess('Alle deltakere er slettet');
     } catch (error) {
       console.error('Error deleting participants:', error);
-      hapticError();
       showError('Kunne ikke slette deltakere');
     } finally {
       setIsDeleting(false);

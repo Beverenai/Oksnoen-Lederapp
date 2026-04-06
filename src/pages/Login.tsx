@@ -34,14 +34,11 @@ export default function Login() {
     setIsLoading(false);
 
     if (result.success) {
-      hapticSuccess();
       showSuccess('Velkommen!');
       navigate('/');
     } else if (result.error === 'INACTIVE_LEADER') {
-      hapticError();
       setInactiveState(true);
     } else {
-      hapticError();
       showError(result.message || result.error || 'Innlogging feilet');
     }
   };

@@ -153,10 +153,8 @@ export default function HomeConfigTab({ homeConfig, localHomeConfig, setLocalHom
       setHasUnsavedChanges(false);
       setHomeConfig(localHomeConfig);
       onSaved();
-      hapticSuccess();
       showSuccess('Konfigurasjon lagret!');
     } catch {
-      hapticError();
       showError('Kunne ikke lagre konfigurasjon');
     } finally {
       setIsSaving(false);

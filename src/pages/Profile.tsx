@@ -107,11 +107,9 @@ export default function Profile() {
         .eq('id', authLeader.id);
 
       if (error) throw error;
-      hapticSuccess();
       showSuccess('Profil lagret!');
     } catch (error) {
       console.error('Error saving profile:', error);
-      hapticError();
       showError('Kunne ikke lagre profil');
     } finally {
       setIsSaving(false);
@@ -163,11 +161,9 @@ export default function Profile() {
 
       // Update local state
       setLeader(prev => prev ? { ...prev, profile_image_url: publicUrl } : null);
-      hapticSuccess();
       showSuccess('Profilbilde oppdatert!');
     } catch (error) {
       console.error('Error uploading image:', error);
-      hapticError();
       showError('Kunne ikke laste opp bilde');
     } finally {
       setIsUploading(false);

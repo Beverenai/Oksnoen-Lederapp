@@ -88,11 +88,9 @@ export function ScheduleTab() {
 
       setStoredImageUrl(publicUrl);
       setImageUrl(publicUrl);
-      hapticSuccess();
       showSuccess('Vaktplan lastet opp!');
     } catch (error) {
       console.error('Error uploading schedule:', error);
-      hapticError();
       showError('Kunne ikke laste opp vaktplan');
     } finally {
       setIsUploading(false);
@@ -121,11 +119,9 @@ export function ScheduleTab() {
       if (error) throw error;
 
       setStoredImageUrl(imageUrl);
-      hapticSuccess();
       showSuccess('Vaktplan-URL lagret!');
     } catch (error) {
       console.error('Error saving schedule URL:', error);
-      hapticError();
       showError('Kunne ikke lagre URL');
     } finally {
       setIsSaving(false);

@@ -86,11 +86,9 @@ export function StoriesTab() {
       setNewStory({ title: '', content: '' });
       setShowNewForm(false);
       loadStories();
-      hapticSuccess();
       showSuccess('Historie lagt til!');
     } catch (error) {
       console.error('Error adding story:', error);
-      hapticError();
       showError('Kunne ikke legge til historie');
     } finally {
       setIsSaving(false);
@@ -119,11 +117,9 @@ export function StoriesTab() {
 
       setEditingStory(null);
       loadStories();
-      hapticSuccess();
       showSuccess('Historie oppdatert!');
     } catch (error) {
       console.error('Error updating story:', error);
-      hapticError();
       showError('Kunne ikke oppdatere historie');
     } finally {
       setIsSaving(false);
@@ -160,11 +156,9 @@ export function StoriesTab() {
       if (error) throw error;
 
       loadStories();
-      hapticSuccess();
       showSuccess('Historie slettet!');
     } catch (error) {
       console.error('Error deleting story:', error);
-      hapticError();
       showError('Kunne ikke slette historie');
     }
   };

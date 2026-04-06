@@ -82,7 +82,6 @@ export function PushNotificationsTab() {
       }
     } catch (error: any) {
       console.error('Error generating VAPID keys:', error);
-      hapticError();
       showError('Kunne ikke generere VAPID-nøkler: ' + (error.message || 'Ukjent feil'));
     } finally {
       setIsGeneratingKeys(false);
@@ -117,7 +116,6 @@ export function PushNotificationsTab() {
       }
 
       if (data?.success) {
-        hapticSuccess();
         showSuccess(`Sendt til ${data.sent} mottakere`);
         setTitle('');
         setMessage('');
@@ -130,7 +128,6 @@ export function PushNotificationsTab() {
       }
     } catch (error: any) {
       console.error('Error sending broadcast:', error);
-      hapticError();
       showError('Kunne ikke sende varsel: ' + (error.message || 'Ukjent feil'));
     } finally {
       setIsSending(false);

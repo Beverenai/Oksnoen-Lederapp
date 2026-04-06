@@ -102,10 +102,8 @@ export default function Admin() {
         key: 'session_activities_text', value: sessionActivitiesText, updated_at: new Date().toISOString()
       }, { onConflict: 'key' });
       if (error) throw error;
-      hapticSuccess();
       showSuccess('Aktiviteter lagret!');
     } catch {
-      hapticError();
       showError('Kunne ikke lagre aktiviteter');
     } finally {
       setIsSavingActivities(false);

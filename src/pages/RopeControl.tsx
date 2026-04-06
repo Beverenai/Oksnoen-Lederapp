@@ -267,7 +267,6 @@ export default function RopeControl() {
           description: `${rejectedItems.length} utstyr er underkjent og må fikses.`,
         });
       } else {
-        hapticSuccess();
         showSuccess('Kontroll lagret!', {
           description: 'Alt utstyr er godkjent.',
         });
@@ -279,7 +278,6 @@ export default function RopeControl() {
       loadData();
     } catch (error) {
       console.error('Error saving rope control:', error);
-      hapticError();
       showError('Kunne ikke lagre kontrollen');
     } finally {
       setIsSubmitting(false);
@@ -311,14 +309,12 @@ export default function RopeControl() {
 
       if (error) throw error;
 
-      hapticSuccess();
       showSuccess('Utstyr godkjent!');
       setSelectedFix(null);
       setFixComment('');
       loadData();
     } catch (error) {
       console.error('Error fixing rope control:', error);
-      hapticError();
       showError('Kunne ikke godkjenne');
     } finally {
       setIsFixing(false);
