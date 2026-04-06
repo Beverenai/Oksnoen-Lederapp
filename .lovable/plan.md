@@ -1,78 +1,76 @@
 
 
-## Nurse Rapport-editor: Omskriving til deltaker-seksjon-basert design
+## Nurse Rapport: Freeform "ark"-opplevelse med @-mention
 
 ### Konsept
 
-Erstatt den nåværende freeform contentEditable-editoren med en strukturert, deltaker-basert rapport:
+Erstatt den nåværende strukturerte card/input-modellen med en enkel skriveflate — som et Google Doc. Nurse skriver fritt i en stor textarea. Når hun skriver `@` dukker det opp en deltakerliste. Ved valg settes `@Navn` inline i teksten. Hver linje som inneholder en `@mention` knyttes til den deltakeren.
 
-- Én sammenhengende rapport (ikke per dag)
-- Nurse skriver `@deltaker` for å starte en ny seksjon for den deltakeren
-- Hver seksjon viser deltakerens profilbilde, navn, hytte, og alle notater med automatisk tidsstempel
-- Informasjonen lagres også på deltakeren (via `participant_health_notes`)
-- PDF-eksport genererer en rute per deltaker
+Arket viser alt kronologisk nedover. Bak kulissene grupperes innhold per deltaker for lagring og PDF-eksport.
 
 ```text
-┌─────────────────────────────────────┐
-│  Nurse Rapport            [Lagre] [PDF] │
-│─────────────────────────────────────│
-│  Skriv @ for å legge til deltaker...│
-│                                     │
-│  ┌─ 👤 Ola Nordmann (Hytte 3) ────┐│
-│  │  6. apr 15:30 — Vondt i kneet  ││
-│  │  6. apr 16:00 — Fikk ibuprofen ││
-│  │  [+ Legg til notat]            ││
-│  └─────────────────────────────────┘│
-│                                     │
-│  ┌─ 👤 Kari Hansen (Hytte 1) ─────┐│
-│  │  6. apr 14:00 — Allergireaksjon││
-│  │  [+ Legg til notat]            ││
-│  └─────────────────────────────────┘│
-│                                     │
-│  Skriv @ for å legge til deltaker...│
-└─────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│  Nurse Rapport              [Lagre] [PDF]│
+│──────────────────────────────────────────│
+│                                          │
+│  6. apr 15:30                            │
+│  Ga ibuprofen til @Ola Nordmann for      │
+│  vondt i kneet. Skal følges opp.         │
+│                                          │
+│  6. apr 16:00                            │
+│  @Kari Hansen hadde allergireaksjon.     │
+│  Ga cetirizin.                           │
+│                                          │
+│  6. apr 17:00                            │
+│  @Ola Nordmann sier kneet er bedre nå.   │
+│                                          │
+│  [skriv her... @ for å nevne deltaker]   │
+└──────────────────────────────────────────┘
 ```
+
+### Datamodell
+
+Bytt fra `sections[]` til en flat liste med linjer:
+
+```typescript
+interface ReportLine {
+  id: string;           // unik ID per linje
+  text: string;         // "Ga ibuprofen til @Ola Nordmann for vondt i kneet"
+  mentionIds: string[]; // participant IDs nevnt i denne linjen
+  timestamp: string;    // auto-satt ved opprettelse
+}
+```
+
+Lagres som JSON-array i `nurse_reports.content`. Ved eksport/sync grupperes linjer per `mentionId`.
 
 ### Teknisk plan
 
-**1. Redesign `NurseReportEditor.tsx` — fullstendig omskriving**
+**`src/components/nurse/NurseReportEditor.tsx` — fullstendig omskriving**
 
-Ny datamodell i state:
-- `sections: { participantId, notes: { text, timestamp }[] }[]`
-- Én input i bunnen med `@`-trigger for å legge til ny deltaker-seksjon
-- Hvert deltaker-kort har en "legg til notat"-input
-- Profilbilde vises i `@`-popup og i deltaker-kortet (via `Avatar`/`AvatarImage` med `participant.image_url`)
+1. **Skriveflate**: Én stor textarea/input i bunnen. Nurse skriver en linje, trykker Enter → linjen legges til i `lines[]` med automatisk tidsstempel og eventuelle mention-IDer parset fra teksten
+2. **@-mention popup**: Når bruker skriver `@` i input-feltet, vis filtrert deltakerliste med profilbilder (samme popup som nå, men trigget inline i skrivefeltet)
+3. **Visning**: Alle linjer rendres kronologisk nedover. `@Navn` vises som en highlighted/styled span med profilbilde-chip. Tidsstempel vises som en liten header når dato/tid endrer seg
+4. **Samme deltaker = samles automatisk**: I PDF-eksport og i sync til `participant_health_notes` grupperes alle linjer som nevner en deltaker
+5. **Sletting**: Swipe/hover for å slette enkeltlinjer
+6. **Autolagring**: Debounced som nå (2 sek)
 
-Lagring:
-- Henter eksisterende data fra `nurse_report_mentions` ved oppstart
-- Ved lagring: upsert `nurse_reports.content` (JSON med alle seksjoner), synk til `nurse_report_mentions` og `participant_health_notes`
-- Tidsstempel settes automatisk på hvert notat
+**Visning av linjer:**
+- Hver linje vises med tidsstempel til venstre
+- `@Navn` i teksten rendres som en liten badge/chip med profilbilde + navn
+- Gir en "chat/logg"-følelse — som å skrive i et ark
 
-**2. `@`-mention popup med profilbilde**
-
-- Vis `Avatar` med `image_url` i autocompletlisten
-- Vis `Avatar` i deltaker-seksjonsheaderen
-
-**3. PDF-eksport**
-
-- Generer HTML med én rute per deltaker
-- Inkluder profilbilde, navn, hytte, alder, og alle tidsstemplede notater
-
-**4. Database: Ingen endringer**
-
-Eksisterende tabeller `nurse_reports` og `nurse_report_mentions` dekker behovet. `content`-feltet lagrer JSON i stedet for HTML.
+**PDF-eksport:**
+- Samme som nå men data samles fra `lines` → grupper per deltaker → generer HTML
 
 ### Filer som endres
 
 | Fil | Endring |
 |-----|--------|
-| `src/components/nurse/NurseReportEditor.tsx` | Fullstendig omskriving: deltaker-seksjon-basert editor med profilbilder, tidsstemplede notater, @-popup med avatar |
-| `src/pages/Nurse.tsx` | Oppdater `participants`-prop til å inkludere `image_url` |
+| `src/components/nurse/NurseReportEditor.tsx` | Fullstendig omskriving: flat linje-basert editor med inline @-mentions |
 
 ### Hva som IKKE endres
-
-- Database-skjema (nurse_reports, nurse_report_mentions)
-- Eksisterende deltakerliste-tab
+- Database-tabeller (samme JSON i `nurse_reports.content`)
 - RLS-policyer
-- Andre sider/komponenter
+- `Nurse.tsx` tabs-struktur
+- Sync-logikk til `participant_health_notes` (bare tilpasset ny datamodell)
 
