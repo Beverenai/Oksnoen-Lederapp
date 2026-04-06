@@ -154,8 +154,6 @@ const CabinHeader = memo(({
   onToggle: () => void;
 }) => {
   const leaderFirstNames = leaders.map(l => l.name.split(' ')[0]);
-  const displayNames = leaderFirstNames.slice(0, 2);
-  const remainingCount = leaderFirstNames.length - 2;
   
   return (
     <Card className="mx-4 overflow-hidden">
@@ -163,8 +161,8 @@ const CabinHeader = memo(({
         className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
         onClick={onToggle}
       >
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Chevron - fixed width */}
+        <div className="flex items-center gap-2">
+          {/* Chevron */}
           <div className="w-5 shrink-0 flex items-center justify-center">
             {isExpanded ? (
               <ChevronDown className="w-5 h-5 text-muted-foreground" />
@@ -172,16 +170,14 @@ const CabinHeader = memo(({
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             )}
           </div>
-          {/* Home icon - fixed width */}
-          <div className="w-5 shrink-0 flex items-center justify-center">
-            <Home className="w-5 h-5 text-primary" />
-          </div>
-          {/* Title - flexible, truncate */}
-          <CardTitle className="text-base sm:text-lg truncate flex-1 min-w-0">{cabin.name}</CardTitle>
-          {/* Leaders badges - hidden on mobile, limited width on tablet+ */}
-          {displayNames.length > 0 && (
-            <div className="hidden sm:flex gap-1 max-w-[100px] overflow-hidden shrink-0">
-              {displayNames.map((name, idx) => (
+          {/* Home icon */}
+          <Home className="w-5 h-5 text-primary shrink-0" />
+          {/* Title */}
+          <CardTitle className="text-base shrink-0">{cabin.name}</CardTitle>
+          {/* Leaders badges - wrap freely in remaining space */}
+          {leaderFirstNames.length > 0 && (
+            <div className="flex gap-1 flex-wrap flex-1 min-w-0">
+              {leaderFirstNames.map((name, idx) => (
                 <Badge 
                   key={idx} 
                   variant="secondary" 
@@ -190,23 +186,14 @@ const CabinHeader = memo(({
                   {name}
                 </Badge>
               ))}
-              {remainingCount > 0 && (
-                <Badge 
-                  variant="secondary" 
-                  className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20 whitespace-nowrap"
-                >
-                  +{remainingCount}
-                </Badge>
-              )}
             </div>
           )}
-          {/* Status pill - responsive sizing, always visible */}
+          {/* Status pill */}
           <Badge 
             variant="outline"
-            className="min-w-[70px] sm:min-w-[90px] h-7 justify-center text-xs shrink-0 whitespace-nowrap"
+            className="h-7 justify-center text-xs shrink-0 whitespace-nowrap"
           >
-            <span className="sm:hidden">{arrivedCount}/{totalCount}</span>
-            <span className="hidden sm:inline">{arrivedCount}/{totalCount} ankommet</span>
+            {arrivedCount}/{totalCount} ank.
           </Badge>
         </div>
       </CardHeader>
