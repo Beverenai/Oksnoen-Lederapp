@@ -228,7 +228,7 @@ export default function Home() {
 
   useEffect(() => {
     loadData();
-  }, [leader]);
+  }, [effectiveLeader]);
 
   // Force refresh when navigated from Hajolo with red status
   useEffect(() => {
