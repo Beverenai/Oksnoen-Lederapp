@@ -811,6 +811,25 @@ export function LeaderContentSheet({
         </SheetContent>
       </Sheet>
 
+      {/* Clear Confirmation Dialog */}
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tøm alle felt?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dette tømmer alle felt for {getFirstName(leader.name)} (team, hytte, aktiviteter, notater, OBS-melding og ekstra-felt). Du må trykke «Lagre» etterpå for å bekrefte.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearAllFields} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <Trash2 className="w-4 h-4 mr-2" />
+              Tøm alle felt
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Change Notification Dialog */}
       <AlertDialog open={showNotifyDialog} onOpenChange={setShowNotifyDialog}>
         <AlertDialogContent>
