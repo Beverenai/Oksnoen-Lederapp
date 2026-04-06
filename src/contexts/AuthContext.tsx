@@ -165,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
   }, [initAuth]);
 
-  const login = async (phone: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (phone: string): Promise<{ success: boolean; error?: string; message?: string }> => {
     loginInProgressRef.current = true;
     try {
       const { data, error } = await supabase.functions.invoke('phone-login', {
