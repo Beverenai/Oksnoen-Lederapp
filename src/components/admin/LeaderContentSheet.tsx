@@ -554,11 +554,13 @@ export function LeaderContentSheet({
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-72 p-0 bg-popover z-[100]" align="start" side="bottom" sideOffset={4}>
-                  <div className="border-b px-3">
-                    <CommandInput 
-                      placeholder="Søk etter hytte..." 
+                  <div className="flex items-center border-b px-3 py-2">
+                    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                    <Input
+                      placeholder="Søk etter hytte..."
                       value={cabinSearch}
-                      onValueChange={setCabinSearch}
+                      onChange={(e) => setCabinSearch(e.target.value)}
+                      className="h-8 border-0 p-0 shadow-none focus-visible:ring-0"
                     />
                   </div>
                   <div className="max-h-60 overflow-y-auto p-1">
