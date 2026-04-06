@@ -396,7 +396,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
-    <div className="h-dvh bg-background flex flex-col overflow-hidden overflow-x-hidden w-full max-w-full pl-safe pr-safe">
+    <div className="bg-background flex flex-col overflow-hidden overflow-x-hidden w-full max-w-full pl-safe pr-safe" style={{ height: 'var(--app-height, 100dvh)' }}>
       {/* View As Banner */}
       {viewAsLeader && (
         <div className="bg-amber-500 dark:bg-amber-600 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">

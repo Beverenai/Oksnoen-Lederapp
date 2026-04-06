@@ -9,6 +9,18 @@ import { runStartupDiagnostics } from "./lib/startupDiagnostics";
 // Run startup diagnostics for debugging
 runStartupDiagnostics();
 
+// Robust viewport height variable for iOS standalone PWA
+const setAppHeight = () => {
+  const h = window.visualViewport
+    ? window.visualViewport.height
+    : window.innerHeight;
+  document.documentElement.style.setProperty('--app-height', `${h}px`);
+};
+setAppHeight();
+window.addEventListener('resize', setAppHeight);
+window.addEventListener('orientationchange', () => setTimeout(setAppHeight, 100));
+window.visualViewport?.addEventListener('resize', setAppHeight);
+
 // Initialize Capacitor plugins if in native context
 initCapacitorPlugins().then((result) => {
   if (result.isNative) {
