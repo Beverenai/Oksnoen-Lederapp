@@ -799,13 +799,9 @@ ${cleanHtml}
           </div>
         )}
 
-        {/* Top writing area with placeholder */}
-        <div
-          className="px-3 pt-3 pb-1 text-sm text-muted-foreground italic select-none pointer-events-none"
-          style={{ display: editorRef.current?.textContent?.trim() ? 'none' : undefined }}
-          id="editor-placeholder"
-        >
-          Skriv her — legg til deltaker med &quot;@navn&quot;
+        {/* Permanent instruction line */}
+        <div className="px-3 pt-2 pb-1 text-xs text-muted-foreground select-none">
+          Legg til deltaker med <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">@</kbd>
         </div>
 
         <div
@@ -813,18 +809,11 @@ ${cleanHtml}
           contentEditable
           suppressContentEditableWarning
           className="min-h-[400px] outline-none text-sm leading-relaxed p-3 rounded-lg border border-border bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
-          onInput={(e) => {
-            handleInput();
-            // Toggle placeholder visibility
-            const placeholder = document.getElementById('editor-placeholder');
-            if (placeholder) {
-              placeholder.style.display = editorRef.current?.textContent?.trim() ? 'none' : '';
-            }
-          }}
+          onInput={handleInput}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           onClick={handleEditorClick}
-          data-placeholder='Skriv her — legg til deltaker med "@navn"'
+          data-placeholder='Legg til deltaker med "@navn"'
           style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         />
 
