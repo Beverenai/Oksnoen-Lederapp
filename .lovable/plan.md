@@ -1,40 +1,69 @@
 
 
-## Fix Login Race Condition
+## RLS Policy Adjustments
 
-### Root Cause
+After comparing the current policies with the requested access model, most policies are already correct. Four tables need updates:
 
-The login backend works perfectly (verified with direct API calls). The problem is a **race condition** in `AuthContext.tsx`:
+### Changes needed
 
-1. `login()` calls the edge function → gets leader data + session tokens
-2. `login()` calls `supabase.auth.setSession()` → this triggers `onAuthStateChange('SIGNED_IN')`
-3. The `onAuthStateChange` callback has a **stale closure** over `leader` (always `null` because dependency array is `[]`), so `!leader` is always true
-4. It calls `loadLeaderFromSession()` which queries the database
-5. If this query fails or returns null for any reason (timing, network), it calls **`supabase.auth.signOut()`** — which immediately logs the user out
-6. Meanwhile `login()` returned `{ success: true }` and called `navigate('/')`, but the leader state was just wiped
+#### 1. Health tables — remove cabin leader access from SELECT
 
-Additionally, the first login attempt (visible in network logs at 10:25:41) hit an **old version** of the edge function that returned no `session` field — causing `data.session.access_token` to throw a TypeError.
+Currently `participant_health_info`, `participant_health_events`, and `participant_health_notes` allow assigned cabin leaders to SELECT. The request says **only admin and nurse** should have access. Remove the `EXISTS(... leader_cabins ...)` clause from all three SELECT policies.
 
-### Fix
+**Migration SQL:**
+```sql
+-- Drop and recreate SELECT policies for all 3 health tables
+-- New USING: (is_admin() OR is_nurse())
+```
 
-**File: `src/contexts/AuthContext.tsx`**
+#### 2. cabin_reports — restrict writes to assigned leaders or admin
 
-1. **Use a ref to track if login is in progress** — when `login()` is running, skip the `onAuthStateChange` `SIGNED_IN` handler (since `login()` already sets leader/roles from the API response)
-2. **Remove the `signOut()` call in `loadLeaderFromSession`** — if the query fails, just log the error instead of nuking the session. This prevents the destructive race.
-3. **Add a null-check for `data.session`** in `login()` — defensive guard against edge function returning without session tokens
+Currently INSERT and UPDATE use `true` (any authenticated user). Change to only allow leaders assigned to that cabin via `leader_cabins`, or admins.
 
-Changes:
-- Add `loginInProgressRef = useRef(false)` 
-- Set it `true` before calling edge function, `false` after setting state
-- In `onAuthStateChange`: skip `SIGNED_IN` handling when `loginInProgressRef.current` is true
-- In `loadLeaderFromSession`: remove `await supabase.auth.signOut()` on failure, just return
-- In `login()`: check `if (!data.session)` and return error before calling `setSession`
+**Migration SQL:**
+```sql
+-- INSERT WITH CHECK: is_admin() OR EXISTS(SELECT 1 FROM leader_cabins WHERE leader_id = current_leader_id() AND cabin_id = cabin_reports.cabin_id)
+-- UPDATE USING: same condition
+```
+
+#### 3. fix_tasks — restrict UPDATE to admin only
+
+Currently UPDATE uses `true`. Change to admin only.
+
+**Migration SQL:**
+```sql
+-- UPDATE USING: is_admin()
+```
+
+#### 4. rope_controls — restrict UPDATE to own rows or admin
+
+Currently UPDATE uses `true`. Change so leaders can only update their own controls, admins can update any.
+
+**Migration SQL:**
+```sql
+-- UPDATE USING: (leader_id = current_leader_id()) OR is_admin()
+```
+
+### Already correct (no changes needed)
+
+| Table | Status |
+|-------|--------|
+| `leaders` | ✅ SELECT all auth, UPDATE own/admin, INSERT/DELETE admin |
+| `participants` | ✅ SELECT/UPDATE all auth (needed for passport), INSERT/DELETE admin |
+| `user_roles` | ✅ SELECT own/admin, no client writes |
+| `push_subscriptions` | ✅ Own rows only |
+| `leader_cabins` | ✅ SELECT all auth, write admin only |
+| `announcements`, `activities`, `stories`, etc. | ✅ SELECT all auth, write admin only |
+
+### phone-login active check
+
+Already implemented — the edge function checks `leader.is_active === false` and returns an error message.
 
 ### Files changed
 
 | File | Change |
 |------|--------|
-| `src/contexts/AuthContext.tsx` | Fix race condition with login ref guard; remove destructive signOut in loadLeaderFromSession; add defensive session check |
+| Database migration | Update 4 policy groups (health tables SELECT, cabin_reports write, fix_tasks UPDATE, rope_controls UPDATE) |
 
-No backend or edge function changes needed — the backend is working correctly.
+No client code changes needed — the app already respects these access patterns in its UI logic.
 
