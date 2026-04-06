@@ -166,6 +166,7 @@ export function LeaderDetailDialog({
     // Check role changes
     if (role !== orig.role) {
       const roleNames: Record<AppRole, string> = {
+        superadmin: 'Superadmin',
         admin: 'Admin',
         nurse: 'Sykepleier',
         leader: 'Leder'
