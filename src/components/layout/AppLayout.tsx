@@ -548,17 +548,26 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       </aside>
 
-      {/* Mobile Slide-out Menu - True fullscreen from right */}
+      {/* Mobile Slide-out Menu - 80vw panel with overlay */}
+      {/* Backdrop overlay */}
       <div
         className={cn(
-          'lg:hidden fixed inset-0 bg-card z-[70] transform transition-transform duration-300 ease-out',
+          'lg:hidden fixed inset-0 z-[69] bg-black/50 transition-opacity duration-300',
+          mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        )}
+        onClick={closeMobileMenu}
+      />
+      {/* Menu panel */}
+      <div
+        className={cn(
+          'lg:hidden fixed inset-y-0 right-0 w-[80vw] max-w-[320px] bg-card z-[70] transform transition-transform duration-300 ease-out shadow-xl',
           mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         )}
         style={{ overscrollBehavior: 'contain' }}
       >
         {/* Menu Header with close button */}
         <header 
-          className="fixed top-0 left-0 right-0 bg-card border-b border-border px-4 pt-safe flex items-center justify-between h-[calc(3.5rem+env(safe-area-inset-top,0px))] z-10"
+          className="absolute top-0 left-0 right-0 bg-card border-b border-border px-4 pt-safe flex items-center justify-between h-[calc(3.5rem+env(safe-area-inset-top,0px))] z-10"
         >
           <div className="flex items-center gap-3">
             <img src={oksnoenLogo} alt="Oksnøen" className="h-8 w-8 object-contain" />
@@ -791,7 +800,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Main Content */}
       <main 
         ref={scrollContainerRef}
-        className="lg:ml-64 lg:pt-0 flex-1 lg:min-h-screen app-content lg:pb-0 lg:overflow-y-auto overflow-x-hidden max-w-full pb-[env(safe-area-inset-bottom,0px)]"
+        className="lg:ml-64 lg:pt-0 flex-1 lg:min-h-screen app-content lg:pb-0 lg:overflow-y-auto overflow-x-hidden max-w-full pb-[calc(var(--nav-h)+env(safe-area-inset-bottom,0px)+24px)] lg:pb-0"
         style={{ overscrollBehaviorY: 'contain' }}
       >
         {/* Spacer for mobile header - animates with header visibility */}

@@ -346,7 +346,7 @@ export default function Leaders() {
   }
 
   return (
-    <div ref={pullRef} className="space-y-4 animate-fade-in overflow-y-auto">
+    <div ref={pullRef} className="space-y-4 animate-fade-in overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
       <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
       {/* Header with search and sort */}
       <div className="flex items-center justify-between gap-2">
