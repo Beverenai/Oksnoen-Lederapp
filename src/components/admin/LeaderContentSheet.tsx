@@ -306,8 +306,6 @@ export function LeaderContentSheet({
   };
 
   const handleClearAllFields = () => {
-    setTeam('');
-    setMinisterpost('');
     setCurrentActivity('');
     setExtraActivity('');
     setPersonalNotes('');
@@ -317,10 +315,9 @@ export function LeaderContentSheet({
     setExtra3('');
     setExtra4('');
     setExtra5('');
-    setSelectedCabinIds([]);
     setShowClearConfirm(false);
     hapticImpact('medium');
-    toast.info('Alle felt tømt — husk å lagre');
+    toast.info('Innholdsfelt tømt — husk å lagre');
   };
 
   const handleSendNotification = async () => {
