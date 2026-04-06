@@ -215,6 +215,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
       // Sync health info
       await syncParticipantHealth(activeParticipant.id);
       hapticSuccess();
+      onDataChange?.();
     } catch (e) {
       console.error('Error saving entry:', e);
       toast.error('Kunne ikke lagre notat');
@@ -394,6 +395,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
       }
 
       toast.success('Notat slettet');
+      onDataChange?.();
     } catch (e) {
       console.error('Error deleting entry:', e);
       toast.error('Kunne ikke slette');
@@ -438,6 +440,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
       }
 
       toast.success('Deltaker-seksjon slettet');
+      onDataChange?.();
     } catch (e) {
       console.error('Error deleting section:', e);
       toast.error('Kunne ikke slette seksjon');
@@ -607,6 +610,7 @@ ${sectionsHtml}
       setLastSaved(new Date());
       hapticSuccess();
       toast.success(`${foundPairs.length} notat(er) lagt til`);
+      onDataChange?.();
     };
 
     createEntries();
