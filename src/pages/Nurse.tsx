@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { NurseReportEditor } from '@/components/nurse/NurseReportEditor';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -616,117 +617,138 @@ export default function Nurse() {
     );
   };
 
+  const reportParticipants = participants.map(p => ({
+    id: p.id,
+    name: p.name,
+    first_name: p.first_name,
+    last_name: p.last_name,
+    cabin: p.cabin,
+    birth_date: p.birth_date,
+  }));
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground flex items-center gap-2">
-            <Heart className="w-8 h-8 text-destructive" />
-            Nurse
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Helsenotater og hendelseslogg for deltakere
-          </p>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              disabled={isExporting || participantsWithHealthInfo.length === 0}
-            >
-              {isExporting ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4 mr-2" />
-              )}
-              Eksporter
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleExportHtml}>
-              <FileText className="w-4 h-4 mr-2" />
-              Eksporter som HTML
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleExportCsv}>
-              <Download className="w-4 h-4 mr-2" />
-              Eksporter som CSV
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+    <div className="space-y-4 animate-fade-in">
+      <div className="flex items-center gap-2">
+        <Heart className="w-8 h-8 text-destructive" />
+        <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground">Nurse</h1>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Søk etter deltaker eller hytte..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={cabinFilter} onValueChange={setCabinFilter}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <Home className="w-4 h-4 mr-2" />
-            <SelectValue placeholder="Velg hytte" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Alle hytter</SelectItem>
-            {uniqueCabins.map((cabin) => (
-              <SelectItem key={cabin} value={cabin}>
-                {cabin}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Tabs defaultValue="participants" className="w-full">
+        <TabsList className="w-full grid grid-cols-2">
+          <TabsTrigger value="participants">Alle deltakere</TabsTrigger>
+          <TabsTrigger value="report">Rapport</TabsTrigger>
+        </TabsList>
 
-      {/* Participants with health info - shown at top */}
-      {participantsWithHealthInfo.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Heart className="w-5 h-5 text-destructive" />
-            <h2 className="text-lg font-semibold text-foreground">
-              Deltakere med helseinfo ({participantsWithHealthInfo.length})
-            </h2>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {participantsWithHealthInfo.map((participant) => (
-              <ParticipantCard key={participant.id} participant={participant} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* All other participants */}
-      {participantsWithoutHealthInfo.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <User className="w-5 h-5 text-muted-foreground" />
-            <h2 className="text-lg font-semibold text-foreground">
-              Alle deltakere ({participantsWithoutHealthInfo.length})
-            </h2>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {participantsWithoutHealthInfo.map((participant) => (
-              <ParticipantCard key={participant.id} participant={participant} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {filteredParticipants.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground">Ingen deltakere funnet</h3>
-            <p className="text-muted-foreground mt-1">
-              Prøv å søke med et annet navn eller velg en annen hytte
+        <TabsContent value="participants" className="space-y-6 mt-4">
+          <div className="flex items-start justify-between gap-4">
+            <p className="text-muted-foreground">
+              Helsenotater og hendelseslogg for deltakere
             </p>
-          </CardContent>
-        </Card>
-      )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  disabled={isExporting || participantsWithHealthInfo.length === 0}
+                >
+                  {isExporting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Eksporter
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportHtml}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Eksporter som HTML
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCsv}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Eksporter som CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Søk etter deltaker eller hytte..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={cabinFilter} onValueChange={setCabinFilter}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <Home className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Velg hytte" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle hytter</SelectItem>
+                {uniqueCabins.map((cabin) => (
+                  <SelectItem key={cabin} value={cabin}>
+                    {cabin}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Participants with health info */}
+          {participantsWithHealthInfo.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Heart className="w-5 h-5 text-destructive" />
+                <h2 className="text-lg font-semibold text-foreground">
+                  Deltakere med helseinfo ({participantsWithHealthInfo.length})
+                </h2>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {participantsWithHealthInfo.map((participant) => (
+                  <ParticipantCard key={participant.id} participant={participant} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* All other participants */}
+          {participantsWithoutHealthInfo.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <User className="w-5 h-5 text-muted-foreground" />
+                <h2 className="text-lg font-semibold text-foreground">
+                  Alle deltakere ({participantsWithoutHealthInfo.length})
+                </h2>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {participantsWithoutHealthInfo.map((participant) => (
+                  <ParticipantCard key={participant.id} participant={participant} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {filteredParticipants.length === 0 && (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground">Ingen deltakere funnet</h3>
+                <p className="text-muted-foreground mt-1">
+                  Prøv å søke med et annet navn eller velg en annen hytte
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="report" className="mt-4">
+          <NurseReportEditor participants={reportParticipants} />
+        </TabsContent>
+      </Tabs>
 
       {/* Participant Detail Dialog */}
       <ResponsiveDialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
@@ -779,7 +801,6 @@ export default function Nurse() {
 
             {/* Health Notes Tab */}
             <TabsContent value="notes" className="flex-1 space-y-4 overflow-auto">
-              {/* Public Health Info for Leaders */}
               <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2 text-blue-700 dark:text-blue-300">
@@ -836,7 +857,6 @@ export default function Nurse() {
 
             {/* Events Tab */}
             <TabsContent value="events" className="flex-1 space-y-4 min-h-0 flex flex-col">
-              {/* Add new event */}
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -896,7 +916,6 @@ export default function Nurse() {
                 </CardContent>
               </Card>
 
-              {/* Events list */}
               <Card className="flex-1 min-h-0 flex flex-col">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Hendelseslogg</CardTitle>
@@ -952,7 +971,6 @@ export default function Nurse() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {/* Activity notes from leaders */}
                   {selectedParticipant?.activity_notes && (
                     <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
                       <div className="flex items-center gap-2 mb-2">

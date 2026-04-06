@@ -467,6 +467,62 @@ export type Database = {
         }
         Relationships: []
       }
+      nurse_report_mentions: {
+        Row: {
+          created_at: string | null
+          id: string
+          mention_text: string
+          participant_id: string
+          report_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          mention_text?: string
+          participant_id: string
+          report_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          mention_text?: string
+          participant_id?: string
+          report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nurse_report_mentions_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "nurse_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nurse_reports: {
+        Row: {
+          content: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       participant_activities: {
         Row: {
           activity: string
