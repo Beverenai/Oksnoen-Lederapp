@@ -363,26 +363,34 @@ header, nav {
 }
 
 /* Bottom nav container - standard iOS tab bar */
+/* Pill nav — floats above safe area in browser, sits tight in PWA/native */
 .bottom-nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  left: 8px;
+  right: 8px;
   z-index: 50;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: hsla(var(--card), 0.92);
+  background: hsla(var(--card), 0.85);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
-  border-top: 0.5px solid hsl(var(--border));
-  border-radius: 0;
+  border: 0.5px solid hsl(var(--border) / 0.5);
+  border-radius: 20px;
+  box-shadow: 0 2px 20px 0 rgb(0 0 0 / 0.10);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
 }
 
+/* In installed PWA or Capacitor: pill sits almost at the very bottom */
+@media (display-mode: standalone) {
+  .bottom-nav {
+    bottom: 2px;
+  }
+}
+
 .dark .bottom-nav {
-  background: hsla(var(--card), 0.92);
-  border-top: 0.5px solid hsl(var(--border));
+  background: hsla(var(--card), 0.88);
+  border-color: hsl(var(--border) / 0.4);
+  box-shadow: 0 2px 20px 0 rgb(0 0 0 / 0.25);
 }
 
   /* App scroll container - smooth iOS momentum scroll */
