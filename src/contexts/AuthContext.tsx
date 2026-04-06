@@ -196,12 +196,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Kunne ikke opprette sesjon. Prøv igjen.' };
       }
 
-      localStorage.setItem('leaderName', data.leader.name);
-      setLeader(data.leader);
-
-      const roles = data.roles || [];
-      setIsAdmin(roles.includes('admin'));
-      setIsNurse(roles.includes('nurse'));
+      // Load full leader + roles from DB now that session is active
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const found = await loadLeaderFromSession(session.user.id);
+        if (!found) {
+          // Retry once after a short delay (session propagation race)
+          await new Promise(r => setTimeout(r, 500));
+          const retryFound = await loadLeaderFromSession(session.user.id);
+          if (!retryFound) {
+            console.error('[Auth] Could not load leader after login');
+            return { success: false, error: 'Kunne ikke laste profilen din. Prøv igjen.' };
+          }
+        }
+      }
       
       return { success: true };
     } catch (err) {
