@@ -182,7 +182,13 @@ export default function Admin() {
         supabase.from('home_screen_config').select('*').order('sort_order'),
       ]);
       const roleMap = new Map<string, AppRole>();
-      (rolesRes.data || []).forEach((r: { leader_id: string; role: string }) => roleMap.set(r.leader_id, r.role as AppRole));
+      const rolePriority: Record<string, number> = { superadmin: 0, admin: 1, nurse: 2, leader: 3 };
+      (rolesRes.data || []).forEach((r: { leader_id: string; role: string }) => {
+        const existing = roleMap.get(r.leader_id);
+        if (!existing || (rolePriority[r.role] ?? 3) < (rolePriority[existing] ?? 3)) {
+          roleMap.set(r.leader_id, r.role as AppRole);
+        }
+      });
       const leadersWithRoles: LeaderWithRole[] = (leadersRes.data || []).map(leader => ({ ...leader, role: roleMap.get(leader.id) || 'leader' }));
       setLeaders(leadersWithRoles);
       const homeConfigData = configRes.data || [];
