@@ -34,7 +34,7 @@ export default function Login() {
     setIsLoading(false);
 
     if (result.success) {
-      showSuccess('Velkommen!');
+      navigate('/');
       navigate('/');
     } else if (result.error === 'INACTIVE_LEADER') {
       setInactiveState(true);

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { toast } from 'sonner';
 import { StatusPopup, type StatusType, type StatusPopupAction } from '@/components/ui/StatusPopup';
 import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
 
@@ -25,7 +26,7 @@ export function StatusPopupProvider({ children }: { children: ReactNode }) {
   const close = useCallback(() => setPopup(null), []);
 
   const showSuccess = useCallback((title: string, message?: string, autoClose = 2000) => {
-    setPopup({ type: 'success', title, message, autoClose });
+    toast.success(title, { description: message, duration: autoClose });
     hapticSuccess();
   }, []);
 
@@ -35,7 +36,7 @@ export function StatusPopupProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const showInfo = useCallback((title: string, message?: string, autoClose = 3000) => {
-    setPopup({ type: 'info', title, message, autoClose });
+    toast(title, { description: message, duration: autoClose });
     hapticImpact('light');
   }, []);
 
