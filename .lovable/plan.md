@@ -1,46 +1,21 @@
 
 
-## Plan: Utsjekk-toggle i Admin + "Se som bruker"-modus
+## Fix: Hjem-siden viser feil leder i "Se som"-modus
 
-### Oppgave 4: Utsjekk-knapp styres av admin
+### Problem
+Data-spørringene i Home.tsx bruker `effectiveLeader.id` korrekt, men **visningen** (navn, avatar, hilsen) bruker fortsatt `leader` direkte. Derfor ser du "Hei, August!" selv om du ser som en annen leder.
 
-**Status:** Mesteparten er allerede implementert. `CheckoutTab` har toggle, `Passport.tsx` leser `checkoutEnabled` via `useQuery` og skjuler checkout-knappen. Det som mangler:
-
-**Endringer:**
-
-| Fil | Endring |
-|-----|--------|
-| `src/pages/Passport.tsx` | Legg til `refetchInterval: 30000` på `checkout-enabled` query for raskere oppdatering. Legg til Supabase Realtime subscription på `app_config` for umiddelbar oppdatering. |
-| `src/pages/admin/Admin.tsx` | Legg til en enkel utsjekk-status badge/toggle i header-området (henter `checkout_enabled` fra `app_config`). Toggle oppdaterer `app_config`. Gir admin rask oversikt uten å navigere til checkout-siden. |
-
-Realtime-subscription i Passport.tsx lytter på `app_config`-tabellen og invaliderer `checkout-enabled` query ved endring.
-
----
-
-### Oppgave 5: Admin "Se som bruker"
-
-**Arkitektur:** Ren client-side visningsoverstyrning. Ingen sesjonsbytte. Admin sin Supabase-sesjon brukes hele tiden.
-
-**Endringer:**
+### Endringer
 
 | Fil | Endring |
 |-----|--------|
-| `src/contexts/AuthContext.tsx` | Legg til `viewAsLeader: Leader \| null`, `setViewAsLeader`, og `effectiveLeader` (computed: `viewAsLeader ?? leader`). Eksporter alle tre. |
-| `src/components/layout/AppLayout.tsx` | Vis banner øverst når `viewAsLeader` er satt: "Du ser appen som [Navn] — Avslutt". Klikk "Avslutt" → `setViewAsLeader(null)` + naviger til `/admin`. |
-| `src/components/admin/LeaderDashboard.tsx` | Legg til "Se som"-knapp i `LeaderCard` (kun for admin). Klikk → `setViewAsLeader(leader)` + naviger til `/`. |
-| `src/components/admin/LeaderListView.tsx` | Samme "Se som"-knapp i listevisning. |
-| `src/pages/Home.tsx` | Erstatt `leader.id` med `effectiveLeader.id` i alle data-spørringer (leader_content, leader_cabins, fix_tasks, rope_controls). |
-| `src/pages/MyCabins.tsx` | Bruk `effectiveLeader.id` for leader_cabins-spørring. |
-| `src/pages/Passport.tsx` | Bruk `effectiveLeader` for filtrering av "mine hytter". |
-| `src/pages/Profile.tsx` | Vis `effectiveLeader` sin profil. Gjør read-only når `viewAsLeader` er satt. |
-| `src/pages/Schedule.tsx` | Bruk `effectiveLeader` for vaktfiltrering (hvis relevant). |
+| `src/pages/Home.tsx` | Erstatt `leader?.name`, `leader?.profile_image_url` og `leader?.name?.split(' ')[0]` med `effectiveLeader` i visnings-seksjonen (linje 378-397). Også fiks realtime-subscription filter (linje 253) fra `leader.id` til `effectiveLeader.id`. |
 
-**Hva endres IKKE:**
-- `isAdmin`/`isSuperAdmin` forblir uendret — admin-panel alltid tilgjengelig
-- RLS bruker admin sin sesjon — ingen sikkerhetsrisiko
-- Bunnmeny forblir uendret
-- Push-varsler påvirkes ikke
-- Skriveoperasjoner (oppdatering av data) bruker fortsatt ekte `leader`, ikke `effectiveLeader`
-
-**Banner-design:** Fast posisjonert, gul/oransje bakgrunn, vises over alt innhold med z-index. Inkluderer øye-ikon, ledernavn, og "Avslutt"-knapp.
+Konkret endres:
+- Linje 253: `leader.id` → `effectiveLeader?.id` i realtime-filter
+- Linje 380: `leader?.name?.split(' ')[0]` → `effectiveLeader?.name?.split(' ')[0]`
+- Linje 389: `leader?.profile_image_url` → `effectiveLeader?.profile_image_url`
+- Linje 389: `alt={leader?.name}` → `alt={effectiveLeader?.name}`
+- Linje 391: `leader?.name` og `leader.name` → `effectiveLeader?.name`
+- Linje 396: `leader?.name` → `effectiveLeader?.name`
 
