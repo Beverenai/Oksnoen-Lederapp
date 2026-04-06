@@ -90,7 +90,7 @@ export function LeaderContentSheet({
   homeConfig,
   onSaved
 }: LeaderContentSheetProps) {
-  const { showSuccess, showError, showInfo } = useStatusPopup();
+  const { showError, showInfo } = useStatusPopup();
   const { leader: currentLeader } = useAuth();
   const [saving, setSaving] = useState(false);
   const [isExtraFieldsOpen, setIsExtraFieldsOpen] = useState(false);
