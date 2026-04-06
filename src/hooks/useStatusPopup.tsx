@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { StatusPopup, type StatusType, type StatusPopupAction } from '@/components/ui/StatusPopup';
 import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
 
