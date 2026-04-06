@@ -72,12 +72,10 @@ serve(async (req) => {
       );
     }
 
-    const inactiveMessage = 'Du har ikke en aktiv bruker. Kontakt admin.';
-
     if (!leader) {
       console.log('No leader found for phone');
       return new Response(
-        JSON.stringify({ success: false, error: inactiveMessage }),
+        JSON.stringify({ success: false, error: 'UNKNOWN_PHONE', message: 'Fant ingen bruker med dette telefonnummeret.' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -85,7 +83,7 @@ serve(async (req) => {
     if (leader.is_active === false) {
       console.log('Leader is not active');
       return new Response(
-        JSON.stringify({ success: false, error: inactiveMessage }),
+        JSON.stringify({ success: false, error: 'INACTIVE_LEADER', message: 'Du jobber ikke denne perioden.' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
