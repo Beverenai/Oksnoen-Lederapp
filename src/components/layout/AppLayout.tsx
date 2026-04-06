@@ -395,7 +395,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
-    <div className="h-dvh bg-background flex flex-col overflow-hidden pl-safe pr-safe">
+    <div className="h-dvh bg-background flex flex-col overflow-hidden overflow-x-hidden w-full pl-safe pr-safe">
       {/* Hajolo Success Overlay */}
       {showHajoloSuccess && (
         <div 
@@ -778,7 +778,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Main Content */}
       <main 
         ref={scrollContainerRef}
-        className="lg:ml-64 lg:pt-0 flex-1 lg:min-h-screen app-content lg:pb-0 lg:overflow-y-auto overflow-x-hidden"
+        className="lg:ml-64 lg:pt-0 flex-1 lg:min-h-screen app-content lg:pb-0 lg:overflow-y-auto overflow-x-hidden pb-[env(safe-area-inset-bottom,0px)]"
+        style={{ overscrollBehaviorY: 'contain' }}
       >
         {/* Spacer for mobile header - animates with header visibility */}
         <div 

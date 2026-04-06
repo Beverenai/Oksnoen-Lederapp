@@ -481,7 +481,7 @@ export default function Leaders() {
       )}
 
       {/* Leaders list */}
-      <div className="grid gap-2">
+      <div className="grid gap-2 overflow-hidden">
         {filteredAndSortedLeaders.map((leader, index) => (
           <div key={leader.id}>
             {/* Separator before first "Fri" leader */}
@@ -499,7 +499,7 @@ export default function Leaders() {
             )}
             
             <Card 
-              className="cursor-pointer transition-colors active:scale-[0.99]"
+              className="cursor-pointer overflow-hidden"
               onClick={() => setSelectedLeader(leader)}
             >
               <CardContent className="p-3">
