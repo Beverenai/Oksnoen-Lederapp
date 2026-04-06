@@ -25,7 +25,7 @@ import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics
 const HomeConfigSection = lazy(() => import('@/components/admin/HomeConfigTab'));
 
 type Leader = Tables<'leaders'>;
-type AppRole = 'admin' | 'nurse' | 'leader';
+type AppRole = 'superadmin' | 'admin' | 'nurse' | 'leader';
 
 interface LeaderWithRole extends Leader {
   role: AppRole;
@@ -46,7 +46,7 @@ interface HomeScreenConfig {
 }
 
 export default function Admin() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isSuperAdmin } = useAuth();
   const [leaders, setLeaders] = useState<LeaderWithRole[]>([]);
   const [homeConfig, setHomeConfig] = useState<HomeScreenConfig[]>([]);
   const [localHomeConfig, setLocalHomeConfig] = useState<HomeScreenConfig[]>([]);
@@ -313,7 +313,7 @@ export default function Admin() {
           </CardHeader>
           <CollapsibleContent>
             <CardContent>
-              <LeaderActivationTab leaders={leaders} onLeaderUpdated={loadData} />
+              <LeaderActivationTab leaders={leaders} onLeaderUpdated={loadData} isSuperAdmin={isSuperAdmin} />
             </CardContent>
           </CollapsibleContent>
         </Card>
