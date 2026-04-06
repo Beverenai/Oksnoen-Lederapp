@@ -481,7 +481,7 @@ export default function Leaders() {
       )}
 
       {/* Leaders list */}
-      <div className="grid gap-2 overflow-hidden">
+      <div className="grid gap-2">
         {filteredAndSortedLeaders.map((leader, index) => (
           <div key={leader.id}>
             {/* Separator before first "Fri" leader */}
