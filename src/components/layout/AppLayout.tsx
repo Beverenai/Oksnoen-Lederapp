@@ -675,7 +675,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 
                 // Center action button (role-based)
                 if (isCenterButton) {
-                  // Leader: Hajolo button with states
+                  // Leader: Hajolo button as standard tab icon
                   if (item.isHajolo) {
                     return (
                       <Popover key="hajolo" open={showHajoloTooltip}>
@@ -685,19 +685,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
                               hapticImpact('medium');
                               handleHajoloClick();
                             }}
-                            className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:opacity-70"
+                            className="flex flex-col items-center justify-center min-w-[52px] py-1 transition-all duration-150 active:opacity-70"
                           >
-                            <div
-                              className={cn(
-                                'w-14 h-14 rounded-full flex items-center justify-center border-[3px] border-white/50 dark:border-white/20 transition-all duration-300 ease-out',
-                                hasRead 
-                                  ? 'bg-[hsl(152_55%_45%)] shadow-[0_2px_12px_rgba(0,0,0,0.1)]' 
-                                  : 'bg-[hsl(0_65%_55%)] shadow-[0_4px_16px_rgba(0,0,0,0.18)]'
+                            <div className="relative">
+                              <Check 
+                                className={cn(
+                                  'w-[22px] h-[22px] transition-colors',
+                                  hasRead ? 'text-primary' : 'text-destructive'
+                                )}
+                                size={22}
+                                strokeWidth={hasRead ? 2.5 : 2.5}
+                              />
+                              {!hasRead && (
+                                <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full border border-background animate-pulse" />
                               )}
-                            >
-                              <Check className="w-7 h-7 text-white" strokeWidth={2.5} />
                             </div>
-                            <span className="text-[10px] font-semibold mt-1.5 text-foreground">
+                            <span className={cn(
+                              'text-[10px] leading-tight font-semibold',
+                              hasRead ? 'text-primary' : 'text-destructive'
+                            )}>
                               {hasRead ? 'Bekreftet' : 'Hajolo'}
                             </span>
                           </button>
@@ -726,36 +732,52 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     );
                   }
                   
-                  // Admin: Dashboard button
+                  // Admin: Dashboard button as standard tab icon
                   if (isAdmin && item.to === '/admin') {
                     return (
                       <NavLink
                         key={item.to}
                         to={item.to}
                         onClick={() => hapticImpact('medium')}
-                        className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:opacity-70"
+                        className="flex flex-col items-center justify-center min-w-[52px] py-1 transition-all duration-150 active:opacity-70"
                       >
-                        <div className="w-14 h-14 rounded-full flex items-center justify-center bg-slate-800 dark:bg-slate-700 shadow-[0_4px_16px_rgba(0,0,0,0.15)] border-[3px] border-white/50 dark:border-white/20">
-                          <Settings className="w-7 h-7 text-white" strokeWidth={2} />
-                        </div>
-                        <span className="text-[10px] font-semibold mt-1.5 text-foreground">Admin</span>
+                        <Settings 
+                          className={cn(
+                            'w-[22px] h-[22px] transition-colors',
+                            location.pathname === '/admin' ? 'text-primary' : 'text-muted-foreground/70'
+                          )}
+                          size={22}
+                          strokeWidth={location.pathname === '/admin' ? 2.5 : 1.75}
+                        />
+                        <span className={cn(
+                          'text-[10px] leading-tight',
+                          location.pathname === '/admin' ? 'text-primary font-semibold' : 'text-muted-foreground/70 font-medium'
+                        )}>Admin</span>
                       </NavLink>
                     );
                   }
                   
-                  // Nurse: Nurse button
+                  // Nurse: Nurse button as standard tab icon
                   if (isNurse && item.to === '/nurse') {
                     return (
                       <NavLink
                         key={item.to}
                         to={item.to}
                         onClick={() => hapticImpact('medium')}
-                        className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:opacity-70"
+                        className="flex flex-col items-center justify-center min-w-[52px] py-1 transition-all duration-150 active:opacity-70"
                       >
-                        <div className="w-14 h-14 rounded-full flex items-center justify-center bg-rose-500 shadow-[0_4px_16px_rgba(0,0,0,0.15)] border-[3px] border-white/50 dark:border-white/20">
-                          <Heart className="w-7 h-7 text-white" strokeWidth={2} />
-                        </div>
-                        <span className="text-[10px] font-semibold mt-1.5 text-foreground">Nurse</span>
+                        <Heart 
+                          className={cn(
+                            'w-[22px] h-[22px] transition-colors',
+                            location.pathname === '/nurse' ? 'text-primary' : 'text-muted-foreground/70'
+                          )}
+                          size={22}
+                          strokeWidth={location.pathname === '/nurse' ? 2.5 : 1.75}
+                        />
+                        <span className={cn(
+                          'text-[10px] leading-tight',
+                          location.pathname === '/nurse' ? 'text-primary font-semibold' : 'text-muted-foreground/70 font-medium'
+                        )}>Nurse</span>
                       </NavLink>
                     );
                   }
