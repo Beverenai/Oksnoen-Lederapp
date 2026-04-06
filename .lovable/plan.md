@@ -1,43 +1,44 @@
 
 
-## Fiks: Multi-deltaker rombytte + korrekt ledige senger
+## Fiks: Romvalg er hardkodet til "høyre/venstre" — men mange hytter bruker andre romnavn
 
-### Problem 1: "6/6 ledig" er feil
-Mange deltakere har `room = NULL` eller tom streng i databasen, men dropdown-listen viser bare "høyre"/"venstre". Når systemet sjekker belegg for "høyre", finner det 0 deltakere der (fordi de er registrert med `room = NULL`), og viser derfor "6/6 ledig". Tallet viser **ledige** senger, ikke belegg — men det er misvisende fordi deltakerne mangler rom-tilordning.
+### Rotårsak
 
-**Fiks:** Vis `X/Y` som "X opptatt av Y" i stedet for "X ledig". Og tell deltakere som har `cabin_id` men `room = NULL` som "uten rom" — vis disse separat per hytte slik at admin ser hvem som mangler rom.
+Koden hardkoder romalternativer til `['høyre', 'venstre']` (linje 127). Men i databasen har deltakerne mange forskjellige romnavn:
 
-### Problem 2: Bare én deltaker om gangen
-Brukeren vil legge til flere deltakere i ett rombytte-sett, og godkjenne alle samtidig.
+- **Seileren** har rom som "Maui", "Seilern Hawaii", "Waikikii", osv.
+- **Bedewins**, **Fyrtårnet**, **Fiskebua**, osv. har deltakere med `room = NULL` (43 deltakere totalt) — disse hyttene bruker kanskje ikke rom-inndelingen i det hele tatt.
 
-**Fiks:** Endre skjemaet til en "handlekurv"-modell:
-- Søk og velg deltaker → legg til i en lokal liste (ikke lagret i DB ennå)
-- Velg mål-rom (felles for alle, eller per deltaker)
-- Trykk "Legg til X rombytter" → alle lagres som separate `room_swaps`-rader
-- Godkjenning fungerer som før (batch-select + godkjenn)
+Når dropdown kun viser "høyre"/"venstre" per hytte, matcher ingen av Seilerens faktiske romnavn, og belegg vises som 0. De 43 deltakerne uten rom er i hytter som ikke har "høyre/venstre"-oppsett.
+
+### Løsning
+
+Bygg rom-dropdown **dynamisk** fra faktisk data i stedet for å hardkode:
+
+1. Hent alle unike `(cabin_id, room)`-kombinasjoner fra `participants`-tabellen + `room_capacity`-tabellen
+2. For hver hytte, vis de faktiske rommene som finnes (f.eks. "Seileren Maui", "Seileren Hawaii", eller "Bedewins høyre/venstre")
+3. Hytter der alle deltakere har `room = NULL` — vis hytten uten rom-underinndeling (bare "Bedewins")
 
 ### Endringer i `src/components/stats/RoomSwapTab.tsx`
 
-**A. Multi-select deltakere:**
-- Endre `selectedParticipant` fra `Participant | null` til `Participant[]`
-- Når bruker velger en deltaker fra søk, legg til i listen (ikke erstatt)
-- Vis alle valgte deltakere med X-knapp for å fjerne enkeltvis
-- Søkefeltet tømmes etter valg, klar for neste søk
+**A. Dynamisk roomOptions (linje 122-138):**
+- I stedet for `['høyre', 'venstre'].forEach(...)`, samle alle unike rom-verdier per hytte fra participants + room_capacity
+- For hytter uten rom-data: vis én entry uten rom-suffix
+- For hytter med rom: vis én entry per unikt rom
 
-**B. Korrekt belegg-visning:**
-- Endre badge fra "X/Y ledig" til "X/Y opptatt" med farge basert på kapasitet
-- Grønn badge = plass ledig, rød = fullt eller overfylt
-- Ikke blokker rombytte til fulle rom (admin vet at de bytter noen bort samtidig)
+**B. Korrekt belegg-telling (linje 112-120):**
+- Tell belegg for alle rom-verdier, ikke bare "høyre"/"venstre"
+- Inkluder deltakere med `room = NULL` i tellen for hytter uten rom-inndeling
 
-**C. handleAddSwap → handleAddSwaps:**
-- Iterér over alle valgte deltakere og opprett én `room_swaps`-rad per deltaker
-- Tøm listen etter lagring
+**C. Target room-valg:**
+- Når admin velger en hytte uten rom-inndeling, sett `to_room = null`
+- Når admin velger et spesifikt rom, sett `to_room` til det faktiske romnavnet
 
 ### Filer som endres
 - `src/components/stats/RoomSwapTab.tsx` — eneste fil
 
 ### Resultat
-- Admin kan velge 1-N deltakere, velge mål-rom, og legge alle inn som rombytter
-- Belegg vises korrekt som "opptatt/total" i stedet for misvisende "ledig"
-- Ingen blokkering ved fullt rom
+- Dropdown viser faktiske rom fra databasen (Maui, Waikikii, høyre, venstre, osv.)
+- Belegg vises korrekt for alle rom
+- "X uten rom" forsvinner for hytter som rett og slett ikke bruker rom-inndeling
 
