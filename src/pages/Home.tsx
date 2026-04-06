@@ -250,7 +250,7 @@ export default function Home() {
         event: '*', 
         schema: 'public', 
         table: 'leader_content',
-        filter: `leader_id=eq.${leader.id}`
+        filter: `leader_id=eq.${effectiveLeader?.id}`
       }, () => loadData())
       .on('postgres_changes', { 
         event: '*', 
@@ -377,7 +377,7 @@ export default function Home() {
         <div className="flex flex-col items-center text-center">
           {/* User name at the very top */}
           <h1 className="text-xl font-heading font-bold text-white mb-3 drop-shadow-lg">
-            Hei, {leader?.name?.split(' ')[0]}!
+            Hei, {effectiveLeader?.name?.split(' ')[0]}!
           </h1>
           
           <Avatar className={cn(
@@ -386,18 +386,18 @@ export default function Home() {
               ? "border-green-500 ring-green-500/20" 
               : "border-red-500 ring-red-500/20"
           )}>
-            <AvatarImage src={leader?.profile_image_url || ''} alt={leader?.name} />
+            <AvatarImage src={effectiveLeader?.profile_image_url || ''} alt={effectiveLeader?.name} />
             <AvatarFallback className="bg-primary text-primary-foreground font-heading text-xl">
-              {leader?.name ? getInitials(leader.name) : '?'}
+              {effectiveLeader?.name ? getInitials(effectiveLeader.name) : '?'}
             </AvatarFallback>
           </Avatar>
           
           <p className="text-base font-medium text-foreground mt-2">
-            {leader?.name}
+            {effectiveLeader?.name}
           </p>
           
-          {leader?.ministerpost && (
-            <p className="text-sm text-muted-foreground mt-0.5">{leader.ministerpost}</p>
+          {effectiveLeader?.ministerpost && (
+            <p className="text-sm text-muted-foreground mt-0.5">{effectiveLeader.ministerpost}</p>
           )}
           
           <div className="flex flex-wrap gap-1.5 mt-2 justify-center">
