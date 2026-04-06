@@ -41,6 +41,7 @@ const calculateAge = (birthDate: string): number => {
 };
 
 export default function ImportantInfo() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const navigate = useNavigate();
   const [participantsWithInfo, setParticipantsWithInfo] = useState<ParticipantWithHealthInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);

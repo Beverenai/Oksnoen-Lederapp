@@ -21,6 +21,7 @@ import {
 import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
 
 export function ActivitiesTab() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { activities, isLoading, refetch } = useActivities(false);
   const [newActivityTitle, setNewActivityTitle] = useState('');
   const [isAdding, setIsAdding] = useState(false);

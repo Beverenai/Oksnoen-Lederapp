@@ -58,6 +58,7 @@ interface RopeControl {
 }
 
 export function RopeControlTab() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [controls, setControls] = useState<RopeControl[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

@@ -87,6 +87,7 @@ function calculateAge(birthDate: string | null): number | null {
 }
 
 export function ParticipantImportTab() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [participantCount, setParticipantCount] = useState(0);

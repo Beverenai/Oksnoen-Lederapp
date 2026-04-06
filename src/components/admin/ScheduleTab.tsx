@@ -9,6 +9,7 @@ import { Calendar, Upload, Trash2, Loader2, Image, Link as LinkIcon } from 'luci
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 export function ScheduleTab() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [imageUrl, setImageUrl] = useState('');
   const [storedImageUrl, setStoredImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);

@@ -22,6 +22,7 @@ export function SyncErrorDetails({
   n8nError,
   n8nStackTrace,
 }: SyncErrorDetailsProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 

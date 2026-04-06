@@ -32,6 +32,7 @@ export const CabinReportSheet = ({
   cabins,
   leaderId,
 }: CabinReportSheetProps) => {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [reports, setReports] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);

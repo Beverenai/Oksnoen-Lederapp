@@ -18,6 +18,7 @@ export function ActivitySelector({
   completedActivities,
   onActivityChanged,
 }: ActivitySelectorProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { activities } = useActivities(true);
   const [isLoading, setIsLoading] = useState<string | null>(null);
 

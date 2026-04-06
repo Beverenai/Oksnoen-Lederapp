@@ -48,6 +48,7 @@ interface RoomSwap {
 }
 
 export function RoomSwapTab() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [roomCapacity, setRoomCapacity] = useState<RoomCapacity[]>([]);

@@ -46,6 +46,7 @@ function getRoleBadge(role: AppRole) {
 }
 
 export function LeaderActivationTab({ leaders, onLeaderUpdated, isSuperAdmin }: LeaderActivationTabProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());

@@ -99,6 +99,7 @@ function SortableItem({ id, children }: { id: string; children: React.ReactNode 
 }
 
 export default function HomeConfigTab({ homeConfig, localHomeConfig, setLocalHomeConfig, onSaved, setHomeConfig }: HomeConfigTabProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 

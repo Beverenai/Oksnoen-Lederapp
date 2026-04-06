@@ -26,6 +26,7 @@ interface CabinWithLeaders extends Cabin {
 }
 
 export const CabinReportsTab = () => {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [cabinsWithLeaders, setCabinsWithLeaders] = useState<CabinWithLeaders[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");

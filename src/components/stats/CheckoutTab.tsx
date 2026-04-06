@@ -32,6 +32,7 @@ interface PassWrittenEntry {
 }
 
 export function CheckoutTab() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
   const [progress, setProgress] = useState<CheckoutProgress>({ status: 'idle', processed: 0, total: 0 });
   const [totalParticipants, setTotalParticipants] = useState(0);

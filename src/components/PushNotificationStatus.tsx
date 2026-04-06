@@ -14,6 +14,7 @@ export function PushNotificationStatus({
   className = '',
   onSuccess,
 }: PushNotificationStatusProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const {
     isSupported,
     isEnabled,

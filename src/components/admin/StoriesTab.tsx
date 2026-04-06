@@ -30,6 +30,7 @@ interface Story {
 }
 
 export function StoriesTab() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [stories, setStories] = useState<Story[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);

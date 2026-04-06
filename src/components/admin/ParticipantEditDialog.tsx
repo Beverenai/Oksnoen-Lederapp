@@ -69,6 +69,7 @@ export function ParticipantEditDialog({
   onOpenChange,
   onSaved,
 }: ParticipantEditDialogProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [birthDate, setBirthDate] = useState('');

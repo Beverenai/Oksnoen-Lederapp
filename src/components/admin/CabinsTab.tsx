@@ -36,6 +36,7 @@ interface Participant {
 }
 
 export function CabinsTab() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [roomCapacity, setRoomCapacity] = useState<RoomCapacity[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
