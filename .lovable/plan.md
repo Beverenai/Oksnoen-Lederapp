@@ -1,39 +1,18 @@
 
 
-## Fix: Vis fullt romnavn (hytte + side) i deltagerdetaljer
+## Fjern `[Nurse]`-prefiks fra helseinformasjon
 
 ### Problem
-Når en leder trykker på en deltager vises bare "Rom høyre" eller "Rom venstre" uten hyttenavn. Det bør stå f.eks. "Babord Høyre" eller "Beritbu bak Venstre".
+Når nurse lagrer info, legges `[Nurse]` foran teksten i databasen (f.eks. `[Nurse] sover dårlig`). Dette er overflødig siden seksjonen allerede heter "Info fra Nurse".
 
-### Datastruktur
-- De fleste hytter har `room` = "høyre" / "venstre"
-- Seileren har fulle romnavn (Seilern Hawaii, Maui, etc.)
-- Hyttenavnet finnes allerede i `participant.cabin.name`
+### Endring
 
-### Løsning
-Lag en hjelpefunksjon `formatFullRoom(cabinName, room)` som:
-- Hvis `room` er "høyre" eller "venstre": returner `"{cabinName} {Room}"`  (med stor forbokstav)
-- Ellers: returner `room` som det er (allerede fullt navn)
+| Fil | Endring |
+|-----|--------|
+| `src/components/nurse/NurseReportEditor.tsx` | Linje 302: Endre `nurseTag` fra `` `[Nurse] ${allText}` `` til bare `allText`. Oppdater regex på linje 314 til å matche uten `[Nurse]`-prefix, eller fjern replace-logikken og bare sett hele feltet til `allText`. |
 
-Oppdater alle steder som viser rom:
+Konkret: Fjern `[Nurse]`-taggen ved lagring, slik at kun selve teksten lagres i `participant_health_info.info`. Eksisterende data med `[Nurse]`-prefix vil fortsatt vises korrekt — vi kan også strippe prefixet ved visning i `ParticipantDetailDialog` som fallback.
 
-| Fil | Linje | Nåværende | Nytt |
-|-----|-------|-----------|------|
-| `src/components/passport/ParticipantDetailDialog.tsx` | ~290 | `Rom {participant.room}` | `formatFullRoom(cabin.name, room)` |
-| `src/components/checkout/CheckoutDetailDialog.tsx` | ~342 | `{participant.room}` | `formatFullRoom(cabin.name, room)` |
-| `src/pages/MyCabins.tsx` | ~497 | `Rom: {participant.room}` | `formatFullRoom(cabin.name, room)` |
-| `src/pages/ImportantInfo.tsx` | ~241 | `{participant.room}` | `formatFullRoom(cabin.name, room)` |
-
-Hjelpefunksjonen legges i `src/lib/utils.ts` eller inline der den brukes:
-```typescript
-function formatFullRoom(cabinName: string | null, room: string | null): string | null {
-  if (!room) return null;
-  const lower = room.toLowerCase();
-  if (lower === 'høyre' || lower === 'venstre') {
-    const capitalized = room.charAt(0).toUpperCase() + room.slice(1).toLowerCase();
-    return cabinName ? `${cabinName} ${capitalized}` : capitalized;
-  }
-  return room;
-}
-```
+### Fallback i visning
+I `ParticipantDetailDialog.tsx` (linje ~231): Strip eventuell `[Nurse] ` prefix fra `healthInfo.info` ved rendering, slik at eksisterende data også vises rent.
 
