@@ -1,69 +1,58 @@
 
 
-## RLS Policy Adjustments
+## Fix RLS + AuthContext to Work Together
 
-After comparing the current policies with the requested access model, most policies are already correct. Four tables need updates:
+### Analysis
 
-### Changes needed
+The current RLS policies mostly work because all helper functions (`is_admin()`, `is_nurse()`, `current_leader_id()`, `has_role()`) are `SECURITY DEFINER` and bypass RLS. The main issues are:
 
-#### 1. Health tables — remove cabin leader access from SELECT
+1. Several SELECT policies use `USING (true)` instead of explicit `auth.role() = 'authenticated'` — allows anon access
+2. `user_roles` table uses `leader_id` (not `user_id`), so the RPC function needs to match this schema
+3. AuthContext has no timeout — hangs forever if session refresh fails
+4. No error state shown to users when auth fails
 
-Currently `participant_health_info`, `participant_health_events`, and `participant_health_notes` allow assigned cabin leaders to SELECT. The request says **only admin and nurse** should have access. Remove the `EXISTS(... leader_cabins ...)` clause from all three SELECT policies.
+### Changes
 
-**Migration SQL:**
+#### 1. Database migration — tighten all policies
+
+Replace every `USING (true)` with `USING (auth.role() = 'authenticated')` on SELECT policies across all tables. Also create a `get_my_roles()` RPC function.
+
+Tables affected (SELECT policy update only — write policies are already correct):
+- `leaders`, `participants`, `cabins`, `activities`, `session_activities`, `participant_activities`, `cabin_reports`, `announcements`, `home_screen_config`, `app_config`, `fix_tasks`, `rope_controls`, `leader_content`, `stories`, `leader_cabins`, `room_swaps`, `extra_fields_config`, `room_capacity`
+
+New RPC function:
 ```sql
--- Drop and recreate SELECT policies for all 3 health tables
--- New USING: (is_admin() OR is_nurse())
+CREATE OR REPLACE FUNCTION public.get_my_roles()
+RETURNS TABLE(role app_role)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT ur.role FROM public.user_roles ur
+  WHERE ur.leader_id = public.current_leader_id()
+$$;
 ```
 
-#### 2. cabin_reports — restrict writes to assigned leaders or admin
+This bypasses RLS entirely, so role checks always work regardless of `user_roles` policies.
 
-Currently INSERT and UPDATE use `true` (any authenticated user). Change to only allow leaders assigned to that cabin via `leader_cabins`, or admins.
+#### 2. `src/contexts/AuthContext.tsx` — timeout + error handling + use RPC
 
-**Migration SQL:**
-```sql
--- INSERT WITH CHECK: is_admin() OR EXISTS(SELECT 1 FROM leader_cabins WHERE leader_id = current_leader_id() AND cabin_id = cabin_reports.cabin_id)
--- UPDATE USING: same condition
-```
+- Add 8-second timeout to `initAuth` — if it exceeds, force `isLoading = false` and set an `authError` state
+- Add `authError` state exposed via context so the UI can show a retry button
+- Replace direct `user_roles` query with `supabase.rpc('get_my_roles')` call
+- Add console breadcrumbs for debugging
 
-#### 3. fix_tasks — restrict UPDATE to admin only
+#### 3. No changes needed
 
-Currently UPDATE uses `true`. Change to admin only.
-
-**Migration SQL:**
-```sql
--- UPDATE USING: is_admin()
-```
-
-#### 4. rope_controls — restrict UPDATE to own rows or admin
-
-Currently UPDATE uses `true`. Change so leaders can only update their own controls, admins can update any.
-
-**Migration SQL:**
-```sql
--- UPDATE USING: (leader_id = current_leader_id()) OR is_admin()
-```
-
-### Already correct (no changes needed)
-
-| Table | Status |
-|-------|--------|
-| `leaders` | ✅ SELECT all auth, UPDATE own/admin, INSERT/DELETE admin |
-| `participants` | ✅ SELECT/UPDATE all auth (needed for passport), INSERT/DELETE admin |
-| `user_roles` | ✅ SELECT own/admin, no client writes |
-| `push_subscriptions` | ✅ Own rows only |
-| `leader_cabins` | ✅ SELECT all auth, write admin only |
-| `announcements`, `activities`, `stories`, etc. | ✅ SELECT all auth, write admin only |
-
-### phone-login active check
-
-Already implemented — the edge function checks `leader.is_active === false` and returns an error message.
+- `phone-login` edge function — already correct, uses service_role key
+- Write policies on most tables — already correctly restricted
+- Health table policies — already restricted to admin/nurse only
 
 ### Files changed
 
 | File | Change |
 |------|--------|
-| Database migration | Update 4 policy groups (health tables SELECT, cabin_reports write, fix_tasks UPDATE, rope_controls UPDATE) |
-
-No client code changes needed — the app already respects these access patterns in its UI logic.
+| Database migration | Update ~18 SELECT policies from `true` to `auth.role() = 'authenticated'`; create `get_my_roles()` RPC |
+| `src/contexts/AuthContext.tsx` | Add timeout, error state, use `get_my_roles()` RPC, add debug logging |
 
