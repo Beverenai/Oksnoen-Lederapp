@@ -47,6 +47,7 @@ export function ParticipantStatsCard() {
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [activities, setActivities] = useState<ParticipantActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isMissingOpen, setIsMissingOpen] = useState(false);
   const [isBirthdaysOpen, setIsBirthdaysOpen] = useState(true);
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
