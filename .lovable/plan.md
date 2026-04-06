@@ -1,94 +1,70 @@
 
 
-## Nurse Rapport: Google Docs-style editor med deltaker-seksjoner
+## Fix: @-mention nesting + flagg deltaker med helseinfo
 
-### Konsept
+### Problem
+When typing `@` inside an existing participant section, the new section gets inserted INSIDE that section (nested). Also, participants with nurse notes are not flagged in `participant_health_info`.
 
-Bygge om NurseReportEditor til en ekte "Google Docs"-opplevelse:
+### Solution
 
-- Ett stort redigerbart dokument (contentEditable) der nurse skriver fritt
-- Når nurse skriver `@deltakernavn`, opprettes automatisk en visuell "ramme/boks" for den deltakeren i dokumentet
-- All tekst som skrives inne i en deltaker-ramme lagres automatisk på den deltakeren (i `participant_health_notes`)
-- Søkefelt i toppen: skriv deltakernavn → hopp direkte til den deltakerens seksjon i dokumentet
-- Kan lime inn tekst med `@navn` og systemet strukturerer det automatisk i riktige deltaker-bokser
-- Autolagring (debounced) til `nurse_reports.content`
+**1. Fix nesting — `insertParticipantSection` in `NurseReportEditor.tsx`**
 
-```text
-┌─────────────────────────────────────────────┐
-│  Nurse Rapport    [Søk deltaker] [Lagre][PDF]│
-│─────────────────────────────────────────────│
-│                                              │
-│  Fritekst her ovenfor...                     │
-│                                              │
-│  ┌──────────────────────────────────────┐   │
-│  │ 👤 Ola Nordmann | Hytte 3 | 14 år   │   │
-│  │──────────────────────────────────────│   │
-│  │ 6. apr 15:30                         │   │
-│  │ Vondt i kneet, ga ibuprofen          │   │
-│  │                                      │   │
-│  │ 6. apr 17:00                         │   │
-│  │ Kneet er bedre nå                    │   │
-│  └──────────────────────────────────────┘   │
-│                                              │
-│  Mer fritekst her...                         │
-│                                              │
-│  ┌──────────────────────────────────────┐   │
-│  │ 👤 Kari Hansen | Hytte 1 | 13 år    │   │
-│  │──────────────────────────────────────│   │
-│  │ 6. apr 14:00                         │   │
-│  │ Allergireaksjon, ga cetirizin        │   │
-│  └──────────────────────────────────────┘   │
-│                                              │
-│  [Skriv fritt... bruk @ for å tagge]        │
-└─────────────────────────────────────────────┘
+Before inserting via `insertHTML`, check if the cursor is inside a `.participant-content` div. If so:
+- Move cursor AFTER the parent `.participant-section` div
+- Then insert the new section there
+
+This ensures sections are always siblings, never nested.
+
+```typescript
+// Before inserting, escape from any existing participant section
+const currentSection = range.startContainer.parentElement?.closest('.participant-section');
+if (currentSection && editorRef.current) {
+  const afterSection = document.createRange();
+  afterSection.setStartAfter(currentSection);
+  afterSection.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(afterSection);
+}
 ```
 
-### Teknisk plan
+**2. Flag participant with health info on save — `syncToParticipantNotes`**
 
-**1. Fullstendig omskriving av `NurseReportEditor.tsx`**
+After syncing notes to `participant_health_notes`, also upsert into `participant_health_info` for each mentioned participant. This makes them appear on the "Viktig Info" page and be flagged in participant lists.
 
-Ny tilnærming med `contentEditable` div:
+```typescript
+// Check if participant_health_info exists, if not create one
+const { data: existingInfo } = await supabase
+  .from('participant_health_info')
+  .select('id')
+  .eq('participant_id', pid)
+  .limit(1);
 
-- Dokumentet lagres som HTML-streng i `nurse_reports.content`
-- Deltaker-seksjoner representeres som `<div class="participant-section" data-participant-id="uuid">` blokker
-- Inne i hver seksjon: header med avatar + navn + hytte, og fritt redigerbart innhold under
-- `@`-mention trigger: når bruker skriver `@`, vis popup med filtrerte deltakere. Ved valg settes en ny deltaker-seksjon inn (eller hopp til eksisterende seksjon for den deltakeren)
-- Hver ny linje i en deltaker-seksjon får automatisk tidsstempel
+if (!existingInfo || existingInfo.length === 0) {
+  await supabase.from('participant_health_info').insert({
+    participant_id: pid,
+    info: `[Nurse] ${text}`,
+  });
+} else {
+  // Update existing with nurse note appended
+  await supabase.from('participant_health_info')
+    .update({ info: `[Nurse] ${text}`, updated_at: new Date().toISOString() })
+    .eq('id', existingInfo[0].id);
+}
+```
 
-**Søkefunksjon:**
-- Input-felt i headeren
-- Filtrerer deltakere som har seksjoner i dokumentet
-- Ved klikk: `scrollIntoView()` til riktig `[data-participant-id]` element
+**3. Also fix @-detection inside participant-content**
 
-**Autolagring:**
-- `MutationObserver` eller `onInput` på contentEditable → debounced lagring av innerHTML til DB
-- Ved manuell lagre: parse alle deltaker-seksjoner → sync innholdet til `participant_health_notes` per deltaker
+The `handleInput` function needs to work correctly when the cursor is inside a `.participant-content` div — the mention popup position calculation should still use the editor's bounding rect.
 
-**Paste-håndtering:**
-- `onPaste` event: parse innlimt tekst for `@navn`-mønster
-- For hver funnet `@navn`: opprett deltaker-seksjon og plasser teksten i riktig boks
+### Files changed
 
-**2. Sync til deltaker-dashboard (Nurse-fanen "Alle deltakere")**
+| File | Change |
+|------|--------|
+| `src/components/nurse/NurseReportEditor.tsx` | Fix section nesting on insert, add `participant_health_info` upsert on save |
 
-Ved lagring:
-- Parse alle `<div class="participant-section">` fra dokumentet
-- For hver deltaker: ekstraher tekst-innholdet
-- Upsert i `participant_health_notes` med `created_by = leader.id`
-- Dette gjør at deltaker-detaljdialogen i "Alle deltakere"-taben automatisk viser nurse-notater
-
-**3. PDF-eksport**
-
-Samme som nå men basert på det nye HTML-dokumentet — kan åpne dokumentet direkte i nytt vindu med print-styling.
-
-### Filer som endres
-
-| Fil | Endring |
-|-----|--------|
-| `src/components/nurse/NurseReportEditor.tsx` | Fullstendig omskriving: contentEditable doc-editor med deltaker-bokser, søk, paste-parsing |
-
-### Hva som IKKE endres
-- Database-tabeller (ingen migrasjoner)
-- `Nurse.tsx` (tabs-struktur beholdes)
-- RLS-policyer
-- Eksisterende deltaker-dashboard i tab 1
+### What stays the same
+- Database schema (no migrations needed — `participant_health_info` table already exists)
+- RLS policies
+- Editor look and feel (still feels like a doc)
+- PDF export, search, paste handling
 
