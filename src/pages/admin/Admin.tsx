@@ -375,7 +375,7 @@ export default function Admin() {
             </div>
           )}
           {preloadDone && !isPreloading && (
-            <div className="flex items-center gap-2 text-sm text-green-600">
+            <div className="flex items-center gap-2 text-sm text-primary">
               <CheckCircle className="w-4 h-4" />
               <span>Appen er klar for bruk uten internett</span>
             </div>
