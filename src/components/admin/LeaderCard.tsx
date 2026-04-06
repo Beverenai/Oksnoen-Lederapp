@@ -17,7 +17,7 @@ interface LeaderCardProps {
 }
 
 export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: LeaderCardProps) {
-  const { isAdmin, setViewAsLeader } = useAuth();
+  const { setViewAsLeader } = useAuth();
   const navigate = useNavigate();
   const content = leader.content;
   const hasObs = !!content?.obs_message;
@@ -27,9 +27,9 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
 
   const isFri = content?.current_activity?.toLowerCase().includes('fri');
   const isKitchen = leader.team?.toLowerCase() === 'kjøkken' || leader.team?.toLowerCase() === 'kjokken';
-  const isAdmin = leader.isAdmin;
+  const isLeaderAdmin = leader.isAdmin;
   const isNurse = leader.isNurse;
-  const isAdminOrNurse = isAdmin || isNurse;
+  const isAdminOrNurse = isLeaderAdmin || isNurse;
 
   const getBorderClass = () => {
     if (isAdminOrNurse) return 'ring-green-500';
