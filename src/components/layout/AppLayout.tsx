@@ -800,7 +800,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Main Content */}
       <main 
         ref={scrollContainerRef}
-        className="lg:ml-64 lg:pt-0 flex-1 w-full lg:min-h-screen app-content lg:pb-0 overflow-y-auto overflow-x-hidden max-w-full pb-[calc(var(--nav-h)+env(safe-area-inset-bottom,0px)+24px)] lg:pb-0"
+        className="lg:pl-64 lg:pt-0 flex-1 w-full min-w-0 lg:min-h-screen app-content lg:pb-0 overflow-y-auto overflow-x-hidden max-w-full pb-[calc(var(--nav-h)+env(safe-area-inset-bottom,0px)+24px)] lg:pb-0"
         style={{ overscrollBehaviorY: 'contain' }}
       >
         {/* Spacer for mobile header - animates with header visibility */}
@@ -812,7 +812,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             height: headerVisible ? 'calc(56px + var(--safe-top))' : '0'
           }}
         />
-        <div className="p-4 lg:p-6 lg:max-w-screen-2xl lg:mx-auto lg:w-full">
+        <div className="p-4 lg:p-6 min-w-0 w-full">
           {children}
         </div>
       </main>
