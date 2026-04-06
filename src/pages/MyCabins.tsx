@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { differenceInYears } from 'date-fns';
+import { formatFullRoom } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
 import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
 import { CabinReportSheet } from '@/components/leaders/CabinReportSheet';
@@ -494,7 +495,7 @@ export default function MyCabins() {
                     )}
                     {selectedParticipant.room && (
                       <p className="text-sm text-muted-foreground">
-                        Rom: {selectedParticipant.room}
+                        {formatFullRoom(selectedParticipant.cabins?.name, selectedParticipant.room)}
                       </p>
                     )}
                   </div>

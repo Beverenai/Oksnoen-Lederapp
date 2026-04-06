@@ -17,6 +17,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { differenceInYears } from 'date-fns';
+import { formatFullRoom } from '@/lib/utils';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 
 interface ParticipantWithHealthInfo {
@@ -238,7 +239,7 @@ export default function ImportantInfo() {
                                   )}
                                   {participant.room && (
                                     <Badge variant="secondary" className="text-xs">
-                                      {participant.room}
+                                      {formatFullRoom(participant.cabin_name, participant.room)}
                                     </Badge>
                                   )}
                                 </div>

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { formatFullRoom } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -287,7 +288,7 @@ export const ParticipantDetailDialog = ({
                   {participant.room && (
                     <>
                       <span>•</span>
-                      <span>Rom {participant.room}</span>
+                      <span>{formatFullRoom(participant.cabin?.name, participant.room)}</span>
                     </>
                   )}
                   <span>•</span>
