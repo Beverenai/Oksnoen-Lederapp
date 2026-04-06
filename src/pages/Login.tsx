@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Phone, Loader2 } from 'lucide-react';
+import { Phone, Loader2, PauseCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
@@ -12,6 +12,7 @@ import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 export default function Login() {
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [inactiveState, setInactiveState] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -24,6 +25,7 @@ export default function Login() {
     }
 
     setIsLoading(true);
+    setInactiveState(false);
     const result = await login(phone);
     setIsLoading(false);
 
@@ -31,10 +33,18 @@ export default function Login() {
       hapticSuccess();
       toast.success('Velkommen!');
       navigate('/');
+    } else if (result.error === 'INACTIVE_LEADER') {
+      hapticError();
+      setInactiveState(true);
     } else {
       hapticError();
-      toast.error(result.error || 'Innlogging feilet');
+      toast.error(result.message || result.error || 'Innlogging feilet');
     }
+  };
+
+  const handleDismissInactive = () => {
+    setInactiveState(false);
+    setPhone('');
   };
 
   return (
@@ -55,43 +65,64 @@ export default function Login() {
           </p>
         </div>
 
-        <Card className="border-0 shadow-xl">
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-xl font-heading">Velkommen</CardTitle>
-            <CardDescription>
-              Skriv inn telefonnummeret ditt for å logge inn
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  type="tel"
-                  placeholder="12345678"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="pl-10 h-12 text-lg"
-                  autoComplete="tel"
-                />
-              </div>
-              <Button 
-                type="submit" 
-                className="w-full h-12 text-lg font-medium"
-                disabled={isLoading}
+        {inactiveState ? (
+          <Card className="border-0 shadow-xl">
+            <CardContent className="pt-8 pb-6 text-center space-y-4">
+              <PauseCircle className="w-16 h-16 mx-auto text-muted-foreground" />
+              <h2 className="text-xl font-heading font-semibold text-foreground">
+                Du jobber ikke denne perioden
+              </h2>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Kontoen din er satt som inaktiv. Kontakt leirledelsen hvis du mener dette er feil.
+              </p>
+              <Button
+                onClick={handleDismissInactive}
+                variant="outline"
+                className="w-full h-12 text-lg font-medium mt-2"
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Logger inn...
-                  </>
-                ) : (
-                  'Logg inn'
-                )}
+                OK
               </Button>
-            </form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-0 shadow-xl">
+            <CardHeader className="space-y-1 pb-4">
+              <CardTitle className="text-xl font-heading">Velkommen</CardTitle>
+              <CardDescription>
+                Skriv inn telefonnummeret ditt for å logge inn
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    type="tel"
+                    placeholder="12345678"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="pl-10 h-12 text-lg"
+                    autoComplete="tel"
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 text-lg font-medium"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Logger inn...
+                    </>
+                  ) : (
+                    'Logg inn'
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
         <p className="text-center text-sm text-muted-foreground mt-6">
           Kontakt admin hvis du ikke finner deg selv i systemet
