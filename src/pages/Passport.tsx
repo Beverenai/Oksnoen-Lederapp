@@ -216,28 +216,9 @@ export default function Passport() {
   };
 
   // Prefetch participant detail
-  const prefetchParticipant = useCallback((participantId: string) => {
-    queryClient.prefetchQuery({
-      queryKey: ['participant-detail-v2', participantId],
-      queryFn: async () => {
-        const [participantRes, activitiesRes, healthRes] = await Promise.all([
-          supabase.from('participants').select('*, cabins:cabin_id(id, name)').eq('id', participantId).single(),
-          supabase.from('participant_activities').select('*').eq('participant_id', participantId),
-          supabase.from('participant_health_info').select('*').eq('participant_id', participantId).maybeSingle()
-        ]);
-        if (participantRes.error) throw participantRes.error;
-        return {
-          participant: {
-            ...participantRes.data,
-            cabin: participantRes.data.cabins,
-          },
-          healthInfo: healthRes.data,
-          activities: activitiesRes.data || [],
-        };
-      },
-      staleTime: 30000,
-    });
-  }, [queryClient]);
+  const prefetchParticipant = useCallback(() => {
+    // Disabled to avoid persisted-cache deadlocks in participant detail dialog.
+  }, []);
 
   // Get activities for a participant
   const getParticipantActivities = (participantId: string): string[] => {
