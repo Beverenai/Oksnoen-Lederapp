@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -28,18 +28,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isNurse, setIsNurse] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const loginInProgressRef = useRef(false);
 
   const isProfileComplete = checkProfileComplete(leader);
 
   useEffect(() => {
-    // Check for existing Supabase auth session
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           await loadLeaderFromSession(session.user.id);
         } else {
-          // Check for legacy localStorage session and clear it
           localStorage.removeItem('leaderId');
           localStorage.removeItem('leaderName');
         }
@@ -52,7 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initAuth();
 
-    // Listen for auth state changes (session refresh, sign out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
         setLeader(null);
@@ -61,8 +59,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('leaderName');
       } else if (event === 'TOKEN_REFRESHED' && session) {
         // Session refreshed, leader data is still valid
-      } else if (event === 'SIGNED_IN' && session && !leader) {
-        // New sign in (not from our login flow which already sets leader)
+      } else if (event === 'SIGNED_IN' && session) {
+        // Skip if login() is actively handling this — it already sets leader/roles
+        if (loginInProgressRef.current) return;
         await loadLeaderFromSession(session.user.id);
       }
     });
@@ -74,7 +73,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadLeaderFromSession = async (authUserId: string) => {
     try {
-      // Find leader by auth_user_id
       const { data: leaderData, error: leaderError } = await supabase
         .from('leaders')
         .select('*')
@@ -82,15 +80,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (leaderError || !leaderData) {
-        console.error('Could not find leader for auth user:', authUserId);
-        await supabase.auth.signOut();
+        console.error('Could not find leader for auth user:', authUserId, leaderError);
+        // Do NOT sign out here — avoid destructive race condition
         return;
       }
 
       setLeader(leaderData);
       localStorage.setItem('leaderName', leaderData.name);
 
-      // Load roles
       const { data: rolesData } = await supabase
         .from('user_roles')
         .select('role')
@@ -119,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [leader?.id]);
 
   const login = async (phone: string): Promise<{ success: boolean; error?: string }> => {
+    loginInProgressRef.current = true;
     try {
       const { data, error } = await supabase.functions.invoke('phone-login', {
         body: { phone }
@@ -131,6 +129,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!data.success) {
         return { success: false, error: data.error || 'Innlogging feilet.' };
+      }
+
+      // Defensive check: ensure edge function returned session tokens
+      if (!data.session?.access_token || !data.session?.refresh_token) {
+        console.error('Edge function returned no session tokens');
+        return { success: false, error: 'Innlogging feilet. Prøv igjen.' };
       }
 
       // Set the Supabase auth session with the tokens from the edge function
@@ -156,6 +160,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Login error:', err);
       return { success: false, error: 'Noe gikk galt. Prøv igjen.' };
+    } finally {
+      loginInProgressRef.current = false;
     }
   };
 
