@@ -280,6 +280,22 @@ export default function Admin() {
         </div>
       </div>
 
+      {/* Checkout toggle */}
+      <div className="flex items-center justify-between rounded-lg border border-border p-3 bg-card">
+        <div className="flex items-center gap-2">
+          <Sparkles className={`h-4 w-4 ${checkoutEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
+          <span className="text-sm font-medium">Utsjekk</span>
+          <Badge variant={checkoutEnabled ? 'default' : 'secondary'} className="text-xs">
+            {checkoutEnabled ? 'Aktiv' : 'Deaktivert'}
+          </Badge>
+        </div>
+        <Switch
+          checked={checkoutEnabled}
+          onCheckedChange={toggleCheckout}
+          disabled={isTogglingCheckout}
+        />
+      </div>
+
       {/* Lederoversikt header with toggle */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">

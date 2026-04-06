@@ -130,7 +130,7 @@ const formatTeamDisplay = (team: string | null): string => {
 };
 
 export default function Home() {
-  const { leader, isAdmin, isNurse } = useAuth();
+  const { leader, effectiveLeader, isAdmin, isNurse } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [content, setContent] = useState<LeaderContent | null>(null);
@@ -143,22 +143,22 @@ export default function Home() {
   const [pendingRopeControls, setPendingRopeControls] = useState<PendingRopeControl[]>([]);
 
   useEffect(() => {
-    if (!leader) return;
+    if (!effectiveLeader) return;
     
     const fetchHasRead = async () => {
       const { data } = await supabase
         .from('leader_content')
         .select('has_read')
-        .eq('leader_id', leader.id)
+        .eq('leader_id', effectiveLeader.id)
         .maybeSingle();
       setHasRead(data?.has_read ?? false);
     };
     
     fetchHasRead();
-  }, [leader, content]);
+  }, [effectiveLeader, content]);
 
   const loadData = useCallback(async () => {
-    if (!leader) return;
+    if (!effectiveLeader) return;
 
     setIsLoading(true);
     try {
@@ -166,7 +166,7 @@ export default function Home() {
         supabase
           .from('leader_content')
           .select('*')
-          .eq('leader_id', leader.id)
+          .eq('leader_id', effectiveLeader.id)
           .maybeSingle(),
         supabase
           .from('app_config')
@@ -181,16 +181,16 @@ export default function Home() {
         supabase
           .from('leader_cabins')
           .select('cabin_id, cabins(id, name)')
-          .eq('leader_id', leader.id),
+          .eq('leader_id', effectiveLeader.id),
         supabase
           .from('fix_tasks')
           .select('id, title, assigned_to, status')
-          .eq('assigned_to', leader.id)
+          .eq('assigned_to', effectiveLeader.id)
           .neq('status', 'fixed'),
         supabase
           .from('rope_controls')
           .select('id, activity, assigned_to, fixed_at')
-          .eq('assigned_to', leader.id)
+          .eq('assigned_to', effectiveLeader.id)
           .is('fixed_at', null),
       ]);
 
