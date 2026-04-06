@@ -86,56 +86,74 @@ export function RoomSwapTab() {
     }
   }
 
-  // Calculate occupancy per room
+  // Calculate occupancy per cabin+room
   const roomOccupancy = useMemo(() => {
     const occupancy: Record<string, number> = {};
     participants.forEach((p) => {
-      if (p.cabin_id && p.room) {
-        const key = `${p.cabin_id}-${p.room}`;
+      if (p.cabin_id) {
+        const key = `${p.cabin_id}-${p.room || '__none__'}`;
         occupancy[key] = (occupancy[key] || 0) + 1;
       }
     });
     return occupancy;
   }, [participants]);
 
-  // Count participants per cabin without a room assigned
-  const unassignedPerCabin = useMemo(() => {
-    const counts: Record<string, number> = {};
+  // Collect all unique rooms per cabin from participants + room_capacity
+  const cabinRooms = useMemo(() => {
+    const map: Record<string, Set<string | null>> = {};
     participants.forEach((p) => {
-      if (p.cabin_id && !p.room) {
-        counts[p.cabin_id] = (counts[p.cabin_id] || 0) + 1;
+      if (p.cabin_id) {
+        if (!map[p.cabin_id]) map[p.cabin_id] = new Set();
+        map[p.cabin_id].add(p.room || null);
       }
     });
-    return counts;
-  }, [participants]);
+    roomCapacity.forEach((rc) => {
+      if (!map[rc.cabin_id]) map[rc.cabin_id] = new Set();
+      map[rc.cabin_id].add(rc.room || null);
+    });
+    return map;
+  }, [participants, roomCapacity]);
 
   function getOccupancy(cabinId: string, room: string | null): { occupied: number; total: number } {
-    const key = `${cabinId}-${room || 'null'}`;
+    const key = `${cabinId}-${room || '__none__'}`;
     const capacity = roomCapacity.find(
-      (c) => c.cabin_id === cabinId && c.room === room
+      (c) => c.cabin_id === cabinId && (c.room || null) === room
     );
     const total = capacity?.bed_count || 6;
-    const occupied = room ? (roomOccupancy[`${cabinId}-${room}`] || 0) : 0;
+    const occupied = roomOccupancy[key] || 0;
     return { occupied, total };
   }
 
-  // Room options for dropdown
+  // Room options for dropdown — built dynamically from actual data
   const roomOptions = useMemo(() => {
     const options: { value: string; label: string; occupied: number; total: number }[] = [];
     cabins.forEach((cabin) => {
-      const unassigned = unassignedPerCabin[cabin.id] || 0;
-      ['høyre', 'venstre'].forEach((room) => {
-        const { occupied, total } = getOccupancy(cabin.id, room);
+      const rooms = cabinRooms[cabin.id];
+      if (!rooms || (rooms.size === 1 && rooms.has(null))) {
+        // Cabin with no room subdivision — show just the cabin
+        const { occupied, total } = getOccupancy(cabin.id, null);
         options.push({
-          value: `${cabin.id}|${room}`,
-          label: `${cabin.name} ${room}${unassigned > 0 ? ` (${unassigned} uten rom)` : ''}`,
+          value: `${cabin.id}|`,
+          label: cabin.name,
           occupied,
           total,
         });
-      });
+      } else {
+        // Cabin with named rooms
+        const sortedRooms = Array.from(rooms).filter((r) => r !== null).sort() as string[];
+        sortedRooms.forEach((room) => {
+          const { occupied, total } = getOccupancy(cabin.id, room);
+          options.push({
+            value: `${cabin.id}|${room}`,
+            label: `${cabin.name} – ${room}`,
+            occupied,
+            total,
+          });
+        });
+      }
     });
     return options;
-  }, [cabins, roomCapacity, roomOccupancy, unassignedPerCabin]);
+  }, [cabins, cabinRooms, roomCapacity, roomOccupancy]);
 
   // Filter participants by search
   const filteredParticipants = useMemo(() => {
