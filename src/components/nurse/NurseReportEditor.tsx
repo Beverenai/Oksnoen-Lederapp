@@ -173,6 +173,24 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
               created_by: leader?.id,
             });
         }
+
+        // Also flag in participant_health_info
+        const { data: existingInfo } = await supabase
+          .from('participant_health_info')
+          .select('id')
+          .eq('participant_id', pid)
+          .limit(1);
+
+        if (!existingInfo || existingInfo.length === 0) {
+          await supabase.from('participant_health_info').insert({
+            participant_id: pid,
+            info: `[Nurse] ${text}`,
+          });
+        } else {
+          await supabase.from('participant_health_info')
+            .update({ info: `[Nurse] ${text}`, updated_at: new Date().toISOString() })
+            .eq('id', existingInfo[0].id);
+        }
       }
 
       if (mentionEntries.length > 0) {
@@ -255,6 +273,22 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
     // Remove the @mention text from the editor
     if (mentionRangeRef.current) {
       mentionRangeRef.current.deleteContents();
+    }
+
+    // Escape from any existing participant section to prevent nesting
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const currentRange = sel.getRangeAt(0);
+      const currentSection = currentRange.startContainer instanceof HTMLElement
+        ? currentRange.startContainer.closest('.participant-section')
+        : currentRange.startContainer.parentElement?.closest('.participant-section');
+      if (currentSection && editorRef.current) {
+        const afterSection = document.createRange();
+        afterSection.setStartAfter(currentSection);
+        afterSection.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(afterSection);
+      }
     }
 
     // Insert new section at cursor
