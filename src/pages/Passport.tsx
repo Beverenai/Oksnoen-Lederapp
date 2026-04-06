@@ -13,13 +13,8 @@ import {
   ArrowLeft,
   Users,
   Sparkles,
-  AlertTriangle,
-  Loader2
+  AlertTriangle
 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import { hapticSuccess } from '@/lib/capacitorHaptics';
 import type { Tables } from '@/integrations/supabase/types';
 import { BulkActivityRegistration } from '@/components/passport/BulkActivityRegistration';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
@@ -115,7 +110,7 @@ async function fetchLeaderCabins(): Promise<Map<string, { id: string; name: stri
 export default function Passport() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { leader, effectiveLeader, isAdmin } = useAuth();
+  const { leader, effectiveLeader } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const cabinFilterFromUrl = searchParams.get('cabin');
   
