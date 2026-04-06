@@ -602,14 +602,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
               onItemClick={closeMobileMenu}
             />
 
-            {/* Content - collapsible (filtered for regular leaders) */}
-            <NavGroup
-              label="Innhold"
-              items={mobileContentNavItems}
-              isOpen={openGroups.content}
-              onOpenChange={(open) => setOpenGroups(prev => ({ ...prev, content: open }))}
-              onItemClick={closeMobileMenu}
-            />
+            {/* Content - always visible in mobile menu */}
+            {mobileContentNavItems.length > 0 && (
+              <div>
+                <div className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Innhold
+                </div>
+                <div className="space-y-1">
+                  {mobileContentNavItems.map((item) => (
+                    <NavLinkItem key={item.to} item={item} onClick={closeMobileMenu} />
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Special access for nurse only (not admin) - collapsible */}
             {isNurse && !isAdmin && (
