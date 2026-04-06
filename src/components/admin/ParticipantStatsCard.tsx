@@ -64,18 +64,23 @@ export function ParticipantStatsCard() {
 
   const loadData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
+    setError(null);
     try {
-      const [participantsRes, cabinsRes, activitiesRes] = await Promise.all([
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000));
+      const fetches = Promise.all([
         supabase.from('participants').select('id, name, first_name, birth_date, has_arrived, cabin_id'),
         supabase.from('cabins').select('id, name'),
         supabase.from('participant_activities').select('participant_id'),
       ]);
 
+      const [participantsRes, cabinsRes, activitiesRes] = await Promise.race([fetches, timeout]) as any;
+
       setParticipants(participantsRes.data || []);
       setCabins(cabinsRes.data || []);
       setActivities(activitiesRes.data || []);
-    } catch (error) {
-      console.error('Error loading participant stats:', error);
+    } catch (err) {
+      console.error('Error loading participant stats:', err);
+      setError('Kunne ikke laste data');
     } finally {
       setIsLoading(false);
     }
