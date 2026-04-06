@@ -1,43 +1,39 @@
 
-Mål: få tilbake glassmorfisk pill-meny, men uten “dødplass” under den i installert iPhone-PWA.
 
-Diagnose:
-- `index.html` er allerede riktig for edge-to-edge PWA: `viewport-fit=cover` og Apple PWA-meta finnes allerede.
-- Problemet er at `.bottom-nav` nå er gjort om til en full bred tab bar med `bottom: 0` og `padding-bottom: env(safe-area-inset-bottom)`. I en installert iPhone-PWA blir derfor hele safe-area nederst synlig som en høy, tom bar.
-- Safe area brukes feil sted akkurat nå: den bør beskytte innholdet i menyen, ikke bli til visuell luft under en flytende meny.
-- `main`/`.app-content` er også justert for en full-width bar, så innholdet stopper for tidlig og forsterker følelsen av dødplass.
+## Deltakersiden: Hytte-oversikt som landingsside
 
-Plan:
-1. Gjeninnfør pill-menyen i `src/index.css`
-   - Bytt `.bottom-nav` tilbake til flytende pill med `left/right: 8px`, `border-radius: 20px`, blur og shadow.
-   - Fjern dagens full-width tab bar-stil som fyller hele bunnen.
+### Konsept
+Erstatt den nåværende tab-baserte layouten med en visuell landingsside som viser:
+1. **Statistikk-kort** øverst (ankomst, bursdager, mangler aktivitet — det som er i ParticipantStatsCard i dag)
+2. **Navigasjonskort i et grid** — fargerike, lekne kort som tar deg videre til undersidene
 
-2. Skill mellom installert PWA og vanlig browser
-   - Legg egne regler for `@media (display-mode: standalone)` og eventuelt native/Capacitor-tilfeller.
-   - I installert PWA skal pillen ligge nesten helt nederst (`bottom: 2px` eller tilsvarende minimal offset).
-   - I vanlig browser kan vi beholde litt tryggere offset hvis browser-UI krever det.
+### Navigasjonskortene (2-kolonne grid)
+Hvert kort har ikon, tittel, kort beskrivelse og en tematisk farge:
+- **Rombytter** (ArrowLeftRight, blå) — "Bytt rom mellom deltakere"
+- **Hytterapporter** (Home, grønn) — "Se rapporter per hytte"  
+- **Utsjekk** (Sparkles, lilla) — "Håndter utsjekk av deltakere"
+- **Lederaktivitet** (UserCheck, oransje) — "Se ledernes aktivitetsregistrering"
+- **Aktiviteter** (Activity, rosa) — "Statistikk over alle aktiviteter"
+- **Eksporter** (Download, grå) — "Last ned rapport"
 
-3. Bruk safe area inni menyen, ikke som gap under menyen
-   - Juster den indre nav-containeren slik at ikon/tekst fortsatt ligger trygt over swipe-området.
-   - Selve pillen skal visuelt ligge tett mot bunnen i stedet for å flyte en hel safe-area over den.
-   - Midtknappen (Hajolo/Admin/Nurse) beholdes som nå, med samme prominente FAB-oppsett og lest/ulest-status.
+### Navigasjon
+Når man trykker på et kort, navigerer vi til samme side men med en query-param (f.eks. `?tab=room-swap`). Siden sjekker for denne parameteren og viser riktig innhold med en tilbake-knapp øverst.
 
-4. Reduser bunnpadding for innhold i `AppLayout.tsx`
-   - Oppdater `<main>` og/eller `.app-content` slik at padding nederst matcher faktisk høyde på pillen, ikke en full bred dock.
-   - Dette gjør at innholdet kan bruke mer av den nederste delen av skjermen.
+### Teknisk
 
-5. Behold fullskjerm-app uten svarte striper
-   - La full-height-oppsettet for `html`, `body` og `#root` stå, så appens bakgrunn fortsatt dekker hele skjermen.
-   - Ikke endre funksjonaliteten i header, navigasjon eller Hajolo-logikk — kun layout/CSS og eventuell standalone-detektering.
+**Endringer i `src/pages/admin/ParticipantStats.tsx`:**
+- Legg til `useSearchParams` for å lese/sette `?tab=...`
+- Hvis ingen `tab`-param: vis landingssiden med statistikk + navigasjonskort-grid
+- Hvis `tab`-param finnes: vis riktig komponent (RoomSwapTab, CheckoutTab, osv.) med en tilbake-knapp som fjerner param
+- Fjern `Tabs`/`TabsList`/`TabsTrigger` — erstattes av kortene
+- Behold `ExportDataSheet` som sheet (åpnes fra eksporter-kortet)
 
-Filer som endres:
-- `src/index.css`
-- `src/components/layout/AppLayout.tsx`
-- eventuelt `src/main.tsx` hvis vi trenger en enkel `standalone/native` klasse på `<body>` for presis styling
+**Filer som endres:**
+- `src/pages/admin/ParticipantStats.tsx` — eneste fil
 
-Forventet resultat:
-- Pill-menyen kommer tilbake
-- Den sitter nesten helt ned mot bunnen i installert PWA
-- Ingen stor tom sone under menyen
-- Innholdet bruker mer av skjermen nederst
-- Hajolo-knappen ser ut og oppfører seg som før
+### Resultat
+- Landingssiden er visuell og oversiktlig med fargerike kort
+- Man trykker seg inn i en seksjon og kan enkelt gå tilbake
+- Statistikk (ankomst, bursdager) er alltid synlig på forsiden
+- Ingen funksjonalitet fjernes, bare reorganisert
+
