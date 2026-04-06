@@ -35,7 +35,9 @@ export function useLeaderRoles() {
       const nurseIds = data?.filter(r => r.role === 'nurse').map(r => r.leader_id) || [];
       return { adminIds, nurseIds };
     },
-    staleTime: 60000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
   });
 }
 
@@ -47,7 +49,9 @@ export function useLeaderContent() {
       if (error) throw error;
       return data || [];
     },
-    staleTime: 30000,
+    staleTime: 15_000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
   });
 }
 

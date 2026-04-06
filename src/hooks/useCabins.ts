@@ -13,7 +13,9 @@ export function useCabins() {
       if (error) throw error;
       return data || [];
     },
-    staleTime: 10 * 60 * 1000,
-    gcTime: 24 * 60 * 60 * 1000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: 'always',
   });
 }

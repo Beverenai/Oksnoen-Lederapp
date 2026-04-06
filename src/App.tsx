@@ -1,9 +1,7 @@
 import { Suspense, lazy } from "react";
 import { StatusPopupProvider } from "@/hooks/useStatusPopup";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient } from "@tanstack/react-query";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { queryPersister } from "@/lib/queryPersistence";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -42,9 +40,11 @@ const Checkout = lazy(() => import("@/pages/admin/Checkout"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,
-      gcTime: 24 * 60 * 60 * 1000,
-      networkMode: 'offlineFirst',
+      staleTime: 60 * 1000, // 1 min — data is fresh for 1 min, then re-fetched
+      gcTime: 10 * 60 * 1000, // 10 min garbage collection
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      refetchOnMount: true,
       retry: (failureCount) => {
         if (!navigator.onLine) return false;
         return failureCount < 2;
@@ -52,12 +52,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-const persistOptions = {
-  persister: queryPersister,
-  maxAge: 24 * 60 * 60 * 1000, // 24h
-  buster: 'v3',
-};
 
 // Preload frequently accessed pages after initial render
 if (typeof window !== 'undefined') {
@@ -209,7 +203,7 @@ function StatusBarSync() {
 
 const App = () => (
   <ErrorBoundary>
-    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+  <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <StatusBarSync />
         <TooltipProvider>
@@ -224,7 +218,7 @@ const App = () => (
           </StatusPopupProvider>
         </TooltipProvider>
       </ThemeProvider>
-    </PersistQueryClientProvider>
+    </QueryClientProvider>
   </ErrorBoundary>
 );
 
