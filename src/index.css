@@ -22,6 +22,10 @@ img, video {
   object-fit: contain;
 }
 
+table {
+  max-width: 100%;
+}
+
 /* Scroll container utility with iOS momentum scrolling */
 .scroll-area {
   flex: 1 1 auto;
