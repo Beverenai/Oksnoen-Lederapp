@@ -594,6 +594,76 @@ export default function AdminSettings() {
     );
   }
 
+  if (activeSection) {
+    return (
+      <>
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => setActiveSection('')}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-2xl font-heading font-bold text-foreground">
+              {sectionLabels[activeSection] || 'Innstillinger'}
+            </h1>
+          </div>
+
+          <AdminSettingsContent
+            activeSection={activeSection}
+            leaders={leaders}
+            leaderSearch={leaderSearch}
+            setLeaderSearch={setLeaderSearch}
+            isDeactivating={isDeactivating}
+            deactivateAllLeaders={deactivateAllLeaders}
+            activateAllLeaders={activateAllLeaders}
+            toggleLeaderActive={toggleLeaderActive}
+            onEditLeader={handleEditLeader}
+            newLeaderName={newLeaderName}
+            setNewLeaderName={setNewLeaderName}
+            newLeaderPhone={newLeaderPhone}
+            setNewLeaderPhone={setNewLeaderPhone}
+            newLeaderIsAdmin={newLeaderIsAdmin}
+            setNewLeaderIsAdmin={setNewLeaderIsAdmin}
+            addLeader={addLeader}
+            cabinStatusRef={cabinStatusRef}
+            isSyncing={isSyncing}
+            storedWebhookUrl={storedWebhookUrl}
+            lastSyncSuccess={lastSyncSuccess}
+            lastSyncTime={lastSyncTime}
+            syncError={syncError}
+            triggerSync={triggerSync}
+            formatSyncTime={formatSyncTime}
+            isExporting={isExporting}
+            storedExportWebhookUrl={storedExportWebhookUrl}
+            lastExportSuccess={lastExportSuccess}
+            lastExportTime={lastExportTime}
+            exportError={exportError}
+            pendingExport={pendingExport}
+            exportCountdown={exportCountdown}
+            triggerExport={triggerExport}
+            cancelPendingExport={cancelPendingExport}
+            webhookUrl={webhookUrl}
+            setWebhookUrl={setWebhookUrl}
+            isSavingWebhook={isSavingWebhook}
+            saveWebhookUrl={saveWebhookUrl}
+            exportWebhookUrl={exportWebhookUrl}
+            setExportWebhookUrl={setExportWebhookUrl}
+            isSavingExportWebhook={isSavingExportWebhook}
+            saveExportWebhookUrl={saveExportWebhookUrl}
+            showSyncInstructions={showSyncInstructions}
+            setShowSyncInstructions={setShowSyncInstructions}
+          />
+        </div>
+
+        <LeaderDetailDialog
+          leader={editingLeader}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          onSaved={loadData}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <div className="space-y-6">
@@ -614,100 +684,36 @@ export default function AdminSettings() {
           </div>
         </div>
 
-        {/* Tab navigation - two rows */}
-        <Tabs value={activeSection} onValueChange={setActiveSection}>
-          <div className="space-y-1">
-            {/* Row 1: Users and camp */}
-            <TabsList className="w-full justify-start h-auto p-1 bg-muted/50">
-              {settingsTabsRow1.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <TabsTrigger
-                    key={tab.id}
-                    value={tab.id}
-                    className="gap-1.5 data-[state=active]:bg-background text-xs sm:text-sm"
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{tab.label}</span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
+        {/* Top cards - Ledere & Deltakere */}
+        <div className="grid grid-cols-2 gap-3">
+          {topNavItems.map(({ key, label, desc, icon: Icon, color }) => (
+            <Card
+              key={key}
+              className={`p-5 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${color}`}
+              onClick={() => setActiveSection(key)}
+            >
+              <Icon className="h-8 w-8 mb-2" />
+              <p className="font-semibold">{label}</p>
+              <p className="text-xs opacity-70 mt-0.5">{desc}</p>
+            </Card>
+          ))}
+        </div>
 
-            {/* Row 2: Content and system */}
-            <TabsList className="w-full justify-start h-auto p-1 bg-muted/50">
-              {settingsTabsRow2.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <TabsTrigger
-                    key={tab.id}
-                    value={tab.id}
-                    className="gap-1.5 data-[state=active]:bg-background text-xs sm:text-sm"
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{tab.label}</span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </div>
-
-          <div className="mt-6">
-            <AdminSettingsContent
-              activeSection={activeSection}
-              leaders={leaders}
-              leaderSearch={leaderSearch}
-              setLeaderSearch={setLeaderSearch}
-              isDeactivating={isDeactivating}
-              deactivateAllLeaders={deactivateAllLeaders}
-              activateAllLeaders={activateAllLeaders}
-              toggleLeaderActive={toggleLeaderActive}
-              onEditLeader={handleEditLeader}
-              newLeaderName={newLeaderName}
-              setNewLeaderName={setNewLeaderName}
-              newLeaderPhone={newLeaderPhone}
-              setNewLeaderPhone={setNewLeaderPhone}
-              newLeaderIsAdmin={newLeaderIsAdmin}
-              setNewLeaderIsAdmin={setNewLeaderIsAdmin}
-              addLeader={addLeader}
-              cabinStatusRef={cabinStatusRef}
-              isSyncing={isSyncing}
-              storedWebhookUrl={storedWebhookUrl}
-              lastSyncSuccess={lastSyncSuccess}
-              lastSyncTime={lastSyncTime}
-              syncError={syncError}
-              triggerSync={triggerSync}
-              formatSyncTime={formatSyncTime}
-              isExporting={isExporting}
-              storedExportWebhookUrl={storedExportWebhookUrl}
-              lastExportSuccess={lastExportSuccess}
-              lastExportTime={lastExportTime}
-              exportError={exportError}
-              pendingExport={pendingExport}
-              exportCountdown={exportCountdown}
-              triggerExport={triggerExport}
-              cancelPendingExport={cancelPendingExport}
-              webhookUrl={webhookUrl}
-              setWebhookUrl={setWebhookUrl}
-              isSavingWebhook={isSavingWebhook}
-              saveWebhookUrl={saveWebhookUrl}
-              exportWebhookUrl={exportWebhookUrl}
-              setExportWebhookUrl={setExportWebhookUrl}
-              isSavingExportWebhook={isSavingExportWebhook}
-              saveExportWebhookUrl={saveExportWebhookUrl}
-              showSyncInstructions={showSyncInstructions}
-              setShowSyncInstructions={setShowSyncInstructions}
-            />
-          </div>
-        </Tabs>
+        {/* Rest of nav cards */}
+        <div className="grid grid-cols-2 gap-3">
+          {navItems.map(({ key, label, desc, icon: Icon, color }) => (
+            <Card
+              key={key}
+              className={`p-4 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${color}`}
+              onClick={() => setActiveSection(key)}
+            >
+              <Icon className="h-7 w-7 mb-2" />
+              <p className="font-semibold text-sm">{label}</p>
+              <p className="text-xs opacity-70 mt-0.5">{desc}</p>
+            </Card>
+          ))}
+        </div>
       </div>
-
-      <LeaderDetailDialog
-        leader={editingLeader}
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        onSaved={loadData}
-      />
     </>
   );
 }
