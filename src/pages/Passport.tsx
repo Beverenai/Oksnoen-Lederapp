@@ -13,8 +13,13 @@ import {
   ArrowLeft,
   Users,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { hapticSuccess } from '@/lib/capacitorHaptics';
 import type { Tables } from '@/integrations/supabase/types';
 import { BulkActivityRegistration } from '@/components/passport/BulkActivityRegistration';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
@@ -434,7 +439,35 @@ export default function Passport() {
         />
       </div>
 
-      {/* Checkout button - prominent placement when enabled */}
+      {/* Checkout section */}
+      {isAdmin && (
+        <div className="flex items-center justify-between rounded-lg border border-border p-3 bg-card">
+          <div className="flex items-center gap-2">
+            <Sparkles className={`h-4 w-4 ${checkoutEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
+            <span className="text-sm font-medium">Utsjekk</span>
+            <Badge variant={checkoutEnabled ? 'default' : 'secondary'} className="text-xs">
+              {checkoutEnabled ? 'Aktiv' : 'Av'}
+            </Badge>
+          </div>
+          <Switch
+            checked={checkoutEnabled}
+            onCheckedChange={async () => {
+              const newValue = !checkoutEnabled;
+              try {
+                const { error } = await supabase.from('app_config').upsert({
+                  key: 'checkout_enabled', value: String(newValue), updated_at: new Date().toISOString()
+                }, { onConflict: 'key' });
+                if (error) throw error;
+                queryClient.invalidateQueries({ queryKey: ['checkout-enabled'] });
+                hapticSuccess();
+                toast.success(newValue ? 'Utsjekk aktivert' : 'Utsjekk deaktivert');
+              } catch {
+                toast.error('Kunne ikke oppdatere');
+              }
+            }}
+          />
+        </div>
+      )}
       {checkoutEnabled && (
         <Button
           variant="default"
