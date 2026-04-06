@@ -10,12 +10,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Settings, Loader2, Shield, Calendar, RefreshCw, Check,
-  Save, ChevronDown, ChevronUp, LayoutGrid, List
+  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
 import { LeaderListView } from '@/components/admin/LeaderListView';
+import { LeaderActivationTab } from '@/components/admin/LeaderActivationTab';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
