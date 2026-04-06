@@ -1,76 +1,94 @@
 
 
-## Nurse Rapport: Freeform "ark"-opplevelse med @-mention
+## Nurse Rapport: Google Docs-style editor med deltaker-seksjoner
 
 ### Konsept
 
-Erstatt den nåværende strukturerte card/input-modellen med en enkel skriveflate — som et Google Doc. Nurse skriver fritt i en stor textarea. Når hun skriver `@` dukker det opp en deltakerliste. Ved valg settes `@Navn` inline i teksten. Hver linje som inneholder en `@mention` knyttes til den deltakeren.
+Bygge om NurseReportEditor til en ekte "Google Docs"-opplevelse:
 
-Arket viser alt kronologisk nedover. Bak kulissene grupperes innhold per deltaker for lagring og PDF-eksport.
+- Ett stort redigerbart dokument (contentEditable) der nurse skriver fritt
+- Når nurse skriver `@deltakernavn`, opprettes automatisk en visuell "ramme/boks" for den deltakeren i dokumentet
+- All tekst som skrives inne i en deltaker-ramme lagres automatisk på den deltakeren (i `participant_health_notes`)
+- Søkefelt i toppen: skriv deltakernavn → hopp direkte til den deltakerens seksjon i dokumentet
+- Kan lime inn tekst med `@navn` og systemet strukturerer det automatisk i riktige deltaker-bokser
+- Autolagring (debounced) til `nurse_reports.content`
 
 ```text
-┌──────────────────────────────────────────┐
-│  Nurse Rapport              [Lagre] [PDF]│
-│──────────────────────────────────────────│
-│                                          │
-│  6. apr 15:30                            │
-│  Ga ibuprofen til @Ola Nordmann for      │
-│  vondt i kneet. Skal følges opp.         │
-│                                          │
-│  6. apr 16:00                            │
-│  @Kari Hansen hadde allergireaksjon.     │
-│  Ga cetirizin.                           │
-│                                          │
-│  6. apr 17:00                            │
-│  @Ola Nordmann sier kneet er bedre nå.   │
-│                                          │
-│  [skriv her... @ for å nevne deltaker]   │
-└──────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│  Nurse Rapport    [Søk deltaker] [Lagre][PDF]│
+│─────────────────────────────────────────────│
+│                                              │
+│  Fritekst her ovenfor...                     │
+│                                              │
+│  ┌──────────────────────────────────────┐   │
+│  │ 👤 Ola Nordmann | Hytte 3 | 14 år   │   │
+│  │──────────────────────────────────────│   │
+│  │ 6. apr 15:30                         │   │
+│  │ Vondt i kneet, ga ibuprofen          │   │
+│  │                                      │   │
+│  │ 6. apr 17:00                         │   │
+│  │ Kneet er bedre nå                    │   │
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  Mer fritekst her...                         │
+│                                              │
+│  ┌──────────────────────────────────────┐   │
+│  │ 👤 Kari Hansen | Hytte 1 | 13 år    │   │
+│  │──────────────────────────────────────│   │
+│  │ 6. apr 14:00                         │   │
+│  │ Allergireaksjon, ga cetirizin        │   │
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  [Skriv fritt... bruk @ for å tagge]        │
+└─────────────────────────────────────────────┘
 ```
-
-### Datamodell
-
-Bytt fra `sections[]` til en flat liste med linjer:
-
-```typescript
-interface ReportLine {
-  id: string;           // unik ID per linje
-  text: string;         // "Ga ibuprofen til @Ola Nordmann for vondt i kneet"
-  mentionIds: string[]; // participant IDs nevnt i denne linjen
-  timestamp: string;    // auto-satt ved opprettelse
-}
-```
-
-Lagres som JSON-array i `nurse_reports.content`. Ved eksport/sync grupperes linjer per `mentionId`.
 
 ### Teknisk plan
 
-**`src/components/nurse/NurseReportEditor.tsx` — fullstendig omskriving**
+**1. Fullstendig omskriving av `NurseReportEditor.tsx`**
 
-1. **Skriveflate**: Én stor textarea/input i bunnen. Nurse skriver en linje, trykker Enter → linjen legges til i `lines[]` med automatisk tidsstempel og eventuelle mention-IDer parset fra teksten
-2. **@-mention popup**: Når bruker skriver `@` i input-feltet, vis filtrert deltakerliste med profilbilder (samme popup som nå, men trigget inline i skrivefeltet)
-3. **Visning**: Alle linjer rendres kronologisk nedover. `@Navn` vises som en highlighted/styled span med profilbilde-chip. Tidsstempel vises som en liten header når dato/tid endrer seg
-4. **Samme deltaker = samles automatisk**: I PDF-eksport og i sync til `participant_health_notes` grupperes alle linjer som nevner en deltaker
-5. **Sletting**: Swipe/hover for å slette enkeltlinjer
-6. **Autolagring**: Debounced som nå (2 sek)
+Ny tilnærming med `contentEditable` div:
 
-**Visning av linjer:**
-- Hver linje vises med tidsstempel til venstre
-- `@Navn` i teksten rendres som en liten badge/chip med profilbilde + navn
-- Gir en "chat/logg"-følelse — som å skrive i et ark
+- Dokumentet lagres som HTML-streng i `nurse_reports.content`
+- Deltaker-seksjoner representeres som `<div class="participant-section" data-participant-id="uuid">` blokker
+- Inne i hver seksjon: header med avatar + navn + hytte, og fritt redigerbart innhold under
+- `@`-mention trigger: når bruker skriver `@`, vis popup med filtrerte deltakere. Ved valg settes en ny deltaker-seksjon inn (eller hopp til eksisterende seksjon for den deltakeren)
+- Hver ny linje i en deltaker-seksjon får automatisk tidsstempel
 
-**PDF-eksport:**
-- Samme som nå men data samles fra `lines` → grupper per deltaker → generer HTML
+**Søkefunksjon:**
+- Input-felt i headeren
+- Filtrerer deltakere som har seksjoner i dokumentet
+- Ved klikk: `scrollIntoView()` til riktig `[data-participant-id]` element
+
+**Autolagring:**
+- `MutationObserver` eller `onInput` på contentEditable → debounced lagring av innerHTML til DB
+- Ved manuell lagre: parse alle deltaker-seksjoner → sync innholdet til `participant_health_notes` per deltaker
+
+**Paste-håndtering:**
+- `onPaste` event: parse innlimt tekst for `@navn`-mønster
+- For hver funnet `@navn`: opprett deltaker-seksjon og plasser teksten i riktig boks
+
+**2. Sync til deltaker-dashboard (Nurse-fanen "Alle deltakere")**
+
+Ved lagring:
+- Parse alle `<div class="participant-section">` fra dokumentet
+- For hver deltaker: ekstraher tekst-innholdet
+- Upsert i `participant_health_notes` med `created_by = leader.id`
+- Dette gjør at deltaker-detaljdialogen i "Alle deltakere"-taben automatisk viser nurse-notater
+
+**3. PDF-eksport**
+
+Samme som nå men basert på det nye HTML-dokumentet — kan åpne dokumentet direkte i nytt vindu med print-styling.
 
 ### Filer som endres
 
 | Fil | Endring |
 |-----|--------|
-| `src/components/nurse/NurseReportEditor.tsx` | Fullstendig omskriving: flat linje-basert editor med inline @-mentions |
+| `src/components/nurse/NurseReportEditor.tsx` | Fullstendig omskriving: contentEditable doc-editor med deltaker-bokser, søk, paste-parsing |
 
 ### Hva som IKKE endres
-- Database-tabeller (samme JSON i `nurse_reports.content`)
+- Database-tabeller (ingen migrasjoner)
+- `Nurse.tsx` (tabs-struktur beholdes)
 - RLS-policyer
-- `Nurse.tsx` tabs-struktur
-- Sync-logikk til `participant_health_notes` (bare tilpasset ny datamodell)
+- Eksisterende deltaker-dashboard i tab 1
 
