@@ -1,6 +1,5 @@
 import { Suspense, lazy } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { StatusPopupProvider } from "@/hooks/useStatusPopup";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -194,9 +193,8 @@ const App = () => (
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <StatusBarSync />
         <TooltipProvider>
+          <StatusPopupProvider>
           <SplashScreen />
-          <Toaster />
-          <Sonner />
           <OfflineIndicator />
           <BrowserRouter>
             <AuthProvider>
