@@ -221,20 +221,18 @@ export default function Passport() {
       queryKey: ['participant-detail-v2', participantId],
       queryFn: async () => {
         const [participantRes, activitiesRes, healthRes] = await Promise.all([
-          supabase.from('participants').select('*, cabins(id, name)').eq('id', participantId).single(),
-
+          supabase.from('participants').select('*, cabins:cabin_id(id, name)').eq('id', participantId).single(),
           supabase.from('participant_activities').select('*').eq('participant_id', participantId),
           supabase.from('participant_health_info').select('*').eq('participant_id', participantId).maybeSingle()
         ]);
+        if (participantRes.error) throw participantRes.error;
         return {
-          participant: participantRes.data
-            ? {
-                ...participantRes.data,
-                cabin: participantRes.data.cabins,
-              }
-            : participantRes.data,
+          participant: {
+            ...participantRes.data,
+            cabin: participantRes.data.cabins,
+          },
+          healthInfo: healthRes.data,
           activities: activitiesRes.data || [],
-          healthInfo: healthRes.data
         };
       },
       staleTime: 30000,
