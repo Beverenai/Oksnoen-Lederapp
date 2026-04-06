@@ -70,6 +70,7 @@ export default function Admin() {
 
   // UI state
   const [isHomeConfigOpen, setIsHomeConfigOpen] = useState(false);
+  const [isActivationOpen, setIsActivationOpen] = useState(false);
   const [leaderViewMode, setLeaderViewMode] = useState<'grid' | 'list'>('grid');
   const [isActivitiesSheetOpen, setIsActivitiesSheetOpen] = useState(false);
 
