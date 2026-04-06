@@ -627,6 +627,10 @@ export default function Nurse() {
     image_url: p.image_url,
   }));
 
+  const handleReportChange = () => {
+    loadParticipants();
+  };
+
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center gap-2">
@@ -747,7 +751,7 @@ export default function Nurse() {
         </TabsContent>
 
         <TabsContent value="report" className="mt-4">
-          <NurseReportEditor participants={reportParticipants} />
+          <NurseReportEditor participants={reportParticipants} onDataChange={handleReportChange} />
         </TabsContent>
       </Tabs>
 
