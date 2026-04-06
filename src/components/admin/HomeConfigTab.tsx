@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,6 @@ import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } 
 import { CSS } from '@dnd-kit/utilities';
 import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 interface HomeScreenConfig {
   id: string;
@@ -99,6 +99,7 @@ function SortableItem({ id, children }: { id: string; children: React.ReactNode 
 }
 
 export default function HomeConfigTab({ homeConfig, localHomeConfig, setLocalHomeConfig, onSaved, setHomeConfig }: HomeConfigTabProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -128,7 +129,7 @@ export default function HomeConfigTab({ homeConfig, localHomeConfig, setLocalHom
     }).sort((a, b) => a.sort_order - b.sort_order);
     setLocalHomeConfig(reset);
     setHasUnsavedChanges(true);
-    toast.info('Konfigurasjon tilbakestilt til standard. Klikk "Lagre endringer" for å bekrefte.');
+    showInfo('Konfigurasjon tilbakestilt til standard. Klikk "Lagre endringer" for å bekrefte.');
   };
 
   const saveAll = async () => {
@@ -152,11 +153,9 @@ export default function HomeConfigTab({ homeConfig, localHomeConfig, setLocalHom
       setHasUnsavedChanges(false);
       setHomeConfig(localHomeConfig);
       onSaved();
-      hapticSuccess();
-      toast.success('Konfigurasjon lagret!');
+      showSuccess('Konfigurasjon lagret!');
     } catch {
-      hapticError();
-      toast.error('Kunne ikke lagre konfigurasjon');
+      showError('Kunne ikke lagre konfigurasjon');
     } finally {
       setIsSaving(false);
     }

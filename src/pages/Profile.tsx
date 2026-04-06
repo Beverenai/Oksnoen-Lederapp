@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,7 +25,6 @@ import {
 } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
-import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { compressImage } from '@/lib/imageUtils';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
@@ -32,6 +32,7 @@ import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 type Leader = Tables<'leaders'>;
 
 export default function Profile() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader: authLeader, viewAsLeader, effectiveLeader } = useAuth();
   const isViewingAs = !!viewAsLeader;
   const [leader, setLeader] = useState<Leader | null>(null);
@@ -80,7 +81,7 @@ export default function Profile() {
       setCanRopeSetup(data.can_rope_setup || false);
     } catch (error) {
       console.error('Error loading profile:', error);
-      toast.error('Kunne ikke laste profil');
+      showError('Kunne ikke laste profil');
     } finally {
       setIsLoading(false);
     }
@@ -106,12 +107,10 @@ export default function Profile() {
         .eq('id', authLeader.id);
 
       if (error) throw error;
-      hapticSuccess();
-      toast.success('Profil lagret!');
+      showSuccess('Profil lagret!');
     } catch (error) {
       console.error('Error saving profile:', error);
-      hapticError();
-      toast.error('Kunne ikke lagre profil');
+      showError('Kunne ikke lagre profil');
     } finally {
       setIsSaving(false);
     }
@@ -123,13 +122,13 @@ export default function Profile() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast.error('Vennligst velg et bilde');
+      showError('Vennligst velg et bilde');
       return;
     }
 
     // Validate file size (max 10MB before compression)
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('Bildet må være mindre enn 10MB');
+      showError('Bildet må være mindre enn 10MB');
       return;
     }
 
@@ -162,12 +161,10 @@ export default function Profile() {
 
       // Update local state
       setLeader(prev => prev ? { ...prev, profile_image_url: publicUrl } : null);
-      hapticSuccess();
-      toast.success('Profilbilde oppdatert!');
+      showSuccess('Profilbilde oppdatert!');
     } catch (error) {
       console.error('Error uploading image:', error);
-      hapticError();
-      toast.error('Kunne ikke laste opp bilde');
+      showError('Kunne ikke laste opp bilde');
     } finally {
       setIsUploading(false);
     }

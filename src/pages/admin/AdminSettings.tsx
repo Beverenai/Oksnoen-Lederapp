@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,7 +24,6 @@ import {
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { CabinAssignmentStatusRef } from '@/components/admin/CabinAssignmentStatus';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
-import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
@@ -53,6 +53,7 @@ const settingsTabsRow2 = [
 ];
 
 export default function AdminSettings() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { isAdmin } = useAuth();
   const [activeSection, setActiveSection] = useState('leaders');
   
@@ -192,10 +193,10 @@ export default function AdminSettings() {
       
       if (error) throw error;
       setStoredWebhookUrl(webhookUrl);
-      toast.success('Import webhook URL lagret!');
+      showSuccess('Import webhook URL lagret!');
     } catch (error) {
       console.error('Error saving webhook URL:', error);
-      toast.error('Kunne ikke lagre webhook URL');
+      showError('Kunne ikke lagre webhook URL');
     } finally {
       setIsSavingWebhook(false);
     }
@@ -214,10 +215,10 @@ export default function AdminSettings() {
       
       if (error) throw error;
       setStoredExportWebhookUrl(exportWebhookUrl);
-      toast.success('Eksport webhook URL lagret!');
+      showSuccess('Eksport webhook URL lagret!');
     } catch (error) {
       console.error('Error saving export webhook URL:', error);
-      toast.error('Kunne ikke lagre eksport webhook URL');
+      showError('Kunne ikke lagre eksport webhook URL');
     } finally {
       setIsSavingExportWebhook(false);
     }
@@ -225,7 +226,7 @@ export default function AdminSettings() {
 
   const triggerExport = useCallback(async (isAutoExport = false) => {
     if (!storedExportWebhookUrl) {
-      if (!isAutoExport) toast.error('Legg inn eksport webhook URL først');
+      if (!isAutoExport) showError('Legg inn eksport webhook URL først');
       return;
     }
 
@@ -244,7 +245,7 @@ export default function AdminSettings() {
       if (error) {
         console.error('Error calling trigger-export:', error);
         setExportError('Kunne ikke kontakte backend');
-        if (!isAutoExport) toast.error('Kunne ikke starte eksport');
+        if (!isAutoExport) showError('Kunne ikke starte eksport');
         return;
       }
 
@@ -252,15 +253,15 @@ export default function AdminSettings() {
         setLastExportSuccess(true);
         const exportTime = new Date().toISOString();
         setLastExportTime(exportTime);
-        toast.success(`Eksport fullført! ${data.leadersExported} ledere sendt til Google Sheets`);
+        showSuccess(`Eksport fullført! ${data.leadersExported} ledere sendt til Google Sheets`);
       } else {
         setExportError(data?.error || 'Ukjent feil');
-        if (!isAutoExport) toast.error(`Eksport feilet: ${data?.error || 'Ukjent feil'}`);
+        if (!isAutoExport) showError(`Eksport feilet: ${data?.error || 'Ukjent feil'}`);
       }
     } catch (error) {
       console.error('Error triggering export:', error);
       setExportError('Nettverksfeil ved eksport');
-      if (!isAutoExport) toast.error('Kunne ikke starte eksport');
+      if (!isAutoExport) showError('Kunne ikke starte eksport');
     } finally {
       setIsExporting(false);
     }
@@ -271,7 +272,7 @@ export default function AdminSettings() {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     setPendingExport(false);
     setExportCountdown(0);
-    toast.info('Auto-eksport avbrutt');
+    showInfo('Auto-eksport avbrutt');
   }, []);
 
   // Cabin aliases for matching cabin names to actual cabins
@@ -386,7 +387,7 @@ export default function AdminSettings() {
 
   const triggerSync = async () => {
     if (!webhookUrl) {
-      toast.error('Legg inn webhook URL først');
+      showError('Legg inn webhook URL først');
       return;
     }
 
@@ -400,7 +401,7 @@ export default function AdminSettings() {
       if (error) {
         console.error('Error calling trigger-sync:', error);
         setSyncError({ error: 'Kunne ikke kontakte backend' });
-        toast.error('Kunne ikke starte synkronisering');
+        showError('Kunne ikke starte synkronisering');
         return;
       }
 
@@ -409,7 +410,7 @@ export default function AdminSettings() {
         
         setLastSyncSuccess(true);
         setLastSyncTime(new Date().toISOString());
-        toast.success(`Synkronisering fullført! (Status: ${data.webhookStatus})`);
+        showSuccess(`Synkronisering fullført! (Status: ${data.webhookStatus})`);
         
         cabinStatusRef.current?.refresh();
         loadData();
@@ -423,12 +424,12 @@ export default function AdminSettings() {
           n8nError: data?.n8nError,
           n8nStackTrace: data?.n8nStackTrace,
         });
-        toast.error(`Synkronisering feilet: ${data?.n8nError || data?.error || 'Ukjent feil'}`);
+        showError(`Synkronisering feilet: ${data?.n8nError || data?.error || 'Ukjent feil'}`);
       }
     } catch (error) {
       console.error('Error triggering sync:', error);
       setSyncError({ error: 'Nettverksfeil ved synkronisering' });
-      toast.error('Kunne ikke starte synkronisering');
+      showError('Kunne ikke starte synkronisering');
     } finally {
       setIsSyncing(false);
     }
@@ -447,10 +448,10 @@ export default function AdminSettings() {
       if (error) throw error;
       
       loadData();
-      toast.success('Alle ledere er nå deaktivert');
+      showSuccess('Alle ledere er nå deaktivert');
     } catch (error) {
       console.error('Error deactivating leaders:', error);
-      toast.error('Kunne ikke deaktivere ledere');
+      showError('Kunne ikke deaktivere ledere');
     } finally {
       setIsDeactivating(false);
     }
@@ -469,10 +470,10 @@ export default function AdminSettings() {
       if (error) throw error;
       
       loadData();
-      toast.success('Alle ledere er nå aktivert');
+      showSuccess('Alle ledere er nå aktivert');
     } catch (error) {
       console.error('Error activating leaders:', error);
-      toast.error('Kunne ikke aktivere ledere');
+      showError('Kunne ikke aktivere ledere');
     } finally {
       setIsDeactivating(false);
     }
@@ -488,10 +489,10 @@ export default function AdminSettings() {
       if (error) throw error;
       
       loadData();
-      toast.success(leader.is_active ? 'Leder deaktivert' : 'Leder aktivert');
+      showSuccess(leader.is_active ? 'Leder deaktivert' : 'Leder aktivert');
     } catch (error) {
       console.error('Error toggling leader active:', error);
-      toast.error('Kunne ikke oppdatere leder');
+      showError('Kunne ikke oppdatere leder');
     }
   };
 
@@ -516,7 +517,7 @@ export default function AdminSettings() {
       setLeaders(leadersWithRoles);
     } catch (error) {
       console.error('Error loading admin data:', error);
-      toast.error('Kunne ikke laste data');
+      showError('Kunne ikke laste data');
     } finally {
       setIsLoading(false);
     }
@@ -524,7 +525,7 @@ export default function AdminSettings() {
 
   const addLeader = async () => {
     if (!newLeaderName || !newLeaderPhone) {
-      toast.error('Fyll inn navn og telefon');
+      showError('Fyll inn navn og telefon');
       return;
     }
 
@@ -547,12 +548,12 @@ export default function AdminSettings() {
       setNewLeaderPhone('');
       setNewLeaderIsAdmin(false);
       loadData();
-      toast.success('Leder lagt til!');
+      showSuccess('Leder lagt til!');
     } catch (error: any) {
       if (error.code === '23505') {
-        toast.error('Dette telefonnummeret finnes allerede');
+        showError('Dette telefonnummeret finnes allerede');
       } else {
-        toast.error('Kunne ikke legge til leder');
+        showError('Kunne ikke legge til leder');
       }
     }
   };

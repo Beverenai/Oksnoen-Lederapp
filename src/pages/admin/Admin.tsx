@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,7 +19,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
 import { LeaderListView } from '@/components/admin/LeaderListView';
 import { LeaderActivationTab } from '@/components/admin/LeaderActivationTab';
-import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
 
@@ -47,6 +47,7 @@ interface HomeScreenConfig {
 }
 
 export default function Admin() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { isAdmin, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [leaders, setLeaders] = useState<LeaderWithRole[]>([]);
@@ -101,11 +102,9 @@ export default function Admin() {
         key: 'session_activities_text', value: sessionActivitiesText, updated_at: new Date().toISOString()
       }, { onConflict: 'key' });
       if (error) throw error;
-      hapticSuccess();
-      toast.success('Aktiviteter lagret!');
+      showSuccess('Aktiviteter lagret!');
     } catch {
-      hapticError();
-      toast.error('Kunne ikke lagre aktiviteter');
+      showError('Kunne ikke lagre aktiviteter');
     } finally {
       setIsSavingActivities(false);
     }
@@ -130,7 +129,7 @@ export default function Admin() {
 
   const triggerExport = useCallback(async (isAutoExport = false) => {
     if (!storedExportWebhookUrl) {
-      if (!isAutoExport) toast.error('Legg inn eksport webhook URL først');
+      if (!isAutoExport) showError('Legg inn eksport webhook URL først');
       return;
     }
     setPendingExport(false);
@@ -139,10 +138,10 @@ export default function Admin() {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     try {
       const { data, error } = await supabase.functions.invoke('trigger-export');
-      if (error) { if (!isAutoExport) toast.error('Kunne ikke starte eksport'); return; }
-      if (data?.success) toast.success(`Eksport fullført! ${data.leadersExported} ledere sendt til Google Sheets`);
-      else if (!isAutoExport) toast.error(`Eksport feilet: ${data?.error || 'Ukjent feil'}`);
-    } catch { if (!isAutoExport) toast.error('Kunne ikke starte eksport'); }
+      if (error) { if (!isAutoExport) showError('Kunne ikke starte eksport'); return; }
+      if (data?.success) showSuccess(`Eksport fullført! ${data.leadersExported} ledere sendt til Google Sheets`);
+      else if (!isAutoExport) showError(`Eksport feilet: ${data?.error || 'Ukjent feil'}`);
+    } catch { if (!isAutoExport) showError('Kunne ikke starte eksport'); }
   }, [storedExportWebhookUrl]);
 
   const scheduleAutoExport = useCallback(() => {
@@ -165,16 +164,16 @@ export default function Admin() {
     setLastSyncSuccess(false);
     try {
       const { data, error } = await supabase.functions.invoke('trigger-sync');
-      if (error) { toast.error('Kunne ikke starte synkronisering'); return; }
+      if (error) { showError('Kunne ikke starte synkronisering'); return; }
       if (data?.success) {
         setLastSyncSuccess(true);
         setLastSyncTime(new Date().toISOString());
-        toast.success(`Synkronisering fullført! (Status: ${data.webhookStatus})`);
+        showSuccess(`Synkronisering fullført! (Status: ${data.webhookStatus})`);
         loadData();
       } else {
-        toast.error(`Synkronisering feilet: ${data?.n8nError || data?.error || 'Ukjent feil'}`);
+        showError(`Synkronisering feilet: ${data?.n8nError || data?.error || 'Ukjent feil'}`);
       }
-    } catch { toast.error('Kunne ikke starte synkronisering'); } finally { setIsSyncing(false); }
+    } catch { showError('Kunne ikke starte synkronisering'); } finally { setIsSyncing(false); }
   };
 
   const loadData = async () => {
@@ -198,7 +197,7 @@ export default function Admin() {
       const homeConfigData = configRes.data || [];
       setHomeConfig(homeConfigData);
       setLocalHomeConfig(homeConfigData);
-    } catch { toast.error('Kunne ikke laste data'); } finally { setIsLoading(false); }
+    } catch { showError('Kunne ikke laste data'); } finally { setIsLoading(false); }
   };
 
   if (!isAdmin) {

@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,7 +25,6 @@ import {
   Image as ImageIcon,
   Trash2
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { compressImage } from '@/lib/imageUtils';
@@ -53,6 +53,7 @@ interface Leader {
 }
 
 export default function Fix() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader, isAdmin } = useAuth();
   const [tasks, setTasks] = useState<FixTask[]>([]);
   const [leaders, setLeaders] = useState<Leader[]>([]);
@@ -130,7 +131,7 @@ export default function Fix() {
       reader.readAsDataURL(compressed);
     } catch (error) {
       console.error('Error compressing image:', error);
-      toast.error('Kunne ikke laste bilde');
+      showError('Kunne ikke laste bilde');
     }
   };
 
@@ -156,7 +157,7 @@ export default function Fix() {
     e.preventDefault();
 
     if (!title.trim()) {
-      toast.error('Skriv inn en tittel');
+      showError('Skriv inn en tittel');
       return;
     }
 
@@ -180,14 +181,12 @@ export default function Fix() {
 
       if (error) throw error;
 
-      hapticSuccess();
-      toast.success('Fix-oppgave opprettet!');
+      showSuccess('Fix-oppgave opprettet!');
       resetForm();
       setShowNewForm(false);
     } catch (error) {
       console.error('Error creating task:', error);
-      hapticError();
-      toast.error('Kunne ikke opprette oppgave');
+      showError('Kunne ikke opprette oppgave');
     } finally {
       setIsSubmitting(false);
     }
@@ -234,14 +233,12 @@ export default function Fix() {
         console.error('Failed to send push notification:', pushError);
       }
 
-      hapticSuccess();
-      toast.success('Oppgave tildelt!');
+      showSuccess('Oppgave tildelt!');
       setAssigningTaskId(null);
       setAdminNotes('');
     } catch (error) {
       console.error('Error assigning task:', error);
-      hapticError();
-      toast.error('Kunne ikke tildele oppgave');
+      showError('Kunne ikke tildele oppgave');
     }
   };
 
@@ -258,13 +255,11 @@ export default function Fix() {
 
       if (error) throw error;
 
-      hapticSuccess();
-      toast.success('Markert som fikset!');
+      showSuccess('Markert som fikset!');
       setSelectedTask(null);
     } catch (error) {
       console.error('Error marking as fixed:', error);
-      hapticError();
-      toast.error('Kunne ikke markere som fikset');
+      showError('Kunne ikke markere som fikset');
     }
   };
 
@@ -280,13 +275,11 @@ export default function Fix() {
 
       if (error) throw error;
 
-      hapticSuccess();
-      toast.success('Oppgave slettet');
+      showSuccess('Oppgave slettet');
       setSelectedTask(null);
     } catch (error) {
       console.error('Error deleting task:', error);
-      hapticError();
-      toast.error('Kunne ikke slette oppgave');
+      showError('Kunne ikke slette oppgave');
     }
   };
 

@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useMemo, useDeferredValue } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +10,6 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Bell, Phone, AlertTriangle, Eye } from 'lucide-react';
-import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { LeaderContentSheet } from './LeaderContentSheet';
 import { LeaderFilters } from './LeaderFilters';
@@ -35,6 +35,7 @@ interface LeaderListViewProps {
 }
 
 export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderListViewProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader: currentLeader, setViewAsLeader } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,15 +55,15 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
 
   const handleSendNotification = async (e: React.MouseEvent, leader: LeaderWithContent) => {
     e.stopPropagation();
-    if (!currentLeader) { toast.error('Du må være logget inn'); return; }
+    if (!currentLeader) { showError('Du må være logget inn'); return; }
     setSendingNotification(leader.id);
     try {
       const { error } = await supabase.functions.invoke('push-send', {
         body: { title: 'Melding fra admin', message: 'Sjekk appen for oppdateringer', url: '/', single_leader_id: leader.id, sender_leader_id: currentLeader.id },
       });
       if (error) throw error;
-      toast.success(`Varsling sendt til ${getFirstName(leader.name)}`);
-    } catch { toast.error('Kunne ikke sende varsling'); } finally { setSendingNotification(null); }
+      showSuccess(`Varsling sendt til ${getFirstName(leader.name)}`);
+    } catch { showError('Kunne ikke sende varsling'); } finally { setSendingNotification(null); }
   };
 
   const handleCall = (e: React.MouseEvent, phone: string) => { e.stopPropagation(); window.location.href = `tel:${phone}`; };

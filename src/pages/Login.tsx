@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -5,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Phone, Loader2, PauseCircle } from 'lucide-react';
-import { toast } from 'sonner';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
@@ -13,6 +13,7 @@ export default function Login() {
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [inactiveState, setInactiveState] = useState(false);
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { login, deactivatedMessage } = useAuth();
   const navigate = useNavigate();
 
@@ -23,7 +24,7 @@ export default function Login() {
     e.preventDefault();
     
     if (!phone.trim()) {
-      toast.error('Skriv inn telefonnummeret ditt');
+      showError('Skriv inn telefonnummeret ditt');
       return;
     }
 
@@ -33,15 +34,12 @@ export default function Login() {
     setIsLoading(false);
 
     if (result.success) {
-      hapticSuccess();
-      toast.success('Velkommen!');
+      showSuccess('Velkommen!');
       navigate('/');
     } else if (result.error === 'INACTIVE_LEADER') {
-      hapticError();
       setInactiveState(true);
     } else {
-      hapticError();
-      toast.error(result.message || result.error || 'Innlogging feilet');
+      showError(result.message || result.error || 'Innlogging feilet');
     }
   };
 

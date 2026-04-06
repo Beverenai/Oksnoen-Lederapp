@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Search, Plus, Check, X, ArrowRight, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 
@@ -48,6 +48,7 @@ interface RoomSwap {
 }
 
 export function RoomSwapTab() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [roomCapacity, setRoomCapacity] = useState<RoomCapacity[]>([]);
@@ -84,7 +85,7 @@ export function RoomSwapTab() {
       if (swapsRes.data) setSwaps(swapsRes.data);
     } catch (error) {
       console.error('Error loading data:', error);
-      toast.error('Kunne ikke laste data');
+      showError('Kunne ikke laste data');
     } finally {
       setLoading(false);
     }
@@ -153,7 +154,7 @@ export function RoomSwapTab() {
   // Add swap to pending list
   async function handleAddSwap() {
     if (!selectedParticipant || !targetCabinId) {
-      toast.error('Velg deltaker og nytt rom');
+      showError('Velg deltaker og nytt rom');
       return;
     }
 
@@ -171,7 +172,7 @@ export function RoomSwapTab() {
 
       if (error) throw error;
 
-      toast.success('Rombytte lagt til');
+      showSuccess('Rombytte lagt til');
       setSelectedParticipant(null);
       setSearchQuery('');
       setTargetCabinId('');
@@ -180,7 +181,7 @@ export function RoomSwapTab() {
       loadData();
     } catch (error) {
       console.error('Error adding swap:', error);
-      toast.error('Kunne ikke legge til rombytte');
+      showError('Kunne ikke legge til rombytte');
     } finally {
       setSubmitting(false);
     }
@@ -189,7 +190,7 @@ export function RoomSwapTab() {
   // Approve selected swaps
   async function handleApproveSwaps() {
     if (selectedSwapIds.length === 0) {
-      toast.error('Velg rombytter å godkjenne');
+      showError('Velg rombytter å godkjenne');
       return;
     }
 
@@ -215,12 +216,12 @@ export function RoomSwapTab() {
           .eq('id', swap.id);
       }
 
-      toast.success(`${swapsToApprove.length} rombytte(r) godkjent`);
+      showSuccess(`${swapsToApprove.length} rombytte(r) godkjent`);
       setSelectedSwapIds([]);
       loadData();
     } catch (error) {
       console.error('Error approving swaps:', error);
-      toast.error('Kunne ikke godkjenne rombytter');
+      showError('Kunne ikke godkjenne rombytter');
     } finally {
       setSubmitting(false);
     }
@@ -229,7 +230,7 @@ export function RoomSwapTab() {
   // Cancel selected swaps
   async function handleCancelSwaps() {
     if (selectedSwapIds.length === 0) {
-      toast.error('Velg rombytter å avbryte');
+      showError('Velg rombytter å avbryte');
       return;
     }
 
@@ -237,12 +238,12 @@ export function RoomSwapTab() {
     try {
       await supabase.from('room_swaps').delete().in('id', selectedSwapIds);
 
-      toast.success('Rombytter avbrutt');
+      showSuccess('Rombytter avbrutt');
       setSelectedSwapIds([]);
       loadData();
     } catch (error) {
       console.error('Error canceling swaps:', error);
-      toast.error('Kunne ikke avbryte rombytter');
+      showError('Kunne ikke avbryte rombytter');
     } finally {
       setSubmitting(false);
     }

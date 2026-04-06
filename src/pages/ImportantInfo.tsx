@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +16,6 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { differenceInYears } from 'date-fns';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 
@@ -41,6 +41,7 @@ const calculateAge = (birthDate: string): number => {
 };
 
 export default function ImportantInfo() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const navigate = useNavigate();
   const [participantsWithInfo, setParticipantsWithInfo] = useState<ParticipantWithHealthInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,7 +95,7 @@ export default function ImportantInfo() {
       setExpandedCabins(cabinIds);
     } catch (error) {
       console.error('Error loading health info:', error);
-      toast.error('Kunne ikke laste data');
+      showError('Kunne ikke laste data');
     } finally {
       setIsLoading(false);
     }

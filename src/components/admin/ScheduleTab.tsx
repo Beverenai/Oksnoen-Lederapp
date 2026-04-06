@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,10 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar, Upload, Trash2, Loader2, Image, Link as LinkIcon } from 'lucide-react';
-import { toast } from 'sonner';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 export function ScheduleTab() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [imageUrl, setImageUrl] = useState('');
   const [storedImageUrl, setStoredImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,13 +47,13 @@ export function ScheduleTab() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast.error('Kun bilder er tillatt');
+      showError('Kun bilder er tillatt');
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Bildet kan ikke være større enn 5MB');
+      showError('Bildet kan ikke være større enn 5MB');
       return;
     }
 
@@ -87,12 +88,10 @@ export function ScheduleTab() {
 
       setStoredImageUrl(publicUrl);
       setImageUrl(publicUrl);
-      hapticSuccess();
-      toast.success('Vaktplan lastet opp!');
+      showSuccess('Vaktplan lastet opp!');
     } catch (error) {
       console.error('Error uploading schedule:', error);
-      hapticError();
-      toast.error('Kunne ikke laste opp vaktplan');
+      showError('Kunne ikke laste opp vaktplan');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -103,7 +102,7 @@ export function ScheduleTab() {
 
   const saveImageUrl = async () => {
     if (!imageUrl) {
-      toast.error('Legg inn en URL');
+      showError('Legg inn en URL');
       return;
     }
 
@@ -120,12 +119,10 @@ export function ScheduleTab() {
       if (error) throw error;
 
       setStoredImageUrl(imageUrl);
-      hapticSuccess();
-      toast.success('Vaktplan-URL lagret!');
+      showSuccess('Vaktplan-URL lagret!');
     } catch (error) {
       console.error('Error saving schedule URL:', error);
-      hapticError();
-      toast.error('Kunne ikke lagre URL');
+      showError('Kunne ikke lagre URL');
     } finally {
       setIsSaving(false);
     }
@@ -145,10 +142,10 @@ export function ScheduleTab() {
 
       setStoredImageUrl(null);
       setImageUrl('');
-      toast.success('Vaktplan fjernet!');
+      showSuccess('Vaktplan fjernet!');
     } catch (error) {
       console.error('Error removing schedule:', error);
-      toast.error('Kunne ikke fjerne vaktplan');
+      showError('Kunne ikke fjerne vaktplan');
     } finally {
       setIsSaving(false);
     }

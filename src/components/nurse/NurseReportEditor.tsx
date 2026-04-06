@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Save, Loader2, Download, User, FileText, Search, Trash2, Clock } from 'lucide-react';
-import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +44,7 @@ interface NurseReportEditorProps {
 }
 
 export function NurseReportEditor({ participants, onDataChange }: NurseReportEditorProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader } = useAuth();
   const [reportId, setReportId] = useState<string | null>(null);
   const [entries, setEntries] = useState<NoteEntry[]>([]);
@@ -110,7 +111,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
       setEntries(mentions || []);
     } catch (e) {
       console.error('Error loading report:', e);
-      toast.error('Kunne ikke laste rapport');
+      showError('Kunne ikke laste rapport');
     } finally {
       setIsLoading(false);
     }
@@ -218,7 +219,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
       onDataChange?.();
     } catch (e) {
       console.error('Error saving entry:', e);
-      toast.error('Kunne ikke lagre notat');
+      showError('Kunne ikke lagre notat');
     } finally {
       setIsSaving(false);
     }
@@ -350,7 +351,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
       if (entry) await syncParticipantHealth(entry.participant_id);
     } catch (e) {
       console.error('Error updating entry:', e);
-      toast.error('Kunne ikke oppdatere');
+      showError('Kunne ikke oppdatere');
     }
   };
 
@@ -394,11 +395,11 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
         await syncParticipantHealth(participantId);
       }
 
-      toast.success('Notat slettet');
+      showSuccess('Notat slettet');
       onDataChange?.();
     } catch (e) {
       console.error('Error deleting entry:', e);
-      toast.error('Kunne ikke slette');
+      showError('Kunne ikke slette');
     }
   };
 
@@ -439,11 +440,11 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
         }
       }
 
-      toast.success('Deltaker-seksjon slettet');
+      showSuccess('Deltaker-seksjon slettet');
       onDataChange?.();
     } catch (e) {
       console.error('Error deleting section:', e);
-      toast.error('Kunne ikke slette seksjon');
+      showError('Kunne ikke slette seksjon');
     }
   };
 
@@ -608,8 +609,7 @@ ${sectionsHtml}
         }
       }
       setLastSaved(new Date());
-      hapticSuccess();
-      toast.success(`${foundPairs.length} notat(er) lagt til`);
+      showSuccess(`${foundPairs.length} notat(er) lagt til`);
       onDataChange?.();
     };
 

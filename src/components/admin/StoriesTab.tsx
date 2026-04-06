@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +19,6 @@ import {
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { hapticSuccess, hapticWarning, hapticError } from '@/lib/capacitorHaptics';
 
 interface Story {
@@ -30,6 +30,7 @@ interface Story {
 }
 
 export function StoriesTab() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [stories, setStories] = useState<Story[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -53,7 +54,7 @@ export function StoriesTab() {
       setStories(data || []);
     } catch (error) {
       console.error('Error loading stories:', error);
-      toast.error('Kunne ikke laste historier');
+      showError('Kunne ikke laste historier');
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +62,7 @@ export function StoriesTab() {
 
   const addStory = async () => {
     if (!newStory.title.trim() || !newStory.content.trim()) {
-      toast.error('Fyll ut både tittel og innhold');
+      showError('Fyll ut både tittel og innhold');
       return;
     }
 
@@ -85,12 +86,10 @@ export function StoriesTab() {
       setNewStory({ title: '', content: '' });
       setShowNewForm(false);
       loadStories();
-      hapticSuccess();
-      toast.success('Historie lagt til!');
+      showSuccess('Historie lagt til!');
     } catch (error) {
       console.error('Error adding story:', error);
-      hapticError();
-      toast.error('Kunne ikke legge til historie');
+      showError('Kunne ikke legge til historie');
     } finally {
       setIsSaving(false);
     }
@@ -100,7 +99,7 @@ export function StoriesTab() {
     if (!editingStory) return;
 
     if (!editingStory.title.trim() || !editingStory.content.trim()) {
-      toast.error('Fyll ut både tittel og innhold');
+      showError('Fyll ut både tittel og innhold');
       return;
     }
 
@@ -118,12 +117,10 @@ export function StoriesTab() {
 
       setEditingStory(null);
       loadStories();
-      hapticSuccess();
-      toast.success('Historie oppdatert!');
+      showSuccess('Historie oppdatert!');
     } catch (error) {
       console.error('Error updating story:', error);
-      hapticError();
-      toast.error('Kunne ikke oppdatere historie');
+      showError('Kunne ikke oppdatere historie');
     } finally {
       setIsSaving(false);
     }
@@ -139,10 +136,10 @@ export function StoriesTab() {
       if (error) throw error;
 
       loadStories();
-      toast.success(story.is_active ? 'Historie deaktivert' : 'Historie aktivert');
+      showSuccess(story.is_active ? 'Historie deaktivert' : 'Historie aktivert');
     } catch (error) {
       console.error('Error toggling story:', error);
-      toast.error('Kunne ikke endre status');
+      showError('Kunne ikke endre status');
     }
   };
 
@@ -159,12 +156,10 @@ export function StoriesTab() {
       if (error) throw error;
 
       loadStories();
-      hapticSuccess();
-      toast.success('Historie slettet!');
+      showSuccess('Historie slettet!');
     } catch (error) {
       console.error('Error deleting story:', error);
-      hapticError();
-      toast.error('Kunne ikke slette historie');
+      showError('Kunne ikke slette historie');
     }
   };
 
@@ -191,7 +186,7 @@ export function StoriesTab() {
       loadStories();
     } catch (error) {
       console.error('Error moving story:', error);
-      toast.error('Kunne ikke flytte historie');
+      showError('Kunne ikke flytte historie');
     }
   };
 

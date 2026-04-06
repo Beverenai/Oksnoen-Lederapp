@@ -28,7 +28,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
-import { toast } from 'sonner';
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import confetti from 'canvas-confetti';
 import { hapticSuccess, hapticImpact } from '@/lib/capacitorHaptics';
 import { PassIcon } from '@/components/icons/PassIcon';
@@ -175,6 +175,7 @@ const NavGroup = ({
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const { leader, isAdmin, isNurse, logout, viewAsLeader, setViewAsLeader } = useAuth();
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
   const [showHajoloSuccess, setShowHajoloSuccess] = useState(false);
@@ -367,7 +368,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       .upsert({ leader_id: leader.id, has_read: true }, { onConflict: 'leader_id' });
 
     if (error) {
-      toast.error('Kunne ikke bekrefte');
+      showError('Kunne ikke bekrefte');
       return;
     }
 

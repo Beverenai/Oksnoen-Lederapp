@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Plus, Minus, Loader2, ChevronDown } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import {
   Popover,
   PopoverContent,
@@ -33,6 +33,7 @@ export const ActivityManager = ({
   onActivityChanged,
 }: ActivityManagerProps) => {
   const { leader } = useAuth();
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { activities } = useActivities(true);
   const isMobile = useIsMobile();
   const [isLoading, setIsLoading] = useState<string | null>(null);
@@ -70,21 +71,13 @@ export const ActivityManager = ({
 
       if (error) throw error;
 
-      hapticSuccess();
 
-      toast({
-        title: 'Aktivitet lagt til',
-        description: `${activityTitle} er registrert`,
-      });
+      showSuccess('Aktivitet lagt til', `${activityTitle} er registrert`);
       onActivityChanged();
       setIsOpen(false);
     } catch (error) {
       console.error('Error adding activity:', error);
-      toast({
-        title: 'Feil',
-        description: 'Kunne ikke legge til aktivitet',
-        variant: 'destructive',
-      });
+      showError('Feil', 'Kunne ikke legge til aktivitet');
     } finally {
       setIsLoading(null);
     }
@@ -109,21 +102,13 @@ export const ActivityManager = ({
 
         if (error) throw error;
 
-        hapticImpact('light');
 
-        toast({
-          title: 'Aktivitet fjernet',
-          description: `En registrering av ${activityTitle} er fjernet`,
-        });
+        showSuccess('Aktivitet fjernet', `En registrering av ${activityTitle} er fjernet`);
         onActivityChanged();
       }
     } catch (error) {
       console.error('Error removing activity:', error);
-      toast({
-        title: 'Feil',
-        description: 'Kunne ikke fjerne aktivitet',
-        variant: 'destructive',
-      });
+      showError('Feil', 'Kunne ikke fjerne aktivitet');
     } finally {
       setIsLoading(null);
     }

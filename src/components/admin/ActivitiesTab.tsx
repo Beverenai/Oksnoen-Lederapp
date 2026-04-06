@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useActivities } from '@/hooks/useActivities';
@@ -17,10 +18,10 @@ import {
   Check,
   X
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
 
 export function ActivitiesTab() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { activities, isLoading, refetch } = useActivities(false);
   const [newActivityTitle, setNewActivityTitle] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -30,7 +31,7 @@ export function ActivitiesTab() {
 
   const addActivity = async () => {
     if (!newActivityTitle.trim()) {
-      toast.error('Skriv inn et aktivitetsnavn');
+      showError('Skriv inn et aktivitetsnavn');
       return;
     }
 
@@ -53,11 +54,10 @@ export function ActivitiesTab() {
       hapticSuccess();
       setNewActivityTitle('');
       refetch();
-      toast.success('Aktivitet lagt til');
+      showSuccess('Aktivitet lagt til');
     } catch (error) {
       console.error('Error adding activity:', error);
-      hapticError();
-      toast.error('Kunne ikke legge til aktivitet');
+      showError('Kunne ikke legge til aktivitet');
     } finally {
       setIsAdding(false);
     }
@@ -73,13 +73,11 @@ export function ActivitiesTab() {
 
       if (error) throw error;
 
-      hapticImpact('light');
       refetch();
-      toast.success(currentActive ? 'Aktivitet deaktivert' : 'Aktivitet aktivert');
+      showSuccess(currentActive ? 'Aktivitet deaktivert' : 'Aktivitet aktivert');
     } catch (error) {
       console.error('Error toggling activity:', error);
-      hapticError();
-      toast.error('Kunne ikke oppdatere aktivitet');
+      showError('Kunne ikke oppdatere aktivitet');
     } finally {
       setUpdatingId(null);
     }
@@ -107,15 +105,13 @@ export function ActivitiesTab() {
 
       if (error) throw error;
 
-      hapticSuccess();
       setEditingId(null);
       setEditingTitle('');
       refetch();
-      toast.success('Aktivitet oppdatert');
+      showSuccess('Aktivitet oppdatert');
     } catch (error) {
       console.error('Error updating activity:', error);
-      hapticError();
-      toast.error('Kunne ikke oppdatere aktivitet');
+      showError('Kunne ikke oppdatere aktivitet');
     } finally {
       setUpdatingId(null);
     }
@@ -135,13 +131,11 @@ export function ActivitiesTab() {
 
       if (error) throw error;
 
-      hapticSuccess();
       refetch();
-      toast.success('Aktivitet slettet');
+      showSuccess('Aktivitet slettet');
     } catch (error) {
       console.error('Error deleting activity:', error);
-      hapticError();
-      toast.error('Kunne ikke slette aktivitet');
+      showError('Kunne ikke slette aktivitet');
     } finally {
       setUpdatingId(null);
     }

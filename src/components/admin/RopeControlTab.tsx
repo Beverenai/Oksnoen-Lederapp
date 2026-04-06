@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -33,7 +34,6 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
-import { toast } from 'sonner';
 
 interface RopeControl {
   id: string;
@@ -58,6 +58,7 @@ interface RopeControl {
 }
 
 export function RopeControlTab() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [controls, setControls] = useState<RopeControl[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,7 +81,7 @@ export function RopeControlTab() {
       setControls((data || []) as RopeControl[]);
     } catch (error) {
       console.error('Error loading rope controls:', error);
-      toast.error('Kunne ikke laste taukontroller');
+      showError('Kunne ikke laste taukontroller');
     } finally {
       setIsLoading(false);
     }
@@ -182,7 +183,7 @@ export function RopeControlTab() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-    toast.success('Eksportert til CSV');
+    showSuccess('Eksportert til CSV');
   };
 
   const filteredControls = controls.filter(control => {

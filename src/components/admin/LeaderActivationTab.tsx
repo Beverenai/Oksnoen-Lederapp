@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,7 +12,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Search, UserCheck, UserX, Users, ShieldCheck, ShieldOff } from 'lucide-react';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import type { Tables } from '@/integrations/supabase/types';
@@ -46,6 +46,7 @@ function getRoleBadge(role: AppRole) {
 }
 
 export function LeaderActivationTab({ leaders, onLeaderUpdated, isSuperAdmin }: LeaderActivationTabProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
@@ -99,12 +100,10 @@ export function LeaderActivationTab({ leaders, onLeaderUpdated, isSuperAdmin }: 
     try {
       const { error } = await supabase.from('leaders').update({ is_active: newActive }).eq('id', leader.id);
       if (error) throw error;
-      hapticSuccess();
-      toast.success(`${leader.name} er nå ${newActive ? 'aktiv' : 'deaktivert'}`);
+      showSuccess(`${leader.name} er nå ${newActive ? 'aktiv' : 'deaktivert'}`);
       onLeaderUpdated();
     } catch {
-      hapticError();
-      toast.error(`Kunne ikke oppdatere ${leader.name}`);
+      showError(`Kunne ikke oppdatere ${leader.name}`);
     } finally {
       setUpdatingIds(prev => { const s = new Set(prev); s.delete(leader.id); return s; });
     }
@@ -130,12 +129,10 @@ export function LeaderActivationTab({ leaders, onLeaderUpdated, isSuperAdmin }: 
         }
       });
       if (error) throw error;
-      hapticSuccess();
-      toast.success(action === 'grant' ? `${leader.name} er nå admin` : `Admin-rolle fjernet fra ${leader.name}`);
+      showSuccess(action === 'grant' ? `${leader.name} er nå admin` : `Admin-rolle fjernet fra ${leader.name}`);
       onLeaderUpdated();
     } catch {
-      hapticError();
-      toast.error('Kunne ikke endre rolle');
+      showError('Kunne ikke endre rolle');
     } finally {
       setUpdatingIds(prev => { const s = new Set(prev); s.delete(leader.id); return s; });
       setConfirmRoleChange(null);
@@ -152,18 +149,16 @@ export function LeaderActivationTab({ leaders, onLeaderUpdated, isSuperAdmin }: 
         .map(l => l.id);
 
       if (targetIds.length === 0) {
-        toast.info(activate ? 'Alle ledere er allerede aktive' : 'Alle ledere er allerede deaktiverte');
+        showInfo(activate ? 'Alle ledere er allerede aktive' : 'Alle ledere er allerede deaktiverte');
         return;
       }
 
       const { error } = await supabase.from('leaders').update({ is_active: activate }).in('id', targetIds);
       if (error) throw error;
-      hapticSuccess();
-      toast.success(`${targetIds.length} ledere ${activate ? 'aktivert' : 'deaktivert'}`);
+      showSuccess(`${targetIds.length} ledere ${activate ? 'aktivert' : 'deaktivert'}`);
       onLeaderUpdated();
     } catch {
-      hapticError();
-      toast.error('Kunne ikke oppdatere ledere');
+      showError('Kunne ikke oppdatere ledere');
     } finally {
       setIsBulkUpdating(false);
     }

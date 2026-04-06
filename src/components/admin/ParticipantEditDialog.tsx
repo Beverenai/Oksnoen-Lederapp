@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -19,7 +20,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, Save, Calendar } from 'lucide-react';
-import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
@@ -69,6 +69,7 @@ export function ParticipantEditDialog({
   onOpenChange,
   onSaved,
 }: ParticipantEditDialogProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [birthDate, setBirthDate] = useState('');
@@ -116,14 +117,12 @@ export function ParticipantEditDialog({
 
       if (error) throw error;
 
-      hapticSuccess();
-      toast.success('Deltaker oppdatert');
+      showSuccess('Deltaker oppdatert');
       onSaved();
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving participant:', error);
-      hapticError();
-      toast.error('Kunne ikke lagre endringer');
+      showError('Kunne ikke lagre endringer');
     } finally {
       setIsSaving(false);
     }

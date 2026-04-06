@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -21,7 +22,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, Check, Home, Trash2, Search } from 'lucide-react';
 import { icons } from 'lucide-react';
-import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
@@ -90,6 +90,7 @@ export function LeaderContentSheet({
   homeConfig,
   onSaved
 }: LeaderContentSheetProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader: currentLeader } = useAuth();
   const [saving, setSaving] = useState(false);
   const [isExtraFieldsOpen, setIsExtraFieldsOpen] = useState(false);
@@ -145,11 +146,11 @@ export function LeaderContentSheet({
 
       if (error) throw error;
       orig[origKey] = value;
-      toast.success('Auto-lagret', { duration: 1500 });
+      showSuccess('Auto-lagret', undefined, 1500);
       onSaved();
     } catch (err) {
       console.error('Auto-save error:', err);
-      toast.error('Kunne ikke auto-lagre');
+      showError('Kunne ikke auto-lagre');
     }
   }, [leader, onSaved]);
 
@@ -307,15 +308,13 @@ export function LeaderContentSheet({
       if (error) throw error;
       
       if (data?.sent > 0) {
-        hapticSuccess();
-        toast.success('Varsling sendt!');
+        showSuccess('Varsling sendt!');
       } else {
-        toast.info(`${firstName} har ikke aktivert push-varslinger`);
+        showInfo(`${firstName} har ikke aktivert push-varslinger`);
       }
     } catch (error) {
       console.error('Error sending change notification:', error);
-      hapticError();
-      toast.error('Kunne ikke sende varsling');
+      showError('Kunne ikke sende varsling');
     } finally {
       setIsSendingChangeNotification(false);
       setShowNotifyDialog(false);
@@ -339,14 +338,12 @@ export function LeaderContentSheet({
     setExtra4('');
     setExtra5('');
     setShowClearConfirm(false);
-    hapticImpact('medium');
-    toast.info('Innholdsfelt tømt — husk å lagre');
+    showInfo('Innholdsfelt tømt — husk å lagre');
   };
 
   const handleSendNotification = async () => {
     if (!leader || !notificationTitle.trim() || !currentLeader) return;
 
-    hapticImpact('medium');
     setIsSendingNotification(true);
     try {
       const { data, error } = await supabase.functions.invoke('push-send', {
@@ -362,17 +359,15 @@ export function LeaderContentSheet({
       if (error) throw error;
 
       if (data?.sent > 0) {
-        hapticSuccess();
-        toast.success(`Varsling sendt til ${getFirstName(leader.name)}!`);
+        showSuccess(`Varsling sendt til ${getFirstName(leader.name)}!`);
         setNotificationTitle('');
         setNotificationMessage('');
       } else {
-        toast.info(`${getFirstName(leader.name)} har ikke aktivert push-varslinger`);
+        showInfo(`${getFirstName(leader.name)} har ikke aktivert push-varslinger`);
       }
     } catch (error) {
       console.error('Error sending notification:', error);
-      hapticError();
-      toast.error('Kunne ikke sende varsling');
+      showError('Kunne ikke sende varsling');
     } finally {
       setIsSendingNotification(false);
     }
@@ -475,8 +470,7 @@ export function LeaderContentSheet({
 
       if (contentError) throw contentError;
 
-      hapticSuccess();
-      toast.success('Lagret!');
+      showSuccess('Lagret!');
       onSaved();
       
       // Check for changes and show notification dialog
@@ -489,8 +483,7 @@ export function LeaderContentSheet({
       }
     } catch (error) {
       console.error('Error saving:', error);
-      hapticError();
-      toast.error('Kunne ikke lagre');
+      showError('Kunne ikke lagre');
     } finally {
       setSaving(false);
     }

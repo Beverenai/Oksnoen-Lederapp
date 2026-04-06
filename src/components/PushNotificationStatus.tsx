@@ -1,7 +1,7 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Bell, BellOff, Loader2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { toast } from 'sonner';
 
 interface PushNotificationStatusProps {
   variant?: 'card' | 'inline' | 'button';
@@ -14,6 +14,7 @@ export function PushNotificationStatus({
   className = '',
   onSuccess,
 }: PushNotificationStatusProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const {
     isSupported,
     isEnabled,
@@ -28,17 +29,17 @@ export function PushNotificationStatus({
   const handleActivate = async () => {
     const success = await enablePushNotifications();
     if (success) {
-      toast.success('Varsler aktivert!');
+      showSuccess('Varsler aktivert!');
       onSuccess?.();
     } else if (error) {
-      toast.error(error);
+      showError(error);
     }
   };
 
   const handleRetry = async () => {
     const success = await retrySync();
     if (success) {
-      toast.success('Varsler synkronisert!');
+      showSuccess('Varsler synkronisert!');
     }
   };
 
