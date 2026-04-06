@@ -387,6 +387,10 @@ header, nav {
   }
 }
 
+.standalone-app .bottom-nav {
+  bottom: 2px;
+}
+
 .dark .bottom-nav {
   background: hsla(var(--card), 0.88);
   border-color: hsl(var(--border) / 0.4);
