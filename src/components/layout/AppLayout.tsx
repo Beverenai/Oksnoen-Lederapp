@@ -668,7 +668,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {!mobileMenuOpen && (
         <nav className="lg:hidden bottom-nav">
           {/* Content container - allows center button overflow */}
-          <div className="relative h-[var(--nav-h)] flex items-center justify-evenly px-1 overflow-visible">
+          <div className="relative h-[var(--nav-h)] flex items-center justify-evenly px-1">
             {getBottomNavItems(isAdmin, isNurse).map((item, index) => {
                 const isActive = location.pathname === item.to;
                 const isCenterButton = index === 2; // Center position (3rd item)
