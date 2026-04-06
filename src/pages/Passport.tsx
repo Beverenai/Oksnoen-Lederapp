@@ -439,35 +439,7 @@ export default function Passport() {
         />
       </div>
 
-      {/* Checkout section */}
-      {isAdmin && (
-        <div className="flex items-center justify-between rounded-lg border border-border p-3 bg-card">
-          <div className="flex items-center gap-2">
-            <Sparkles className={`h-4 w-4 ${checkoutEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
-            <span className="text-sm font-medium">Utsjekk</span>
-            <Badge variant={checkoutEnabled ? 'default' : 'secondary'} className="text-xs">
-              {checkoutEnabled ? 'Aktiv' : 'Av'}
-            </Badge>
-          </div>
-          <Switch
-            checked={checkoutEnabled}
-            onCheckedChange={async () => {
-              const newValue = !checkoutEnabled;
-              try {
-                const { error } = await supabase.from('app_config').upsert({
-                  key: 'checkout_enabled', value: String(newValue), updated_at: new Date().toISOString()
-                }, { onConflict: 'key' });
-                if (error) throw error;
-                queryClient.invalidateQueries({ queryKey: ['checkout-enabled'] });
-                hapticSuccess();
-                toast.success(newValue ? 'Utsjekk aktivert' : 'Utsjekk deaktivert');
-              } catch {
-                toast.error('Kunne ikke oppdatere');
-              }
-            }}
-          />
-        </div>
-      )}
+      {/* Checkout button - prominent placement when enabled */}
       {checkoutEnabled && (
         <Button
           variant="default"
