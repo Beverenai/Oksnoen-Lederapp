@@ -1,47 +1,34 @@
 
 
-## Admin Innstillinger: Kabana-oversikt som landingsside
+## Rombytte: Visuell "fra → til" med beboerliste
 
 ### Konsept
-Samme mønster som ParticipantStats — erstatt de to radene med tab-knapper med et visuelt kort-grid. "Ledere" og "Deltakere" blir de to øverste og mest prominente kortene. Når man trykker på et kort, vises innholdet med tilbake-knapp.
+Når admin velger et mål-rom i dropdown, vises en kompakt beboerliste under valget som viser hvem som allerede bor der. I tillegg får ventende og godkjente rombytter en visuell "fra-til"-visning med to mini-kort side om side.
 
-### Navigasjonskortene (2-kolonne grid)
+### Endringer i `src/components/stats/RoomSwapTab.tsx`
 
-**Rad 1 (prominente, fulle bredde eller store):**
-- **Ledere** (Users, blå) — "Administrer ledere og roller"
-- **Deltakere** (Users, grønn) — "Importer og håndter deltakere"
+**A. Beboerliste ved valgt mål-rom (ny seksjon under rom-dropdown):**
+- Når `targetCabinId` er satt, filtrer `participants` som bor i det rommet
+- Vis en liten liste: "Nåværende beboere (X):" med navnene
+- Gir admin full oversikt over hvem som allerede er der
 
-**Rad 2+ (2-kolonne grid):**
-- **Hytter** (Home, amber) — "Administrer hytter"
-- **Vaktplan** (Calendar, purple) — "Sett opp vaktplan"
-- **Aktiviteter** (Dumbbell, pink) — "Administrer aktiviteter"
-- **Skjær** (MapIcon, teal) — "Skjæraktiviteter"
-- **Historier** (BookOpen, orange) — "Administrer historier"
-- **Push-varsler** (Bell, yellow) — "Send push-varsler"
-- **Tau-kontroll** (Anchor, red) — "Tau-kontroll oppsett"
-- **Synkronisering** (RefreshCw, cyan) — "Import/eksport fra Google Sheets"
-- **Oppsett** (Settings, gray) — "Webhook-konfigurasjon"
+**B. Visuell "fra → til" kort for ventende/godkjente rombytter:**
+- Erstatt den enkle tekst-linjen med to mini-kort side om side:
+  - Venstre kort (rød/rosa bakgrunn): Fra-hytte + rom + liste over andre som bor der
+  - Pil i midten
+  - Høyre kort (grønn bakgrunn): Til-hytte + rom + liste over nåværende beboere
+- For ventende bytter: vis deltagerens navn over kortene
+- Hvis to deltakere bytter rom med hverandre (A→B og B→A), grupper dem visuelt
 
-### Navigasjon
-- Bruk `activeSection` state (allerede finnes) — `null`/`''` = vis grid, ellers vis innhold
-- Tilbake-knapp øverst som setter `activeSection` tilbake til `''`
-
-### Teknisk
-
-**Endringer i `src/pages/admin/AdminSettings.tsx`:**
-- Erstatt `Tabs`/`TabsList`/`TabsTrigger` med et kort-grid (som i ParticipantStats)
-- Legg til en "landing"-tilstand der `activeSection === ''` viser kortene
-- Når `activeSection` har verdi, vis `AdminSettingsContent` med tilbake-knapp
-- Ledere og Deltakere-kortene blir vist som fulle-bredde kort øverst
-
-**Ingen endringer i `AdminSettingsContent`** — den fungerer allerede med `activeSection` switch.
+**C. Grupper "swap-par":**
+- Detect om to ventende swaps er "motsatte" (A flytter til B's rom, B flytter til A's rom)
+- Vis disse som ett visuelt bytte-kort med dobbel-pil (⇄) i stedet for to separate rader
 
 ### Filer som endres
-- `src/pages/admin/AdminSettings.tsx` — eneste fil
+- `src/components/stats/RoomSwapTab.tsx` — eneste fil
 
 ### Resultat
-- Landingssiden viser fargerike navigasjonskort i stedet for tab-rader
-- Ledere og Deltakere er prominente øverst
-- Trykk for å komme inn, tilbake-knapp for å gå ut
-- Konsistent med ParticipantStats-designet
+- Admin ser hvem som bor på et rom før de legger til byttet
+- Ventende/godkjente bytter vises visuelt med fra/til-kort
+- Gjensidig rombytter (A↔B) grupperes automatisk
 
