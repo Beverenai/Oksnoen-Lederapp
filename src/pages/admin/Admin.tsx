@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,9 +11,11 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Progress } from '@/components/ui/progress';
 import {
   Settings, Loader2, Shield, Calendar, RefreshCw, Check,
-  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles
+  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles,
+  Download, WifiOff, CheckCircle
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -21,6 +24,7 @@ import { LeaderListView } from '@/components/admin/LeaderListView';
 import { LeaderActivationTab } from '@/components/admin/LeaderActivationTab';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
+import { preloadForOffline, type PreloadProgress } from '@/lib/offlinePreload';
 
 // Lazy-load the heavy HomeConfig section (includes @dnd-kit)
 const HomeConfigSection = lazy(() => import('@/components/admin/HomeConfigTab'));
@@ -50,6 +54,7 @@ export default function Admin() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { isAdmin, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
+  const rqClient = useQueryClient();
   const [leaders, setLeaders] = useState<LeaderWithRole[]>([]);
   const [homeConfig, setHomeConfig] = useState<HomeScreenConfig[]>([]);
   const [localHomeConfig, setLocalHomeConfig] = useState<HomeScreenConfig[]>([]);
@@ -77,6 +82,10 @@ export default function Admin() {
   const [leaderViewMode, setLeaderViewMode] = useState<'grid' | 'list'>('grid');
   const [isActivitiesSheetOpen, setIsActivitiesSheetOpen] = useState(false);
 
+  // Offline preload state
+  const [isPreloading, setIsPreloading] = useState(false);
+  const [preloadProgress, setPreloadProgress] = useState<PreloadProgress | null>(null);
+  const [preloadDone, setPreloadDone] = useState(false);
   useEffect(() => {
     loadData();
     loadLastSyncTime();
@@ -198,6 +207,22 @@ export default function Admin() {
       setHomeConfig(homeConfigData);
       setLocalHomeConfig(homeConfigData);
     } catch { showError('Kunne ikke laste data'); } finally { setIsLoading(false); }
+  };
+
+  const handlePreloadOffline = async () => {
+    setIsPreloading(true);
+    setPreloadDone(false);
+    setPreloadProgress(null);
+    try {
+      const result = await preloadForOffline(rqClient, setPreloadProgress);
+      setPreloadDone(true);
+      showSuccess('Klar for offline!', `${result.participants} deltakere og bilder er lastet ned`);
+    } catch (e) {
+      console.error('[Offline] Preload failed:', e);
+      showError('Kunne ikke laste ned alt', 'Sjekk internettforbindelsen og prøv igjen');
+    } finally {
+      setIsPreloading(false);
+    }
   };
 
   if (!isAdmin) {
@@ -328,6 +353,49 @@ export default function Admin() {
           </CollapsibleContent>
         </Card>
       </Collapsible>
+
+      {/* Offline preload */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <WifiOff className="w-5 h-5" />
+            <div>
+              <CardTitle>Offline-modus</CardTitle>
+              <CardDescription>Last ned alle data og bilder for bruk uten internett</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {preloadProgress && isPreloading && (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">{preloadProgress.label}</p>
+              <Progress 
+                value={preloadProgress.total > 0 ? (preloadProgress.current / preloadProgress.total) * 100 : 0} 
+              />
+            </div>
+          )}
+          {preloadDone && !isPreloading && (
+            <div className="flex items-center gap-2 text-sm text-primary">
+              <CheckCircle className="w-4 h-4" />
+              <span>Appen er klar for bruk uten internett</span>
+            </div>
+          )}
+          <Button
+            onClick={handlePreloadOffline}
+            disabled={isPreloading}
+            variant={preloadDone ? 'outline' : 'default'}
+            className="w-full"
+          >
+            {isPreloading ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Laster ned...</>
+            ) : preloadDone ? (
+              <><CheckCircle className="w-4 h-4 mr-2" />Last ned på nytt</>
+            ) : (
+              <><Download className="w-4 h-4 mr-2" />Klargjør offline-modus</>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Home screen config - lazy loaded */}
       <Collapsible open={isHomeConfigOpen} onOpenChange={setIsHomeConfigOpen}>
