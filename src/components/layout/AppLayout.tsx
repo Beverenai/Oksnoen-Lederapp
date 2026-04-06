@@ -174,7 +174,7 @@ const NavGroup = ({
 };
 
 export default function AppLayout({ children }: AppLayoutProps) {
-  const { leader, isAdmin, isNurse, logout } = useAuth();
+  const { leader, isAdmin, isNurse, logout, viewAsLeader, setViewAsLeader } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
   const [showHajoloSuccess, setShowHajoloSuccess] = useState(false);
@@ -396,6 +396,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="h-dvh bg-background flex flex-col overflow-hidden overflow-x-hidden w-full pl-safe pr-safe">
+      {/* View As Banner */}
+      {viewAsLeader && (
+        <div className="bg-amber-500 dark:bg-amber-600 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
+          <span className="text-sm font-medium">👁 Du ser appen som {viewAsLeader.name}</span>
+          <button
+            onClick={() => { setViewAsLeader(null); navigate('/admin'); }}
+            className="text-sm font-bold underline hover:no-underline"
+          >
+            Avslutt
+          </button>
+        </div>
+      )}
       {/* Hajolo Success Overlay */}
       {showHajoloSuccess && (
         <div 
