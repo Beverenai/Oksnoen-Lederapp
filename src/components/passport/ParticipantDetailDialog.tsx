@@ -202,10 +202,7 @@ export const ParticipantDetailDialog = ({
 
       if (error) throw error;
 
-      toast({
-        title: newStatus ? 'Ankommet' : 'Ikke ankommet',
-        description: `${participant.name} er markert som ${newStatus ? 'ankommet' : 'ikke ankommet'}`,
-      });
+      showSuccess(newStatus ? 'Ankommet' : 'Ikke ankommet', `${participant.name} er markert som ${newStatus ? 'ankommet' : 'ikke ankommet'}`);
       refetchParticipant();
       onParticipantUpdated?.();
     } catch (error) {
