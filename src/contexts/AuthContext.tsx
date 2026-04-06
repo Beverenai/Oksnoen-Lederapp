@@ -125,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const timeoutId = setTimeout(() => {
       console.warn('[Auth] initAuth timeout — forcing isLoading=false');
       setIsLoading(false);
-      isInitializedRef.current = true;
+      setIsInitialized(true);
       setAuthError('Innlasting tok for lang tid. Prøv å laste siden på nytt.');
     }, 10000);
 
@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       clearTimeout(timeoutId);
       setIsLoading(false);
-      isInitializedRef.current = true;
+      setIsInitialized(true);
       initInProgressRef.current = false;
       console.log('[Auth] initAuth complete');
     }
@@ -263,7 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       leader, isSuperAdmin, isAdmin, isNurse,
       isLoading,
-      isInitialized: isInitializedRef.current,
+      isInitialized,
       isProfileComplete, authError, deactivatedMessage,
       login, logout, refreshLeader, retryAuth
     }}>
