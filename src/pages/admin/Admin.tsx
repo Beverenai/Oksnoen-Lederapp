@@ -55,7 +55,6 @@ export default function Admin() {
   const { isAdmin, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const rqClient = useQueryClient();
-  const navigate = useNavigate();
   const [leaders, setLeaders] = useState<LeaderWithRole[]>([]);
   const [homeConfig, setHomeConfig] = useState<HomeScreenConfig[]>([]);
   const [localHomeConfig, setLocalHomeConfig] = useState<HomeScreenConfig[]>([]);
