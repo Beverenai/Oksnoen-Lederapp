@@ -55,8 +55,16 @@ html, body, #root, main, section, article, form {
 }
 
 /* Background color set here so body bg is visible behind safe areas */
+html {
+  background: hsl(var(--background));
+  min-height: 100dvh;
+}
+
 body {
   background: hsl(var(--background));
+  margin: 0;
+  padding: 0;
+  min-height: 100dvh;
 }
 
 /* Force flex/grid children to respect parent bounds */
@@ -359,53 +367,39 @@ header, nav {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
+  padding-bottom: 100px;
 }
 
-/* Bottom nav container — floating pill */
+/* Bottom nav — full-width bar that covers safe area */
 .bottom-nav {
-  position: fixed;
-  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-  left: 8px;
-  right: 8px;
-  z-index: 50;
-  background: hsla(var(--card), 0.85);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  border: 0.5px solid hsl(var(--border) / 0.5);
-  border-radius: 20px;
-  box-shadow: 0 2px 20px 0 rgb(0 0 0 / 0.10);
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-}
-
-/* Underlay that fills the safe-area gap below the pill with app bg */
-.bottom-nav-underlay {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 40;
-  height: env(safe-area-inset-bottom, 0px);
-  background: hsl(var(--background));
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
+  width: 100%;
+  padding-bottom: 34px;
+  padding-top: 8px;
+  background: hsl(var(--card));
+  border-top: 1px solid hsl(var(--border));
+  border-radius: 0;
+  margin: 0;
+  z-index: 50;
 }
 
-/* In installed PWA or Capacitor: pill sits just above the underlay */
-@media (display-mode: standalone) {
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
   .bottom-nav {
-    bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 34px);
   }
 }
 
-.standalone-app .bottom-nav {
-  bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+/* Underlay no longer needed — nav covers full width */
+.bottom-nav-underlay {
+  display: none;
 }
 
 .dark .bottom-nav {
-  background: hsla(var(--card), 0.88);
+  background: hsl(var(--card));
   border-color: hsl(var(--border) / 0.4);
-  box-shadow: 0 2px 20px 0 rgb(0 0 0 / 0.25);
 }
 
   /* App scroll container - smooth iOS momentum scroll */
