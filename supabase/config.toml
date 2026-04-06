@@ -3,47 +3,5 @@ project_id = "noxnbtvxksgjsqzfdgcd"
 [functions.phone-login]
 verify_jwt = false
 
-[functions.sync-leaders-export]
-verify_jwt = false
-
-[functions.sync-leaders-import]
-verify_jwt = false
-
-[functions.trigger-sync]
-verify_jwt = false
-
-[functions.trigger-export]
-verify_jwt = false
-
-[functions.import-participants]
-verify_jwt = false
-
-[functions.generate-pass]
-verify_jwt = false
-
-[functions.generate-all-passes]
-verify_jwt = false
-
-[functions.generate-vapid-keys]
-verify_jwt = false
-
-[functions.push-vapid-key]
-verify_jwt = false
-
-[functions.push-subscribe]
-verify_jwt = false
-
-[functions.push-unsubscribe]
-verify_jwt = false
-
-[functions.push-send]
-verify_jwt = false
-
-[functions.migrate-images]
-verify_jwt = false
-
-[functions.push-admin-alert]
-verify_jwt = false
-
-[functions.import-participants-background]
+[functions.manage-roles]
 verify_jwt = false
