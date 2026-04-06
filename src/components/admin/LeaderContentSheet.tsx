@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, Check, Home } from 'lucide-react';
+import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, Check, Home, Trash2 } from 'lucide-react';
 import { icons } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -104,6 +104,7 @@ export function LeaderContentSheet({
   const [showNotifyDialog, setShowNotifyDialog] = useState(false);
   const [detectedChanges, setDetectedChanges] = useState<string[]>([]);
   const [isSendingChangeNotification, setIsSendingChangeNotification] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   
   // Store original values to detect changes
   const originalValuesRef = useRef<Record<string, any>>({});
@@ -302,6 +303,24 @@ export function LeaderContentSheet({
   const handleSkipNotification = () => {
     setShowNotifyDialog(false);
     onOpenChange(false);
+  };
+
+  const handleClearAllFields = () => {
+    setTeam('');
+    setMinisterpost('');
+    setCurrentActivity('');
+    setExtraActivity('');
+    setPersonalNotes('');
+    setObsMessage('');
+    setExtra1('');
+    setExtra2('');
+    setExtra3('');
+    setExtra4('');
+    setExtra5('');
+    setSelectedCabinIds([]);
+    setShowClearConfirm(false);
+    hapticImpact('medium');
+    toast.info('Alle felt tømt — husk å lagre');
   };
 
   const handleSendNotification = async () => {
@@ -763,25 +782,53 @@ export function LeaderContentSheet({
               </Collapsible>
             )}
 
-            {/* Save Button */}
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full"
-              size="lg"
-            >
-              {saving ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              Lagre endringer
-            </Button>
+            {/* Clear + Save Buttons */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowClearConfirm(true)}
+                className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1"
+                size="lg"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Lagre endringer
+              </Button>
+            </div>
             {/* Safe area spacer for iOS home indicator */}
             <div className="pb-safe" />
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Clear Confirmation Dialog */}
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tøm alle felt?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dette tømmer alle felt for {getFirstName(leader.name)} (team, hytte, aktiviteter, notater, OBS-melding og ekstra-felt). Du må trykke «Lagre» etterpå for å bekrefte.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearAllFields} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <Trash2 className="w-4 h-4 mr-2" />
+              Tøm alle felt
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Change Notification Dialog */}
       <AlertDialog open={showNotifyDialog} onOpenChange={setShowNotifyDialog}>
