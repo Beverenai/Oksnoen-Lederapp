@@ -68,10 +68,9 @@ export const CabinAssignmentStatus = forwardRef<CabinAssignmentStatusRef>((_, re
 
       if (leadersError) throw leadersError;
 
-      // Fetch user roles to check for admin/nurse
+      // Fetch user roles to check for admin/nurse via RPC
       const { data: userRoles } = await supabase
-        .from('user_roles')
-        .select('leader_id, role');
+        .rpc('get_all_leader_roles');
 
       const rolesMap = new Map<string, string[]>();
       (userRoles || []).forEach((r) => {

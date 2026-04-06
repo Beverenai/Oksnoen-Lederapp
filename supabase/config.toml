@@ -2,6 +2,3 @@ project_id = "noxnbtvxksgjsqzfdgcd"
 
 [functions.phone-login]
 verify_jwt = false
-
-[functions.manage-roles]
-verify_jwt = false

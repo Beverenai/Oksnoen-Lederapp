@@ -152,10 +152,9 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
         .from('leader_content')
         .select('*');
 
-      // Fetch admin and nurse roles
+      // Fetch admin and nurse roles via RPC
       const { data: rolesData } = await supabase
-        .from('user_roles')
-        .select('leader_id, role');
+        .rpc('get_all_leader_roles');
 
       const admins = rolesData?.filter(r => r.role === 'admin').map(r => r.leader_id) || [];
       const nurses = rolesData?.filter(r => r.role === 'nurse').map(r => r.leader_id) || [];

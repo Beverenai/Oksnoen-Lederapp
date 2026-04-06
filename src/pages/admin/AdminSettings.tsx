@@ -310,8 +310,7 @@ export default function AdminSettings() {
       }
 
       const { data: userRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('leader_id, role');
+        .rpc('get_all_leader_roles');
       
       if (rolesError) {
         console.error('[syncLeaderCabins] Error fetching roles:', rolesError);
@@ -501,11 +500,11 @@ export default function AdminSettings() {
     try {
       const [leadersRes, rolesRes] = await Promise.all([
         supabase.from('leaders').select('*').order('created_at'),
-        supabase.from('user_roles').select('*'),
+        supabase.rpc('get_all_leader_roles'),
       ]);
 
       const roleMap = new Map<string, AppRole>();
-      (rolesRes.data || []).forEach((r: UserRole) => {
+      (rolesRes.data || []).forEach((r: { leader_id: string; role: string }) => {
         roleMap.set(r.leader_id, r.role as AppRole);
       });
 

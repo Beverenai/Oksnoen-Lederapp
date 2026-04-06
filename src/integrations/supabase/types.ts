@@ -1013,6 +1013,13 @@ export type Database = {
     }
     Functions: {
       current_leader_id: { Args: never; Returns: string }
+      get_all_leader_roles: {
+        Args: never
+        Returns: {
+          leader_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
+      }
       get_my_roles: {
         Args: never
         Returns: {
