@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -684,6 +684,7 @@ export function LeaderContentSheet({
               <Input
                 value={currentActivity}
                 onChange={(e) => setCurrentActivity(e.target.value)}
+                onBlur={() => autoSaveField('current_activity', currentActivity)}
                 placeholder="Hva gjør lederen nå?"
               />
             </div>
@@ -693,6 +694,7 @@ export function LeaderContentSheet({
               <Input
                 value={extraActivity}
                 onChange={(e) => setExtraActivity(e.target.value)}
+                onBlur={() => autoSaveField('extra_activity', extraActivity)}
                 placeholder="Tilleggsinfo om aktivitet"
               />
             </div>
