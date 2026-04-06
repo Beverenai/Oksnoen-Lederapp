@@ -6,21 +6,47 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   const correlationId = Date.now().toString()
-  console.log(`trigger-export [${correlationId}]: Starting...`)
 
   try {
+    // Validate JWT
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    })
+    const token = authHeader.replace('Bearer ', '')
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token)
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get export webhook URL from app_config
+    // Verify caller is admin
+    const callerAuthId = claimsData.claims.sub
+    const { data: callerLeader } = await supabase.from('leaders').select('id').eq('auth_user_id', callerAuthId).maybeSingle()
+    if (!callerLeader) {
+      return new Response(JSON.stringify({ error: 'Leader not found' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    const { data: adminRole } = await supabase.from('user_roles').select('role').eq('leader_id', callerLeader.id).eq('role', 'admin').maybeSingle()
+    if (!adminRole) {
+      return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    console.log(`trigger-export [${correlationId}]: Starting (by admin ${callerLeader.id})...`)
+
     const { data: configData, error: configError } = await supabase
       .from('app_config')
       .select('value')
@@ -28,7 +54,6 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (configError) {
-      console.error(`trigger-export [${correlationId}]: Error fetching webhook URL:`, configError)
       return new Response(
         JSON.stringify({ success: false, error: 'Could not fetch export webhook URL', correlationId }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -36,7 +61,6 @@ Deno.serve(async (req) => {
     }
 
     if (!configData?.value) {
-      console.log(`trigger-export [${correlationId}]: No export webhook URL configured`)
       return new Response(
         JSON.stringify({ success: false, error: 'No export webhook URL configured', correlationId }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -44,9 +68,7 @@ Deno.serve(async (req) => {
     }
 
     const exportWebhookUrl = configData.value
-    console.log(`trigger-export [${correlationId}]: Fetching leaders for export...`)
 
-    // Fetch all leaders with their content
     const { data: leaders, error: leadersError } = await supabase
       .from('leaders')
       .select('*')
@@ -54,20 +76,15 @@ Deno.serve(async (req) => {
       .order('name')
 
     if (leadersError) {
-      console.error(`trigger-export [${correlationId}]: Error fetching leaders:`, leadersError)
       return new Response(
         JSON.stringify({ success: false, error: 'Could not fetch leaders', correlationId }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const { data: contents } = await supabase
-      .from('leader_content')
-      .select('*')
-
+    const { data: contents } = await supabase.from('leader_content').select('*')
     const contentMap = new Map(contents?.map(c => [c.leader_id, c]) || [])
 
-    // Build export data
     const exportData = leaders?.map(leader => {
       const content = contentMap.get(leader.id)
       return {
@@ -88,14 +105,9 @@ Deno.serve(async (req) => {
       }
     }) || []
 
-    console.log(`trigger-export [${correlationId}]: Exporting ${exportData.length} leaders to webhook...`)
-
-    // Send to n8n webhook
     const response = await fetch(exportWebhookUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         timestamp: new Date().toISOString(),
         triggered_from: 'admin_panel_export',
@@ -105,42 +117,22 @@ Deno.serve(async (req) => {
     })
 
     const responseText = await response.text()
-    console.log(`trigger-export [${correlationId}]: Webhook response status:`, response.status)
-    console.log(`trigger-export [${correlationId}]: Webhook response body:`, responseText)
 
     if (!response.ok) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `Export webhook returned ${response.status}`,
-          webhookStatus: response.status,
-          correlationId,
-          rawResponse: responseText
-        }),
+        JSON.stringify({ success: false, error: `Export webhook returned ${response.status}`, webhookStatus: response.status, correlationId, rawResponse: responseText }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Update last export timestamp
     await supabase
       .from('app_config')
-      .upsert({ 
-        key: 'last_export_timestamp', 
-        value: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'key' })
+      .upsert({ key: 'last_export_timestamp', value: new Date().toISOString(), updated_at: new Date().toISOString() }, { onConflict: 'key' })
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: `Exported ${exportData.length} leaders to Google Sheets`,
-        webhookStatus: response.status,
-        correlationId,
-        leadersExported: exportData.length
-      }),
+      JSON.stringify({ success: true, message: `Exported ${exportData.length} leaders to Google Sheets`, webhookStatus: response.status, correlationId, leadersExported: exportData.length }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-
   } catch (error) {
     console.error(`trigger-export [${correlationId}]: Error:`, error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
