@@ -676,7 +676,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                               hapticImpact('medium');
                               handleHajoloClick();
                             }}
-                            className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:scale-95"
+                            className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:opacity-70"
                           >
                             <div
                               className={cn(
@@ -724,7 +724,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                         key={item.to}
                         to={item.to}
                         onClick={() => hapticImpact('medium')}
-                        className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:scale-95"
+                        className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:opacity-70"
                       >
                         <div className="w-14 h-14 rounded-full flex items-center justify-center bg-slate-800 dark:bg-slate-700 shadow-[0_4px_16px_rgba(0,0,0,0.15)] border-[3px] border-white/50 dark:border-white/20">
                           <Settings className="w-7 h-7 text-white" strokeWidth={2} />
@@ -741,7 +741,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                         key={item.to}
                         to={item.to}
                         onClick={() => hapticImpact('medium')}
-                        className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:scale-95"
+                        className="flex flex-col items-center justify-center min-w-[64px] -mt-6 z-10 transition-all duration-150 active:opacity-70"
                       >
                         <div className="w-14 h-14 rounded-full flex items-center justify-center bg-rose-500 shadow-[0_4px_16px_rgba(0,0,0,0.15)] border-[3px] border-white/50 dark:border-white/20">
                           <Heart className="w-7 h-7 text-white" strokeWidth={2} />
