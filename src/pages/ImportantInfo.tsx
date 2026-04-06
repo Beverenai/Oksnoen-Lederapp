@@ -17,6 +17,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { differenceInYears } from 'date-fns';
+import { formatFullRoom } from '@/lib/utils';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 
 interface ParticipantWithHealthInfo {
