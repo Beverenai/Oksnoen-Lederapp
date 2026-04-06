@@ -222,6 +222,7 @@ export default function Passport() {
       queryFn: async () => {
         const [participantRes, activitiesRes, healthRes] = await Promise.all([
           supabase.from('participants').select('*, cabins(id, name)').eq('id', participantId).single(),
+          // Note: 'cabins' is the default relationship name from cabin_id FK
           supabase.from('participant_activities').select('*').eq('participant_id', participantId),
           supabase.from('participant_health_info').select('*').eq('participant_id', participantId).maybeSingle()
         ]);
