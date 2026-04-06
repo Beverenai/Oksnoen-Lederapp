@@ -617,19 +617,21 @@ export default function Nurse() {
     );
   };
 
-  const reportParticipants = useMemo(() => 
-    participants.map(p => ({
-      id: p.id,
-      name: p.name,
-      first_name: p.first_name,
-      last_name: p.last_name,
-      cabin: p.cabin,
-      birth_date: p.birth_date,
-    })),
-    [participants]
-  );
-
   return (
+    <div className="space-y-4 animate-fade-in">
+      <div className="flex items-center gap-2 mb-2">
+        <Heart className="w-8 h-8 text-destructive" />
+        <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground">Nurse</h1>
+      </div>
+
+      <Tabs defaultValue="participants" className="w-full">
+        <TabsList className="w-full grid grid-cols-2">
+          <TabsTrigger value="participants">Alle deltakere</TabsTrigger>
+          <TabsTrigger value="report">Rapport</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="participants" className="space-y-6 mt-4">
+      <div className="flex items-start justify-between gap-4">
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center gap-2 mb-2">
         <Heart className="w-8 h-8 text-destructive" />
