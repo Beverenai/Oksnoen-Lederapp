@@ -175,6 +175,7 @@ const NavGroup = ({
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const { leader, isAdmin, isNurse, logout, viewAsLeader, setViewAsLeader } = useAuth();
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
   const [showHajoloSuccess, setShowHajoloSuccess] = useState(false);
@@ -367,7 +368,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       .upsert({ leader_id: leader.id, has_read: true }, { onConflict: 'leader_id' });
 
     if (error) {
-      toast.error('Kunne ikke bekrefte');
+      showError('Kunne ikke bekrefte');
       return;
     }
 
