@@ -1,36 +1,37 @@
 
 
-## Fiks: Meny, scroll, layout og safe area
+## Fiks: Dødplass på høyre side, scroll på Ledere, og bytt Profil → Fix
 
-### Endringer
+### Problem 1: Dødplass på høyre side
+Skjermbildet viser at innholdet ikke fyller hele bredden — det er en stripe med dødplass til høyre. Sannsynlig årsak: den globale CSS-regelen `max-width: 100%` på alle `div`-elementer (index.css linje 53-55) kan kollidere med menypanelet som ligger i DOM-en med `w-[80vw]`. Eller så er det `overflow: hidden` på `#root` som klipper feil.
 
-**1. Sidemenyen → 80vw med overlay (`AppLayout.tsx` linje 551-656)**
-- Legg til en `bg-black/50` overlay-div bak menypanelet som fader inn/ut. Klikk på overlay → `closeMobileMenu()`.
-- Meny-panelet endres fra `fixed inset-0` til `fixed inset-y-0 right-0 w-[80vw] max-w-[320px]`.
-- Meny-headeren endres fra `left-0 right-0` til bare full bredde innenfor panelet.
-- Animasjon beholdes: `translate-x-full` → `translate-x-0`.
+**Endring i `index.css` (linje 53-55):**
+- Fjern `div` fra den globale `max-width: 100%`-regelen (behold `html, body, #root, main, section, article, form`)
+- `div` er for generisk og kan påvirke layout-beregninger uventet
 
-**2. Svart stripe → safe area på bunnav (`AppLayout.tsx` linje 660)**
-- Legg til `pb-[env(safe-area-inset-bottom,0px)]` på `<nav>` og sørg for at bakgrunnen strekker seg ned.
-- CSS-klassen `.bottom-nav` i `index.css` bruker allerede `bottom: calc(8px + env(...))` — men selve nav-elementet trenger intern padding for å unngå at innholdet kuttes.
+**Endring i `AppLayout.tsx` (linje 800-804):**
+- Legg til `w-full` på `<main>` for å sikre at den fyller hele tilgjengelig bredde
+- Verifiser at `p-4` paddingen ikke skaper visuelt "dødplass"
 
-**3. Main content padding (`AppLayout.tsx` linje 794)**
-- Endre `pb-[env(safe-area-inset-bottom,0px)]` til `pb-[calc(var(--nav-h)+env(safe-area-inset-bottom,0px)+24px)]` slik at innhold aldri havner bak den flytende bunnav-baren.
+### Problem 2: Scrolling fungerer ikke på Ledere
+Leaders.tsx (linje 349) har `overflow-y-auto` på inner div, men `#root` har `overflow: hidden` og `<main>` i AppLayout har `overflow-x-hidden` uten eksplisitt `overflow-y-auto` for mobil.
 
-**4. Scroll-ytelse på Leaders (`Leaders.tsx` linje 349)**
-- Legg til `overflow-x-hidden` og style `WebkitOverflowScrolling: 'touch'`, `overscrollBehavior: 'contain'`, `willChange: 'transform'` på scroll-containeren.
+**Endring i `AppLayout.tsx` (linje 803):**
+- Legg til `overflow-y-auto` på `<main>` for mobil (den er allerede der for `lg:overflow-y-auto`)
+- Fjern `overflow-y-auto` fra Leaders.tsx inner div (den skal arve scroll fra main)
 
-**5. Viewport-fix (`index.css`)**
-- Verifiser at `html, body, #root` bruker `min-height: 100dvh` (allerede delvis på plass, dobbeltsjekker).
+**Endring i `Leaders.tsx` (linje 349):**
+- Fjern `overflow-y-auto` fra den ytre div-en — scroll skal håndteres av `<main>` i AppLayout
+
+### Problem 3: Bytt "Profil" → "Fix" i bunnav
+Brukeren vil at Profil-fanen erstattes med Fix, siden Profil allerede er tilgjengelig via sidemenyen.
+
+**Endring i `AppLayout.tsx` (linje 92-118):**
+- I alle tre `getBottomNavItems`-variantene: bytt siste element fra `{ to: '/profile', icon: User, label: 'Profil' }` til `{ to: '/fix', icon: Wrench, label: 'Fix' }`
+- `Wrench`-ikonet er allerede importert
 
 ### Filer som endres
-- `src/components/layout/AppLayout.tsx`
-- `src/pages/Leaders.tsx`
-- `src/index.css` (kun om `100dvh` mangler)
-
-### Resultat
-- Meny dekker 80% med dimmet bakgrunn bak
-- Ingen svart stripe på iPhone
-- Innhold kuttes ikke av bunnav
-- Smooth scroll på Ledere-siden
+- `src/components/layout/AppLayout.tsx` — bunnav Fix, main overflow-y-auto, w-full
+- `src/index.css` — fjern `div` fra global max-width-regel
+- `src/pages/Leaders.tsx` — fjern overflow-y-auto fra inner div
 
