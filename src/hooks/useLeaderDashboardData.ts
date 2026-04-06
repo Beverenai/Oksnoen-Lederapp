@@ -7,6 +7,18 @@ import { getTeamSortOrder } from '@/lib/teamUtils';
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
 
+function normalizeRoleIds(ids: unknown): string[] {
+  if (Array.isArray(ids)) {
+    return ids.filter((id): id is string => typeof id === 'string');
+  }
+
+  if (ids instanceof Set) {
+    return Array.from(ids).filter((id): id is string => typeof id === 'string');
+  }
+
+  return [];
+}
+
 export interface LeaderWithContent extends Leader {
   content?: LeaderContent | null;
   isAdmin?: boolean;
@@ -43,8 +55,8 @@ export function useLeaderDashboardData(leaders: Leader[]) {
   const { data: roles, isLoading: rolesLoading } = useLeaderRoles();
   const { data: contentData, isLoading: contentLoading, refetch: refetchContent } = useLeaderContent();
 
-  const adminIds = useMemo(() => new Set(roles?.adminIds ?? []), [roles?.adminIds]);
-  const nurseIds = useMemo(() => new Set(roles?.nurseIds ?? []), [roles?.nurseIds]);
+  const adminIds = useMemo(() => new Set(normalizeRoleIds(roles?.adminIds)), [roles?.adminIds]);
+  const nurseIds = useMemo(() => new Set(normalizeRoleIds(roles?.nurseIds)), [roles?.nurseIds]);
 
   // Filter out superadmin and inactive
   const activeLeaders = useMemo(() =>
