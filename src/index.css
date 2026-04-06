@@ -367,20 +367,19 @@ header, nav {
   padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
 }
 
-/* Bottom nav container - standard iOS tab bar */
+/* Bottom nav container - floating pill with minimal gap */
 .bottom-nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+  left: 8px;
+  right: 8px;
   z-index: 50;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: hsla(var(--card), 0.85);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
   border-top: 0.5px solid hsl(var(--border));
-  border-radius: 0;
-  box-shadow: none;
+  border-radius: 20px;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.08);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
 }
@@ -388,7 +387,7 @@ header, nav {
 .dark .bottom-nav {
   background: hsla(var(--card), 0.85);
   border-top: 0.5px solid hsl(var(--border));
-  box-shadow: none;
+  box-shadow: 0 2px 16px rgb(0 0 0 / 0.25);
 }
 
   /* App scroll container - smooth iOS momentum scroll */
