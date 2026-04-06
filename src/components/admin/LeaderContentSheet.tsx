@@ -782,20 +782,29 @@ export function LeaderContentSheet({
               </Collapsible>
             )}
 
-            {/* Save Button */}
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full"
-              size="lg"
-            >
-              {saving ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              Lagre endringer
-            </Button>
+            {/* Clear + Save Buttons */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowClearConfirm(true)}
+                className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1"
+                size="lg"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Lagre endringer
+              </Button>
+            </div>
             {/* Safe area spacer for iOS home indicator */}
             <div className="pb-safe" />
           </div>
