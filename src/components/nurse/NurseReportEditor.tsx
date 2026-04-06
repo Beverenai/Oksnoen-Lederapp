@@ -795,6 +795,7 @@ ${cleanHtml}
         )}
       </div>
 
+      <div className="relative flex-1 min-h-0 overflow-y-auto">
         {mentionQuery !== null && filteredMentionParticipants.length > 0 && (
           <div
             className="absolute bg-popover border border-border rounded-lg shadow-lg p-1 max-h-64 overflow-y-auto z-50"
