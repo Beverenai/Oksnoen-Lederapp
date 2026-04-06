@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,9 +11,11 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Progress } from '@/components/ui/progress';
 import {
   Settings, Loader2, Shield, Calendar, RefreshCw, Check,
-  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles
+  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles,
+  Download, WifiOff, CheckCircle
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -21,6 +24,7 @@ import { LeaderListView } from '@/components/admin/LeaderListView';
 import { LeaderActivationTab } from '@/components/admin/LeaderActivationTab';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
+import { preloadForOffline, type PreloadProgress } from '@/lib/offlinePreload';
 
 // Lazy-load the heavy HomeConfig section (includes @dnd-kit)
 const HomeConfigSection = lazy(() => import('@/components/admin/HomeConfigTab'));
@@ -50,6 +54,8 @@ export default function Admin() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { isAdmin, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
+  const rqClient = useQueryClient();
+  const navigate = useNavigate();
   const [leaders, setLeaders] = useState<LeaderWithRole[]>([]);
   const [homeConfig, setHomeConfig] = useState<HomeScreenConfig[]>([]);
   const [localHomeConfig, setLocalHomeConfig] = useState<HomeScreenConfig[]>([]);
@@ -77,6 +83,10 @@ export default function Admin() {
   const [leaderViewMode, setLeaderViewMode] = useState<'grid' | 'list'>('grid');
   const [isActivitiesSheetOpen, setIsActivitiesSheetOpen] = useState(false);
 
+  // Offline preload state
+  const [isPreloading, setIsPreloading] = useState(false);
+  const [preloadProgress, setPreloadProgress] = useState<PreloadProgress | null>(null);
+  const [preloadDone, setPreloadDone] = useState(false);
   useEffect(() => {
     loadData();
     loadLastSyncTime();
