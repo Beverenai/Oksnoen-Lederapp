@@ -114,6 +114,8 @@ export function LeaderContentSheet({
   const [cabins, setCabins] = useState<{ id: string; name: string }[]>([]);
   const [selectedCabinIds, setSelectedCabinIds] = useState<string[]>([]);
   const [cabinSearch, setCabinSearch] = useState('');
+  const [isLoadingCabins, setIsLoadingCabins] = useState(false);
+  const [cabinsLoadError, setCabinsLoadError] = useState<string | null>(null);
 
   // Leader fields
   const [team, setTeam] = useState(leader?.team || '');
@@ -212,16 +214,32 @@ export function LeaderContentSheet({
     }
   }, [leader, onSaved, showError, showSuccess]);
 
-  useEffect(() => {
-    const loadCabins = async () => {
-      const { data } = await supabase
-        .from('cabins')
-        .select('id, name')
-        .order('sort_order', { ascending: true });
-      setCabins(data || []);
-    };
-    loadCabins();
+  const loadCabins = useCallback(async () => {
+    setIsLoadingCabins(true);
+    setCabinsLoadError(null);
+
+    const { data, error } = await supabase
+      .from('cabins')
+      .select('id, name')
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('Error loading cabins:', error);
+      setCabins([]);
+      setCabinsLoadError('Kunne ikke laste hytter');
+      setIsLoadingCabins(false);
+      return;
+    }
+
+    setCabins(data || []);
+    setIsLoadingCabins(false);
   }, []);
+
+  useEffect(() => {
+    if (open) {
+      void loadCabins();
+    }
+  }, [open, loadCabins]);
 
   // Load leader's existing cabin links when leader changes
   useEffect(() => {
