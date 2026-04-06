@@ -68,7 +68,7 @@ export default function Login() {
           </p>
         </div>
 
-        {inactiveState ? (
+        {showDeactivated ? (
           <Card className="border-0 shadow-xl">
             <CardContent className="pt-8 pb-6 text-center space-y-4">
               <PauseCircle className="w-16 h-16 mx-auto text-muted-foreground" />
