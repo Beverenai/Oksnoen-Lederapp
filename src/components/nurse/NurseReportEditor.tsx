@@ -32,7 +32,6 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // @-mention state
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionPosition, setMentionPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
@@ -42,15 +41,115 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
   const mentionRangeRef = useRef<Range | null>(null);
   const pendingContentRef = useRef<string | null>(null);
 
-  useEffect(() => { loadReport(); }, []);
+  const getParticipant = useCallback((id: string) => participants.find((p) => p.id === id), [participants]);
 
-  // Apply pending content once editor is mounted
+  const getSectionFromNode = useCallback((node: Node | null): HTMLElement | null => {
+    if (!node) return null;
+    if (node instanceof HTMLElement) {
+      return node.closest('.participant-section');
+    }
+    return node.parentElement?.closest('.participant-section') || null;
+  }, []);
+
+  const getTopLevelNode = useCallback((node: Node | null): ChildNode | null => {
+    if (!node || !editorRef.current) return null;
+    let current: Node | null = node instanceof HTMLElement ? node : node.parentNode;
+
+    while (current && current.parentNode && current.parentNode !== editorRef.current) {
+      current = current.parentNode;
+    }
+
+    return current as ChildNode | null;
+  }, []);
+
+  const createDeleteButton = useCallback((participantName?: string) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.setAttribute('contenteditable', 'false');
+    button.setAttribute('data-section-delete', 'true');
+    button.setAttribute('aria-label', `Slett notat for ${participantName || 'deltaker'}`);
+    button.textContent = 'Slett';
+    button.style.cssText = [
+      'margin-left:auto',
+      'border:1px solid hsl(var(--border))',
+      'background:hsl(var(--background))',
+      'color:hsl(var(--foreground))',
+      'border-radius:9999px',
+      'padding:6px 10px',
+      'font-size:12px',
+      'line-height:1',
+      'cursor:pointer',
+      'flex-shrink:0'
+    ].join(';');
+    return button;
+  }, []);
+
+  const normalizeParticipantSections = useCallback((root: HTMLElement) => {
+    let nestedSections = Array.from(root.querySelectorAll('.participant-section .participant-section')) as HTMLElement[];
+
+    while (nestedSections.length > 0) {
+      nestedSections.forEach((section) => {
+        const parentSection = section.parentElement?.closest('.participant-section') as HTMLElement | null;
+        if (!parentSection) return;
+
+        parentSection.insertAdjacentElement('afterend', section);
+
+        const next = section.nextElementSibling as HTMLElement | null;
+        const hasSpacer = next?.tagName === 'P' && !next.textContent?.trim();
+        if (!hasSpacer) {
+          const spacer = document.createElement('p');
+          spacer.innerHTML = '<br>';
+          section.insertAdjacentElement('afterend', spacer);
+        }
+      });
+
+      nestedSections = Array.from(root.querySelectorAll('.participant-section .participant-section')) as HTMLElement[];
+    }
+  }, []);
+
+  const ensureSectionActions = useCallback((root: HTMLElement) => {
+    const sections = Array.from(root.querySelectorAll('.participant-section')) as HTMLElement[];
+
+    sections.forEach((section) => {
+      const header = section.firstElementChild as HTMLElement | null;
+      if (!header) return;
+
+      header.style.pointerEvents = 'auto';
+      if (!header.querySelector('[data-section-delete="true"]')) {
+        const participantName = getParticipant(section.dataset.participantId || '')?.name;
+        header.appendChild(createDeleteButton(participantName));
+      }
+    });
+  }, [createDeleteButton, getParticipant]);
+
+  const prepareEditorDom = useCallback(() => {
+    if (!editorRef.current) return;
+    normalizeParticipantSections(editorRef.current);
+    ensureSectionActions(editorRef.current);
+  }, [ensureSectionActions, normalizeParticipantSections]);
+
+  const getCleanEditorHtml = useCallback(() => {
+    if (!editorRef.current) return '<p><br></p>';
+
+    const clone = editorRef.current.cloneNode(true) as HTMLElement;
+    normalizeParticipantSections(clone);
+    clone.querySelectorAll('[data-section-delete="true"]').forEach((button) => button.remove());
+
+    const html = clone.innerHTML.trim();
+    return html || '<p><br></p>';
+  }, [normalizeParticipantSections]);
+
+  useEffect(() => {
+    loadReport();
+  }, []);
+
   useEffect(() => {
     if (!isLoading && editorRef.current && pendingContentRef.current !== null) {
       editorRef.current.innerHTML = pendingContentRef.current;
       pendingContentRef.current = null;
+      prepareEditorDom();
     }
-  }, [isLoading]);
+  }, [isLoading, prepareEditorDom]);
 
   const loadReport = async () => {
     try {
@@ -64,7 +163,7 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
       if (reports && reports.length > 0) {
         const report = reports[0];
         setReportId(report.id);
-        // Detect old JSON format and convert to HTML
+
         let content = report.content || '<p><br></p>';
         if (content.trim().startsWith('[')) {
           try {
@@ -72,18 +171,20 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
             if (Array.isArray(lines)) {
               content = lines.map((line: any) => {
                 const mentionedNames = (line.mentionIds || [])
-                  .map((id: string) => participants.find(p => p.id === id))
+                  .map((id: string) => participants.find((p) => p.id === id))
                   .filter(Boolean);
                 let text = line.text || '';
-                // Bold @mentions
                 for (const p of mentionedNames) {
                   text = text.replace(`@${p.name}`, `<strong>@${p.name}</strong>`);
                 }
                 return `<p><span style="color:hsl(var(--muted-foreground));font-size:12px;">${line.timestamp || ''}</span> ${text}</p>`;
               }).join('') || '<p><br></p>';
             }
-          } catch { /* not JSON, use as-is */ }
+          } catch {
+            // not JSON, use as-is
+          }
         }
+
         pendingContentRef.current = content;
       } else {
         const { data, error: createErr } = await supabase
@@ -105,11 +206,15 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
 
   const saveReport = useCallback(async () => {
     if (!reportId || !editorRef.current) return;
+
+    prepareEditorDom();
+    const content = getCleanEditorHtml();
+
     setIsSaving(true);
     try {
       const { error } = await supabase
         .from('nurse_reports')
-        .update({ content: editorRef.current.innerHTML, updated_at: new Date().toISOString() })
+        .update({ content, updated_at: new Date().toISOString() })
         .eq('id', reportId);
       if (error) throw error;
       setLastSaved(new Date());
@@ -118,38 +223,40 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
     } finally {
       setIsSaving(false);
     }
-  }, [reportId]);
+  }, [getCleanEditorHtml, prepareEditorDom, reportId]);
 
   const debouncedSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => saveReport(), 2000);
   }, [saveReport]);
 
-  const syncToParticipantNotes = async () => {
+  const syncToParticipantNotes = useCallback(async () => {
     if (!reportId || !editorRef.current) return;
+
+    prepareEditorDom();
+
     try {
-      // Delete old synced mentions
       await supabase.from('nurse_report_mentions').delete().eq('report_id', reportId);
 
-      // Find all participant sections
-      const sections = editorRef.current.querySelectorAll('[data-participant-id]');
+      const sections = Array.from(editorRef.current.querySelectorAll('.participant-section')) as HTMLElement[];
       const mentionEntries: { report_id: string; participant_id: string; mention_text: string }[] = [];
+      const activeParticipantIds = new Set<string>();
 
       for (const section of sections) {
         const pid = section.getAttribute('data-participant-id');
         if (!pid) continue;
+
         const contentEl = section.querySelector('.participant-content');
         const text = contentEl?.textContent?.trim() || '';
         if (!text) continue;
 
+        activeParticipantIds.add(pid);
         mentionEntries.push({
           report_id: reportId,
           participant_id: pid,
           mention_text: text,
         });
 
-        // Also sync to participant_health_notes
-        // First check existing
         const { data: existing } = await supabase
           .from('participant_health_notes')
           .select('id')
@@ -174,23 +281,52 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
             });
         }
 
-        // Also flag in participant_health_info
         const { data: existingInfo } = await supabase
           .from('participant_health_info')
-          .select('id')
+          .select('id, info')
           .eq('participant_id', pid)
           .limit(1);
 
+        const nurseInfo = `[Nurse] ${text}`;
         if (!existingInfo || existingInfo.length === 0) {
           await supabase.from('participant_health_info').insert({
             participant_id: pid,
-            info: `[Nurse] ${text}`,
+            info: nurseInfo,
           });
-        } else {
-          await supabase.from('participant_health_info')
-            .update({ info: `[Nurse] ${text}`, updated_at: new Date().toISOString() })
+        } else if ((existingInfo[0].info || '').startsWith('[Nurse]')) {
+          await supabase
+            .from('participant_health_info')
+            .update({ info: nurseInfo, updated_at: new Date().toISOString() })
             .eq('id', existingInfo[0].id);
         }
+      }
+
+      const { data: existingNurseNotes } = await supabase
+        .from('participant_health_notes')
+        .select('id, participant_id')
+        .eq('created_by', leader?.id || '')
+        .like('content', '[Nurse Rapport]%');
+
+      const staleNoteIds = (existingNurseNotes || [])
+        .filter((note) => !activeParticipantIds.has(note.participant_id))
+        .map((note) => note.id);
+
+      if (staleNoteIds.length > 0) {
+        await supabase.from('participant_health_notes').delete().in('id', staleNoteIds);
+      }
+
+      const { data: existingNurseInfo } = await supabase
+        .from('participant_health_info')
+        .select('id, participant_id, info')
+        .like('info', '[Nurse]%');
+
+      const staleInfoIds = (existingNurseInfo || [])
+        .filter((info) => (info.info || '').startsWith('[Nurse]'))
+        .filter((info) => !activeParticipantIds.has(info.participant_id))
+        .map((info) => info.id);
+
+      if (staleInfoIds.length > 0) {
+        await supabase.from('participant_health_info').delete().in('id', staleInfoIds);
       }
 
       if (mentionEntries.length > 0) {
@@ -199,40 +335,41 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
     } catch (error) {
       console.error('Error syncing mention data:', error);
     }
-  };
+  }, [leader?.id, prepareEditorDom, reportId]);
 
-  const handleManualSave = async () => {
+  const persistReportState = useCallback(async () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     await saveReport();
     await syncToParticipantNotes();
+  }, [saveReport, syncToParticipantNotes]);
+
+  const handleManualSave = async () => {
+    await persistReportState();
     hapticSuccess();
     toast.success('Rapport lagret og synkronisert');
   };
 
-  const getParticipant = (id: string) => participants.find(p => p.id === id);
-
-  // Filtered participants for mention popup
   const filteredMentionParticipants = mentionQuery !== null
     ? participants
-        .filter(p => p.name.toLowerCase().includes(mentionQuery.toLowerCase()))
+        .filter((p) => p.name.toLowerCase().includes(mentionQuery.toLowerCase()))
         .slice(0, 8)
     : [];
 
-  // Create participant section HTML
   const createParticipantSection = (participant: Participant): string => {
     const age = participant.birth_date ? differenceInYears(new Date(), new Date(participant.birth_date)) : null;
     const timestamp = format(new Date(), 'd. MMM HH:mm', { locale: nb });
     const imgHtml = participant.image_url
       ? `<img src="${participant.image_url}" alt="${participant.name}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />`
-      : `<span style="width:32px;height:32px;border-radius:50%;background:#e2e8f0;display:inline-flex;align-items:center;justify-content:center;font-size:14px;color:#94a3b8;">👤</span>`;
+      : `<span style="width:32px;height:32px;border-radius:50%;background:hsl(var(--muted));display:inline-flex;align-items:center;justify-content:center;font-size:14px;color:hsl(var(--muted-foreground));">👤</span>`;
 
     return `<div class="participant-section" data-participant-id="${participant.id}" contenteditable="false" style="border:2px solid hsl(var(--primary)/0.3);border-radius:12px;margin:12px 0;background:hsl(var(--primary)/0.04);overflow:hidden;">
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:hsl(var(--primary)/0.08);border-bottom:1px solid hsl(var(--primary)/0.15);pointer-events:none;">
+      <div class="participant-section-header" contenteditable="false" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:hsl(var(--primary)/0.08);border-bottom:1px solid hsl(var(--primary)/0.15);">
         ${imgHtml}
         <div>
           <strong style="font-size:15px;color:hsl(var(--foreground));">${participant.name}</strong>
           <div style="font-size:12px;color:hsl(var(--muted-foreground));">${participant.cabin?.name || 'Ingen hytte'}${age ? ` · ${age} år` : ''}</div>
         </div>
+        <button type="button" contenteditable="false" data-section-delete="true" aria-label="Slett notat for ${participant.name}" style="margin-left:auto;border:1px solid hsl(var(--border));background:hsl(var(--background));color:hsl(var(--foreground));border-radius:9999px;padding:6px 10px;font-size:12px;line-height:1;cursor:pointer;flex-shrink:0;">Slett</button>
       </div>
       <div class="participant-content" contenteditable="true" style="padding:10px 14px;min-height:40px;outline:none;font-size:14px;line-height:1.6;" data-placeholder="Skriv notater om ${participant.name}...">
         <p><span style="color:hsl(var(--muted-foreground));font-size:12px;">${timestamp}</span> </p>
@@ -240,84 +377,97 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
     </div><p><br></p>`;
   };
 
-  // Find existing section for participant
-  const findExistingSection = (participantId: string): Element | null => {
+  const findExistingSection = (participantId: string): HTMLElement | null => {
     if (!editorRef.current) return null;
     return editorRef.current.querySelector(`[data-participant-id="${participantId}"]`);
+  };
+
+  const focusSectionContent = (section: HTMLElement) => {
+    const contentEl = section.querySelector('.participant-content') as HTMLElement | null;
+    if (!contentEl) return;
+
+    const lastP = contentEl.querySelector('p:last-child');
+    if (lastP) {
+      const range = document.createRange();
+      const selection = window.getSelection();
+      range.selectNodeContents(lastP);
+      range.collapse(false);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+
+    contentEl.focus();
   };
 
   const insertParticipantSection = (participant: Participant) => {
     const existing = findExistingSection(participant.id);
     if (existing) {
-      // Scroll to existing section
       existing.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      const contentEl = existing.querySelector('.participant-content') as HTMLElement;
+      const contentEl = existing.querySelector('.participant-content') as HTMLElement | null;
       if (contentEl) {
-        // Add new timestamped line
         const timestamp = format(new Date(), 'd. MMM HH:mm', { locale: nb });
         const p = document.createElement('p');
         p.innerHTML = `<span style="color:hsl(var(--muted-foreground));font-size:12px;">${timestamp}</span> `;
         contentEl.appendChild(p);
-        // Place cursor at end of new line
-        const range = document.createRange();
-        const sel = window.getSelection();
-        range.setStartAfter(p.lastChild!);
-        range.collapse(true);
-        sel?.removeAllRanges();
-        sel?.addRange(range);
-        contentEl.focus();
+        focusSectionContent(existing);
       }
+      setMentionQuery(null);
+      mentionRangeRef.current = null;
+      debouncedSave();
       return;
     }
 
-    // Remove the @mention text from the editor
+    const insertionNode = mentionRangeRef.current?.startContainer || window.getSelection()?.anchorNode || null;
+    const currentSection = getSectionFromNode(insertionNode);
+    const topLevelNode = getTopLevelNode(insertionNode);
+
     if (mentionRangeRef.current) {
       mentionRangeRef.current.deleteContents();
+      mentionRangeRef.current.collapse(false);
     }
 
-    // Escape from any existing participant section to prevent nesting
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      const currentRange = sel.getRangeAt(0);
-      const currentSection = currentRange.startContainer instanceof HTMLElement
-        ? currentRange.startContainer.closest('.participant-section')
-        : currentRange.startContainer.parentElement?.closest('.participant-section');
-      if (currentSection && editorRef.current) {
-        const afterSection = document.createRange();
-        afterSection.setStartAfter(currentSection);
-        afterSection.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(afterSection);
-      }
+    const template = document.createElement('template');
+    template.innerHTML = createParticipantSection(participant);
+    const fragment = template.content.cloneNode(true) as DocumentFragment;
+
+    if (currentSection && currentSection.parentNode) {
+      currentSection.parentNode.insertBefore(fragment, currentSection.nextSibling);
+    } else if (topLevelNode && topLevelNode.parentNode === editorRef.current) {
+      topLevelNode.parentNode.insertBefore(fragment, topLevelNode.nextSibling);
+    } else {
+      editorRef.current?.appendChild(fragment);
     }
 
-    // Insert new section at cursor
-    const html = createParticipantSection(participant);
-    document.execCommand('insertHTML', false, html);
-    
-    // Focus the new content area
+    prepareEditorDom();
+    mentionRangeRef.current = null;
+    setMentionQuery(null);
+    debouncedSave();
+
     setTimeout(() => {
       const newSection = findExistingSection(participant.id);
       if (newSection) {
-        const contentEl = newSection.querySelector('.participant-content') as HTMLElement;
-        if (contentEl) {
-          const lastP = contentEl.querySelector('p:last-child');
-          if (lastP) {
-            const range = document.createRange();
-            const sel = window.getSelection();
-            range.setStartAfter(lastP.lastChild || lastP);
-            range.collapse(true);
-            sel?.removeAllRanges();
-            sel?.addRange(range);
-          }
-          contentEl.focus();
-        }
+        focusSectionContent(newSection);
       }
     }, 50);
   };
 
-  // Detect @-mention in contentEditable
+  const deleteParticipantSection = useCallback(async (section: HTMLElement) => {
+    const participantName = getParticipant(section.dataset.participantId || '')?.name || 'notatet';
+    const next = section.nextElementSibling as HTMLElement | null;
+    if (next?.tagName === 'P' && !next.textContent?.trim()) {
+      next.remove();
+    }
+
+    section.remove();
+    setMentionQuery(null);
+    mentionRangeRef.current = null;
+    prepareEditorDom();
+    await persistReportState();
+    toast.success(`Slettet notat for ${participantName}`);
+  }, [getParticipant, persistReportState, prepareEditorDom]);
+
   const handleInput = () => {
+    prepareEditorDom();
     debouncedSave();
 
     const sel = window.getSelection();
@@ -343,13 +493,11 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
       if (charBefore === ' ' || charBefore === '\n' || charBefore === '\u00A0' || lastAtIndex === 0) {
         const query = textBeforeCursor.slice(lastAtIndex + 1);
         if (!query.includes('\n') && query.length < 40) {
-          // Store range for deletion later
           const mentionRange = document.createRange();
           mentionRange.setStart(textNode, lastAtIndex);
           mentionRange.setEnd(textNode, cursorPos);
           mentionRangeRef.current = mentionRange;
 
-          // Get position for popup
           const rect = range.getBoundingClientRect();
           const editorRect = editorRef.current?.getBoundingClientRect();
           if (editorRect) {
@@ -365,25 +513,39 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
         }
       }
     }
+
     setMentionQuery(null);
+  };
+
+  const handleEditorClick = async (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const deleteButton = target.closest('[data-section-delete="true"]');
+    if (!deleteButton) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const section = deleteButton.closest('.participant-section') as HTMLElement | null;
+    if (!section) return;
+
+    await deleteParticipantSection(section);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (mentionQuery !== null && filteredMentionParticipants.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedMentionIndex(prev => Math.min(prev + 1, filteredMentionParticipants.length - 1));
+        setSelectedMentionIndex((prev) => Math.min(prev + 1, filteredMentionParticipants.length - 1));
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setSelectedMentionIndex(prev => Math.max(prev - 1, 0));
+        setSelectedMentionIndex((prev) => Math.max(prev - 1, 0));
         return;
       }
       if (e.key === 'Enter') {
         e.preventDefault();
         insertParticipantSection(filteredMentionParticipants[selectedMentionIndex]);
-        setMentionQuery(null);
         return;
       }
       if (e.key === 'Escape') {
@@ -393,19 +555,17 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
     }
   };
 
-  // Handle paste: detect @names in pasted text
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     const text = e.clipboardData.getData('text/plain');
 
-    // Check for @mentions in pasted text
     const mentionPattern = /@([^\n@]+)/g;
     let match;
     const foundParticipants: { participant: Participant; fullMatch: string }[] = [];
 
     while ((match = mentionPattern.exec(text)) !== null) {
       const mentionName = match[1].trim();
-      const found = participants.find(p =>
+      const found = participants.find((p) =>
         p.name.toLowerCase() === mentionName.toLowerCase() ||
         p.name.toLowerCase().startsWith(mentionName.toLowerCase())
       );
@@ -415,35 +575,36 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
     }
 
     if (foundParticipants.length === 0) {
-      // No mentions found, just paste as plain text
       document.execCommand('insertText', false, text);
       return;
     }
 
-    // Split text by mentions and create sections
     let remaining = text;
     for (const { participant, fullMatch } of foundParticipants) {
       const idx = remaining.indexOf(fullMatch);
       if (idx > 0) {
-        // Insert text before the mention
         document.execCommand('insertText', false, remaining.slice(0, idx));
       }
 
-      // Find text belonging to this participant (until next @mention or end)
       const afterMention = remaining.slice(idx + fullMatch.length);
       const nextAtIdx = afterMention.search(/@[A-ZÆØÅa-zæøå]/);
       const participantText = nextAtIdx >= 0 ? afterMention.slice(0, nextAtIdx).trim() : afterMention.trim();
 
-      // Insert participant section
-      const html = createParticipantSection(participant);
-      document.execCommand('insertHTML', false, html);
-
-      // Add the pasted content into the section
-      if (participantText) {
+      const existing = findExistingSection(participant.id);
+      if (existing) {
+        const contentEl = existing.querySelector('.participant-content') as HTMLElement | null;
+        if (contentEl) {
+          const p = document.createElement('p');
+          p.textContent = participantText;
+          contentEl.appendChild(p);
+        }
+      } else {
+        const html = createParticipantSection(participant);
+        document.execCommand('insertHTML', false, html);
         const section = findExistingSection(participant.id);
         if (section) {
           const contentEl = section.querySelector('.participant-content');
-          if (contentEl) {
+          if (contentEl && participantText) {
             const p = document.createElement('p');
             p.textContent = participantText;
             contentEl.appendChild(p);
@@ -458,10 +619,10 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
       document.execCommand('insertText', false, remaining);
     }
 
+    prepareEditorDom();
     debouncedSave();
   };
 
-  // Search: jump to participant section
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     if (!query.trim() || !editorRef.current) return;
@@ -469,10 +630,9 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
     const sections = editorRef.current.querySelectorAll('[data-participant-id]');
     for (const section of sections) {
       const pid = section.getAttribute('data-participant-id');
-      const p = pid ? getParticipant(pid) : null;
-      if (p && p.name.toLowerCase().includes(query.toLowerCase())) {
+      const participant = pid ? getParticipant(pid) : null;
+      if (participant && participant.name.toLowerCase().includes(query.toLowerCase())) {
         section.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        // Highlight briefly
         (section as HTMLElement).style.boxShadow = '0 0 0 3px hsl(var(--primary))';
         setTimeout(() => {
           (section as HTMLElement).style.boxShadow = '';
@@ -482,10 +642,10 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
     }
   };
 
-  // PDF export
   const exportPdf = () => {
     if (!editorRef.current) return;
     const dateStr = format(new Date(), 'd. MMMM yyyy', { locale: nb });
+    const cleanHtml = getCleanEditorHtml();
 
     const html = `<!DOCTYPE html><html lang="no"><head><meta charset="UTF-8">
 <title>Nurse Rapport - ${dateStr}</title>
@@ -502,7 +662,7 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
 </style></head><body>
 <h1>Nurse Rapport</h1>
 <p class="meta">Eksportert: ${dateStr}</p>
-${editorRef.current.innerHTML}
+${cleanHtml}
 </body></html>`;
 
     const newWindow = window.open('', '_blank');
@@ -522,7 +682,6 @@ ${editorRef.current.innerHTML}
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="flex items-center justify-between gap-3 pb-3 border-b border-border">
         <h2 className="text-lg font-heading font-semibold flex items-center gap-2">
           <FileText className="w-5 h-5" />
@@ -545,7 +704,6 @@ ${editorRef.current.innerHTML}
         </div>
       </div>
 
-      {/* Search bar */}
       <div className="relative py-3">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
@@ -556,9 +714,7 @@ ${editorRef.current.innerHTML}
         />
       </div>
 
-      {/* Editor */}
       <div className="relative flex-1 min-h-0 overflow-y-auto">
-        {/* Mention popup */}
         {mentionQuery !== null && filteredMentionParticipants.length > 0 && (
           <div
             className="absolute bg-popover border border-border rounded-lg shadow-lg p-1 max-h-64 overflow-y-auto z-50"
@@ -573,7 +729,6 @@ ${editorRef.current.innerHTML}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   insertParticipantSection(p);
-                  setMentionQuery(null);
                 }}
                 onMouseEnter={() => setSelectedMentionIndex(i)}
               >
@@ -592,7 +747,6 @@ ${editorRef.current.innerHTML}
           </div>
         )}
 
-        {/* ContentEditable editor */}
         <div
           ref={editorRef}
           contentEditable
@@ -601,11 +755,11 @@ ${editorRef.current.innerHTML}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
+          onClick={handleEditorClick}
           data-placeholder="Skriv fritt her... bruk @ for å nevne en deltaker og opprette en seksjon."
           style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         />
 
-        {/* Empty state placeholder */}
         <style>{`
           [data-placeholder]:empty::before {
             content: attr(data-placeholder);
@@ -617,11 +771,14 @@ ${editorRef.current.innerHTML}
             color: hsl(var(--muted-foreground));
             pointer-events: none;
           }
-          .participant-section {
-            user-select: contain;
-          }
           .participant-content:focus {
             outline: none;
+          }
+          .participant-section {
+            position: relative;
+          }
+          .participant-section [data-section-delete="true"]:hover {
+            filter: brightness(0.96);
           }
         `}</style>
       </div>
