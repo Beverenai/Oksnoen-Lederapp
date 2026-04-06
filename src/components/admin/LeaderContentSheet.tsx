@@ -9,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CommandInput } from '@/components/ui/command';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, Check, Home, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, Check, Home, Trash2, Search } from 'lucide-react';
 import { icons } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -554,11 +553,13 @@ export function LeaderContentSheet({
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-72 p-0 bg-popover z-[100]" align="start" side="bottom" sideOffset={4}>
-                  <div className="border-b px-3">
-                    <CommandInput 
-                      placeholder="Søk etter hytte..." 
+                  <div className="flex items-center border-b px-3 py-2">
+                    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                    <Input
+                      placeholder="Søk etter hytte..."
                       value={cabinSearch}
-                      onValueChange={setCabinSearch}
+                      onChange={(e) => setCabinSearch(e.target.value)}
+                      className="h-8 border-0 p-0 shadow-none focus-visible:ring-0"
                     />
                   </div>
                   <div className="max-h-60 overflow-y-auto p-1">
