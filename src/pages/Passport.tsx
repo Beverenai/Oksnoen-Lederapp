@@ -443,7 +443,7 @@ export default function Passport() {
             hapticImpact('medium');
             navigate('/checkout');
           }}
-          className="w-full gap-2 text-lg py-6 active:scale-[0.98] active:opacity-90 transition-transform"
+          className="w-full gap-2 text-lg py-6"
         >
           <Sparkles className="w-5 h-5" />
           Utsjekk
