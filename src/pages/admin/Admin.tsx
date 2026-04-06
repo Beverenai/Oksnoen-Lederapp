@@ -15,7 +15,6 @@ import { Progress } from '@/components/ui/progress';
 import {
   Settings, Loader2, Shield, Calendar, RefreshCw, Check,
   Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles,
-  Download, WifiOff, CheckCircle
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
