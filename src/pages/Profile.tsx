@@ -21,7 +21,8 @@ import {
   Cable,
   Wrench,
   Bell,
-  Palette
+  Palette,
+  RefreshCw
 } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
@@ -39,6 +40,7 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form fields
@@ -52,15 +54,22 @@ export default function Profile() {
   const [canRopeSetup, setCanRopeSetup] = useState(false);
 
   useEffect(() => {
-    if (effectiveLeader?.id) {
-      loadProfile();
-    }
+    if (!effectiveLeader?.id) return;
+    const timeout = setTimeout(() => {
+      setIsLoading(prev => {
+        if (prev) setLoadFailed(true);
+        return false;
+      });
+    }, 8000);
+    loadProfile();
+    return () => clearTimeout(timeout);
   }, [effectiveLeader?.id]);
 
   const loadProfile = async () => {
     if (!effectiveLeader?.id) return;
     
     setIsLoading(true);
+    setLoadFailed(false);
     try {
       const { data, error } = await supabase
         .from('leaders')
@@ -81,7 +90,7 @@ export default function Profile() {
       setCanRopeSetup(data.can_rope_setup || false);
     } catch (error) {
       console.error('Error loading profile:', error);
-      showError('Kunne ikke laste profil');
+      setLoadFailed(true);
     } finally {
       setIsLoading(false);
     }
@@ -170,7 +179,7 @@ export default function Profile() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !loadFailed) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-48" />
@@ -179,16 +188,24 @@ export default function Profile() {
     );
   }
 
-  if (!leader) {
+  if (loadFailed || !leader) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Card className="max-w-md">
           <CardContent className="pt-6 text-center">
             <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-xl font-heading font-semibold">Profil ikke funnet</h2>
+            <h2 className="text-xl font-heading font-semibold">
+              {loadFailed ? 'Kunne ikke laste profil' : 'Profil ikke funnet'}
+            </h2>
             <p className="text-muted-foreground mt-2">
-              Kunne ikke laste din profil.
+              {loadFailed ? 'Noe gikk galt. Prøv igjen.' : 'Kunne ikke laste din profil.'}
             </p>
+            {loadFailed && (
+              <Button onClick={loadProfile} variant="outline" size="sm" className="mt-4">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Prøv igjen
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
