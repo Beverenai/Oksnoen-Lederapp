@@ -343,7 +343,7 @@ export function LeaderContentSheet({
 
   // Filter home_screen_config to get visible extra fields (extra_1 through extra_5)
   const visibleExtraFields = homeConfig
-    .filter(c => c.element_key.startsWith('extra_') && c.is_visible)
+    .filter(c => /^extra_\d+$/.test(c.element_key) && c.is_visible)
     .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
   const getExtraFieldValue = (fieldKey: string) => {
