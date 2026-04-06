@@ -1,21 +1,16 @@
 
 
-## Fix: Hjem-siden viser feil leder i "Se som"-modus
+## Fix: OK-knappen i StatusPopup fungerer ikke
 
 ### Problem
-Data-spørringene i Home.tsx bruker `effectiveLeader.id` korrekt, men **visningen** (navn, avatar, hilsen) bruker fortsatt `leader` direkte. Derfor ser du "Hei, August!" selv om du ser som en annen leder.
+StatusPopup renderes inne i React-treet, men Sheet-komponenten (Radix) bruker en portal som legger seg over. Selv om z-index er 9999, kan Radix-portalen fange klikk-hendelser.
 
-### Endringer
+### Løsning
+Render StatusPopup via `createPortal` til `document.body` slik at den alltid er øverst i DOM-treet og ikke blokkeres av andre portaler.
+
+### Endring
 
 | Fil | Endring |
 |-----|--------|
-| `src/pages/Home.tsx` | Erstatt `leader?.name`, `leader?.profile_image_url` og `leader?.name?.split(' ')[0]` med `effectiveLeader` i visnings-seksjonen (linje 378-397). Også fiks realtime-subscription filter (linje 253) fra `leader.id` til `effectiveLeader.id`. |
-
-Konkret endres:
-- Linje 253: `leader.id` → `effectiveLeader?.id` i realtime-filter
-- Linje 380: `leader?.name?.split(' ')[0]` → `effectiveLeader?.name?.split(' ')[0]`
-- Linje 389: `leader?.profile_image_url` → `effectiveLeader?.profile_image_url`
-- Linje 389: `alt={leader?.name}` → `alt={effectiveLeader?.name}`
-- Linje 391: `leader?.name` og `leader.name` → `effectiveLeader?.name`
-- Linje 396: `leader?.name` → `effectiveLeader?.name`
+| `src/hooks/useStatusPopup.tsx` | Wrap `<StatusPopup>` i `createPortal(…, document.body)` |
 
