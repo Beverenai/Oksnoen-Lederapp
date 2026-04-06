@@ -299,7 +299,6 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
       }
 
       // Update health info (flag as having health info)
-      const nurseTag = `[Nurse] ${allText}`;
       const { data: existingInfo } = await supabase
         .from('participant_health_info')
         .select('id, info')
@@ -307,17 +306,10 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
         .limit(1);
 
       if (!existingInfo || existingInfo.length === 0) {
-        await supabase.from('participant_health_info').insert({ participant_id: participantId, info: nurseTag });
+        await supabase.from('participant_health_info').insert({ participant_id: participantId, info: allText });
       } else {
-        const current = existingInfo[0].info || '';
-        // Replace existing [Nurse] block or append
-        const nurseRegex = /\[Nurse\][^\[]*/s;
-        let newInfo: string;
-        if (nurseRegex.test(current)) {
-          newInfo = current.replace(nurseRegex, nurseTag);
-        } else {
-          newInfo = `${current}\n${nurseTag}`.trim();
-        }
+        // Replace existing content entirely with latest nurse text
+        const newInfo = allText;
         await supabase
           .from('participant_health_info')
           .update({ info: newInfo, updated_at: new Date().toISOString() })
