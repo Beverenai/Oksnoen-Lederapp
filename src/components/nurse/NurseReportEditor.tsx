@@ -31,6 +31,7 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [quickInput, setQuickInput] = useState('');
 
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionPosition, setMentionPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
