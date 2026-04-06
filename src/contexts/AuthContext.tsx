@@ -161,8 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    initAuth();
-
+    // Set up auth state listener FIRST (before getSession)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[Auth] onAuthStateChange:', event);
       if (event === 'SIGNED_OUT') {
@@ -172,12 +171,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsNurse(false);
         localStorage.removeItem('leaderName');
       } else if (event === 'TOKEN_REFRESHED' && session) {
-        // Session refreshed, leader data is still valid
+        console.log('[Auth] Token refreshed successfully');
+        // Token was refreshed — leader data is still valid, no action needed
       } else if (event === 'SIGNED_IN' && session) {
         if (loginInProgressRef.current || initInProgressRef.current) return;
         await loadLeaderFromSession(session.user.id);
       }
     });
+
+    // Then initialize auth
+    initAuth();
 
     return () => {
       subscription.unsubscribe();

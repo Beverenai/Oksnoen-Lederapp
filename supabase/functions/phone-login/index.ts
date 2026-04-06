@@ -107,17 +107,41 @@ serve(async (req) => {
       });
 
       if (createError) {
-        // User might already exist (e.g. from a previous partial attempt)
-        console.error('Error creating auth user:', createError);
+        // User likely already exists — try signing in directly instead of listing users
+        console.log('Create failed (user may exist), will try sign-in directly');
         
-        // Try to find existing auth user by email
-        const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
-        const existingUser = users?.find(u => u.email === email);
+        // We'll handle this in the sign-in step below — just need to find the auth user ID
+        // Try to sign in with the email/password to confirm user exists
+        const anonTest = createClient(supabaseUrl, supabaseAnonKey);
+        const { data: testLogin, error: testErr } = await anonTest.auth.signInWithPassword({ email, password });
         
-        if (existingUser) {
-          authUserId = existingUser.id;
-          console.log(`Found existing auth user: ${authUserId}`);
+        if (testLogin?.user) {
+          authUserId = testLogin.user.id;
+          console.log(`Found existing auth user via sign-in: ${authUserId}`);
+          
+          // Store auth_user_id on the leader if not already set
+          await supabase.from('leaders').update({ auth_user_id: authUserId }).eq('id', leader.id);
+          
+          // We already have a session, return it directly
+          const { data: rolesData } = await supabase.from('user_roles').select('role').eq('leader_id', leader.id);
+          const roles = rolesData?.map(r => r.role) || [];
+          const { auth_user_id: _, ...leaderData } = leader;
+          
+          return new Response(
+            JSON.stringify({
+              success: true,
+              leader: leaderData,
+              roles,
+              session: {
+                access_token: testLogin.session!.access_token,
+                refresh_token: testLogin.session!.refresh_token,
+              },
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         } else {
+          // Try updating password and retrying
+          console.error('Could not find or create auth user:', testErr?.message);
           return new Response(
             JSON.stringify({ success: false, error: 'Kunne ikke opprette bruker. Prøv igjen.' }),
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
