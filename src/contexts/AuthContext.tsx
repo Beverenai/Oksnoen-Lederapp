@@ -7,6 +7,9 @@ type AppRole = 'superadmin' | 'admin' | 'leader' | 'nurse';
 
 interface AuthContextType {
   leader: Leader | null;
+  viewAsLeader: Leader | null;
+  effectiveLeader: Leader | null;
+  setViewAsLeader: (leader: Leader | null) => void;
   isSuperAdmin: boolean;
   isAdmin: boolean;
   isNurse: boolean;
@@ -37,10 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [deactivatedMessage, setDeactivatedMessage] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [viewAsLeader, setViewAsLeader] = useState<Leader | null>(null);
   const loginInProgressRef = useRef(false);
   const initInProgressRef = useRef(false);
 
   const isProfileComplete = checkProfileComplete(leader);
+  const effectiveLeader = viewAsLeader ?? leader;
 
   const loadRolesViaRpc = async (): Promise<AppRole[]> => {
     try {
@@ -261,7 +266,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      leader, isSuperAdmin, isAdmin, isNurse,
+      leader, viewAsLeader, effectiveLeader, setViewAsLeader,
+      isSuperAdmin, isAdmin, isNurse,
       isLoading,
       isInitialized,
       isProfileComplete, authError, deactivatedMessage,
