@@ -570,6 +570,40 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
         return;
       }
     }
+
+    // Auto-insert timestamp on Enter inside a participant section
+    if (e.key === 'Enter') {
+      const sel = window.getSelection();
+      const node = sel?.anchorNode;
+      const section = getSectionFromNode(node || null);
+      if (section) {
+        e.preventDefault();
+        const timestamp = format(new Date(), 'd. MMM HH:mm', { locale: nb });
+        const contentEl = section.querySelector('.participant-content') as HTMLElement | null;
+        if (contentEl) {
+          const p = document.createElement('p');
+          p.innerHTML = `<span style="color:hsl(var(--muted-foreground));font-size:12px;">${timestamp}</span> `;
+          
+          // Insert after current line
+          const currentBlock = node instanceof HTMLElement ? node.closest('p') : node?.parentElement?.closest('p');
+          if (currentBlock && contentEl.contains(currentBlock)) {
+            currentBlock.insertAdjacentElement('afterend', p);
+          } else {
+            contentEl.appendChild(p);
+          }
+
+          // Place cursor after the timestamp
+          const range = document.createRange();
+          range.selectNodeContents(p);
+          range.collapse(false);
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+          
+          debouncedSave();
+        }
+        return;
+      }
+    }
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
@@ -765,12 +799,28 @@ ${cleanHtml}
           </div>
         )}
 
+        {/* Top writing area with placeholder */}
+        <div
+          className="px-3 pt-3 pb-1 text-sm text-muted-foreground italic select-none pointer-events-none"
+          style={{ display: editorRef.current?.textContent?.trim() ? 'none' : undefined }}
+          id="editor-placeholder"
+        >
+          Skriv her — legg til deltaker med &quot;@navn&quot;
+        </div>
+
         <div
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
           className="min-h-[400px] outline-none text-sm leading-relaxed p-3 rounded-lg border border-border bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
-          onInput={handleInput}
+          onInput={(e) => {
+            handleInput();
+            // Toggle placeholder visibility
+            const placeholder = document.getElementById('editor-placeholder');
+            if (placeholder) {
+              placeholder.style.display = editorRef.current?.textContent?.trim() ? 'none' : '';
+            }
+          }}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           onClick={handleEditorClick}
