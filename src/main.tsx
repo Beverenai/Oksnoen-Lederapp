@@ -32,4 +32,9 @@ if (isCapacitor()) {
 // Register service worker for web/PWA only (not in Capacitor native)
 registerServiceWorker();
 
+// Tag <body> for standalone/native so CSS can target it
+if (window.matchMedia('(display-mode: standalone)').matches || isCapacitor()) {
+  document.body.classList.add('standalone-app');
+}
+
 createRoot(document.getElementById("root")!).render(<App />);
