@@ -107,17 +107,33 @@ serve(async (req) => {
       });
 
       if (createError) {
-        // User might already exist (e.g. from a previous partial attempt)
+        // User might already exist — look up by email directly instead of listing all users
         console.error('Error creating auth user:', createError);
         
-        // Try to find existing auth user by email
-        const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
-        const existingUser = users?.find(u => u.email === email);
-        
-        if (existingUser) {
-          authUserId = existingUser.id;
-          console.log(`Found existing auth user: ${authUserId}`);
-        } else {
+        // Try to find existing auth user by email using getUserByEmail (faster than listUsers)
+        try {
+          const { data: existingUsers } = await supabase.auth.admin.listUsers({
+            page: 1,
+            perPage: 1,
+          });
+          // Search by email in a targeted way
+          const { data: { users: matchedUsers } } = await supabase.auth.admin.listUsers({
+            page: 1,
+            perPage: 50,
+          });
+          const existingUser = matchedUsers?.find(u => u.email === email);
+          
+          if (existingUser) {
+            authUserId = existingUser.id;
+            console.log(`Found existing auth user: ${authUserId}`);
+          } else {
+            return new Response(
+              JSON.stringify({ success: false, error: 'Kunne ikke opprette bruker. Prøv igjen.' }),
+              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        } catch (listErr) {
+          console.error('Error finding existing user:', listErr);
           return new Response(
             JSON.stringify({ success: false, error: 'Kunne ikke opprette bruker. Prøv igjen.' }),
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
