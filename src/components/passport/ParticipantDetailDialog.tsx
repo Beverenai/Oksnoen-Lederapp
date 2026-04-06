@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { toast } from '@/hooks/use-toast';
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
@@ -97,6 +97,7 @@ export const ParticipantDetailDialog = ({
   onParticipantUpdated,
 }: ParticipantDetailDialogProps) => {
   const { leader, isAdmin, isNurse } = useAuth();
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const queryClient = useQueryClient();
   const [activityNotes, setActivityNotes] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -136,21 +137,12 @@ export const ParticipantDetailDialog = ({
 
       if (error) throw error;
 
-      hapticSuccess();
-      toast({
-        title: 'Lagret',
-        description: 'Aktivitetsnotater er oppdatert',
-      });
+      showSuccess('Lagret', 'Aktivitetsnotater er oppdatert');
       refetchParticipant();
       onParticipantUpdated?.();
     } catch (error) {
       console.error('Error saving activity notes:', error);
-      hapticError();
-      toast({
-        title: 'Feil',
-        description: 'Kunne ikke lagre aktivitetsnotater',
-        variant: 'destructive',
-      });
+      showError('Feil', 'Kunne ikke lagre aktivitetsnotater');
     } finally {
       setIsSavingNotes(false);
     }
@@ -185,21 +177,12 @@ export const ParticipantDetailDialog = ({
 
       if (updateError) throw updateError;
 
-      hapticSuccess();
-      toast({
-        title: 'Bilde lastet opp',
-        description: 'Profilbildet er oppdatert',
-      });
+      showSuccess('Bilde lastet opp', 'Profilbildet er oppdatert');
       refetchParticipant();
       onParticipantUpdated?.();
     } catch (error) {
       console.error('Error uploading image:', error);
-      hapticError();
-      toast({
-        title: 'Feil',
-        description: 'Kunne ikke laste opp bilde',
-        variant: 'destructive',
-      });
+      showError('Feil', 'Kunne ikke laste opp bilde');
     } finally {
       setIsUploadingImage(false);
     }
@@ -219,7 +202,6 @@ export const ParticipantDetailDialog = ({
 
       if (error) throw error;
 
-      hapticSuccess();
       toast({
         title: newStatus ? 'Ankommet' : 'Ikke ankommet',
         description: `${participant.name} er markert som ${newStatus ? 'ankommet' : 'ikke ankommet'}`,
@@ -228,12 +210,7 @@ export const ParticipantDetailDialog = ({
       onParticipantUpdated?.();
     } catch (error) {
       console.error('Error toggling arrival:', error);
-      hapticError();
-      toast({
-        title: 'Feil',
-        description: 'Kunne ikke oppdatere ankomststatus',
-        variant: 'destructive',
-      });
+      showError('Feil', 'Kunne ikke oppdatere ankomststatus');
     } finally {
       setIsTogglingArrival(false);
     }
