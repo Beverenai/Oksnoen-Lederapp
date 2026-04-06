@@ -624,6 +624,7 @@ export default function Nurse() {
     last_name: p.last_name,
     cabin: p.cabin,
     birth_date: p.birth_date,
+    image_url: p.image_url,
   }));
 
   return (
