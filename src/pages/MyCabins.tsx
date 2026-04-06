@@ -47,7 +47,7 @@ const calculateAge = (birthDate: string): number => {
 };
 
 export default function MyCabins() {
-  const { leader } = useAuth();
+  const { leader, effectiveLeader } = useAuth();
   const navigate = useNavigate();
   const [cabins, setCabins] = useState<LeaderCabin[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,10 +60,10 @@ export default function MyCabins() {
 
   useEffect(() => {
     loadData();
-  }, [leader]);
+  }, [effectiveLeader]);
 
   const loadData = useCallback(async () => {
-    if (!leader) return;
+    if (!effectiveLeader) return;
     
     setIsLoading(true);
     try {
@@ -71,7 +71,7 @@ export default function MyCabins() {
       const { data: leaderCabins } = await supabase
         .from('leader_cabins')
         .select('cabin_id, cabins(*)')
-        .eq('leader_id', leader.id);
+        .eq('leader_id', effectiveLeader.id);
 
       if (!leaderCabins || leaderCabins.length === 0) {
         setCabins([]);
@@ -113,7 +113,7 @@ export default function MyCabins() {
     } finally {
       setIsLoading(false);
     }
-  }, [leader]);
+  }, [effectiveLeader]);
 
   // Pull-to-refresh
   const { pullRef, isPulling, pullProgress, isRefreshing } = usePullToRefresh({

@@ -32,7 +32,8 @@ import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 type Leader = Tables<'leaders'>;
 
 export default function Profile() {
-  const { leader: authLeader } = useAuth();
+  const { leader: authLeader, viewAsLeader, effectiveLeader } = useAuth();
+  const isViewingAs = !!viewAsLeader;
   const [leader, setLeader] = useState<Leader | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -50,20 +51,20 @@ export default function Profile() {
   const [canRopeSetup, setCanRopeSetup] = useState(false);
 
   useEffect(() => {
-    if (authLeader?.id) {
+    if (effectiveLeader?.id) {
       loadProfile();
     }
-  }, [authLeader?.id]);
+  }, [effectiveLeader?.id]);
 
   const loadProfile = async () => {
-    if (!authLeader?.id) return;
+    if (!effectiveLeader?.id) return;
     
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('leaders')
         .select('*')
-        .eq('id', authLeader.id)
+        .eq('id', effectiveLeader.id)
         .single();
 
       if (error) throw error;

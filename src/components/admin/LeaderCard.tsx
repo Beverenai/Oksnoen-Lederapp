@@ -1,13 +1,15 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Edit, MapPin, FileText, AlertTriangle } from 'lucide-react';
+import { Edit, MapPin, FileText, AlertTriangle, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getTeamStyles, formatTeamDisplay, formatTeamDisplayMobile, getFirstName } from '@/lib/teamUtils';
 import type { LeaderWithContent } from '@/hooks/useLeaderDashboardData';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LeaderCardProps {
   leader: LeaderWithContent;
@@ -15,6 +17,8 @@ interface LeaderCardProps {
 }
 
 export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: LeaderCardProps) {
+  const { setViewAsLeader } = useAuth();
+  const navigate = useNavigate();
   const content = leader.content;
   const hasObs = !!content?.obs_message;
   const hasActivity = !!content?.current_activity;
@@ -23,9 +27,9 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
 
   const isFri = content?.current_activity?.toLowerCase().includes('fri');
   const isKitchen = leader.team?.toLowerCase() === 'kjøkken' || leader.team?.toLowerCase() === 'kjokken';
-  const isAdmin = leader.isAdmin;
+  const isLeaderAdmin = leader.isAdmin;
   const isNurse = leader.isNurse;
-  const isAdminOrNurse = isAdmin || isNurse;
+  const isAdminOrNurse = isLeaderAdmin || isNurse;
 
   const getBorderClass = () => {
     if (isAdminOrNurse) return 'ring-green-500';
@@ -69,10 +73,10 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
             <span className="sm:hidden w-2.5 h-2.5 rounded-full bg-destructive shrink-0 animate-pulse" title="OBS-melding" />
           )}
 
-          {(leader.team || isAdmin || isNurse) && (
+          {(leader.team || isLeaderAdmin || isNurse) && (
             <>
-              <Badge className={cn("sm:hidden text-[10px] px-1.5 py-0 shrink-0", getTeamStyles(isAdmin ? 'sjef' : isNurse ? 'nurse' : leader.team))}>
-                {formatTeamDisplayMobile(leader.team, isAdmin, isNurse)}
+              <Badge className={cn("sm:hidden text-[10px] px-1.5 py-0 shrink-0", getTeamStyles(isLeaderAdmin ? 'sjef' : isNurse ? 'nurse' : leader.team))}>
+                {formatTeamDisplayMobile(leader.team, isLeaderAdmin, isNurse)}
               </Badge>
               <Badge className={cn("hidden sm:inline-flex text-xs", getTeamStyles(leader.team))}>
                 {formatTeamDisplay(leader.team)}
@@ -80,6 +84,15 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
             </>
           )}
 
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden sm:flex h-8 w-8 shrink-0"
+            title="Se som denne lederen"
+            onClick={(e) => { e.stopPropagation(); setViewAsLeader(leader); navigate('/'); }}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"

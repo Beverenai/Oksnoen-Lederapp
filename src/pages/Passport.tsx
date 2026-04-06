@@ -110,7 +110,7 @@ async function fetchLeaderCabins(): Promise<Map<string, { id: string; name: stri
 export default function Passport() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { leader } = useAuth();
+  const { leader, effectiveLeader } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const cabinFilterFromUrl = searchParams.get('cabin');
   
@@ -156,17 +156,31 @@ export default function Passport() {
       const { data } = await supabase.from('app_config').select('value').eq('key', 'checkout_enabled').maybeSingle();
       return data?.value === 'true';
     },
-    staleTime: 60000,
+    staleTime: 30000,
+    refetchInterval: 30000,
   });
 
+  // Realtime subscription for checkout_enabled
+  useEffect(() => {
+    const channel = supabase
+      .channel('checkout-config')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, (payload: any) => {
+        if (payload.new?.key === 'checkout_enabled') {
+          queryClient.invalidateQueries({ queryKey: ['checkout-enabled'] });
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const { data: myCabinIds = [] } = useQuery({
-    queryKey: ['my-cabin-ids', leader?.id],
+    queryKey: ['my-cabin-ids', effectiveLeader?.id],
     queryFn: async () => {
-      if (!leader?.id) return [];
+      if (!effectiveLeader?.id) return [];
       const { data } = await supabase
         .from('leader_cabins')
         .select('cabin_id')
-        .eq('leader_id', leader.id);
+        .eq('leader_id', effectiveLeader.id);
       return (data || []).map(c => c.cabin_id);
     },
     enabled: !!leader?.id,

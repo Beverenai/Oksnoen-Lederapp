@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Settings, Loader2, Shield, Calendar, RefreshCw, Check,
-  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog
+  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -47,6 +48,7 @@ interface HomeScreenConfig {
 
 export default function Admin() {
   const { isAdmin, isSuperAdmin } = useAuth();
+  const navigate = useNavigate();
   const [leaders, setLeaders] = useState<LeaderWithRole[]>([]);
   const [homeConfig, setHomeConfig] = useState<HomeScreenConfig[]>([]);
   const [localHomeConfig, setLocalHomeConfig] = useState<HomeScreenConfig[]>([]);
@@ -73,17 +75,44 @@ export default function Admin() {
   const [isActivationOpen, setIsActivationOpen] = useState(false);
   const [leaderViewMode, setLeaderViewMode] = useState<'grid' | 'list'>('grid');
   const [isActivitiesSheetOpen, setIsActivitiesSheetOpen] = useState(false);
+  const [checkoutEnabled, setCheckoutEnabled] = useState(false);
+  const [isTogglingCheckout, setIsTogglingCheckout] = useState(false);
 
   useEffect(() => {
     loadData();
     loadLastSyncTime();
     loadSessionActivitiesText();
     loadExportWebhookUrl();
+    loadCheckoutEnabled();
     return () => {
       if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     };
   }, []);
+
+  const loadCheckoutEnabled = async () => {
+    const { data } = await supabase.from('app_config').select('value').eq('key', 'checkout_enabled').maybeSingle();
+    setCheckoutEnabled(data?.value === 'true');
+  };
+
+  const toggleCheckout = async () => {
+    setIsTogglingCheckout(true);
+    const newValue = !checkoutEnabled;
+    try {
+      const { error } = await supabase.from('app_config').upsert({
+        key: 'checkout_enabled', value: String(newValue), updated_at: new Date().toISOString()
+      }, { onConflict: 'key' });
+      if (error) throw error;
+      setCheckoutEnabled(newValue);
+      hapticSuccess();
+      toast.success(newValue ? 'Utsjekk aktivert' : 'Utsjekk deaktivert');
+    } catch {
+      hapticError();
+      toast.error('Kunne ikke oppdatere utsjekk-status');
+    } finally {
+      setIsTogglingCheckout(false);
+    }
+  };
 
   const loadSessionActivitiesText = async () => {
     const { data } = await supabase.from('app_config').select('value').eq('key', 'session_activities_text').maybeSingle();
@@ -249,6 +278,22 @@ export default function Admin() {
           </Button>
           {lastSyncTime && <span className="hidden sm:inline text-xs text-muted-foreground">{formatSyncTime(lastSyncTime)}</span>}
         </div>
+      </div>
+
+      {/* Checkout toggle */}
+      <div className="flex items-center justify-between rounded-lg border border-border p-3 bg-card">
+        <div className="flex items-center gap-2">
+          <Sparkles className={`h-4 w-4 ${checkoutEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
+          <span className="text-sm font-medium">Utsjekk</span>
+          <Badge variant={checkoutEnabled ? 'default' : 'secondary'} className="text-xs">
+            {checkoutEnabled ? 'Aktiv' : 'Deaktivert'}
+          </Badge>
+        </div>
+        <Switch
+          checked={checkoutEnabled}
+          onCheckedChange={toggleCheckout}
+          disabled={isTogglingCheckout}
+        />
       </div>
 
       {/* Lederoversikt header with toggle */}
