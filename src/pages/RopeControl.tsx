@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,7 +27,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { toast } from 'sonner';
 import { 
   Anchor, 
   Check, 
@@ -113,6 +113,7 @@ const EQUIPMENT_CONFIG: Omit<EquipmentCheck, 'status' | 'comment'>[] = [
 ];
 
 export default function RopeControl() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader } = useAuth();
   const navigate = useNavigate();
   const [activity, setActivity] = useState<string>('');
@@ -217,20 +218,20 @@ export default function RopeControl() {
 
   const handleSubmit = async () => {
     if (!leader || !activity) {
-      toast.error('Velg en aktivitet først');
+      showError('Velg en aktivitet først');
       return;
     }
 
     const allChecked = equipment.every(e => e.status !== 'pending');
     if (!allChecked) {
-      toast.error('Du må godkjenne eller underkjenne alt utstyr');
+      showError('Du må godkjenne eller underkjenne alt utstyr');
       return;
     }
 
     const rejectedItems = equipment.filter(e => e.status === 'rejected');
     const missingComments = rejectedItems.filter(e => !e.comment.trim());
     if (missingComments.length > 0) {
-      toast.error('Du må skrive en kommentar for underkjent utstyr');
+      showError('Du må skrive en kommentar for underkjent utstyr');
       return;
     }
 
@@ -262,12 +263,12 @@ export default function RopeControl() {
         sendAdminAlert(rejectedItemNames);
         
         hapticWarning();
-        toast.error('Fiks dette!', {
+        showError('Fiks dette!', {
           description: `${rejectedItems.length} utstyr er underkjent og må fikses.`,
         });
       } else {
         hapticSuccess();
-        toast.success('Kontroll lagret!', {
+        showSuccess('Kontroll lagret!', {
           description: 'Alt utstyr er godkjent.',
         });
       }
@@ -279,7 +280,7 @@ export default function RopeControl() {
     } catch (error) {
       console.error('Error saving rope control:', error);
       hapticError();
-      toast.error('Kunne ikke lagre kontrollen');
+      showError('Kunne ikke lagre kontrollen');
     } finally {
       setIsSubmitting(false);
     }
@@ -289,7 +290,7 @@ export default function RopeControl() {
     if (!selectedFix || !leader) return;
     
     if (!fixComment.trim()) {
-      toast.error('Du må skrive hva du gjorde for å fikse utstyret');
+      showError('Du må skrive hva du gjorde for å fikse utstyret');
       return;
     }
 
@@ -311,14 +312,14 @@ export default function RopeControl() {
       if (error) throw error;
 
       hapticSuccess();
-      toast.success('Utstyr godkjent!');
+      showSuccess('Utstyr godkjent!');
       setSelectedFix(null);
       setFixComment('');
       loadData();
     } catch (error) {
       console.error('Error fixing rope control:', error);
       hapticError();
-      toast.error('Kunne ikke godkjenne');
+      showError('Kunne ikke godkjenne');
     } finally {
       setIsFixing(false);
     }

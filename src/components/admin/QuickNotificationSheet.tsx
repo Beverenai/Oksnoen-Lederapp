@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState } from 'react';
 import { Calendar, Play, Coffee, Send, Loader2, Bell } from 'lucide-react';
 import {
@@ -10,7 +11,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
@@ -83,6 +83,7 @@ const quickNotifications: QuickNotification[] = [
 ];
 
 export function QuickNotificationSheet({ open, onOpenChange }: QuickNotificationSheetProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader } = useAuth();
   const [sendingId, setSendingId] = useState<string | null>(null);
 
@@ -108,12 +109,12 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
       if (error) throw error;
 
       hapticSuccess();
-      toast.success(`Varsling sendt til ${data.sent} mottakere`);
+      showSuccess(`Varsling sendt til ${data.sent} mottakere`);
       onOpenChange(false);
     } catch (error) {
       console.error('Error sending notification:', error);
       hapticError();
-      toast.error('Kunne ikke sende varsling');
+      showError('Kunne ikke sende varsling');
     } finally {
       setSendingId(null);
     }

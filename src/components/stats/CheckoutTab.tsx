@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Loader2, Sparkles, CheckCircle2, AlertCircle, RefreshCw, Search, ChevronDown, User } from 'lucide-react';
-import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { CheckoutDetailDialog } from '@/components/checkout/CheckoutDetailDialog';
@@ -111,10 +111,10 @@ export function CheckoutTab() {
 
             if (parsed.status === 'done') {
               setCheckoutEnabled(true);
-              toast.success('Utsjekk aktivert! Ledere kan nå skrive pass.');
+              showSuccess('Utsjekk aktivert! Ledere kan nå skrive pass.');
               loadData();
             } else if (parsed.status === 'error') {
-              toast.error('Feil ved generering: ' + (parsed.error || 'Ukjent feil'));
+              showError('Feil ved generering: ' + (parsed.error || 'Ukjent feil'));
             }
           } catch {
             // ignore parse errors
@@ -136,13 +136,13 @@ export function CheckoutTab() {
       if (error) {
         console.error('Error starting pass generation:', error);
         hapticError();
-        toast.error('Kunne ikke starte generering');
+        showError('Kunne ikke starte generering');
         setProgress({ status: 'error', processed: 0, total: 0, error: error.message });
       }
     } catch (error) {
       console.error('Error starting checkout:', error);
       hapticError();
-      toast.error('Kunne ikke starte utsjekk');
+      showError('Kunne ikke starte utsjekk');
       setProgress({ status: 'error', processed: 0, total: 0 });
     }
   };
@@ -162,11 +162,11 @@ export function CheckoutTab() {
       setCheckoutEnabled(false);
       setProgress({ status: 'idle', processed: 0, total: 0 });
       hapticSuccess();
-      toast.success('Utsjekk deaktivert');
+      showSuccess('Utsjekk deaktivert');
     } catch (error) {
       console.error('Error disabling checkout:', error);
       hapticError();
-      toast.error('Kunne ikke deaktivere utsjekk');
+      showError('Kunne ikke deaktivere utsjekk');
     }
   };
 

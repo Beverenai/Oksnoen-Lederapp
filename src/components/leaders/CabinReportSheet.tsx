@@ -1,10 +1,10 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { Home, Save, Loader2 } from "lucide-react";
 import { hapticSuccess, hapticError } from "@/lib/capacitorHaptics";
 
@@ -61,7 +61,7 @@ export const CabinReportSheet = ({
       setReports(reportsMap);
     } catch (error) {
       console.error("Error loading cabin reports:", error);
-      toast.error("Kunne ikke laste hytterapporter");
+      showError("Kunne ikke laste hytterapporter");
     } finally {
       setLoading(false);
     }
@@ -85,11 +85,11 @@ export const CabinReportSheet = ({
 
       if (error) throw error;
       hapticSuccess();
-      toast.success("Hytterapport lagret");
+      showSuccess("Hytterapport lagret");
     } catch (error) {
       console.error("Error saving cabin report:", error);
       hapticError();
-      toast.error("Kunne ikke lagre hytterapport");
+      showError("Kunne ikke lagre hytterapport");
     } finally {
       setSaving(null);
     }

@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +14,6 @@ import {
   Users,
   Save
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface Cabin {
   id: string;
@@ -68,7 +68,7 @@ export function CabinsTab() {
       setParticipants(participantsRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
-      toast.error('Kunne ikke laste data');
+      showError('Kunne ikke laste data');
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +102,7 @@ export function CabinsTab() {
 
   const addCabin = async () => {
     if (!newCabinName.trim()) {
-      toast.error('Skriv inn et hyttenavn');
+      showError('Skriv inn et hyttenavn');
       return;
     }
 
@@ -123,7 +123,7 @@ export function CabinsTab() {
 
       if (error) {
         if (error.code === '23505') {
-          toast.error('Denne hytten finnes allerede');
+          showError('Denne hytten finnes allerede');
         } else {
           throw error;
         }
@@ -140,10 +140,10 @@ export function CabinsTab() {
 
       setNewCabinName('');
       loadData();
-      toast.success('Hytte lagt til!');
+      showSuccess('Hytte lagt til!');
     } catch (error) {
       console.error('Error adding cabin:', error);
-      toast.error('Kunne ikke legge til hytte');
+      showError('Kunne ikke legge til hytte');
     } finally {
       setIsAdding(false);
     }
@@ -157,7 +157,7 @@ export function CabinsTab() {
       .eq('cabin_id', cabin.id);
 
     if (count && count > 0) {
-      toast.error(`Kan ikke slette - ${count} deltaker(e) er tilknyttet denne hytten`);
+      showError(`Kan ikke slette - ${count} deltaker(e) er tilknyttet denne hytten`);
       return;
     }
 
@@ -176,10 +176,10 @@ export function CabinsTab() {
       if (error) throw error;
       
       loadData();
-      toast.success('Hytte slettet');
+      showSuccess('Hytte slettet');
     } catch (error) {
       console.error('Error deleting cabin:', error);
-      toast.error('Kunne ikke slette hytte');
+      showError('Kunne ikke slette hytte');
     } finally {
       setDeletingId(null);
     }
@@ -208,7 +208,7 @@ export function CabinsTab() {
           .insert({ cabin_id: cabinId, room, bed_count: newCount });
       }
 
-      toast.success('Sengeplasser oppdatert');
+      showSuccess('Sengeplasser oppdatert');
       loadData();
       setEditingBeds((prev) => {
         const next = { ...prev };
@@ -217,7 +217,7 @@ export function CabinsTab() {
       });
     } catch (error) {
       console.error('Error updating bed count:', error);
-      toast.error('Kunne ikke oppdatere sengeplasser');
+      showError('Kunne ikke oppdatere sengeplasser');
     } finally {
       setSavingBeds(null);
     }

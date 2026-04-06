@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,13 +10,13 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, User, Car, Check, Upload, Bell, Anchor, Mountain, Cable, Wrench } from 'lucide-react';
-import { toast } from 'sonner';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
 import { compressImage } from '@/lib/imageUtils';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader, refreshLeader } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -39,13 +40,13 @@ export default function Onboarding() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast.error('Vennligst velg en bildefil');
+      showError('Vennligst velg en bildefil');
       return;
     }
 
     // Validate file size (max 10MB before compression)
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('Bildet må være mindre enn 10MB');
+      showError('Bildet må være mindre enn 10MB');
       return;
     }
 
@@ -67,10 +68,10 @@ export default function Onboarding() {
         .getPublicUrl(filePath);
 
       setImageUrl(publicUrl);
-      toast.success('Bilde lastet opp!');
+      showSuccess('Bilde lastet opp!');
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Kunne ikke laste opp bilde');
+      showError('Kunne ikke laste opp bilde');
     } finally {
       setIsUploading(false);
     }
@@ -80,12 +81,12 @@ export default function Onboarding() {
     if (!leader) return;
 
     if (!imageUrl) {
-      toast.error('Vennligst last opp et profilbilde');
+      showError('Vennligst last opp et profilbilde');
       return;
     }
 
     if (!age || parseInt(age) < 15 || parseInt(age) > 100) {
-      toast.error('Vennligst oppgi gyldig alder');
+      showError('Vennligst oppgi gyldig alder');
       return;
     }
 
@@ -111,12 +112,12 @@ export default function Onboarding() {
 
       await refreshLeader();
       hapticSuccess();
-      toast.success('Profil fullført!');
+      showSuccess('Profil fullført!');
       navigate('/');
     } catch (error) {
       console.error('Save error:', error);
       hapticError();
-      toast.error('Kunne ikke lagre profil');
+      showError('Kunne ikke lagre profil');
     } finally {
       setIsSaving(false);
     }

@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,10 +10,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Bell, Send, Users, Key, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 export function PushNotificationsTab() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -55,7 +56,7 @@ export function PushNotificationsTab() {
 
   const generateVapidKeys = async () => {
     if (!leader?.id) {
-      toast.error('Du må være logget inn');
+      showError('Du må være logget inn');
       return;
     }
     
@@ -75,14 +76,14 @@ export function PushNotificationsTab() {
           publicKey: data.publicKey,
           privateKey: data.privateKey,
         });
-        toast.success('VAPID-nøkler generert! Kopier og lagre disse som secrets.');
+        showSuccess('VAPID-nøkler generert! Kopier og lagre disse som secrets.');
       } else {
         throw new Error(data?.error || 'Ukjent feil');
       }
     } catch (error: any) {
       console.error('Error generating VAPID keys:', error);
       hapticError();
-      toast.error('Kunne ikke generere VAPID-nøkler: ' + (error.message || 'Ukjent feil'));
+      showError('Kunne ikke generere VAPID-nøkler: ' + (error.message || 'Ukjent feil'));
     } finally {
       setIsGeneratingKeys(false);
     }
@@ -90,12 +91,12 @@ export function PushNotificationsTab() {
 
   const sendBroadcast = async () => {
     if (!title.trim() || !message.trim()) {
-      toast.error('Fyll inn tittel og melding');
+      showError('Fyll inn tittel og melding');
       return;
     }
 
     if (!leader?.id) {
-      toast.error('Du må være logget inn');
+      showError('Du må være logget inn');
       return;
     }
 
@@ -117,7 +118,7 @@ export function PushNotificationsTab() {
 
       if (data?.success) {
         hapticSuccess();
-        toast.success(`Sendt til ${data.sent} mottakere`);
+        showSuccess(`Sendt til ${data.sent} mottakere`);
         setTitle('');
         setMessage('');
         setUrl('');
@@ -130,7 +131,7 @@ export function PushNotificationsTab() {
     } catch (error: any) {
       console.error('Error sending broadcast:', error);
       hapticError();
-      toast.error('Kunne ikke sende varsel: ' + (error.message || 'Ukjent feil'));
+      showError('Kunne ikke sende varsel: ' + (error.message || 'Ukjent feil'));
     } finally {
       setIsSending(false);
     }
@@ -214,7 +215,7 @@ export function PushNotificationsTab() {
                         onClick={(e) => {
                           (e.target as HTMLInputElement).select();
                           navigator.clipboard.writeText(generatedKeys.publicKey);
-                          toast.success('Public key kopiert!');
+                          showSuccess('Public key kopiert!');
                         }}
                       />
                     </div>
@@ -229,7 +230,7 @@ export function PushNotificationsTab() {
                         onClick={(e) => {
                           (e.target as HTMLInputElement).select();
                           navigator.clipboard.writeText(generatedKeys.privateKey);
-                          toast.success('Private key kopiert!');
+                          showSuccess('Private key kopiert!');
                         }}
                       />
                     </div>
@@ -244,7 +245,7 @@ export function PushNotificationsTab() {
                         onClick={(e) => {
                           (e.target as HTMLInputElement).select();
                           navigator.clipboard.writeText('mailto:support@oksnoen.com');
-                          toast.success('Subject kopiert!');
+                          showSuccess('Subject kopiert!');
                         }}
                       />
                     </div>

@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Map, Upload, Trash2, Loader2, Image, Link as LinkIcon } from 'lucide-react';
-import { toast } from 'sonner';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 export function SkjaerTab() {
@@ -46,13 +46,13 @@ export function SkjaerTab() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast.error('Kun bilder er tillatt');
+      showError('Kun bilder er tillatt');
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Bildet kan ikke være større enn 5MB');
+      showError('Bildet kan ikke være større enn 5MB');
       return;
     }
 
@@ -88,11 +88,11 @@ export function SkjaerTab() {
       setStoredImageUrl(publicUrl);
       setImageUrl(publicUrl);
       hapticSuccess();
-      toast.success('Skjærkart lastet opp!');
+      showSuccess('Skjærkart lastet opp!');
     } catch (error) {
       console.error('Error uploading skjaer map:', error);
       hapticError();
-      toast.error('Kunne ikke laste opp skjærkart');
+      showError('Kunne ikke laste opp skjærkart');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -103,7 +103,7 @@ export function SkjaerTab() {
 
   const saveImageUrl = async () => {
     if (!imageUrl) {
-      toast.error('Legg inn en URL');
+      showError('Legg inn en URL');
       return;
     }
 
@@ -121,11 +121,11 @@ export function SkjaerTab() {
 
       setStoredImageUrl(imageUrl);
       hapticSuccess();
-      toast.success('Skjærkart-URL lagret!');
+      showSuccess('Skjærkart-URL lagret!');
     } catch (error) {
       console.error('Error saving skjaer URL:', error);
       hapticError();
-      toast.error('Kunne ikke lagre URL');
+      showError('Kunne ikke lagre URL');
     } finally {
       setIsSaving(false);
     }
@@ -145,10 +145,10 @@ export function SkjaerTab() {
 
       setStoredImageUrl(null);
       setImageUrl('');
-      toast.success('Skjærkart fjernet!');
+      showSuccess('Skjærkart fjernet!');
     } catch (error) {
       console.error('Error removing skjaer:', error);
-      toast.error('Kunne ikke fjerne skjærkart');
+      showError('Kunne ikke fjerne skjærkart');
     } finally {
       setIsSaving(false);
     }

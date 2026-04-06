@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -25,7 +26,6 @@ import {
   RotateCw,
   X
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { differenceInYears } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -72,6 +72,7 @@ export function CheckoutDetailDialog({
   onOpenChange,
   onComplete,
 }: CheckoutDetailDialogProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader } = useAuth();
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [activities, setActivities] = useState<ParticipantActivity[]>([]);
@@ -121,7 +122,7 @@ export function CheckoutDetailDialog({
       setActivities(activitiesRes.data || []);
     } catch (error) {
       console.error('Error loading participant:', error);
-      toast.error('Kunne ikke laste deltaker');
+      showError('Kunne ikke laste deltaker');
     } finally {
       setIsLoading(false);
     }
@@ -158,10 +159,10 @@ export function CheckoutDetailDialog({
 
       // Reload participant to get new suggestion
       await loadParticipant();
-      toast.success('Nytt passforslag generert');
+      showSuccess('Nytt passforslag generert');
     } catch (error) {
       console.error('Error regenerating pass:', error);
-      toast.error('Kunne ikke generere nytt forslag');
+      showError('Kunne ikke generere nytt forslag');
     } finally {
       setIsRegenerating(false);
     }
@@ -186,13 +187,13 @@ export function CheckoutDetailDialog({
       if (error) throw error;
 
       hapticSuccess();
-      toast.success('Pass markert som skrevet!');
+      showSuccess('Pass markert som skrevet!');
       onComplete();
       onOpenChange(false);
     } catch (error) {
       console.error('Error marking pass as written:', error);
       hapticError();
-      toast.error('Kunne ikke lagre');
+      showError('Kunne ikke lagre');
     } finally {
       setIsSaving(false);
     }
@@ -214,12 +215,12 @@ export function CheckoutDetailDialog({
 
       if (error) throw error;
 
-      toast.success('Pass markering fjernet');
+      showSuccess('Pass markering fjernet');
       onComplete();
       await loadParticipant();
     } catch (error) {
       console.error('Error unmarking pass:', error);
-      toast.error('Kunne ikke fjerne markering');
+      showError('Kunne ikke fjerne markering');
     } finally {
       setIsSaving(false);
     }

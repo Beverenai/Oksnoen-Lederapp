@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { NurseReportEditor } from '@/components/nurse/NurseReportEditor';
@@ -40,7 +41,6 @@ import {
   Trophy,
   Download
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
@@ -99,6 +99,7 @@ const severityLevels = [
 ];
 
 export default function Nurse() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader, isAdmin, isNurse } = useAuth();
   const [participants, setParticipants] = useState<ParticipantWithHealth[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -156,7 +157,7 @@ export default function Nurse() {
       setParticipants(participantsWithHealth);
     } catch (error) {
       console.error('Error loading participants:', error);
-      toast.error('Kunne ikke laste deltakere');
+      showError('Kunne ikke laste deltakere');
     } finally {
       setIsLoading(false);
     }
@@ -191,7 +192,7 @@ export default function Nurse() {
 
   const saveHealthNote = async () => {
     if (!selectedParticipant || !newNote.trim()) {
-      toast.error('Skriv inn et notat');
+      showError('Skriv inn et notat');
       return;
     }
 
@@ -216,13 +217,13 @@ export default function Nurse() {
       }
 
       hapticSuccess();
-      toast.success('Helsenotat lagret');
+      showSuccess('Helsenotat lagret');
       await loadParticipantDetails(selectedParticipant);
       loadParticipants();
     } catch (error) {
       console.error('Error saving health note:', error);
       hapticError();
-      toast.error('Kunne ikke lagre notat');
+      showError('Kunne ikke lagre notat');
     } finally {
       setIsSaving(false);
     }
@@ -255,13 +256,13 @@ export default function Nurse() {
       }
 
       hapticSuccess();
-      toast.success('Info for ledere lagret');
+      showSuccess('Info for ledere lagret');
       await loadParticipantDetails(selectedParticipant);
       loadParticipants();
     } catch (error) {
       console.error('Error saving public health note:', error);
       hapticError();
-      toast.error('Kunne ikke lagre info');
+      showError('Kunne ikke lagre info');
     } finally {
       setIsSaving(false);
     }
@@ -269,7 +270,7 @@ export default function Nurse() {
 
   const addHealthEvent = async () => {
     if (!selectedParticipant || !newEventDescription.trim()) {
-      toast.error('Skriv inn en beskrivelse');
+      showError('Skriv inn en beskrivelse');
       return;
     }
 
@@ -284,7 +285,7 @@ export default function Nurse() {
       });
 
       hapticSuccess();
-      toast.success('Hendelse registrert');
+      showSuccess('Hendelse registrert');
       setNewEventDescription('');
       setNewEventType('observation');
       setNewEventSeverity('low');
@@ -293,7 +294,7 @@ export default function Nurse() {
     } catch (error) {
       console.error('Error adding health event:', error);
       hapticError();
-      toast.error('Kunne ikke registrere hendelse');
+      showError('Kunne ikke registrere hendelse');
     } finally {
       setIsSaving(false);
     }
@@ -504,10 +505,10 @@ export default function Nurse() {
         newWindow.document.write(html);
         newWindow.document.close();
       }
-      toast.success('Rapport åpnet i nytt vindu');
+      showSuccess('Rapport åpnet i nytt vindu');
     } catch (error) {
       console.error('Error exporting nurse data:', error);
-      toast.error('Kunne ikke eksportere data');
+      showError('Kunne ikke eksportere data');
     } finally {
       setIsExporting(false);
     }
@@ -526,10 +527,10 @@ export default function Nurse() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      toast.success('CSV lastet ned');
+      showSuccess('CSV lastet ned');
     } catch (error) {
       console.error('Error exporting CSV:', error);
-      toast.error('Kunne ikke eksportere CSV');
+      showError('Kunne ikke eksportere CSV');
     } finally {
       setIsExporting(false);
     }

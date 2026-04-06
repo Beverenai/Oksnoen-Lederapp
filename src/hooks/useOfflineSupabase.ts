@@ -1,8 +1,8 @@
+import { statusPopup } from '@/hooks/useStatusPopup';
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { addToSyncQueue } from "@/lib/syncQueue";
 import { useOfflineStatus } from "./useOfflineStatus";
-import { toast } from "sonner";
 
 type ValidTable = 
   | 'participants'
@@ -21,7 +21,7 @@ export function useOfflineSupabase() {
   ): Promise<{ success: boolean; offline: boolean }> => {
     if (isOffline) {
       addToSyncQueue({ type: 'insert', table, data });
-      toast.info("Lagret lokalt - synkroniseres når du er online");
+      statusPopup.info("Lagret lokalt - synkroniseres når du er online");
       return { success: true, offline: true };
     }
 
@@ -32,7 +32,7 @@ export function useOfflineSupabase() {
     } catch (err) {
       console.error('[OfflineSupabase] Insert failed, queuing:', err);
       addToSyncQueue({ type: 'insert', table, data });
-      toast.info("Lagret lokalt - synkroniseres når du er online");
+      statusPopup.info("Lagret lokalt - synkroniseres når du er online");
       return { success: true, offline: true };
     }
   }, [isOffline]);
@@ -46,7 +46,7 @@ export function useOfflineSupabase() {
 
     if (isOffline) {
       addToSyncQueue({ type: 'update', table, data: fullData });
-      toast.info("Lagret lokalt - synkroniseres når du er online");
+      statusPopup.info("Lagret lokalt - synkroniseres når du er online");
       return { success: true, offline: true };
     }
 
@@ -57,7 +57,7 @@ export function useOfflineSupabase() {
     } catch (err) {
       console.error('[OfflineSupabase] Update failed, queuing:', err);
       addToSyncQueue({ type: 'update', table, data: fullData });
-      toast.info("Lagret lokalt - synkroniseres når du er online");
+      statusPopup.info("Lagret lokalt - synkroniseres når du er online");
       return { success: true, offline: true };
     }
   }, [isOffline]);
@@ -68,7 +68,7 @@ export function useOfflineSupabase() {
   ): Promise<{ success: boolean; offline: boolean }> => {
     if (isOffline) {
       addToSyncQueue({ type: 'delete', table, data: { id } });
-      toast.info("Slettet lokalt - synkroniseres når du er online");
+      statusPopup.info("Slettet lokalt - synkroniseres når du er online");
       return { success: true, offline: true };
     }
 
@@ -79,7 +79,7 @@ export function useOfflineSupabase() {
     } catch (err) {
       console.error('[OfflineSupabase] Delete failed, queuing:', err);
       addToSyncQueue({ type: 'delete', table, data: { id } });
-      toast.info("Slettet lokalt - synkroniseres når du er online");
+      statusPopup.info("Slettet lokalt - synkroniseres når du er online");
       return { success: true, offline: true };
     }
   }, [isOffline]);

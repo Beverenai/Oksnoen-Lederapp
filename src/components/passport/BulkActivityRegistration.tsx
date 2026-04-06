@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useMemo } from 'react';
 import { Search, Check, X, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { useActivities } from '@/hooks/useActivities';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
@@ -33,6 +33,7 @@ export function BulkActivityRegistration({
   onComplete,
   onClose,
 }: BulkActivityRegistrationProps) {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader } = useAuth();
   const { activities } = useActivities(true);
   const [selectedActivity, setSelectedActivity] = useState<string>('');
@@ -87,14 +88,14 @@ export function BulkActivityRegistration({
       if (error) throw error;
 
       hapticSuccess();
-      toast.success(`${selectedActivity} registrert for ${selectedParticipants.size} deltakere!`);
+      showSuccess(`${selectedActivity} registrert for ${selectedParticipants.size} deltakere!`);
       setSelectedParticipants(new Set());
       setSelectedActivity('');
       onComplete();
     } catch (error) {
       console.error('Error registering activities:', error);
       hapticError();
-      toast.error('Kunne ikke registrere aktiviteter');
+      showError('Kunne ikke registrere aktiviteter');
     } finally {
       setIsSubmitting(false);
     }

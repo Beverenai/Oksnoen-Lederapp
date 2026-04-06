@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,7 +22,6 @@ import {
   FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
 import { differenceInYears } from 'date-fns';
 import type { Tables } from '@/integrations/supabase/types';
 import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
@@ -47,6 +47,7 @@ const calculateAge = (birthDate: string): number => {
 };
 
 export default function MyCabins() {
+  const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader, effectiveLeader } = useAuth();
   const navigate = useNavigate();
   const [cabins, setCabins] = useState<LeaderCabin[]>([]);
@@ -109,7 +110,7 @@ export default function MyCabins() {
       setExpandedCabins(new Set(cabinData.map(c => c.id)));
     } catch (error) {
       console.error('Error loading data:', error);
-      toast.error('Kunne ikke laste data');
+      showError('Kunne ikke laste data');
     } finally {
       setIsLoading(false);
     }
@@ -154,9 +155,9 @@ export default function MyCabins() {
       if (error) throw error;
       
       loadData();
-      toast.success(participant.has_arrived ? 'Ankomst fjernet' : 'Markert som ankommet!');
+      showSuccess(participant.has_arrived ? 'Ankomst fjernet' : 'Markert som ankommet!');
     } catch (error) {
-      toast.error('Kunne ikke oppdatere status');
+      showError('Kunne ikke oppdatere status');
     }
   };
 

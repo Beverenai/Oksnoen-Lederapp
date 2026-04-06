@@ -1,3 +1,4 @@
+import { statusPopup } from '@/hooks/useStatusPopup';
 import { useEffect, useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -8,7 +9,6 @@ import {
   type SyncQueueItem 
 } from "@/lib/syncQueue";
 import { useOfflineStatus } from "./useOfflineStatus";
-import { toast } from "sonner";
 
 // Valid table names for type safety
 type ValidTable = 
@@ -117,11 +117,11 @@ export function useBackgroundSync() {
     setIsSyncing(false);
 
     if (successCount > 0) {
-      toast.success(`Synkronisert ${successCount} ${successCount === 1 ? 'endring' : 'endringer'}`);
+      statusPopup.success(`Synkronisert ${successCount} ${successCount === 1 ? 'endring' : 'endringer'}`);
     }
     
     if (failCount > 0) {
-      toast.error(`${failCount} ${failCount === 1 ? 'endring' : 'endringer'} kunne ikke synkroniseres`);
+      statusPopup.error(`${failCount} ${failCount === 1 ? 'endring' : 'endringer'} kunne ikke synkroniseres`);
     }
   }, [processQueueItem]);
 

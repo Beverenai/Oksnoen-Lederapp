@@ -1,7 +1,7 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Copy, Check, AlertTriangle } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface SyncErrorDetailsProps {
   error: string;
@@ -37,7 +37,7 @@ export function SyncErrorDetails({
     };
     navigator.clipboard.writeText(JSON.stringify(details, null, 2));
     setCopied(true);
-    toast.success('Kopiert til utklippstavlen');
+    showSuccess('Kopiert til utklippstavlen');
     setTimeout(() => setCopied(false), 2000);
   };
 

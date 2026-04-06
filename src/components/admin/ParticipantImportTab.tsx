@@ -1,3 +1,4 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +20,6 @@ import {
   Edit2,
   MapPin
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { ParticipantEditDialog } from './ParticipantEditDialog';
 import { hapticSuccess, hapticWarning, hapticError } from '@/lib/capacitorHaptics';
 
@@ -134,13 +134,13 @@ export function ParticipantImportTab() {
             setParsedData([]);
             if (fileInputRef.current) fileInputRef.current.value = '';
             hapticSuccess();
-            toast.success(`Import fullført! ${progress.created} nye, ${progress.updated} oppdatert, ${progress.activitiesAdded} aktiviteter`);
+            showSuccess(`Import fullført! ${progress.created} nye, ${progress.updated} oppdatert, ${progress.activitiesAdded} aktiviteter`);
           } else if (progress.status === 'error') {
             hapticError();
-            toast.error('Import feilet');
+            showError('Import feilet');
           } else {
             hapticWarning();
-            toast.warning(`Import delvis fullført med ${progress.errors.length} feil`);
+            showInfo(`Import delvis fullført med ${progress.errors.length} feil`);
           }
           loadData();
         }
@@ -198,7 +198,7 @@ export function ParticipantImportTab() {
       setAllParticipants(data || []);
     } catch (error) {
       console.error('Error loading participants:', error);
-      toast.error('Kunne ikke laste deltakere');
+      showError('Kunne ikke laste deltakere');
     } finally {
       setIsLoadingParticipants(false);
     }
@@ -450,18 +450,18 @@ export function ParticipantImportTab() {
 
       if (error) {
         console.error('Error calling import function:', error);
-        toast.error('Kunne ikke starte import');
+        showError('Kunne ikke starte import');
         setIsImporting(false);
         return;
       }
 
-      toast.info(`Import startet for ${validParticipants.length} deltakere. Du kan navigere bort - importen fortsetter i bakgrunnen.`);
+      showInfo(`Import startet for ${validParticipants.length} deltakere. Du kan navigere bort - importen fortsetter i bakgrunnen.`);
       
       // Start polling for progress
       pollProgress();
     } catch (error) {
       console.error('Import error:', error);
-      toast.error('Kunne ikke starte import');
+      showError('Kunne ikke starte import');
       setIsImporting(false);
     }
   };
@@ -482,11 +482,11 @@ export function ParticipantImportTab() {
       
       loadData();
       hapticSuccess();
-      toast.success('Alle deltakere er slettet');
+      showSuccess('Alle deltakere er slettet');
     } catch (error) {
       console.error('Error deleting participants:', error);
       hapticError();
-      toast.error('Kunne ikke slette deltakere');
+      showError('Kunne ikke slette deltakere');
     } finally {
       setIsDeleting(false);
     }

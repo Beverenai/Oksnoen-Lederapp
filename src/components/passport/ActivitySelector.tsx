@@ -1,9 +1,9 @@
+import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState } from 'react';
 import { Check, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { useActivities } from '@/hooks/useActivities';
 import { cn } from '@/lib/utils';
 
@@ -40,7 +40,7 @@ export function ActivitySelector({
           .ilike('activity', activityTitle);
 
         if (error) throw error;
-        toast.success(`${activityTitle} fjernet`);
+        showSuccess(`${activityTitle} fjernet`);
       } else {
         // Add activity
         const { error } = await supabase
@@ -51,13 +51,13 @@ export function ActivitySelector({
           });
 
         if (error) throw error;
-        toast.success(`${activityTitle} lagt til!`);
+        showSuccess(`${activityTitle} lagt til!`);
       }
       
       onActivityChanged();
     } catch (error) {
       console.error('Error toggling activity:', error);
-      toast.error('Kunne ikke oppdatere aktivitet');
+      showError('Kunne ikke oppdatere aktivitet');
     } finally {
       setIsLoading(null);
     }
