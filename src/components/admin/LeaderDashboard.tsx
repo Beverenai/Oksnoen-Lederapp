@@ -134,11 +134,9 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
       .from('leader_content')
       .select('*');
 
-    // Fetch admin and nurse roles separately for sorting and green border
+    // Fetch admin and nurse roles via RPC
     const { data: rolesData } = await supabase
-      .from('user_roles')
-      .select('leader_id, role')
-      .in('role', ['admin', 'nurse']);
+      .rpc('get_all_leader_roles');
 
     const adminSet = new Set(rolesData?.filter(r => r.role === 'admin').map(r => r.leader_id) || []);
     const nurseSet = new Set(rolesData?.filter(r => r.role === 'nurse').map(r => r.leader_id) || []);

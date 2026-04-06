@@ -32,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const loginInProgressRef = useRef(false);
+  const initInProgressRef = useRef(false);
 
   const isProfileComplete = checkProfileComplete(leader);
 
@@ -84,6 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const initAuth = useCallback(async () => {
+    if (initInProgressRef.current) return;
+    initInProgressRef.current = true;
     console.log('[Auth] initAuth started');
     setAuthError(null);
 
@@ -91,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn('[Auth] initAuth timeout — forcing isLoading=false');
       setIsLoading(false);
       setAuthError('Innlasting tok for lang tid. Prøv å laste siden på nytt.');
-    }, 8000);
+    }, 10000);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -113,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       clearTimeout(timeoutId);
       setIsLoading(false);
+      initInProgressRef.current = false;
       console.log('[Auth] initAuth complete');
     }
   }, []);
@@ -130,7 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (event === 'TOKEN_REFRESHED' && session) {
         // Session refreshed, leader data is still valid
       } else if (event === 'SIGNED_IN' && session) {
-        if (loginInProgressRef.current) return;
+        // Skip if login or init is already handling this
+        if (loginInProgressRef.current || initInProgressRef.current) return;
         await loadLeaderFromSession(session.user.id);
       }
     });

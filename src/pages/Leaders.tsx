@@ -105,9 +105,7 @@ export default function Leaders() {
         supabase
           .from('leader_content')
           .select('*'),
-        supabase
-          .from('user_roles')
-          .select('leader_id, role'),
+        supabase.rpc('get_all_leader_roles'),
         supabase
           .from('extra_fields_config')
           .select('*')

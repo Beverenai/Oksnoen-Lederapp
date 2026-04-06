@@ -353,13 +353,13 @@ export default function Admin() {
     try {
       const [leadersRes, rolesRes, configRes, extraConfigRes] = await Promise.all([
         supabase.from('leaders').select('*').order('created_at'),
-        supabase.from('user_roles').select('*'),
+        supabase.rpc('get_all_leader_roles'),
         supabase.from('home_screen_config').select('*').order('sort_order'),
         supabase.from('extra_fields_config').select('*').order('sort_order'),
       ]);
 
       const roleMap = new Map<string, AppRole>();
-      (rolesRes.data || []).forEach((r: UserRole) => {
+      (rolesRes.data || []).forEach((r: { leader_id: string; role: string }) => {
         roleMap.set(r.leader_id, r.role as AppRole);
       });
 
