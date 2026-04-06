@@ -207,13 +207,13 @@ export function LeaderContentSheet({
 
       if (error) throw error;
       orig[origKey] = value;
-      showSuccess('Auto-lagret', undefined, 1500);
+      toast.success('Auto-lagret');
       onSaved();
     } catch (err) {
       console.error('Auto-save error:', err);
       showError('Kunne ikke auto-lagre');
     }
-  }, [leader, onSaved, showError, showSuccess]);
+  }, [leader, onSaved, showError]);
 
   const loadCabins = useCallback(async () => {
     setIsLoadingCabins(true);
@@ -405,7 +405,7 @@ export function LeaderContentSheet({
       if (error) throw error;
       
       if (data?.sent > 0) {
-        showSuccess('Varsling sendt!');
+        toast.success('Varsling sendt!');
       } else {
         showInfo(`${firstName} har ikke aktivert push-varslinger`);
       }
@@ -456,7 +456,7 @@ export function LeaderContentSheet({
       if (error) throw error;
 
       if (data?.sent > 0) {
-        showSuccess(`Varsling sendt til ${getFirstName(leader.name)}!`);
+        toast.success(`Varsling sendt til ${getFirstName(leader.name)}!`);
         setNotificationTitle('');
         setNotificationMessage('');
       } else {
@@ -570,7 +570,7 @@ export function LeaderContentSheet({
 
       originalValuesRef.current = currentState;
       hasInitializedRef.current = true;
-      showSuccess('Lagret!');
+      toast.success('Lagret!');
       onSaved();
       
       if (changes.length > 0) {
