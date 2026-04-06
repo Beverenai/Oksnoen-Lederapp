@@ -1,13 +1,15 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Edit, MapPin, FileText, AlertTriangle } from 'lucide-react';
+import { Edit, MapPin, FileText, AlertTriangle, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getTeamStyles, formatTeamDisplay, formatTeamDisplayMobile, getFirstName } from '@/lib/teamUtils';
 import type { LeaderWithContent } from '@/hooks/useLeaderDashboardData';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LeaderCardProps {
   leader: LeaderWithContent;
@@ -15,6 +17,8 @@ interface LeaderCardProps {
 }
 
 export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: LeaderCardProps) {
+  const { isAdmin, setViewAsLeader } = useAuth();
+  const navigate = useNavigate();
   const content = leader.content;
   const hasObs = !!content?.obs_message;
   const hasActivity = !!content?.current_activity;
@@ -80,6 +84,15 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
             </>
           )}
 
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden sm:flex h-8 w-8 shrink-0"
+            title="Se som denne lederen"
+            onClick={(e) => { e.stopPropagation(); setViewAsLeader(leader); navigate('/'); }}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
