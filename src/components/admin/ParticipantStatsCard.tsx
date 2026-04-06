@@ -181,6 +181,26 @@ export function ParticipantStatsCard() {
     );
   }
 
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <BarChart3 className="w-5 h-5" />
+            Deltakerstatistikk
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center space-y-3">
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <Button variant="outline" size="sm" onClick={() => loadData()}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Prøv igjen
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Card>
