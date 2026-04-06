@@ -305,6 +305,24 @@ export function LeaderContentSheet({
     onOpenChange(false);
   };
 
+  const handleClearAllFields = () => {
+    setTeam('');
+    setMinisterpost('');
+    setCurrentActivity('');
+    setExtraActivity('');
+    setPersonalNotes('');
+    setObsMessage('');
+    setExtra1('');
+    setExtra2('');
+    setExtra3('');
+    setExtra4('');
+    setExtra5('');
+    setSelectedCabinIds([]);
+    setShowClearConfirm(false);
+    hapticImpact('medium');
+    toast.info('Alle felt tømt — husk å lagre');
+  };
+
   const handleSendNotification = async () => {
     if (!leader || !notificationTitle.trim() || !currentLeader) return;
 
