@@ -142,6 +142,9 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" title="Se som" onClick={(e) => { e.stopPropagation(); setViewAsLeader(leader); navigate('/'); }}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleSendNotification(e, leader)} disabled={sendingNotification === leader.id}>
                       <Bell className={`h-4 w-4 ${sendingNotification === leader.id ? 'animate-pulse' : ''}`} />
                     </Button>
