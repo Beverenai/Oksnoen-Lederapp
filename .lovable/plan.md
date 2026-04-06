@@ -1,36 +1,36 @@
 
 
-## Fiks: Sider som henger på skeleton/loading uten å laste
-
-### Problemet
-Home og Profile bruker manuell `useState`/`useEffect`-basert datahenting. Hvis en Supabase-forespørsel henger (f.eks. ved token-refresh eller nettverkstreg), sitter `isLoading` fast på `true` — og brukeren ser bare skjeletter som aldri forsvinner. Det finnes ingen timeout eller feilhåndtering som avbryter lastingen.
-
-I tillegg har Home.tsx en bug: `loadData` har `leader` som dependency i `useCallback`, men `useEffect` lytter på `effectiveLeader`. Dette kan gi mismatches.
+## Fiks: Meny, scroll, layout og safe area
 
 ### Endringer
 
-#### 1. Legg til timeout på lasting i Profile.tsx
-- Hvis `loadProfile` ikke fullfører innen 8 sekunder, sett `isLoading = false` og vis en retry-knapp i stedet for evig skeleton.
-- Vis profilen med det vi har (eller en feilmelding med retry).
+**1. Sidemenyen → 80vw med overlay (`AppLayout.tsx` linje 551-656)**
+- Legg til en `bg-black/50` overlay-div bak menypanelet som fader inn/ut. Klikk på overlay → `closeMobileMenu()`.
+- Meny-panelet endres fra `fixed inset-0` til `fixed inset-y-0 right-0 w-[80vw] max-w-[320px]`.
+- Meny-headeren endres fra `left-0 right-0` til bare full bredde innenfor panelet.
+- Animasjon beholdes: `translate-x-full` → `translate-x-0`.
 
-#### 2. Legg til timeout på lasting i Home.tsx
-- Samme mønster: timeout etter 8 sekunder → vis feilmelding med retry-knapp.
-- Fiks dependency-bug: `loadData` bør bruke `effectiveLeader` (ikke `leader`) som dependency i `useCallback`.
+**2. Svart stripe → safe area på bunnav (`AppLayout.tsx` linje 660)**
+- Legg til `pb-[env(safe-area-inset-bottom,0px)]` på `<nav>` og sørg for at bakgrunnen strekker seg ned.
+- CSS-klassen `.bottom-nav` i `index.css` bruker allerede `bottom: calc(8px + env(...))` — men selve nav-elementet trenger intern padding for å unngå at innholdet kuttes.
 
-#### 3. Ikke vis evig skeleton — vis retry ved feil
-- Begge sider: erstatt den evige skeleton-visningen med en tilstand som skiller mellom "laster første gang" og "lasting feilet".
-- Ved feil: vis en kort melding ("Kunne ikke laste data") med en "Prøv igjen"-knapp.
-- Behold skeleton kun for de første 1-2 sekundene av normal lasting.
+**3. Main content padding (`AppLayout.tsx` linje 794)**
+- Endre `pb-[env(safe-area-inset-bottom,0px)]` til `pb-[calc(var(--nav-h)+env(safe-area-inset-bottom,0px)+24px)]` slik at innhold aldri havner bak den flytende bunnav-baren.
 
-#### 4. Fallback: vis sist kjente data
-- Hvis `effectiveLeader` finnes men forespørselen feiler, vis i det minste lederens navn og grunnleggende info fra `effectiveLeader`-konteksten i stedet for en blank side.
+**4. Scroll-ytelse på Leaders (`Leaders.tsx` linje 349)**
+- Legg til `overflow-x-hidden` og style `WebkitOverflowScrolling: 'touch'`, `overscrollBehavior: 'contain'`, `willChange: 'transform'` på scroll-containeren.
+
+**5. Viewport-fix (`index.css`)**
+- Verifiser at `html, body, #root` bruker `min-height: 100dvh` (allerede delvis på plass, dobbeltsjekker).
 
 ### Filer som endres
-- `src/pages/Home.tsx`
-- `src/pages/Profile.tsx`
+- `src/components/layout/AppLayout.tsx`
+- `src/pages/Leaders.tsx`
+- `src/index.css` (kun om `100dvh` mangler)
 
 ### Resultat
-- Sidene henger aldri på evig skeleton
-- Brukeren ser alltid noe nyttig, selv om nettverket er tregt
-- Retry-knapp gjør det enkelt å prøve på nytt uten å måtte refreshe hele appen
+- Meny dekker 80% med dimmet bakgrunn bak
+- Ingen svart stripe på iPhone
+- Innhold kuttes ikke av bunnav
+- Smooth scroll på Ledere-siden
 
