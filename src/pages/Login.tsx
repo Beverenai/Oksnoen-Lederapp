@@ -13,8 +13,11 @@ export default function Login() {
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [inactiveState, setInactiveState] = useState(false);
-  const { login } = useAuth();
+  const { login, deactivatedMessage } = useAuth();
   const navigate = useNavigate();
+
+  // Show deactivated message if user was auto-logged out
+  const showDeactivated = inactiveState || !!deactivatedMessage;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +68,7 @@ export default function Login() {
           </p>
         </div>
 
-        {inactiveState ? (
+        {showDeactivated ? (
           <Card className="border-0 shadow-xl">
             <CardContent className="pt-8 pb-6 text-center space-y-4">
               <PauseCircle className="w-16 h-16 mx-auto text-muted-foreground" />
