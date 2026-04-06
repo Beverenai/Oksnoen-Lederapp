@@ -539,7 +539,9 @@ export default function AdminSettings() {
       if (error) throw error;
 
       if (newLeaderIsAdmin && leader) {
-        await supabase.from('user_roles').insert({ leader_id: leader.id, role: 'admin' });
+        await supabase.functions.invoke('manage-roles', {
+          body: { action: 'set', leader_id: leader.id, role: 'admin' }
+        });
       }
 
       setNewLeaderName('');
