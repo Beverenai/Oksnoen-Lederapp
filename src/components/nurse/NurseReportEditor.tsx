@@ -6,6 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Save, Loader2, Download, User, FileText, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { hapticSuccess } from '@/lib/capacitorHaptics';
@@ -40,6 +50,7 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mentionRangeRef = useRef<Range | null>(null);
   const pendingContentRef = useRef<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<HTMLElement | null>(null);
 
   const getParticipant = useCallback((id: string) => participants.find((p) => p.id === id), [participants]);
 
@@ -517,7 +528,7 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
     setMentionQuery(null);
   };
 
-  const handleEditorClick = async (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     const deleteButton = target.closest('[data-section-delete="true"]');
     if (!deleteButton) return;
@@ -528,7 +539,13 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
     const section = deleteButton.closest('.participant-section') as HTMLElement | null;
     if (!section) return;
 
-    await deleteParticipantSection(section);
+    setDeleteTarget(section);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    await deleteParticipantSection(deleteTarget);
+    setDeleteTarget(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -757,7 +774,7 @@ ${cleanHtml}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           onClick={handleEditorClick}
-          data-placeholder="Skriv fritt her... bruk @ for å nevne en deltaker og opprette en seksjon."
+          data-placeholder='Skriv her — legg til deltaker med "@navn"'
           style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         />
 
@@ -783,6 +800,21 @@ ${cleanHtml}
           }
         `}</style>
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Slett deltaker-seksjon?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Er du sikker på at du vil slette denne seksjonen? All tekst for deltakeren fjernes fra rapporten.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Slett</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
