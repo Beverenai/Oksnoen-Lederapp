@@ -96,7 +96,7 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
       { to: '/passport', icon: PassIcon, label: 'Passkontor' },
       { to: '/admin', icon: Settings, label: 'Dashboard' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '/profile', icon: User, label: 'Profil' },
+      { to: '/fix', icon: Wrench, label: 'Fix' },
     ];
   } else if (isNurse) {
     return [
@@ -104,7 +104,7 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
       { to: '/passport', icon: PassIcon, label: 'Passkontor' },
       { to: '/nurse', icon: Heart, label: 'Nurse' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '/profile', icon: User, label: 'Profil' },
+      { to: '/fix', icon: Wrench, label: 'Fix' },
     ];
   } else {
     return [
@@ -112,7 +112,7 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
       { to: '/passport', icon: PassIcon, label: 'Passkontor' },
       { to: '#', icon: Check, label: 'Hajolo', isHajolo: true },
       { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '/profile', icon: User, label: 'Profil' },
+      { to: '/fix', icon: Wrench, label: 'Fix' },
     ];
   }
 };
@@ -800,7 +800,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Main Content */}
       <main 
         ref={scrollContainerRef}
-        className="lg:ml-64 lg:pt-0 flex-1 lg:min-h-screen app-content lg:pb-0 lg:overflow-y-auto overflow-x-hidden max-w-full pb-[calc(var(--nav-h)+env(safe-area-inset-bottom,0px)+24px)] lg:pb-0"
+        className="lg:ml-64 lg:pt-0 flex-1 w-full lg:min-h-screen app-content lg:pb-0 overflow-y-auto overflow-x-hidden max-w-full pb-[calc(var(--nav-h)+env(safe-area-inset-bottom,0px)+24px)] lg:pb-0"
         style={{ overscrollBehaviorY: 'contain' }}
       >
         {/* Spacer for mobile header - animates with header visibility */}
