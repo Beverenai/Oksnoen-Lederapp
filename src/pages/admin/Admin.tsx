@@ -10,12 +10,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Settings, Loader2, Shield, Calendar, RefreshCw, Check,
-  Save, ChevronDown, ChevronUp, LayoutGrid, List
+  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
 import { LeaderListView } from '@/components/admin/LeaderListView';
+import { LeaderActivationTab } from '@/components/admin/LeaderActivationTab';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
@@ -69,6 +70,7 @@ export default function Admin() {
 
   // UI state
   const [isHomeConfigOpen, setIsHomeConfigOpen] = useState(false);
+  const [isActivationOpen, setIsActivationOpen] = useState(false);
   const [leaderViewMode, setLeaderViewMode] = useState<'grid' | 'list'>('grid');
   const [isActivitiesSheetOpen, setIsActivitiesSheetOpen] = useState(false);
 
@@ -293,6 +295,29 @@ export default function Admin() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Leader activation management */}
+      <Collapsible open={isActivationOpen} onOpenChange={setIsActivationOpen}>
+        <Card>
+          <CardHeader>
+            <CollapsibleTrigger className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <UserCog className="w-5 h-5" />
+                <div className="text-left">
+                  <CardTitle>Lederaktivering</CardTitle>
+                  <CardDescription>Styr hvem som kan logge inn i appen</CardDescription>
+                </div>
+              </div>
+              {isActivationOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
+            </CollapsibleTrigger>
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent>
+              <LeaderActivationTab leaders={leaders} onLeaderUpdated={loadData} />
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Home screen config - lazy loaded */}
       <Collapsible open={isHomeConfigOpen} onOpenChange={setIsHomeConfigOpen}>
