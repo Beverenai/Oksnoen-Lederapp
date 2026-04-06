@@ -34,23 +34,29 @@ interface LeaderWithRole extends Leader {
   role: AppRole;
 }
 
-// Tab definitions - split into two rows
-const settingsTabsRow1 = [
-  { id: 'leaders', label: 'Ledere', icon: Users },
-  { id: 'participants', label: 'Deltakere', icon: Users },
-  { id: 'cabins', label: 'Hytter', icon: Home },
-  { id: 'schedule', label: 'Vaktplan', icon: Calendar },
-  { id: 'activities', label: 'Aktiviteter', icon: Dumbbell },
+// Navigation card definitions
+const topNavItems = [
+  { key: 'leaders', label: 'Ledere', desc: 'Administrer ledere og roller', icon: Users, color: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
+  { key: 'participants', label: 'Deltakere', desc: 'Importer og håndter deltakere', icon: Users, color: 'bg-green-500/15 text-green-600 dark:text-green-400' },
 ];
 
-const settingsTabsRow2 = [
-  { id: 'skjaer', label: 'Skjær', icon: MapIcon },
-  { id: 'stories', label: 'Historier', icon: BookOpen },
-  { id: 'push', label: 'Push-varsler', icon: Bell },
-  { id: 'rope-control', label: 'Tau-kontroll', icon: Anchor },
-  { id: 'sync', label: 'Synkronisering', icon: RefreshCw },
-  { id: 'setup', label: 'Oppsett', icon: Settings },
+const navItems = [
+  { key: 'cabins', label: 'Hytter', desc: 'Administrer hytter', icon: Home, color: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' },
+  { key: 'schedule', label: 'Vaktplan', desc: 'Sett opp vaktplan', icon: Calendar, color: 'bg-purple-500/15 text-purple-600 dark:text-purple-400' },
+  { key: 'activities', label: 'Aktiviteter', desc: 'Administrer aktiviteter', icon: Dumbbell, color: 'bg-pink-500/15 text-pink-600 dark:text-pink-400' },
+  { key: 'skjaer', label: 'Skjær', desc: 'Skjæraktiviteter', icon: MapIcon, color: 'bg-teal-500/15 text-teal-600 dark:text-teal-400' },
+  { key: 'stories', label: 'Historier', desc: 'Administrer historier', icon: BookOpen, color: 'bg-orange-500/15 text-orange-600 dark:text-orange-400' },
+  { key: 'push', label: 'Push-varsler', desc: 'Send push-varsler', icon: Bell, color: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' },
+  { key: 'rope-control', label: 'Tau-kontroll', desc: 'Tau-kontroll oppsett', icon: Anchor, color: 'bg-red-500/15 text-red-600 dark:text-red-400' },
+  { key: 'sync', label: 'Synkronisering', desc: 'Import/eksport', icon: RefreshCw, color: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400' },
+  { key: 'setup', label: 'Oppsett', desc: 'Webhook-konfigurasjon', icon: Settings, color: 'bg-muted/50 text-muted-foreground' },
 ];
+
+const sectionLabels: Record<string, string> = {
+  leaders: 'Ledere', participants: 'Deltakere', cabins: 'Hytter', schedule: 'Vaktplan',
+  activities: 'Aktiviteter', skjaer: 'Skjær', stories: 'Historier', push: 'Push-varsler',
+  'rope-control': 'Tau-kontroll', sync: 'Synkronisering', setup: 'Oppsett',
+};
 
 export default function AdminSettings() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
