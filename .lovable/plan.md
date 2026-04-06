@@ -1,44 +1,47 @@
 
 
-## Gjenopprett pill-meny med minimal gap + prominent Hajolo-knapp
+## Fiks: Suksessmeldinger som toast + minimal bunn-gap
 
-### Hva endres
+### To problemer
 
-**1. `src/index.css` — `.bottom-nav` tilbake til pill med minimal gap**
+**1. StatusPopup er for intrusiv for suksessmeldinger**
+`StatusPopup` viser en fullskjerm-overlay med backdrop, stor ikon, og OK-knapp — midt på skjermen. For suksess og info er dette overkill. Feilmeldinger kan fortsatt bruke denne stilen (de krever oppmerksomhet).
 
-```css
-.bottom-nav {
-  position: fixed;
-  bottom: calc(4px + env(safe-area-inset-bottom, 0px)); /* Minimal gap — bare 4px over safe area */
-  left: 8px;
-  right: 8px;
-  z-index: 50;
-  background: hsla(var(--card), 0.85);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  border-top: 0.5px solid hsl(var(--border));
-  border-radius: 20px;              /* Pill-form tilbake */
-  box-shadow: 0 2px 12px rgb(0 0 0 / 0.08);
-}
+**2. For mye plass under pill-menyen**
+`bottom: calc(4px + env(safe-area-inset-bottom))` — safe-area er 34px på Face ID-iPhoner, så pillen sitter 38px over bunnen. Vi reduserer til `2px + safe-area` for minimal gap.
+
+### Endringer
+
+**1. `src/hooks/useStatusPopup.tsx` — Suksess/info bruker sonner toast i stedet**
+
+`showSuccess` og `showInfo` kaller `toast.success()` / `toast()` fra sonner i stedet for å sette `popup`-state. Sonner er allerede konfigurert med `position="top-center"` og safe-area offset.
+
+- `showSuccess` → `toast.success(title, { description: message, duration: 2000 })`
+- `showInfo` → `toast(title, { description: message, duration: autoClose ?? 3000 })`
+- `showError` beholdes som StatusPopup (krever brukerinteraksjon)
+- Haptic feedback beholdes for alle
+
+**2. `src/components/ui/sonner.tsx` — Flytt toast-posisjon**
+
+Endre `position` fra `"top-center"` til `"bottom-center"` med offset som plasserer toasten rett over pill-menyen. Da unngår vi at den kuttes av på toppen.
+
+```
+offset="calc(80px + env(safe-area-inset-bottom, 0px))"
+position="bottom-center"
 ```
 
-Nøkkelforskjell fra før: `bottom: calc(4px + safe-area)` i stedet for `calc(8px + safe-area)` — halvparten av gapet, akkurat nok til å se pill-formen.
+**3. `src/index.css` — Reduser pill-gap**
 
-**2. `src/components/layout/AppLayout.tsx` — Hajolo/Admin/Nurse tilbake til prominent midtknapp**
-
-Gjenopprett FAB-stilen på midtknappen:
-- `w-14 h-14 rounded-full` med bakgrunnsfarge
-- `-mt-6` for å stikke litt opp over pill-en
-- Rød/grønn farge som viser om meldingen er lest eller ikke
-- Hajolo: rød sirkel med puls når ulest, grønn med check når bekreftet
-- Admin/Nurse: tilsvarende prominent sirkel
+`.bottom-nav` `bottom`: `calc(4px + ...)` → `calc(2px + env(safe-area-inset-bottom, 0px))`
 
 ### Filer som endres
-- `src/index.css` — pill-stil med minimal gap
-- `src/components/layout/AppLayout.tsx` — midtknappen tilbake til FAB
+- `src/hooks/useStatusPopup.tsx`
+- `src/components/ui/sonner.tsx`
+- `src/index.css`
 
 ### Resultat
-- Pill-meny med så vidt litt plass under (4px + safe area)
-- Hajolo-knappen er prominent og viser tydelig lest/ulest-status
-- Ingen overdreven svart stripe under menyen
+- Suksessmeldinger vises som diskret toast over menyen, forsvinner etter 2 sek
+- Feilmeldinger forblir fullskjerm-popup som krever OK/handling
+- Toasts kuttes ikke av på toppen
+- Pill-menyen sitter tettere mot bunnen
 
