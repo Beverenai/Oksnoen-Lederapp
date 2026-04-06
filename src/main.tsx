@@ -9,16 +9,6 @@ import { runStartupDiagnostics } from "./lib/startupDiagnostics";
 // Run startup diagnostics for debugging
 runStartupDiagnostics();
 
-// Robust viewport height variable for iOS standalone PWA
-// Use window.innerHeight (not visualViewport) — it reports the full standalone height
-const setAppHeight = () => {
-  const h = window.innerHeight;
-  document.documentElement.style.setProperty('--app-height', `${h}px`);
-};
-setAppHeight();
-window.addEventListener('resize', setAppHeight);
-window.addEventListener('orientationchange', () => setTimeout(setAppHeight, 100));
-
 // Initialize Capacitor plugins if in native context
 initCapacitorPlugins().then((result) => {
   if (result.isNative) {
