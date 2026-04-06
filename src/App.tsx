@@ -56,7 +56,7 @@ const queryClient = new QueryClient({
 const persistOptions = {
   persister: queryPersister,
   maxAge: 24 * 60 * 60 * 1000, // 24h
-  buster: 'v1',
+  buster: 'v2',
 };
 
 // Preload frequently accessed pages after initial render
