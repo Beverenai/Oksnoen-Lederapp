@@ -359,11 +359,9 @@ header, nav {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
 }
 
-/* Bottom nav container - standard iOS tab bar */
-/* Pill nav — floats above safe area in browser, sits tight in PWA/native */
+/* Bottom nav container — floating pill */
 .bottom-nav {
   position: fixed;
   bottom: calc(8px + env(safe-area-inset-bottom, 0px));
@@ -380,15 +378,28 @@ header, nav {
   backface-visibility: hidden;
 }
 
-/* In installed PWA or Capacitor: pill sits almost at the very bottom */
+/* Underlay that fills the safe-area gap below the pill with app bg */
+.bottom-nav-underlay {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  height: env(safe-area-inset-bottom, 0px);
+  background: hsl(var(--background));
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* In installed PWA or Capacitor: pill sits just above the underlay */
 @media (display-mode: standalone) {
   .bottom-nav {
-    bottom: 2px;
+    bottom: calc(4px + env(safe-area-inset-bottom, 0px));
   }
 }
 
 .standalone-app .bottom-nav {
-  bottom: 2px;
+  bottom: calc(4px + env(safe-area-inset-bottom, 0px));
 }
 
 .dark .bottom-nav {
