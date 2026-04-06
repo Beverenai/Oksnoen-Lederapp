@@ -42,9 +42,11 @@ const Checkout = lazy(() => import("@/pages/admin/Checkout"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,
-      gcTime: 24 * 60 * 60 * 1000,
-      networkMode: 'offlineFirst',
+      staleTime: 60 * 1000, // 1 min — data is fresh for 1 min, then re-fetched
+      gcTime: 10 * 60 * 1000, // 10 min garbage collection
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      refetchOnMount: true,
       retry: (failureCount) => {
         if (!navigator.onLine) return false;
         return failureCount < 2;
@@ -52,12 +54,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-const persistOptions = {
-  persister: queryPersister,
-  maxAge: 24 * 60 * 60 * 1000, // 24h
-  buster: 'v3',
-};
 
 // Preload frequently accessed pages after initial render
 if (typeof window !== 'undefined') {
@@ -209,7 +205,7 @@ function StatusBarSync() {
 
 const App = () => (
   <ErrorBoundary>
-    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+  <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <StatusBarSync />
         <TooltipProvider>
@@ -224,7 +220,7 @@ const App = () => (
           </StatusPopupProvider>
         </TooltipProvider>
       </ThemeProvider>
-    </PersistQueryClientProvider>
+    </QueryClientProvider>
   </ErrorBoundary>
 );
 
