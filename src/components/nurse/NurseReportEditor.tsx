@@ -715,7 +715,86 @@ ${cleanHtml}
         />
       </div>
 
-      <div className="relative flex-1 min-h-0 overflow-y-auto">
+      {/* Quick add input */}
+      <div className="relative pb-3">
+        <Input
+          placeholder='Skriv inn her — legg til deltaker med "@"'
+          value={quickInput}
+          onChange={(e) => {
+            const val = e.target.value;
+            setQuickInput(val);
+            const lastAt = val.lastIndexOf('@');
+            if (lastAt >= 0) {
+              const q = val.slice(lastAt + 1);
+              if (q.length > 0 && q.length < 40 && !q.includes(' ')) {
+                setMentionQuery(q);
+                setSelectedMentionIndex(0);
+                return;
+              }
+            }
+          }}
+          onKeyDown={(e) => {
+            if (mentionQuery !== null && filteredMentionParticipants.length > 0) {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setSelectedMentionIndex((prev) => Math.min(prev + 1, filteredMentionParticipants.length - 1));
+                return;
+              }
+              if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setSelectedMentionIndex((prev) => Math.max(prev - 1, 0));
+                return;
+              }
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                const p = filteredMentionParticipants[selectedMentionIndex];
+                if (p) {
+                  insertParticipantSection(p);
+                  setQuickInput('');
+                  setMentionQuery(null);
+                }
+                return;
+              }
+              if (e.key === 'Escape') {
+                setMentionQuery(null);
+                return;
+              }
+            }
+          }}
+          className="h-10 text-sm"
+        />
+        {quickInput.includes('@') && mentionQuery !== null && filteredMentionParticipants.length > 0 && (
+          <div className="absolute top-full left-0 right-0 bg-popover border border-border rounded-lg shadow-lg p-1 max-h-64 overflow-y-auto z-50 mt-1">
+            {filteredMentionParticipants.map((p, i) => (
+              <button
+                key={p.id}
+                className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-3 transition-colors ${
+                  i === selectedMentionIndex ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
+                }`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  insertParticipantSection(p);
+                  setQuickInput('');
+                  setMentionQuery(null);
+                }}
+                onMouseEnter={() => setSelectedMentionIndex(i)}
+              >
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src={p.image_url || undefined} alt={p.name} />
+                  <AvatarFallback className="text-xs"><User className="w-3 h-3" /></AvatarFallback>
+                </Avatar>
+                <div>
+                  <span className="font-medium">{p.name}</span>
+                  {p.cabin && (
+                    <span className="text-xs text-muted-foreground ml-2">{p.cabin.name}</span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
         {mentionQuery !== null && filteredMentionParticipants.length > 0 && (
           <div
             className="absolute bg-popover border border-border rounded-lg shadow-lg p-1 max-h-64 overflow-y-auto z-50"
