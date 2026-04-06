@@ -370,7 +370,7 @@ header, nav {
 /* Bottom nav container - floating pill with minimal gap */
 .bottom-nav {
   position: fixed;
-  bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(2px + env(safe-area-inset-bottom, 0px));
   left: 8px;
   right: 8px;
   z-index: 50;
