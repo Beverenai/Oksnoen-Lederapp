@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
-import { BarChart3, AlertCircle, Cake, ChevronDown, ChevronUp, Users } from 'lucide-react';
+import { BarChart3, AlertCircle, Cake, ChevronDown, ChevronUp, Users, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { AgeDistributionChart } from '@/components/stats/AgeDistributionChart';
@@ -46,6 +47,7 @@ export function ParticipantStatsCard() {
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [activities, setActivities] = useState<ParticipantActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isMissingOpen, setIsMissingOpen] = useState(false);
   const [isBirthdaysOpen, setIsBirthdaysOpen] = useState(true);
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
@@ -62,18 +64,23 @@ export function ParticipantStatsCard() {
 
   const loadData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
+    setError(null);
     try {
-      const [participantsRes, cabinsRes, activitiesRes] = await Promise.all([
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000));
+      const fetches = Promise.all([
         supabase.from('participants').select('id, name, first_name, birth_date, has_arrived, cabin_id'),
         supabase.from('cabins').select('id, name'),
         supabase.from('participant_activities').select('participant_id'),
       ]);
 
+      const [participantsRes, cabinsRes, activitiesRes] = await Promise.race([fetches, timeout]) as any;
+
       setParticipants(participantsRes.data || []);
       setCabins(cabinsRes.data || []);
       setActivities(activitiesRes.data || []);
-    } catch (error) {
-      console.error('Error loading participant stats:', error);
+    } catch (err) {
+      console.error('Error loading participant stats:', err);
+      setError('Kunne ikke laste data');
     } finally {
       setIsLoading(false);
     }
@@ -169,6 +176,26 @@ export function ParticipantStatsCard() {
             <div className="h-2 bg-muted rounded" />
             <div className="h-4 bg-muted rounded w-1/2" />
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <BarChart3 className="w-5 h-5" />
+            Deltakerstatistikk
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center space-y-3">
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <Button variant="outline" size="sm" onClick={() => loadData()}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Prøv igjen
+          </Button>
         </CardContent>
       </Card>
     );
