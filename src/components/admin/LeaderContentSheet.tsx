@@ -107,6 +107,8 @@ export function LeaderContentSheet({
   
   // Store original values to detect changes
   const originalValuesRef = useRef<Record<string, any>>({});
+  const hasInitializedRef = useRef(false);
+  const isProgrammaticCloseRef = useRef(false);
 
   // Cabin multi-select state
   const [cabins, setCabins] = useState<{ id: string; name: string }[]>([]);
@@ -127,6 +129,62 @@ export function LeaderContentSheet({
   const [extra3, setExtra3] = useState('');
   const [extra4, setExtra4] = useState('');
   const [extra5, setExtra5] = useState('');
+
+  const getCurrentState = useCallback(() => ({
+    team: team || '',
+    ministerpost: ministerpost || '',
+    currentActivity: currentActivity || '',
+    extraActivity: extraActivity || '',
+    personalNotes: personalNotes || '',
+    obsMessage: obsMessage || '',
+    extra1: extra1 || '',
+    extra2: extra2 || '',
+    extra3: extra3 || '',
+    extra4: extra4 || '',
+    extra5: extra5 || '',
+    selectedCabinIds: [...selectedCabinIds].sort(),
+  }), [team, ministerpost, currentActivity, extraActivity, personalNotes, obsMessage, extra1, extra2, extra3, extra4, extra5, selectedCabinIds]);
+
+  const closeSheet = useCallback(() => {
+    isProgrammaticCloseRef.current = true;
+    onOpenChange(false);
+    setTimeout(() => {
+      isProgrammaticCloseRef.current = false;
+    }, 0);
+  }, [onOpenChange]);
+
+  const hasPendingChanges = useCallback(() => {
+    const current = getCurrentState();
+    const original = {
+      team: originalValuesRef.current.team || '',
+      ministerpost: originalValuesRef.current.ministerpost || '',
+      currentActivity: originalValuesRef.current.currentActivity || '',
+      extraActivity: originalValuesRef.current.extraActivity || '',
+      personalNotes: originalValuesRef.current.personalNotes || '',
+      obsMessage: originalValuesRef.current.obsMessage || '',
+      extra1: originalValuesRef.current.extra1 || '',
+      extra2: originalValuesRef.current.extra2 || '',
+      extra3: originalValuesRef.current.extra3 || '',
+      extra4: originalValuesRef.current.extra4 || '',
+      extra5: originalValuesRef.current.extra5 || '',
+      selectedCabinIds: [...(originalValuesRef.current.selectedCabinIds || [])].sort(),
+    };
+
+    return (
+      current.team !== original.team ||
+      current.ministerpost !== original.ministerpost ||
+      current.currentActivity !== original.currentActivity ||
+      current.extraActivity !== original.extraActivity ||
+      current.personalNotes !== original.personalNotes ||
+      current.obsMessage !== original.obsMessage ||
+      current.extra1 !== original.extra1 ||
+      current.extra2 !== original.extra2 ||
+      current.extra3 !== original.extra3 ||
+      current.extra4 !== original.extra4 ||
+      current.extra5 !== original.extra5 ||
+      JSON.stringify(current.selectedCabinIds) !== JSON.stringify(original.selectedCabinIds)
+    );
+  }, [getCurrentState]);
 
   // Auto-save for activity fields
   const autoSaveField = useCallback(async (field: 'current_activity' | 'extra_activity', value: string) => {
@@ -152,7 +210,7 @@ export function LeaderContentSheet({
       console.error('Auto-save error:', err);
       showError('Kunne ikke auto-lagre');
     }
-  }, [leader, onSaved]);
+  }, [leader, onSaved, showError, showSuccess]);
 
   useEffect(() => {
     const loadCabins = async () => {
@@ -167,23 +225,44 @@ export function LeaderContentSheet({
 
   // Load leader's existing cabin links when leader changes
   useEffect(() => {
+    let isActive = true;
+
     const loadLeaderCabins = async () => {
-      if (!leader) return;
+      if (!leader) {
+        setSelectedCabinIds([]);
+        hasInitializedRef.current = false;
+        return;
+      }
+
+      hasInitializedRef.current = false;
       const { data } = await supabase
         .from('leader_cabins')
         .select('cabin_id')
         .eq('leader_id', leader.id);
+
+      if (!isActive) return;
+
       const cabinIds = data?.map(d => d.cabin_id) || [];
       setSelectedCabinIds(cabinIds);
-      // Store original cabin IDs
-      originalValuesRef.current.selectedCabinIds = cabinIds;
+      originalValuesRef.current = {
+        ...originalValuesRef.current,
+        selectedCabinIds: cabinIds,
+      };
+      hasInitializedRef.current = true;
     };
+
     loadLeaderCabins();
+
+    return () => {
+      isActive = false;
+      hasInitializedRef.current = false;
+    };
   }, [leader?.id]);
 
   // Reset form when leader changes
   useEffect(() => {
     if (leader) {
+      hasInitializedRef.current = false;
       setTeam(leader.team || '');
       setMinisterpost(leader.ministerpost || '');
 
@@ -211,6 +290,7 @@ export function LeaderContentSheet({
         extra3: content?.extra_3 || '',
         extra4: content?.extra_4 || '',
         extra5: content?.extra_5 || '',
+        selectedCabinIds: originalValuesRef.current.selectedCabinIds || [],
       };
       
       // Reset notification state
@@ -254,7 +334,6 @@ export function LeaderContentSheet({
       changes.push(`Nye notater`);
     }
     
-    // Check cabin changes
     const origCabinIds = orig.selectedCabinIds || [];
     const cabinIdsChanged = JSON.stringify([...selectedCabinIds].sort()) !== JSON.stringify([...origCabinIds].sort());
     if (cabinIdsChanged && selectedCabinIds.length > 0) {
@@ -262,7 +341,6 @@ export function LeaderContentSheet({
       changes.push(`Nytt hytte-ansvar: ${cabinNames}`);
     }
     
-    // Check extra fields (only show if there's actual new content)
     if (extra1 !== orig.extra1 && extra1) {
       const fieldConfig = homeConfig.find(c => c.element_key === 'extra_1');
       changes.push(`Ny info: ${fieldConfig?.title || 'Ekstra 1'}`);
@@ -318,13 +396,13 @@ export function LeaderContentSheet({
     } finally {
       setIsSendingChangeNotification(false);
       setShowNotifyDialog(false);
-      onOpenChange(false);
+      closeSheet();
     }
   };
 
   const handleSkipNotification = () => {
     setShowNotifyDialog(false);
-    onOpenChange(false);
+    closeSheet();
   };
 
   const handleClearAllFields = () => {
@@ -338,7 +416,7 @@ export function LeaderContentSheet({
     setExtra4('');
     setExtra5('');
     setShowClearConfirm(false);
-    showInfo('Innholdsfelt tømt — husk å lagre');
+    showInfo('Innholdsfelt tømt');
   };
 
   const handleSendNotification = async () => {
@@ -407,15 +485,18 @@ export function LeaderContentSheet({
   };
 
   const handleSave = async () => {
+    if (!leader) return;
+
+    const changes = getChanges();
+    const currentState = getCurrentState();
+
     setSaving(true);
     try {
-      // Get selected cabin names for the leaders.cabin field
       const selectedCabinNames = cabins
         .filter(c => selectedCabinIds.includes(c.id))
         .map(c => c.name)
         .join(', ');
 
-      // Update leader info
       const { error: leaderError } = await supabase
         .from('leaders')
         .update({
@@ -427,7 +508,6 @@ export function LeaderContentSheet({
 
       if (leaderError) throw leaderError;
 
-      // Update leader_cabins table - delete existing and insert new
       const { error: deleteError } = await supabase
         .from('leader_cabins')
         .delete()
@@ -448,7 +528,6 @@ export function LeaderContentSheet({
         if (insertError) throw insertError;
       }
 
-      // Upsert content
       const contentData = {
         leader_id: leader.id,
         current_activity: currentActivity || null,
@@ -460,7 +539,7 @@ export function LeaderContentSheet({
         extra_3: extra3 || null,
         extra_4: extra4 || null,
         extra_5: extra5 || null,
-        has_read: false, // Reset when content is changed
+        has_read: false,
         updated_at: new Date().toISOString()
       };
 
@@ -470,16 +549,16 @@ export function LeaderContentSheet({
 
       if (contentError) throw contentError;
 
+      originalValuesRef.current = currentState;
+      hasInitializedRef.current = true;
       showSuccess('Lagret!');
       onSaved();
       
-      // Check for changes and show notification dialog
-      const changes = getChanges();
       if (changes.length > 0) {
         setDetectedChanges(changes);
         setShowNotifyDialog(true);
       } else {
-        onOpenChange(false);
+        closeSheet();
       }
     } catch (error) {
       console.error('Error saving:', error);
@@ -489,9 +568,28 @@ export function LeaderContentSheet({
     }
   };
 
+  const handleSheetOpenChange = async (nextOpen: boolean) => {
+    if (nextOpen) {
+      onOpenChange(true);
+      return;
+    }
+
+    if (isProgrammaticCloseRef.current) {
+      onOpenChange(false);
+      return;
+    }
+
+    if (!leader || saving || !hasInitializedRef.current || !hasPendingChanges()) {
+      closeSheet();
+      return;
+    }
+
+    await handleSave();
+  };
+
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
+      <Sheet open={open} onOpenChange={handleSheetOpenChange}>
         <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader className="pb-4">
             <div className="flex items-start gap-4">
