@@ -2,10 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Save, Loader2, Download, Plus, Trash2, User, FileText } from 'lucide-react';
+import { Save, Loader2, Download, Trash2, User, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -21,14 +20,11 @@ interface Participant {
   image_url?: string | null;
 }
 
-interface NoteEntry {
+interface ReportLine {
+  id: string;
   text: string;
+  mentionIds: string[];
   timestamp: string;
-}
-
-interface ReportSection {
-  participantId: string;
-  notes: NoteEntry[];
 }
 
 interface NurseReportEditorProps {
@@ -37,27 +33,22 @@ interface NurseReportEditorProps {
 
 export function NurseReportEditor({ participants }: NurseReportEditorProps) {
   const { leader } = useAuth();
-  const [sections, setSections] = useState<ReportSection[]>([]);
+  const [lines, setLines] = useState<ReportLine[]>([]);
   const [reportId, setReportId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-  // @-mention state
-  const [mentionQuery, setMentionQuery] = useState('');
-  const [showMentionPopup, setShowMentionPopup] = useState(false);
+  // Input state
+  const [inputText, setInputText] = useState('');
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionStartIndex, setMentionStartIndex] = useState<number>(-1);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
-  const mentionInputRef = useRef<HTMLInputElement>(null);
-
-  // Per-section new note inputs
-  const [newNoteTexts, setNewNoteTexts] = useState<Record<string, string>>({});
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load or create report on mount
-  useEffect(() => {
-    loadReport();
-  }, []);
+  useEffect(() => { loadReport(); }, []);
 
   const loadReport = async () => {
     try {
@@ -66,7 +57,6 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1);
-
       if (error) throw error;
 
       if (reports && reports.length > 0) {
@@ -74,12 +64,9 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
         setReportId(report.id);
         try {
           const parsed = JSON.parse(report.content || '[]');
-          setSections(Array.isArray(parsed) ? parsed : []);
-        } catch {
-          setSections([]);
-        }
+          setLines(Array.isArray(parsed) ? parsed : []);
+        } catch { setLines([]); }
       } else {
-        // Create a new report
         const { data, error: createErr } = await supabase
           .from('nurse_reports')
           .insert({ content: '[]', created_by: leader?.id })
@@ -87,7 +74,7 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
           .single();
         if (createErr) throw createErr;
         setReportId(data.id);
-        setSections([]);
+        setLines([]);
       }
     } catch (error) {
       console.error('Error loading report:', error);
@@ -97,16 +84,13 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
     }
   };
 
-  const saveReport = useCallback(async (sectionsToSave: ReportSection[]) => {
+  const saveReport = useCallback(async (linesToSave: ReportLine[]) => {
     if (!reportId) return;
     setIsSaving(true);
     try {
       const { error } = await supabase
         .from('nurse_reports')
-        .update({
-          content: JSON.stringify(sectionsToSave),
-          updated_at: new Date().toISOString(),
-        })
+        .update({ content: JSON.stringify(linesToSave), updated_at: new Date().toISOString() })
         .eq('id', reportId);
       if (error) throw error;
       setLastSaved(new Date());
@@ -117,47 +101,48 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
     }
   }, [reportId]);
 
-  const debouncedSave = useCallback((sectionsToSave: ReportSection[]) => {
+  const debouncedSave = useCallback((linesToSave: ReportLine[]) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => saveReport(sectionsToSave), 2000);
+    saveTimeoutRef.current = setTimeout(() => saveReport(linesToSave), 2000);
   }, [saveReport]);
 
   const handleManualSave = async () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    await saveReport(sections);
-    await syncMentionData(sections);
+    await saveReport(lines);
+    await syncMentionData(lines);
     hapticSuccess();
     toast.success('Rapport lagret');
   };
 
-  const syncMentionData = async (sectionsToSync: ReportSection[]) => {
+  const syncMentionData = async (linesToSync: ReportLine[]) => {
     if (!reportId) return;
     try {
-      // Delete existing mentions
       await supabase.from('nurse_report_mentions').delete().eq('report_id', reportId);
 
-      // Insert new mentions
-      const mentionEntries = sectionsToSync
-        .filter(s => s.notes.length > 0)
-        .map(s => ({
-          report_id: reportId,
-          participant_id: s.participantId,
-          mention_text: s.notes.map(n => `[${n.timestamp}] ${n.text}`).join('\n'),
-        }));
+      // Group lines by participant
+      const grouped: Record<string, ReportLine[]> = {};
+      for (const line of linesToSync) {
+        for (const pid of line.mentionIds) {
+          if (!grouped[pid]) grouped[pid] = [];
+          grouped[pid].push(line);
+        }
+      }
+
+      const mentionEntries = Object.entries(grouped).map(([pid, pLines]) => ({
+        report_id: reportId,
+        participant_id: pid,
+        mention_text: pLines.map(l => `[${l.timestamp}] ${l.text}`).join('\n'),
+      }));
 
       if (mentionEntries.length > 0) {
         await supabase.from('nurse_report_mentions').insert(mentionEntries);
       }
 
       // Sync to participant_health_notes
-      for (const section of sectionsToSync) {
-        if (section.notes.length === 0) continue;
-        const noteContent = section.notes
-          .map(n => `[Nurse ${n.timestamp}] ${n.text}`)
-          .join('\n');
-
+      for (const [pid, pLines] of Object.entries(grouped)) {
+        const noteContent = pLines.map(l => `[Nurse ${l.timestamp}] ${l.text}`).join('\n');
         await supabase.from('participant_health_notes').insert({
-          participant_id: section.participantId,
+          participant_id: pid,
           content: noteContent,
           created_by: leader?.id,
         });
@@ -167,88 +152,185 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
     }
   };
 
-  // Filtered participants for @-mention (exclude already added)
-  const addedIds = new Set(sections.map(s => s.participantId));
-  const filteredMentionParticipants = participants
-    .filter(p =>
-      !addedIds.has(p.id) &&
-      p.name.toLowerCase().includes(mentionQuery.toLowerCase())
-    )
-    .slice(0, 8);
-
-  const addParticipantSection = (participant: Participant) => {
-    const newSections = [...sections, { participantId: participant.id, notes: [] }];
-    setSections(newSections);
-    debouncedSave(newSections);
-    setShowMentionPopup(false);
-    setMentionQuery('');
-    if (mentionInputRef.current) mentionInputRef.current.value = '';
-  };
-
-  const removeSection = (participantId: string) => {
-    const newSections = sections.filter(s => s.participantId !== participantId);
-    setSections(newSections);
-    debouncedSave(newSections);
-  };
-
-  const addNoteToSection = (participantId: string) => {
-    const text = newNoteTexts[participantId]?.trim();
-    if (!text) return;
-
-    const timestamp = format(new Date(), 'd. MMM HH:mm', { locale: nb });
-    const newSections = sections.map(s =>
-      s.participantId === participantId
-        ? { ...s, notes: [...s.notes, { text, timestamp }] }
-        : s
-    );
-    setSections(newSections);
-    setNewNoteTexts(prev => ({ ...prev, [participantId]: '' }));
-    debouncedSave(newSections);
-  };
-
-  const removeNote = (participantId: string, noteIndex: number) => {
-    const newSections = sections.map(s =>
-      s.participantId === participantId
-        ? { ...s, notes: s.notes.filter((_, i) => i !== noteIndex) }
-        : s
-    );
-    setSections(newSections);
-    debouncedSave(newSections);
-  };
-
-  const handleMentionInputChange = (value: string) => {
-    if (value.startsWith('@')) {
-      setMentionQuery(value.slice(1));
-      setShowMentionPopup(true);
-      setSelectedMentionIndex(0);
-    } else {
-      setMentionQuery(value);
-      setShowMentionPopup(value.length > 0);
-      setSelectedMentionIndex(0);
+  // Parse @mentions from text, return participant IDs found
+  const parseMentionIds = (text: string): string[] => {
+    const ids: string[] = [];
+    for (const p of participants) {
+      if (text.includes(`@${p.name}`)) {
+        ids.push(p.id);
+      }
     }
-  };
-
-  const handleMentionKeyDown = (e: React.KeyboardEvent) => {
-    if (!showMentionPopup || filteredMentionParticipants.length === 0) return;
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedMentionIndex(prev => Math.min(prev + 1, filteredMentionParticipants.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedMentionIndex(prev => Math.max(prev - 1, 0));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      addParticipantSection(filteredMentionParticipants[selectedMentionIndex]);
-    } else if (e.key === 'Escape') {
-      setShowMentionPopup(false);
-    }
+    return ids;
   };
 
   const getParticipant = (id: string) => participants.find(p => p.id === id);
 
+  // Filtered participants for mention popup
+  const filteredMentionParticipants = mentionQuery !== null
+    ? participants
+        .filter(p => p.name.toLowerCase().includes(mentionQuery.toLowerCase()))
+        .slice(0, 8)
+    : [];
+
+  const handleInputChange = (value: string) => {
+    setInputText(value);
+
+    // Detect @-mention
+    const cursorPos = inputRef.current?.selectionStart ?? value.length;
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+    if (lastAtIndex >= 0) {
+      const charBefore = lastAtIndex > 0 ? textBeforeCursor[lastAtIndex - 1] : ' ';
+      if (charBefore === ' ' || charBefore === '\n' || lastAtIndex === 0) {
+        const query = textBeforeCursor.slice(lastAtIndex + 1);
+        if (!query.includes(' ') || query.length < 30) {
+          setMentionQuery(query);
+          setMentionStartIndex(lastAtIndex);
+          setSelectedMentionIndex(0);
+          return;
+        }
+      }
+    }
+    setMentionQuery(null);
+  };
+
+  const insertMention = (participant: Participant) => {
+    const before = inputText.slice(0, mentionStartIndex);
+    const cursorPos = inputRef.current?.selectionStart ?? inputText.length;
+    const after = inputText.slice(cursorPos);
+    const newText = `${before}@${participant.name} ${after}`;
+    setInputText(newText);
+    setMentionQuery(null);
+    setMentionStartIndex(-1);
+
+    // Focus back
+    setTimeout(() => {
+      if (inputRef.current) {
+        const pos = before.length + participant.name.length + 2;
+        inputRef.current.focus();
+        inputRef.current.setSelectionRange(pos, pos);
+      }
+    }, 0);
+  };
+
+  const submitLine = () => {
+    const text = inputText.trim();
+    if (!text) return;
+
+    const mentionIds = parseMentionIds(text);
+    const timestamp = format(new Date(), 'd. MMM HH:mm', { locale: nb });
+    const newLine: ReportLine = {
+      id: crypto.randomUUID(),
+      text,
+      mentionIds,
+      timestamp,
+    };
+
+    const newLines = [...lines, newLine];
+    setLines(newLines);
+    setInputText('');
+    setMentionQuery(null);
+    debouncedSave(newLines);
+  };
+
+  const removeLine = (lineId: string) => {
+    const newLines = lines.filter(l => l.id !== lineId);
+    setLines(newLines);
+    debouncedSave(newLines);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionQuery !== null && filteredMentionParticipants.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedMentionIndex(prev => Math.min(prev + 1, filteredMentionParticipants.length - 1));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedMentionIndex(prev => Math.max(prev - 1, 0));
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        insertMention(filteredMentionParticipants[selectedMentionIndex]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        setMentionQuery(null);
+        return;
+      }
+    }
+
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submitLine();
+    }
+  };
+
+  // Render text with @mentions highlighted
+  const renderLineText = (text: string, mentionIds: string[]) => {
+    if (mentionIds.length === 0) return <span>{text}</span>;
+
+    const mentionedParticipants = mentionIds
+      .map(id => getParticipant(id))
+      .filter(Boolean)
+      .sort((a, b) => b!.name.length - a!.name.length); // longest first to avoid partial matches
+
+    const parts: (string | JSX.Element)[] = [];
+    let remaining = text;
+    let keyIdx = 0;
+
+    while (remaining.length > 0) {
+      let earliestIdx = remaining.length;
+      let matchedP: Participant | null = null;
+
+      for (const p of mentionedParticipants) {
+        if (!p) continue;
+        const idx = remaining.indexOf(`@${p.name}`);
+        if (idx >= 0 && idx < earliestIdx) {
+          earliestIdx = idx;
+          matchedP = p;
+        }
+      }
+
+      if (!matchedP) {
+        parts.push(remaining);
+        break;
+      }
+
+      if (earliestIdx > 0) {
+        parts.push(remaining.slice(0, earliestIdx));
+      }
+
+      parts.push(
+        <span key={keyIdx++} className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-2 py-0.5 text-sm font-medium mx-0.5">
+          <Avatar className="w-4 h-4">
+            <AvatarImage src={matchedP.image_url || undefined} alt={matchedP.name} />
+            <AvatarFallback className="text-[8px]"><User className="w-2.5 h-2.5" /></AvatarFallback>
+          </Avatar>
+          {matchedP.name}
+        </span>
+      );
+
+      remaining = remaining.slice(earliestIdx + 1 + matchedP.name.length);
+    }
+
+    return <>{parts}</>;
+  };
+
   const exportPdf = () => {
     const dateStr = format(new Date(), 'd. MMMM yyyy', { locale: nb });
+
+    // Group by participant
+    const grouped: Record<string, ReportLine[]> = {};
+    for (const line of lines) {
+      for (const pid of line.mentionIds) {
+        if (!grouped[pid]) grouped[pid] = [];
+        grouped[pid].push(line);
+      }
+    }
 
     let html = `<!DOCTYPE html><html lang="no"><head><meta charset="UTF-8">
 <title>Nurse Rapport - ${dateStr}</title>
@@ -256,28 +338,37 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
   body { font-family: system-ui, -apple-system, sans-serif; padding: 24px; max-width: 900px; margin: 0 auto; }
   h1 { color: #1e293b; margin-bottom: 8px; }
   .meta { color: #64748b; margin-bottom: 24px; }
-  .participant-card {
-    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
-    padding: 16px; margin-bottom: 16px; page-break-inside: avoid;
-  }
+  h2 { margin-top: 24px; }
+  .participant-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; page-break-inside: avoid; }
   .participant-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; }
   .participant-header img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
   .participant-header .avatar-fallback { width: 40px; height: 40px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 16px; }
-  .participant-header h2 { margin: 0; color: #1e293b; font-size: 18px; }
+  .participant-header h3 { margin: 0; color: #1e293b; font-size: 18px; }
   .participant-header p { margin: 2px 0 0 0; color: #64748b; font-size: 14px; }
   .note-entry { padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
   .note-entry:last-child { border-bottom: none; }
   .note-time { color: #64748b; font-size: 12px; font-weight: 500; }
   .note-text { margin-top: 2px; font-size: 14px; line-height: 1.5; }
+  .chronological { margin-bottom: 32px; }
+  .chrono-entry { padding: 6px 0; }
+  .chrono-time { color: #64748b; font-size: 12px; font-weight: 500; display: inline-block; min-width: 100px; }
   @media print { body { padding: 12px; } .participant-card { break-inside: avoid; } }
 </style></head><body>
 <h1>Nurse Rapport</h1>
-<p class="meta">Eksportert: ${dateStr} | Deltakere: ${sections.filter(s => s.notes.length > 0).length}</p>`;
+<p class="meta">Eksportert: ${dateStr} | Totalt ${lines.length} notater</p>
 
-    sections.forEach(section => {
-      if (section.notes.length === 0) return;
-      const p = getParticipant(section.participantId);
-      if (!p) return;
+<h2>Kronologisk logg</h2>
+<div class="chronological">`;
+
+    for (const line of lines) {
+      html += `<div class="chrono-entry"><span class="chrono-time">${line.timestamp}</span> <span class="note-text">${line.text}</span></div>`;
+    }
+
+    html += `</div><h2>Per deltaker</h2>`;
+
+    for (const [pid, pLines] of Object.entries(grouped)) {
+      const p = getParticipant(pid);
+      if (!p) continue;
       const age = p.birth_date ? differenceInYears(new Date(), new Date(p.birth_date)) : null;
 
       html += `<div class="participant-card"><div class="participant-header">`;
@@ -286,14 +377,13 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
       } else {
         html += `<div class="avatar-fallback">👤</div>`;
       }
-      html += `<div><h2>${p.name}</h2><p>${p.cabin?.name || 'Ingen hytte'}${age ? ` | ${age} år` : ''}</p></div></div>`;
+      html += `<div><h3>${p.name}</h3><p>${p.cabin?.name || 'Ingen hytte'}${age ? ` | ${age} år` : ''}</p></div></div>`;
 
-      section.notes.forEach(note => {
-        html += `<div class="note-entry"><span class="note-time">${note.timestamp}</span><div class="note-text">${note.text}</div></div>`;
-      });
-
+      for (const line of pLines) {
+        html += `<div class="note-entry"><span class="note-time">${line.timestamp}</span><div class="note-text">${line.text}</div></div>`;
+      }
       html += `</div>`;
-    });
+    }
 
     html += `</body></html>`;
 
@@ -313,9 +403,9 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Actions bar */}
-      <div className="flex items-center justify-between gap-3">
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 pb-3 border-b border-border">
         <h2 className="text-lg font-heading font-semibold flex items-center gap-2">
           <FileText className="w-5 h-5" />
           Nurse Rapport
@@ -330,29 +420,49 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
             {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
             Lagre
           </Button>
-          <Button variant="outline" size="sm" onClick={exportPdf} disabled={sections.length === 0}>
+          <Button variant="outline" size="sm" onClick={exportPdf} disabled={lines.length === 0}>
             <Download className="w-4 h-4 mr-1" />
             PDF
           </Button>
         </div>
       </div>
 
-      {/* Add participant input with @-mention */}
-      <div className="relative">
-        <Input
-          ref={mentionInputRef}
-          placeholder="Skriv @ eller søk for å legge til deltaker..."
-          onChange={(e) => handleMentionInputChange(e.target.value)}
-          onKeyDown={handleMentionKeyDown}
-          onFocus={() => {
-            if (mentionInputRef.current?.value) {
-              handleMentionInputChange(mentionInputRef.current.value);
-            }
-          }}
-          onBlur={() => setTimeout(() => setShowMentionPopup(false), 200)}
-        />
-        {showMentionPopup && filteredMentionParticipants.length > 0 && (
-          <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-lg shadow-lg p-1 max-h-64 overflow-y-auto">
+      {/* Lines feed */}
+      <div className="flex-1 overflow-y-auto py-4 space-y-1 min-h-0">
+        {lines.length === 0 && (
+          <div className="text-center py-12">
+            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium">Tom rapport</h3>
+            <p className="text-muted-foreground mt-1">
+              Skriv i feltet under. Bruk @navn for å nevne en deltaker.
+            </p>
+          </div>
+        )}
+
+        {lines.map(line => (
+          <div key={line.id} className="flex items-start gap-2 group px-1 py-1.5 rounded-md hover:bg-muted/50 transition-colors">
+            <span className="text-xs text-muted-foreground font-mono whitespace-nowrap pt-0.5 min-w-[90px]">
+              {line.timestamp}
+            </span>
+            <p className="flex-1 text-sm leading-relaxed">
+              {renderLineText(line.text, line.mentionIds)}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0"
+              onClick={() => removeLine(line.id)}
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
+        ))}
+      </div>
+
+      {/* Input area */}
+      <div className="relative border-t border-border pt-3">
+        {mentionQuery !== null && filteredMentionParticipants.length > 0 && (
+          <div className="absolute bottom-full mb-1 left-0 w-full bg-popover border border-border rounded-lg shadow-lg p-1 max-h-64 overflow-y-auto z-50">
             {filteredMentionParticipants.map((p, i) => (
               <button
                 key={p.id}
@@ -361,15 +471,13 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
                 }`}
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  addParticipantSection(p);
+                  insertMention(p);
                 }}
                 onMouseEnter={() => setSelectedMentionIndex(i)}
               >
                 <Avatar className="w-8 h-8">
                   <AvatarImage src={p.image_url || undefined} alt={p.name} />
-                  <AvatarFallback className="text-xs">
-                    <User className="w-3 h-3" />
-                  </AvatarFallback>
+                  <AvatarFallback className="text-xs"><User className="w-3 h-3" /></AvatarFallback>
                 </Avatar>
                 <div>
                   <span className="font-medium">{p.name}</span>
@@ -381,100 +489,16 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
             ))}
           </div>
         )}
+        <Textarea
+          ref={inputRef}
+          placeholder="Skriv notat... bruk @navn for å nevne en deltaker. Enter for å legge til."
+          value={inputText}
+          onChange={(e) => handleInputChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="min-h-[60px] resize-none text-sm"
+          rows={2}
+        />
       </div>
-
-      {/* Participant sections */}
-      {sections.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium">Ingen deltakere lagt til</h3>
-            <p className="text-muted-foreground mt-1">
-              Skriv @ eller søk i feltet over for å legge til en deltaker
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {sections.map(section => {
-        const p = getParticipant(section.participantId);
-        if (!p) return null;
-        const age = p.birth_date ? differenceInYears(new Date(), new Date(p.birth_date)) : null;
-
-        return (
-          <Card key={section.participantId} className="overflow-hidden">
-            <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/30">
-              <Avatar className="w-10 h-10">
-                <AvatarImage src={p.image_url || undefined} alt={p.name} />
-                <AvatarFallback>
-                  <User className="w-4 h-4" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm">{p.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {p.cabin?.name || 'Ingen hytte'}
-                  {age ? ` · ${age} år` : ''}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                onClick={() => removeSection(section.participantId)}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-
-            <CardContent className="p-4 space-y-2">
-              {/* Existing notes */}
-              {section.notes.map((note, idx) => (
-                <div key={idx} className="flex items-start gap-2 group">
-                  <div className="flex-1 bg-muted/50 rounded-md px-3 py-2">
-                    <span className="text-xs text-muted-foreground font-medium">{note.timestamp}</span>
-                    <p className="text-sm mt-0.5">{note.text}</p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0 mt-1"
-                    onClick={() => removeNote(section.participantId, idx)}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                </div>
-              ))}
-
-              {/* Add new note */}
-              <div className="flex items-center gap-2 pt-1">
-                <Input
-                  placeholder="Legg til notat..."
-                  value={newNoteTexts[section.participantId] || ''}
-                  onChange={(e) =>
-                    setNewNoteTexts(prev => ({ ...prev, [section.participantId]: e.target.value }))
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addNoteToSection(section.participantId);
-                    }
-                  }}
-                  className="text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addNoteToSection(section.participantId)}
-                  disabled={!newNoteTexts[section.participantId]?.trim()}
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
     </div>
   );
 }
