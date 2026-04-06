@@ -104,6 +104,7 @@ export function LeaderContentSheet({
   const [showNotifyDialog, setShowNotifyDialog] = useState(false);
   const [detectedChanges, setDetectedChanges] = useState<string[]>([]);
   const [isSendingChangeNotification, setIsSendingChangeNotification] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   
   // Store original values to detect changes
   const originalValuesRef = useRef<Record<string, any>>({});
