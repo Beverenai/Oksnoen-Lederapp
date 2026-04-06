@@ -1,4 +1,5 @@
 import { useState, useMemo, useDeferredValue } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -7,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Bell, Phone, AlertTriangle } from 'lucide-react';
+import { Bell, Phone, AlertTriangle, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { LeaderContentSheet } from './LeaderContentSheet';
@@ -34,7 +35,8 @@ interface LeaderListViewProps {
 }
 
 export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderListViewProps) {
-  const { leader: currentLeader } = useAuth();
+  const { leader: currentLeader, setViewAsLeader } = useAuth();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearch = useDeferredValue(searchQuery);
   const [selectedLeader, setSelectedLeader] = useState<LeaderWithContent | null>(null);
