@@ -209,6 +209,22 @@ export default function Admin() {
     } catch { showError('Kunne ikke laste data'); } finally { setIsLoading(false); }
   };
 
+  const handlePreloadOffline = async () => {
+    setIsPreloading(true);
+    setPreloadDone(false);
+    setPreloadProgress(null);
+    try {
+      const result = await preloadForOffline(rqClient, setPreloadProgress);
+      setPreloadDone(true);
+      showSuccess('Klar for offline!', `${result.participants} deltakere og bilder er lastet ned`);
+    } catch (e) {
+      console.error('[Offline] Preload failed:', e);
+      showError('Kunne ikke laste ned alt', 'Sjekk internettforbindelsen og prøv igjen');
+    } finally {
+      setIsPreloading(false);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -337,6 +353,49 @@ export default function Admin() {
           </CollapsibleContent>
         </Card>
       </Collapsible>
+
+      {/* Offline preload */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <WifiOff className="w-5 h-5" />
+            <div>
+              <CardTitle>Offline-modus</CardTitle>
+              <CardDescription>Last ned alle data og bilder for bruk uten internett</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {preloadProgress && isPreloading && (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">{preloadProgress.label}</p>
+              <Progress 
+                value={preloadProgress.total > 0 ? (preloadProgress.current / preloadProgress.total) * 100 : 0} 
+              />
+            </div>
+          )}
+          {preloadDone && !isPreloading && (
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <CheckCircle className="w-4 h-4" />
+              <span>Appen er klar for bruk uten internett</span>
+            </div>
+          )}
+          <Button
+            onClick={handlePreloadOffline}
+            disabled={isPreloading}
+            variant={preloadDone ? 'outline' : 'default'}
+            className="w-full"
+          >
+            {isPreloading ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Laster ned...</>
+            ) : preloadDone ? (
+              <><CheckCircle className="w-4 h-4 mr-2" />Last ned på nytt</>
+            ) : (
+              <><Download className="w-4 h-4 mr-2" />Klargjør offline-modus</>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Home screen config - lazy loaded */}
       <Collapsible open={isHomeConfigOpen} onOpenChange={setIsHomeConfigOpen}>
