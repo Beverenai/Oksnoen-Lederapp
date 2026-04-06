@@ -31,7 +31,6 @@ export function usePullToRefresh({
     const element = pullRef.current;
     if (!element || isRefreshing) return;
     
-    // Only activate if at the top of the scrollable area
     if (element.scrollTop > 0) return;
     
     startY.current = e.touches[0].clientY;
@@ -43,7 +42,6 @@ export function usePullToRefresh({
     if (!element || isRefreshing) return;
     if (startY.current === 0) return;
     
-    // Only allow pull if at top of scroll
     if (element.scrollTop > 0) {
       startY.current = 0;
       setIsPulling(false);
@@ -58,13 +56,11 @@ export function usePullToRefresh({
       e.preventDefault();
       setIsPulling(true);
       
-      // Calculate progress with resistance
       const resistance = 0.5;
       const pull = Math.min(diff * resistance, maxPull);
       const progress = (pull / threshold) * 100;
       setPullProgress(Math.min(progress, 150));
 
-      // Trigger haptic when passing threshold
       if (progress >= 100 && !hasTriggeredHaptic.current) {
         hasTriggeredHaptic.current = true;
         hapticImpact('medium');
@@ -79,12 +75,14 @@ export function usePullToRefresh({
       setIsRefreshing(true);
       setPullProgress(100);
       
+      const timeout = setTimeout(() => setIsRefreshing(false), 8000);
       try {
         await onRefresh();
         hapticSuccess();
       } catch (error) {
-        console.error('Refresh failed:', error);
+        console.error('Pull-to-refresh failed:', error);
       } finally {
+        clearTimeout(timeout);
         setIsRefreshing(false);
       }
     }

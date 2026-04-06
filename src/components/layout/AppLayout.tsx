@@ -396,7 +396,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
-    <div className="h-dvh bg-background flex flex-col overflow-hidden overflow-x-hidden w-full pl-safe pr-safe">
+    <div className="h-dvh bg-background flex flex-col overflow-hidden overflow-x-hidden w-full max-w-full pl-safe pr-safe">
       {/* View As Banner */}
       {viewAsLeader && (
         <div className="bg-amber-500 dark:bg-amber-600 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
@@ -760,7 +760,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     key={item.to}
                     to={item.to}
                     onClick={() => hapticImpact('light')}
-                    className="flex flex-col items-center justify-center min-w-[52px] py-1 transition-all duration-150 active:scale-95 active:opacity-70 relative"
+                    className="flex flex-col items-center justify-center min-w-[52px] py-1 transition-all duration-150 active:opacity-70 relative"
                   >
                     <div className="relative">
                       <item.icon 
@@ -791,7 +791,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Main Content */}
       <main 
         ref={scrollContainerRef}
-        className="lg:ml-64 lg:pt-0 flex-1 lg:min-h-screen app-content lg:pb-0 lg:overflow-y-auto overflow-x-hidden pb-[env(safe-area-inset-bottom,0px)]"
+        className="lg:ml-64 lg:pt-0 flex-1 lg:min-h-screen app-content lg:pb-0 lg:overflow-y-auto overflow-x-hidden max-w-full pb-[env(safe-area-inset-bottom,0px)]"
         style={{ overscrollBehaviorY: 'contain' }}
       >
         {/* Spacer for mobile header - animates with header visibility */}

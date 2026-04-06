@@ -7,14 +7,14 @@ interface PullIndicatorProps {
 }
 
 export function PullIndicator({ isPulling, isRefreshing, pullProgress }: PullIndicatorProps) {
-  if (!isPulling && !isRefreshing) return null;
+  const visible = isPulling || isRefreshing;
 
   return (
     <div 
-      className="flex items-center justify-center overflow-hidden transition-all duration-200"
+      className="flex items-center justify-center overflow-hidden transition-all duration-300"
       style={{ 
-        height: isPulling || isRefreshing ? `${Math.min(pullProgress * 0.6, 60)}px` : 0,
-        opacity: pullProgress / 100 
+        height: visible ? `${Math.min(pullProgress * 0.6, 60)}px` : '0px',
+        opacity: visible ? pullProgress / 100 : 0 
       }}
     >
       <div 
