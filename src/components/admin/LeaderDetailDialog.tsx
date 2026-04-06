@@ -184,6 +184,11 @@ export function LeaderDetailDialog({
     }
   }, [leader, name, phone, email, age, team, cabin, ministerpost, profileImageUrl, hasCar, hasDriversLicense, hasBoatLicense, canRappelling, canClimbing, canZipline, canRopeSetup, onSaved, showError]);
 
+  // Keep ref updated to latest save function
+  useEffect(() => {
+    saveLeaderFieldsRef.current = saveLeaderFields;
+  }, [saveLeaderFields]);
+
   // Debounced auto-save for all fields (1s debounce)
   useEffect(() => {
     if (!isInitializedRef.current || !leader) return;
