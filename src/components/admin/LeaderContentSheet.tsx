@@ -561,10 +561,9 @@ export function LeaderContentSheet({
                       value={cabinSearch}
                       onValueChange={setCabinSearch}
                     />
-                    <CommandList>
+                    <CommandList className="max-h-60 overflow-y-auto">
                       <CommandEmpty>Ingen hytter funnet</CommandEmpty>
                       <CommandGroup>
-                        <ScrollArea className="h-60">
                           {cabins
                             .filter(c => c.name.toLowerCase().includes(cabinSearch.toLowerCase()))
                             .map(cabin => (
@@ -582,7 +581,6 @@ export function LeaderContentSheet({
                                 {cabin.name}
                               </CommandItem>
                             ))}
-                        </ScrollArea>
                       </CommandGroup>
                     </CommandList>
                   </Command>
