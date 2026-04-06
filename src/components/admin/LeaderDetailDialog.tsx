@@ -133,6 +133,9 @@ export function LeaderDetailDialog({
     }
   }, [leader, currentRole]);
 
+  // Keep a ref to latest saveLeaderFields so we can flush on close
+  const saveLeaderFieldsRef = useRef<(() => Promise<void>) | null>(null);
+
   // Cleanup timers
   useEffect(() => {
     return () => {
