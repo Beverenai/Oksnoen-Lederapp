@@ -11,8 +11,10 @@ interface AuthContextType {
   isAdmin: boolean;
   isNurse: boolean;
   isLoading: boolean;
+  isInitialized: boolean;
   isProfileComplete: boolean;
   authError: string | null;
+  deactivatedMessage: string | null;
   login: (phone: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   logout: () => void;
   refreshLeader: () => Promise<void>;
@@ -33,12 +35,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isNurse, setIsNurse] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [deactivatedMessage, setDeactivatedMessage] = useState<string | null>(null);
   const loginInProgressRef = useRef(false);
   const initInProgressRef = useRef(false);
+  const isInitializedRef = useRef(false);
 
   const isProfileComplete = checkProfileComplete(leader);
 
-  const loadRolesViaRpc = async () => {
+  const loadRolesViaRpc = async (): Promise<AppRole[]> => {
     try {
       const { data, error } = await supabase.rpc('get_my_roles');
       if (error) {
@@ -53,10 +57,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const applyRoles = (roles: AppRole[]) => {
-    const superAdmin = roles.includes('superadmin');
-    setIsSuperAdmin(superAdmin);
-    setIsAdmin(superAdmin || roles.includes('admin'));
+    const sa = roles.includes('superadmin');
+    setIsSuperAdmin(sa);
+    setIsAdmin(sa || roles.includes('admin'));
     setIsNurse(roles.includes('nurse'));
+    return sa;
+  };
+
+  const performLogout = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem('leaderName');
+    setLeader(null);
+    setIsSuperAdmin(false);
+    setIsAdmin(false);
+    setIsNurse(false);
   };
 
   const loadLeaderFromSession = async (authUserId: string): Promise<boolean> => {
@@ -79,12 +93,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       console.log('[Auth] Leader found:', leaderData.name);
-      setLeader(leaderData);
-      localStorage.setItem('leaderName', leaderData.name);
 
       const roles = await loadRolesViaRpc();
       console.log('[Auth] Roles:', roles);
-      applyRoles(roles);
+      const isSA = applyRoles(roles);
+
+      // Session protection: if inactive and not superadmin, auto-logout
+      if (leaderData.is_active === false && !isSA) {
+        console.warn('[Auth] Inactive leader detected — signing out');
+        setDeactivatedMessage('Kontoen din ble deaktivert. Kontakt leirledelsen.');
+        await performLogout();
+        return false;
+      }
+
+      setDeactivatedMessage(null);
+      setLeader(leaderData);
+      localStorage.setItem('leaderName', leaderData.name);
       return true;
     } catch (error) {
       console.error('[Auth] loadLeaderFromSession exception:', error);
@@ -101,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const timeoutId = setTimeout(() => {
       console.warn('[Auth] initAuth timeout — forcing isLoading=false');
       setIsLoading(false);
+      isInitializedRef.current = true;
       setAuthError('Innlasting tok for lang tid. Prøv å laste siden på nytt.');
     }, 10000);
 
@@ -110,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (session) {
         const found = await loadLeaderFromSession(session.user.id);
-        if (!found) {
+        if (!found && !deactivatedMessage) {
           console.warn('[Auth] Stale session — signing out');
           await supabase.auth.signOut();
           localStorage.removeItem('leaderName');
@@ -124,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       clearTimeout(timeoutId);
       setIsLoading(false);
+      isInitializedRef.current = true;
       initInProgressRef.current = false;
       console.log('[Auth] initAuth complete');
     }
@@ -170,11 +196,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const retryAuth = useCallback(() => {
     setIsLoading(true);
     setAuthError(null);
+    setDeactivatedMessage(null);
     initAuth();
   }, [initAuth]);
 
   const login = async (phone: string): Promise<{ success: boolean; error?: string; message?: string }> => {
     loginInProgressRef.current = true;
+    setDeactivatedMessage(null);
     try {
       const { data, error } = await supabase.functions.invoke('phone-login', {
         body: { phone }
@@ -227,16 +255,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem('leaderName');
-    setLeader(null);
-    setIsSuperAdmin(false);
-    setIsAdmin(false);
-    setIsNurse(false);
+    setDeactivatedMessage(null);
+    await performLogout();
   };
 
   return (
-    <AuthContext.Provider value={{ leader, isSuperAdmin, isAdmin, isNurse, isLoading, isProfileComplete, authError, login, logout, refreshLeader, retryAuth }}>
+    <AuthContext.Provider value={{
+      leader, isSuperAdmin, isAdmin, isNurse,
+      isLoading,
+      isInitialized: isInitializedRef.current,
+      isProfileComplete, authError, deactivatedMessage,
+      login, logout, refreshLeader, retryAuth
+    }}>
       {children}
     </AuthContext.Provider>
   );
