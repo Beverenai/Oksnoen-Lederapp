@@ -14,6 +14,7 @@ import { differenceInYears } from 'date-fns';
 import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticImpact } from '@/lib/capacitorHaptics';
+import { formatFullRoom } from '@/lib/utils';
 
 type Cabin = Tables<'cabins'>;
 
@@ -112,6 +113,14 @@ const ParticipantCard = memo(({
           {participant.birth_date && (
             <Badge variant="outline" className="text-xs">
               {calculateAge(participant.birth_date)} år
+            </Badge>
+          )}
+          {participant.room && (
+            <Badge
+              variant="secondary"
+              className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs"
+            >
+              {formatFullRoom(participant.cabins?.name, participant.room)}
             </Badge>
           )}
           <StyrkeproveBadges 
@@ -261,8 +270,8 @@ export function VirtualizedParticipantList({
       if (isExpanded) {
         // Group participants by room
         const roomGroups: { side: 'høyre' | 'venstre' | 'none'; name: string; participants: ParticipantWithCabin[] }[] = [
-          { side: 'høyre', name: 'Høyre', participants: participants.filter(p => p.room === 'høyre').sort((a, b) => a.name.localeCompare(b.name, 'nb')) },
-          { side: 'venstre', name: 'Venstre', participants: participants.filter(p => p.room === 'venstre').sort((a, b) => a.name.localeCompare(b.name, 'nb')) },
+          { side: 'høyre', name: formatFullRoom(cabin.name, 'høyre') || 'Høyre', participants: participants.filter(p => p.room === 'høyre').sort((a, b) => a.name.localeCompare(b.name, 'nb')) },
+          { side: 'venstre', name: formatFullRoom(cabin.name, 'venstre') || 'Venstre', participants: participants.filter(p => p.room === 'venstre').sort((a, b) => a.name.localeCompare(b.name, 'nb')) },
           { side: 'none', name: 'Uten rom', participants: participants.filter(p => !p.room || (p.room !== 'høyre' && p.room !== 'venstre')).sort((a, b) => a.name.localeCompare(b.name, 'nb')) },
         ];
         
