@@ -73,10 +73,10 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
             <span className="sm:hidden w-2.5 h-2.5 rounded-full bg-destructive shrink-0 animate-pulse" title="OBS-melding" />
           )}
 
-          {(leader.team || isAdmin || isNurse) && (
+          {(leader.team || isLeaderAdmin || isNurse) && (
             <>
-              <Badge className={cn("sm:hidden text-[10px] px-1.5 py-0 shrink-0", getTeamStyles(isAdmin ? 'sjef' : isNurse ? 'nurse' : leader.team))}>
-                {formatTeamDisplayMobile(leader.team, isAdmin, isNurse)}
+              <Badge className={cn("sm:hidden text-[10px] px-1.5 py-0 shrink-0", getTeamStyles(isLeaderAdmin ? 'sjef' : isNurse ? 'nurse' : leader.team))}>
+                {formatTeamDisplayMobile(leader.team, isLeaderAdmin, isNurse)}
               </Badge>
               <Badge className={cn("hidden sm:inline-flex text-xs", getTeamStyles(leader.team))}>
                 {formatTeamDisplay(leader.team)}
