@@ -296,7 +296,7 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
       }
 
       // Update health info (flag as having health info)
-      const nurseInfo = `[Nurse] ${allText}`;
+      const nurseTag = `[Nurse] ${allText}`;
       const { data: existingInfo } = await supabase
         .from('participant_health_info')
         .select('id, info')
@@ -304,11 +304,20 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
         .limit(1);
 
       if (!existingInfo || existingInfo.length === 0) {
-        await supabase.from('participant_health_info').insert({ participant_id: participantId, info: nurseInfo });
-      } else if ((existingInfo[0].info || '').startsWith('[Nurse]')) {
+        await supabase.from('participant_health_info').insert({ participant_id: participantId, info: nurseTag });
+      } else {
+        const current = existingInfo[0].info || '';
+        // Replace existing [Nurse] block or append
+        const nurseRegex = /\[Nurse\][^\[]*/s;
+        let newInfo: string;
+        if (nurseRegex.test(current)) {
+          newInfo = current.replace(nurseRegex, nurseTag);
+        } else {
+          newInfo = `${current}\n${nurseTag}`.trim();
+        }
         await supabase
           .from('participant_health_info')
-          .update({ info: nurseInfo, updated_at: new Date().toISOString() })
+          .update({ info: newInfo, updated_at: new Date().toISOString() })
           .eq('id', existingInfo[0].id);
       }
     } catch (e) {
@@ -363,14 +372,21 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
           .eq('created_by', leader?.id || '')
           .like('content', '[Nurse Rapport]%');
 
+        // Remove nurse portion from health info
         const { data: healthInfo } = await supabase
           .from('participant_health_info')
           .select('id, info')
           .eq('participant_id', participantId)
-          .like('info', '[Nurse]%');
+          .limit(1);
 
         if (healthInfo && healthInfo.length > 0) {
-          await supabase.from('participant_health_info').delete().in('id', healthInfo.map((h) => h.id));
+          const current = healthInfo[0].info || '';
+          const cleaned = current.replace(/\[Nurse\][^\[]*/s, '').trim();
+          if (cleaned) {
+            await supabase.from('participant_health_info').update({ info: cleaned, updated_at: new Date().toISOString() }).eq('id', healthInfo[0].id);
+          } else {
+            await supabase.from('participant_health_info').delete().eq('id', healthInfo[0].id);
+          }
         }
       } else {
         await syncParticipantHealth(participantId);
@@ -403,14 +419,21 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
         .eq('created_by', leader?.id || '')
         .like('content', '[Nurse Rapport]%');
 
+      // Remove nurse portion from health info
       const { data: healthInfo } = await supabase
         .from('participant_health_info')
         .select('id, info')
         .eq('participant_id', participantId)
-        .like('info', '[Nurse]%');
+        .limit(1);
 
       if (healthInfo && healthInfo.length > 0) {
-        await supabase.from('participant_health_info').delete().in('id', healthInfo.map((h) => h.id));
+        const current = healthInfo[0].info || '';
+        const cleaned = current.replace(/\[Nurse\][^\[]*/s, '').trim();
+        if (cleaned) {
+          await supabase.from('participant_health_info').update({ info: cleaned, updated_at: new Date().toISOString() }).eq('id', healthInfo[0].id);
+        } else {
+          await supabase.from('participant_health_info').delete().eq('id', healthInfo[0].id);
+        }
       }
 
       toast.success('Deltaker-seksjon slettet');
@@ -431,23 +454,42 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
     setDeleteTarget(null);
   };
 
-  // Search and scroll to a participant card
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    if (!query.trim()) return;
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
-    const matchId = groupedEntries.order.find((pid) => {
-      const p = getParticipant(pid);
-      return p?.name.toLowerCase().includes(query.toLowerCase());
-    });
+  // Participants that have notes and match search
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    return groupedEntries.order
+      .map((pid) => {
+        const p = getParticipant(pid);
+        if (!p) return null;
+        if (!p.name.toLowerCase().includes(searchQuery.toLowerCase())) return null;
+        const count = groupedEntries.map.get(pid)?.length || 0;
+        return { participant: p, noteCount: count };
+      })
+      .filter(Boolean) as { participant: Participant; noteCount: number }[];
+  }, [searchQuery, groupedEntries, getParticipant]);
 
-    if (matchId) {
-      const el = document.getElementById(`nurse-section-${matchId}`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.style.boxShadow = '0 0 0 3px hsl(var(--primary))';
-        setTimeout(() => { el.style.boxShadow = ''; }, 2000);
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchDropdownOpen(false);
       }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const scrollToParticipant = (pid: string) => {
+    setSearchDropdownOpen(false);
+    setSearchQuery('');
+    const el = document.getElementById(`nurse-section-${pid}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.boxShadow = '0 0 0 3px hsl(var(--primary))';
+      setTimeout(() => { el.style.boxShadow = ''; }, 2000);
     }
   };
 
@@ -598,15 +640,45 @@ ${sectionsHtml}
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative py-3">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      {/* Search with dropdown */}
+      <div className="relative py-3" ref={searchRef}>
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
         <Input
           placeholder="Søk etter deltaker i rapporten..."
           value={searchQuery}
-          onChange={(e) => handleSearch(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setSearchDropdownOpen(!!e.target.value.trim());
+          }}
+          onFocus={() => { if (searchQuery.trim()) setSearchDropdownOpen(true); }}
           className="pl-9 h-9 text-sm"
         />
+        {searchDropdownOpen && searchResults.length > 0 && (
+          <div className="absolute left-0 right-0 top-full bg-popover border border-border rounded-lg shadow-lg p-1 max-h-64 overflow-y-auto z-50">
+            {searchResults.map(({ participant, noteCount }) => (
+              <button
+                key={participant.id}
+                className="w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-3 hover:bg-muted transition-colors"
+                onClick={() => scrollToParticipant(participant.id)}
+              >
+                <Avatar className="w-7 h-7">
+                  <AvatarImage src={participant.image_url || undefined} alt={participant.name} />
+                  <AvatarFallback className="text-xs"><User className="w-3 h-3" /></AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <span className="font-medium">{participant.name}</span>
+                  <span className="text-xs text-muted-foreground ml-2">{participant.cabin?.name || ''}</span>
+                </div>
+                <span className="text-xs text-muted-foreground">{noteCount} notat{noteCount !== 1 ? 'er' : ''}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {searchDropdownOpen && searchQuery.trim() && searchResults.length === 0 && (
+          <div className="absolute left-0 right-0 top-full bg-popover border border-border rounded-lg shadow-lg p-3 text-sm text-muted-foreground text-center z-50">
+            Ingen deltakere med notater matcher søket
+          </div>
+        )}
       </div>
 
       {/* Scrollable content area */}
