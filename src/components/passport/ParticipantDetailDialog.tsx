@@ -283,12 +283,16 @@ export const ParticipantDetailDialog = ({
 
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground flex-wrap">
                   {age !== null && <span>{age} år</span>}
-                  {age !== null && participant.cabin && <span>•</span>}
-                  {participant.cabin && <span>{participant.cabin.name}</span>}
                   {participant.room && (
                     <>
                       <span>•</span>
                       <span>{formatFullRoom(participant.cabin?.name, participant.room)}</span>
+                    </>
+                  )}
+                  {!participant.room && participant.cabin && (
+                    <>
+                      <span>•</span>
+                      <span>{participant.cabin.name}</span>
                     </>
                   )}
                   <span>•</span>
