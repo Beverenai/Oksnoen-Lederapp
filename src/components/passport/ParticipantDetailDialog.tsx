@@ -311,7 +311,7 @@ export const ParticipantDetailDialog = ({
                       <span>Info fra Nurse</span>
                     </div>
                     <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg text-sm">
-                      {healthInfo.info}
+                      {healthInfo.info.replace(/^\[Nurse\]\s*/i, '')}
                     </div>
                   </div>
                 )}
