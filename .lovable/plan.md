@@ -1,44 +1,47 @@
 
 
-## Fiks: Romvalg er hardkodet til "høyre/venstre" — men mange hytter bruker andre romnavn
+## Admin Innstillinger: Kabana-oversikt som landingsside
 
-### Rotårsak
+### Konsept
+Samme mønster som ParticipantStats — erstatt de to radene med tab-knapper med et visuelt kort-grid. "Ledere" og "Deltakere" blir de to øverste og mest prominente kortene. Når man trykker på et kort, vises innholdet med tilbake-knapp.
 
-Koden hardkoder romalternativer til `['høyre', 'venstre']` (linje 127). Men i databasen har deltakerne mange forskjellige romnavn:
+### Navigasjonskortene (2-kolonne grid)
 
-- **Seileren** har rom som "Maui", "Seilern Hawaii", "Waikikii", osv.
-- **Bedewins**, **Fyrtårnet**, **Fiskebua**, osv. har deltakere med `room = NULL` (43 deltakere totalt) — disse hyttene bruker kanskje ikke rom-inndelingen i det hele tatt.
+**Rad 1 (prominente, fulle bredde eller store):**
+- **Ledere** (Users, blå) — "Administrer ledere og roller"
+- **Deltakere** (Users, grønn) — "Importer og håndter deltakere"
 
-Når dropdown kun viser "høyre"/"venstre" per hytte, matcher ingen av Seilerens faktiske romnavn, og belegg vises som 0. De 43 deltakerne uten rom er i hytter som ikke har "høyre/venstre"-oppsett.
+**Rad 2+ (2-kolonne grid):**
+- **Hytter** (Home, amber) — "Administrer hytter"
+- **Vaktplan** (Calendar, purple) — "Sett opp vaktplan"
+- **Aktiviteter** (Dumbbell, pink) — "Administrer aktiviteter"
+- **Skjær** (MapIcon, teal) — "Skjæraktiviteter"
+- **Historier** (BookOpen, orange) — "Administrer historier"
+- **Push-varsler** (Bell, yellow) — "Send push-varsler"
+- **Tau-kontroll** (Anchor, red) — "Tau-kontroll oppsett"
+- **Synkronisering** (RefreshCw, cyan) — "Import/eksport fra Google Sheets"
+- **Oppsett** (Settings, gray) — "Webhook-konfigurasjon"
 
-### Løsning
+### Navigasjon
+- Bruk `activeSection` state (allerede finnes) — `null`/`''` = vis grid, ellers vis innhold
+- Tilbake-knapp øverst som setter `activeSection` tilbake til `''`
 
-Bygg rom-dropdown **dynamisk** fra faktisk data i stedet for å hardkode:
+### Teknisk
 
-1. Hent alle unike `(cabin_id, room)`-kombinasjoner fra `participants`-tabellen + `room_capacity`-tabellen
-2. For hver hytte, vis de faktiske rommene som finnes (f.eks. "Seileren Maui", "Seileren Hawaii", eller "Bedewins høyre/venstre")
-3. Hytter der alle deltakere har `room = NULL` — vis hytten uten rom-underinndeling (bare "Bedewins")
+**Endringer i `src/pages/admin/AdminSettings.tsx`:**
+- Erstatt `Tabs`/`TabsList`/`TabsTrigger` med et kort-grid (som i ParticipantStats)
+- Legg til en "landing"-tilstand der `activeSection === ''` viser kortene
+- Når `activeSection` har verdi, vis `AdminSettingsContent` med tilbake-knapp
+- Ledere og Deltakere-kortene blir vist som fulle-bredde kort øverst
 
-### Endringer i `src/components/stats/RoomSwapTab.tsx`
-
-**A. Dynamisk roomOptions (linje 122-138):**
-- I stedet for `['høyre', 'venstre'].forEach(...)`, samle alle unike rom-verdier per hytte fra participants + room_capacity
-- For hytter uten rom-data: vis én entry uten rom-suffix
-- For hytter med rom: vis én entry per unikt rom
-
-**B. Korrekt belegg-telling (linje 112-120):**
-- Tell belegg for alle rom-verdier, ikke bare "høyre"/"venstre"
-- Inkluder deltakere med `room = NULL` i tellen for hytter uten rom-inndeling
-
-**C. Target room-valg:**
-- Når admin velger en hytte uten rom-inndeling, sett `to_room = null`
-- Når admin velger et spesifikt rom, sett `to_room` til det faktiske romnavnet
+**Ingen endringer i `AdminSettingsContent`** — den fungerer allerede med `activeSection` switch.
 
 ### Filer som endres
-- `src/components/stats/RoomSwapTab.tsx` — eneste fil
+- `src/pages/admin/AdminSettings.tsx` — eneste fil
 
 ### Resultat
-- Dropdown viser faktiske rom fra databasen (Maui, Waikikii, høyre, venstre, osv.)
-- Belegg vises korrekt for alle rom
-- "X uten rom" forsvinner for hytter som rett og slett ikke bruker rom-inndeling
+- Landingssiden viser fargerike navigasjonskort i stedet for tab-rader
+- Ledere og Deltakere er prominente øverst
+- Trykk for å komme inn, tilbake-knapp for å gå ut
+- Konsistent med ParticipantStats-designet
 
