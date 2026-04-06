@@ -61,7 +61,7 @@ const sectionLabels: Record<string, string> = {
 export default function AdminSettings() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { isAdmin } = useAuth();
-  const [activeSection, setActiveSection] = useState('leaders');
+  const [activeSection, setActiveSection] = useState('');
   
   const [leaders, setLeaders] = useState<LeaderWithRole[]>([]);
   const [editingLeader, setEditingLeader] = useState<LeaderWithRole | null>(null);
