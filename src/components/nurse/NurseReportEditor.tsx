@@ -6,6 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Save, Loader2, Download, User, FileText, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { hapticSuccess } from '@/lib/capacitorHaptics';
