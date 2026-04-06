@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Search, Plus, Check, X, ArrowRight, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -42,13 +41,10 @@ interface RoomSwap {
   created_at: string;
   approved_at: string | null;
   reason: string | null;
-  participant?: Participant;
-  from_cabin?: Cabin;
-  to_cabin?: Cabin;
 }
 
 export function RoomSwapTab() {
-  const { showSuccess, showError, showInfo } = useStatusPopup();
+  const { showSuccess, showError } = useStatusPopup();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [roomCapacity, setRoomCapacity] = useState<RoomCapacity[]>([]);
@@ -56,13 +52,12 @@ export function RoomSwapTab() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Form state
+  // Form state — multi-select
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
+  const [selectedParticipants, setSelectedParticipants] = useState<Participant[]>([]);
   const [targetCabinId, setTargetCabinId] = useState('');
   const [targetRoom, setTargetRoom] = useState('');
   const [swapReason, setSwapReason] = useState('');
-  // Selection state for batch approval
   const [selectedSwapIds, setSelectedSwapIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -95,99 +90,121 @@ export function RoomSwapTab() {
   const roomOccupancy = useMemo(() => {
     const occupancy: Record<string, number> = {};
     participants.forEach((p) => {
-      if (p.cabin_id) {
-        const key = `${p.cabin_id}-${p.room || 'null'}`;
+      if (p.cabin_id && p.room) {
+        const key = `${p.cabin_id}-${p.room}`;
         occupancy[key] = (occupancy[key] || 0) + 1;
       }
     });
     return occupancy;
   }, [participants]);
 
-  // Get available beds for a room
-  function getAvailableBeds(cabinId: string, room: string | null): { available: number; total: number } {
+  // Count participants per cabin without a room assigned
+  const unassignedPerCabin = useMemo(() => {
+    const counts: Record<string, number> = {};
+    participants.forEach((p) => {
+      if (p.cabin_id && !p.room) {
+        counts[p.cabin_id] = (counts[p.cabin_id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [participants]);
+
+  function getOccupancy(cabinId: string, room: string | null): { occupied: number; total: number } {
     const key = `${cabinId}-${room || 'null'}`;
     const capacity = roomCapacity.find(
       (c) => c.cabin_id === cabinId && c.room === room
     );
     const total = capacity?.bed_count || 6;
-    const occupied = roomOccupancy[key] || 0;
-    return { available: total - occupied, total };
+    const occupied = room ? (roomOccupancy[`${cabinId}-${room}`] || 0) : 0;
+    return { occupied, total };
   }
 
-  // Get room options for dropdown
+  // Room options for dropdown
   const roomOptions = useMemo(() => {
-    const options: { value: string; label: string; available: number; total: number }[] = [];
+    const options: { value: string; label: string; occupied: number; total: number }[] = [];
     cabins.forEach((cabin) => {
+      const unassigned = unassignedPerCabin[cabin.id] || 0;
       ['høyre', 'venstre'].forEach((room) => {
-        const { available, total } = getAvailableBeds(cabin.id, room);
+        const { occupied, total } = getOccupancy(cabin.id, room);
         options.push({
           value: `${cabin.id}|${room}`,
-          label: `${cabin.name} ${room}`,
-          available,
+          label: `${cabin.name} ${room}${unassigned > 0 ? ` (${unassigned} uten rom)` : ''}`,
+          occupied,
           total,
         });
       });
     });
     return options;
-  }, [cabins, roomCapacity, roomOccupancy]);
+  }, [cabins, roomCapacity, roomOccupancy, unassignedPerCabin]);
 
-  // Filter participants by search (name or cabin name)
+  // Filter participants by search
   const filteredParticipants = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
+    const selectedIds = new Set(selectedParticipants.map((p) => p.id));
     return participants
       .filter((p) => {
+        if (selectedIds.has(p.id)) return false;
         const nameMatch = p.name.toLowerCase().includes(query);
         const cabinName = getCabinName(p.cabin_id).toLowerCase();
         const cabinMatch = cabinName.includes(query);
         return nameMatch || cabinMatch;
       })
       .slice(0, 10);
-  }, [participants, searchQuery, cabins]);
+  }, [participants, searchQuery, cabins, selectedParticipants]);
 
-  // Get cabin name by id
   function getCabinName(cabinId: string | null): string {
     if (!cabinId) return 'Ukjent';
     return cabins.find((c) => c.id === cabinId)?.name || 'Ukjent';
   }
 
-  // Add swap to pending list
-  async function handleAddSwap() {
-    if (!selectedParticipant || !targetCabinId) {
-      showError('Velg deltaker og nytt rom');
+  // Add participant to selection list
+  function handleSelectParticipant(p: Participant) {
+    setSelectedParticipants((prev) => [...prev, p]);
+    setSearchQuery('');
+  }
+
+  function handleRemoveParticipant(id: string) {
+    setSelectedParticipants((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  // Add swaps for all selected participants
+  async function handleAddSwaps() {
+    if (selectedParticipants.length === 0 || !targetCabinId) {
+      showError('Velg deltakere og nytt rom');
       return;
     }
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('room_swaps').insert({
-        participant_id: selectedParticipant.id,
-        from_cabin_id: selectedParticipant.cabin_id,
-        from_room: selectedParticipant.room,
+      const rows = selectedParticipants.map((p) => ({
+        participant_id: p.id,
+        from_cabin_id: p.cabin_id,
+        from_room: p.room,
         to_cabin_id: targetCabinId,
         to_room: targetRoom || null,
         status: 'pending',
         reason: swapReason.trim() || null,
-      });
+      }));
 
+      const { error } = await supabase.from('room_swaps').insert(rows);
       if (error) throw error;
 
-      showSuccess('Rombytte lagt til');
-      setSelectedParticipant(null);
+      showSuccess(`${rows.length} rombytte(r) lagt til`);
+      setSelectedParticipants([]);
       setSearchQuery('');
       setTargetCabinId('');
       setTargetRoom('');
       setSwapReason('');
       loadData();
     } catch (error) {
-      console.error('Error adding swap:', error);
-      showError('Kunne ikke legge til rombytte');
+      console.error('Error adding swaps:', error);
+      showError('Kunne ikke legge til rombytter');
     } finally {
       setSubmitting(false);
     }
   }
 
-  // Approve selected swaps
   async function handleApproveSwaps() {
     if (selectedSwapIds.length === 0) {
       showError('Velg rombytter å godkjenne');
@@ -196,20 +213,16 @@ export function RoomSwapTab() {
 
     setSubmitting(true);
     try {
-      // Get the swaps to approve
       const swapsToApprove = swaps.filter(
         (s) => selectedSwapIds.includes(s.id) && s.status === 'pending'
       );
 
-      // Update participant rooms and swap status
       for (const swap of swapsToApprove) {
-        // Update participant
         await supabase
           .from('participants')
           .update({ cabin_id: swap.to_cabin_id, room: swap.to_room })
           .eq('id', swap.participant_id);
 
-        // Update swap status
         await supabase
           .from('room_swaps')
           .update({ status: 'approved', approved_at: new Date().toISOString() })
@@ -227,7 +240,6 @@ export function RoomSwapTab() {
     }
   }
 
-  // Cancel selected swaps
   async function handleCancelSwaps() {
     if (selectedSwapIds.length === 0) {
       showError('Velg rombytter å avbryte');
@@ -237,7 +249,6 @@ export function RoomSwapTab() {
     setSubmitting(true);
     try {
       await supabase.from('room_swaps').delete().in('id', selectedSwapIds);
-
       showSuccess('Rombytter avbrutt');
       setSelectedSwapIds([]);
       loadData();
@@ -249,7 +260,6 @@ export function RoomSwapTab() {
     }
   }
 
-  // Toggle swap selection
   function toggleSwapSelection(id: string) {
     setSelectedSwapIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
@@ -269,7 +279,7 @@ export function RoomSwapTab() {
 
   return (
     <div className="space-y-6">
-      {/* Add new swap */}
+      {/* Add new swaps */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base font-medium">Legg til rombytte</CardTitle>
@@ -277,29 +287,23 @@ export function RoomSwapTab() {
         <CardContent className="space-y-4">
           {/* Search participant */}
           <div className="space-y-2">
-            <Label>Søk deltaker</Label>
+            <Label>Søk deltaker(e)</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Skriv navn..."
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setSelectedParticipant(null);
-                }}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
             {/* Search results */}
-            {filteredParticipants.length > 0 && !selectedParticipant && (
-              <div className="border rounded-md divide-y bg-background shadow-sm">
+            {filteredParticipants.length > 0 && (
+              <div className="border rounded-md divide-y bg-background shadow-sm max-h-48 overflow-y-auto">
                 {filteredParticipants.map((p) => (
                   <button
                     key={p.id}
-                    onClick={() => {
-                      setSelectedParticipant(p);
-                      setSearchQuery(p.name);
-                    }}
+                    onClick={() => handleSelectParticipant(p)}
                     className="w-full px-3 py-2 text-left hover:bg-muted/50 text-sm flex justify-between items-center"
                   >
                     <span>{p.name}</span>
@@ -312,13 +316,32 @@ export function RoomSwapTab() {
             )}
           </div>
 
-          {/* Selected participant info */}
-          {selectedParticipant && (
-            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
-              <span className="font-medium">{selectedParticipant.name}</span>
-              <Badge variant="secondary">
-                {getCabinName(selectedParticipant.cabin_id)} {selectedParticipant.room || ''}
-              </Badge>
+          {/* Selected participants list */}
+          {selectedParticipants.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">
+                Valgte deltakere ({selectedParticipants.length})
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {selectedParticipants.map((p) => (
+                  <Badge
+                    key={p.id}
+                    variant="secondary"
+                    className="flex items-center gap-1 pr-1"
+                  >
+                    <span>{p.name}</span>
+                    <span className="text-muted-foreground text-[10px]">
+                      ({getCabinName(p.cabin_id)} {p.room || ''})
+                    </span>
+                    <button
+                      onClick={() => handleRemoveParticipant(p.id)}
+                      className="ml-1 rounded-full hover:bg-muted p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
             </div>
           )}
 
@@ -341,11 +364,11 @@ export function RoomSwapTab() {
                   <SelectItem key={opt.value} value={opt.value}>
                     <div className="flex items-center justify-between w-full gap-4">
                       <span>{opt.label}</span>
-                      <Badge 
-                        variant={opt.available > 0 ? 'secondary' : 'destructive'}
+                      <Badge
+                        variant={opt.occupied < opt.total ? 'secondary' : 'destructive'}
                         className="ml-2"
                       >
-                        {opt.available}/{opt.total} ledig
+                        {opt.occupied}/{opt.total} opptatt
                       </Badge>
                     </div>
                   </SelectItem>
@@ -365,12 +388,12 @@ export function RoomSwapTab() {
           </div>
 
           <Button
-            onClick={handleAddSwap}
-            disabled={!selectedParticipant || !targetCabinId || submitting}
+            onClick={handleAddSwaps}
+            disabled={selectedParticipants.length === 0 || !targetCabinId || submitting}
             className="w-full"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Legg til i liste
+            Legg til {selectedParticipants.length > 1 ? `${selectedParticipants.length} rombytter` : 'i liste'}
           </Button>
         </CardContent>
       </Card>
