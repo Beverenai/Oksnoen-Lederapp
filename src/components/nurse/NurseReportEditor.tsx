@@ -40,8 +40,17 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mentionRangeRef = useRef<Range | null>(null);
+  const pendingContentRef = useRef<string | null>(null);
 
   useEffect(() => { loadReport(); }, []);
+
+  // Apply pending content once editor is mounted
+  useEffect(() => {
+    if (!isLoading && editorRef.current && pendingContentRef.current !== null) {
+      editorRef.current.innerHTML = pendingContentRef.current;
+      pendingContentRef.current = null;
+    }
+  }, [isLoading]);
 
   const loadReport = async () => {
     try {
@@ -55,9 +64,27 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
       if (reports && reports.length > 0) {
         const report = reports[0];
         setReportId(report.id);
-        if (editorRef.current) {
-          editorRef.current.innerHTML = report.content || '<p><br></p>';
+        // Detect old JSON format and convert to HTML
+        let content = report.content || '<p><br></p>';
+        if (content.trim().startsWith('[')) {
+          try {
+            const lines = JSON.parse(content);
+            if (Array.isArray(lines)) {
+              content = lines.map((line: any) => {
+                const mentionedNames = (line.mentionIds || [])
+                  .map((id: string) => participants.find(p => p.id === id))
+                  .filter(Boolean);
+                let text = line.text || '';
+                // Bold @mentions
+                for (const p of mentionedNames) {
+                  text = text.replace(`@${p.name}`, `<strong>@${p.name}</strong>`);
+                }
+                return `<p><span style="color:hsl(var(--muted-foreground));font-size:12px;">${line.timestamp || ''}</span> ${text}</p>`;
+              }).join('') || '<p><br></p>';
+            }
+          } catch { /* not JSON, use as-is */ }
         }
+        pendingContentRef.current = content;
       } else {
         const { data, error: createErr } = await supabase
           .from('nurse_reports')
@@ -66,9 +93,7 @@ export function NurseReportEditor({ participants }: NurseReportEditorProps) {
           .single();
         if (createErr) throw createErr;
         setReportId(data.id);
-        if (editorRef.current) {
-          editorRef.current.innerHTML = '<p><br></p>';
-        }
+        pendingContentRef.current = '<p><br></p>';
       }
     } catch (error) {
       console.error('Error loading report:', error);
