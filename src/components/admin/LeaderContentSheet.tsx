@@ -554,35 +554,37 @@ export function LeaderContentSheet({
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-72 p-0 bg-popover z-[100]" align="start" side="bottom" sideOffset={4}>
-                  <Command shouldFilter={false}>
+                  <div className="border-b px-3">
                     <CommandInput 
                       placeholder="Søk etter hytte..." 
                       value={cabinSearch}
                       onValueChange={setCabinSearch}
                     />
-                    <CommandList className="max-h-60 overflow-y-auto">
-                      <CommandEmpty>Ingen hytter funnet</CommandEmpty>
-                      <CommandGroup>
-                          {cabins
-                            .filter(c => c.name.toLowerCase().includes(cabinSearch.toLowerCase()))
-                            .map(cabin => (
-                              <CommandItem
-                                key={cabin.id}
-                                onSelect={() => toggleCabin(cabin.id)}
-                                className="cursor-pointer"
-                              >
-                                <Check 
-                                  className={`mr-2 h-4 w-4 ${
-                                    selectedCabinIds.includes(cabin.id) ? 'opacity-100' : 'opacity-0'
-                                  }`}
-                                />
-                                <Home className="mr-2 h-4 w-4 text-muted-foreground" />
-                                {cabin.name}
-                              </CommandItem>
-                            ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto p-1">
+                    {cabins.filter(c => c.name.toLowerCase().includes(cabinSearch.toLowerCase())).length === 0 ? (
+                      <div className="py-6 text-center text-sm text-muted-foreground">Ingen hytter funnet</div>
+                    ) : (
+                      cabins
+                        .filter(c => c.name.toLowerCase().includes(cabinSearch.toLowerCase()))
+                        .map(cabin => (
+                          <button
+                            key={cabin.id}
+                            type="button"
+                            onClick={() => toggleCabin(cabin.id)}
+                            className="flex w-full items-center rounded-sm px-2 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                          >
+                            <Check 
+                              className={`mr-2 h-4 w-4 ${
+                                selectedCabinIds.includes(cabin.id) ? 'opacity-100' : 'opacity-0'
+                              }`}
+                            />
+                            <Home className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <span className="text-left">{cabin.name}</span>
+                          </button>
+                        ))
+                    )}
+                  </div>
                   <div className="p-2 border-t">
                     <Button size="sm" onClick={() => setEditingField(null)} className="w-full">
                       Ferdig
