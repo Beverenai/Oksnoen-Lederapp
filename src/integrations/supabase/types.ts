@@ -1035,6 +1035,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_nurse: { Args: never; Returns: boolean }
+      is_superadmin: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "leader" | "nurse" | "superadmin"
