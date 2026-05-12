@@ -425,8 +425,13 @@ export default function Admin() {
           </CollapsibleContent>
         </Card>
       </Collapsible>
-    </div>
 
-      {/* (Outside main wrapper above) */}
+      <PasteLeaderContentSheet
+        open={isPasteSheetOpen}
+        onOpenChange={setIsPasteSheetOpen}
+        leaders={leaders}
+        onSaved={loadData}
+      />
+    </div>
   );
 }
