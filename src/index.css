@@ -389,7 +389,9 @@ header, nav {
 /* Bottom nav — glassmorphic pill that owns the safe area */
   .bottom-nav {
    position: fixed;
-   bottom: 0;
+   /* Anchor to the actual visual viewport bottom (set at runtime by AppLayout).
+      Falls back to 0 if the variable isn't set yet. */
+   bottom: var(--vv-bottom, 0px);
    left: 0;
    right: 0;
    z-index: 50;

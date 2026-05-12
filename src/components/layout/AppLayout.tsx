@@ -34,6 +34,7 @@ import confetti from 'canvas-confetti';
 import { hapticSuccess, hapticImpact } from '@/lib/capacitorHaptics';
 import { PassIcon } from '@/components/icons/PassIcon';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
+import { PwaDebugPanel } from '@/components/debug/PwaDebugPanel';
 import {
   Collapsible,
   CollapsibleContent,
@@ -396,8 +397,40 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
+  // PWA viewport lock: anchor .bottom-nav to actual visualViewport bottom.
+  // Works around iOS PWA dead-space where CSS bottom:0 doesn't reach the
+  // real viewport edge in standalone mode.
+  useEffect(() => {
+    const update = () => {
+      const vv = window.visualViewport;
+      const vvH = vv?.height ?? window.innerHeight;
+      const offsetTop = vv?.offsetTop ?? 0;
+      // Distance from layout viewport top to visual viewport bottom
+      const bottomY = vvH + offsetTop;
+      document.documentElement.style.setProperty('--vv-bottom', `${Math.round(window.innerHeight - bottomY)}px`);
+      document.documentElement.style.setProperty('--vv-h', `${Math.round(vvH)}px`);
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    window.visualViewport?.addEventListener('resize', update);
+    window.visualViewport?.addEventListener('scroll', update);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+      window.visualViewport?.removeEventListener('resize', update);
+      window.visualViewport?.removeEventListener('scroll', update);
+    };
+  }, []);
+
+  const showDebug =
+    import.meta.env.DEV ||
+    (typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('debug') === '1');
+
   return (
     <div className="bg-background flex h-[100dvh] lg:h-auto lg:min-h-dvh flex-col overflow-hidden lg:overflow-visible overflow-x-hidden w-full max-w-full pl-safe pr-safe">
+      {showDebug && <PwaDebugPanel />}
       {/* View As Banner */}
       {viewAsLeader && (
         <div className="bg-amber-500 dark:bg-amber-600 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
