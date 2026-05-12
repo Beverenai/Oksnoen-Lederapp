@@ -14,6 +14,7 @@ interface DebugValues {
   navTop: number | string;
   navBottom: number | string;
   navHeight: number | string;
+  gap: number | string;
   viewport: string;
 }
 
@@ -71,6 +72,7 @@ function read(): DebugValues {
     navTop: rect ? Math.round(rect.top) : '(no .bottom-nav)',
     navBottom: rect ? Math.round(rect.bottom) : '(no .bottom-nav)',
     navHeight: rect ? Math.round(rect.height) : '(no .bottom-nav)',
+    gap: rect ? Math.round((window.visualViewport?.height ?? window.innerHeight) - rect.bottom) : '—',
     viewport: meta?.content ?? '(no meta)',
   };
 }
@@ -145,6 +147,7 @@ export function PwaDebugPanel() {
       {row('nav.top', v.navTop)}
       {row('nav.bottom', v.navBottom)}
       {row('nav.height', v.navHeight)}
+      {row('gap(vh-navB)', v.gap)}
       {row('viewport', v.viewport)}
       <div style={{ marginTop: 6, opacity: 0.7 }}>culprits ({culprits.length}):</div>
       {culprits.length === 0 && <div>(none)</div>}

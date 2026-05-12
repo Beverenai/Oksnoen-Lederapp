@@ -1,57 +1,41 @@
-## Plan
+## Mål
+Få faktiske målinger på den grønne stripen i PWA-modus og så fikse bunnmenyen ut fra disse, i stedet for flere gjetninger.
 
-Jeg legger inn en ren diagnosepakke i appen, uten å forsøke flere scroll/safe-area-fikser ennå.
+## Hva jeg vil gjøre
+1. Flytte debug-panelet fra bare Hjem-siden til global layout
+   - Rendres fra `AppLayout`, så det vises også på `/admin` der feilen faktisk skjer.
+   - Fortsatt kun i development eller med `?debug=1`.
 
-### 1. Midlertidig debugpanel på Hjem
-- Lage en liten debug-komponent som bare vises når:
-  - appen kjører i development, eller
-  - URL har `?debug=1`
-- Rendre den på `Hjem`-siden som en `fixed` overlay øverst til venstre.
-- Panelet oppdaterer seg ved initial render, `resize`, og `visualViewport.resize` der det finnes.
-- Det viser nøyaktig disse feltene i sanntid:
-  - `window.innerHeight`
-  - `window.innerWidth`
-  - `document.documentElement.clientHeight`
-  - `document.body.clientHeight`
-  - `window.visualViewport?.height`
-  - `window.matchMedia('(display-mode: standalone)').matches`
-  - `navigator.standalone`
-  - `getComputedStyle(document.documentElement).getPropertyValue('--safe-top')`
-  - `getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom')`
-  - `CSS.supports('padding: env(safe-area-inset-bottom)')`
-  - beregnet `.bottom-nav` fra `getBoundingClientRect()` (`top`, `bottom`, `height`)
-  - innholdet i viewport-meta-taggen
-- Visuell stil blir midlertidig: semi-transparent svart bakgrunn, hvit monospace, små bokstaver, kompakt størrelse.
+2. Utvide debug-panelet med de målingene vi mangler
+   - `window.innerHeight`, `window.innerWidth`
+   - `document.documentElement.clientHeight`
+   - `document.body.clientHeight`
+   - `window.visualViewport.height`
+   - `--safe-bottom`
+   - `.bottom-nav` sin `top`, `bottom`, `height`
+   - forskjell mellom viewport-bunn og nav-bunn (`gap`)
+   - containing-block-kjeden som allerede er påbegynt
+   - tydelig console-log med samme tall så du kan kopiere dem
 
-### 2. Midlertidig fargediagnose i globale styles
-- Legge inn eksakt de diagnostiske bakgrunnsfargene i `index.css`:
-  - `html` = rød
-  - `body` = grønn
-  - `#root` = blå
-  - `.bottom-nav` = gul
-  - `.app-content` = magenta
-- Markørene blir tydelig midlertidige og enkle å fjerne i én oppryddingsrunde etter at vi har funnet årsaken.
+3. Verifisere om portal-løsningen faktisk hjelper eller om dette er viewport-mismatch
+   - Siden screenshotet fortsatt viser grønn stripe under gul meny, skal jeg måle om `nav.bottom` stopper over `innerHeight` / `visualViewport.height`.
+   - Hvis det ikke finnes noen reell containing-block-synder, behandler jeg dette som PWA viewport-problem.
 
-### 3. Ingen nye blinde layout-endringer
-- Jeg endrer ikke scroll-arkitekturen, pull-to-refresh eller header-collapse i denne runden.
-- Jeg rører ikke manifest/meta/logikk utover det som trengs for å lese og vise diagnostiske verdier.
+4. Implementere målrettet posisjonering for bunnmenyen hvis målingene bekrefter mismatch
+   - Låse `.bottom-nav` mot faktisk viewport-bunn via JavaScript/CSS-variabel basert på `visualViewport.height` eller `innerHeight`.
+   - Beholde scroll-funksjonalitet i hovedinnholdet.
+   - Ikke røre mer enn nødvendig i layouten.
 
-### 4. Leveranse og neste steg
-Etter implementering gjør vi denne diagnostikk-runden:
-1. Åpne Hjem med `?debug=1`
-2. Slett installert PWA fra hjemskjermen på iPhone
-3. Installer på nytt
-4. Ta screenshot av dødplassen med fargemarkørene synlige
-5. Send screenshot + verdiene fra debugpanelet tilbake
+5. Beholde debug-fargene og panelet midlertidig
+   - Slik at vi kan bekrefte visuelt at grønt område er borte før opprydding.
 
-Da kan vi avgjøre presist om problemet kommer fra `html`, `body`, `#root`, `.bottom-nav`, `.app-content`, eller systembakgrunnen.
+## Forventet resultat
+- Debug-panelet blir synlig også på Admin.
+- Vi får konkrete tall for hvorfor menyen stopper for høyt.
+- Bunnmenyen legges helt ned til skjermkanten i installert PWA.
+- Grønn stripe forsvinner uten å ødelegge scrolling.
 
 ## Tekniske detaljer
-- Filer som sannsynligvis endres:
-  - `src/pages/Home.tsx`
-  - `src/index.css`
-  - eventuelt en ny komponent som `src/components/debug/PwaDebugPanel.tsx`
-- Jeg bruker eksisterende `useLocation()` på Hjem-siden for `?debug=1`.
-- `bottom-nav` måles via `document.querySelector('.bottom-nav')?.getBoundingClientRect()`.
-- `visualViewport` håndteres defensivt så panelet også fungerer der API-et mangler.
-- Dette er bevisst midlertidig kode som slettes etter at vi har fått ekte måledata.
+- Jeg kommer til å jobbe i `AppLayout.tsx`, `PwaDebugPanel.tsx` og eventuelt `index.css`.
+- Mest sannsynlig løsning er en runtime-beregnet offset for `.bottom-nav` i standalone/PWA-modus, fordi dagens CSS med `bottom: 0` + safe-area ikke matcher faktisk viewport på enheten.
+- Jeg lar midlertidige diagnostikkmarkører stå til vi har bekreftet at gapet er null.
