@@ -307,26 +307,35 @@ serve(async (req) => {
         // Parse cabin names and create leader_cabins links
         const cabinNames = parseCabinNames(leader.cabin || leader.cabin_info);
         if (cabinNames.length > 0) {
-          // Delete existing leader_cabins for this leader
-          await supabase.from('leader_cabins').delete().eq('leader_id', leaderId);
-
-          // Insert new leader_cabins links using improved matching
-          // Returnerer ALLE matchende hytter for hovedhyttenavn
+          // Compute desired cabin id set first; only delete+insert if it differs
+          // from what's already in the DB. Avoids ~30 redundant writes per call.
+          const desiredIds = new Set<string>();
           for (const cabinName of cabinNames) {
             const cabinIds = findCabinIds(cabinName, cabinsByName);
             if (cabinIds.length > 0) {
-              for (const cabinId of cabinIds) {
-                const { error: linkError } = await supabase.from('leader_cabins').insert({
-                  leader_id: leaderId,
-                  cabin_id: cabinId,
-                });
-                if (!linkError) {
-                  results.cabinLinks++;
-                }
-              }
-              console.log(`Linked ${leader.name} to ${cabinIds.length} cabin(s) for: ${cabinName}`);
+              for (const cid of cabinIds) desiredIds.add(cid);
             } else {
               console.log(`Cabin not found for ${leader.name}: ${cabinName} (tried fuzzy matching)`);
+            }
+          }
+
+          const { data: existingLinks } = await supabase
+            .from('leader_cabins')
+            .select('cabin_id')
+            .eq('leader_id', leaderId);
+          const existingIds = new Set((existingLinks || []).map(l => l.cabin_id));
+
+          const sameSet =
+            existingIds.size === desiredIds.size &&
+            [...desiredIds].every(id => existingIds.has(id));
+
+          if (!sameSet && desiredIds.size > 0) {
+            await supabase.from('leader_cabins').delete().eq('leader_id', leaderId);
+            const rows = [...desiredIds].map(cabin_id => ({ leader_id: leaderId, cabin_id }));
+            const { error: linkError } = await supabase.from('leader_cabins').insert(rows);
+            if (!linkError) {
+              results.cabinLinks += rows.length;
+              console.log(`Updated ${leader.name} cabin links: ${rows.length} cabin(s)`);
             }
           }
         }
