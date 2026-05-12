@@ -94,6 +94,25 @@ export default function Admin() {
     };
   }, [isAdmin]);
 
+  // Realtime: refresh leader list when n8n sync (or any other source) writes to leaders / leader_cabins.
+  useEffect(() => {
+    if (!isAdmin) return;
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+    const scheduleReload = () => {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(() => loadData(), 600);
+    };
+    const channel = supabase
+      .channel('admin-leaders-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leaders' }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leader_cabins' }, scheduleReload)
+      .subscribe();
+    return () => {
+      if (debounce) clearTimeout(debounce);
+      supabase.removeChannel(channel);
+    };
+  }, [isAdmin]);
+
 
   const loadSessionActivitiesText = async () => {
     const { data } = await supabase.from('app_config').select('value').eq('key', 'session_activities_text').maybeSingle();
@@ -174,7 +193,11 @@ export default function Admin() {
         setLastSyncSuccess(true);
         setLastSyncTime(new Date().toISOString());
         showSuccess(`Synkronisering fullført! (Status: ${data.webhookStatus})`);
+        // n8n writes back asynchronously after we get 200 from its webhook —
+        // give the import a few seconds to land, then reload (realtime also covers it).
         loadData();
+        setTimeout(() => loadData(), 3000);
+        setTimeout(() => loadData(), 8000);
       } else {
         showError(`Synkronisering feilet: ${data?.n8nError || data?.error || 'Ukjent feil'}`);
       }
