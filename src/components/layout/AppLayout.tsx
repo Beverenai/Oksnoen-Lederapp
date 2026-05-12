@@ -840,7 +840,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Main Content */}
       <main 
         ref={scrollContainerRef}
-        className="lg:pl-64 lg:pt-0 flex-1 w-full min-w-0 lg:min-h-screen app-content lg:pb-0 overflow-y-auto overflow-x-hidden max-w-full"
+        className="lg:pl-64 lg:pt-0 flex-1 w-full min-w-0 lg:min-h-screen app-content lg:pb-0 overflow-y-auto lg:overflow-visible overflow-x-hidden max-w-full"
         style={{ overscrollBehaviorY: 'contain' }}
       >
         {/* Spacer for mobile header - animates with header visibility */}
