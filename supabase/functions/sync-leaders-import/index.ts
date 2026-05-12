@@ -177,21 +177,45 @@ serve(async (req) => {
   }
 
   try {
+    // Shared secret check — n8n must send x-n8n-secret header matching N8N_SHARED_SECRET
+    const expectedSecret = Deno.env.get('N8N_SHARED_SECRET');
+    const providedSecret = req.headers.get('x-n8n-secret');
+    if (!expectedSecret) {
+      console.error('sync-leaders-import: N8N_SHARED_SECRET not configured on server');
+      return new Response(JSON.stringify({ error: 'Server misconfigured: missing N8N_SHARED_SECRET' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (providedSecret !== expectedSecret) {
+      console.warn('sync-leaders-import: rejected request — bad or missing x-n8n-secret header');
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { leaders } = await req.json() as { leaders: LeaderImport[] };
+    const rawBody = await req.json().catch((e) => {
+      console.error('sync-leaders-import: failed to parse JSON body', e);
+      return null;
+    });
+    console.log('sync-leaders-import: received body keys =', rawBody ? Object.keys(rawBody) : 'null');
+    const { leaders } = (rawBody ?? {}) as { leaders?: LeaderImport[] };
 
     if (!leaders || !Array.isArray(leaders)) {
+      console.error('sync-leaders-import: payload missing "leaders" array. Got:', JSON.stringify(rawBody)?.slice(0, 500));
       return new Response(JSON.stringify({ error: 'Invalid leaders data' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log(`Syncing ${leaders.length} leaders`);
+    console.log(`sync-leaders-import: syncing ${leaders.length} leaders. First phone:`, leaders[0]?.phone);
 
     // Pre-fetch all cabins for matching
     const { data: allCabins } = await supabase.from('cabins').select('id, name');
