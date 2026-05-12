@@ -124,8 +124,8 @@ export default function Onboarding() {
   const isFormValid = imageUrl && age && parseInt(age) >= 15;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 pt-safe">
+    <div className="min-h-[100dvh] bg-gradient-to-b from-green-50 to-white">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center p-4 pt-safe">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">

@@ -109,7 +109,7 @@ export default function Team() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-[100dvh] bg-background">
         <div className="p-4">
           <Skeleton className="h-10 w-32 mb-6" />
           <div className="space-y-3">
@@ -123,7 +123,7 @@ export default function Team() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="flex items-center gap-3 p-4">

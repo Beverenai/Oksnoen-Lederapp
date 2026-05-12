@@ -379,21 +379,20 @@ header, nav {
   padding-bottom: calc(var(--nav-h) + 12px);
 }
 
-/* Bottom nav — JS pins the bar, CSS stretches background below viewport as backup */
- .bottom-nav {
+/* Bottom nav — pinned via env(safe-area-inset-bottom) to dodge iOS 26 vh bug */
+.bottom-nav {
   position: fixed;
+  bottom: env(safe-area-inset-bottom, 0px);
   left: 0;
   right: 0;
   z-index: 50;
-  padding-top: 12px;
-  padding-bottom: calc(var(--actual-safe-bottom, env(safe-area-inset-bottom, 34px)) + 100px);
-  min-height: calc(var(--nav-h) + 8px);
-  margin: 0;
-  margin-bottom: -100px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  min-height: var(--nav-h);
   background: hsl(var(--background));
-  border-top: 1px solid hsl(var(--border) / 0.5);
+  border-top: 0.5px solid hsl(var(--border) / 0.5);
   box-shadow: 0 -2px 20px 0 rgb(0 0 0 / 0.10);
-  }
+}
 
 /* Underlay no longer needed — pill covers safe area */
 .bottom-nav-underlay {

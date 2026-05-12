@@ -346,72 +346,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     };
   }, [leader, isAdmin, isNurse, fetchHasReadStatus]);
 
-  // iOS PWA safe-area + bottom-nav pinning fix.
-  // Workarounds for: (1) iOS 26.1 fullscreen regression,
-  // (2) env(safe-area-inset-bottom) returning 0 on cold start,
-  // (3) position:fixed bottom drift after backgrounding,
-  // (4) iOS 26.1 reporting a too-small innerHeight in standalone mode.
-  useEffect(() => {
-    const viewport = document.querySelector('meta[name="viewport"]');
-    const originalViewport = viewport?.getAttribute('content') || '';
-
-    // 1) Toggle viewport-fit to force env() recalculation
-    if (viewport && originalViewport.includes('viewport-fit=cover')) {
-      viewport.setAttribute('content', originalViewport.replace('viewport-fit=cover', 'viewport-fit=auto'));
-      requestAnimationFrame(() => viewport.setAttribute('content', originalViewport));
-    }
-
-    // 2) Probe env(safe-area-inset-bottom) at multiple intervals
-    const probeSafeArea = () => {
-      const probe = document.createElement('div');
-      probe.style.cssText = 'position:fixed;bottom:env(safe-area-inset-bottom);visibility:hidden;height:0;pointer-events:none;';
-      document.body.appendChild(probe);
-      const computed = parseFloat(getComputedStyle(probe).bottom) || 0;
-      document.body.removeChild(probe);
-      if (computed > 0) {
-        document.documentElement.style.setProperty('--actual-safe-bottom', `${computed}px`);
-      }
-      return computed;
-    };
-
-    // 3) Pin using the largest available viewport metric.
-    // iOS 26.1 standalone can under-report innerHeight, so include screen.height.
-    const pinNav = () => {
-      const nav = document.querySelector('.bottom-nav') as HTMLElement | null;
-      if (!nav) return;
-
-      const screenH = window.screen.height;
-      const innerH = window.innerHeight;
-      const visualH = window.visualViewport?.height ?? innerH;
-      const trueH = Math.max(screenH, innerH, visualH);
-
-      console.log('VIEWPORT DEBUG:', { screenH, innerH, visualH, trueH });
-
-      nav.style.position = 'fixed';
-      nav.style.top = `${trueH - nav.offsetHeight}px`;
-      nav.style.bottom = 'auto';
-      nav.style.left = '0';
-      nav.style.right = '0';
-    };
-
-    probeSafeArea();
-    const timers = [100, 500, 1000, 2000].map((ms) => setTimeout(() => {
-      probeSafeArea();
-      pinNav();
-    }, ms));
-    pinNav();
-
-    const intervalId = window.setInterval(pinNav, 500);
-    window.addEventListener('resize', pinNav);
-    window.visualViewport?.addEventListener('resize', pinNav);
-
-    return () => {
-      timers.forEach(clearTimeout);
-      window.clearInterval(intervalId);
-      window.removeEventListener('resize', pinNav);
-      window.visualViewport?.removeEventListener('resize', pinNav);
-    };
-  }, []);
+  // Pure-CSS safe-area pinning (see .bottom-nav). iOS 26 vh bug is handled by
+  // using 100dvh and env(safe-area-inset-bottom) instead of bottom: 0.
 
   // Handle dismissing the Hajolo tooltip
   const handleDismissTooltip = async () => {
@@ -902,13 +838,29 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </nav>
       , document.body)}
 
-      {/* Bottom underlay — fills safe-area below the pill with app background */}
-      <div className="lg:hidden bottom-nav-underlay" aria-hidden="true" />
+      {/* iOS 26 safe-area filler — covers the strip below the nav with app bg */}
+      {createPortal(
+        <div
+          aria-hidden="true"
+          className="lg:hidden bottom-nav-safe-filler"
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 'env(safe-area-inset-bottom, 0px)',
+            background: 'hsl(var(--background))',
+            zIndex: 49,
+            pointerEvents: 'none',
+          }}
+        />,
+        document.body
+      )}
 
       {/* Main Content */}
       <main 
         ref={scrollContainerRef}
-        className="lg:pl-64 lg:pt-0 flex-1 w-full min-w-0 lg:min-h-screen app-content lg:pb-0 overflow-y-auto lg:overflow-visible overflow-x-hidden max-w-full"
+        className="lg:pl-64 lg:pt-0 flex-1 w-full min-w-0 lg:min-h-[100dvh] app-content lg:pb-0 overflow-y-auto lg:overflow-visible overflow-x-hidden max-w-full"
         style={{ overscrollBehaviorY: 'contain' }}
       >
         {/* Spacer for mobile header - animates with header visibility */}
