@@ -378,6 +378,7 @@ export default function Home() {
 
   return (
     <div ref={pullRef} className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 pb-24 overflow-y-auto">
+      {showDebug && <PwaDebugPanel />}
       <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
       {/* Header with background image */}
       <div className="relative h-44 md:h-52 overflow-hidden">
