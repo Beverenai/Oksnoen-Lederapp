@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Progress } from '@/components/ui/progress';
 import {
-  Settings, Loader2, Shield, Calendar, RefreshCw, Check,
+  Settings, Loader2, Shield, Calendar,
   Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles, ClipboardPaste,
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -64,13 +64,6 @@ export default function Admin() {
   const [sessionActivitiesText, setSessionActivitiesText] = useState('');
   const [isSavingActivities, setIsSavingActivities] = useState(false);
 
-  // Sync state
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSyncSuccess, setLastSyncSuccess] = useState(false);
-  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
-  const [storedExportWebhookUrl, setStoredExportWebhookUrl] = useState('');
-  const [dirtyCount, setDirtyCount] = useState(0);
-
   // UI state
   const [isHomeConfigOpen, setIsHomeConfigOpen] = useState(false);
   const [isActivationOpen, setIsActivationOpen] = useState(false);
@@ -81,10 +74,7 @@ export default function Admin() {
   useEffect(() => {
     if (!isAdmin) return;
     loadData();
-    loadLastSyncTime();
     loadSessionActivitiesText();
-    loadExportWebhookUrl();
-    loadDirtyCount();
   }, [isAdmin]);
 
   // Realtime: refresh leader list when n8n sync (or any other source) writes to leaders / leader_cabins.
@@ -93,7 +83,7 @@ export default function Admin() {
     let debounce: ReturnType<typeof setTimeout> | null = null;
     const scheduleReload = () => {
       if (debounce) clearTimeout(debounce);
-      debounce = setTimeout(() => { loadData(); loadDirtyCount(); }, 600);
+      debounce = setTimeout(() => { loadData(); }, 600);
     };
     const channel = supabase
       .channel('admin-leaders-realtime')
@@ -126,85 +116,6 @@ export default function Admin() {
     } finally {
       setIsSavingActivities(false);
     }
-  };
-
-  const loadLastSyncTime = async () => {
-    const { data } = await supabase.from('app_config').select('value').eq('key', 'last_sync_timestamp').maybeSingle();
-    if (data?.value) setLastSyncTime(data.value);
-  };
-
-  const loadExportWebhookUrl = async () => {
-    const { data } = await supabase.from('app_config').select('value').eq('key', 'export_webhook_url').maybeSingle();
-    if (data?.value) setStoredExportWebhookUrl(data.value);
-  };
-
-  const formatSyncTime = (isoString: string) => {
-    try {
-      const date = new Date(isoString);
-      return date.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    } catch { return null; }
-  };
-
-  const loadDirtyCount = async () => {
-    // Count leaders + leader_content rows where last_app_edit_at > last_synced_at OR never synced.
-    // PostgREST can't compare two columns; fetch ids+timestamps and compute client-side.
-    try {
-      const [leadersRes, contentRes] = await Promise.all([
-        supabase.from('leaders').select('id, last_app_edit_at, last_synced_at').eq('is_active', true),
-        supabase.from('leader_content').select('leader_id, last_app_edit_at, last_synced_at'),
-      ]);
-      const dirty = new Set<string>();
-      const isDirty = (edit?: string | null, sync?: string | null) => {
-        if (!sync) return true;
-        if (!edit) return false;
-        return new Date(edit).getTime() > new Date(sync).getTime();
-      };
-      (leadersRes.data || []).forEach(l => {
-        if (isDirty(l.last_app_edit_at, l.last_synced_at)) dirty.add(l.id);
-      });
-      const activeIds = new Set((leadersRes.data || []).map(l => l.id));
-      (contentRes.data || []).forEach(c => {
-        if (activeIds.has(c.leader_id) && isDirty(c.last_app_edit_at, c.last_synced_at)) dirty.add(c.leader_id);
-      });
-      setDirtyCount(dirty.size);
-    } catch (e) {
-      console.warn('Could not load dirty count', e);
-    }
-  };
-
-  const triggerSync = async () => {
-    setIsSyncing(true);
-    setLastSyncSuccess(false);
-    try {
-      // 1) Push app changes to Sheet first (only dirty rows)
-      let exportedCount = 0;
-      if (storedExportWebhookUrl && dirtyCount > 0) {
-        const { data: expData, error: expErr } = await supabase.functions.invoke('trigger-export');
-        if (expErr) {
-          showError('Kunne ikke sende endringer til Sheet');
-        } else if (expData?.success) {
-          exportedCount = expData.leadersExported ?? 0;
-        } else if (expData?.error) {
-          showError(`Eksport feilet: ${expData.error}`);
-        }
-      }
-
-      // 2) Pull fresh data from Sheet
-      const { data, error } = await supabase.functions.invoke('trigger-sync');
-      if (error) { showError('Kunne ikke hente fra Sheet'); return; }
-      if (data?.success) {
-        setLastSyncSuccess(true);
-        setLastSyncTime(new Date().toISOString());
-        const exportMsg = exportedCount > 0 ? `${exportedCount} endringer sendt. ` : '';
-        showSuccess(`${exportMsg}Synkronisering fullført!`);
-        loadData();
-        loadDirtyCount();
-        setTimeout(() => { loadData(); loadDirtyCount(); }, 3000);
-        setTimeout(() => { loadData(); loadDirtyCount(); }, 8000);
-      } else {
-        showError(`Synkronisering feilet: ${data?.n8nError || data?.error || 'Ukjent feil'}`);
-      }
-    } catch { showError('Kunne ikke starte synkronisering'); } finally { setIsSyncing(false); }
   };
 
   const loadData = async () => {
