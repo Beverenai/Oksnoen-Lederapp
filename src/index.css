@@ -15,14 +15,6 @@
   --nav-h: 56px;
 }
 
-/* TEMP DIAGNOSTIC COLORS — slettes etter at vi har funnet dødplassen */
-html { background: #ff0000 !important; }
-body { background: #00ff00 !important; }
-#root { background: #0000ff !important; }
-.bottom-nav { background: #ffff00 !important; }
-.app-content { background: #ff00ff !important; }
-/* END TEMP DIAGNOSTIC COLORS */
-
 /* Responsive media defaults */
 img, video {
   max-width: 100%;
@@ -383,25 +375,24 @@ header, nav {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 16px);
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 34px) + 12px);
 }
 
 /* Bottom nav — glassmorphic pill that owns the safe area */
-  .bottom-nav {
-   position: fixed;
-   top: var(--vv-nav-top, calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom, 34px) - 4px));
-   bottom: auto;
-   left: 0;
-   right: 0;
-   z-index: 50;
-   padding-top: 4px;
-   padding-bottom: env(safe-area-inset-bottom, 34px);
-   min-height: calc(var(--nav-h) + env(safe-area-inset-bottom, 34px) + 4px);
-   background: hsl(var(--background));
-   border-top: 0.5px solid hsl(var(--border) / 0.5);
-   margin: 0;
-   box-shadow: 0 -2px 20px 0 rgb(0 0 0 / 0.10);
-  }
+ .bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding-top: 4px;
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
+  min-height: calc(var(--nav-h) + max(env(safe-area-inset-bottom, 0px), 12px) + 4px);
+  background: hsl(var(--background));
+  border-top: 0.5px solid hsl(var(--border) / 0.5);
+  margin: 0;
+  box-shadow: 0 -2px 20px 0 rgb(0 0 0 / 0.10);
+ }
 
 /* Underlay no longer needed — pill covers safe area */
 .bottom-nav-underlay {
