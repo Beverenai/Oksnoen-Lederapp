@@ -177,24 +177,6 @@ serve(async (req) => {
   }
 
   try {
-    // Shared secret check — n8n must send x-n8n-secret header matching N8N_SHARED_SECRET
-    const expectedSecret = Deno.env.get('N8N_SHARED_SECRET');
-    const providedSecret = req.headers.get('x-n8n-secret');
-    if (!expectedSecret) {
-      console.error('sync-leaders-import: N8N_SHARED_SECRET not configured on server');
-      return new Response(JSON.stringify({ error: 'Server misconfigured: missing N8N_SHARED_SECRET' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    if (providedSecret !== expectedSecret) {
-      console.warn('sync-leaders-import: rejected request — bad or missing x-n8n-secret header');
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
