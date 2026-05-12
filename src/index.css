@@ -70,6 +70,18 @@ body {
   overflow-x: hidden;
 }
 
+/* Ensure #root fills the viewport so safe-area below pill is filled with app bg */
+#root {
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  background: hsl(var(--background));
+}
+
+/* Prevent overscroll bounce that would reveal area behind the bottom nav */
+html, body {
+  overscroll-behavior: none;
+}
+
 /* Force flex/grid children to respect parent bounds */
 * {
   min-width: 0;
@@ -375,9 +387,9 @@ header, nav {
    z-index: 50;
    padding-top: 4px;
    padding-bottom: env(safe-area-inset-bottom, 34px);
-   background: hsla(var(--card), 0.85);
-   -webkit-backdrop-filter: saturate(180%) blur(20px);
-   backdrop-filter: saturate(180%) blur(20px);
+   /* Solid app background so the safe-area region below the icons matches the body
+      and we don't get a visible stripe / dead zone on iOS PWA. */
+   background: hsl(var(--background));
    border-top: 0.5px solid hsl(var(--border) / 0.5);
    margin: 0;
    box-shadow: 0 -2px 20px 0 rgb(0 0 0 / 0.10);
@@ -389,7 +401,7 @@ header, nav {
 }
 
 .dark .bottom-nav {
-  background: hsla(var(--card), 0.88);
+  background: hsl(var(--background));
   border-color: hsl(var(--border) / 0.4);
   box-shadow: 0 -2px 20px 0 rgb(0 0 0 / 0.25);
 }
