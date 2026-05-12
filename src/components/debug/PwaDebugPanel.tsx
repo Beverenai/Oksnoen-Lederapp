@@ -17,6 +17,41 @@ interface DebugValues {
   viewport: string;
 }
 
+interface Culprit {
+  tag: string;
+  cls: string;
+  prop: string;
+  value: string;
+}
+
+function findCulprits(): Culprit[] {
+  const out: Culprit[] = [];
+  let el: HTMLElement | null = document.querySelector('.bottom-nav');
+  while (el && el !== document.documentElement) {
+    const cs = getComputedStyle(el);
+    const checks: Array<[string, string, string]> = [
+      ['transform', cs.transform, 'none'],
+      ['filter', cs.filter, 'none'],
+      ['perspective', cs.perspective, 'none'],
+      ['contain', cs.contain, 'none'],
+      ['willChange', cs.willChange, 'auto'],
+      ['backdropFilter', (cs as any).backdropFilter ?? (cs as any).webkitBackdropFilter ?? 'none', 'none'],
+    ];
+    for (const [name, value, base] of checks) {
+      if (value && value !== base) {
+        out.push({
+          tag: el.tagName,
+          cls: (el.className?.toString?.() ?? '').slice(0, 60),
+          prop: name,
+          value: value.slice(0, 80),
+        });
+      }
+    }
+    el = el.parentElement;
+  }
+  return out;
+}
+
 function read(): DebugValues {
   const nav = document.querySelector('.bottom-nav') as HTMLElement | null;
   const rect = nav?.getBoundingClientRect();
