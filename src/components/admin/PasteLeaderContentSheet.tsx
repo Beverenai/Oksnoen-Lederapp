@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { hapticSuccess } from '@/lib/capacitorHaptics';
 
-interface Leader { id: string; name: string }
+interface Leader { id: string; name: string; phone?: string | null }
 
 interface Props {
   open: boolean;
@@ -17,22 +17,58 @@ interface Props {
   onSaved: () => void;
 }
 
-type FieldKey = 'current_activity' | 'personal_notes' | 'personal_message' | 'obs_message';
+type ContentKey =
+  | 'current_activity'
+  | 'extra_activity'
+  | 'personal_notes'
+  | 'personal_message'
+  | 'obs_message'
+  | 'extra_1' | 'extra_2' | 'extra_3' | 'extra_4' | 'extra_5';
+type LeaderKey = 'phone' | 'cabin' | 'ministerpost' | 'team';
+type SpecialKey = 'name';
+type FieldKey = ContentKey | LeaderKey;
+type AnyKey = FieldKey | SpecialKey;
 
-// Header alias map (lowercased) → DB field
-const HEADER_ALIASES: Record<string, FieldKey | 'name'> = {
-  'navn': 'name',
-  'name': 'name',
-  'aktivitet': 'current_activity',
-  'activity': 'current_activity',
-  'notater': 'personal_notes',
-  'notes': 'personal_notes',
-  'til deg': 'personal_message',
-  'til lederen': 'personal_message',
-  'personal_message': 'personal_message',
-  'obs': 'obs_message',
-  'obs!': 'obs_message',
-  'viktig': 'obs_message',
+const CONTENT_KEYS: ContentKey[] = [
+  'current_activity', 'extra_activity', 'personal_notes', 'personal_message',
+  'obs_message', 'extra_1', 'extra_2', 'extra_3', 'extra_4', 'extra_5',
+];
+const LEADER_KEYS: LeaderKey[] = ['phone', 'cabin', 'ministerpost', 'team'];
+
+const FIELD_LABELS: Record<FieldKey, string> = {
+  current_activity: 'Aktivitet',
+  extra_activity: 'Ansvar',
+  personal_notes: 'Notater',
+  personal_message: 'Til deg',
+  obs_message: 'OBS!',
+  extra_1: 'Ekstra #1',
+  extra_2: 'Ekstra #2',
+  extra_3: 'Ekstra #3',
+  extra_4: 'Ekstra #4',
+  extra_5: 'Ekstra #5',
+  phone: 'Tlf',
+  cabin: 'Hytte',
+  ministerpost: 'Ministerpost',
+  team: 'Team',
+};
+
+// Header alias map (lowercased) → field key
+const HEADER_ALIASES: Record<string, AnyKey> = {
+  'navn': 'name', 'name': 'name',
+  'tlf': 'phone', 'telefon': 'phone', 'phone': 'phone', 'mobil': 'phone',
+  'aktivitet': 'current_activity', 'activity': 'current_activity',
+  'ansvar': 'extra_activity',
+  'notater': 'personal_notes', 'notes': 'personal_notes',
+  'til deg': 'personal_message', 'til lederen': 'personal_message', 'personal_message': 'personal_message',
+  'obs': 'obs_message', 'obs!': 'obs_message', 'viktig': 'obs_message',
+  'ekstra #1': 'extra_1', 'ekstra 1': 'extra_1', 'ekstra1': 'extra_1',
+  'ekstra #2': 'extra_2', 'ekstra 2': 'extra_2', 'ekstra2': 'extra_2',
+  'ekstra #3': 'extra_3', 'ekstra 3': 'extra_3', 'ekstra3': 'extra_3',
+  'ekstra #4': 'extra_4', 'ekstra 4': 'extra_4', 'ekstra4': 'extra_4',
+  'ekstra #5': 'extra_5', 'ekstra 5': 'extra_5', 'ekstra5': 'extra_5',
+  'hytte': 'cabin', 'cabin': 'cabin',
+  'ministerpost': 'ministerpost',
+  'team': 'team',
 };
 
 // Parse TSV (tab-separated, with quoted multi-line support like Excel/Sheets copy)
@@ -67,16 +103,19 @@ function parseTsv(text: string): string[][] {
 }
 
 const norm = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ');
+const normPhone = (s: string | null | undefined) => (s || '').replace(/\D/g, '').slice(-8);
 
 interface ParsedRow {
   rawName: string;
+  rawPhone: string;
   matchedLeader?: Leader;
   values: Partial<Record<FieldKey, string>>;
 }
 
 interface Parsed {
-  headerMap: Record<number, FieldKey | 'name'>;
+  headerMap: Record<number, AnyKey>;
   nameCol: number;
+  phoneCol: number;
   rows: ParsedRow[];
   unknownHeaders: string[];
   error?: string;
@@ -85,40 +124,51 @@ interface Parsed {
 function parseInput(text: string, leaders: Leader[]): Parsed {
   const grid = parseTsv(text);
   if (grid.length < 2) {
-    return { headerMap: {}, nameCol: -1, rows: [], unknownHeaders: [], error: 'Trenger en headerrad og minst én datarad.' };
+    return { headerMap: {}, nameCol: -1, phoneCol: -1, rows: [], unknownHeaders: [], error: 'Trenger en headerrad og minst én datarad.' };
   }
   const header = grid[0];
-  const headerMap: Record<number, FieldKey | 'name'> = {};
+  const headerMap: Record<number, AnyKey> = {};
   const unknownHeaders: string[] = [];
   let nameCol = -1;
+  let phoneCol = -1;
   header.forEach((h, idx) => {
     const key = HEADER_ALIASES[norm(h)];
     if (key) {
       headerMap[idx] = key;
       if (key === 'name') nameCol = idx;
+      if (key === 'phone') phoneCol = idx;
     } else if (h.trim()) {
       unknownHeaders.push(h);
     }
   });
   if (nameCol === -1) {
-    return { headerMap, nameCol, rows: [], unknownHeaders, error: 'Fant ingen "Navn"-kolonne.' };
+    return { headerMap, nameCol, phoneCol, rows: [], unknownHeaders, error: 'Fant ingen "Navn"-kolonne.' };
   }
 
-  // Build leader index by normalized name
+  // Build leader indices by normalized name and phone
   const byName = new Map<string, Leader>();
+  const byPhone = new Map<string, Leader>();
   for (const l of leaders) byName.set(norm(l.name), l);
+  for (const l of leaders) {
+    const p = normPhone(l.phone);
+    if (p) byPhone.set(p, l);
+  }
 
   const rows: ParsedRow[] = grid.slice(1).map(r => {
     const rawName = (r[nameCol] || '').trim();
+    const rawPhone = phoneCol >= 0 ? (r[phoneCol] || '').trim() : '';
     const values: Partial<Record<FieldKey, string>> = {};
     for (const [idxStr, key] of Object.entries(headerMap)) {
       if (key === 'name') continue;
       const v = (r[Number(idxStr)] || '').trim();
-      if (v) values[key] = v;
+      if (v) values[key as FieldKey] = v;
     }
-    let matchedLeader = byName.get(norm(rawName));
+    // Prefer phone match
+    let matchedLeader: Leader | undefined;
+    const phoneKey = normPhone(rawPhone);
+    if (phoneKey) matchedLeader = byPhone.get(phoneKey);
+    if (!matchedLeader) matchedLeader = byName.get(norm(rawName));
     if (!matchedLeader && rawName) {
-      // Fallback: match on first+last name tokens (case-insensitive substring)
       const target = norm(rawName);
       for (const l of leaders) {
         const ln = norm(l.name);
@@ -126,10 +176,10 @@ function parseInput(text: string, leaders: Leader[]): Parsed {
         if (ln.startsWith(target) || target.startsWith(ln)) { matchedLeader = l; break; }
       }
     }
-    return { rawName, matchedLeader, values };
-  }).filter(r => r.rawName);
+    return { rawName, rawPhone, matchedLeader, values };
+  }).filter(r => r.rawName || r.rawPhone);
 
-  return { headerMap, nameCol, rows, unknownHeaders };
+  return { headerMap, nameCol, phoneCol, rows, unknownHeaders };
 }
 
 export function PasteLeaderContentSheet({ open, onOpenChange, leaders, onSaved }: Props) {
@@ -153,7 +203,6 @@ export function PasteLeaderContentSheet({ open, onOpenChange, leaders, onSaved }
     if (!matched.length) return;
     setIsSaving(true);
     try {
-      // Fetch existing rows so we can decide insert vs update (avoid touching unrelated fields)
       const ids = matched.map(r => r.matchedLeader!.id);
       const { data: existing } = await supabase
         .from('leader_content')
@@ -165,14 +214,38 @@ export function PasteLeaderContentSheet({ open, onOpenChange, leaders, onSaved }
       let saved = 0, failed = 0;
       for (const row of matched) {
         const leaderId = row.matchedLeader!.id;
-        const payload = { ...row.values, last_synced_at: nowIso };
-        if (existingByLeader.has(leaderId)) {
-          const { error } = await supabase.from('leader_content').update(payload).eq('leader_id', leaderId);
-          if (error) { failed++; console.error('Update failed', leaderId, error); } else saved++;
-        } else {
-          const { error } = await supabase.from('leader_content').insert({ leader_id: leaderId, ...payload });
-          if (error) { failed++; console.error('Insert failed', leaderId, error); } else saved++;
+
+        // Split into content vs leader-table fields
+        const contentPayload: Record<string, string> = {};
+        const leaderPayload: Record<string, string> = {};
+        for (const k of CONTENT_KEYS) {
+          const v = row.values[k];
+          if (v !== undefined) contentPayload[k] = v;
         }
+        for (const k of LEADER_KEYS) {
+          const v = row.values[k];
+          if (v !== undefined) leaderPayload[k] = v;
+        }
+
+        let rowFailed = false;
+
+        if (Object.keys(contentPayload).length > 0) {
+          const payload = { ...contentPayload, last_synced_at: nowIso };
+          if (existingByLeader.has(leaderId)) {
+            const { error } = await supabase.from('leader_content').update(payload).eq('leader_id', leaderId);
+            if (error) { rowFailed = true; console.error('Content update failed', leaderId, error); }
+          } else {
+            const { error } = await supabase.from('leader_content').insert({ leader_id: leaderId, ...payload });
+            if (error) { rowFailed = true; console.error('Content insert failed', leaderId, error); }
+          }
+        }
+
+        if (Object.keys(leaderPayload).length > 0) {
+          const { error } = await supabase.from('leaders').update(leaderPayload).eq('id', leaderId);
+          if (error) { rowFailed = true; console.error('Leader update failed', leaderId, error); }
+        }
+
+        if (rowFailed) failed++; else saved++;
       }
       hapticSuccess();
       if (failed > 0) showError(`Lagret ${saved} av ${matched.length} (${failed} feilet)`);
@@ -197,7 +270,7 @@ export function PasteLeaderContentSheet({ open, onOpenChange, leaders, onSaved }
             <ClipboardPaste className="h-5 w-5" /> Lim inn fra Sheet
           </SheetTitle>
           <SheetDescription>
-            Kopier rader fra Google Sheets/Excel inkl. headerrad. Gjenkjente kolonner: <strong>Navn, Aktivitet, Notater, Til deg, OBS!</strong>. Tomme celler ignoreres (sletter ikke eksisterende verdier).
+            Kopier rader fra Google Sheets/Excel inkl. headerrad. Gjenkjente kolonner: <strong>Tlf, Navn, Aktivitet, Notater, Til deg, OBS!, Ekstra #1–5, Hytte, Ansvar, Ministerpost, Team</strong>. Matching skjer primært på telefon, deretter navn. Tomme celler ignoreres.
           </SheetDescription>
         </SheetHeader>
 
@@ -206,7 +279,7 @@ export function PasteLeaderContentSheet({ open, onOpenChange, leaders, onSaved }
             <Textarea
               value={text}
               onChange={e => setText(e.target.value)}
-              placeholder={'Navn\tAktivitet\tNotater\tTil deg\tOBS!\nOla Nordmann\tTriatlon\tHusk badetøy\t...\t...'}
+              placeholder={'Tlf\tNavn\tAktivitet\tNotater\tTil deg\tOBS!\tEkstra #1\tHytte\tMinisterpost\tTeam\n90012345\tOla Nordmann\tTriatlon\tHusk badetøy\t...\t...\t...\tBalder\tStatsminister\tSjef'}
               className="min-h-[300px] font-mono text-xs"
             />
             <div className="flex justify-between items-center">
@@ -248,17 +321,31 @@ export function PasteLeaderContentSheet({ open, onOpenChange, leaders, onSaved }
                   <Check className="h-3.5 w-3.5 text-green-600" /> Vil bli oppdatert
                 </div>
                 <div className="divide-y max-h-[40vh] overflow-y-auto">
-                  {matched.map((r, i) => (
-                    <div key={i} className="px-3 py-2 text-sm">
-                      <div className="font-medium">{r.matchedLeader!.name}</div>
-                      <div className="mt-1 grid grid-cols-1 gap-0.5 text-xs text-muted-foreground">
-                        {r.values.current_activity && <div><span className="font-medium text-foreground">Aktivitet:</span> {r.values.current_activity}</div>}
-                        {r.values.personal_notes && <div><span className="font-medium text-foreground">Notater:</span> {r.values.personal_notes}</div>}
-                        {r.values.personal_message && <div><span className="font-medium text-foreground">Til deg:</span> {r.values.personal_message}</div>}
-                        {r.values.obs_message && <div><span className="font-medium text-foreground">OBS!:</span> {r.values.obs_message}</div>}
+                  {matched.map((r, i) => {
+                    const leaderFields = LEADER_KEYS.filter(k => r.values[k] !== undefined);
+                    const contentFields = CONTENT_KEYS.filter(k => r.values[k] !== undefined);
+                    return (
+                      <div key={i} className="px-3 py-2 text-sm">
+                        <div className="font-medium">{r.matchedLeader!.name}</div>
+                        {leaderFields.length > 0 && (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            <div className="font-semibold text-foreground/80">📇 Leder-info</div>
+                            {leaderFields.map(k => (
+                              <div key={k}><span className="font-medium text-foreground">{FIELD_LABELS[k]}:</span> {r.values[k]}</div>
+                            ))}
+                          </div>
+                        )}
+                        {contentFields.length > 0 && (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            <div className="font-semibold text-foreground/80">📋 Innhold</div>
+                            {contentFields.map(k => (
+                              <div key={k}><span className="font-medium text-foreground">{FIELD_LABELS[k]}:</span> {r.values[k]}</div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
