@@ -43,28 +43,33 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
     <Card
       className={cn(
         'relative overflow-hidden transition-all hover:shadow-md cursor-pointer ring-2',
-        'h-[100px] sm:h-auto sm:min-h-[220px]',
+        'h-[100px] sm:h-[240px] flex flex-col',
         getBorderClass()
       )}
       onClick={() => onEdit(leader)}
     >
-      <CardContent className="p-2 sm:p-4 h-full flex flex-col">
-        <div className="flex items-center sm:items-start gap-2 sm:gap-3 sm:mb-3">
-          <Avatar className="w-8 h-8 sm:w-12 sm:h-12 shrink-0">
+      <CardContent className="p-2 sm:p-4 h-full flex flex-col gap-2 sm:gap-3">
+        <div className="flex items-center sm:items-start gap-2 sm:gap-3">
+          <Avatar className="w-8 h-8 sm:w-11 sm:h-11 shrink-0">
             {leader.profile_image_url && (
               <AvatarImage src={leader.profile_image_url} alt={leader.name} loading="lazy" className="object-cover" />
             )}
-            <AvatarFallback className="bg-primary/10 text-primary text-xs sm:text-sm font-medium">
+            <AvatarFallback className="bg-muted text-muted-foreground text-xs sm:text-sm font-medium">
               {getFirstName(leader.name).slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground text-xs sm:text-sm truncate">
+            <h3 className="font-semibold text-foreground text-xs sm:text-sm truncate leading-tight">
               {getFirstName(leader.name)}
             </h3>
             {leader.ministerpost && (
-              <p className="hidden sm:block text-xs text-muted-foreground truncate">
+              <p className="hidden sm:block text-[11px] text-muted-foreground truncate mt-0.5">
                 {leader.ministerpost}
+              </p>
+            )}
+            {leader.cabin && (
+              <p className="hidden sm:block text-[11px] text-muted-foreground truncate">
+                {leader.cabin}
               </p>
             )}
           </div>
@@ -78,64 +83,77 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
               <Badge className={cn("sm:hidden text-[10px] px-1.5 py-0 shrink-0", getTeamStyles(isLeaderAdmin ? 'sjef' : isNurse ? 'nurse' : leader.team))}>
                 {formatTeamDisplayMobile(leader.team, isLeaderAdmin, isNurse)}
               </Badge>
-              <Badge className={cn("hidden sm:inline-flex text-xs", getTeamStyles(leader.team))}>
+              <Badge className={cn("hidden sm:inline-flex text-[10px] px-1.5 py-0 h-5 shrink-0 self-start", getTeamStyles(isLeaderAdmin ? 'sjef' : isNurse ? 'nurse' : leader.team))}>
                 {formatTeamDisplay(leader.team)}
               </Badge>
             </>
           )}
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hidden sm:flex h-8 w-8 shrink-0"
-            title="Se som denne lederen"
-            onClick={(e) => { e.stopPropagation(); setViewAsLeader(leader); navigate('/'); }}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hidden sm:flex h-8 w-8 shrink-0"
-            onClick={(e) => { e.stopPropagation(); onEdit(leader); }}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
         </div>
 
-        <div className="flex-1 mt-1 sm:mt-0 space-y-0.5 sm:space-y-2 min-h-0">
-          <div className="flex items-center sm:items-start gap-1 sm:gap-2">
-            <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-primary shrink-0 sm:mt-0.5" />
-            <p className={cn("text-xs sm:text-sm truncate", hasActivity ? 'text-foreground' : 'text-muted-foreground italic')}>
-              {hasActivity ? content?.current_activity : '—'}
-            </p>
-          </div>
-
-          <div className="flex items-center sm:items-start gap-1 sm:gap-2">
-            <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0 sm:mt-0.5" />
-            <p className={cn("text-xs sm:text-sm truncate", hasExtraActivity ? 'text-muted-foreground' : 'text-transparent')}>
-              {hasExtraActivity ? content?.extra_activity : '—'}
-            </p>
-          </div>
-
-          <div className="hidden sm:flex items-start gap-2">
-            <FileText className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-            <p className={cn("text-sm line-clamp-2", hasNotes ? 'text-foreground' : 'text-muted-foreground italic')}>
-              {hasNotes ? content?.personal_notes : 'Ingen notater'}
-            </p>
-          </div>
+        {/* Mobile: compact activity row */}
+        <div className="sm:hidden flex-1 min-h-0">
+          {hasActivity && (
+            <div className="flex items-center gap-1 mt-1">
+              <MapPin className="h-3 w-3 text-primary shrink-0" />
+              <p className="text-xs truncate text-foreground">{content?.current_activity}</p>
+            </div>
+          )}
         </div>
 
-        <div className="hidden sm:flex flex-wrap gap-1.5 mb-3">
-          {leader.cabin && <Badge variant="outline" className="text-xs">{leader.cabin}</Badge>}
+        {/* Desktop: structured content */}
+        <div className="hidden sm:flex flex-1 flex-col gap-1.5 min-h-0">
+          {hasActivity && (
+            <div className="flex items-start gap-2">
+              <MapPin className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-foreground truncate flex-1">{content?.current_activity}</p>
+            </div>
+          )}
+          {hasExtraActivity && (
+            <div className="flex items-start gap-2">
+              <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground truncate flex-1">{content?.extra_activity}</p>
+            </div>
+          )}
+          {hasNotes && (
+            <div className="flex items-start gap-2">
+              <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+              <p className="text-xs text-foreground line-clamp-2 flex-1">{content?.personal_notes}</p>
+            </div>
+          )}
         </div>
 
-        {hasObs && (
-          <Alert variant="destructive" className="hidden sm:flex mt-3 py-2 px-3 items-center justify-center text-center">
-            <AlertTriangle className="h-3 w-3 shrink-0" />
-            <AlertDescription className="text-xs line-clamp-2">{content?.obs_message}</AlertDescription>
-          </Alert>
-        )}
+        {/* Desktop footer: actions + OBS */}
+        <div className="hidden sm:flex items-center justify-between gap-2 mt-auto pt-2 border-t border-border/50">
+          {hasObs ? (
+            <div className="flex items-center gap-1.5 text-destructive min-w-0 flex-1">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              <span className="text-[11px] truncate">{content?.obs_message}</span>
+            </div>
+          ) : (
+            <span className="text-[11px] text-muted-foreground/60">
+              {content?.has_read ? 'Lest' : 'Ulest'}
+            </span>
+          )}
+          <div className="flex gap-0.5 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Se som denne lederen"
+              onClick={(e) => { e.stopPropagation(); setViewAsLeader(leader); navigate('/'); }}
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={(e) => { e.stopPropagation(); onEdit(leader); }}
+            >
+              <Edit className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
