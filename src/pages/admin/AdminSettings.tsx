@@ -256,33 +256,6 @@ export default function AdminSettings() {
             newLeaderIsAdmin={newLeaderIsAdmin}
             setNewLeaderIsAdmin={setNewLeaderIsAdmin}
             addLeader={addLeader}
-            cabinStatusRef={cabinStatusRef}
-            isSyncing={isSyncing}
-            storedWebhookUrl={storedWebhookUrl}
-            lastSyncSuccess={lastSyncSuccess}
-            lastSyncTime={lastSyncTime}
-            syncError={syncError}
-            triggerSync={triggerSync}
-            formatSyncTime={formatSyncTime}
-            isExporting={isExporting}
-            storedExportWebhookUrl={storedExportWebhookUrl}
-            lastExportSuccess={lastExportSuccess}
-            lastExportTime={lastExportTime}
-            exportError={exportError}
-            pendingExport={pendingExport}
-            exportCountdown={exportCountdown}
-            triggerExport={triggerExport}
-            cancelPendingExport={cancelPendingExport}
-            webhookUrl={webhookUrl}
-            setWebhookUrl={setWebhookUrl}
-            isSavingWebhook={isSavingWebhook}
-            saveWebhookUrl={saveWebhookUrl}
-            exportWebhookUrl={exportWebhookUrl}
-            setExportWebhookUrl={setExportWebhookUrl}
-            isSavingExportWebhook={isSavingExportWebhook}
-            saveExportWebhookUrl={saveExportWebhookUrl}
-            showSyncInstructions={showSyncInstructions}
-            setShowSyncInstructions={setShowSyncInstructions}
           />
         </div>
 
