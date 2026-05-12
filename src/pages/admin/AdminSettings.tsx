@@ -1,5 +1,5 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,11 +18,8 @@ import {
   Dumbbell,
   MapIcon,
   BookOpen,
-  RefreshCw,
-  Settings,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
-import { CabinAssignmentStatusRef } from '@/components/admin/CabinAssignmentStatus';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -48,14 +45,12 @@ const navItems = [
   { key: 'stories', label: 'Historier', desc: 'Administrer historier', icon: BookOpen, color: 'bg-orange-500/15 text-orange-600 dark:text-orange-400' },
   { key: 'push', label: 'Push-varsler', desc: 'Send push-varsler', icon: Bell, color: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' },
   { key: 'rope-control', label: 'Tau-kontroll', desc: 'Tau-kontroll oppsett', icon: Anchor, color: 'bg-red-500/15 text-red-600 dark:text-red-400' },
-  { key: 'sync', label: 'Synkronisering', desc: 'Import/eksport', icon: RefreshCw, color: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400' },
-  { key: 'setup', label: 'Oppsett', desc: 'Webhook-konfigurasjon', icon: Settings, color: 'bg-muted/50 text-muted-foreground' },
 ];
 
 const sectionLabels: Record<string, string> = {
   leaders: 'Ledere', participants: 'Deltakere', cabins: 'Hytter', schedule: 'Vaktplan',
   activities: 'Aktiviteter', skjaer: 'Skjær', stories: 'Historier', push: 'Push-varsler',
-  'rope-control': 'Tau-kontroll', sync: 'Synkronisering', setup: 'Oppsett',
+  'rope-control': 'Tau-kontroll',
 };
 
 export default function AdminSettings() {
@@ -67,7 +62,6 @@ export default function AdminSettings() {
   const [editingLeader, setEditingLeader] = useState<LeaderWithRole | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [showSyncInstructions, setShowSyncInstructions] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [leaderSearch, setLeaderSearch] = useState('');
   
@@ -76,371 +70,9 @@ export default function AdminSettings() {
   const [newLeaderPhone, setNewLeaderPhone] = useState('');
   const [newLeaderIsAdmin, setNewLeaderIsAdmin] = useState(false);
 
-  // Sync webhook
-  const [webhookUrl, setWebhookUrl] = useState('');
-  const [storedWebhookUrl, setStoredWebhookUrl] = useState('');
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isSavingWebhook, setIsSavingWebhook] = useState(false);
-  const [syncError, setSyncError] = useState<{
-    error: string;
-    webhookStatus?: number;
-    webhookUrl?: string;
-    correlationId?: string;
-    rawResponse?: string;
-    n8nError?: string | null;
-    n8nStackTrace?: string[] | null;
-  } | null>(null);
-  const [lastSyncSuccess, setLastSyncSuccess] = useState(false);
-  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
-
-  // Export webhook
-  const [exportWebhookUrl, setExportWebhookUrl] = useState('');
-  const [storedExportWebhookUrl, setStoredExportWebhookUrl] = useState('');
-  const [isExporting, setIsExporting] = useState(false);
-  const [isSavingExportWebhook, setIsSavingExportWebhook] = useState(false);
-  const [lastExportSuccess, setLastExportSuccess] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
-  const [lastExportTime, setLastExportTime] = useState<string | null>(null);
-  
-  // Auto-export state
-  const [pendingExport, setPendingExport] = useState(false);
-  const [exportCountdown, setExportCountdown] = useState(0);
-  const exportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const cabinStatusRef = useRef<CabinAssignmentStatusRef>(null);
-
   useEffect(() => {
     loadData();
-    loadWebhookUrl();
-    loadExportWebhookUrl();
-    loadLastSyncTime();
-    loadLastExportTime();
-    
-    return () => {
-      if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    };
   }, []);
-
-  const loadLastSyncTime = async () => {
-    const { data } = await supabase
-      .from('app_config')
-      .select('value')
-      .eq('key', 'last_sync_timestamp')
-      .maybeSingle();
-    
-    if (data?.value) {
-      setLastSyncTime(data.value);
-    }
-  };
-
-  const loadLastExportTime = async () => {
-    const { data } = await supabase
-      .from('app_config')
-      .select('value')
-      .eq('key', 'last_export_timestamp')
-      .maybeSingle();
-    
-    if (data?.value) {
-      setLastExportTime(data.value);
-    }
-  };
-
-  const formatSyncTime = (isoString: string) => {
-    try {
-      const date = new Date(isoString);
-      return date.toLocaleDateString('nb-NO', {
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch {
-      return null;
-    }
-  };
-
-  const loadWebhookUrl = async () => {
-    const { data } = await supabase
-      .from('app_config')
-      .select('value')
-      .eq('key', 'sync_webhook_url')
-      .maybeSingle();
-    
-    if (data?.value) {
-      setWebhookUrl(data.value);
-      setStoredWebhookUrl(data.value);
-    }
-  };
-
-  const loadExportWebhookUrl = async () => {
-    const { data } = await supabase
-      .from('app_config')
-      .select('value')
-      .eq('key', 'export_webhook_url')
-      .maybeSingle();
-    
-    if (data?.value) {
-      setExportWebhookUrl(data.value);
-      setStoredExportWebhookUrl(data.value);
-    }
-  };
-
-  const saveWebhookUrl = async () => {
-    setIsSavingWebhook(true);
-    try {
-      const { error } = await supabase
-        .from('app_config')
-        .upsert({ 
-          key: 'sync_webhook_url', 
-          value: webhookUrl, 
-          updated_at: new Date().toISOString() 
-        }, { onConflict: 'key' });
-      
-      if (error) throw error;
-      setStoredWebhookUrl(webhookUrl);
-      showSuccess('Import webhook URL lagret!');
-    } catch (error) {
-      console.error('Error saving webhook URL:', error);
-      showError('Kunne ikke lagre webhook URL');
-    } finally {
-      setIsSavingWebhook(false);
-    }
-  };
-
-  const saveExportWebhookUrl = async () => {
-    setIsSavingExportWebhook(true);
-    try {
-      const { error } = await supabase
-        .from('app_config')
-        .upsert({ 
-          key: 'export_webhook_url', 
-          value: exportWebhookUrl, 
-          updated_at: new Date().toISOString() 
-        }, { onConflict: 'key' });
-      
-      if (error) throw error;
-      setStoredExportWebhookUrl(exportWebhookUrl);
-      showSuccess('Eksport webhook URL lagret!');
-    } catch (error) {
-      console.error('Error saving export webhook URL:', error);
-      showError('Kunne ikke lagre eksport webhook URL');
-    } finally {
-      setIsSavingExportWebhook(false);
-    }
-  };
-
-  const triggerExport = useCallback(async (isAutoExport = false) => {
-    if (!storedExportWebhookUrl) {
-      if (!isAutoExport) showError('Legg inn eksport webhook URL først');
-      return;
-    }
-
-    setPendingExport(false);
-    setExportCountdown(0);
-    if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
-    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-
-    setIsExporting(true);
-    setExportError(null);
-    setLastExportSuccess(false);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('trigger-export');
-
-      if (error) {
-        console.error('Error calling trigger-export:', error);
-        setExportError('Kunne ikke kontakte backend');
-        if (!isAutoExport) showError('Kunne ikke starte eksport');
-        return;
-      }
-
-      if (data?.success) {
-        setLastExportSuccess(true);
-        const exportTime = new Date().toISOString();
-        setLastExportTime(exportTime);
-        showSuccess(`Eksport fullført! ${data.leadersExported} ledere sendt til Google Sheets`);
-      } else {
-        setExportError(data?.error || 'Ukjent feil');
-        if (!isAutoExport) showError(`Eksport feilet: ${data?.error || 'Ukjent feil'}`);
-      }
-    } catch (error) {
-      console.error('Error triggering export:', error);
-      setExportError('Nettverksfeil ved eksport');
-      if (!isAutoExport) showError('Kunne ikke starte eksport');
-    } finally {
-      setIsExporting(false);
-    }
-  }, [storedExportWebhookUrl]);
-
-  const cancelPendingExport = useCallback(() => {
-    if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
-    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    setPendingExport(false);
-    setExportCountdown(0);
-    showInfo('Auto-eksport avbrutt');
-  }, []);
-
-  // Cabin aliases for matching cabin names to actual cabins
-  const CABIN_ALIASES: Record<string, string[]> = {
-    'balder': ['balder bak', 'balder front'],
-    'hulder': ['hulder bak', 'hulder front'],
-    'seilern': ['seileren'],
-    'seileren': ['seileren'],
-  };
-
-  // Teams that don't have cabin responsibility
-  const TEAMS_WITHOUT_CABIN_RESPONSIBILITY = ['kjøkken', 'kitchen', 'tech'];
-  const ROLES_WITHOUT_CABIN_RESPONSIBILITY = ['admin', 'nurse'];
-
-  const syncLeaderCabins = async () => {
-    console.log('[syncLeaderCabins] Starting cabin sync...');
-    
-    try {
-      const { data: leadersData, error: leadersError } = await supabase
-        .from('leaders')
-        .select('id, name, cabin, team')
-        .eq('is_active', true);
-      
-      if (leadersError) {
-        console.error('[syncLeaderCabins] Error fetching leaders:', leadersError);
-        return;
-      }
-
-      const { data: cabinsData, error: cabinsError } = await supabase
-        .from('cabins')
-        .select('id, name');
-      
-      if (cabinsError) {
-        console.error('[syncLeaderCabins] Error fetching cabins:', cabinsError);
-        return;
-      }
-
-      const { data: userRoles, error: rolesError } = await supabase
-        .rpc('get_all_leader_roles');
-      
-      if (rolesError) {
-        console.error('[syncLeaderCabins] Error fetching roles:', rolesError);
-        return;
-      }
-
-      const cabinsByName = new Map<string, string>();
-      cabinsData?.forEach(c => {
-        cabinsByName.set(c.name.toLowerCase(), c.id);
-      });
-
-      const rolesMap = new Map<string, string[]>();
-      userRoles?.forEach(r => {
-        const existing = rolesMap.get(r.leader_id) || [];
-        rolesMap.set(r.leader_id, [...existing, r.role]);
-      });
-
-      let synced = 0;
-      let skipped = 0;
-
-      for (const leader of leadersData || []) {
-        if (!leader.cabin?.trim()) {
-          skipped++;
-          continue;
-        }
-
-        const teamLower = leader.team?.toLowerCase() || '';
-        if (TEAMS_WITHOUT_CABIN_RESPONSIBILITY.some(t => teamLower.includes(t))) {
-          console.log(`[syncLeaderCabins] Skipping ${leader.name} - exempt team: ${leader.team}`);
-          skipped++;
-          continue;
-        }
-
-        const leaderRoles = rolesMap.get(leader.id) || [];
-        if (leaderRoles.some(r => ROLES_WITHOUT_CABIN_RESPONSIBILITY.includes(r))) {
-          console.log(`[syncLeaderCabins] Skipping ${leader.name} - exempt role`);
-          skipped++;
-          continue;
-        }
-
-        const cabinNames = leader.cabin.split(/[&,]/).map(s => s.trim()).filter(Boolean);
-        
-        await supabase.from('leader_cabins').delete().eq('leader_id', leader.id);
-
-        for (const cabinName of cabinNames) {
-          const normalized = cabinName.toLowerCase();
-          
-          const aliasesToTry = CABIN_ALIASES[normalized] || [normalized];
-          
-          for (const alias of aliasesToTry) {
-            const cabinId = cabinsByName.get(alias);
-            if (cabinId) {
-              const { error: insertError } = await supabase
-                .from('leader_cabins')
-                .insert({ leader_id: leader.id, cabin_id: cabinId });
-              
-              if (insertError) {
-                console.error(`[syncLeaderCabins] Error inserting link for ${leader.name} -> ${alias}:`, insertError);
-              } else {
-                console.log(`[syncLeaderCabins] Linked ${leader.name} -> ${alias}`);
-              }
-            }
-          }
-        }
-        synced++;
-      }
-
-      console.log(`[syncLeaderCabins] Complete. Synced: ${synced}, Skipped: ${skipped}`);
-    } catch (error) {
-      console.error('[syncLeaderCabins] Unexpected error:', error);
-    }
-  };
-
-  const triggerSync = async () => {
-    if (!webhookUrl) {
-      showError('Legg inn webhook URL først');
-      return;
-    }
-
-    setIsSyncing(true);
-    setSyncError(null);
-    setLastSyncSuccess(false);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('trigger-sync');
-
-      if (error) {
-        console.error('Error calling trigger-sync:', error);
-        setSyncError({ error: 'Kunne ikke kontakte backend' });
-        showError('Kunne ikke starte synkronisering');
-        return;
-      }
-
-      if (data?.success) {
-        await syncLeaderCabins();
-        
-        setLastSyncSuccess(true);
-        setLastSyncTime(new Date().toISOString());
-        showSuccess(`Synkronisering fullført! (Status: ${data.webhookStatus})`);
-        
-        cabinStatusRef.current?.refresh();
-        loadData();
-      } else {
-        setSyncError({
-          error: data?.error || 'Ukjent feil',
-          webhookStatus: data?.webhookStatus,
-          webhookUrl: data?.webhookUrl,
-          correlationId: data?.correlationId,
-          rawResponse: data?.rawResponse,
-          n8nError: data?.n8nError,
-          n8nStackTrace: data?.n8nStackTrace,
-        });
-        showError(`Synkronisering feilet: ${data?.n8nError || data?.error || 'Ukjent feil'}`);
-      }
-    } catch (error) {
-      console.error('Error triggering sync:', error);
-      setSyncError({ error: 'Nettverksfeil ved synkronisering' });
-      showError('Kunne ikke starte synkronisering');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   const deactivateAllLeaders = async () => {
     if (!confirm('Reset periode: Dette vil deaktivere alle nåværende ledere.\n\nNår du syncer nye ledere, vil de som matcher (basert på telefonnummer) automatisk bli aktivert igjen med sin lagrede info (profilbilde, notater osv).')) return;
 
@@ -624,33 +256,6 @@ export default function AdminSettings() {
             newLeaderIsAdmin={newLeaderIsAdmin}
             setNewLeaderIsAdmin={setNewLeaderIsAdmin}
             addLeader={addLeader}
-            cabinStatusRef={cabinStatusRef}
-            isSyncing={isSyncing}
-            storedWebhookUrl={storedWebhookUrl}
-            lastSyncSuccess={lastSyncSuccess}
-            lastSyncTime={lastSyncTime}
-            syncError={syncError}
-            triggerSync={triggerSync}
-            formatSyncTime={formatSyncTime}
-            isExporting={isExporting}
-            storedExportWebhookUrl={storedExportWebhookUrl}
-            lastExportSuccess={lastExportSuccess}
-            lastExportTime={lastExportTime}
-            exportError={exportError}
-            pendingExport={pendingExport}
-            exportCountdown={exportCountdown}
-            triggerExport={triggerExport}
-            cancelPendingExport={cancelPendingExport}
-            webhookUrl={webhookUrl}
-            setWebhookUrl={setWebhookUrl}
-            isSavingWebhook={isSavingWebhook}
-            saveWebhookUrl={saveWebhookUrl}
-            exportWebhookUrl={exportWebhookUrl}
-            setExportWebhookUrl={setExportWebhookUrl}
-            isSavingExportWebhook={isSavingExportWebhook}
-            saveExportWebhookUrl={saveExportWebhookUrl}
-            showSyncInstructions={showSyncInstructions}
-            setShowSyncInstructions={setShowSyncInstructions}
           />
         </div>
 
