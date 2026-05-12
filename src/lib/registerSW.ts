@@ -7,6 +7,13 @@ import { isCapacitor } from './capacitor';
 
 let registration: ServiceWorkerRegistration | null = null;
 
+const applyPendingUpdate = (): void => {
+  if (registration?.waiting) {
+    console.log('[SW] Applying waiting update immediately');
+    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+  }
+};
+
 /**
  * Register the service worker for web/PWA context only
  * Skips registration in Capacitor native context
@@ -49,6 +56,8 @@ export const registerServiceWorker = async (): Promise<void> => {
     });
 
     console.log('[SW] Service worker registered successfully');
+    await registration.update();
+    applyPendingUpdate();
 
     // Check for updates on registration
     registration.addEventListener('updatefound', () => {
@@ -61,10 +70,16 @@ export const registerServiceWorker = async (): Promise<void> => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
             // New version available
             console.log('[SW] New version available');
-            showUpdateNotification();
+            applyPendingUpdate();
           }
         });
       }
+    });
+
+    window.addEventListener('focus', () => {
+      registration?.update().catch((error) => {
+        console.warn('[SW] Focus update check failed:', error);
+      });
     });
 
     // Handle controller change (when new SW takes over)
@@ -81,68 +96,6 @@ export const registerServiceWorker = async (): Promise<void> => {
 /**
  * Show update notification to user
  */
-const showUpdateNotification = (): void => {
-  // Check if we already have an update banner
-  if (document.getElementById('sw-update-banner')) {
-    return;
-  }
-
-  const banner = document.createElement('div');
-  banner.id = 'sw-update-banner';
-  banner.style.cssText = `
-    position: fixed;
-    bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: hsl(var(--primary));
-    color: hsl(var(--primary-foreground));
-    padding: 12px 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-family: system-ui, -apple-system, sans-serif;
-    font-size: 14px;
-    max-width: 90vw;
-  `;
-
-  banner.innerHTML = `
-    <span>Ny versjon tilgjengelig!</span>
-    <button id="sw-update-btn" style="
-      background: hsl(var(--primary-foreground));
-      color: hsl(var(--primary));
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 500;
-      font-size: 14px;
-    ">Oppdater</button>
-  `;
-
-  document.body.appendChild(banner);
-
-  document.getElementById('sw-update-btn')?.addEventListener('click', () => {
-    applyUpdate();
-    banner.remove();
-  });
-};
-
-/**
- * Apply pending service worker update
- */
-const applyUpdate = (): void => {
-  if (registration?.waiting) {
-    // Tell waiting SW to skip waiting and take over
-    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-  } else {
-    // Fallback: just reload
-    window.location.reload();
-  }
-};
-
 /**
  * Check for service worker updates manually
  */
