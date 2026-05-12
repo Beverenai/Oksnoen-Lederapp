@@ -94,9 +94,6 @@ export const registerServiceWorker = async (): Promise<void> => {
 };
 
 /**
- * Show update notification to user
- */
-/**
  * Check for service worker updates manually
  */
 export const checkForUpdates = async (): Promise<boolean> => {
