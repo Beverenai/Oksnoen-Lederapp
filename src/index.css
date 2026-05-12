@@ -391,8 +391,8 @@ header, nav {
   padding-top: 4px;
   padding-bottom: 4px;
   min-height: calc(var(--nav-h) + 8px);
-  background: hsl(var(--background));
-  border-top: 0.5px solid hsl(var(--border) / 0.5);
+  background: red !important;
+  border: 5px solid lime !important;
   margin: 0;
   box-shadow: 0 -2px 20px 0 rgb(0 0 0 / 0.10);
  }
