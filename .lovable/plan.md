@@ -1,51 +1,45 @@
-## Idé
-Bytt ut (eller supplementer) n8n-sheet-syncen med en **lim-inn-boks** i Admin-panelet. Du kopierer hele tabellen fra Excel/Google Sheets, limer inn, og appen oppdaterer `leader_content` direkte — ingen webhook, ingen 500-feil, ingen ventetid.
+## Utvid "Lim inn fra Sheet" til å støtte alle kolonner
 
-## Hvordan det fungerer
+Utvider `PasteLeaderContentSheet` slik at hele arket kan limes inn — inkludert leder-metadata (Tlf, Hytte, Ministerpost, Team) i tillegg til innholdsfeltene som finnes i dag.
 
-### UI
-Ny knapp i Admin-toppen ved siden av "Synk med Sheet": **"Lim inn fra Sheet"**.
-- Åpner et Sheet/Dialog med en stor `<textarea>`.
-- Liten hjelpetekst: *"Kopier rader fra Google Sheets/Excel inkl. headerrad. Kolonner: Navn, Aktivitet, Notater, Til deg, OBS!"*
-- Knapper: **Forhåndsvis** → **Bekreft og lagre**.
+### Kolonnemapping (case-insensitive, godtar varianter)
 
-### Parsing (frontend, ingen edge function nødvendig)
-1. Splitt input på linjeskift.
-2. Første rad = header. Detekter kolonnenavn (case-insensitivt, norske varianter: `navn`, `aktivitet`, `notater`, `til deg`/`personal_message`, `obs`/`obs!`).
-3. Splitt hver rad på TAB (Excel/Sheets bruker tab ved kopi).
-4. For hver rad: matche `Navn` mot eksisterende ledere via fornavn + etternavn (case-insensitivt, trim, fuzzy hvis nødvendig).
-5. Bygg en liste `{ leader_id, current_activity, personal_notes, personal_message, obs_message }`.
+| Kolonne i ark | Felt i database | Tabell |
+|---|---|---|
+| `Tlf` / `Telefon` / `Phone` | `phone` | `leaders` |
+| `Navn` / `Name` | `name` (matching) | `leaders` |
+| `Aktivitet` / `Activity` | `current_activity` | `leader_content` |
+| `Notater` / `Notes` | `personal_notes` | `leader_content` |
+| `Til deg` / `Til lederen` | `personal_message` | `leader_content` |
+| `OBS!` / `OBS` / `Viktig` | `obs_message` | `leader_content` |
+| `Ekstra #1` / `Ekstra 1` | `extra_1` | `leader_content` |
+| `Ekstra #2` … `#5` | `extra_2` … `extra_5` | `leader_content` |
+| `Hytte` / `Cabin` | `cabin` | `leaders` |
+| `Ansvar` | `extra_activity` | `leader_content` |
+| `Ministerpost` | `ministerpost` | `leaders` |
+| `Team` | `team` | `leaders` |
 
-### Forhåndsvisning
-Før lagring vises:
-- ✅ Antall rader som matchet en leder
-- ⚠️ Rader som ikke ble matchet (vis navnene + årsak)
-- ✏️ Endringer som faktisk skjer (diff mot nåværende verdi i DB)
+### Matching av leder
 
-Brukeren kan klikke **Bekreft** eller **Avbryt**.
+- Primært på `Tlf` (normalisert: bare siffer, siste 8) når kolonnen finnes — mest robust mot stavefeil i navn.
+- Fallback til normalisert navn-match hvis Tlf mangler eller ikke treffer.
+- Hvis verken Tlf eller Navn matcher → vises som "Ikke matchet" i forhåndsvisning og hoppes over.
 
 ### Lagring
-Frontend kjører `upsert` på `leader_content` per matchet leder med de nye verdiene. Bruker vanlig Supabase-klient — RLS tillater allerede admin å skrive.
 
-Fordi dette er en bevisst handling fra admin, vil verdiene **overskrive** dirty-flagget (samme prinsipp som "manuell sync = du vet hva du gjør"). Vi setter `last_app_edit_at = now()` (skjer automatisk via trigger) og `last_synced_at = now()` for å holde dirty-state ren.
+- To parallelle upserts pr. matched leder:
+  - `leaders` (kun feltene som finnes i pasten: phone, cabin, ministerpost, team)
+  - `leader_content` (current_activity, extra_activity, personal_notes, personal_message, obs_message, extra_1..5) + `last_synced_at = now()`
+- Tomme celler ignoreres (overskriver ikke eksisterende verdier) — som i dag.
 
-### Multi-linje-celler
-Når Excel-celler inneholder linjeskift, kopieres de som `"tekst med\nlinjeskift"` (omgitt av sitattegn). Parser må håndtere TSV med sitattegn — bruker enkel state-machine eller `papaparse` (allerede ofte i bundle, hvis ikke kan vi skrive 30 linjer).
+### Forhåndsvisning
 
-## Hva dette IKKE løser
-- **Toveis sync:** Dette er kun Sheet → App. Hvis du redigerer i appen og vil tilbake til sheet, må du fortsatt bruke "Synk"-knappen (eller la sheet være read-only/snapshot).
-- **Ledermetadata** (telefon, hytte, team, etc.) håndteres ikke her — de redigeres i lederprofilen. Hvis du også vil lime inn de feltene, kan vi utvide kolonnemappingen senere.
+Utvides til å vise alle felter som vil endres pr. leder, gruppert pr. tabell:
+- 📇 Leder-info: phone, cabin, ministerpost, team
+- 📋 Innhold: aktivitet, notater, til deg, OBS, ekstra-felter, ansvar
 
-## Anbefaling
-Behold n8n-knappen i tilfelle den trengs senere, men gjør lim-inn-knappen til den primære. Da er du ikke avhengig av webhook-stabilitet for daglig drift.
+### Filer som endres
 
-## Filer som lages/endres
-- Ny: `src/components/admin/PasteLeaderContentSheet.tsx` (UI + parser + lagring)
-- Endret: `src/pages/admin/Admin.tsx` (legg til knappen i toppen)
+- `src/components/admin/PasteLeaderContentSheet.tsx` — utvidet kolonnemapping, leder-tabell-upsert, telefon-matching, oppdatert preview-UI.
 
-Ingen DB-migrasjoner. Ingen edge functions. Ingen n8n-avhengighet.
-
-## Spørsmål før jeg bygger
-1. **Kolonner**: Er `Navn | Aktivitet | Notater | Til deg | OBS!` riktig og komplett, eller skal også `Ekstra 1–5` (de fleksible feltene) være med?
-2. **Matching**: Hvis et navn i innliminga ikke finnes som leder — bare hoppe over og rapportere, eller skal det opprettes en ny leder? (Anbefaler: hoppe over.)
-3. **Tomme celler**: Skal en tom celle i innliminga **slette** eksisterende verdi i appen, eller bare **ignoreres**? (Anbefaler: ignorere, så du kan oppdatere kun én kolonne uten å nullstille resten.)
+Ingen DB-migrasjoner. Ingen edge functions. Ingen n8n.
