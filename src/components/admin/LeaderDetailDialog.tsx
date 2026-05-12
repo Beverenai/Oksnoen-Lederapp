@@ -89,8 +89,12 @@ export function LeaderDetailDialog({
   const [role, setRole] = useState<AppRole>('leader');
 
   // Populate form when leader changes
+  // Only repopulate when the leader ID changes (not on every refetch),
+  // otherwise auto-save → parent refetch → useEffect would wipe in-progress edits.
+  const lastLeaderIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (leader) {
+    if (leader && leader.id !== lastLeaderIdRef.current) {
+      lastLeaderIdRef.current = leader.id;
       isInitializedRef.current = false;
       setName(leader.name || '');
       setPhone(leader.phone || '');
