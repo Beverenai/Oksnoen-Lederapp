@@ -273,12 +273,34 @@ export default function Admin() {
           <Button
             onClick={triggerSync}
             disabled={isSyncing}
-            variant={lastSyncSuccess ? "default" : "outline"}
+            variant={dirtyCount > 0 ? 'default' : lastSyncSuccess ? 'default' : 'outline'}
             size="sm"
-            className={lastSyncSuccess ? "bg-green-600 hover:bg-green-700" : ""}
+            title={dirtyCount > 0
+              ? `${dirtyCount} endringer venter på å sendes til Sheet`
+              : 'Sender dine endringer til Sheet og henter nye økter/info derfra'}
+            className={
+              dirtyCount > 0
+                ? 'bg-amber-500 hover:bg-amber-600 text-white ring-2 ring-amber-300 ring-offset-1 animate-pulse'
+                : lastSyncSuccess
+                ? 'bg-green-600 hover:bg-green-700'
+                : ''
+            }
           >
-            {isSyncing ? <RefreshCw className="h-4 w-4 animate-spin" /> : lastSyncSuccess ? <Check className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
-            <span className="hidden sm:inline sm:ml-2">{isSyncing ? "Synkroniserer..." : lastSyncSuccess ? "Synket!" : "Synk ledere"}</span>
+            {isSyncing ? <RefreshCw className="h-4 w-4 animate-spin" /> : lastSyncSuccess && dirtyCount === 0 ? <Check className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
+            <span className="hidden sm:inline sm:ml-2">
+              {isSyncing
+                ? 'Synkroniserer...'
+                : dirtyCount > 0
+                ? `Synk (${dirtyCount} venter)`
+                : lastSyncSuccess
+                ? 'Synket!'
+                : 'Synk med Sheet'}
+            </span>
+            {dirtyCount > 0 && (
+              <span className="sm:hidden ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-white text-amber-600 text-[10px] font-bold">
+                {dirtyCount}
+              </span>
+            )}
           </Button>
           {lastSyncTime && <span className="hidden sm:inline text-xs text-muted-foreground">{formatSyncTime(lastSyncTime)}</span>}
         </div>
