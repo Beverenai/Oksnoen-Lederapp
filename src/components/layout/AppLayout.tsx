@@ -346,21 +346,54 @@ export default function AppLayout({ children }: AppLayoutProps) {
     };
   }, [leader, isAdmin, isNurse, fetchHasReadStatus]);
 
+  // iOS PWA safe-area + bottom-nav pinning fix.
+  // Workarounds for: (1) iOS 26.1 fullscreen regression,
+  // (2) env(safe-area-inset-bottom) returning 0 on cold start,
+  // (3) position:fixed bottom drift after backgrounding.
   useEffect(() => {
-    const nav = document.querySelector('.bottom-nav');
-
-    if (nav) {
-      const rect = nav.getBoundingClientRect();
-      console.log('NAV POSITION:', {
-        top: rect.top,
-        bottom: rect.bottom,
-        height: rect.height,
-        windowInnerHeight: window.innerHeight,
-        visualViewportHeight: window.visualViewport?.height,
-        diff: window.innerHeight - rect.bottom,
-        parentNode: nav.parentElement?.tagName + '.' + nav.parentElement?.className?.toString().slice(0, 40),
-      });
+    // 1) Toggle viewport-fit to force env() recalculation
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+      const original = viewport.getAttribute('content') || '';
+      if (original.includes('viewport-fit=cover')) {
+        viewport.setAttribute('content', original.replace('viewport-fit=cover', 'viewport-fit=auto'));
+        requestAnimationFrame(() => viewport.setAttribute('content', original));
+      }
     }
+
+    // 2) Probe env(safe-area-inset-bottom) at multiple intervals
+    const probeSafeArea = () => {
+      const probe = document.createElement('div');
+      probe.style.cssText = 'position:fixed;bottom:env(safe-area-inset-bottom);visibility:hidden;height:0;';
+      document.body.appendChild(probe);
+      const computed = parseFloat(getComputedStyle(probe).bottom) || 0;
+      document.body.removeChild(probe);
+      if (computed > 0) {
+        document.documentElement.style.setProperty('--actual-safe-bottom', `${computed}px`);
+      }
+      return computed;
+    };
+    probeSafeArea();
+    const timers = [100, 500, 1000, 2000].map((ms) => setTimeout(probeSafeArea, ms));
+
+    // 3) visualViewport-based pinning as backup against iOS bottom drift
+    const pinNav = () => {
+      const nav = document.querySelector('.bottom-nav') as HTMLElement | null;
+      if (!nav) return;
+      const vv = window.visualViewport;
+      const h = vv?.height ?? window.innerHeight;
+      nav.style.top = `${h - nav.offsetHeight}px`;
+      nav.style.bottom = 'auto';
+    };
+    pinNav();
+    window.visualViewport?.addEventListener('resize', pinNav);
+    window.visualViewport?.addEventListener('scroll', pinNav);
+
+    return () => {
+      timers.forEach(clearTimeout);
+      window.visualViewport?.removeEventListener('resize', pinNav);
+      window.visualViewport?.removeEventListener('scroll', pinNav);
+    };
   }, []);
 
   // Handle dismissing the Hajolo tooltip
