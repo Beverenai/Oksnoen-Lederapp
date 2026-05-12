@@ -382,20 +382,18 @@ header, nav {
 /* Bottom nav — glassmorphic pill that owns the safe area */
  .bottom-nav {
   position: fixed;
+  /* bottom is controlled by JS (pinNav) — fall back to 0 before JS runs */
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 50;
-  /* Ingen safe-area padding — vi vil at trykkflatene faktisk skal bruke
-     hele nederste område på iPhone/PWA i stedet for å sitte oppe over et dødt felt. */
   padding-top: 4px;
-  padding-bottom: 4px;
+  /* Use probed value if available, else env() with 34px fallback (iPhone home indicator) */
+  padding-bottom: var(--actual-safe-bottom, env(safe-area-inset-bottom, 34px));
   min-height: calc(var(--nav-h) + 8px);
-  background: red !important;
-  border: 5px solid lime !important;
   margin: 0;
   box-shadow: 0 -2px 20px 0 rgb(0 0 0 / 0.10);
- }
+  }
 
 /* Underlay no longer needed — pill covers safe area */
 .bottom-nav-underlay {
