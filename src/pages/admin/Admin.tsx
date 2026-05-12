@@ -14,13 +14,14 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Progress } from '@/components/ui/progress';
 import {
   Settings, Loader2, Shield, Calendar, RefreshCw, Check,
-  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles,
+  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles, ClipboardPaste,
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
 import { LeaderListView } from '@/components/admin/LeaderListView';
 import { LeaderActivationTab } from '@/components/admin/LeaderActivationTab';
+import { PasteLeaderContentSheet } from '@/components/admin/PasteLeaderContentSheet';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
 
@@ -75,6 +76,7 @@ export default function Admin() {
   const [isActivationOpen, setIsActivationOpen] = useState(false);
   const [leaderViewMode, setLeaderViewMode] = useState<'grid' | 'list'>('grid');
   const [isActivitiesSheetOpen, setIsActivitiesSheetOpen] = useState(false);
+  const [isPasteSheetOpen, setIsPasteSheetOpen] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -270,6 +272,15 @@ export default function Admin() {
               <span className="hidden sm:inline sm:ml-2">Innstillinger</span>
             </Button>
           </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsPasteSheetOpen(true)}
+            title="Lim inn rader fra Google Sheets/Excel for å oppdatere ledere raskt"
+          >
+            <ClipboardPaste className="h-4 w-4" />
+            <span className="hidden sm:inline sm:ml-2">Lim inn</span>
+          </Button>
           <Button
             onClick={triggerSync}
             disabled={isSyncing}
