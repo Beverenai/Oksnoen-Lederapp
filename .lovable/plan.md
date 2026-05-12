@@ -1,51 +1,57 @@
-## Hvorfor scroll er ødelagt
+## Plan
 
-I `src/components/layout/AppLayout.tsx` (linje 399) er root-containeren:
+Jeg legger inn en ren diagnosepakke i appen, uten å forsøke flere scroll/safe-area-fikser ennå.
 
-```
-min-h-dvh h-full flex-col overflow-hidden
-```
+### 1. Midlertidig debugpanel på Hjem
+- Lage en liten debug-komponent som bare vises når:
+  - appen kjører i development, eller
+  - URL har `?debug=1`
+- Rendre den på `Hjem`-siden som en `fixed` overlay øverst til venstre.
+- Panelet oppdaterer seg ved initial render, `resize`, og `visualViewport.resize` der det finnes.
+- Det viser nøyaktig disse feltene i sanntid:
+  - `window.innerHeight`
+  - `window.innerWidth`
+  - `document.documentElement.clientHeight`
+  - `document.body.clientHeight`
+  - `window.visualViewport?.height`
+  - `window.matchMedia('(display-mode: standalone)').matches`
+  - `navigator.standalone`
+  - `getComputedStyle(document.documentElement).getPropertyValue('--safe-top')`
+  - `getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom')`
+  - `CSS.supports('padding: env(safe-area-inset-bottom)')`
+  - beregnet `.bottom-nav` fra `getBoundingClientRect()` (`top`, `bottom`, `height`)
+  - innholdet i viewport-meta-taggen
+- Visuell stil blir midlertidig: semi-transparent svart bakgrunn, hvit monospace, små bokstaver, kompakt størrelse.
 
-`<main>` inni er `flex-1 ... overflow-y-auto`.
+### 2. Midlertidig fargediagnose i globale styles
+- Legge inn eksakt de diagnostiske bakgrunnsfargene i `index.css`:
+  - `html` = rød
+  - `body` = grønn
+  - `#root` = blå
+  - `.bottom-nav` = gul
+  - `.app-content` = magenta
+- Markørene blir tydelig midlertidige og enkle å fjerne i én oppryddingsrunde etter at vi har funnet årsaken.
 
-For at `flex-1 overflow-y-auto` skal kunne scrolle, må forelderen ha en **fast høyde** lik viewporten. Etter forrige runde der vi byttet fra `height` til `min-height` på `html`, `body`, `#root` (og fjernet `--app-height`), har root-containeren nå bare `min-height: 100dvh` — ingen øvre grense. Når innholdet er høyere enn skjermen, vokser hele app-shellen i stedet for at `<main>` får en intern scroll. Samtidig klipper `overflow-hidden` på root alt som havner under viewporten, så det ser ut som at sidene ikke kan scrolles.
+### 3. Ingen nye blinde layout-endringer
+- Jeg endrer ikke scroll-arkitekturen, pull-to-refresh eller header-collapse i denne runden.
+- Jeg rører ikke manifest/meta/logikk utover det som trengs for å lese og vise diagnostiske verdier.
 
-Dette er en ren regresjon fra forrige fix og har ingenting med PWA-bunnen å gjøre.
+### 4. Leveranse og neste steg
+Etter implementering gjør vi denne diagnostikk-runden:
+1. Åpne Hjem med `?debug=1`
+2. Slett installert PWA fra hjemskjermen på iPhone
+3. Installer på nytt
+4. Ta screenshot av dødplassen med fargemarkørene synlige
+5. Send screenshot + verdiene fra debugpanelet tilbake
 
-## Fix
+Da kan vi avgjøre presist om problemet kommer fra `html`, `body`, `#root`, `.bottom-nav`, `.app-content`, eller systembakgrunnen.
 
-Gi **selve app-shell-wrapperen** i `AppLayout` en fast høyde lik dynamisk viewport, mens `html`/`body`/`#root` får beholde `min-height`-strategien sin (som er det som holder PWA-bunnen riktig).
-
-### Endring i `src/components/layout/AppLayout.tsx` (linje 399)
-
-Bytt fra:
-```
-className="bg-background flex min-h-dvh h-full flex-col overflow-hidden overflow-x-hidden w-full max-w-full pl-safe pr-safe"
-```
-
-til (mobil = fast dvh-høyde, desktop = uendret oppførsel):
-```
-className="bg-background flex h-[100dvh] lg:h-auto lg:min-h-dvh flex-col overflow-hidden overflow-x-hidden w-full max-w-full pl-safe pr-safe"
-```
-
-- `h-[100dvh]` på mobil gir `<main className="flex-1 overflow-y-auto">` en konkret høyde å scrolle innenfor.
-- `lg:h-auto lg:min-h-dvh` beholder dagens desktop-oppførsel (sidebaren er `fixed`, og main scroller med dokumentet).
-- `overflow-hidden` på root beholdes så ingenting lekker forbi viewporten — men nå har root også en høyde lik viewporten, så `<main>` får faktisk scroll i stedet for å bli klippet bort.
-
-### Hva som IKKE endres
-
-- `html`, `body`, `#root` i `src/index.css` røres ikke. PWA-fyllingen nederst er fortsatt korrekt.
-- `--app-height` introduseres ikke på nytt.
-- Ingen JavaScript for viewport-høyde.
-- `.bottom-nav` og safe-area-paddingen røres ikke.
-- Desktop-layouten endres ikke.
-
-## Forventet resultat
-
-- Sidene (inkl. `/nurse`, `/leaders` osv.) kan scrolles igjen på både mobil og desktop.
-- Bunnen av iPhone-skjermen brukes fortsatt fullt ut (forrige fix beholdes).
-- Pill-menyen ligger fortsatt riktig nederst.
-
-## Filer som endres
-
-- `src/components/layout/AppLayout.tsx` (én linje, klassenavn på root-`div`)
+## Tekniske detaljer
+- Filer som sannsynligvis endres:
+  - `src/pages/Home.tsx`
+  - `src/index.css`
+  - eventuelt en ny komponent som `src/components/debug/PwaDebugPanel.tsx`
+- Jeg bruker eksisterende `useLocation()` på Hjem-siden for `?debug=1`.
+- `bottom-nav` måles via `document.querySelector('.bottom-nav')?.getBoundingClientRect()`.
+- `visualViewport` håndteres defensivt så panelet også fungerer der API-et mangler.
+- Dette er bevisst midlertidig kode som slettes etter at vi har fått ekte måledata.
