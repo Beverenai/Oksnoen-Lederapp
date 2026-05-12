@@ -192,11 +192,13 @@ export function LeaderDetailDialog({
   // Debounced auto-save for all fields (1s debounce)
   useEffect(() => {
     if (!isInitializedRef.current || !leader) return;
-    
+
+    // Show "Lagrer…" immediately so the user feels the change registered.
+    setAutoSaveStatus('saving');
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
       saveLeaderFields();
-    }, 1000);
+    }, 350);
   }, [name, phone, email, age, team, cabin, ministerpost, hasCar, hasDriversLicense, hasBoatLicense, canRappelling, canClimbing, canZipline, canRopeSetup, saveLeaderFields, leader]);
 
   // Auto-save role changes (separate because it uses edge function)
