@@ -382,12 +382,12 @@ header, nav {
 /* Bottom nav — pinned via env(safe-area-inset-bottom) to dodge iOS 26 vh bug */
 .bottom-nav {
   position: fixed;
-  bottom: env(safe-area-inset-bottom, 0px);
+  bottom: 0;
   left: 0;
   right: 0;
   z-index: 50;
   padding-top: 8px;
-  padding-bottom: 8px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   min-height: var(--nav-h);
   background: hsl(var(--background));
   border-top: 0.5px solid hsl(var(--border) / 0.5);
