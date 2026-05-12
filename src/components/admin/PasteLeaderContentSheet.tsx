@@ -68,6 +68,7 @@ const HEADER_ALIASES: Record<string, AnyKey> = {
   'ekstra #4': 'extra_4', 'ekstra 4': 'extra_4', 'ekstra4': 'extra_4',
   'ekstra #5': 'extra_5', 'ekstra 5': 'extra_5', 'ekstra5': 'extra_5',
   'hytte': 'cabin', 'cabin': 'cabin',
+  'hytte ansvar': 'cabin', 'hytte/ansvar': 'cabin',
   'ministerpost': 'ministerpost',
   'team': 'team',
 };
