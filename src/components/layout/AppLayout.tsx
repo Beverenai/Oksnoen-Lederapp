@@ -34,7 +34,6 @@ import confetti from 'canvas-confetti';
 import { hapticSuccess, hapticImpact } from '@/lib/capacitorHaptics';
 import { PassIcon } from '@/components/icons/PassIcon';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
-import { PwaDebugPanel } from '@/components/debug/PwaDebugPanel';
 import {
   Collapsible,
   CollapsibleContent,
@@ -397,48 +396,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
-  // PWA viewport lock: place .bottom-nav by explicit top-position from the
-  // actual visual viewport, so iOS standalone dead-space becomes usable.
-  useEffect(() => {
-    let frame = 0;
-
-    const update = () => {
-      cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        const vv = window.visualViewport;
-        const nav = document.querySelector('.bottom-nav') as HTMLElement | null;
-        const vvHeight = vv?.height ?? window.innerHeight;
-        const vvTop = vv?.offsetTop ?? 0;
-        const navHeight = nav?.offsetHeight ?? 0;
-        const navTop = Math.max(0, Math.round(vvTop + vvHeight - navHeight));
-
-        document.documentElement.style.setProperty('--vv-nav-top', `${navTop}px`);
-        document.documentElement.style.setProperty('--vv-h', `${Math.round(vvHeight)}px`);
-      });
-    };
-
-    update();
-    window.addEventListener('resize', update);
-    window.addEventListener('orientationchange', update);
-    window.visualViewport?.addEventListener('resize', update);
-    window.visualViewport?.addEventListener('scroll', update);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('resize', update);
-      window.removeEventListener('orientationchange', update);
-      window.visualViewport?.removeEventListener('resize', update);
-      window.visualViewport?.removeEventListener('scroll', update);
-    };
-  }, [mobileMenuOpen, location.pathname]);
-
-  const showDebug =
-    import.meta.env.DEV ||
-    (typeof window !== 'undefined' &&
-      new URLSearchParams(window.location.search).get('debug') === '1');
-
   return (
     <div className="bg-background flex h-[100dvh] lg:h-auto lg:min-h-dvh flex-col overflow-hidden lg:overflow-visible overflow-x-hidden w-full max-w-full pl-safe pr-safe">
-      {showDebug && <PwaDebugPanel />}
       {/* View As Banner */}
       {viewAsLeader && (
         <div className="bg-amber-500 dark:bg-amber-600 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
