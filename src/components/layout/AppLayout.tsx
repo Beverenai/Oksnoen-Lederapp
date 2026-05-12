@@ -671,7 +671,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </div>
 
       {/* Mobile Bottom Navigation - Fixed iOS-style tab bar */}
-      {!mobileMenuOpen && (
+      {!mobileMenuOpen && createPortal(
         <nav className="lg:hidden bottom-nav">
           {/* Content container - allows center button overflow */}
           <div className="relative h-[var(--nav-h)] flex items-center justify-evenly px-1">
@@ -833,7 +833,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               })}
             </div>
         </nav>
-      )}
+      , document.body)}
 
       {/* Bottom underlay — fills safe-area below the pill with app background */}
       <div className="lg:hidden bottom-nav-underlay" aria-hidden="true" />
