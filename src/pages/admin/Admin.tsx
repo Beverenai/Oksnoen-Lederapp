@@ -68,12 +68,7 @@ export default function Admin() {
   const [lastSyncSuccess, setLastSyncSuccess] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [storedExportWebhookUrl, setStoredExportWebhookUrl] = useState('');
-
-  // Auto-export
-  const [pendingExport, setPendingExport] = useState(false);
-  const [exportCountdown, setExportCountdown] = useState(0);
-  const exportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [dirtyCount, setDirtyCount] = useState(0);
 
   // UI state
   const [isHomeConfigOpen, setIsHomeConfigOpen] = useState(false);
@@ -87,11 +82,7 @@ export default function Admin() {
     loadLastSyncTime();
     loadSessionActivitiesText();
     loadExportWebhookUrl();
-    
-    return () => {
-      if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    };
+    loadDirtyCount();
   }, [isAdmin]);
 
   // Realtime: refresh leader list when n8n sync (or any other source) writes to leaders / leader_cabins.
@@ -100,12 +91,13 @@ export default function Admin() {
     let debounce: ReturnType<typeof setTimeout> | null = null;
     const scheduleReload = () => {
       if (debounce) clearTimeout(debounce);
-      debounce = setTimeout(() => loadData(), 600);
+      debounce = setTimeout(() => { loadData(); loadDirtyCount(); }, 600);
     };
     const channel = supabase
       .channel('admin-leaders-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leaders' }, scheduleReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leader_cabins' }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leader_content' }, scheduleReload)
       .subscribe();
     return () => {
       if (debounce) clearTimeout(debounce);
@@ -151,53 +143,62 @@ export default function Admin() {
     } catch { return null; }
   };
 
-  const triggerExport = useCallback(async (isAutoExport = false) => {
-    if (!storedExportWebhookUrl) {
-      if (!isAutoExport) showError('Legg inn eksport webhook URL først');
-      return;
-    }
-    setPendingExport(false);
-    setExportCountdown(0);
-    if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
-    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+  const loadDirtyCount = async () => {
+    // Count leaders + leader_content rows where last_app_edit_at > last_synced_at OR never synced.
+    // PostgREST can't compare two columns; fetch ids+timestamps and compute client-side.
     try {
-      const { data, error } = await supabase.functions.invoke('trigger-export');
-      if (error) { if (!isAutoExport) showError('Kunne ikke starte eksport'); return; }
-      if (data?.success) showSuccess(`Eksport fullført! ${data.leadersExported} ledere sendt til Google Sheets`);
-      else if (!isAutoExport) showError(`Eksport feilet: ${data?.error || 'Ukjent feil'}`);
-    } catch { if (!isAutoExport) showError('Kunne ikke starte eksport'); }
-  }, [storedExportWebhookUrl]);
-
-  const scheduleAutoExport = useCallback(() => {
-    if (!storedExportWebhookUrl) return;
-    if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
-    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    setPendingExport(true);
-    setExportCountdown(30);
-    countdownIntervalRef.current = setInterval(() => {
-      setExportCountdown(prev => {
-        if (prev <= 1) { if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current); return 0; }
-        return prev - 1;
+      const [leadersRes, contentRes] = await Promise.all([
+        supabase.from('leaders').select('id, last_app_edit_at, last_synced_at').eq('is_active', true),
+        supabase.from('leader_content').select('leader_id, last_app_edit_at, last_synced_at'),
+      ]);
+      const dirty = new Set<string>();
+      const isDirty = (edit?: string | null, sync?: string | null) => {
+        if (!sync) return true;
+        if (!edit) return false;
+        return new Date(edit).getTime() > new Date(sync).getTime();
+      };
+      (leadersRes.data || []).forEach(l => {
+        if (isDirty(l.last_app_edit_at, l.last_synced_at)) dirty.add(l.id);
       });
-    }, 1000);
-    exportTimerRef.current = setTimeout(() => triggerExport(true), 30000);
-  }, [storedExportWebhookUrl, triggerExport]);
+      const activeIds = new Set((leadersRes.data || []).map(l => l.id));
+      (contentRes.data || []).forEach(c => {
+        if (activeIds.has(c.leader_id) && isDirty(c.last_app_edit_at, c.last_synced_at)) dirty.add(c.leader_id);
+      });
+      setDirtyCount(dirty.size);
+    } catch (e) {
+      console.warn('Could not load dirty count', e);
+    }
+  };
 
   const triggerSync = async () => {
     setIsSyncing(true);
     setLastSyncSuccess(false);
     try {
+      // 1) Push app changes to Sheet first (only dirty rows)
+      let exportedCount = 0;
+      if (storedExportWebhookUrl && dirtyCount > 0) {
+        const { data: expData, error: expErr } = await supabase.functions.invoke('trigger-export');
+        if (expErr) {
+          showError('Kunne ikke sende endringer til Sheet');
+        } else if (expData?.success) {
+          exportedCount = expData.leadersExported ?? 0;
+        } else if (expData?.error) {
+          showError(`Eksport feilet: ${expData.error}`);
+        }
+      }
+
+      // 2) Pull fresh data from Sheet
       const { data, error } = await supabase.functions.invoke('trigger-sync');
-      if (error) { showError('Kunne ikke starte synkronisering'); return; }
+      if (error) { showError('Kunne ikke hente fra Sheet'); return; }
       if (data?.success) {
         setLastSyncSuccess(true);
         setLastSyncTime(new Date().toISOString());
-        showSuccess(`Synkronisering fullført! (Status: ${data.webhookStatus})`);
-        // n8n writes back asynchronously after we get 200 from its webhook —
-        // give the import a few seconds to land, then reload (realtime also covers it).
+        const exportMsg = exportedCount > 0 ? `${exportedCount} endringer sendt. ` : '';
+        showSuccess(`${exportMsg}Synkronisering fullført!`);
         loadData();
-        setTimeout(() => loadData(), 3000);
-        setTimeout(() => loadData(), 8000);
+        loadDirtyCount();
+        setTimeout(() => { loadData(); loadDirtyCount(); }, 3000);
+        setTimeout(() => { loadData(); loadDirtyCount(); }, 8000);
       } else {
         showError(`Synkronisering feilet: ${data?.n8nError || data?.error || 'Ukjent feil'}`);
       }
