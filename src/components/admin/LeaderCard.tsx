@@ -59,7 +59,7 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground text-xs sm:text-base truncate">
+            <h3 className="font-semibold text-foreground text-xs sm:text-base break-words">
               {getFirstName(leader.name)}
             </h3>
             {leader.ministerpost && (
