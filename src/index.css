@@ -375,7 +375,8 @@ header, nav {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 34px) + 12px);
+  /* Bunnmenyen eier nå hele safe-area nederst, så vi trenger bare høyden på selve nav-pillen */
+  padding-bottom: calc(var(--nav-h) + 12px);
 }
 
 /* Bottom nav — glassmorphic pill that owns the safe area */
@@ -385,9 +386,11 @@ header, nav {
   left: 0;
   right: 0;
   z-index: 50;
+  /* Ingen safe-area padding — vi vil at trykkflatene faktisk skal bruke
+     hele nederste område på iPhone/PWA i stedet for å sitte oppe over et dødt felt. */
   padding-top: 4px;
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
-  min-height: calc(var(--nav-h) + max(env(safe-area-inset-bottom, 0px), 12px) + 4px);
+  padding-bottom: 4px;
+  min-height: calc(var(--nav-h) + 8px);
   background: hsl(var(--background));
   border-top: 0.5px solid hsl(var(--border) / 0.5);
   margin: 0;
