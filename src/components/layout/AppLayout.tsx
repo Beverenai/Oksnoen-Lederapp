@@ -349,22 +349,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // iOS PWA safe-area + bottom-nav pinning fix.
   // Workarounds for: (1) iOS 26.1 fullscreen regression,
   // (2) env(safe-area-inset-bottom) returning 0 on cold start,
-  // (3) position:fixed bottom drift after backgrounding.
+  // (3) position:fixed bottom drift after backgrounding,
+  // (4) iOS 26.1 reporting a too-small innerHeight in standalone mode.
   useEffect(() => {
-    // 1) Toggle viewport-fit to force env() recalculation
     const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) {
-      const original = viewport.getAttribute('content') || '';
-      if (original.includes('viewport-fit=cover')) {
-        viewport.setAttribute('content', original.replace('viewport-fit=cover', 'viewport-fit=auto'));
-        requestAnimationFrame(() => viewport.setAttribute('content', original));
-      }
+    const originalViewport = viewport?.getAttribute('content') || '';
+
+    // 1) Toggle viewport-fit to force env() recalculation
+    if (viewport && originalViewport.includes('viewport-fit=cover')) {
+      viewport.setAttribute('content', originalViewport.replace('viewport-fit=cover', 'viewport-fit=auto'));
+      requestAnimationFrame(() => viewport.setAttribute('content', originalViewport));
     }
 
     // 2) Probe env(safe-area-inset-bottom) at multiple intervals
     const probeSafeArea = () => {
       const probe = document.createElement('div');
-      probe.style.cssText = 'position:fixed;bottom:env(safe-area-inset-bottom);visibility:hidden;height:0;';
+      probe.style.cssText = 'position:fixed;bottom:env(safe-area-inset-bottom);visibility:hidden;height:0;pointer-events:none;';
       document.body.appendChild(probe);
       const computed = parseFloat(getComputedStyle(probe).bottom) || 0;
       document.body.removeChild(probe);
@@ -373,26 +373,43 @@ export default function AppLayout({ children }: AppLayoutProps) {
       }
       return computed;
     };
-    probeSafeArea();
-    const timers = [100, 500, 1000, 2000].map((ms) => setTimeout(probeSafeArea, ms));
 
-    // 3) visualViewport-based pinning as backup against iOS bottom drift
+    // 3) Pin using the largest available viewport metric.
+    // iOS 26.1 standalone can under-report innerHeight, so include screen.height.
     const pinNav = () => {
       const nav = document.querySelector('.bottom-nav') as HTMLElement | null;
       if (!nav) return;
-      const vv = window.visualViewport;
-      const h = vv?.height ?? window.innerHeight;
-      nav.style.top = `${h - nav.offsetHeight}px`;
+
+      const screenH = window.screen.height;
+      const innerH = window.innerHeight;
+      const visualH = window.visualViewport?.height ?? innerH;
+      const trueH = Math.max(screenH, innerH, visualH);
+
+      console.log('VIEWPORT DEBUG:', { screenH, innerH, visualH, trueH });
+
+      nav.style.position = 'fixed';
+      nav.style.top = `${trueH - nav.offsetHeight}px`;
       nav.style.bottom = 'auto';
+      nav.style.left = '0';
+      nav.style.right = '0';
     };
+
+    probeSafeArea();
+    const timers = [100, 500, 1000, 2000].map((ms) => setTimeout(() => {
+      probeSafeArea();
+      pinNav();
+    }, ms));
     pinNav();
+
+    const intervalId = window.setInterval(pinNav, 500);
+    window.addEventListener('resize', pinNav);
     window.visualViewport?.addEventListener('resize', pinNav);
-    window.visualViewport?.addEventListener('scroll', pinNav);
 
     return () => {
       timers.forEach(clearTimeout);
+      window.clearInterval(intervalId);
+      window.removeEventListener('resize', pinNav);
       window.visualViewport?.removeEventListener('resize', pinNav);
-      window.visualViewport?.removeEventListener('scroll', pinNav);
     };
   }, []);
 

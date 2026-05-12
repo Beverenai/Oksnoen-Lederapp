@@ -379,19 +379,19 @@ header, nav {
   padding-bottom: calc(var(--nav-h) + 12px);
 }
 
-/* Bottom nav — glassmorphic pill that owns the safe area */
+/* Bottom nav — JS pins the bar, CSS stretches background below viewport as backup */
  .bottom-nav {
   position: fixed;
-  /* bottom is controlled by JS (pinNav) — fall back to 0 before JS runs */
-  bottom: 0;
   left: 0;
   right: 0;
   z-index: 50;
-  padding-top: 4px;
-  /* Use probed value if available, else env() with 34px fallback (iPhone home indicator) */
-  padding-bottom: var(--actual-safe-bottom, env(safe-area-inset-bottom, 34px));
+  padding-top: 12px;
+  padding-bottom: calc(var(--actual-safe-bottom, env(safe-area-inset-bottom, 34px)) + 100px);
   min-height: calc(var(--nav-h) + 8px);
   margin: 0;
+  margin-bottom: -100px;
+  background: hsl(var(--background));
+  border-top: 1px solid hsl(var(--border) / 0.5);
   box-shadow: 0 -2px 20px 0 rgb(0 0 0 / 0.10);
   }
 
