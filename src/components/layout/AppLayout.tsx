@@ -397,31 +397,39 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
-  // PWA viewport lock: anchor .bottom-nav to actual visualViewport bottom.
-  // Works around iOS PWA dead-space where CSS bottom:0 doesn't reach the
-  // real viewport edge in standalone mode.
+  // PWA viewport lock: place .bottom-nav by explicit top-position from the
+  // actual visual viewport, so iOS standalone dead-space becomes usable.
   useEffect(() => {
+    let frame = 0;
+
     const update = () => {
-      const vv = window.visualViewport;
-      const vvH = vv?.height ?? window.innerHeight;
-      const offsetTop = vv?.offsetTop ?? 0;
-      // Distance from layout viewport top to visual viewport bottom
-      const bottomY = vvH + offsetTop;
-      document.documentElement.style.setProperty('--vv-bottom', `${Math.round(window.innerHeight - bottomY)}px`);
-      document.documentElement.style.setProperty('--vv-h', `${Math.round(vvH)}px`);
+      cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const vv = window.visualViewport;
+        const nav = document.querySelector('.bottom-nav') as HTMLElement | null;
+        const vvHeight = vv?.height ?? window.innerHeight;
+        const vvTop = vv?.offsetTop ?? 0;
+        const navHeight = nav?.offsetHeight ?? 0;
+        const navTop = Math.max(0, Math.round(vvTop + vvHeight - navHeight));
+
+        document.documentElement.style.setProperty('--vv-nav-top', `${navTop}px`);
+        document.documentElement.style.setProperty('--vv-h', `${Math.round(vvHeight)}px`);
+      });
     };
+
     update();
     window.addEventListener('resize', update);
     window.addEventListener('orientationchange', update);
     window.visualViewport?.addEventListener('resize', update);
     window.visualViewport?.addEventListener('scroll', update);
     return () => {
+      cancelAnimationFrame(frame);
       window.removeEventListener('resize', update);
       window.removeEventListener('orientationchange', update);
       window.visualViewport?.removeEventListener('resize', update);
       window.visualViewport?.removeEventListener('scroll', update);
     };
-  }, []);
+  }, [mobileMenuOpen, location.pathname]);
 
   const showDebug =
     import.meta.env.DEV ||
