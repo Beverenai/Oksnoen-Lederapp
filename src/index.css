@@ -389,7 +389,7 @@ header, nav {
 /* Bottom nav — glassmorphic pill that owns the safe area */
   .bottom-nav {
    position: fixed;
-   top: var(--vv-nav-top, auto);
+   top: var(--vv-nav-top, calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom, 34px) - 4px));
    bottom: auto;
    left: 0;
    right: 0;
