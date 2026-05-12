@@ -309,7 +309,7 @@ export default function Admin() {
 
       {/* Leader Dashboard or List View */}
       {leaderViewMode === 'grid' ? (
-        <LeaderDashboard leaders={leaders} homeConfig={localHomeConfig} onLeaderUpdated={loadData} onScheduleAutoExport={scheduleAutoExport} />
+        <LeaderDashboard leaders={leaders} homeConfig={localHomeConfig} onLeaderUpdated={loadData} />
       ) : (
         <LeaderListView leaders={leaders} homeConfig={localHomeConfig} onLeaderUpdated={loadData} />
       )}
