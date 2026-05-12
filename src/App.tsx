@@ -64,7 +64,7 @@ if (typeof window !== 'undefined') {
 // Loading fallback for lazy-loaded pages
 function PageLoader() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-background">
       <div className="animate-pulse text-muted-foreground">Laster...</div>
     </div>
   );
@@ -80,7 +80,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (authError) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4 p-4 text-center">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background gap-4 p-4 text-center">
         <p className="text-destructive">{authError}</p>
         <button onClick={retryAuth} className="px-4 py-2 rounded bg-primary text-primary-foreground">Prøv igjen</button>
       </div>

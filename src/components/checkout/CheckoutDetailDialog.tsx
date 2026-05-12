@@ -275,7 +275,7 @@ export function CheckoutDetailDialog({
           )}
           style={isHorizontal ? {
             transform: 'rotate(90deg)',
-            width: '100vh',
+            width: '100dvh',
             height: '100vw',
             position: 'absolute',
             top: '50%',

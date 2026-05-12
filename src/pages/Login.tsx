@@ -49,8 +49,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="min-h-screen flex items-center justify-center p-4 pt-safe">
+    <div className="min-h-[100dvh] bg-background">
+      <div className="min-h-[100dvh] flex items-center justify-center p-4 pt-safe">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
           <img 
