@@ -345,6 +345,8 @@ export type Database = {
           has_read: boolean | null
           has_seen_hajolo_tooltip: boolean | null
           id: string
+          last_app_edit_at: string
+          last_synced_at: string | null
           leader_id: string
           obs_message: string | null
           personal_message: string | null
@@ -362,6 +364,8 @@ export type Database = {
           has_read?: boolean | null
           has_seen_hajolo_tooltip?: boolean | null
           id?: string
+          last_app_edit_at?: string
+          last_synced_at?: string | null
           leader_id: string
           obs_message?: string | null
           personal_message?: string | null
@@ -379,6 +383,8 @@ export type Database = {
           has_read?: boolean | null
           has_seen_hajolo_tooltip?: boolean | null
           id?: string
+          last_app_edit_at?: string
+          last_synced_at?: string | null
           leader_id?: string
           obs_message?: string | null
           personal_message?: string | null
@@ -412,6 +418,8 @@ export type Database = {
           has_drivers_license: boolean | null
           id: string
           is_active: boolean | null
+          last_app_edit_at: string
+          last_synced_at: string | null
           ministerpost: string | null
           name: string
           phone: string
@@ -435,6 +443,8 @@ export type Database = {
           has_drivers_license?: boolean | null
           id?: string
           is_active?: boolean | null
+          last_app_edit_at?: string
+          last_synced_at?: string | null
           ministerpost?: string | null
           name: string
           phone: string
@@ -458,6 +468,8 @@ export type Database = {
           has_drivers_license?: boolean | null
           id?: string
           is_active?: boolean | null
+          last_app_edit_at?: string
+          last_synced_at?: string | null
           ministerpost?: string | null
           name?: string
           phone?: string

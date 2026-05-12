@@ -21,10 +21,10 @@ interface LeaderDashboardProps {
   leaders: Leader[];
   homeConfig: HomeScreenConfigItem[];
   onLeaderUpdated: () => void;
-  onScheduleAutoExport: () => void;
+  onScheduleAutoExport?: () => void;
 }
 
-export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onScheduleAutoExport }: LeaderDashboardProps) {
+export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated }: LeaderDashboardProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearch = useDeferredValue(searchQuery);
   const [selectedLeader, setSelectedLeader] = useState<LeaderWithContent | null>(null);
@@ -46,7 +46,6 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated, onSchedu
 
   const handleContentSaved = () => {
     onLeaderUpdated();
-    onScheduleAutoExport();
     refetchContent();
   };
 

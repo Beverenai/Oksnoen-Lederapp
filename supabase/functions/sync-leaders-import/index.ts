@@ -226,11 +226,12 @@ serve(async (req) => {
       // Check if leader exists
       const { data: existingLeader } = await supabase
         .from('leaders')
-        .select('id')
+        .select('id, last_app_edit_at, last_synced_at')
         .eq('phone', phone)
         .maybeSingle();
 
       let leaderId: string;
+      let leaderIsDirty = false;
 
       if (!existingLeader) {
         // Create new leader - name is required
@@ -266,17 +267,27 @@ serve(async (req) => {
         console.log(`Created leader: ${leader.name} (${phone})`);
       } else {
         leaderId = existingLeader.id;
+        // Dirty = edited in app since last successful sync.
+        // When dirty, sheet must NOT overwrite app values (app wins).
+        const lastSync = existingLeader.last_synced_at ? new Date(existingLeader.last_synced_at).getTime() : 0;
+        const lastEdit = existingLeader.last_app_edit_at ? new Date(existingLeader.last_app_edit_at).getTime() : 0;
+        leaderIsDirty = lastEdit > lastSync;
 
         // Update leader info if provided - always reactivate on sync
         const updateData: Record<string, unknown> = {
           is_active: true,  // Reactivate leader when synced
+          last_synced_at: new Date().toISOString(),
         };
-        if (leader.name) updateData.name = leader.name;
-        if (leader.email) updateData.email = leader.email;
-        if (leader.team) updateData.team = leader.team;
-        if (leader.cabin || leader.cabin_info) updateData.cabin = leader.cabin || leader.cabin_info;
-        if (leader.ministerpost) updateData.ministerpost = leader.ministerpost;
-        if (leader.age) updateData.age = leader.age;
+        if (!leaderIsDirty) {
+          if (leader.name) updateData.name = leader.name;
+          if (leader.email) updateData.email = leader.email;
+          if (leader.team) updateData.team = leader.team;
+          if (leader.cabin || leader.cabin_info) updateData.cabin = leader.cabin || leader.cabin_info;
+          if (leader.ministerpost) updateData.ministerpost = leader.ministerpost;
+          if (leader.age) updateData.age = leader.age;
+        } else {
+          console.log(`Leader ${phone} is dirty (app-edited since last sync) — preserving app fields, only marking last_synced_at`);
+        }
 
         if (Object.keys(updateData).length > 0) {
           const { error: updateError } = await supabase
@@ -326,27 +337,67 @@ serve(async (req) => {
         console.log(`Skipped cabin assignment for ${leader.name} (team: ${leader.team}, excluded)`);
       }
 
-      // Upsert leader content
-      const contentData = {
-        leader_id: leaderId,
-        current_activity: leader.current_activity || null,
-        personal_notes: leader.personal_notes || null,
-        personal_message: leader.personal_message || null,
-        obs_message: leader.obs_message || null,
-        extra_1: leader.extra_1 || null,
-        extra_2: leader.extra_2 || null,
-        extra_3: leader.extra_3 || null,
-        extra_4: leader.extra_4 || null,
-        extra_5: leader.extra_5 || null,
-      };
-
-      const { error: contentError } = await supabase
+      // Leader content: respect dirty flag (app wins on conflict)
+      const { data: existingContent } = await supabase
         .from('leader_content')
-        .upsert(contentData, { onConflict: 'leader_id' });
+        .select('id, last_app_edit_at, last_synced_at')
+        .eq('leader_id', leaderId)
+        .maybeSingle();
 
-      if (contentError) {
-        console.error(`Error updating content for ${phone}:`, contentError);
-        results.errors.push(`Content error for ${phone}: ${contentError.message}`);
+      const contentLastSync = existingContent?.last_synced_at ? new Date(existingContent.last_synced_at).getTime() : 0;
+      const contentLastEdit = existingContent?.last_app_edit_at ? new Date(existingContent.last_app_edit_at).getTime() : 0;
+      const contentDirty = !!existingContent && contentLastEdit > contentLastSync;
+
+      const nowIso = new Date().toISOString();
+      if (!existingContent) {
+        // Fresh row — write everything from sheet
+        const { error: contentError } = await supabase
+          .from('leader_content')
+          .insert({
+            leader_id: leaderId,
+            current_activity: leader.current_activity || null,
+            personal_notes: leader.personal_notes || null,
+            personal_message: leader.personal_message || null,
+            obs_message: leader.obs_message || null,
+            extra_1: leader.extra_1 || null,
+            extra_2: leader.extra_2 || null,
+            extra_3: leader.extra_3 || null,
+            extra_4: leader.extra_4 || null,
+            extra_5: leader.extra_5 || null,
+            last_synced_at: nowIso,
+          });
+        if (contentError) {
+          console.error(`Error inserting content for ${phone}:`, contentError);
+          results.errors.push(`Content error for ${phone}: ${contentError.message}`);
+        }
+      } else if (contentDirty) {
+        // App-edited since last sync — only mark synced, don't overwrite
+        console.log(`Content for ${phone} dirty — preserving app values`);
+        await supabase
+          .from('leader_content')
+          .update({ last_synced_at: nowIso })
+          .eq('leader_id', leaderId);
+      } else {
+        // Clean — overwrite from sheet
+        const { error: contentError } = await supabase
+          .from('leader_content')
+          .update({
+            current_activity: leader.current_activity || null,
+            personal_notes: leader.personal_notes || null,
+            personal_message: leader.personal_message || null,
+            obs_message: leader.obs_message || null,
+            extra_1: leader.extra_1 || null,
+            extra_2: leader.extra_2 || null,
+            extra_3: leader.extra_3 || null,
+            extra_4: leader.extra_4 || null,
+            extra_5: leader.extra_5 || null,
+            last_synced_at: nowIso,
+          })
+          .eq('leader_id', leaderId);
+        if (contentError) {
+          console.error(`Error updating content for ${phone}:`, contentError);
+          results.errors.push(`Content error for ${phone}: ${contentError.message}`);
+        }
       }
     }
 
