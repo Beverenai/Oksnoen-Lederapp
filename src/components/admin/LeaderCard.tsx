@@ -50,16 +50,16 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
     >
       <CardContent className="p-2 sm:p-4 h-full flex flex-col">
         <div className="flex items-center sm:items-start gap-2 sm:gap-3 sm:mb-3">
-          <Avatar className="w-8 h-8 sm:w-12 sm:h-12 border-2 border-primary/20 shrink-0">
+          <Avatar className="w-8 h-8 sm:w-12 sm:h-12 shrink-0">
             {leader.profile_image_url && (
-              <AvatarImage src={leader.profile_image_url} alt={leader.name} loading="lazy" />
+              <AvatarImage src={leader.profile_image_url} alt={leader.name} loading="lazy" className="object-cover" />
             )}
             <AvatarFallback className="bg-primary/10 text-primary text-xs sm:text-sm font-medium">
               {getFirstName(leader.name).slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground text-xs sm:text-base break-words">
+            <h3 className="font-semibold text-foreground text-xs sm:text-sm truncate">
               {getFirstName(leader.name)}
             </h3>
             {leader.ministerpost && (
