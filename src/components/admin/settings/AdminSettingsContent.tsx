@@ -1,4 +1,3 @@
-import { RefObject } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,14 +11,9 @@ import {
   Save,
   Loader2,
   Shield,
-  RefreshCw,
   Heart,
-  FileSpreadsheet,
-  CheckCircle2,
-  Upload,
   UserCheck,
   Search,
-  Check,
 } from 'lucide-react';
 import { CabinsTab } from '@/components/admin/CabinsTab';
 import { ParticipantImportTab } from '@/components/admin/ParticipantImportTab';
@@ -29,8 +23,6 @@ import { RopeControlTab } from '@/components/admin/RopeControlTab';
 import { ActivitiesTab } from '@/components/admin/ActivitiesTab';
 import { SkjaerTab } from '@/components/admin/SkjaerTab';
 import { StoriesTab } from '@/components/admin/StoriesTab';
-import { CabinAssignmentStatus, CabinAssignmentStatusRef } from '@/components/admin/CabinAssignmentStatus';
-import { SyncErrorDetails } from '@/components/admin/SyncErrorDetails';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
@@ -38,16 +30,6 @@ type AppRole = 'superadmin' | 'admin' | 'nurse' | 'leader';
 
 interface LeaderWithRole extends Leader {
   role: AppRole;
-}
-
-interface SyncError {
-  error: string;
-  webhookStatus?: number;
-  webhookUrl?: string;
-  correlationId?: string;
-  rawResponse?: string;
-  n8nError?: string | null;
-  n8nStackTrace?: string[] | null;
 }
 
 interface AdminSettingsContentProps {
@@ -69,36 +51,6 @@ interface AdminSettingsContentProps {
   newLeaderIsAdmin: boolean;
   setNewLeaderIsAdmin: (value: boolean) => void;
   addLeader: () => Promise<void>;
-  // Sync props
-  cabinStatusRef: RefObject<CabinAssignmentStatusRef>;
-  isSyncing: boolean;
-  storedWebhookUrl: string;
-  lastSyncSuccess: boolean;
-  lastSyncTime: string | null;
-  syncError: SyncError | null;
-  triggerSync: () => Promise<void>;
-  formatSyncTime: (isoString: string) => string | null;
-  // Export props
-  isExporting: boolean;
-  storedExportWebhookUrl: string;
-  lastExportSuccess: boolean;
-  lastExportTime: string | null;
-  exportError: string | null;
-  pendingExport: boolean;
-  exportCountdown: number;
-  triggerExport: (isAutoExport: boolean) => Promise<void>;
-  cancelPendingExport: () => void;
-  // Setup props
-  webhookUrl: string;
-  setWebhookUrl: (value: string) => void;
-  isSavingWebhook: boolean;
-  saveWebhookUrl: () => Promise<void>;
-  exportWebhookUrl: string;
-  setExportWebhookUrl: (value: string) => void;
-  isSavingExportWebhook: boolean;
-  saveExportWebhookUrl: () => Promise<void>;
-  showSyncInstructions: boolean;
-  setShowSyncInstructions: (value: boolean) => void;
 }
 
 export function AdminSettingsContent({
@@ -118,33 +70,6 @@ export function AdminSettingsContent({
   newLeaderIsAdmin,
   setNewLeaderIsAdmin,
   addLeader,
-  cabinStatusRef,
-  isSyncing,
-  storedWebhookUrl,
-  lastSyncSuccess,
-  lastSyncTime,
-  syncError,
-  triggerSync,
-  formatSyncTime,
-  isExporting,
-  storedExportWebhookUrl,
-  lastExportSuccess,
-  lastExportTime,
-  exportError,
-  pendingExport,
-  exportCountdown,
-  triggerExport,
-  cancelPendingExport,
-  webhookUrl,
-  setWebhookUrl,
-  isSavingWebhook,
-  saveWebhookUrl,
-  exportWebhookUrl,
-  setExportWebhookUrl,
-  isSavingExportWebhook,
-  saveExportWebhookUrl,
-  showSyncInstructions,
-  setShowSyncInstructions,
 }: AdminSettingsContentProps) {
   switch (activeSection) {
     case 'leaders':
