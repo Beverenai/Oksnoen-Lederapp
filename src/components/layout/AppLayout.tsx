@@ -346,6 +346,23 @@ export default function AppLayout({ children }: AppLayoutProps) {
     };
   }, [leader, isAdmin, isNurse, fetchHasReadStatus]);
 
+  useEffect(() => {
+    const nav = document.querySelector('.bottom-nav');
+
+    if (nav) {
+      const rect = nav.getBoundingClientRect();
+      console.log('NAV POSITION:', {
+        top: rect.top,
+        bottom: rect.bottom,
+        height: rect.height,
+        windowInnerHeight: window.innerHeight,
+        visualViewportHeight: window.visualViewport?.height,
+        diff: window.innerHeight - rect.bottom,
+        parentNode: nav.parentElement?.tagName + '.' + nav.parentElement?.className?.toString().slice(0, 40),
+      });
+    }
+  }, []);
+
   // Handle dismissing the Hajolo tooltip
   const handleDismissTooltip = async () => {
     if (!leader?.id) return;
