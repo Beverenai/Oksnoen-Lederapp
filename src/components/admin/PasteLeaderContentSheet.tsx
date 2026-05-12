@@ -59,6 +59,7 @@ const HEADER_ALIASES: Record<string, AnyKey> = {
   'aktivitet': 'current_activity', 'activity': 'current_activity',
   'ansvar': 'extra_activity',
   'notater': 'personal_notes', 'notes': 'personal_notes',
+  'notater til deg': 'personal_notes', 'notater/til deg': 'personal_notes',
   'til deg': 'personal_message', 'til lederen': 'personal_message', 'personal_message': 'personal_message',
   'obs': 'obs_message', 'obs!': 'obs_message', 'viktig': 'obs_message',
   'ekstra #1': 'extra_1', 'ekstra 1': 'extra_1', 'ekstra1': 'extra_1',
