@@ -77,10 +77,20 @@ function read(): DebugValues {
 
 export function PwaDebugPanel() {
   const [v, setV] = useState<DebugValues>(() => read());
+  const [culprits, setCulprits] = useState<Culprit[]>([]);
 
   useEffect(() => {
-    const update = () => setV(read());
+    const update = () => {
+      setV(read());
+      const c = findCulprits();
+      setCulprits(c);
+    };
     update();
+    // Log once after mount so it's easy to copy from console
+    setTimeout(() => {
+      // eslint-disable-next-line no-console
+      console.log('CONTAINING BLOCK CULPRITS:', findCulprits());
+    }, 300);
     const id = window.setInterval(update, 500);
     window.addEventListener('resize', update);
     window.addEventListener('orientationchange', update);
@@ -136,6 +146,13 @@ export function PwaDebugPanel() {
       {row('nav.bottom', v.navBottom)}
       {row('nav.height', v.navHeight)}
       {row('viewport', v.viewport)}
+      <div style={{ marginTop: 6, opacity: 0.7 }}>culprits ({culprits.length}):</div>
+      {culprits.length === 0 && <div>(none)</div>}
+      {culprits.map((c, i) => (
+        <div key={i}>
+          {c.tag}.{c.cls} → {c.prop}={c.value}
+        </div>
+      ))}
     </div>
   );
 }
