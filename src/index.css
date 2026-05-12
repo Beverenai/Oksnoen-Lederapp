@@ -389,21 +389,19 @@ header, nav {
 /* Bottom nav — glassmorphic pill that owns the safe area */
   .bottom-nav {
    position: fixed;
-   /* Anchor to the actual visual viewport bottom (set at runtime by AppLayout).
-      Falls back to 0 if the variable isn't set yet. */
-   bottom: var(--vv-bottom, 0px);
+   top: var(--vv-nav-top, calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom, 34px) - 4px));
+   bottom: auto;
    left: 0;
    right: 0;
    z-index: 50;
    padding-top: 4px;
    padding-bottom: env(safe-area-inset-bottom, 34px);
-   /* Solid app background so the safe-area region below the icons matches the body
-      and we don't get a visible stripe / dead zone on iOS PWA. */
+   min-height: calc(var(--nav-h) + env(safe-area-inset-bottom, 34px) + 4px);
    background: hsl(var(--background));
    border-top: 0.5px solid hsl(var(--border) / 0.5);
    margin: 0;
    box-shadow: 0 -2px 20px 0 rgb(0 0 0 / 0.10);
- }
+  }
 
 /* Underlay no longer needed — pill covers safe area */
 .bottom-nav-underlay {
