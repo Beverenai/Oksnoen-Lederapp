@@ -1,49 +1,51 @@
+## Hvorfor scroll er ødelagt
 
-Mål: få app-shellen til faktisk å bruke nederste del av iPhone-skjermen, uten å miste pill-menyen.
+I `src/components/layout/AppLayout.tsx` (linje 399) er root-containeren:
 
-Hva jeg fant
-- `index.html` og manifest-oppsettet ser nå riktig ut for standalone.
-- Problemet ser ikke lenger ut til å være selve navbaren.
-- Nåværende kode bruker allerede `--app-height`, men den settes fra `window.visualViewport.height` i `src/main.tsx`.
-- På iPhone kan `visualViewport.height` være lavere enn den faktiske tilgjengelige standalone-flaten. Da blir hele root-containeren for kort.
-- `AppLayout.tsx` låser hele app-shellen direkte til `style={{ height: 'var(--app-height, 100dvh)' }}`.
-- Når rooten er for lav, hjelper det ikke at `.bottom-nav` ligger på `bottom: 0`; safe area under oppleves fortsatt som “låst” fordi selve appen stopper før den.
+```
+min-h-dvh h-full flex-col overflow-hidden
+```
 
-Rotårsak
-- Vi styrer hele appens høyde fra feil målepunkt.
-- `visualViewport.height` er sannsynligvis synderen nå, ikke `-webkit-fill-available`.
-- App-shellen bør ikke hardlåses til en høyde som kan bli mindre enn faktisk skjermflate.
+`<main>` inni er `flex-1 ... overflow-y-auto`.
 
-Plan
-1. Bytt viewport-strategi i `src/main.tsx`
-- Slutt å bruke `visualViewport.height` som primær kilde for app-shell-høyde.
-- Bruk `window.innerHeight` som basis for `--app-height`.
-- Behold resize/orientation-oppdatering, men gjør løsningen enklere og mer stabil på iPhone.
+For at `flex-1 overflow-y-auto` skal kunne scrolle, må forelderen ha en **fast høyde** lik viewporten. Etter forrige runde der vi byttet fra `height` til `min-height` på `html`, `body`, `#root` (og fjernet `--app-height`), har root-containeren nå bare `min-height: 100dvh` — ingen øvre grense. Når innholdet er høyere enn skjermen, vokser hele app-shellen i stedet for at `<main>` får en intern scroll. Samtidig klipper `overflow-hidden` på root alt som havner under viewporten, så det ser ut som at sidene ikke kan scrolles.
 
-2. Gjør root-layout mer tolerant i `src/index.css`
-- Endre `html`, `body` og `#root` fra hard `height` til en kombinasjon der appen minst fyller viewporten, i stedet for å bli klippet.
-- Behold kontrollert scrolling, men unngå at root-nivået blir “kortere enn skjermen”.
+Dette er en ren regresjon fra forrige fix og har ingenting med PWA-bunnen å gjøre.
 
-3. Juster app-shellen i `src/components/layout/AppLayout.tsx`
-- Bytt fra hard `height` til `minHeight` eller en mer robust full-height-strategi på wrapperen.
-- Sørg for at `main` fortsatt er eneste scroll-område, men at shellen kan strekke seg helt ned.
+## Fix
 
-4. Finjuster bunnnavigasjon og content-spacing
-- Behold pill-designet på `.bottom-nav`.
-- La safe area fortsatt være en del av menyens interne padding.
-- Match `app-content` sin `padding-bottom` bedre mot faktisk nav-høyde, så vi ikke reserverer mer plass enn nødvendig.
+Gi **selve app-shell-wrapperen** i `AppLayout` en fast høyde lik dynamisk viewport, mens `html`/`body`/`#root` får beholde `min-height`-strategien sin (som er det som holder PWA-bunnen riktig).
 
-5. Begrens endringen til mobiloppsettet
-- Desktop skal fortsatt bruke dagens oppførsel.
-- Endringen holdes isolert til mobil/standalone-app-shellen.
+### Endring i `src/components/layout/AppLayout.tsx` (linje 399)
 
-Filer som bør endres
-- `src/main.tsx`
-- `src/index.css`
-- `src/components/layout/AppLayout.tsx`
+Bytt fra:
+```
+className="bg-background flex min-h-dvh h-full flex-col overflow-hidden overflow-x-hidden w-full max-w-full pl-safe pr-safe"
+```
 
-Forventet resultat
-- App-shellen stopper ikke for tidlig på iPhone.
-- Nederste safe area blir en faktisk del av appens høyde.
-- Pill-menyen beholdes nederst.
-- Den låste plassen nederst blir klart mindre eller forsvinner.
+til (mobil = fast dvh-høyde, desktop = uendret oppførsel):
+```
+className="bg-background flex h-[100dvh] lg:h-auto lg:min-h-dvh flex-col overflow-hidden overflow-x-hidden w-full max-w-full pl-safe pr-safe"
+```
+
+- `h-[100dvh]` på mobil gir `<main className="flex-1 overflow-y-auto">` en konkret høyde å scrolle innenfor.
+- `lg:h-auto lg:min-h-dvh` beholder dagens desktop-oppførsel (sidebaren er `fixed`, og main scroller med dokumentet).
+- `overflow-hidden` på root beholdes så ingenting lekker forbi viewporten — men nå har root også en høyde lik viewporten, så `<main>` får faktisk scroll i stedet for å bli klippet bort.
+
+### Hva som IKKE endres
+
+- `html`, `body`, `#root` i `src/index.css` røres ikke. PWA-fyllingen nederst er fortsatt korrekt.
+- `--app-height` introduseres ikke på nytt.
+- Ingen JavaScript for viewport-høyde.
+- `.bottom-nav` og safe-area-paddingen røres ikke.
+- Desktop-layouten endres ikke.
+
+## Forventet resultat
+
+- Sidene (inkl. `/nurse`, `/leaders` osv.) kan scrolles igjen på både mobil og desktop.
+- Bunnen av iPhone-skjermen brukes fortsatt fullt ut (forrige fix beholdes).
+- Pill-menyen ligger fortsatt riktig nederst.
+
+## Filer som endres
+
+- `src/components/layout/AppLayout.tsx` (én linje, klassenavn på root-`div`)
