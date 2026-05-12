@@ -5,6 +5,11 @@ const config: CapacitorConfig = {
   appName: 'Oksnøen LederApp',
   webDir: 'dist',
   bundledWebRuntime: false,
+  ios: {
+    contentInset: 'always',
+    scrollEnabled: true,
+    backgroundColor: '#0a0f1c',
+  },
 };
 
 export default config;
