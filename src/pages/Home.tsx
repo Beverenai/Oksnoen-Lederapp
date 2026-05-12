@@ -31,6 +31,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullIndicator } from '@/components/ui/pull-indicator';
 import { updateWidgetData } from '@/lib/capacitorWidget';
+import { PwaDebugPanel } from '@/components/debug/PwaDebugPanel';
 
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
@@ -133,6 +134,10 @@ export default function Home() {
   const { leader, effectiveLeader, isAdmin, isNurse } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const showDebug =
+    import.meta.env.DEV ||
+    (typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('debug') === '1');
   const [content, setContent] = useState<LeaderContent | null>(null);
   const [sessionActivitiesText, setSessionActivitiesText] = useState<string>('');
   const [config, setConfig] = useState<HomeScreenConfig[]>([]);
@@ -373,6 +378,7 @@ export default function Home() {
 
   return (
     <div ref={pullRef} className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 pb-24 overflow-y-auto">
+      {showDebug && <PwaDebugPanel />}
       <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
       {/* Header with background image */}
       <div className="relative h-44 md:h-52 overflow-hidden">
