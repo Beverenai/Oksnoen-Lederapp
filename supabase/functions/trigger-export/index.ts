@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
 
     const { data: leaders, error: leadersError } = await supabase
       .from('leaders')
-      .select('*, last_app_edit_at, last_synced_at')
+      .select('*')
       .eq('is_active', true)
       .order('name')
 
@@ -85,30 +85,12 @@ Deno.serve(async (req) => {
     const { data: contents } = await supabase.from('leader_content').select('*')
     const contentMap = new Map(contents?.map(c => [c.leader_id, c]) || [])
 
-    // Only export rows that have unsynced app changes (dirty).
-    // A leader is dirty if either the leader row OR its content row has
-    // last_app_edit_at > last_synced_at (or never synced).
-    const isDirty = (lastEdit: string | null | undefined, lastSync: string | null | undefined) => {
-      if (!lastSync) return true
-      if (!lastEdit) return false
-      return new Date(lastEdit).getTime() > new Date(lastSync).getTime()
-    }
-
-    const dirtyLeaders = (leaders ?? []).filter(leader => {
-      const content = contentMap.get(leader.id) as { last_app_edit_at?: string; last_synced_at?: string } | undefined
-      return isDirty(leader.last_app_edit_at, leader.last_synced_at)
-        || (content && isDirty(content.last_app_edit_at, content.last_synced_at))
-    })
-
-    if (dirtyLeaders.length === 0) {
-      console.log(`trigger-export [${correlationId}]: No dirty leaders to export`)
-      return new Response(
-        JSON.stringify({ success: true, message: 'No changes to export', leadersExported: 0, correlationId }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const exportData = dirtyLeaders.map(leader => {
+    // Send ALL active leaders so n8n's "clear & write all rows" flow works.
+    // Manual sync is the only trigger; user explicitly wants the sheet
+    // overwritten when they press Sync. Dirty-protection on import side
+    // still ensures sheet doesn't overwrite unsynced app edits.
+    const allLeaders = leaders ?? []
+    const exportData = allLeaders.map(leader => {
       const content = contentMap.get(leader.id)
       return {
         phone: leader.phone,
@@ -148,8 +130,8 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Mark exported rows as clean so they don't re-export until user edits again.
-    const exportedIds = dirtyLeaders.map(l => l.id)
+    // Mark exported rows as clean (last_synced_at = now) so dirty badge resets.
+    const exportedIds = allLeaders.map(l => l.id)
     const nowIso = new Date().toISOString()
     await supabase.from('leaders').update({ last_synced_at: nowIso }).in('id', exportedIds)
     await supabase.from('leader_content').update({ last_synced_at: nowIso }).in('leader_id', exportedIds)
