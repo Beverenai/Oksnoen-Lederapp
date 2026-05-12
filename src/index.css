@@ -15,6 +15,14 @@
   --nav-h: 56px;
 }
 
+/* TEMP DIAGNOSTIC COLORS — slettes etter at vi har funnet dødplassen */
+html { background: #ff0000 !important; }
+body { background: #00ff00 !important; }
+#root { background: #0000ff !important; }
+.bottom-nav { background: #ffff00 !important; }
+.app-content { background: #ff00ff !important; }
+/* END TEMP DIAGNOSTIC COLORS */
+
 /* Responsive media defaults */
 img, video {
   max-width: 100%;
