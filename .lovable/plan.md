@@ -1,33 +1,54 @@
-## Fjern n8n-synkronisering (behold kun Lim inn)
+## Mål
 
-Synk-knapper, edge-funksjoner og webhook-konfigurasjon fjernes helt. Lim inn-funksjonen tar over som eneste import-vei. Offline-køen (`useBackgroundSync`) er separat og blir værende.
+Fjerne den synlige mørke stripa under bunnmenyen på iPhone PWA (iOS 26.x) ved å kompensere for iOS' kjente bug der `position: fixed; bottom: 0` ikke følger `window.innerHeight` korrekt når Safari-chrome animerer.
 
-### 1. `src/pages/admin/Admin.tsx`
-- Fjerne `triggerSync`, `loadDirtyCount`, `loadLastSyncTime`, `loadExportWebhookUrl`, `formatSyncTime`.
-- Fjerne all sync-state: `isSyncing`, `lastSyncSuccess`, `lastSyncTime`, `storedExportWebhookUrl`, `dirtyCount`.
-- Fjerne hele "Synk med Sheet"-knappen og tidsstempel-visningen i headeren.
-- Fjerne ubrukte imports (`RefreshCw`, `Check` hvis ikke brukt andre steder).
+## Løsning
 
-### 2. `src/pages/admin/AdminSettings.tsx`
-- Fjerne nav-kortene `sync` og `setup` fra `navItems` + tilhørende `sectionLabels`-oppføringer.
-- Fjerne all sync/eksport/webhook-state og -funksjoner: `triggerSync`, `triggerExport`, `cancelPendingExport`, `syncLeaderCabins`, `loadWebhookUrl`, `loadExportWebhookUrl`, `loadLastSyncTime`, `loadLastExportTime`, `saveWebhookUrl`, `saveExportWebhookUrl`, alle relaterte useState/useRef-er.
-- Fjerne tilhørende props som sendes til `<AdminSettingsContent>`.
-- Beholde leder-CRUD, deaktiver/aktiver-funksjoner uendret.
+Bruk `window.visualViewport` til å beregne hvor mye av layout-viewport som er "skjult" under iOS UI, og forskyv `.bottom-nav` med `transform: translate3d(0, -offset, 0)` (GPU-akselerert, omgår fixed-buggen).
 
-### 3. `src/components/admin/settings/AdminSettingsContent.tsx`
-- Fjerne `case 'sync'` og `case 'setup'`-blokker.
-- Fjerne tilhørende props fra `AdminSettingsContentProps` (sync, export, setup, webhook, syncError, formatSyncTime, cabinStatusRef, etc.).
-- Fjerne ubrukte imports: `SyncErrorDetails`, `RefreshCw`, `Upload`, `FileSpreadsheet`, `CheckCircle2`, `CabinAssignmentStatus`.
+## Endringer
 
-### 4. Slett filer
-- `src/components/admin/SyncErrorDetails.tsx`
-- `supabase/functions/trigger-export/index.ts` (mappen)
-- `supabase/functions/trigger-sync/index.ts` (mappen) — hvis den finnes
-- `supabase/functions/sync-leaders-import/index.ts` (mappen)
+Kun én fil: `src/components/layout/AppLayout.tsx`.
 
-### 5. La være i fred
-- `useBackgroundSync` (offline-kø, urelatert)
-- `last_synced_at` / `last_app_edit_at` DB-kolonner (brukes fortsatt av Lim inn for å markere når data ble overskrevet)
-- `app_config`-rader med gamle webhook URLs blir liggende uten effekt — kan ryddes manuelt i DB hvis ønsket
+Legg til en `useEffect` i `AppLayout`-komponenten (etter eksisterende effekter, før `return`):
 
-Ingen DB-migrasjoner nødvendig.
+```tsx
+// iOS 26 PWA fix: compensate for visualViewport offset on .bottom-nav
+useEffect(() => {
+  const bottomBar = document.querySelector<HTMLElement>('.bottom-nav');
+  if (!bottomBar || !window.visualViewport) return;
+
+  const viewport = window.visualViewport;
+
+  const updateBottomBar = () => {
+    const offset = Math.max(
+      0,
+      window.innerHeight - viewport.height - viewport.offsetTop
+    );
+    bottomBar.style.transform = `translate3d(0, ${-offset}px, 0)`;
+  };
+
+  viewport.addEventListener('resize', updateBottomBar);
+  viewport.addEventListener('scroll', updateBottomBar);
+  updateBottomBar();
+
+  return () => {
+    viewport.removeEventListener('resize', updateBottomBar);
+    viewport.removeEventListener('scroll', updateBottomBar);
+    bottomBar.style.transform = '';
+  };
+}, []);
+```
+
+## Detaljer / vurderinger
+
+- Effekten kjører i alle miljøer; på Capacitor og desktop blir `offset` typisk 0, så `translate3d(0,0,0)` har ingen visuell effekt (bare promoterer laget til GPU — uskadelig).
+- `.bottom-nav` er Portal'et til `document.body`, så `document.querySelector('.bottom-nav')` finner det uavhengig av React-treet. Hvis elementet ikke er montert ennå (f.eks. før første render), avbryter effekten — det er trygt fordi nav-en er en del av `AppLayout` og monteres synkront sammen med denne effekten på første frame etter mount.
+- Vi rører ikke `src/index.css`. Eksisterende `bottom: 0` + `padding-bottom: calc(4px + env(safe-area-inset-bottom))` beholdes.
+- Cleanup nullstiller `transform` slik at vi ikke etterlater inline style hvis komponenten unmountes.
+
+## Verifikasjon
+
+- PWA på iPhone (iOS 26): den mørke stripa under nav-pillen skal forsvinne; nav-en ligger flush med home indicator-området.
+- Capacitor iOS: visuelt uendret.
+- Desktop (lg): uendret (`.bottom-nav` brukes kun på mobil via `lg:hidden`).
