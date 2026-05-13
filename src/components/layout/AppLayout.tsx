@@ -349,6 +349,34 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Pure-CSS safe-area pinning (see .bottom-nav). iOS 26 vh bug is handled by
   // using 100dvh and env(safe-area-inset-bottom) instead of bottom: 0.
 
+  // iOS 26 PWA fix: compensate for visualViewport offset on .bottom-nav.
+  // Works around the bug where position: fixed; bottom: 0 doesn't track
+  // window.innerHeight while Safari chrome animates, leaving a dark strip.
+  useEffect(() => {
+    const bottomBar = document.querySelector<HTMLElement>('.bottom-nav');
+    if (!bottomBar || !window.visualViewport) return;
+
+    const viewport = window.visualViewport;
+
+    const updateBottomBar = () => {
+      const offset = Math.max(
+        0,
+        window.innerHeight - viewport.height - viewport.offsetTop
+      );
+      bottomBar.style.transform = `translate3d(0, ${-offset}px, 0)`;
+    };
+
+    viewport.addEventListener('resize', updateBottomBar);
+    viewport.addEventListener('scroll', updateBottomBar);
+    updateBottomBar();
+
+    return () => {
+      viewport.removeEventListener('resize', updateBottomBar);
+      viewport.removeEventListener('scroll', updateBottomBar);
+      bottomBar.style.transform = '';
+    };
+  }, []);
+
   // Handle dismissing the Hajolo tooltip
   const handleDismissTooltip = async () => {
     if (!leader?.id) return;
