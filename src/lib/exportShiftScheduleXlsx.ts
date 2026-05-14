@@ -298,29 +298,12 @@ async function writeSpecialBlock(
   // Rows: 4 teams (one per row) for clarity
   const dayAss = assignments.filter((a) => a.day_index === dayIndex);
   const TEAMS: Team[] = ['team1', 'team2', 'team1f', 'team2f'];
+  const thinBorder = { style: 'thin' as const, color: { argb: 'FFCCCCCC' } };
   TEAMS.forEach((t, ti) => {
     const r = startRow + 3 + ti;
     ws.getCell(r, 1).value = TEAM_LABEL[t];
     ws.getCell(r, 1).font = { bold: true };
-    types.forEach((st, i) => {
-      const cell = ws.getCell(r, i + 2);
-      const { text, filled } = teamCellForShift(dayAss, st, t, leaderById);
-      cell.value = text;
-      if (filled) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAM_FILL[t] } };
-        cell.font = {
-          color: { argb: t === 'team1f' ? 'FF000000' : 'FFFFFFFF' },
-          bold: true,
-          size: 9,
-        };
-      }
-      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-      cell.border = {
-        top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-        bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-        left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-        right: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-      };
-    });
+    const cells = types.map((st) => teamCellForShift(dayAss, st, t, leaderById));
+    writeTeamRowMerged(ws, r, 2, cells, t, thinBorder, thinBorder);
   });
 }
