@@ -47,25 +47,33 @@ function shortName(fullName: string): string {
   return `${firstName} ${lastInitials}`;
 }
 
-/** Build the cell content lines for a (day, shift) cell */
-function cellLines(
+/** Single (leader) names for a shift cell, joined by line breaks. */
+function singleNamesForShift(
   dayAssignments: Assignment[],
   st: ShiftType,
   leaderById: Map<string, Leader>,
-): { team?: Team; text: string }[] {
-  const items = dayAssignments.filter((a) => a.shift_type_id === st.id);
-  const lines: { team?: Team; text: string }[] = [];
-  for (const a of items) {
-    if (a.assignment_type === 'team' && a.team_name) {
-      const t = a.team_name as Team;
-      lines.push({ team: t, text: `${TEAM_LABEL[t] || t}${a.note ? a.note : ''}` });
-    } else if (a.assignment_type === 'leader' && a.leader_id) {
-      const ldr = leaderById.get(a.leader_id);
+): string {
+  const names = dayAssignments
+    .filter((a) => a.shift_type_id === st.id && a.assignment_type === 'leader' && a.leader_id)
+    .map((a) => {
+      const ldr = leaderById.get(a.leader_id!);
       const name = ldr?.name ? shortName(ldr.name) : 'Ukjent';
-      lines.push({ text: a.note ? `${name} (${a.note})` : name });
-    }
-  }
-  return lines;
+      return a.note ? `${name} (${a.note})` : name;
+    });
+  return names.join('\n');
+}
+
+/** Returns "Team 1*" if team is on this shift, else null. */
+function teamLabelForShift(
+  dayAssignments: Assignment[],
+  st: ShiftType,
+  team: Team,
+): string | null {
+  const a = dayAssignments.find(
+    (x) => x.shift_type_id === st.id && x.assignment_type === 'team' && x.team_name === team,
+  );
+  if (!a) return null;
+  return `${TEAM_LABEL[team]}${a.note ?? ''}`;
 }
 
 export async function exportShiftScheduleXlsx(opts: {
