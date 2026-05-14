@@ -1,0 +1,214 @@
+import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ArrowLeft, ClipboardList, RefreshCw, CalendarX } from 'lucide-react';
+import type { Tables } from '@/integrations/supabase/types';
+
+type ShiftSchedule = Tables<'shift_schedules'>;
+type ShiftAssignment = Tables<'shift_assignments'>;
+type ShiftType = Tables<'shift_types'>;
+
+const PROFILE_TO_TEAM: Record<string, string> = {
+  '1': 'team1', '2': 'team2', '1f': 'team1f', '2f': 'team2f',
+};
+
+const DAY_TYPE_LABEL: Record<string, string> = {
+  arrival: 'Ankomstdag',
+  departure: 'Avreisedag',
+  normal: '',
+};
+
+const TEAM_LABEL: Record<string, string> = {
+  team1: 'Team 1', team2: 'Team 2', team1f: 'Team 1F', team2f: 'Team 2F',
+};
+
+export default function MyShifts() {
+  const navigate = useNavigate();
+  const { effectiveLeader, isAdmin } = useAuth();
+  const leaderId = effectiveLeader?.id;
+
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ['my-shifts', leaderId],
+    enabled: !!leaderId,
+    staleTime: 30 * 1000,
+    queryFn: async () => {
+      // Get latest schedule. Leaders see only published; admins also see latest draft.
+      let scheduleQuery = supabase
+        .from('shift_schedules')
+        .select('*')
+        .order('year', { ascending: false })
+        .order('period_number', { ascending: false });
+      if (!isAdmin) scheduleQuery = scheduleQuery.eq('status', 'published');
+      const { data: schedules, error: schErr } = await scheduleQuery.limit(1);
+      if (schErr) throw schErr;
+      const schedule = (schedules || [])[0] as ShiftSchedule | undefined;
+      if (!schedule) return { schedule: null, assignments: [], shiftTypes: [], myTeam: null };
+
+      const [{ data: assignments, error: aErr }, { data: shiftTypes, error: tErr }, { data: leaderTeam }] = await Promise.all([
+        supabase.from('shift_assignments').select('*').eq('schedule_id', schedule.id),
+        supabase.from('shift_types').select('*'),
+        supabase.from('leader_teams').select('team').eq('leader_id', leaderId!).eq('period_number', schedule.period_number).eq('year', schedule.year).maybeSingle(),
+      ]);
+      if (aErr) throw aErr;
+      if (tErr) throw tErr;
+
+      const teamFromRotation = leaderTeam?.team ? PROFILE_TO_TEAM[leaderTeam.team] : null;
+      const teamFromProfile = effectiveLeader?.team ? PROFILE_TO_TEAM[effectiveLeader.team.trim()] : null;
+      const myTeam = teamFromRotation ?? teamFromProfile;
+
+      return {
+        schedule,
+        assignments: (assignments || []) as ShiftAssignment[],
+        shiftTypes: (shiftTypes || []) as ShiftType[],
+        myTeam,
+      };
+    },
+  });
+
+  const grouped = useMemo(() => {
+    if (!data?.schedule) return [];
+    const { schedule, assignments, shiftTypes, myTeam } = data;
+    const typeById = new Map(shiftTypes.map((t) => [t.id, t]));
+
+    const myAssignments = assignments.filter((a) => {
+      if (a.assignment_type === 'leader') return a.leader_id === leaderId;
+      if (a.assignment_type === 'team') {
+        const excluded = Array.isArray(a.excluded_leader_ids) ? a.excluded_leader_ids : [];
+        return !!myTeam && a.team_name === myTeam && !excluded.includes(leaderId!);
+      }
+      return false;
+    });
+
+    const days: { dayIndex: number; dayType: string; rows: { st: ShiftType; note: string | null }[]; totalHours: number }[] = [];
+    for (let d = 0; d < schedule.period_length; d++) {
+      const dayItems = myAssignments
+        .filter((a) => a.day_index === d)
+        .map((a) => ({ st: typeById.get(a.shift_type_id)!, note: a.note }))
+        .filter((r) => r.st)
+        .sort((a, b) => (a.st.start_time || '').localeCompare(b.st.start_time || ''));
+      const dayType = d === 0 ? 'arrival' : d === schedule.period_length - 1 ? 'departure' : 'normal';
+      const totalHours = dayItems.reduce((sum, r) => sum + Number(r.st.duration_hours || 0), 0);
+      days.push({ dayIndex: d, dayType, rows: dayItems, totalHours });
+    }
+    return days;
+  }, [data, leaderId]);
+
+  const totalPeriodHours = useMemo(() => grouped.reduce((s, d) => s + d.totalHours, 0), [grouped]);
+
+  return (
+    <div className="space-y-4 sm:space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-heading font-bold flex items-center gap-2">
+              <ClipboardList className="w-5 h-5" />
+              Min vakt
+            </h1>
+            {data?.schedule && (
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Periode {data.schedule.period_number} · {data.schedule.year}
+                {data.myTeam && ` · ${TEAM_LABEL[data.myTeam] ?? data.myTeam}`}
+              </p>
+            )}
+          </div>
+        </div>
+        <Button variant="ghost" size="icon" onClick={() => refetch()} disabled={isFetching}>
+          <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32" />)}
+        </div>
+      ) : !data?.schedule ? (
+        <Card>
+          <CardContent className="pt-6 text-center space-y-3">
+            <CalendarX className="w-12 h-12 text-muted-foreground mx-auto" />
+            <h2 className="font-heading font-semibold">Ingen vaktplan publisert ennå</h2>
+            <p className="text-sm text-muted-foreground">Vaktplanen vises her så snart admin publiserer perioden.</p>
+            <Button variant="outline" onClick={() => refetch()}>
+              <RefreshCw className="w-4 h-4 mr-2" /> Sjekk på nytt
+            </Button>
+          </CardContent>
+        </Card>
+      ) : grouped.every((d) => d.rows.length === 0) ? (
+        <Card>
+          <CardContent className="pt-6 text-center space-y-2">
+            <CalendarX className="w-12 h-12 text-muted-foreground mx-auto" />
+            <h2 className="font-heading font-semibold">Du har ingen vakter i denne perioden</h2>
+            <p className="text-sm text-muted-foreground">
+              Hvis dette er feil, ta kontakt med admin — du er kanskje lagt til etter at planen ble laget.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {grouped.map((day) => (
+            <Card key={day.dayIndex} className={day.rows.length === 0 ? 'opacity-60' : ''}>
+              <CardHeader className="pb-3">
+                <div className="flex items-baseline justify-between gap-2">
+                  <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                    Dag {day.dayIndex + 1}
+                    {DAY_TYPE_LABEL[day.dayType] && (
+                      <Badge variant="outline" className="text-[10px] uppercase font-normal">
+                        {DAY_TYPE_LABEL[day.dayType]}
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  {day.rows.length > 0 && (
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {day.totalHours.toFixed(day.totalHours % 1 === 0 ? 0 : 1)} t
+                    </span>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {day.rows.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">Fri</p>
+                ) : (
+                  <ul className="divide-y">
+                    {day.rows.map((r, i) => (
+                      <li key={i} className="py-2 flex items-baseline justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm">{r.st.name}</div>
+                          {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
+                        </div>
+                        <div className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                          {r.st.start_time?.slice(0, 5)}–{r.st.end_time?.slice(0, 5)}
+                          <span className="ml-2 text-[10px]">({Number(r.st.duration_hours)}t)</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+          <Card className="bg-muted/40">
+            <CardContent className="py-3 flex items-center justify-between">
+              <span className="text-sm font-medium">Totalt for perioden</span>
+              <span className="text-base font-heading font-semibold tabular-nums">
+                {totalPeriodHours.toFixed(totalPeriodHours % 1 === 0 ? 0 : 1)} timer
+              </span>
+            </CardContent>
+          </Card>
+          {data.schedule.status !== 'published' && (
+            <p className="text-xs text-muted-foreground text-center">
+              ⚠️ Denne planen er ikke publisert ennå (status: {data.schedule.status}).
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
