@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ import {
   Heart,
   UserCheck,
   Search,
+  Upload,
 } from 'lucide-react';
 import { CabinsTab } from '@/components/admin/CabinsTab';
 import { ParticipantImportTab } from '@/components/admin/ParticipantImportTab';
@@ -24,6 +25,7 @@ import { RopeControlTab } from '@/components/admin/RopeControlTab';
 import { ActivitiesTab } from '@/components/admin/ActivitiesTab';
 import { SkjaerTab } from '@/components/admin/SkjaerTab';
 import { StoriesTab } from '@/components/admin/StoriesTab';
+import { LeaderImportDialog } from '@/components/admin/LeaderImportDialog';
 const HomeConfigTab = lazy(() => import('@/components/admin/HomeConfigTab'));
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -86,10 +88,17 @@ export function AdminSettingsContent({
   setHomeConfig,
   onLeaderUpdated,
 }: AdminSettingsContentProps) {
+  const [isImportOpen, setIsImportOpen] = useState(false);
   switch (activeSection) {
     case 'leaders':
       return (
         <div className="space-y-4">
+          <LeaderImportDialog
+            open={isImportOpen}
+            onOpenChange={setIsImportOpen}
+            existingPhones={leaders.map(l => l.phone)}
+            onImported={onLeaderUpdated}
+          />
           {/* Leader Overview Stats and Actions */}
           <Card>
             <CardHeader>
@@ -105,6 +114,14 @@ export function AdminSettingsContent({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setIsImportOpen(true)}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Importer ledere
+                </Button>
                 <Button 
                   variant="outline" 
                   size="sm" 
