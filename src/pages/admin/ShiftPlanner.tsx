@@ -384,6 +384,27 @@ export default function ShiftPlanner() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {warnings.length > 0 && (
+              <div className="mb-4 border border-yellow-500/50 bg-yellow-500/10 rounded-lg p-3">
+                <div className="flex items-center gap-2 font-semibold text-sm mb-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                  {warnings.length} advarsel{warnings.length === 1 ? '' : 'er'}
+                </div>
+                <ul className="text-xs space-y-0.5 max-h-40 overflow-y-auto">
+                  {warnings.map((w, i) => (
+                    <li key={i}>
+                      <strong>{w.leader_name}</strong>
+                      {w.day_index != null ? ` — Dag ${w.day_index + 1}` : ''}: {w.detail}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {warnings.length === 0 && viewScheduleId && (
+              <div className="mb-4 border border-green-500/30 bg-green-500/10 rounded-lg p-2 text-xs text-green-800 dark:text-green-200">
+                Ingen regelbrudd oppdaget i siste generering.
+              </div>
+            )}
             {loadingGrid ? (
               <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
             ) : (
