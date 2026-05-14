@@ -1,28 +1,19 @@
 ## Mål
-Flytt «Lederaktivering» og «Hjemskjerm-elementer» fra Admin-forsiden inn i Innstillinger som egne kort.
+Tillate at superadmin kan deaktiveres (skjules fra lederoversikten) uten å miste tilgang til appen.
 
-## Endringer
+## Funn
+- `AuthContext` line 210 lar allerede superadmin logge inn selv om `is_active = false` — ingen endring trengs der.
+- Lederoversikten (`useLeaderDashboardData`) filtrerer allerede bort `is_active === false`, så en deaktivert superadmin vil automatisk forsvinne fra grid og liste.
+- Eneste blokker: `LeaderActivationTab.canToggle` returnerer `allowed: false` for alle med `role === 'superadmin'`.
 
-### 1. `src/pages/admin/AdminSettings.tsx`
-- Legg to nye kort i `navItems`:
-  - `activation` — «Lederaktivering», ikon `UserCog`, beskrivelse «Styr hvem som kan logge inn».
-  - `home-config` — «Hjemskjerm», ikon `LayoutGrid`, beskrivelse «Tittel, ikon og synlighet».
-- Legg tilsvarende `sectionLabels`-oppføringer.
-- Last `home_screen_config` her ved behov (state for `homeConfig` + `localHomeConfig`) og hent ledere med roller (allerede tilgjengelig).
-- Send nødvendige props videre til `AdminSettingsContent`.
+## Endring
+`src/components/admin/LeaderActivationTab.tsx`:
+- I `canToggle`: tillat at superadmin slås av/på, men kun når innlogget bruker selv er superadmin.
+  ```ts
+  if (leader.role === 'superadmin' && !isSuperAdmin) {
+    return { allowed: false, reason: 'Kun superadmin kan endre superadmin' };
+  }
+  ```
+- I bekreftelses-dialogen for deaktivering, vis en kort info-tekst når raden er superadmin: «Superadmin beholder full tilgang, men skjules fra lederoversikten.»
 
-### 2. `src/components/admin/settings/AdminSettingsContent.tsx`
-- Utvid props med `isSuperAdmin`, `homeConfig`, `localHomeConfig`, `setLocalHomeConfig`, `setHomeConfig`, `onLeaderUpdated`.
-- Nye case-grener:
-  - `case 'activation'` → render `<LeaderActivationTab leaders={leaders} onLeaderUpdated={onLeaderUpdated} isSuperAdmin={isSuperAdmin} />`.
-  - `case 'home-config'` → lazy-render `HomeConfigTab` med samme props som dagens Admin.tsx bruker.
-
-### 3. `src/pages/admin/Admin.tsx`
-- Fjern de to `Collapsible`-blokkene for «Lederaktivering» og «Hjemskjerm-elementer» og tilhørende state (`isHomeConfigOpen`, `isActivationOpen`).
-- Behold lasting av `home_screen_config` siden `LeaderDashboard`/`LeaderListView` fortsatt bruker det.
-- Fjern nå-ubrukte imports (`Collapsible*`, `HomeConfigSection`, `LeaderActivationTab`, `UserCog`, `Settings` brukt i Hjemskjerm-kortet osv. der relevant).
-
-## Teknisk
-- Ingen DB-endringer.
-- `HomeConfigTab` lastes fortsatt med `lazy()` for å holde Innstillinger lett.
-- Ingen endringer i RLS, edge functions eller andre moduler.
+Ingen DB-, RLS- eller andre kodeendringer nødvendig.
