@@ -242,7 +242,6 @@ Deno.serve(async (req) => {
       seilern: LeaderRow[];           // 2 people, from morgenF
       kjokken: LeaderRow | null;      // 1 person, from any F-team
       natt: LeaderRow[];              // 2 people, mix from team1+team2 (= sanitas+box)
-      legging: LeaderRow[];           // 2 people, from evening18 (not Økt 1 folks)
     };
     const days: (DayPlan | null)[] = new Array(period_length).fill(null);
 
