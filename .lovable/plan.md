@@ -1,24 +1,32 @@
 ## Mål
+Legge til «Tøm»-knapp som nullstiller daglige felt for ledere, både globalt (alle ledere) og per leder.
 
-På "Min vakt"-siden: når lederen har kjøkkenvakt en dag, vis kun kjøkkenvakt for den dagen — skjul alle andre vakter samme dag. Ingen endring i database, edge function eller adminvisning.
+## Felter som tømmes
+Settes til `NULL` i `leader_content`:
+- `current_activity` (nåværende aktivitet)
+- `extra_activity` (ekstra aktivitet)
+- `personal_notes` (notat til lederen)
+- `obs_message` (OBS)
+- `extra_2`, `extra_3`, `extra_4`, `extra_5`
 
-## Endring
+`extra_1` røres ikke (brukes til overnatting hovedfelt). Team, ministerpost, hytter, leirsteder etc. røres heller ikke.
 
-Kun én fil: `src/pages/MyShifts.tsx`
+## Endringer
 
-Etter at `day.rows` er bygget per dag, sjekk om noen rad er kjøkkenvakt:
+### 1. Per leder – `src/components/admin/LeaderContentSheet.tsx`
+- Ny «Tøm felter»-knapp øverst i sheet-en (ved siden av eksisterende handlinger).
+- Bekreftelsesdialog: «Tøm alle daglige felt for {leder}? Kan ikke angres.»
+- Ved bekreftelse: sett lokale state-verdier til `''`, kjør samme save-flyt som finnes i dag (skriver `null` til DB), nullstill `originalValuesRef`.
+- Toast: «Felter tømt».
 
-```ts
-const hasKjokken = day.rows.some((r) => r.st.slug === 'kjokkenvakt');
-const visibleRows = hasKjokken
-  ? day.rows.filter((r) => r.st.slug === 'kjokkenvakt')
-  : day.rows;
-```
+### 2. Global – `src/pages/admin/Admin.tsx`
+- Ny «Tøm daglige felt»-knapp i admin-headeren (kun synlig for admin/superadmin).
+- Bekreftelsesdialog med tydelig advarsel: «Dette tømmer aktivitet, ekstra aktivitet, notat, OBS og ekstra 2–5 for ALLE ledere. Kan ikke angres.»
+- Kjører én Supabase update mot `leader_content` som setter de 8 feltene til `null` for alle rader.
+- Invaliderer relevante React Query-cacher slik at admin-grid og leder-vy oppdateres umiddelbart.
+- Toast med antall ledere som ble nullstilt.
 
-Bruk `visibleRows` i stedet for `day.rows` i `<ul>`-renderingen. Merknadsteksten ("Snakk med Kjøkkenet …") vises allerede via `r.note`.
-
-## Uendret
-
-- Admin-grid viser fortsatt alle vakter (slik at admin ser eventuelle konflikter).
-- Excel-eksport, edge function og DB rørt ikke.
-- Timeoversikten på admin-siden er uendret.
+### Teknisk
+- Bruker eksisterende Supabase-klient og React Query-pattern.
+- Trenger ingen DB-migrasjon (RLS på `leader_content` tillater allerede admin-update).
+- Ingen endringer i edge functions, planlegger eller andre moduler.
