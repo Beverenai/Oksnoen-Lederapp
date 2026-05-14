@@ -21,7 +21,7 @@ const TEAM_LABEL: Record<Team, string> = {
 const NORMAL_SLUGS = [
   'morgenvakt', 'vekking', 'frokost', 'bings_morgen', 'personalmoete', 'okt1',
   'middag', 'bings_ettermiddag', 'personalmoete2', 'okt2', 'kveldsmat',
-  'bings_kveld', 'okt3', 'legging', 'nattevakt',
+  'bings_kveld', 'okt3', 'legging', 'nattevakt', 'sanitas', 'seilern_box', 'kjokkenvakt',
 ];
 const ARRIVAL_SLUGS = [
   'forberedelser', 'lunsj_mote', 'ankomst', 'middag_ankomst', 'informasjon',
@@ -38,6 +38,15 @@ function timeRange(st: ShiftType): string {
   return `${(st.start_time || '').slice(0, 5)}–${(st.end_time || '').slice(0, 5)}`;
 }
 
+/** "Caroline Røthe Skjaker" → "Caroline R.S." */
+function shortName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const firstName = parts[0];
+  const lastInitials = parts.slice(1).map((p) => p[0] + '.').join('');
+  return `${firstName} ${lastInitials}`;
+}
+
 /** Build the cell content lines for a (day, shift) cell */
 function cellLines(
   dayAssignments: Assignment[],
@@ -52,7 +61,7 @@ function cellLines(
       lines.push({ team: t, text: `${TEAM_LABEL[t] || t}${a.note ? a.note : ''}` });
     } else if (a.assignment_type === 'leader' && a.leader_id) {
       const ldr = leaderById.get(a.leader_id);
-      const name = ldr?.name || 'Ukjent';
+      const name = ldr?.name ? shortName(ldr.name) : 'Ukjent';
       lines.push({ text: a.note ? `${name} (${a.note})` : name });
     }
   }
