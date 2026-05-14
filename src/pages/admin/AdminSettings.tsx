@@ -18,6 +18,8 @@ import {
   Dumbbell,
   MapIcon,
   BookOpen,
+  UserCog,
+  LayoutGrid,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
@@ -45,17 +47,19 @@ const navItems = [
   { key: 'stories', label: 'Historier', desc: 'Administrer historier', icon: BookOpen, color: 'bg-orange-500/15 text-orange-600 dark:text-orange-400' },
   { key: 'push', label: 'Push-varsler', desc: 'Send push-varsler', icon: Bell, color: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' },
   { key: 'rope-control', label: 'Tau-kontroll', desc: 'Tau-kontroll oppsett', icon: Anchor, color: 'bg-red-500/15 text-red-600 dark:text-red-400' },
+  { key: 'activation', label: 'Lederaktivering', desc: 'Styr hvem som kan logge inn', icon: UserCog, color: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400' },
+  { key: 'home-config', label: 'Hjemskjerm', desc: 'Tittel, ikon og synlighet', icon: LayoutGrid, color: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400' },
 ];
 
 const sectionLabels: Record<string, string> = {
   leaders: 'Ledere', participants: 'Deltakere', cabins: 'Hytter', schedule: 'Vaktplan',
   activities: 'Aktiviteter', skjaer: 'Skjær', stories: 'Historier', push: 'Push-varsler',
-  'rope-control': 'Tau-kontroll',
+  'rope-control': 'Tau-kontroll', activation: 'Lederaktivering', 'home-config': 'Hjemskjerm-elementer',
 };
 
 export default function AdminSettings() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isSuperAdmin } = useAuth();
   const [activeSection, setActiveSection] = useState('');
   
   const [leaders, setLeaders] = useState<LeaderWithRole[]>([]);
@@ -64,6 +68,8 @@ export default function AdminSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [leaderSearch, setLeaderSearch] = useState('');
+  const [homeConfig, setHomeConfig] = useState<any[]>([]);
+  const [localHomeConfig, setLocalHomeConfig] = useState<any[]>([]);
   
   // New leader form
   const [newLeaderName, setNewLeaderName] = useState('');
@@ -137,9 +143,10 @@ export default function AdminSettings() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [leadersRes, rolesRes] = await Promise.all([
+      const [leadersRes, rolesRes, configRes] = await Promise.all([
         supabase.from('leaders').select('*').order('created_at'),
         supabase.rpc('get_all_leader_roles'),
+        supabase.from('home_screen_config').select('*').order('sort_order'),
       ]);
 
       const roleMap = new Map<string, AppRole>();
@@ -153,6 +160,9 @@ export default function AdminSettings() {
       }));
 
       setLeaders(leadersWithRoles);
+      const homeData = configRes.data || [];
+      setHomeConfig(homeData);
+      setLocalHomeConfig(homeData);
     } catch (error) {
       console.error('Error loading admin data:', error);
       showError('Kunne ikke laste data');
@@ -256,6 +266,12 @@ export default function AdminSettings() {
             newLeaderIsAdmin={newLeaderIsAdmin}
             setNewLeaderIsAdmin={setNewLeaderIsAdmin}
             addLeader={addLeader}
+            isSuperAdmin={isSuperAdmin}
+            homeConfig={homeConfig}
+            localHomeConfig={localHomeConfig}
+            setLocalHomeConfig={setLocalHomeConfig}
+            setHomeConfig={setHomeConfig}
+            onLeaderUpdated={loadData}
           />
         </div>
 
