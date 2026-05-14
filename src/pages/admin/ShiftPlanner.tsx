@@ -104,7 +104,11 @@ export default function ShiftPlanner() {
       let { data, error } = await supabase.functions.invoke('generate-shift-schedule', {
         body: { period_number: periodNumber, year, period_length: periodLength },
       });
-      const errMsg = (error as any)?.message || data?.error || '';
+      let errMsg = (error as any)?.message || data?.error || '';
+      const ctx = (error as any)?.context;
+      if (ctx && typeof ctx.json === 'function') {
+        try { const body = await ctx.clone().json(); errMsg = body?.error || errMsg; } catch {}
+      }
       if (errMsg && /published/i.test(errMsg)) {
         if (!confirm('Denne perioden er publisert. Arkivér og generer på nytt?')) {
           setGenerating(false);
