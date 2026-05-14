@@ -1,34 +1,54 @@
 ## Problem
 
-Timer-tabellen i ShiftPlanner viser ~16 t/dag for ledere som har en egen-vakt (kjøkkenvakt, morgenvakt, nattevakt, bingsvakt, sanitas, frokostvakt). Tallet er feil fordi varigheter summeres rått — også når egen-vakten tidsmessig overlapper med team-vakter som vedkommende egentlig er ekskludert fra.
+`revalidate-shift-schedule` (edge function) gir 184 advarsler både på 7- og 8-dagers planer fordi den har samme dobbelttellings-bug som UI hadde:
 
-Generator-koden i `supabase/functions/generate-shift-schedule/index.ts` håndterer dette korrekt i `recordWork` (eksluderer leder fra team-vakter de er trukket ut av). Men `shift_assignments`-radene i databasen lagrer ikke ekskluderingslisten — bare `team_name` — så UI-tabellen ekspanderer hele teamet og dobbelttoler.
+- Generator (`generate-shift-schedule`) ekskluderer ledere med egen-vakt (kjøkken, morgen, natt, bings, sanitas, frokost) fra team-vakter via `recordWork`.
+- Men `shift_assignments`-radene lagrer kun `team_name` — ikke hvem som er ekskludert.
+- Både UI og `revalidate` ekspanderer derfor team-vakta til ALLE medlemmer av teamet → hver leder får ~16 t/dag → `8h_max`-regelen fyrer for nesten alle ledere på nesten alle dager.
 
-Med 8 dager (6 normale dager) er problemet mer synlig fordi det er flere normaldager hvor mønsteret repeteres.
+Tallet er likt på 7 og 8 dager fordi feilen er per (leder, dag) og treffer hver normaldag uavhengig av periodelengde.
+
+UI-fixen (intervall-union) hjalp delvis der egen-vakt og team-vakter overlapper i tid, men løser ikke selve datamodell-problemet, og treffer ikke `revalidate` i det hele tatt.
 
 ## Løsning
 
-Bytt fra "summer varigheter" til "summer union av tidsintervaller" per (leder, dag) i `hoursMatrix`. Da blir overlappende vakter telt som ett sammenhengende intervall, og dobbelttellingen forsvinner uten at generator/DB-modellen må endres.
+Persistér ekskluderingslisten på team-tildelingen. Da har UI, revalidate og Excel-eksport én sannhetskilde og slipper å rekonstruere generator-logikken.
 
-### Detaljer
+### 1. Skjema-migrasjon
 
-I `src/pages/admin/ShiftPlanner.tsx`, i `hoursMatrix`-useMemo:
+`shift_assignments`: legg til kolonne
+```
+excluded_leader_ids uuid[] not null default '{}'
+```
+Ingen RLS-endring.
 
-1. For hver `assignment` bygg et tidsintervall `{startAbs, endAbs}` på samme måte som edge-funksjonen (`shiftInterval`): minutter siden midnatt, og hvis `end <= start` → krysser midnatt → +24t.
-2. Per (`leader_id`, `day_index`), samle alle intervaller (både fra `assignment_type='leader'` og fra team-ekspansjon).
-3. Slå sammen overlappende/kantliggende intervaller (sort + merge).
-4. Sum union-lengden i timer.
+### 2. Generator (`supabase/functions/generate-shift-schedule/index.ts`)
 
-Resultat: kjøkkenvakt (09–17) som overlapper med vekking/frokost/pm1/økt1/middag/pm2/økt2 teller ~09–19 ≈ 10t, ikke 16t. Morgenvakt (06–08:30) som "ekskluderer" seg selv fra vekking/frokost forblir korrekt fordi disse uansett er sekvensielle.
+I `pushTeam`: ta `excluded` (LeaderRow[]) og skriv `excluded_leader_ids: excluded.map(l => l.id)` på rad-objektet. Alle eksisterende kall passerer allerede `excluded`.
 
-Ingen endringer i edge-funksjonene — kun UI-beregning.
+### 3. Revalidate (`supabase/functions/revalidate-shift-schedule/index.ts`)
 
-### Filer som endres
+Når team-tildeling ekspanderes til medlemmer, hopp over `m.id` som finnes i `a.excluded_leader_ids`. Behold `union-of-intervals` for `8h_max` (sikkert mot fremtidige overlapp), men hovedeffekten er at de ekskluderte ikke lenger blir inkludert i det hele tatt.
 
-- `src/pages/admin/ShiftPlanner.tsx` — `hoursMatrix` useMemo (~linje 267–297)
+### 4. UI (`src/pages/admin/ShiftPlanner.tsx`)
+
+I `hoursMatrix`: samme exclusion-sjekk under team-ekspansjon. Behold union-logikken — den er fortsatt riktig for ledere som faktisk jobber overlappende vakter.
+
+### 5. Excel-eksport (`src/lib/exportShiftScheduleXlsx.ts`)
+
+Sjekk om filen ekspanderer team-vakter til ledere; hvis ja, samme exclusion-sjekk.
 
 ### Verifisering
 
-- Sjekk at en bingsF-leder som er kjøkkenvakt viser ~10 t (ikke 16).
-- Sjekk at en team1-leder som er nattevakt på normaldag viser ~13 t (06–01 med pauser → union ca 13 t arbeidstid: pm1+økt1+pm2+økt2 dekkes ikke for morning18, så reelt: pm1 0.25 + økt1 3 + middag/legging utelatt + pm2 0.25 + nattevakt 5.5 ≈ men union…). Forventet rundt 8–9 t for en typisk leder uten egen-vakt.
-- Sumkolonnen "Sum dag" gir mening (ca antall ledere × 8).
+- Kjør generate på 7-dagers og 8-dagers periode, åpne planen → forvent 0 eller noen få advarsler (kun ekte brudd, f.eks. F-team-natt eller manglende hvile).
+- Sjekk timer-tabellen: ledere uten egen-vakt ≈ 8 t/dag på normaldag; ledere med egen-vakt ≈ 8 t også (egen-vakt erstatter team-vakt, ikke legges til).
+- Sumkolonnen "Sum dag" ≈ antall ledere × 8 på normaldager.
+
+### Filer som endres
+
+- ny migrasjon: `supabase/migrations/<ts>_add_excluded_leaders_to_shift_assignments.sql`
+- `supabase/functions/generate-shift-schedule/index.ts` (pushTeam + insert payload)
+- `supabase/functions/revalidate-shift-schedule/index.ts` (team-ekspansjon)
+- `src/pages/admin/ShiftPlanner.tsx` (hoursMatrix team-ekspansjon)
+- `src/lib/exportShiftScheduleXlsx.ts` (kun hvis den ekspanderer team-vakter)
+- `.lovable/plan.md`
