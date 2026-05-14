@@ -170,6 +170,10 @@ export default function MyShifts() {
           {grouped.map((day) => (
             (() => {
               const dateInfo = dateForDay(startDate, day.dayIndex);
+              const hasKjokken = day.rows.some((r) => r.st.slug === 'kjokkenvakt');
+              const visibleRows = hasKjokken
+                ? day.rows.filter((r) => r.st.slug === 'kjokkenvakt')
+                : day.rows;
               return (
                 <Card key={day.dayIndex} className={day.rows.length === 0 ? 'opacity-70' : ''}>
                   <CardHeader className="pb-2">
@@ -186,11 +190,11 @@ export default function MyShifts() {
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0">
-                    {day.rows.length === 0 ? (
+                    {visibleRows.length === 0 ? (
                       <p className="text-sm text-muted-foreground italic">Fri</p>
                     ) : (
                       <ul className="space-y-1.5">
-                        {day.rows.map((r, i) => (
+                        {visibleRows.map((r, i) => (
                           <li key={i} className="flex items-baseline justify-between gap-3 py-1">
                             <div className="min-w-0">
                               <div className="font-medium text-sm">{r.st.name}</div>
