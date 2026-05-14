@@ -401,6 +401,41 @@ export type Database = {
           },
         ]
       }
+      leader_teams: {
+        Row: {
+          created_at: string | null
+          id: string
+          leader_id: string
+          period_number: number
+          team: string
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          leader_id: string
+          period_number: number
+          team: string
+          year?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          leader_id?: string
+          period_number?: number
+          team?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_teams_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leaders: {
         Row: {
           age: number | null
@@ -1018,6 +1053,201 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      shift_assignments: {
+        Row: {
+          assignment_type: string
+          created_at: string | null
+          day_index: number
+          day_type: string
+          id: string
+          leader_id: string | null
+          note: string | null
+          role: string | null
+          schedule_id: string
+          shift_type_id: string
+          team_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assignment_type: string
+          created_at?: string | null
+          day_index: number
+          day_type: string
+          id?: string
+          leader_id?: string | null
+          note?: string | null
+          role?: string | null
+          schedule_id: string
+          shift_type_id: string
+          team_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assignment_type?: string
+          created_at?: string | null
+          day_index?: number
+          day_type?: string
+          id?: string
+          leader_id?: string | null
+          note?: string | null
+          role?: string | null
+          schedule_id?: string
+          shift_type_id?: string
+          team_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_assignments_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "shift_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_shift_type_id_fkey"
+            columns: ["shift_type_id"]
+            isOneToOne: false
+            referencedRelation: "shift_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_schedules: {
+        Row: {
+          generated_at: string | null
+          generated_by: string | null
+          id: string
+          period_length: number
+          period_number: number
+          status: string
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          period_length?: number
+          period_number: number
+          status?: string
+          updated_at?: string | null
+          year?: number
+        }
+        Update: {
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          period_length?: number
+          period_number?: number
+          status?: string
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_schedules_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_types: {
+        Row: {
+          all_must_attend: boolean | null
+          created_at: string | null
+          day_type: string
+          duration_hours: number
+          end_time: string
+          id: string
+          min_leaders: number | null
+          name: string
+          requires_18_plus: boolean | null
+          slug: string
+          sort_order: number
+          start_time: string
+        }
+        Insert: {
+          all_must_attend?: boolean | null
+          created_at?: string | null
+          day_type: string
+          duration_hours: number
+          end_time: string
+          id?: string
+          min_leaders?: number | null
+          name: string
+          requires_18_plus?: boolean | null
+          slug: string
+          sort_order: number
+          start_time: string
+        }
+        Update: {
+          all_must_attend?: boolean | null
+          created_at?: string | null
+          day_type?: string
+          duration_hours?: number
+          end_time?: string
+          id?: string
+          min_leaders?: number | null
+          name?: string
+          requires_18_plus?: boolean | null
+          slug?: string
+          sort_order?: number
+          start_time?: string
+        }
+        Relationships: []
+      }
+      special_duties: {
+        Row: {
+          created_at: string | null
+          day_index: number
+          duty_type: string
+          id: string
+          leader_id: string
+          schedule_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          day_index: number
+          duty_type: string
+          id?: string
+          leader_id: string
+          schedule_id: string
+        }
+        Update: {
+          created_at?: string | null
+          day_index?: number
+          duty_type?: string
+          id?: string
+          leader_id?: string
+          schedule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "special_duties_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "special_duties_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "shift_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stories: {
         Row: {

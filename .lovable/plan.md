@@ -1,54 +1,91 @@
-## Mål
+# STEG 1: Database for vaktplan-systemet
 
-Fjerne den synlige mørke stripa under bunnmenyen på iPhone PWA (iOS 26.x) ved å kompensere for iOS' kjente bug der `position: fixed; bottom: 0` ikke følger `window.innerHeight` korrekt når Safari-chrome animerer.
+Legger fundamentet for vaktplan-generatoren. Ingen UI eller logikk i dette steget — kun tabeller, seed-data og RLS. Etter dette kan vi trygt gå videre til STEG 2 (generator) og STEG 3 (admin-UI).
 
-## Løsning
+## Hva som lages
 
-Bruk `window.visualViewport` til å beregne hvor mye av layout-viewport som er "skjult" under iOS UI, og forskyv `.bottom-nav` med `transform: translate3d(0, -offset, 0)` (GPU-akselerert, omgår fixed-buggen).
+### 5 nye tabeller
 
-## Endringer
+1. **`shift_types`** — referanse for alle vakttyper (33 rader totalt)
+   - 16 vakter for normal dag (morgenvakt, vekking, frokost, økt 1/2/3, middag, bings, personalmøter, kveldsmat, legging, nattevakt, kjøkkenvakt, m.fl.)
+   - 9 vakter for ankomstdag (forberedelser, ankomst, intro, kiosk, m.fl.)
+   - 8 vakter for avreisedag (rydding, utdeling pass, opprydning, m.fl.)
+   - Hver vakt har klokkeslett, varighet, minimum antall ledere, 18+ krav
 
-Kun én fil: `src/components/layout/AppLayout.tsx`.
+2. **`leader_teams`** — hvilket team en leder tilhører i en gitt periode
+   - team1, team2 (18+ dagteam/kveldsteam)
+   - team1f, team2f (under-18 F-team)
+   - Per periode/år, så samme leder kan ha ulikt team i ulike perioder
 
-Legg til en `useEffect` i `AppLayout`-komponenten (etter eksisterende effekter, før `return`):
+3. **`shift_schedules`** — én rad per generert vaktplan (periode + år)
+   - status: draft / published / archived
+   - period_length: 7 eller 8 dager
 
-```tsx
-// iOS 26 PWA fix: compensate for visualViewport offset on .bottom-nav
-useEffect(() => {
-  const bottomBar = document.querySelector<HTMLElement>('.bottom-nav');
-  if (!bottomBar || !window.visualViewport) return;
+4. **`shift_assignments`** — selve vakttildelingene
+   - Knyttet til en schedule, en dag (0..n) og en vakttype
+   - Enten team-tildeling (team_name) ELLER navngitt leder (leader_id)
+   - Note-felt for asterisk-merknader (*, **, ***, ****, *****)
 
-  const viewport = window.visualViewport;
+5. **`special_duties`** — register for spesialvakt-rotasjon
+   - morgenvakt, bingsvakt, nattevakt, frokostvakt, kjøkkenvakt, sanitas, seilern_box
+   - Brukes både av generator (rotasjon) og av leder-visning ("er jeg unntatt?")
 
-  const updateBottomBar = () => {
-    const offset = Math.max(
-      0,
-      window.innerHeight - viewport.height - viewport.offsetTop
-    );
-    bottomBar.style.transform = `translate3d(0, ${-offset}px, 0)`;
-  };
+### Tilgangsregler
 
-  viewport.addEventListener('resize', updateBottomBar);
-  viewport.addEventListener('scroll', updateBottomBar);
-  updateBottomBar();
+- **Alle innloggede ledere** kan lese alle 5 tabellene (trenger det for å se sin egen vaktplan i STEG 4)
+- **Kun admin/superadmin** kan opprette, endre eller slette rader
 
-  return () => {
-    viewport.removeEventListener('resize', updateBottomBar);
-    viewport.removeEventListener('scroll', updateBottomBar);
-    bottomBar.style.transform = '';
-  };
-}, []);
+### Seed-data
+
+Alle 33 vakttyper for normal/ankomst/avreise legges inn samtidig (i samme migrasjon) slik at systemet er klart til generator i STEG 2.
+
+### Auto-update
+
+`updated_at`-trigger på `shift_schedules` og `shift_assignments` så vi alltid vet når en plan ble sist endret.
+
+## Tekniske detaljer
+
+```text
+shift_types
+├── slug + day_type (unik kombinasjon, så samme slug kan finnes i normal og ankomst)
+├── duration_hours numeric(3,2)
+├── min_leaders int
+└── requires_18_plus, all_must_attend bool
+
+leader_teams
+├── leader_id → leaders(id) ON DELETE CASCADE
+├── unik(leader_id, period_number, year)
+└── team CHECK i ('team1','team2','team1f','team2f')
+
+shift_schedules
+├── unik(period_number, year)
+└── generated_by → leaders(id)
+
+shift_assignments
+├── schedule_id → shift_schedules ON DELETE CASCADE
+├── shift_type_id → shift_types
+├── leader_id → leaders (nullable, kun ved assignment_type='leader')
+├── team_name (nullable, kun ved assignment_type='team')
+└── index på (schedule_id, day_index)
+
+special_duties
+├── schedule_id → shift_schedules ON DELETE CASCADE
+├── leader_id → leaders
+└── unik(schedule_id, day_index, duty_type, leader_id)
 ```
 
-## Detaljer / vurderinger
+RLS bruker eksisterende `is_admin()` security definer (allerede i prosjektet). Ingen rekursjonsrisiko.
 
-- Effekten kjører i alle miljøer; på Capacitor og desktop blir `offset` typisk 0, så `translate3d(0,0,0)` har ingen visuell effekt (bare promoterer laget til GPU — uskadelig).
-- `.bottom-nav` er Portal'et til `document.body`, så `document.querySelector('.bottom-nav')` finner det uavhengig av React-treet. Hvis elementet ikke er montert ennå (f.eks. før første render), avbryter effekten — det er trygt fordi nav-en er en del av `AppLayout` og monteres synkront sammen med denne effekten på første frame etter mount.
-- Vi rører ikke `src/index.css`. Eksisterende `bottom: 0` + `padding-bottom: calc(4px + env(safe-area-inset-bottom))` beholdes.
-- Cleanup nullstiller `transform` slik at vi ikke etterlater inline style hvis komponenten unmountes.
+## Hva som IKKE skjer i dette steget
 
-## Verifikasjon
+- Ingen edge function (det er STEG 2)
+- Ingen admin-side eller UI (STEG 3)
+- Ingen leder-visning (STEG 4)
+- Ingen endringer i eksisterende kode
+- Ingen kobling til admin-dashboardet ennå
 
-- PWA på iPhone (iOS 26): den mørke stripa under nav-pillen skal forsvinne; nav-en ligger flush med home indicator-området.
-- Capacitor iOS: visuelt uendret.
-- Desktop (lg): uendret (`.bottom-nav` brukes kun på mobil via `lg:hidden`).
+`src/integrations/supabase/types.ts` regenereres automatisk etter migrasjonen, så de nye tabellene blir tilgjengelige med full type-sikkerhet i React.
+
+## Etterpå
+
+Når dette er kjørt og typene er oppdatert, sier du bare "kjør STEG 2" så bygger jeg `generate-shift-schedule` edge function.
