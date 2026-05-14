@@ -532,7 +532,11 @@ Deno.serve(async (req) => {
 
     // ===== Bulk insert =====
     if (assignments.length) {
-      const { error: aErr } = await admin.from('shift_assignments').insert(assignments);
+      const safeAssignments = assignments.map((a) => ({
+        ...a,
+        excluded_leader_ids: Array.isArray(a.excluded_leader_ids) ? a.excluded_leader_ids : [],
+      }));
+      const { error: aErr } = await admin.from('shift_assignments').insert(safeAssignments);
       if (aErr) throw aErr;
     }
     if (duties.length) {
