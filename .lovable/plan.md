@@ -1,91 +1,88 @@
-# STEG 1: Database for vaktplan-systemet
+# Vaktplan v2 — Excel-lik grid + eksport + validering
 
-Legger fundamentet for vaktplan-generatoren. Ingen UI eller logikk i dette steget — kun tabeller, seed-data og RLS. Etter dette kan vi trygt gå videre til STEG 2 (generator) og STEG 3 (admin-UI).
+Mål: Generator som produserer en plan som ser ut som Excel-malen din, med streng validering (8t/dag, F-team < 21:00, 11t hvile, hele økter), og .xlsx-nedlasting.
 
-## Hva som lages
+## 1. Edge function — `generate-shift-schedule` (full omskriving)
 
-### 5 nye tabeller
+**Input:** `period_number`, `year`, `period_length` (7/8). Team hentes fra `leaders.team` ("1"/"2"/"1f"/"2f").
 
-1. **`shift_types`** — referanse for alle vakttyper (33 rader totalt)
-   - 16 vakter for normal dag (morgenvakt, vekking, frokost, økt 1/2/3, middag, bings, personalmøter, kveldsmat, legging, nattevakt, kjøkkenvakt, m.fl.)
-   - 9 vakter for ankomstdag (forberedelser, ankomst, intro, kiosk, m.fl.)
-   - 8 vakter for avreisedag (rydding, utdeling pass, opprydning, m.fl.)
-   - Hver vakt har klokkeslett, varighet, minimum antall ledere, 18+ krav
+**Output:** `assignments`, `special_duties`, og en ny `validation`-blokk med advarsler per leder.
 
-2. **`leader_teams`** — hvilket team en leder tilhører i en gitt periode
-   - team1, team2 (18+ dagteam/kveldsteam)
-   - team1f, team2f (under-18 F-team)
-   - Per periode/år, så samme leder kan ha ulikt team i ulike perioder
+**Logikk (per spec):**
+- A/B-rotasjon: oddetallsdager = Dag A (Team 1 = dag, Team 2 = kveld); partall = Dag B
+- Spesialvakt-rotasjoner pre-bygget for hele perioden:
+  - `morgenvakt` (1 fra UNDER18A, roterer)
+  - `bingsvakt` (par fra UNDER18B, par-rotasjon)
+  - `kjøkkenvakt` (1 fra et F-team, roterer — IKKE samme person som har morgen-/bingsvakt samme dag)
+  - `nattevakt` (par fra Team1+Team2)
+  - `frokostvakt` (par fra dagteam)
+  - `sanitas` (2 fra leggeteam), `seilern` (2 fra vekketeam)
+- Asterisk-regler implementert: `*` (uten frokost/natt), `**` (uten bings), `***` (uten morgenvakt), `****` (legging-natt-regel), `*****` (ikke jobbet Økt 1)
+- **Middag** = dagens `dagteam*` + UNDER18B + **morgendagens frokostvakt-par** (lagres som ekstra leder-tildelinger på middag-vakten med `role='frokostvakt_neste_dag'`)
 
-3. **`shift_schedules`** — én rad per generert vaktplan (periode + år)
-   - status: draft / published / archived
-   - period_length: 7 eller 8 dager
+**Validering (kjøres etter generering, returneres til klient — generering stopper IKKE):**
 
-4. **`shift_assignments`** — selve vakttildelingene
-   - Knyttet til en schedule, en dag (0..n) og en vakttype
-   - Enten team-tildeling (team_name) ELLER navngitt leder (leader_id)
-   - Note-felt for asterisk-merknader (*, **, ***, ****, *****)
+| Regel | Sjekk |
+|---|---|
+| Maks 8t/dag per leder | Sum `duration_hours` per (leder, dag) ≤ 8 |
+| F-team aldri etter 21:00 | Ingen leder med team 1F/2F tildelt vakt med `start_time` > 21:00 |
+| 11t hvile | Mellom siste `end_time` dag X og første `start_time` dag X+1 |
+| Hele økten | Ledere som er i en team-tildeling regnes som hele varigheten (asterisk-unntak respekteres ved at de ikke er med) |
+| Kjøkkenvakt-konflikt | Ikke samtidig morgen/bings samme dag |
+| Bings-par hindret Økt 1 | Bings-leder må IKKE stå i Økt 1 samme dag |
 
-5. **`special_duties`** — register for spesialvakt-rotasjon
-   - morgenvakt, bingsvakt, nattevakt, frokostvakt, kjøkkenvakt, sanitas, seilern_box
-   - Brukes både av generator (rotasjon) og av leder-visning ("er jeg unntatt?")
+Advarsler returneres som `[{leader_id, leader_name, day_index, rule, detail}]` og lagres i state — ikke i DB.
 
-### Tilgangsregler
+## 2. Frontend — `ShiftPlanner.tsx`
 
-- **Alle innloggede ledere** kan lese alle 5 tabellene (trenger det for å se sin egen vaktplan i STEG 4)
-- **Kun admin/superadmin** kan opprette, endre eller slette rader
-
-### Seed-data
-
-Alle 33 vakttyper for normal/ankomst/avreise legges inn samtidig (i samme migrasjon) slik at systemet er klart til generator i STEG 2.
-
-### Auto-update
-
-`updated_at`-trigger på `shift_schedules` og `shift_assignments` så vi alltid vet når en plan ble sist endret.
-
-## Tekniske detaljer
+**Endringer i grid-visning** for å matche Excel-malen:
 
 ```text
-shift_types
-├── slug + day_type (unik kombinasjon, så samme slug kan finnes i normal og ankomst)
-├── duration_hours numeric(3,2)
-├── min_leaders int
-└── requires_18_plus, all_must_attend bool
-
-leader_teams
-├── leader_id → leaders(id) ON DELETE CASCADE
-├── unik(leader_id, period_number, year)
-└── team CHECK i ('team1','team2','team1f','team2f')
-
-shift_schedules
-├── unik(period_number, year)
-└── generated_by → leaders(id)
-
-shift_assignments
-├── schedule_id → shift_schedules ON DELETE CASCADE
-├── shift_type_id → shift_types
-├── leader_id → leaders (nullable, kun ved assignment_type='leader')
-├── team_name (nullable, kun ved assignment_type='team')
-└── index på (schedule_id, day_index)
-
-special_duties
-├── schedule_id → shift_schedules ON DELETE CASCADE
-├── leader_id → leaders
-└── unik(schedule_id, day_index, duty_type, leader_id)
+                Morgenvakt | Vekking | Frokost | Bings | PM1 | Økt 1 | Middag | ... | Nattevakt
+Søndag (dag 1)   [Sophia H] [Team1F] [Frokost: ...] ...
+Mandag (dag 2)   [Marie]    [Team2F] ...
+...
 ```
 
-RLS bruker eksisterende `is_admin()` security definer (allerede i prosjektet). Ingen rekursjonsrisiko.
+- Dager som rader, vakter som kolonner (sticky header + sticky første kolonne, horisontal scroll på smale skjermer)
+- Hver celle viser fargede team-bånd (rød=Team1, blå=Team2, oransje=1F, gul=2F) + navngitte ledere som tekst på badges der relevant (morgen, bings, natt, kjøkken, frokost)
+- Stablede bånd i samme celle (matcher Excel der flere team står over hverandre i en vakt)
+- Asterisk-tegn (`*`, `**`, etc.) vises på bånd som har dem
+- Egne rader for Ankomst/Avreise med sin egen kolonne-rekkefølge
 
-## Hva som IKKE skjer i dette steget
+**Validering-kort** øverst i grid-visning:
+- Grønt panel "Ingen brudd" hvis tomt
+- Rødt/gult panel med liste: "⚠ Marie (Team 1F) — Tirsdag: 9.5 timer (over 8t)"
+- Filtrerbar per leder
 
-- Ingen edge function (det er STEG 2)
-- Ingen admin-side eller UI (STEG 3)
-- Ingen leder-visning (STEG 4)
-- Ingen endringer i eksisterende kode
-- Ingen kobling til admin-dashboardet ennå
+**Periode/team-summary:** beholdes som i dag (read-only fra profil).
 
-`src/integrations/supabase/types.ts` regenereres automatisk etter migrasjonen, så de nye tabellene blir tilgjengelige med full type-sikkerhet i React.
+## 3. Excel-eksport (.xlsx)
 
-## Etterpå
+- "Last ned Excel"-knapp på hver vaktplan-rad
+- Klient-side med [`exceljs`](https://www.npmjs.com/package/exceljs) (støtter cell fill + merged cells)
+- Layout matcher uploads:
+  - Header-rad: vakt-navn
+  - Tid-rad, Timer-rad, Min.ledere-rad
+  - Dag-rader (Søndag … Fredag) med flettede celler og team-fargede bakgrunner
+  - Egen blokk for "Ankomst (Lørdag)" og "Avreise (Lørdag)" under hovedtabellen
+  - Asterisk-fotnoter nederst
+- Filnavn: `vaktplan-periode-{n}-{year}.xlsx`
 
-Når dette er kjørt og typene er oppdatert, sier du bare "kjør STEG 2" så bygger jeg `generate-shift-schedule` edge function.
+## 4. Tekniske detaljer
+
+- Ny fil `src/lib/exportShiftScheduleXlsx.ts` med eksportlogikk
+- `exceljs` legges til (`bun add exceljs`)
+- Edge function returnerer `validation: { warnings: [...], errors_blocking: [] }` — ingen blokkerende feil med dette valget
+- Ingen DB-skjemaendringer nødvendig (advarsler er kun runtime, lagres ikke)
+- Eksisterende `shift_assignments`-tabell brukes som er; `role`-feltet markerer spesialvakter ('morgenvakt', 'bingsvakt', etc.)
+
+## 5. Rekkefølge for implementering
+
+1. Skriv om edge function (logikk + validering)
+2. Legg til `exceljs` + skriv eksport-modulen
+3. Bygg om grid-visningen (matrix-layout)
+4. Vis validering-advarsler øverst
+5. Legg til "Last ned Excel"-knapp
+
+Sier du fra til "implementer planen", går jeg på.

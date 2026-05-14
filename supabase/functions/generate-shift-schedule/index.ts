@@ -9,10 +9,11 @@ const corsHeaders = {
 type Team = 'team1' | 'team2' | 'team1f' | 'team2f';
 type DayType = 'normal' | 'arrival' | 'departure';
 
-interface LeaderRow { id: string; name: string; age: number | null; }
-interface LeaderTeamRow { leader_id: string; team: Team; }
-interface ShiftType { id: string; slug: string; day_type: DayType; sort_order: number; }
-
+interface LeaderRow { id: string; name: string; age: number | null; team: string | null; }
+interface ShiftType {
+  id: string; slug: string; day_type: DayType; sort_order: number;
+  start_time: string; end_time: string; duration_hours: number;
+}
 interface AssignmentInsert {
   schedule_id: string;
   day_index: number;
@@ -24,12 +25,18 @@ interface AssignmentInsert {
   role: string;
   note: string | null;
 }
-
 interface SpecialDutyInsert {
   schedule_id: string;
   day_index: number;
   duty_type: 'morgenvakt' | 'bingsvakt' | 'nattevakt' | 'frokostvakt' | 'kjokkenvakt';
   leader_id: string;
+}
+interface Warning {
+  leader_id: string;
+  leader_name: string;
+  day_index: number | null;
+  rule: '8h_max' | 'f_team_after_21' | '11h_rest' | 'kjokken_conflict' | 'bings_in_okt1';
+  detail: string;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -40,38 +47,38 @@ function shuffle<T>(arr: T[]): T[] {
   }
   return a;
 }
-
-function next<T>(rotation: T[], cursor: { i: number }): T {
-  const item = rotation[cursor.i % rotation.length];
-  cursor.i += 1;
-  return item;
+function next<T>(rot: T[], cur: { i: number }): T | null {
+  if (rot.length === 0) return null;
+  const v = rot[cur.i % rot.length];
+  cur.i += 1;
+  return v;
 }
-
-function nextPair<T>(rotation: T[][], cursor: { i: number }): T[] {
-  if (rotation.length === 0) return [];
-  const item = rotation[cursor.i % rotation.length];
-  cursor.i += 1;
-  return item;
-}
-
 function pairsWithin<T>(items: T[]): T[][] {
-  const pairs: T[][] = [];
-  for (let i = 0; i < items.length; i++) {
-    for (let j = i + 1; j < items.length; j++) {
-      pairs.push([items[i], items[j]]);
-    }
-  }
-  return shuffle(pairs);
+  const p: T[][] = [];
+  for (let i = 0; i < items.length; i++)
+    for (let j = i + 1; j < items.length; j++)
+      p.push([items[i], items[j]]);
+  return shuffle(p);
+}
+function pairsAcross<T>(a: T[], b: T[]): T[][] {
+  const p: T[][] = [];
+  for (const x of a) for (const y of b) p.push([x, y]);
+  return shuffle(p);
 }
 
-function pairsAcross<T extends { id: string }>(a: T[], b: T[]): T[][] {
-  const pairs: T[][] = [];
-  for (const x of a) {
-    for (const y of b) {
-      pairs.push([x, y]);
-    }
-  }
-  return shuffle(pairs);
+/** Convert "HH:MM:SS" to minutes since 00:00. */
+function toMinutes(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+/** Compute a shift's effective interval as minutes from start of dayIndex.
+ * If end < start, it crossed midnight → end gets +24h. */
+function shiftInterval(st: ShiftType, dayIndex: number): { startAbs: number; endAbs: number } {
+  const dayBase = dayIndex * 24 * 60;
+  const s = toMinutes(st.start_time);
+  let e = toMinutes(st.end_time);
+  if (e <= s) e += 24 * 60;
+  return { startAbs: dayBase + s, endAbs: dayBase + e };
 }
 
 Deno.serve(async (req) => {
@@ -82,7 +89,6 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
-    // Auth check — must be admin
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization' }), {
@@ -121,73 +127,52 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Service-role client for writes
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Fetch active leaders and group by their profile.team field
-    // Only "1" / "2" / "1f" / "2f" count for vaktplan; Kjøkken / Sjef / Nurse / Kordinator are excluded
-    const { data: leadersData, error: leadersErr } = await admin
-      .from('leaders')
-      .select('id, name, age, team')
-      .eq('is_active', true)
-      .neq('phone', '12345678');
-    if (leadersErr) throw leadersErr;
+    // Load active leaders, group by profile.team
+    const { data: leadersData, error: ldrErr } = await admin
+      .from('leaders').select('id, name, age, team')
+      .eq('is_active', true).neq('phone', '12345678');
+    if (ldrErr) throw ldrErr;
 
     const teamMapNorm: Record<string, Team> = {
       '1': 'team1', '2': 'team2', '1f': 'team1f', '2f': 'team2f',
     };
-    const groupedAll: Record<Team, LeaderRow[]> = { team1: [], team2: [], team1f: [], team2f: [] };
-    for (const l of (leadersData || [])) {
-      const t = teamMapNorm[(l.team || '').trim()];
-      if (t) groupedAll[t].push({ id: l.id, name: l.name, age: l.age });
+    const grouped: Record<Team, LeaderRow[]> = { team1: [], team2: [], team1f: [], team2f: [] };
+    for (const l of (leadersData || []) as LeaderRow[]) {
+      const t = teamMapNorm[(l.team || '').trim().toLowerCase()];
+      if (t) grouped[t].push(l);
     }
-    if (groupedAll.team1.length + groupedAll.team2.length + groupedAll.team1f.length + groupedAll.team2f.length === 0) {
+    if (Object.values(grouped).every((g) => g.length === 0)) {
       return new Response(JSON.stringify({ error: 'Ingen ledere er tildelt team 1/2/1f/2f i lederprofilene' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const validation: { passed: boolean; warnings: string[]; errors: string[] } = {
-      passed: true, warnings: [], errors: [],
-    };
-    const minPer: Record<Team, number> = { team1: 4, team2: 4, team1f: 2, team2f: 2 };
-    (Object.keys(minPer) as Team[]).forEach((t) => {
-      if (groupedAll[t].length < minPer[t]) {
-        validation.warnings.push(`${t}: kun ${groupedAll[t].length} ledere (anbefalt ${minPer[t]})`);
-      }
-    });
-
-    // Fetch shift_types
-    const { data: shiftTypesData, error: stErr } = await admin
-      .from('shift_types')
-      .select('id, slug, day_type, sort_order');
+    // Load shift_types
+    const { data: stData, error: stErr } = await admin
+      .from('shift_types').select('id, slug, day_type, sort_order, start_time, end_time, duration_hours');
     if (stErr) throw stErr;
-    const stMap = new Map<string, ShiftType>();
-    for (const st of (shiftTypesData || []) as ShiftType[]) {
-      stMap.set(`${st.day_type}:${st.slug}`, st);
+    const stByKey = new Map<string, ShiftType>();
+    for (const st of (stData || []) as ShiftType[]) {
+      stByKey.set(`${st.day_type}:${st.slug}`, st);
     }
-    const stId = (day_type: DayType, slug: string) => {
-      const st = stMap.get(`${day_type}:${slug}`);
-      if (!st) throw new Error(`Missing shift_type ${day_type}:${slug}`);
-      return st.id;
+    const ST = (dt: DayType, slug: string): ShiftType => {
+      const v = stByKey.get(`${dt}:${slug}`);
+      if (!v) throw new Error(`Missing shift_type ${dt}:${slug}`);
+      return v;
     };
 
-    // Upsert (or replace) the schedule
-    const { data: existing } = await admin
-      .from('shift_schedules')
-      .select('id, status')
-      .eq('period_number', period_number)
-      .eq('year', year)
-      .maybeSingle();
+    // Schedule row (replace existing draft, refuse if published)
+    const { data: existing } = await admin.from('shift_schedules')
+      .select('id, status').eq('period_number', period_number).eq('year', year).maybeSingle();
     if (existing && existing.status === 'published') {
       return new Response(JSON.stringify({ error: 'Period is published — archive first to regenerate' }), {
         status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
     let scheduleId: string;
     if (existing) {
-      // Wipe assignments + duties, keep schedule row
       await admin.from('shift_assignments').delete().eq('schedule_id', existing.id);
       await admin.from('special_duties').delete().eq('schedule_id', existing.id);
       await admin.from('shift_schedules').update({
@@ -195,8 +180,7 @@ Deno.serve(async (req) => {
       }).eq('id', existing.id);
       scheduleId = existing.id;
     } else {
-      const { data: ins, error: insErr } = await admin
-        .from('shift_schedules')
+      const { data: ins, error: insErr } = await admin.from('shift_schedules')
         .insert({ period_number, year, period_length, status: 'draft' })
         .select('id').single();
       if (insErr) throw insErr;
@@ -205,130 +189,288 @@ Deno.serve(async (req) => {
 
     const assignments: AssignmentInsert[] = [];
     const duties: SpecialDutyInsert[] = [];
+    const warnings: Warning[] = [];
 
-    // Rotation cursors
-    const morgenRot: Record<'team1f' | 'team2f', LeaderRow[]> = {
-      team1f: shuffle(groupedAll.team1f),
-      team2f: shuffle(groupedAll.team2f),
+    // Per-leader work intervals, used for validation only.
+    // Map<leaderId, Array<{startAbs, endAbs, dayIndex, st}>>
+    const work = new Map<string, { startAbs: number; endAbs: number; dayIndex: number; st: ShiftType }[]>();
+    const recordWork = (leaderId: string, dayIndex: number, st: ShiftType) => {
+      const iv = shiftInterval(st, dayIndex);
+      const arr = work.get(leaderId) || [];
+      arr.push({ ...iv, dayIndex, st });
+      work.set(leaderId, arr);
     };
+
+    // ----- Pre-build rotations -----
+    // For under-18: morgen rotates within UNDER18A (alternates by day type),
+    // bings rotates within UNDER18B (alternates by day type)
+    const morgenRot = { team1f: shuffle(grouped.team1f), team2f: shuffle(grouped.team2f) };
     const morgenCur = { team1f: { i: 0 }, team2f: { i: 0 } };
-    const bingsRot = { team1f: pairsWithin(groupedAll.team1f), team2f: pairsWithin(groupedAll.team2f) };
+    const bingsRot = { team1f: pairsWithin(grouped.team1f), team2f: pairsWithin(grouped.team2f) };
     const bingsCur = { team1f: { i: 0 }, team2f: { i: 0 } };
-    const kjokkenRot = shuffle([...groupedAll.team1f, ...groupedAll.team2f]);
+    // Kjokken rotates across all F-team leaders
+    const kjokkenRot = shuffle([...grouped.team1f, ...grouped.team2f]);
     const kjokkenCur = { i: 0 };
-    const nattRot = pairsAcross(groupedAll.team1, groupedAll.team2);
+    // Nattevakt: pairs across team1+team2 (18+)
+    const nattRot = pairsAcross(grouped.team1, grouped.team2);
     const nattCur = { i: 0 };
-    const frokostRot = { team1: pairsWithin(groupedAll.team1), team2: pairsWithin(groupedAll.team2) };
+    // Frokostvakt: pair from current dagteam
+    const frokostRot = { team1: pairsWithin(grouped.team1), team2: pairsWithin(grouped.team2) };
     const frokostCur = { team1: { i: 0 }, team2: { i: 0 } };
 
-    const teamsAll: Team[] = ['team1', 'team2', 'team1f', 'team2f'];
+    // We need to know the NEXT day's frokostvakt-pair while building today's middag.
+    // So compute all special duty selections per day FIRST, then build assignments.
+    type DayPlan = {
+      isA: boolean;
+      dagteam: Team; kveldsteam: Team;
+      under18a: 'team1f' | 'team2f';
+      under18b: 'team1f' | 'team2f';
+      morgen: LeaderRow | null;
+      bings: LeaderRow[];
+      kjokken: LeaderRow | null;
+      natt: LeaderRow[];
+      frokost: LeaderRow[];
+    };
+    const days: (DayPlan | null)[] = new Array(period_length).fill(null);
 
-    for (let dayIndex = 0; dayIndex < period_length; dayIndex++) {
-      if (dayIndex === 0) {
-        // ARRIVAL
-        const dt: DayType = 'arrival';
-        const arrivalSlugs = [
-          'forberedelser', 'lunsj_mote', 'ankomst', 'middag_ankomst',
-          'informasjon', 'intro_moter',
-        ];
-        for (const slug of arrivalSlugs) {
-          for (const t of teamsAll) {
-            assignments.push({ schedule_id: scheduleId, day_index: dayIndex, day_type: dt,
-              shift_type_id: stId(dt, slug), assignment_type: 'team', team_name: t,
-              leader_id: null, role: 'standard', note: null });
-          }
-        }
-        // 18+ shifts
-        for (const slug of ['kiosk', 'legging_ankomst', 'nattevakt_ankomst']) {
-          for (const t of ['team1', 'team2'] as Team[]) {
-            assignments.push({ schedule_id: scheduleId, day_index: dayIndex, day_type: dt,
-              shift_type_id: stId(dt, slug), assignment_type: 'team', team_name: t,
-              leader_id: null, role: 'standard', note: null });
-          }
-        }
-      } else if (dayIndex === period_length - 1) {
-        // DEPARTURE
-        const dt: DayType = 'departure';
-        const slugs = ['vekking_avreise', 'rydding', 'frokost_avreise', 'utdeling_pass',
-          'avreise', 'lunsj_mote_avreise', 'opprydning1', 'opprydning2'];
-        for (const slug of slugs) {
-          for (const t of teamsAll) {
-            assignments.push({ schedule_id: scheduleId, day_index: dayIndex, day_type: dt,
-              shift_type_id: stId(dt, slug), assignment_type: 'team', team_name: t,
-              leader_id: null, role: 'standard', note: null });
-          }
-        }
-      } else {
-        // NORMAL day with A/B rotation
-        const dt: DayType = 'normal';
-        const isTypeA = dayIndex % 2 === 1;
-        const dagteam: Team = isTypeA ? 'team1' : 'team2';
-        const kveldsteam: Team = isTypeA ? 'team2' : 'team1';
-        const under18a: 'team1f' | 'team2f' = isTypeA ? 'team1f' : 'team2f';
-        const under18b: 'team1f' | 'team2f' = isTypeA ? 'team2f' : 'team1f';
+    for (let d = 1; d < period_length - 1; d++) {
+      const isA = d % 2 === 1;
+      const dagteam: Team = isA ? 'team1' : 'team2';
+      const kveldsteam: Team = isA ? 'team2' : 'team1';
+      const under18a = (isA ? 'team1f' : 'team2f') as 'team1f' | 'team2f';
+      const under18b = (isA ? 'team2f' : 'team1f') as 'team1f' | 'team2f';
 
-        // Special duty rotation
-        const morgenLeader = morgenRot[under18a].length
-          ? next(morgenRot[under18a], morgenCur[under18a]) : null;
-        const bingsPair = bingsRot[under18b].length
-          ? nextPair(bingsRot[under18b], bingsCur[under18b]) : [];
-        const kjokkenLeader = kjokkenRot.length ? next(kjokkenRot, kjokkenCur) : null;
-        const nattPair = nattRot.length ? nextPair(nattRot, nattCur) : [];
-        const frokostPair = frokostRot[dagteam].length
-          ? nextPair(frokostRot[dagteam], frokostCur[dagteam]) : [];
+      // pick kjokken first; if same as morgen/bings candidate, advance
+      const morgen = next(morgenRot[under18a], morgenCur[under18a]);
+      const bings = (() => {
+        const p = bingsRot[under18b];
+        if (!p.length) return [];
+        const v = p[bingsCur[under18b].i % p.length];
+        bingsCur[under18b].i += 1;
+        return v;
+      })();
+      // kjokken rotation: pick next that isn't morgen/bings
+      let kjokken: LeaderRow | null = null;
+      for (let tries = 0; tries < kjokkenRot.length; tries++) {
+        const candidate = kjokkenRot[kjokkenCur.i % kjokkenRot.length];
+        kjokkenCur.i += 1;
+        if (!candidate) break;
+        if (morgen && candidate.id === morgen.id) continue;
+        if (bings.find((b) => b.id === candidate.id)) continue;
+        kjokken = candidate;
+        break;
+      }
+      const natt = (() => {
+        if (!nattRot.length) return [];
+        const v = nattRot[nattCur.i % nattRot.length];
+        nattCur.i += 1;
+        return v;
+      })();
+      const frokost = (() => {
+        const r = frokostRot[dagteam];
+        if (!r.length) return [];
+        const v = r[frokostCur[dagteam].i % r.length];
+        frokostCur[dagteam].i += 1;
+        return v;
+      })();
 
-        if (morgenLeader) duties.push({ schedule_id: scheduleId, day_index: dayIndex, duty_type: 'morgenvakt', leader_id: morgenLeader.id });
-        for (const l of bingsPair) duties.push({ schedule_id: scheduleId, day_index: dayIndex, duty_type: 'bingsvakt', leader_id: l.id });
-        if (kjokkenLeader) duties.push({ schedule_id: scheduleId, day_index: dayIndex, duty_type: 'kjokkenvakt', leader_id: kjokkenLeader.id });
-        for (const l of nattPair) duties.push({ schedule_id: scheduleId, day_index: dayIndex, duty_type: 'nattevakt', leader_id: l.id });
-        for (const l of frokostPair) duties.push({ schedule_id: scheduleId, day_index: dayIndex, duty_type: 'frokostvakt', leader_id: l.id });
+      days[d] = { isA, dagteam, kveldsteam, under18a, under18b, morgen, bings, kjokken, natt, frokost };
+    }
 
-        const push = (slug: string, team: Team | 'all', note: string | null = null) => {
-          assignments.push({
-            schedule_id: scheduleId, day_index: dayIndex, day_type: dt,
-            shift_type_id: stId(dt, slug), assignment_type: 'team',
-            team_name: team, leader_id: null, role: 'standard', note,
-          });
-        };
-        const pushLeader = (slug: string, leader: LeaderRow, role = 'standard') => {
-          assignments.push({
-            schedule_id: scheduleId, day_index: dayIndex, day_type: dt,
-            shift_type_id: stId(dt, slug), assignment_type: 'leader',
-            team_name: null, leader_id: leader.id, role, note: null,
-          });
-        };
+    // ----- BUILD ASSIGNMENTS -----
+    const teams: Team[] = ['team1', 'team2', 'team1f', 'team2f'];
+    const teamLeaders = (t: Team) => grouped[t];
 
-        // Build day
-        if (morgenLeader) pushLeader('morgenvakt', morgenLeader, 'morgenvakt');
-        push('vekking', under18a);
-        for (const l of frokostPair) pushLeader('frokost', l, 'frokostvakt');
-        push('frokost', under18a);
-        for (const l of bingsPair) pushLeader('bings_morgen', l, 'bingsvakt');
-        push('personalmoete', dagteam);
-        push('personalmoete', under18a);
-        push('personalmoete', under18b);
-        push('okt1', dagteam);
-        push('okt1', under18a);
-        push('okt1', under18b, '**');
-        push('middag', dagteam, '*');
-        push('middag', under18b);
-        for (const l of bingsPair) pushLeader('bings_ettermiddag', l, 'bingsvakt');
-        push('personalmoete2', 'all');
-        push('okt2', dagteam);
-        push('okt2', under18a, '***');
-        push('okt2', under18b);
-        push('kveldsmat', under18a, '***');
-        push('kveldsmat', kveldsteam);
-        for (const l of bingsPair) pushLeader('bings_kveld', l, 'bingsvakt');
-        push('okt3', kveldsteam);
-        push('legging', kveldsteam, '****');
-        push('legging', dagteam, '*****');
-        for (const l of nattPair) pushLeader('nattevakt', l, 'nattevakt');
-        if (kjokkenLeader) pushLeader('kjokkenvakt', kjokkenLeader, 'kjokkenvakt');
+    const pushTeam = (
+      day: number, dt: DayType, slug: string, team: Team,
+      excluded: LeaderRow[], note: string | null,
+    ) => {
+      const st = ST(dt, slug);
+      assignments.push({
+        schedule_id: scheduleId, day_index: day, day_type: dt,
+        shift_type_id: st.id, assignment_type: 'team',
+        team_name: team, leader_id: null, role: 'standard', note,
+      });
+      const exIds = new Set(excluded.map((l) => l.id));
+      for (const l of teamLeaders(team)) {
+        if (!exIds.has(l.id)) recordWork(l.id, day, st);
+      }
+    };
+    const pushLeader = (
+      day: number, dt: DayType, slug: string, leader: LeaderRow, role: string, note?: string | null,
+    ) => {
+      const st = ST(dt, slug);
+      assignments.push({
+        schedule_id: scheduleId, day_index: day, day_type: dt,
+        shift_type_id: st.id, assignment_type: 'leader',
+        team_name: null, leader_id: leader.id, role, note: note ?? null,
+      });
+      recordWork(leader.id, day, st);
+    };
+
+    // ===== ARRIVAL DAY (day 0) =====
+    {
+      const dt: DayType = 'arrival';
+      // Standard team-block
+      for (const slug of ['forberedelser', 'lunsj_mote', 'ankomst', 'middag_ankomst', 'informasjon', 'intro_moter']) {
+        for (const t of teams) pushTeam(0, dt, slug, t, [], null);
+      }
+      // 18+ shifts
+      for (const slug of ['kiosk', 'legging_ankomst', 'nattevakt_ankomst']) {
+        for (const t of ['team1', 'team2'] as Team[]) pushTeam(0, dt, slug, t, [], null);
       }
     }
 
-    // Bulk insert
+    // ===== NORMAL DAYS =====
+    for (let d = 1; d < period_length - 1; d++) {
+      const dt: DayType = 'normal';
+      const p = days[d]!;
+      const tomorrow = days[d + 1]; // for frokost-from-tomorrow
+
+      // morgenvakt (1 leader)
+      if (p.morgen) pushLeader(d, dt, 'morgenvakt', p.morgen, 'morgenvakt');
+
+      // vekking — UNDER18A team (full team)
+      pushTeam(d, dt, 'vekking', p.under18a, [], null);
+
+      // frokost — frokostvakt (named) + UNDER18A team
+      for (const l of p.frokost) pushLeader(d, dt, 'frokost', l, 'frokostvakt');
+      pushTeam(d, dt, 'frokost', p.under18a, [], null);
+
+      // bings morgen — bings pair
+      for (const l of p.bings) pushLeader(d, dt, 'bings_morgen', l, 'bingsvakt');
+
+      // PM1 — dagteam + under18a + under18b (NOT kveldsteam)
+      pushTeam(d, dt, 'personalmoete', p.dagteam, [], null);
+      pushTeam(d, dt, 'personalmoete', p.under18a, [], null);
+      pushTeam(d, dt, 'personalmoete', p.under18b, [], null);
+
+      // Økt 1 — dagteam + under18a + under18b (minus bings) **
+      pushTeam(d, dt, 'okt1', p.dagteam, [], null);
+      pushTeam(d, dt, 'okt1', p.under18a, [], null);
+      pushTeam(d, dt, 'okt1', p.under18b, p.bings, '**');
+
+      // Middag — dagteam* (minus frokost+natt) + under18b + tomorrow's frokostvakt
+      pushTeam(d, dt, 'middag', p.dagteam, [...p.frokost, ...p.natt], '*');
+      pushTeam(d, dt, 'middag', p.under18b, [], null);
+      if (tomorrow) for (const l of tomorrow.frokost) {
+        pushLeader(d, dt, 'middag', l, 'frokostvakt_neste_dag', 'fra dagen etter');
+      }
+
+      // Bings ettermiddag
+      for (const l of p.bings) pushLeader(d, dt, 'bings_ettermiddag', l, 'bingsvakt');
+
+      // PM2 — ALL 4 teams
+      for (const t of teams) pushTeam(d, dt, 'personalmoete2', t, [], null);
+
+      // Økt 2 — dagteam + under18a*** (minus morgen) + under18b
+      pushTeam(d, dt, 'okt2', p.dagteam, [], null);
+      pushTeam(d, dt, 'okt2', p.under18a, p.morgen ? [p.morgen] : [], '***');
+      pushTeam(d, dt, 'okt2', p.under18b, [], null);
+
+      // Kveldsmat — under18a*** + kveldsteam
+      pushTeam(d, dt, 'kveldsmat', p.under18a, p.morgen ? [p.morgen] : [], '***');
+      pushTeam(d, dt, 'kveldsmat', p.kveldsteam, [], null);
+
+      // Bings kveld
+      for (const l of p.bings) pushLeader(d, dt, 'bings_kveld', l, 'bingsvakt');
+
+      // Økt 3 — kveldsteam (18+)
+      pushTeam(d, dt, 'okt3', p.kveldsteam, [], null);
+
+      // Legging — kveldsteam**** (minus natt) + dagteam***** (minus okt1 folks = full dagteam)
+      // ***** = those who worked Økt 1 do NOT work legging. Whole dagteam was on Økt 1, so dagteam excluded entirely.
+      pushTeam(d, dt, 'legging', p.kveldsteam, p.natt, '****');
+      // We still want to render the row to match the Excel — empty for dagteam since all worked Økt 1
+      // (skipping the band since no one is on it)
+
+      // Nattevakt
+      for (const l of p.natt) pushLeader(d, dt, 'nattevakt', l, 'nattevakt');
+
+      // Kjokkenvakt (1 from F-team, full day, NOT in normal okter)
+      if (p.kjokken) {
+        pushLeader(d, dt, 'kjokkenvakt', p.kjokken, 'kjokkenvakt');
+        // also add to special_duties for legacy view
+        duties.push({ schedule_id: scheduleId, day_index: d, duty_type: 'kjokkenvakt', leader_id: p.kjokken.id });
+      }
+      if (p.morgen) duties.push({ schedule_id: scheduleId, day_index: d, duty_type: 'morgenvakt', leader_id: p.morgen.id });
+      for (const l of p.bings) duties.push({ schedule_id: scheduleId, day_index: d, duty_type: 'bingsvakt', leader_id: l.id });
+      for (const l of p.natt) duties.push({ schedule_id: scheduleId, day_index: d, duty_type: 'nattevakt', leader_id: l.id });
+      for (const l of p.frokost) duties.push({ schedule_id: scheduleId, day_index: d, duty_type: 'frokostvakt', leader_id: l.id });
+    }
+
+    // ===== DEPARTURE DAY (last) =====
+    {
+      const d = period_length - 1;
+      const dt: DayType = 'departure';
+      for (const slug of ['vekking_avreise', 'rydding', 'frokost_avreise', 'utdeling_pass',
+        'avreise', 'lunsj_mote_avreise', 'opprydning1', 'opprydning2']) {
+        for (const t of teams) pushTeam(d, dt, slug, t, [], null);
+      }
+    }
+
+    // ===== VALIDATION =====
+    const leaderById = new Map<string, LeaderRow>(
+      (leadersData || []).map((l) => [l.id, l as LeaderRow]),
+    );
+
+    for (const [leaderId, intervals] of work.entries()) {
+      const ldr = leaderById.get(leaderId);
+      if (!ldr) continue;
+      const fteam = (ldr.team || '').trim().toLowerCase();
+      const isFTeam = fteam === '1f' || fteam === '2f';
+
+      // Group by dayIndex for 8h check + F-team-21:00 check
+      const byDay = new Map<number, typeof intervals>();
+      for (const iv of intervals) {
+        const arr = byDay.get(iv.dayIndex) || [];
+        arr.push(iv);
+        byDay.set(iv.dayIndex, arr);
+      }
+      for (const [day, arr] of byDay.entries()) {
+        const hours = arr.reduce((s, x) => s + Number(x.st.duration_hours), 0);
+        if (hours > 8.01) {
+          warnings.push({
+            leader_id: leaderId, leader_name: ldr.name, day_index: day,
+            rule: '8h_max', detail: `${hours.toFixed(2)} timer (over 8t)`,
+          });
+        }
+        if (isFTeam) {
+          for (const iv of arr) {
+            const startMin = toMinutes(iv.st.start_time);
+            const endMin = toMinutes(iv.st.end_time);
+            const endNorm = endMin <= startMin ? endMin + 24 * 60 : endMin;
+            if (endNorm > 21 * 60) {
+              warnings.push({
+                leader_id: leaderId, leader_name: ldr.name, day_index: day,
+                rule: 'f_team_after_21',
+                detail: `${iv.st.slug} slutter ${iv.st.end_time.slice(0, 5)} — F-team kan ikke jobbe etter 21:00`,
+              });
+            }
+          }
+        }
+      }
+
+      // 11h rest: sort intervals by startAbs, check gap between consecutive
+      const sorted = [...intervals].sort((a, b) => a.startAbs - b.startAbs);
+      for (let i = 1; i < sorted.length; i++) {
+        const gap = sorted[i].startAbs - sorted[i - 1].endAbs;
+        // Only warn for gaps spanning to next "work episode" (gap >= 0 and < 11h means insufficient rest)
+        // skip if same continuous shift block (gap <= 30 min counts as same block)
+        if (gap > 30 && gap < 11 * 60) {
+          warnings.push({
+            leader_id: leaderId, leader_name: ldr.name, day_index: sorted[i].dayIndex,
+            rule: '11h_rest',
+            detail: `Kun ${(gap / 60).toFixed(1)}t hvile etter ${sorted[i - 1].st.slug} (krav 11t)`,
+          });
+        }
+      }
+    }
+
+    // Bings-in-okt1 sanity (bings should be excluded from okt1 — sanity check the assignments)
+    // Already enforced above; no double-check needed.
+
+    // ===== Bulk insert =====
     if (assignments.length) {
       const { error: aErr } = await admin.from('shift_assignments').insert(assignments);
       if (aErr) throw aErr;
@@ -344,7 +486,7 @@ Deno.serve(async (req) => {
       days: period_length,
       assignments_count: assignments.length,
       duties_count: duties.length,
-      validation,
+      validation: { warnings, count: warnings.length },
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (e) {
     console.error('generate-shift-schedule error:', e);

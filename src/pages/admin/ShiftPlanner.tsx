@@ -14,8 +14,10 @@ import {
 } from '@/components/ui/select';
 import {
   Shield, ArrowLeft, CalendarDays, Loader2, Sparkles, Send, Archive, Trash2, Users, Eye,
+  Download, AlertTriangle,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import { exportShiftScheduleXlsx } from '@/lib/exportShiftScheduleXlsx';
 
 type Leader = Tables<'leaders'>;
 type ShiftSchedule = Tables<'shift_schedules'>;
@@ -54,6 +56,7 @@ export default function ShiftPlanner() {
   const [viewScheduleId, setViewScheduleId] = useState<string | null>(null);
   const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
   const [loadingGrid, setLoadingGrid] = useState(false);
+  const [warnings, setWarnings] = useState<Array<{ leader_id: string; leader_name: string; day_index: number | null; rule: string; detail: string }>>([]);
 
   const loadAll = async () => {
     setLoading(true);
@@ -104,6 +107,7 @@ export default function ShiftPlanner() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       showSuccess(`Generert: ${data.assignments_count} tildelinger over ${data.days} dager`);
+      setWarnings(data.validation?.warnings || []);
       loadAll();
     } catch (e) {
       console.error(e);
@@ -134,6 +138,20 @@ export default function ShiftPlanner() {
       loadAll();
     } catch {
       showError('Kunne ikke slette');
+    }
+  };
+
+  const downloadXlsx = async (s: ShiftSchedule) => {
+    try {
+      const { data, error } = await supabase.from('shift_assignments').select('*').eq('schedule_id', s.id);
+      if (error) throw error;
+      await exportShiftScheduleXlsx({
+        schedule: s, assignments: data || [], shiftTypes, leaders,
+      });
+      showSuccess('Excel lastet ned');
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke lage Excel');
     }
   };
 
@@ -320,6 +338,9 @@ export default function ShiftPlanner() {
                     <Button size="sm" variant={viewScheduleId === s.id ? 'default' : 'secondary'} onClick={() => loadGrid(s.id)}>
                       <Eye className="w-3.5 h-3.5 mr-1" /> Vis
                     </Button>
+                    <Button size="sm" variant="outline" onClick={() => downloadXlsx(s)}>
+                      <Download className="w-3.5 h-3.5 mr-1" /> Excel
+                    </Button>
                     {s.status !== 'published' && (
                       <Button size="sm" onClick={() => setStatus(s.id, 'published')}>
                         <Send className="w-3.5 h-3.5 mr-1" /> Publiser
@@ -363,6 +384,27 @@ export default function ShiftPlanner() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {warnings.length > 0 && (
+              <div className="mb-4 border border-yellow-500/50 bg-yellow-500/10 rounded-lg p-3">
+                <div className="flex items-center gap-2 font-semibold text-sm mb-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                  {warnings.length} advarsel{warnings.length === 1 ? '' : 'er'}
+                </div>
+                <ul className="text-xs space-y-0.5 max-h-40 overflow-y-auto">
+                  {warnings.map((w, i) => (
+                    <li key={i}>
+                      <strong>{w.leader_name}</strong>
+                      {w.day_index != null ? ` — Dag ${w.day_index + 1}` : ''}: {w.detail}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {warnings.length === 0 && viewScheduleId && (
+              <div className="mb-4 border border-green-500/30 bg-green-500/10 rounded-lg p-2 text-xs text-green-800 dark:text-green-200">
+                Ingen regelbrudd oppdaget i siste generering.
+              </div>
+            )}
             {loadingGrid ? (
               <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
             ) : (
