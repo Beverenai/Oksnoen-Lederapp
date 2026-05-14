@@ -125,11 +125,21 @@ export function useLeaderDashboardData(leaders: Leader[]) {
       return matchesSearch && matchesTeam && matchesUnread;
     });
 
+    const getPriority = (l: typeof filtered[number]) => {
+      const post = l.ministerpost?.toLowerCase() || '';
+      const team = l.team?.toLowerCase() || '';
+      if (post === 'statsminister') return 0;
+      if (post === 'visestatsminister' || post === 'vise-statsminister') return 1;
+      if (l.isAdmin) return 1;
+      if (l.isNurse) return 2;
+      if (team === 'kordinator') return 3;
+      return 10;
+    };
+
     return [...filtered].sort((a, b) => {
-      if (a.isAdmin && !b.isAdmin) return -1;
-      if (!a.isAdmin && b.isAdmin) return 1;
-      if (a.isNurse && !b.isNurse) return -1;
-      if (!a.isNurse && b.isNurse) return 1;
+      const ap = getPriority(a);
+      const bp = getPriority(b);
+      if (ap !== bp) return ap - bp;
       const aOrder = getTeamSortOrder(a.team);
       const bOrder = getTeamSortOrder(b.team);
       if (aOrder !== bOrder) return aOrder - bOrder;
