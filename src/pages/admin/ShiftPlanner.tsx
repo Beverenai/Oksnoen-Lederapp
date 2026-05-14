@@ -262,8 +262,12 @@ export default function ShiftPlanner() {
     }));
   }, [warnings]);
 
-  // Timer per leder per dag (speiler generator/revalidate-logikken: team-vakter
-  // ekspanderes til alle medlemmer av teamet).
+  // Timer per leder per dag. Telt som UNION av tidsintervaller (ikke sum av
+  // varigheter), slik at overlappende vakter — f.eks. kjøkkenvakt 09–17 som
+  // overlapper teamets vekking/frokost/økt1/middag/økt2 — ikke dobbelttelles.
+  // Generator-koden ekskluderer slike ledere fra team-vakter i recordWork, men
+  // shift_assignments-radene lagrer ikke ekskluderingen, så UI må håndtere det
+  // via intervall-union.
   const hoursMatrix = useMemo(() => {
     if (!viewedSchedule) return null;
     const days = viewedSchedule.period_length;
@@ -275,23 +279,59 @@ export default function ShiftPlanner() {
       if (k) { teamMembers[k].push(l); teamLeaders.push(l); }
     }
     teamLeaders.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
-    const hours = new Map<string, number[]>();
-    for (const l of teamLeaders) hours.set(l.id, new Array(days).fill(0));
+
+    const toMin = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+    // Intervaller per (leder, dag): minutter siden midnatt på dayIndex
+    // (kan være > 1440 hvis vakten krysser midnatt).
+    const intervalsPerLeaderDay = new Map<string, [number, number][][]>();
+    for (const l of teamLeaders) {
+      intervalsPerLeaderDay.set(l.id, Array.from({ length: days }, () => [] as [number, number][]));
+    }
+    const addInterval = (leaderId: string, day: number, st: { start_time: string; end_time: string }) => {
+      const grid = intervalsPerLeaderDay.get(leaderId);
+      if (!grid || day < 0 || day >= days) return;
+      const s = toMin(st.start_time);
+      let e = toMin(st.end_time);
+      if (e <= s) e += 24 * 60;
+      grid[day].push([s, e]);
+    };
+
     for (const a of assignments) {
       const st = stById.get(a.shift_type_id);
       if (!st) continue;
-      const dur = Number(st.duration_hours) || 0;
       if (a.assignment_type === 'leader' && a.leader_id) {
-        const row = hours.get(a.leader_id);
-        if (row) row[a.day_index] += dur;
+        addInterval(a.leader_id, a.day_index, st);
       } else if (a.assignment_type === 'team' && a.team_name) {
         const members = teamMembers[a.team_name as Team];
         if (!members) continue;
-        for (const m of members) {
-          const row = hours.get(m.id);
-          if (row) row[a.day_index] += dur;
-        }
+        for (const m of members) addInterval(m.id, a.day_index, st);
       }
+    }
+
+    const hours = new Map<string, number[]>();
+    for (const l of teamLeaders) {
+      const grid = intervalsPerLeaderDay.get(l.id)!;
+      const row = grid.map((ivs) => {
+        if (ivs.length === 0) return 0;
+        const sorted = [...ivs].sort((a, b) => a[0] - b[0]);
+        let total = 0;
+        let [curS, curE] = sorted[0];
+        for (let i = 1; i < sorted.length; i++) {
+          const [s, e] = sorted[i];
+          if (s <= curE) {
+            curE = Math.max(curE, e);
+          } else {
+            total += curE - curS;
+            [curS, curE] = [s, e];
+          }
+        }
+        total += curE - curS;
+        return total / 60;
+      });
+      hours.set(l.id, row);
     }
     return { days, leaders: teamLeaders, hours };
   }, [viewedSchedule, shiftTypes, assignments, leaders]);
