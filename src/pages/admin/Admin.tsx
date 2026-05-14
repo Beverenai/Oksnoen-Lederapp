@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Progress } from '@/components/ui/progress';
 import {
   Settings, Loader2, Shield, Calendar,
-  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles, ClipboardPaste,
+  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles, ClipboardPaste, CalendarDays,
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -177,6 +177,12 @@ export default function Admin() {
           </p>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <Link to="/admin/shifts">
+            <Button variant="outline" size="sm">
+              <CalendarDays className="h-4 w-4" />
+              <span className="hidden sm:inline sm:ml-2">Vaktplan</span>
+            </Button>
+          </Link>
           <Link to="/admin/settings">
             <Button variant="outline" size="sm">
               <Settings className="h-4 w-4" />

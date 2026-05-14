@@ -36,6 +36,7 @@ const RopeControl = lazy(() => import("@/pages/RopeControl"));
 const ImportantInfo = lazy(() => import("@/pages/ImportantInfo"));
 const ParticipantStats = lazy(() => import("@/pages/admin/ParticipantStats"));
 const Checkout = lazy(() => import("@/pages/admin/Checkout"));
+const ShiftPlanner = lazy(() => import("@/pages/admin/ShiftPlanner"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -183,6 +184,7 @@ function AppRoutes() {
         <Route path="/nurse" element={<ProtectedRoute><Nurse /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
         <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
+        <Route path="/admin/shifts" element={<ProtectedRoute><ShiftPlanner /></ProtectedRoute>} />
         <Route path="/participant-stats" element={<ProtectedRoute><ParticipantStats /></ProtectedRoute>} />
         <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
         <Route path="/fix" element={<ProtectedRoute><Fix /></ProtectedRoute>} />
