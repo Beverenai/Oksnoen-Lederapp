@@ -242,6 +242,16 @@ export default function Admin() {
             <ClipboardPaste className="h-4 w-4" />
             <span className="hidden sm:inline sm:ml-2">Lim inn</span>
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsClearAllOpen(true)}
+            title="Tøm daglige felt for alle ledere"
+            className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Eraser className="h-4 w-4" />
+            <span className="hidden sm:inline sm:ml-2">Tøm</span>
+          </Button>
         </div>
       </div>
 
@@ -359,6 +369,28 @@ export default function Admin() {
         leaders={leaders}
         onSaved={loadData}
       />
+
+      <AlertDialog open={isClearAllOpen} onOpenChange={setIsClearAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tøm daglige felt for ALLE ledere?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dette tømmer nåværende aktivitet, ekstra aktivitet, notat til lederen, OBS-melding og ekstra info 2–5 for samtlige ledere. Team, hytte, ministerpost og overnatting (ekstra 1) beholdes. Handlingen kan ikke angres.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isClearingAll}>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleClearAllDailyFields(); }}
+              disabled={isClearingAll}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isClearingAll ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Eraser className="w-4 h-4 mr-2" />}
+              Ja, tøm alle
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
