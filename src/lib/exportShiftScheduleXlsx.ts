@@ -159,7 +159,7 @@ export async function exportShiftScheduleXlsx(opts: {
         if (filled) {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAM_FILL[team] } };
           cell.font = {
-            color: { argb: team === 'team2f' ? 'FF000000' : 'FFFFFFFF' },
+            color: { argb: team === 'team1f' ? 'FF000000' : 'FFFFFFFF' },
             bold: true,
             size: 9,
           };
@@ -283,7 +283,7 @@ async function writeSpecialBlock(
       if (filled) {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAM_FILL[t] } };
         cell.font = {
-          color: { argb: t === 'team2f' ? 'FF000000' : 'FFFFFFFF' },
+          color: { argb: t === 'team1f' ? 'FF000000' : 'FFFFFFFF' },
           bold: true,
           size: 9,
         };
