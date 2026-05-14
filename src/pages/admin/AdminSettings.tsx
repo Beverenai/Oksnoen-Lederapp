@@ -278,6 +278,7 @@ export default function AdminSettings() {
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           onSaved={loadData}
+          currentRole={(editingLeader as any)?.role || 'leader'}
         />
       </>
     );
