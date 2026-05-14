@@ -150,12 +150,6 @@ export async function exportShiftScheduleXlsx(opts: {
 
     ROW_TEAMS.forEach((rowKind, ri) => {
       const r = currentRow + ri;
-      // Column A: row label (small, italic) — dayLabel itself goes via merge below
-      const labelCell = ws.getCell(r, 1);
-      labelCell.value = ROW_LABELS[rowKind];
-      labelCell.font = { size: 9, italic: rowKind === 'single', color: { argb: 'FF555555' } };
-      labelCell.alignment = { vertical: 'middle', horizontal: 'right' };
-
       normalTypes.forEach((st, i) => {
         const cell = ws.getCell(r, i + 2);
         if (rowKind === 'single') {
@@ -190,8 +184,7 @@ export async function exportShiftScheduleXlsx(opts: {
       ws.getRow(r).height = rowKind === 'single' ? 32 : 16;
     });
 
-    // Replace col A labels with merged day-name cell
-    for (let ri = 0; ri < ROW_TEAMS.length; ri++) ws.getCell(dayStartRow + ri, 1).value = '';
+    // Merged day-name cell in column A
     ws.mergeCells(dayStartRow, 1, dayStartRow + ROW_TEAMS.length - 1, 1);
     const dayCell = ws.getCell(dayStartRow, 1);
     dayCell.value = dayLabel;
