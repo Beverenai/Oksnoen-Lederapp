@@ -510,6 +510,25 @@ export default function ShiftPlanner() {
                     <div className="text-xs text-muted-foreground">
                       {s.period_length} dager • generert {new Date(s.generated_at!).toLocaleString('nb-NO')}
                     </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Label htmlFor={`start-${s.id}`} className="text-xs text-muted-foreground">Startdato:</Label>
+                      <Input
+                        id={`start-${s.id}`}
+                        type="date"
+                        className="h-8 text-xs w-[160px]"
+                        value={(s as any).start_date ?? ''}
+                        onChange={async (e) => {
+                          const newDate = e.target.value || null;
+                          const { error } = await supabase
+                            .from('shift_schedules')
+                            .update({ start_date: newDate } as any)
+                            .eq('id', s.id);
+                          if (error) { showError('Kunne ikke lagre dato'); return; }
+                          setSchedules((prev) => prev.map((p) => p.id === s.id ? ({ ...p, start_date: newDate } as any) : p));
+                          showSuccess('Startdato lagret');
+                        }}
+                      />
+                    </div>
                   </div>
                   <Badge variant={STATUS_META[s.status]?.variant || 'secondary'}>
                     {STATUS_META[s.status]?.label || s.status}
