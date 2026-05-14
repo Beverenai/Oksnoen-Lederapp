@@ -193,17 +193,18 @@ export function LeaderDetailDialog({
     saveLeaderFieldsRef.current = saveLeaderFields;
   }, [saveLeaderFields]);
 
-  // Debounced auto-save for all fields (1s debounce)
+  // Debounced auto-save for all fields (350ms debounce). Use the ref so that
+  // parent refetches (which produce a new `leader` reference) don't retrigger
+  // phantom saves.
   useEffect(() => {
-    if (!isInitializedRef.current || !leader) return;
+    if (!isInitializedRef.current || !leaderId) return;
 
-    // Show "Lagrer…" immediately so the user feels the change registered.
     setAutoSaveStatus('saving');
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
-      saveLeaderFields();
+      saveLeaderFieldsRef.current?.();
     }, 350);
-  }, [name, phone, email, age, team, cabin, ministerpost, hasCar, hasDriversLicense, hasBoatLicense, canRappelling, canClimbing, canZipline, canRopeSetup, saveLeaderFields, leader]);
+  }, [name, phone, email, age, team, cabin, ministerpost, hasCar, hasDriversLicense, hasBoatLicense, canRappelling, canClimbing, canZipline, canRopeSetup, leaderId]);
 
   // Keep latest callbacks in refs so the role-save effect doesn't re-run
   // every time the parent refetches and passes new function identities.
