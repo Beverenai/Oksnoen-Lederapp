@@ -75,7 +75,11 @@ Deno.serve(async (req) => {
       if (a.assignment_type === 'leader' && a.leader_id) {
         addInterval(a.leader_id, a.day_index, st);
       } else if (a.assignment_type === 'team' && a.team_name && teamMembers[a.team_name]) {
-        for (const m of teamMembers[a.team_name]) addInterval(m.id, a.day_index, st);
+        const excluded = new Set<string>(Array.isArray(a.excluded_leader_ids) ? a.excluded_leader_ids : []);
+        for (const m of teamMembers[a.team_name]) {
+          if (excluded.has(m.id)) continue;
+          addInterval(m.id, a.day_index, st);
+        }
       }
     }
 

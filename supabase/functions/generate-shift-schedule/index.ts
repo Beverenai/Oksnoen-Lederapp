@@ -332,6 +332,7 @@ Deno.serve(async (req) => {
         schedule_id: scheduleId, day_index: day, day_type: dt,
         shift_type_id: st.id, assignment_type: 'team',
         team_name: team, leader_id: null, role: 'standard', note,
+        excluded_leader_ids: excluded.map((l) => l.id),
       });
       const exIds = new Set(excluded.map((l) => l.id));
       for (const l of teamLeaders(team)) {

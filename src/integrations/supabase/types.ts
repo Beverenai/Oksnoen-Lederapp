@@ -1060,6 +1060,7 @@ export type Database = {
           created_at: string | null
           day_index: number
           day_type: string
+          excluded_leader_ids: string[]
           id: string
           leader_id: string | null
           note: string | null
@@ -1074,6 +1075,7 @@ export type Database = {
           created_at?: string | null
           day_index: number
           day_type: string
+          excluded_leader_ids?: string[]
           id?: string
           leader_id?: string | null
           note?: string | null
@@ -1088,6 +1090,7 @@ export type Database = {
           created_at?: string | null
           day_index?: number
           day_type?: string
+          excluded_leader_ids?: string[]
           id?: string
           leader_id?: string | null
           note?: string | null
