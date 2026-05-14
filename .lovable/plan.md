@@ -1,85 +1,72 @@
+## Avvik mot v5-spec — funnet i koden og databasen
 
-## Hva jeg ser i dokumentet vs. nåværende kode
+### A. Database (`shift_types`) — feil tider/varigheter
 
-Logikkdokumentet ditt er veldig presist. Jeg sammenlignet det mot `generate-shift-schedule/index.ts` slik den står nå. Det stemmer i grove trekk, men det er **flere konkrete avvik** som gjør at vaktplanen ikke matcher Excel-malen ennå.
+| Slug | Nå | Spec v5 |
+|------|----|---------|
+| `nattevakt` | 23:30–05:00, 5.5t | **23:30–04:00, 4.5t** |
+| `sanitas_box` | 23:30–05:00, 5.5t (kombinert) | **Splittes i to:** `sanitas` 23:30–01:00 1.5t (Økt 1-team) + `seilern_box` 09:15–10:00 0.75t (UNDER18A) |
+| `seilern` | 09:15–10:00 (eksisterer) | Skal **slettes / smeltes inn i `seilern_box`** (Excel-korreksjonen sier dette er ÉN kolonne). |
 
-### Avvik funnet (det jeg "mangler" / koden mangler)
+### B. Generator-logikk (`generate-shift-schedule/index.ts`) — feil tildelinger
 
-**1. Frokost har for få folk**
-- Doc: Frokostvakt (1 fra Økt 1+2-team) **+ hele UNDER18A** (minus evt. kjøkkenvakt).
-- Kode: kun frokostvakt-personen blir pushet. UNDER18A er ikke med på frokost-vakten.
+1. **Nattevakt-pool er feil.** Velger fra `[...team1, ...team2]`. Spec: **kun fra Økt 1-teamet (`morning18`)**. Også dette gjør at "nattevakt-leder unntatt middag (*)"-eksklusjonen i `middag` ikke alltid treffer.
+2. **Legging er på feil team.** Koden gjør `pushTeam('legging', p.evening18, …)`. Spec: **Legging = Økt 1-team (`morning18`)** (de kommer tilbake etter 6t pause). Evening18 har Økt 3, ikke Legging.
+3. **Sanitas er på feil personer.** Tildeles nattevakt-paret. Spec: **2 fra leggeteamet (Økt 1-team), IKKE nattevakt-paret**.
+4. **Seilern+Box er ikke kombinert.** Skal være ÉN kolonne med 2 fra UNDER18A. Slug: `seilern_box`.
+5. **Kveldsmat har F-team.** Koden pusher `p.morgenF` (UNDER18A) til kveldsmat. Spec: **kun Økt 2+3-team, ingen F-team** (under-18 er ferdige etter Økt 2).
+6. **"Frokostvakt fra neste dag" mangler i PM1, Økt 1, PM2, Økt 2, Kveldsmat.** Spec: 1 person fra evening18 (= neste dags frokostvakt) deltar i PM1 → Økt 1 → PM2 → Økt 2 → Kveldsmat, men IKKE Økt 3 (*****).
+7. **`tomorrow.frokost` er feilaktig pushet til Middag.** Spec: den personen er på Økt 1, ikke på Middag. Skal fjernes fra middag-blokken.
+8. **`*****`-regelen (Økt 3 uten neste-dags-frokostvakt) er ikke implementert** — pga. punkt 6 finnes personen ikke i okt3-blokken, men note-merket bør være `*****` (ikke `****` slik det står nå på okt3).
+9. **Personalmøte 1** mangler `neste_frokostvakt` (samme som punkt 6).
+10. **Resten av Økt 2+3-teamet (evening18) skal IKKE være på PM1.** ✓ Allerede riktig.
+11. **Kveldsmat-noten mangler.** Skal bare være `evening18`, men kommentaren "+ UNDER18A***" må fjernes.
 
-**2. Vekking ekskluderer morgenvakt**
-- Doc: Hele UNDER18A inkl. morgenvakt-personen (han er allerede oppe).
-- Kode: morgenvakt blir trukket ut av vekking-teamet.
+### C. Excel-eksport (`exportShiftScheduleXlsx.ts`)
 
-**3. Kjøkkenvakt trekkes fra feil pool**
-- Doc: 1 person fra **UNDER18B** (samme F-team som har bings den dagen).
-- Kode: trekker fra `[...team1f, ...team2f]` — kan havne i UNDER18A.
+- Bruker fortsatt `seilern` + `sanitas_box` som separate slugs i `NORMAL_SLUGS`. Må oppdateres til `sanitas` + `seilern_box` (i denne rekkefølgen, etter Nattevakt og før Kjøkkenvakt).
+- Navneformat — `shortName(fullName)` mangler. Skal vise "Fornavn E.": `"Caroline Røthe Skjaker" → "Caroline R.S."`.
 
-**4. Personalmøte 1 har feil deltakere**
-- Doc: Kun Økt 1+2-team + UNDER18A + UNDER18B. **Økt 3-teamet er IKKE med** (de hviler).
-- Kode: alle 4 team pushes til `personalmoete`.
+### D. Mindre rydding
 
-**5. Frokostvakt jobber også Økt 1 — men ekskluderes**
-- Doc: Frokostvakt jobber Økt 1 sammen med teamet sitt (unntatt fra middag, ikke Økt 1).
-- Kode: ekskluderer frokostvakt fra Økt 1.
-
-**6. UNDER18B mangler på Økt 2**
-- Doc: Økt 2 = Økt 1+2-team + UNDER18A*** + **UNDER18B** (bings er tilbake).
-- Kode: pusher kun evening18 og morgenF til okt2. UNDER18B helt fraværende.
-
-**7. Middag mangler UNDER18B**
-- Doc: Middag = Frokostvakt(neste dag) + Økt 1+2-team* + **UNDER18B**.
-- Kode: pusher kun morning18 + neste dags frokost. UNDER18B mangler.
-
-**8. Legging er for liten gruppe**
-- Doc: Legging = **hele Økt 3-team**** (minus nattevakt; de med Økt 1 neste dag slutter 23:45) + **Økt 1+2-team***** (de som IKKE jobbet Økt 1)**.
-- Kode: bare 2 navngitte personer fra evening18 ("legging-paret"). Den store gruppen som faktisk legger barn er ikke med.
-
-**9. "Neste-dag-Økt-1-slutter-23:45"-regelen mangler**
-- Doc: Fotnote ****: Folk som har Økt 1 neste dag slutter legging 23:45.
-- Kode: ingen markering eller tidshåndtering for dette.
-
-**10. Bings ettermiddag — slug-mismatch**
-- Doc bruker "bings_em". Koden pusher slug `'bings_ettermiddag'`. Må verifisere at `shift_types` har akkurat den slugen, ellers feiler `ST()`.
-
-**11. Personalmøte 2 — slug-mismatch**
-- Koden bruker `'personalmoete2'`. Må sikre at den finnes i `shift_types` (spec sier 15:45–16:00).
-
-**12. Ankomst/avreise refererer til slugs som kanskje ikke finnes**
-- Koden pusher `forberedelser, lunsj_mote, ankomst, middag_ankomst, informasjon, intro_moter, kiosk, legging_ankomst, nattevakt_ankomst, vekking_avreise, rydding, frokost_avreise, utdeling_pass, avreise, lunsj_mote_avreise, opprydning1, opprydning2`. Hvis disse ikke er seedet i `shift_types`, krasjer hele generatoren før normale dager skrives. Du sa ankomst/avreise kan fikses senere — da må vi enten **gjøre dem valgfrie** (skip hvis shift_type mangler) eller seede dem.
-
-**13. Validering `kjokken_conflict` deklareres men brukes aldri** — kjøkkenvakt får ikke konflikt-sjekk mot morgenvakt/bings.
-
-**14. Special_duties.duty_type-enum**
-- Koden inserter `'sanitas'` og `'seilern_box'` som duty_type. Tabellen har ikke check-constraint, men interfacet i koden tillater bare `'morgenvakt' | 'bingsvakt' | 'nattevakt' | 'frokostvakt' | 'kjokkenvakt'`. Type-løgn — vil kompilere, men inkonsistent.
-
-**15. Frokostvakt-rotasjon per team**
-- Doc: separat rotasjon per team (`frokostvakt_rot_t1` for Dag A, `frokostvakt_rot_t2` for Dag B).
-- Kode: bruker generell `pickFairest`. Funker fordi team-poolen filtrerer, men bør verifiseres at samme person ikke får frokost flere ganger på rad.
+- Fjern den redundante `kjøkken-i-morgenF`-eksklusjonen i `vekking` og `frokost` (kjøkken kommer alltid fra `bingsF`).
+- Bytt `okt3`-noten fra `****` til `*****`.
 
 ---
 
-### Foreslått fix-plan (kort)
+## Implementasjonsplan
 
-Hvis du vil at jeg implementerer dette i neste runde, foreslår jeg å gjøre alt i ett pass i `generate-shift-schedule/index.ts`:
+**Migrasjon `update_shift_types_v5_times.sql`:**
+- `UPDATE shift_types SET end_time='04:00', duration_hours=4.5 WHERE slug='nattevakt' AND day_type='normal'`
+- Slett `sanitas_box`-raden og `seilern`-raden.
+- Insert `sanitas` (23:30–01:00, 1.5t, requires_18_plus=true, min 2) og `seilern_box` (09:15–10:00, 0.75t, min 2).
 
-1. **Frokost**: legg til `pushTeam(d, dt, 'frokost', p.morgenF, [p.morgen?, kjokken?], null)` i tillegg til `pushLeader` for frokostvakt.
-2. **Vekking**: fjern `[p.morgen]`-eksklusjonen.
-3. **Kjøkkenvakt**: bytt pool til `grouped[p.bingsF]` (UNDER18B kun).
-4. **Personalmøte 1**: pushTeam for `morning18, morgenF, bingsF` — IKKE `evening18`.
-5. **Frokostvakt på Økt 1**: fjern eksklusjon — frokostvakt skal være med i okt1.
-6. **Økt 2**: legg til `pushTeam(d, dt, 'okt2', p.bingsF, [p.kjokken?], null)`.
-7. **Middag**: legg til `pushTeam(d, dt, 'middag', p.bingsF, [...p.bings, p.kjokken?], null)`.
-8. **Legging-store-gruppe**: pushTeam evening18 (uten nattevakt) + pushTeam morning18 ekskludert de som var på Økt 1 = ALLE i morning18 minus seg selv → praktisk talt ingen, så her må vi tenke. Egentlig: morning18-folk er PÅ Økt 1, så `*****` betyr "ingen fra morning18 på legging" → det er bare evening18. **Korrigert**: legging = evening18 minus nattevakt minus de som har Økt 1 NESTE dag (de slutter 23:45). Dette er faktisk hva regelen sier — så ***** -regelen om "ikke jobbet Økt 1 i dag" treffer kun spesielle dager (f.eks. når noen frokostvakter krysser team). Verifiser.
-9. **Slugs**: lag en `seedShiftTypes`-funksjon som upserter ALLE slugs koden bruker (ikke bare seilern + sanitas). Så slipper vi krasj.
-10. **Kjøkken-konflikt-warning**: aktivér.
+**`supabase/functions/generate-shift-schedule/index.ts`:**
+1. Endre nattevakt-pool: `nattPool = grouped[morning18]` + behold mix-logikken bare hvis vi vil tillate fra evening18 som backup. Spec sier strengt morning18.
+2. Legg til `nesteFrokost` i `DayPlan`. Beregnes som `pickFairest(grouped[evening18], 1, busy)` — separat fra dagens egen frokost.
+3. **PM1**: legg til `pushLeader(d, dt, 'personalmoete', p.nesteFrokost, 'frokostvakt_neste_dag')`.
+4. **Økt 1**: legg til `pushLeader(d, dt, 'okt1', p.nesteFrokost, 'frokostvakt_neste_dag')`.
+5. **Middag**: fjern `tomorrow.frokost`-pushet. Beholder morning18* + UNDER18B (uten kjøkken).
+6. **PM2**: alle 4 team — uendret (`nesteFrokost` er allerede i evening18-blokken).
+7. **Økt 2**: legg til `pushLeader(d, dt, 'okt2', p.nesteFrokost, 'frokostvakt_neste_dag')`. (Han er allerede i evening18-blokken? Nei — evening18 jobber Økt 2 som hel-team via `pushTeam('okt2', p.evening18)`. Men koden pusher ikke evening18 til Økt 2 i dag — sjekk: linje 401 `pushTeam('okt2', p.morning18)` — det er *Økt 1+2-teamet*. evening18 (Økt 2+3-team) skal også være med. Re-sjekkes: Spec sier Økt 2 = Økt 2+3-team + UNDER18A*** + UNDER18B. Koden pusher `morning18` til Økt 2 — det er feil! Skal være `evening18`.) → **Bug 12: Økt 2 har feil team!**
+8. **Kveldsmat**: fjern `morgenF`-pushet, behold kun `evening18`.
+9. **Økt 3**: bytt note til `*****`. Behold evening18, ekskluder `[p.nesteFrokost]`.
+10. **Legging**: bytt fra `p.evening18` til `p.morning18`, ekskluder nattevakt-paret. Note `****`.
+11. **Sanitas**: nytt block — `pickFairest(grouped[morning18], 2, busy excluding natt)`, push som `pushLeader(d, dt, 'sanitas', l, 'sanitas')`.
+12. **Seilern+Box**: bytt slug fra `seilern` til `seilern_box`. Behold p.seilern fra UNDER18A.
+13. Fjern de redundante kjøkken-eksklusjonene i `vekking`/`frokost`-pushene.
+14. Sørg for at `seilern_box` upserten i koden matcher den nye DB-raden (ellers blir den overskrevet).
 
-### Spørsmål før jeg bygger
+**`src/lib/exportShiftScheduleXlsx.ts`:**
+- I `NORMAL_SLUGS`: bytt rekkefølgen siste 3 til `…'nattevakt', 'sanitas', 'seilern_box', 'kjokkenvakt'`.
+- Legg til `shortName(fullName: string): string` og bruk i `cellLines` for leader-navn (også for `note`).
 
-1. **Legging — store gruppen**: Skal hele evening18-teamet stå på legging-vakten (de som faktisk legger barn), og er `legging`-paret (2 navngitte) en separat "ansvarlig"-rolle? Eller er det virkelig bare 2 navngitte personer fra hele teamet? Doc linje 60 sier "min 8 ledere" på legging.
-2. **Ankomst/avreise**: Skal jeg gjøre dem **no-op** (hopp over hvis shift_type mangler) til vi får på plass logikken, eller skal jeg seede slugene med rimelige defaults nå?
-3. **`personalmoete` vs `personalmoete2`**: Er det to separate shift_type-rader (én pr. PM), eller én shift_type som brukes to ganger pr. dag?
+---
 
-Når du svarer på disse 3, skriver jeg en konkret implementasjonsplan og kjører den.
+## Spørsmål før jeg bygger
+
+1. **Bug 12 (Økt 2 på feil team)**: Bekreft at Økt 2 skal være `evening18` (Økt 2+3-team) + UNDER18A*** + UNDER18B — ikke `morning18`. Spec sier dette, men det vil endre alle vaktdager mye, så jeg vil være sikker.
+2. **Nattevakt-pool**: skal vi være strenge ("kun morning18") eller tillate fallback til evening18 hvis morning18 har for få?
+3. **Sanitas-eksklusjon**: skal sanitas-paret også ekskluderes fra Legging-team-pushet (de jobber Sanitas 23:30–01:00 = overlapper Legging slutt), eller står de markert i begge?
+
+Når du svarer på disse 3, gjør jeg alle endringene over i ett pass og deployer.

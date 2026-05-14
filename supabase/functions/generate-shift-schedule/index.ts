@@ -28,7 +28,7 @@ interface AssignmentInsert {
 interface SpecialDutyInsert {
   schedule_id: string;
   day_index: number;
-  duty_type: 'morgenvakt' | 'bingsvakt' | 'nattevakt' | 'frokostvakt' | 'kjokkenvakt';
+  duty_type: 'morgenvakt' | 'bingsvakt' | 'nattevakt' | 'frokostvakt' | 'kjokkenvakt' | 'sanitas' | 'seilern_box' | 'neste_frokostvakt';
   leader_id: string;
 }
 interface Warning {
@@ -130,10 +130,10 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Ensure new shift_types exist (idempotent)
+    // Ensure v5 shift_types exist (idempotent — migration also seeds these)
     await admin.from('shift_types').upsert([
-      { slug: 'seilern',     day_type: 'normal', name: 'Seilern',       start_time: '09:15:00', end_time: '10:00:00', duration_hours: 0.75, sort_order: 17, min_leaders: 2, requires_18_plus: false, all_must_attend: false },
-      { slug: 'sanitas_box', day_type: 'normal', name: 'Sanitas + Box', start_time: '23:30:00', end_time: '05:00:00', duration_hours: 5.50, sort_order: 18, min_leaders: 2, requires_18_plus: true,  all_must_attend: false },
+      { slug: 'sanitas',     day_type: 'normal', name: 'Sanitas',       start_time: '23:30:00', end_time: '01:00:00', duration_hours: 1.50, sort_order: 17, min_leaders: 2, requires_18_plus: true,  all_must_attend: false },
+      { slug: 'seilern_box', day_type: 'normal', name: 'Seilern + Box', start_time: '09:15:00', end_time: '10:00:00', duration_hours: 0.75, sort_order: 18, min_leaders: 2, requires_18_plus: false, all_must_attend: false },
     ], { onConflict: 'slug,day_type' });
 
     // Load active leaders, group by profile.team
@@ -241,7 +241,9 @@ Deno.serve(async (req) => {
       bings: LeaderRow[];             // 2 people, from bingsF, all 3 bings-shifts
       seilern: LeaderRow[];           // 2 people, from morgenF
       kjokken: LeaderRow | null;      // 1 person, from any F-team
-      natt: LeaderRow[];              // 2 people, mix from team1+team2 (= sanitas+box)
+      natt: LeaderRow[];              // 2 people, from morning18 (Økt 1-team)
+      nesteFrokost: LeaderRow | null; // 1 person from evening18 = next-day's frokostvakt
+      sanitas: LeaderRow[];           // 2 people from morning18 (leggeteamet), NOT nattevakt
     };
     const days: (DayPlan | null)[] = new Array(period_length).fill(null);
 
@@ -280,30 +282,23 @@ Deno.serve(async (req) => {
       const kjokken = kjokkenPick[0] || null;
       if (kjokken) { busy.add(kjokken.id); inc(kjokken.id); }
 
-      // 6) Nattevakt — 2 from team1+team2, prefer one of each
-      const nattPool = [...grouped.team1, ...grouped.team2];
-      let natt = pickFairest(nattPool, 2, busy);
-      // try to enforce mix (1 from each 18+ team) if possible
-      if (natt.length === 2) {
-        const t0 = (natt[0].team || '').trim().toLowerCase();
-        const t1 = (natt[1].team || '').trim().toLowerCase();
-        if (t0 === t1) {
-          const otherTeamKey: Team = t0 === '1' ? 'team2' : 'team1';
-          const replacement = pickFairest(
-            grouped[otherTeamKey], 1,
-            new Set([...busy, natt[0].id]),
-          );
-          if (replacement[0]) natt = [natt[0], replacement[0]];
-        }
-      }
+      // 6) Nattevakt — 2 from morning18 (Økt 1-team, 18+)
+      const natt = pickFairest(grouped[morning18], 2, busy);
       natt.forEach((l) => { busy.add(l.id); inc(l.id); });
 
-      // Note: legging is the WHOLE evening18 team (minus nattevakt). No separate pair pick.
-      // Tracked as team-push below; no individual rotation needed here.
+      // 7) Neste-dags frokostvakt — 1 from evening18 (Økt 2+3-team)
+      //    Deltar i PM1+Økt1+PM2+Økt2+Kveldsmat, men IKKE Økt 3 (*****).
+      const nesteFrokostPick = pickFairest(grouped[evening18], 1, busy);
+      const nesteFrokost = nesteFrokostPick[0] || null;
+      if (nesteFrokost) { busy.add(nesteFrokost.id); inc(nesteFrokost.id); }
+
+      // 8) Sanitas — 2 from morning18 (leggeteamet), MÅ være forskjellig fra nattevakt
+      const sanitas = pickFairest(grouped[morning18], 2, busy);
+      sanitas.forEach((l) => { busy.add(l.id); inc(l.id); });
 
       days[d] = {
         isA, morning18, evening18, morgenF, bingsF,
-        morgen, frokost, bings, seilern, kjokken, natt,
+        morgen, frokost, bings, seilern, kjokken, natt, nesteFrokost, sanitas,
       };
     }
 
@@ -361,35 +356,34 @@ Deno.serve(async (req) => {
       if (p.morgen) pushLeader(d, dt, 'morgenvakt', p.morgen, 'morgenvakt');
 
       // 08:30–09:00 Vekking — entire UNDER18A (incl. morgenvakt who is already up)
-      pushTeam(d, dt, 'vekking', p.morgenF, p.kjokken && p.kjokken.team?.toLowerCase() === (p.morgenF === 'team1f' ? '1f' : '2f') ? [p.kjokken] : [], null);
+      pushTeam(d, dt, 'vekking', p.morgenF, [], null);
 
-      // 09:00–10:00 Frokost — 1 frokostvakt (from morning18) + entire UNDER18A (minus kjøkkenvakt)
+      // 09:00–10:00 Frokost — 1 frokostvakt (from morning18) + entire UNDER18A
       if (p.frokost) pushLeader(d, dt, 'frokost', p.frokost, 'frokostvakt');
-      pushTeam(d, dt, 'frokost', p.morgenF, p.kjokken && p.kjokken.team?.toLowerCase() === (p.morgenF === 'team1f' ? '1f' : '2f') ? [p.kjokken] : [], null);
+      pushTeam(d, dt, 'frokost', p.morgenF, [], null);
 
-      // 09:15–10:00 Seilern — 2 from morgenF
-      for (const l of p.seilern) pushLeader(d, dt, 'seilern', l, 'seilern');
+      // 09:15–10:00 Seilern + Box — 2 from morgenF
+      for (const l of p.seilern) pushLeader(d, dt, 'seilern_box', l, 'seilern_box');
 
       // 09:30–11:00 Bings morgen — bings pair
       for (const l of p.bings) pushLeader(d, dt, 'bings_morgen', l, 'bingsvakt');
 
-      // 10:45–11:00 Personalmøte 1 — Økt 1+2-team + UNDER18A + UNDER18B (IKKE Økt 3-team)
+      // 10:45–11:00 Personalmøte 1 — Økt 1+2-team + UNDER18A + UNDER18B + 1 fra Økt 3-team (neste frokostvakt)
       for (const t of [p.morning18, p.morgenF, p.bingsF] as Team[]) pushTeam(d, dt, 'personalmoete', t, [], null);
+      if (p.nesteFrokost) pushLeader(d, dt, 'personalmoete', p.nesteFrokost, 'frokostvakt_neste_dag', 'fra dagen etter');
 
-      // 11:00–14:00 Økt 1 — morning18 (incl. frokostvakt) + morgenF*** + bingsF**
+      // 11:00–14:00 Økt 1 — morning18 (incl. frokostvakt) + morgenF*** + bingsF** + 1 fra evening18
       pushTeam(d, dt, 'okt1', p.morning18, [], null);
       pushTeam(d, dt, 'okt1', p.morgenF, [...(p.morgen ? [p.morgen] : []), ...p.seilern], null);
       pushTeam(d, dt, 'okt1', p.bingsF, p.bings, '**');
+      if (p.nesteFrokost) pushLeader(d, dt, 'okt1', p.nesteFrokost, 'frokostvakt_neste_dag', 'fra dagen etter');
 
-      // 14:00–15:30 Middag — morning18* (minus frokost + natt) + UNDER18B (minus kjøkken) + tomorrow's frokostvakt
+      // 14:00–15:30 Middag — morning18* (minus frokost + natt) + UNDER18B (minus kjøkken)
       pushTeam(d, dt, 'middag', p.morning18, [
         ...(p.frokost ? [p.frokost] : []),
-        ...p.natt.filter((n) => n.team?.toLowerCase() === (p.morning18 === 'team1' ? '1' : '2')),
+        ...p.natt,
       ], '*');
       pushTeam(d, dt, 'middag', p.bingsF, p.kjokken ? [p.kjokken] : [], null);
-      if (tomorrow?.frokost) {
-        pushLeader(d, dt, 'middag', tomorrow.frokost, 'frokostvakt_neste_dag', 'fra dagen etter');
-      }
 
       // 15:30–16:00 Bings ettermiddag
       for (const l of p.bings) pushLeader(d, dt, 'bings_ettermiddag', l, 'bingsvakt');
@@ -397,29 +391,30 @@ Deno.serve(async (req) => {
       // 15:45–16:00 Personalmøte 2 — alle 4 team
       for (const t of teams) pushTeam(d, dt, 'personalmoete2', t, [], null);
 
-      // 16:00–19:00 Økt 2 — morning18 (Økt 1+2-team) + UNDER18A*** (minus morgen) + UNDER18B (minus kjøkken)
-      pushTeam(d, dt, 'okt2', p.morning18, [], null);
+      // 16:00–19:00 Økt 2 — Økt 2+3-team (evening18) + UNDER18A*** (minus morgen) + UNDER18B (minus kjøkken)
+      // Neste-dags frokostvakt er allerede i evening18-team-pushet, ingen ekstra push.
+      pushTeam(d, dt, 'okt2', p.evening18, [], null);
       pushTeam(d, dt, 'okt2', p.morgenF, p.morgen ? [p.morgen] : [], '***');
       pushTeam(d, dt, 'okt2', p.bingsF, p.kjokken ? [p.kjokken] : [], null);
 
-      // 19:00–20:00 Kveldsmat — UNDER18A*** (minus morgen) + Økt 3-team (evening18)
-      pushTeam(d, dt, 'kveldsmat', p.morgenF, p.morgen ? [p.morgen] : [], '***');
+      // 19:00–20:00 Kveldsmat — KUN Økt 2+3-team (evening18). INGEN F-team.
       pushTeam(d, dt, 'kveldsmat', p.evening18, [], null);
 
       // 20:00–20:30 Bings kveld
       for (const l of p.bings) pushLeader(d, dt, 'bings_kveld', l, 'bingsvakt');
 
-      // 20:30–00:00 Økt 3 — evening18**** (minus nattevakt). De med Økt 1 neste dag slutter 23:45.
-      pushTeam(d, dt, 'okt3', p.evening18, p.natt, '****');
+      // 20:30–00:00 Økt 3 — evening18***** (minus de som var på Økt 1 = neste-dags frokostvakt)
+      pushTeam(d, dt, 'okt3', p.evening18, p.nesteFrokost ? [p.nesteFrokost] : [], '*****');
 
-      // 22:00–01:00 Legging — Økt 3-team**** (minus nattevakt). Folk med Økt 1 neste dag slutter 23:45.
-      pushTeam(d, dt, 'legging', p.evening18, p.natt, '****');
+      // 22:00–01:00 Legging — Økt 1-team**** (minus nattevakt og sanitas-paret).
+      // Sanitas-paret jobber 23:30–01:00 (overlapper slutten av legging) — markeres som sanitas, ikke legging.
+      pushTeam(d, dt, 'legging', p.morning18, [...p.natt, ...p.sanitas], '****');
 
-      // 23:30–05:00 Nattevakt — 2
+      // 23:30–04:00 Nattevakt — 2 fra Økt 1-team
       for (const l of p.natt) pushLeader(d, dt, 'nattevakt', l, 'nattevakt');
 
-      // 23:30–05:00 Sanitas + Box = same pair as Nattevakt
-      for (const l of p.natt) pushLeader(d, dt, 'sanitas_box', l, 'sanitas');
+      // 23:30–01:00 Sanitas — 2 fra Økt 1-team (leggeteamet), IKKE nattevakt
+      for (const l of p.sanitas) pushLeader(d, dt, 'sanitas', l, 'sanitas');
 
       // Hele dagen Kjøkkenvakt — 1 from F-teams
       if (p.kjokken) pushLeader(d, dt, 'kjokkenvakt', p.kjokken, 'kjokkenvakt');
@@ -430,8 +425,9 @@ Deno.serve(async (req) => {
       if (p.kjokken) duties.push({ schedule_id: scheduleId, day_index: d, duty_type: 'kjokkenvakt', leader_id: p.kjokken.id });
       for (const l of p.bings)   duties.push({ schedule_id: scheduleId, day_index: d, duty_type: 'bingsvakt',  leader_id: l.id });
       for (const l of p.natt)    duties.push({ schedule_id: scheduleId, day_index: d, duty_type: 'nattevakt',  leader_id: l.id });
-      for (const l of p.natt)    duties.push({ schedule_id: scheduleId, day_index: d, duty_type: 'sanitas',    leader_id: l.id });
+      for (const l of p.sanitas) duties.push({ schedule_id: scheduleId, day_index: d, duty_type: 'sanitas',    leader_id: l.id });
       for (const l of p.seilern) duties.push({ schedule_id: scheduleId, day_index: d, duty_type: 'seilern_box', leader_id: l.id });
+      if (p.nesteFrokost) duties.push({ schedule_id: scheduleId, day_index: d, duty_type: 'neste_frokostvakt', leader_id: p.nesteFrokost.id });
     }
 
     // ===== DEPARTURE DAY (last) =====
