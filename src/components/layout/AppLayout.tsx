@@ -348,36 +348,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
     };
   }, [leader, isAdmin, isNurse, fetchHasReadStatus]);
 
-  // Pure-CSS safe-area pinning (see .bottom-nav). iOS 26 vh bug is handled by
-  // using 100dvh and env(safe-area-inset-bottom) instead of bottom: 0.
-
-  // iOS 26 PWA fix: compensate for visualViewport offset on .bottom-nav.
-  // Works around the bug where position: fixed; bottom: 0 doesn't track
-  // window.innerHeight while Safari chrome animates, leaving a dark strip.
+  // Auto-scroll active tab into view when route changes
+  const tabBarRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const bottomBar = document.querySelector<HTMLElement>('.bottom-nav');
-    if (!bottomBar || !window.visualViewport) return;
-
-    const viewport = window.visualViewport;
-
-    const updateBottomBar = () => {
-      const offset = Math.max(
-        0,
-        window.innerHeight - viewport.height - viewport.offsetTop
-      );
-      bottomBar.style.transform = `translate3d(0, ${-offset}px, 0)`;
-    };
-
-    viewport.addEventListener('resize', updateBottomBar);
-    viewport.addEventListener('scroll', updateBottomBar);
-    updateBottomBar();
-
-    return () => {
-      viewport.removeEventListener('resize', updateBottomBar);
-      viewport.removeEventListener('scroll', updateBottomBar);
-      bottomBar.style.transform = '';
-    };
-  }, []);
+    const bar = tabBarRef.current;
+    if (!bar) return;
+    const active = bar.querySelector<HTMLElement>('[data-active="true"]');
+    if (active) {
+      active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    }
+  }, [location.pathname]);
 
   // Handle dismissing the Hajolo tooltip
   const handleDismissTooltip = async () => {
@@ -703,188 +683,84 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </nav>
       </div>
 
-      {/* Mobile Bottom Navigation - Fixed iOS-style tab bar */}
-      {!mobileMenuOpen && createPortal(
-        <nav className="lg:hidden bottom-nav">
-          {/* Content container - allows center button overflow */}
-          <div className="relative h-[var(--nav-h)] flex items-center justify-evenly px-1">
-            {getBottomNavItems(isAdmin, isNurse).map((item, index) => {
-                const isActive = location.pathname === item.to;
-                const isCenterButton = index === 2; // Center position (3rd item)
-                
-                // Center action button (role-based)
-                if (isCenterButton) {
-                  // Leader: Hajolo button - prominent FAB
-                  if (item.isHajolo) {
-                    return (
-                      <Popover key="hajolo" open={showHajoloTooltip}>
-                        <PopoverTrigger asChild>
-                      <button
-                            onClick={() => {
-                              hapticImpact('medium');
-                              handleHajoloClick();
-                            }}
-                            className="flex flex-col items-center justify-center min-w-[52px] -mt-6 transition-all duration-150 active:opacity-70"
-                          >
-                            <div className={cn(
-                              'w-14 h-14 rounded-full flex items-center justify-center border-[3px] border-background shadow-lg transition-colors',
-                              hasRead ? 'bg-primary' : 'bg-destructive'
-                            )}>
-                              <Check 
-                                className="w-7 h-7 text-primary-foreground"
-                                size={28}
-                                strokeWidth={2.5}
-                              />
-                              {!hasRead && (
-                                <span className="absolute top-0 right-0 w-3 h-3 bg-destructive rounded-full border-2 border-background animate-pulse" />
-                              )}
-                            </div>
-                            <span className={cn(
-                              'text-[10px] leading-tight font-semibold mt-0.5',
-                              hasRead ? 'text-primary' : 'text-destructive'
-                            )}>
-                              {hasRead ? 'Bekreftet' : 'Hajolo'}
-                            </span>
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent 
-                          side="top" 
-                          className="max-w-[280px] p-4"
-                          sideOffset={12}
-                        >
-                          <div className="text-center space-y-3">
-                            <p className="text-sm font-semibold">Hva er Hajolo-knappen?</p>
-                            <p className="text-xs text-muted-foreground leading-relaxed">
-                              Når det kommer ny info til deg blir denne knappen rød. Admin ser hvem som ikke har lest ennå. 
-                              Trykk på knappen for å bekrefte at du har sett infoen.
-                            </p>
-                            <Button 
-                              size="sm" 
-                              onClick={handleDismissTooltip}
-                              className="w-full"
-                            >
-                              Forstått
-                            </Button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    );
-                  }
-                  
-                  // Admin: Dashboard button - prominent FAB
-                  if (isAdmin && item.to === '/admin') {
-                    return (
-                      <NavLink
-                        key={item.to}
-                        to={item.to}
-                        onClick={() => hapticImpact('medium')}
-                        className="flex flex-col items-center justify-center min-w-[52px] -mt-6 transition-all duration-150 active:opacity-70"
-                      >
-                        <div className={cn(
-                          'w-14 h-14 rounded-full flex items-center justify-center border-[3px] border-background shadow-lg transition-colors',
-                          location.pathname === '/admin' ? 'bg-primary' : 'bg-muted'
-                        )}>
-                          <Settings 
-                            className={cn(
-                              'w-7 h-7 transition-colors',
-                              location.pathname === '/admin' ? 'text-primary-foreground' : 'text-muted-foreground'
-                            )}
-                            size={28}
-                            strokeWidth={2}
-                          />
-                        </div>
-                        <span className={cn(
-                          'text-[10px] leading-tight mt-0.5',
-                          location.pathname === '/admin' ? 'text-primary font-semibold' : 'text-muted-foreground/70 font-medium'
-                        )}>Admin</span>
-                      </NavLink>
-                    );
-                  }
-                  
-                  // Nurse: Nurse button - prominent FAB
-                  if (isNurse && item.to === '/nurse') {
-                    return (
-                      <NavLink
-                        key={item.to}
-                        to={item.to}
-                        onClick={() => hapticImpact('medium')}
-                        className="flex flex-col items-center justify-center min-w-[52px] -mt-6 transition-all duration-150 active:opacity-70"
-                      >
-                        <div className={cn(
-                          'w-14 h-14 rounded-full flex items-center justify-center border-[3px] border-background shadow-lg transition-colors',
-                          location.pathname === '/nurse' ? 'bg-primary' : 'bg-muted'
-                        )}>
-                          <Heart 
-                            className={cn(
-                              'w-7 h-7 transition-colors',
-                              location.pathname === '/nurse' ? 'text-primary-foreground' : 'text-muted-foreground'
-                            )}
-                            size={28}
-                            strokeWidth={2}
-                          />
-                        </div>
-                        <span className={cn(
-                          'text-[10px] leading-tight mt-0.5',
-                          location.pathname === '/nurse' ? 'text-primary font-semibold' : 'text-muted-foreground/70 font-medium'
-                        )}>Nurse</span>
-                      </NavLink>
-                    );
-                  }
-                }
-                
-                // Standard tab items (non-center)
-                const isHomeWithUnread = item.to === '/' && !hasRead && isRegularLeader;
-                
-                return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => hapticImpact('light')}
-                    className="flex flex-col items-center justify-center min-w-[52px] py-1 transition-all duration-150 active:opacity-70 relative"
-                  >
-                    <div className="relative">
-                      <item.icon 
-                        className={cn(
-                          'w-[22px] h-[22px] transition-colors',
-                          isActive ? 'text-primary' : 'text-muted-foreground/70'
-                        )} 
-                        size={22}
-                        strokeWidth={isActive ? 2.5 : 1.75}
-                      />
-                      {isHomeWithUnread && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-[hsl(0_65%_55%)] rounded-full border border-background animate-pulse" />
-                      )}
-                    </div>
-                    <span className={cn(
-                      'text-[10px] leading-tight transition-colors',
-                      isActive ? 'text-primary font-semibold' : 'text-muted-foreground/70 font-medium'
-                    )}>
-                      {item.label}
-                    </span>
-                  </NavLink>
-                );
-              })}
-            </div>
-        </nav>
-      , document.body)}
-
-      {/* iOS 26 safe-area filler — covers the strip below the nav with app bg */}
-      {createPortal(
+      {/* Mobile Top Tab Bar — horizontal scrollable tabs under header */}
+      {!mobileMenuOpen && (
         <div
-          aria-hidden="true"
-          className="lg:hidden bottom-nav-safe-filler"
+          ref={tabBarRef}
+          className="lg:hidden top-tabs scrollbar-hide"
           style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 'env(safe-area-inset-bottom, 0px)',
-            background: 'hsl(var(--background))',
-            zIndex: 49,
-            pointerEvents: 'none',
+            top: `calc(56px + var(--safe-top))`,
+            transform: headerVisible ? 'translateY(0)' : 'translateY(calc(-100% - 56px - var(--safe-top)))',
           }}
-        />,
-        document.body
+        >
+          <div className="flex items-stretch h-full px-2 min-w-full w-max">
+            {getBottomNavItems(isAdmin, isNurse).map((item) => {
+              const isActive = item.isHajolo ? false : location.pathname === item.to;
+
+              if (item.isHajolo) {
+                return (
+                  <Popover key="hajolo" open={showHajoloTooltip}>
+                    <PopoverTrigger asChild>
+                      <button
+                        data-active={false}
+                        onClick={() => {
+                          hapticImpact('medium');
+                          handleHajoloClick();
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-2 whitespace-nowrap relative"
+                      >
+                        <Check className={cn('w-4 h-4', hasRead ? 'text-primary' : 'text-destructive')} strokeWidth={2.5} />
+                        <span className={cn('text-sm font-semibold', hasRead ? 'text-primary' : 'text-destructive')}>
+                          {hasRead ? 'Bekreftet' : 'Hajolo'}
+                        </span>
+                        {!hasRead && (
+                          <span className="w-2 h-2 bg-destructive rounded-full animate-pulse ml-0.5" />
+                        )}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent side="bottom" className="max-w-[280px] p-4" sideOffset={8}>
+                      <div className="text-center space-y-3">
+                        <p className="text-sm font-semibold">Hva er Hajolo-knappen?</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Når det kommer ny info til deg blir denne knappen rød. Admin ser hvem som ikke har lest ennå.
+                          Trykk på knappen for å bekrefte at du har sett infoen.
+                        </p>
+                        <Button size="sm" onClick={handleDismissTooltip} className="w-full">
+                          Forstått
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                );
+              }
+
+              const isHomeWithUnread = item.to === '/' && !hasRead && isRegularLeader;
+
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  data-active={isActive}
+                  onClick={() => hapticImpact('light')}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-2 whitespace-nowrap relative transition-colors border-b-2',
+                    isActive
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground/80'
+                  )}
+                >
+                  <item.icon className="w-4 h-4" strokeWidth={isActive ? 2.5 : 2} />
+                  <span className={cn('text-sm', isActive ? 'font-semibold' : 'font-medium')}>
+                    {item.label}
+                  </span>
+                  {isHomeWithUnread && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full animate-pulse" />
+                  )}
+                </NavLink>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Main Content */}
@@ -899,7 +775,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             "lg:hidden transition-all duration-300 ease-out shrink-0",
           )}
           style={{
-            height: headerVisible ? 'calc(56px + var(--safe-top))' : '0'
+            height: headerVisible ? 'calc(56px + var(--safe-top) + 44px)' : '0'
           }}
         />
         <div className="p-4 lg:p-6 min-w-0 w-full">
