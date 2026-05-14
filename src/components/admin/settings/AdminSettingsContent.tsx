@@ -24,7 +24,6 @@ import { RopeControlTab } from '@/components/admin/RopeControlTab';
 import { ActivitiesTab } from '@/components/admin/ActivitiesTab';
 import { SkjaerTab } from '@/components/admin/SkjaerTab';
 import { StoriesTab } from '@/components/admin/StoriesTab';
-import { LeaderActivationTab } from '@/components/admin/LeaderActivationTab';
 const HomeConfigTab = lazy(() => import('@/components/admin/HomeConfigTab'));
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -288,9 +287,6 @@ export function AdminSettingsContent({
 
     case 'stories':
       return <StoriesTab />;
-
-    case 'activation':
-      return <LeaderActivationTab leaders={leaders} onLeaderUpdated={onLeaderUpdated} isSuperAdmin={isSuperAdmin} />;
 
     case 'home-config':
       return (
