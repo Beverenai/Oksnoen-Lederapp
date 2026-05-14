@@ -24,7 +24,8 @@ import {
   BookOpen,
   LucideIcon,
   ChevronDown,
-  ArrowLeft
+  ArrowLeft,
+  ClipboardList
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -61,6 +62,7 @@ const mainNavItems: NavItem[] = [
   { to: '/', icon: Home, label: 'Hjem' },
   { to: '/profile', icon: User, label: 'Min Profil' },
   { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
+  { to: '/my-shifts', icon: ClipboardList, label: 'Min vakt' },
 ];
 
 const leaderNavItems: NavItem[] = [
