@@ -238,28 +238,33 @@ export async function exportShiftScheduleXlsx(opts: {
     currentRow += 1;
   });
 
-  // ===== ARRIVAL BLOCK =====
-  currentRow += 2;
-  ws.mergeCells(currentRow, 1, currentRow, ARRIVAL_SLUGS.length + 1);
-  const arrTitle = ws.getCell(currentRow, 1);
-  arrTitle.value = 'Ankomst (Lørdag)';
-  arrTitle.font = { bold: true, size: 12 };
-  currentRow += 1;
-  await writeSpecialBlock(ws, currentRow, schedule, assignments, shiftTypes, leaderById, ARRIVAL_SLUGS, 'arrival', 0);
-  currentRow += 6 + 4; // header rows + 4 team rows
-
-  // ===== DEPARTURE BLOCK =====
-  currentRow += 2;
-  ws.mergeCells(currentRow, 1, currentRow, DEPARTURE_SLUGS.length + 1);
-  const depTitle = ws.getCell(currentRow, 1);
-  depTitle.value = 'Avreise (Lørdag)';
-  depTitle.font = { bold: true, size: 12 };
-  currentRow += 1;
-  await writeSpecialBlock(ws, currentRow, schedule, assignments, shiftTypes, leaderById, DEPARTURE_SLUGS, 'departure', schedule.period_length - 1);
-
-  // Column widths
+  // Column widths (hovedark)
   ws.getColumn(1).width = 16;
   for (let i = 2; i <= NORMAL_SLUGS.length + 1; i++) ws.getColumn(i).width = 16;
+
+  // ===== ANKOMST (eget ark) =====
+  const wsArr = wb.addWorksheet('Ankomst');
+  wsArr.properties.defaultColWidth = 16;
+  wsArr.mergeCells(1, 1, 1, ARRIVAL_SLUGS.length + 1);
+  const arrTitle = wsArr.getCell(1, 1);
+  arrTitle.value = `Ankomst (Lørdag) — Periode ${schedule.period_number} / ${schedule.year}`;
+  arrTitle.font = { bold: true, size: 14 };
+  arrTitle.alignment = { horizontal: 'center' };
+  await writeSpecialBlock(wsArr, 3, schedule, assignments, shiftTypes, leaderById, ARRIVAL_SLUGS, 'arrival', 0);
+  wsArr.getColumn(1).width = 16;
+  for (let i = 2; i <= ARRIVAL_SLUGS.length + 1; i++) wsArr.getColumn(i).width = 16;
+
+  // ===== AVREISE (eget ark) =====
+  const wsDep = wb.addWorksheet('Avreise');
+  wsDep.properties.defaultColWidth = 16;
+  wsDep.mergeCells(1, 1, 1, DEPARTURE_SLUGS.length + 1);
+  const depTitle = wsDep.getCell(1, 1);
+  depTitle.value = `Avreise (Lørdag) — Periode ${schedule.period_number} / ${schedule.year}`;
+  depTitle.font = { bold: true, size: 14 };
+  depTitle.alignment = { horizontal: 'center' };
+  await writeSpecialBlock(wsDep, 3, schedule, assignments, shiftTypes, leaderById, DEPARTURE_SLUGS, 'departure', schedule.period_length - 1);
+  wsDep.getColumn(1).width = 16;
+  for (let i = 2; i <= DEPARTURE_SLUGS.length + 1; i++) wsDep.getColumn(i).width = 16;
 
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
