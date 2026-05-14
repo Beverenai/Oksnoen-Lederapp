@@ -82,8 +82,10 @@ export function LeaderActivationTab({ leaders, onLeaderUpdated, isSuperAdmin }: 
 
   // Can this user toggle the given leader's active status?
   const canToggle = (leader: LeaderWithRole): { allowed: boolean; reason?: string } => {
-    if (leader.role === 'superadmin') return { allowed: false, reason: 'Superadmin kan ikke deaktiveres' };
-    if (!isSuperAdmin && (leader.role === 'admin')) return { allowed: false, reason: 'Kun superadmin kan endre admin-er' };
+    if (leader.role === 'superadmin' && !isSuperAdmin) {
+      return { allowed: false, reason: 'Kun superadmin kan endre superadmin' };
+    }
+    if (!isSuperAdmin && leader.role === 'admin') return { allowed: false, reason: 'Kun superadmin kan endre admin-er' };
     return { allowed: true };
   };
 
@@ -307,6 +309,11 @@ export function LeaderActivationTab({ leaders, onLeaderUpdated, isSuperAdmin }: 
               <AlertDialogTitle>Deaktiver leder?</AlertDialogTitle>
               <AlertDialogDescription>
                 Er du sikker på at du vil deaktivere <strong>{confirmDeactivate?.name}</strong>? De vil ikke kunne logge inn i appen.
+                {confirmDeactivate?.role === 'superadmin' && (
+                  <span className="mt-2 block text-foreground">
+                    Superadmin beholder full tilgang, men skjules fra lederoversikten.
+                  </span>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
