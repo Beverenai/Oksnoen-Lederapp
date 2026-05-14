@@ -98,7 +98,9 @@ Deno.serve(async (req) => {
       }
       for (const [day, arr] of byDay.entries()) {
         const hours = arr.reduce((s, x) => s + Number(x.st.duration_hours), 0);
-        if (hours > 8.01) {
+        const hasNatt = arr.some((x) => x.st.slug === 'nattevakt');
+        const cap = hasNatt ? 8.6 : 8.01;
+        if (hours > cap) {
           warnings.push({
             leader_id: leaderId, leader_name: ldr.name, day_index: day,
             rule: '8h_max', detail: `${hours.toFixed(2)} timer (over 8t)`,
