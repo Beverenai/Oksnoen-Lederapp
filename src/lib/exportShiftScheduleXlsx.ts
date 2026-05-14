@@ -194,7 +194,7 @@ export async function exportShiftScheduleXlsx(opts: {
     '** Teamet jobber uten de som har bingsvakt',
     '*** Teamet jobber uten de som er morgenvakt',
     '**** Teamet jobber uten nattevakt; de med Økt 1 neste dag avslutter 23:45',
-    '***** De som jobbet Økt 1 jobber IKKE legging',
+    '***** Den som jobbet første økt jobber IKKE legging',
   ];
   notes.forEach((n) => {
     ws.getCell(currentRow, 1).value = n;

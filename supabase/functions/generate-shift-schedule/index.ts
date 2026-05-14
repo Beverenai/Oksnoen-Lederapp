@@ -435,7 +435,9 @@ Deno.serve(async (req) => {
       for (const l of p.bings) pushLeader(d, dt, 'bings_morgen', l, 'bingsvakt');
 
       // 10:45–11:00 Personalmøte 1 — Økt 1+2-team + UNDER18A + UNDER18B + 1 fra Økt 3-team (neste frokostvakt)
-      for (const t of [p.morning18, p.morgenF, p.bingsF] as Team[]) pushTeam(d, dt, 'personalmoete', t, [], null);
+      // Nattevakt skal IKKE delta på personalmøte (de jobber kun Økt 1 + nattevakt)
+      pushTeam(d, dt, 'personalmoete', p.morning18, p.natt, null);
+      for (const t of [p.morgenF, p.bingsF] as Team[]) pushTeam(d, dt, 'personalmoete', t, [], null);
       if (p.nesteFrokost) pushLeader(d, dt, 'personalmoete', p.nesteFrokost, 'frokostvakt_neste_dag', 'fra dagen etter');
 
       // 11:00–14:00 Økt 1 — morning18 (incl. frokostvakt) + morgenF*** + bingsF** + 1 fra evening18
@@ -455,7 +457,11 @@ Deno.serve(async (req) => {
       for (const l of p.bings) pushLeader(d, dt, 'bings_ettermiddag', l, 'bingsvakt');
 
       // 15:45–16:00 Personalmøte 2 — alle 4 team
-      for (const t of teams) pushTeam(d, dt, 'personalmoete2', t, [], null);
+      // Nattevakt skal IKKE delta på personalmøte (de jobber kun Økt 1 + nattevakt)
+      pushTeam(d, dt, 'personalmoete2', p.morning18, p.natt, null);
+      for (const t of teams.filter((t) => t !== p.morning18)) {
+        pushTeam(d, dt, 'personalmoete2', t, [], null);
+      }
 
       // 16:00–19:00 Økt 2 — Økt 2+3-team (evening18) + UNDER18A*** (minus morgen) + UNDER18B (minus kjøkken)
       // Neste-dags frokostvakt er allerede i evening18-team-pushet, ingen ekstra push.
@@ -526,7 +532,10 @@ Deno.serve(async (req) => {
       }
       for (const [day, arr] of byDay.entries()) {
         const hours = arr.reduce((s, x) => s + Number(x.st.duration_hours), 0);
-        if (hours > 8.01) {
+        // Nattevakt har et eget tak: Økt 1 (3t) + nattevakt (5,5t) = 8,5t er OK.
+        const hasNatt = arr.some((x) => x.st.slug === 'nattevakt');
+        const cap = hasNatt ? 8.6 : 8.01;
+        if (hours > cap) {
           warnings.push({
             leader_id: leaderId, leader_name: ldr.name, day_index: day,
             rule: '8h_max', detail: `${hours.toFixed(2)} timer (over 8t)`,
