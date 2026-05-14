@@ -14,10 +14,20 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Progress } from '@/components/ui/progress';
 import {
   Settings, Loader2, Shield, Calendar,
-  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles, ClipboardPaste, CalendarDays,
+  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles, ClipboardPaste, CalendarDays, Eraser,
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
 import { LeaderListView } from '@/components/admin/LeaderListView';
 import { LeaderActivationTab } from '@/components/admin/LeaderActivationTab';
@@ -70,6 +80,8 @@ export default function Admin() {
   const [leaderViewMode, setLeaderViewMode] = useState<'grid' | 'list'>('grid');
   const [isActivitiesSheetOpen, setIsActivitiesSheetOpen] = useState(false);
   const [isPasteSheetOpen, setIsPasteSheetOpen] = useState(false);
+  const [isClearAllOpen, setIsClearAllOpen] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -140,6 +152,38 @@ export default function Admin() {
       setHomeConfig(homeConfigData);
       setLocalHomeConfig(homeConfigData);
     } catch { showError('Kunne ikke laste data'); } finally { setIsLoading(false); }
+  };
+
+  const handleClearAllDailyFields = async () => {
+    setIsClearingAll(true);
+    try {
+      const { error, count } = await supabase
+        .from('leader_content')
+        .update({
+          current_activity: null,
+          extra_activity: null,
+          personal_notes: null,
+          obs_message: null,
+          extra_2: null,
+          extra_3: null,
+          extra_4: null,
+          extra_5: null,
+          updated_at: new Date().toISOString(),
+        }, { count: 'exact' })
+        .not('leader_id', 'is', null);
+      if (error) throw error;
+      hapticSuccess();
+      showSuccess(`Tømte daglige felt for ${count ?? 'alle'} ledere`);
+      setIsClearAllOpen(false);
+      await loadData();
+      rqClient.invalidateQueries();
+    } catch (err) {
+      console.error('Clear all error:', err);
+      hapticError();
+      showError('Kunne ikke tømme felt');
+    } finally {
+      setIsClearingAll(false);
+    }
   };
 
 
