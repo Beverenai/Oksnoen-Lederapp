@@ -13,12 +13,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Shield, ArrowLeft, CalendarDays, Loader2, Sparkles, Send, Archive, Trash2, Users,
+  Shield, ArrowLeft, CalendarDays, Loader2, Sparkles, Send, Archive, Trash2, Users, Eye,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
 type ShiftSchedule = Tables<'shift_schedules'>;
+type ShiftAssignment = Tables<'shift_assignments'>;
+type ShiftType = Tables<'shift_types'>;
 type Team = 'team1' | 'team2' | 'team1f' | 'team2f';
 
 const TEAM_META: Record<Team, { label: string; className: string }> = {
@@ -27,6 +29,8 @@ const TEAM_META: Record<Team, { label: string; className: string }> = {
   team1f: { label: 'Team 1F', className: 'bg-orange-500 text-white hover:bg-orange-600' },
   team2f: { label: 'Team 2F', className: 'bg-yellow-400 text-foreground hover:bg-yellow-500' },
 };
+
+const PROFILE_TO_TEAM: Record<string, Team> = { '1': 'team1', '2': 'team2', '1f': 'team1f', '2f': 'team2f' };
 
 const STATUS_META: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
   draft:     { label: 'Kladd',      variant: 'secondary' },
@@ -43,30 +47,26 @@ export default function ShiftPlanner() {
   const [periodLength, setPeriodLength] = useState<7 | 8>(7);
 
   const [leaders, setLeaders] = useState<Leader[]>([]);
-  const [teamMap, setTeamMap] = useState<Record<string, Team | ''>>({});
   const [schedules, setSchedules] = useState<ShiftSchedule[]>([]);
+  const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [savingTeams, setSavingTeams] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [filter, setFilter] = useState('');
+  const [viewScheduleId, setViewScheduleId] = useState<string | null>(null);
+  const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
+  const [loadingGrid, setLoadingGrid] = useState(false);
 
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [ldrRes, ltRes, scRes] = await Promise.all([
+      const [ldrRes, scRes, stRes] = await Promise.all([
         supabase.from('leaders').select('*').eq('is_active', true).order('name'),
-        supabase.from('leader_teams').select('*').eq('period_number', periodNumber).eq('year', year),
         supabase.from('shift_schedules').select('*').order('year', { ascending: false }).order('period_number', { ascending: false }),
+        supabase.from('shift_types').select('*').order('day_type').order('sort_order'),
       ]);
       const ldrs = (ldrRes.data || []).filter((l) => l.phone !== '12345678');
       setLeaders(ldrs);
-      const map: Record<string, Team | ''> = {};
-      ldrs.forEach((l) => { map[l.id] = ''; });
-      (ltRes.data || []).forEach((row: { leader_id: string; team: string }) => {
-        map[row.leader_id] = row.team as Team;
-      });
-      setTeamMap(map);
       setSchedules(scRes.data || []);
+      setShiftTypes(stRes.data || []);
     } catch {
       showError('Kunne ikke laste data');
     } finally {
@@ -74,45 +74,26 @@ export default function ShiftPlanner() {
     }
   };
 
-  useEffect(() => { if (isAdmin) loadAll(); }, [isAdmin, periodNumber, year]);
+  useEffect(() => { if (isAdmin) loadAll(); }, [isAdmin]);
+
+  const leaderById = useMemo(() => {
+    const m = new Map<string, Leader>();
+    leaders.forEach((l) => m.set(l.id, l));
+    return m;
+  }, [leaders]);
 
   const counts = useMemo(() => {
-    const c: Record<Team | 'unassigned', number> = {
-      team1: 0, team2: 0, team1f: 0, team2f: 0, unassigned: 0,
+    const c: Record<Team | 'other', number> = {
+      team1: 0, team2: 0, team1f: 0, team2f: 0, other: 0,
     };
-    Object.values(teamMap).forEach((t) => {
-      if (t) c[t as Team] += 1; else c.unassigned += 1;
+    leaders.forEach((l) => {
+      const t = PROFILE_TO_TEAM[(l.team || '').trim()];
+      if (t) c[t] += 1; else c.other += 1;
     });
     return c;
-  }, [teamMap]);
+  }, [leaders]);
 
   const canGenerate = counts.team1 >= 1 && counts.team2 >= 1 && counts.team1f >= 1 && counts.team2f >= 1;
-
-  const setTeamFor = (leaderId: string, team: Team | '') => {
-    setTeamMap((prev) => ({ ...prev, [leaderId]: team }));
-  };
-
-  const saveTeams = async () => {
-    setSavingTeams(true);
-    try {
-      // Delete previous setup for period, then insert all assigned
-      await supabase.from('leader_teams').delete()
-        .eq('period_number', periodNumber).eq('year', year);
-      const rows = Object.entries(teamMap)
-        .filter(([, t]) => t)
-        .map(([leader_id, team]) => ({ leader_id, team, period_number: periodNumber, year }));
-      if (rows.length) {
-        const { error } = await supabase.from('leader_teams').insert(rows);
-        if (error) throw error;
-      }
-      showSuccess('Team-oppsett lagret');
-    } catch (e) {
-      console.error(e);
-      showError('Kunne ikke lagre team-oppsett');
-    } finally {
-      setSavingTeams(false);
-    }
-  };
 
   const generate = async () => {
     setGenerating(true);
@@ -149,11 +130,46 @@ export default function ShiftPlanner() {
       const { error } = await supabase.from('shift_schedules').delete().eq('id', id);
       if (error) throw error;
       showSuccess('Slettet');
+      if (viewScheduleId === id) { setViewScheduleId(null); setAssignments([]); }
       loadAll();
     } catch {
       showError('Kunne ikke slette');
     }
   };
+
+  const loadGrid = async (id: string) => {
+    setViewScheduleId(id);
+    setLoadingGrid(true);
+    try {
+      const { data, error } = await supabase.from('shift_assignments')
+        .select('*').eq('schedule_id', id);
+      if (error) throw error;
+      setAssignments(data || []);
+    } catch {
+      showError('Kunne ikke laste vaktplan-grid');
+    } finally {
+      setLoadingGrid(false);
+    }
+  };
+
+  const viewedSchedule = schedules.find((s) => s.id === viewScheduleId) || null;
+
+  const grid = useMemo(() => {
+    if (!viewedSchedule) return [];
+    const days: { dayIndex: number; dayType: string; rows: { st: ShiftType; items: ShiftAssignment[] }[] }[] = [];
+    for (let d = 0; d < viewedSchedule.period_length; d++) {
+      const dt = d === 0 ? 'arrival' : d === viewedSchedule.period_length - 1 ? 'departure' : 'normal';
+      const types = shiftTypes.filter((s) => s.day_type === dt);
+      const rows = types.map((st) => ({
+        st,
+        items: assignments
+          .filter((a) => a.day_index === d && a.shift_type_id === st.id)
+          .sort((a, b) => (a.team_name || '').localeCompare(b.team_name || '')),
+      }));
+      days.push({ dayIndex: d, dayType: dt, rows });
+    }
+    return days;
+  }, [viewedSchedule, shiftTypes, assignments]);
 
   if (!isAdmin) {
     return (
@@ -169,10 +185,6 @@ export default function ShiftPlanner() {
     );
   }
 
-  const filteredLeaders = leaders.filter((l) =>
-    l.name.toLowerCase().includes(filter.toLowerCase()),
-  );
-
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Header */}
@@ -184,7 +196,7 @@ export default function ShiftPlanner() {
               <CalendarDays className="w-5 h-5" />
               Vaktplan
             </h1>
-            <p className="hidden sm:block text-sm text-muted-foreground">Sett opp team, generer og publiser vaktplaner</p>
+            <p className="hidden sm:block text-sm text-muted-foreground">Generer, publiser og se vaktplaner</p>
           </div>
         </div>
       </div>
@@ -221,11 +233,14 @@ export default function ShiftPlanner() {
         </CardContent>
       </Card>
 
-      {/* Team setup */}
+      {/* Team summary (read-only — hentet fra lederprofil) */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5" /> Team-oppsett</CardTitle>
-          <CardDescription>Tildel hver leder til et team for periode {periodNumber}/{year}</CardDescription>
+          <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5" /> Team</CardTitle>
+          <CardDescription>
+            Team hentes fra lederprofilen (felt: <em>team</em>). Kun <strong>1, 2, 1F, 2F</strong> er med i vaktplan —
+            Kjøkken, Sjef og Nurse er ekskludert.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -234,58 +249,43 @@ export default function ShiftPlanner() {
                 {TEAM_META[t].label}: {counts[t]}
               </Badge>
             ))}
-            <Badge variant="outline">Uten team: {counts.unassigned}</Badge>
+            <Badge variant="outline">Ekskludert (kjøkken/sjef/nurse/uten): {counts.other}</Badge>
           </div>
 
-          <Input placeholder="Søk leder..." value={filter} onChange={(e) => setFilter(e.target.value)} />
-
           {loading ? (
-            <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
+            <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
           ) : (
-            <div className="border rounded-lg divide-y max-h-[480px] overflow-y-auto">
-              {filteredLeaders.map((l) => (
-                <div key={l.id} className="flex items-center justify-between gap-3 p-2 px-3">
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium truncate">{l.name}</div>
-                    {l.age != null && (
-                      <div className="text-xs text-muted-foreground">
-                        {l.age} år {l.age < 18 ? '(under 18)' : ''}
-                      </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {(['team1','team2','team1f','team2f'] as Team[]).map((t) => {
+                const members = leaders.filter((l) => PROFILE_TO_TEAM[(l.team || '').trim()] === t);
+                return (
+                  <div key={t} className="border rounded-lg p-3 space-y-2">
+                    <Badge className={TEAM_META[t].className}>{TEAM_META[t].label}</Badge>
+                    {members.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Ingen ledere</p>
+                    ) : (
+                      <ul className="text-sm space-y-0.5">
+                        {members.map((m) => (
+                          <li key={m.id} className="truncate">
+                            {m.name}{m.age != null && m.age < 18 ? <span className="text-muted-foreground text-xs"> ({m.age})</span> : null}
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                  </div>
-                  <Select
-                    value={teamMap[l.id] || 'none'}
-                    onValueChange={(v) => setTeamFor(l.id, v === 'none' ? '' : (v as Team))}
-                  >
-                    <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">— Ingen —</SelectItem>
-                      <SelectItem value="team1">Team 1</SelectItem>
-                      <SelectItem value="team2">Team 2</SelectItem>
-                      <SelectItem value="team1f">Team 1F</SelectItem>
-                      <SelectItem value="team2f">Team 2F</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
-              ))}
-              {filteredLeaders.length === 0 && (
-                <div className="text-center py-6 text-sm text-muted-foreground">Ingen ledere</div>
-              )}
+                );
+              })}
             </div>
           )}
 
           <div className="flex flex-wrap gap-2">
-            <Button onClick={saveTeams} disabled={savingTeams}>
-              {savingTeams ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              Lagre team-oppsett
-            </Button>
             <Button onClick={generate} disabled={!canGenerate || generating} variant="default">
               {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-              Generer vaktplan
+              Generer vaktplan ({periodLength} dager)
             </Button>
             {!canGenerate && (
               <p className="text-xs text-muted-foreground self-center">
-                Trenger minst 1 leder i hvert team før du kan generere.
+                Trenger minst 1 leder i hvert av team 1, 2, 1F og 2F.
               </p>
             )}
           </div>
@@ -296,7 +296,7 @@ export default function ShiftPlanner() {
       <Card>
         <CardHeader>
           <CardTitle>Vaktplaner</CardTitle>
-          <CardDescription>Publiser, arkiver eller slett genererte planer</CardDescription>
+          <CardDescription>Vis, publiser, arkiver eller slett genererte planer</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -317,6 +317,9 @@ export default function ShiftPlanner() {
                     {STATUS_META[s.status]?.label || s.status}
                   </Badge>
                   <div className="flex flex-wrap gap-1.5">
+                    <Button size="sm" variant={viewScheduleId === s.id ? 'default' : 'secondary'} onClick={() => loadGrid(s.id)}>
+                      <Eye className="w-3.5 h-3.5 mr-1" /> Vis
+                    </Button>
                     {s.status !== 'published' && (
                       <Button size="sm" onClick={() => setStatus(s.id, 'published')}>
                         <Send className="w-3.5 h-3.5 mr-1" /> Publiser
@@ -347,6 +350,86 @@ export default function ShiftPlanner() {
           )}
         </CardContent>
       </Card>
+
+      {/* Grid view */}
+      {viewedSchedule && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Vaktplan · Periode {viewedSchedule.period_number}/{viewedSchedule.year}
+            </CardTitle>
+            <CardDescription>
+              {viewedSchedule.period_length} dager · {STATUS_META[viewedSchedule.status]?.label || viewedSchedule.status}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingGrid ? (
+              <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
+            ) : (
+              <div className="space-y-6">
+                {grid.map((day) => (
+                  <div key={day.dayIndex} className="space-y-2">
+                    <h3 className="font-heading font-semibold text-base">
+                      Dag {day.dayIndex + 1}
+                      <span className="ml-2 text-xs font-normal text-muted-foreground uppercase">
+                        {day.dayType === 'arrival' ? 'Ankomst' : day.dayType === 'departure' ? 'Avreise' : 'Normal'}
+                      </span>
+                    </h3>
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            <th className="text-left p-2 w-20">Tid</th>
+                            <th className="text-left p-2">Vakt</th>
+                            <th className="text-left p-2">Tildelt</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {day.rows.map(({ st, items }) => (
+                            <tr key={st.id} className="border-t align-top">
+                              <td className="p-2 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                                {st.start_time?.slice(0, 5)}–{st.end_time?.slice(0, 5)}
+                              </td>
+                              <td className="p-2 font-medium">{st.name}</td>
+                              <td className="p-2">
+                                {items.length === 0 ? (
+                                  <span className="text-xs text-muted-foreground">—</span>
+                                ) : (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {items.map((a) => {
+                                      if (a.assignment_type === 'team' && a.team_name) {
+                                        const t = a.team_name as Team;
+                                        const meta = TEAM_META[t];
+                                        return (
+                                          <Badge key={a.id} className={meta?.className || ''}>
+                                            {meta?.label || a.team_name}
+                                            {a.note ? <span className="ml-1 opacity-80">{a.note}</span> : null}
+                                          </Badge>
+                                        );
+                                      }
+                                      const ldr = a.leader_id ? leaderById.get(a.leader_id) : null;
+                                      return (
+                                        <Badge key={a.id} variant="outline">
+                                          {ldr?.name || 'Ukjent'}
+                                          {a.role && a.role !== 'standard' ? <span className="ml-1 text-[10px] opacity-70">({a.role})</span> : null}
+                                        </Badge>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
