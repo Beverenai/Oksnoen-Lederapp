@@ -1,5 +1,15 @@
 // Shared team utility functions used by LeaderDashboard, LeaderListView, etc.
 
+/** Map a leader's `team` field ('1','2','1f','2f',...) to the canonical team key. */
+export const leaderTeamKey = (team: string | null | undefined): 'team1' | 'team2' | 'team1f' | 'team2f' | null => {
+  const t = (team || '').toLowerCase().trim();
+  if (t === '1' || t === 'team 1') return 'team1';
+  if (t === '2' || t === 'team 2') return 'team2';
+  if (t === '1f' || t === 'team 1f') return 'team1f';
+  if (t === '2f' || t === 'team 2f') return 'team2f';
+  return null;
+};
+
 export const getTeamStyles = (team: string | null): string => {
   const teamLower = team?.toLowerCase().trim();
   switch (teamLower) {

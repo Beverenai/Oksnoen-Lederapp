@@ -1,47 +1,40 @@
 ## Mål
 
-Hver dag i vaktplanen skal vises med **5 rader** i Excel, slik at man enkelt kan følge sitt team vannrett bortover:
+Fjern "Single navn"-raden. Hver dag har **4 rader** — én per team — slik at hver leder/team alltid følger sin egen farge vannrett bortover, uansett om hele teamet jobber eller bare én leder fra teamet.
 
 ```
-Lørdag   | Single navn  | (alle individuelle ledere stables her)
-         | Team 1       | farget rad – "Team 1" der teamet jobber
-         | Team 1F      | farget rad – "Team 1F"
-         | Team 2       | farget rad – "Team 2"
-         | Team 2F      | farget rad – "Team 2F"
+Lørdag  | Team 1   | rød celle: "Team 1" hvis hele teamet, ellers navnet på lederen(e) fra Team 1 som jobber den vakten
+        | Team 1F  | oransje celle: "Team 1F" eller navn på Team 1F-leder(e)
+        | Team 2   | blå celle: "Team 2" eller navn på Team 2-leder(e)
+        | Team 2F  | gul celle: "Team 2F" eller navn på Team 2F-leder(e)
 ```
 
-Dagsnavn (f.eks. "Lørdag") skrives i kolonne A og merges loddrett over alle 5 radene.
+## Regel per celle (per dag × per vakt × per team-rad)
+
+1. Hvis vakten har en `assignment_type='team'`-tildeling for dette teamet → vis `Team X` + evt. fotnote-asterisk. Fyll cellen med team-fargen.
+2. Ellers, hvis det finnes `assignment_type='leader'`-tildelinger på denne vakten der lederens `leader.team` tilhører dette team-radet (mapping `'1'→team1`, `'2'→team2`, `'1f'→team1f`, `'2f'→team2f`) → vis kortnavn(ene) stablet med linjeskift. Fyll cellen med team-fargen.
+3. Ellers → tom, ufarget celle.
+
+Ledere uten team-tilknytning (f.eks. koordinator/kjøkken som ikke matcher mappingen) faller utenfor de 4 radene; de håndteres ikke her (samme oppførsel som i dag for team-radene).
 
 ## Endringer i `src/lib/exportShiftScheduleXlsx.ts`
 
-### Normal-dag-blokken (rader fra row 7 og nedover)
-- Bytt fra **1 rad per dag** til **5 rader per dag**:
-  - Rad 1: `Single navn` – alle assignments med `assignment_type = 'leader'` for denne vakten, stablet med linjeskift i samme celle (slik som i dag, bare uten team-tekst).
-  - Rad 2–5: én rad per team i rekkefølgen `team1`, `team1f`, `team2`, `team2f`.
-- For team-radene: hvis teamet er tildelt vakten, fyll cellen med team-fargen og skriv `Team 1` / `Team 1F` osv. (med evt. note som `*`, `**` etter labelen). Hvis ikke tildelt: tom celle.
-- Tekstfarge: hvit på rød/blå/oransje, svart på gul (team2f). Bold, size 9, sentrert.
-- Kolonne A: skriv dagsnavn i første rad (Single-rad) og `mergeCells` loddrett over alle 5 rader. Vertikal sentrering, bold.
-- Tynne grå borders rundt hver celle som i dag. Radhøyde ~18 (mindre enn dagens 60, siden hver rad er én linje – Single-raden får auto-høyde via `wrapText`).
-- Legg horisontal "skille-border" (medium grå) på topp av Single-raden for hver ny dag, så dagene er visuelt adskilt.
+- Fjern `'single'` fra `ROW_TEAMS`. Ny rekkefølge: `['team1', 'team1f', 'team2', 'team2f']` (4 rader per dag).
+- Fjern `singleNamesForShift()`. Erstatt `teamLabelForShift()` med ny `teamCellForShift(dayAss, st, team, leaderById) → { text: string; filled: boolean }`:
+  - Returnerer `Team X[*]` hvis det finnes team-tildeling.
+  - Ellers slår opp leader-tildelinger og filtrerer på `PROFILE_TO_TEAM[leader.team] === team`; returnerer kortnavn(ene) joinet med `\n` (inkl. evt. `(note)` per assignment).
+  - `filled=true` så lenge tekst ikke er tom — da settes team-farge + bold + hvit/svart tekst.
+- Importer/dupliser `PROFILE_TO_TEAM`-mappingen (legg den i `src/lib/teamUtils.ts` som ny eksport `leaderTeamKey()` så både ShiftPlanner og export kan bruke den uten duplisering).
+- Radhøyde: alle team-rader får `wrapText: true` og auto-høyde (ingen fast 16 — vi vet ikke om det blir 1 eller flere navn).
+- Dag-merge i kolonne A: `mergeCells(start, 1, start+3, 1)` (4 rader nå i stedet for 5).
+- Asterisk-fotnotene under tabellen beholdes uendret.
 
-### Hjelpefunksjoner
-- Behold `shortName()`, `timeRange()`, `TEAM_FILL`, `TEAM_LABEL`.
-- Erstatt `cellLines()` med to nye:
-  - `singleNamesForShift(dayAss, st, leaderById) → string` (sammenslått tekst med `\n`)
-  - `teamNoteForShift(dayAss, st, team) → string | null` (returnerer f.eks. `"Team 1*"` eller `null`)
+## Ankomst-/avreise-blokken
 
-### Ankomst/avreise-blokken
-- Allerede strukturert med én rad per team — la stå som det er, men bytt fargefyll-cellene til også å vise team-label (`Team 1`, …) for konsistens.
-
-## Tekniske detaljer
-
-- ExcelJS støtter `ws.mergeCells(startRow, 1, startRow+4, 1)` for loddrett merge av dag-cellen.
-- Ingen DB- eller edge-function-endringer nødvendig — kun front-end formattering.
-- Excel-arket blir ~5x lengre vertikalt (5 rader × 7 dager = 35 rader pluss header), men hver rad er kort, så total høyde er omtrent samme som i dag.
-- Single-rad har `wrapText: true`; team-radene får fast høyde 18.
+Samme regel: hver av de 4 team-radene viser enten `Team X` eller navnet på de(n) leder(e) fra det teamet som er tildelt vakten den dagen — alltid med team-farge.
 
 ## Hva endres ikke
 
-- Logikken som genererer vaktene (edge function).
-- Database-skjema.
-- Fotnoter, ankomst-, avreise-blokker (utover label-tilføyelsen nevnt over).
+- Edge function / DB-skjema.
+- Header-rader (vakt/tid/timer/min. ledere).
+- Tittel og fotnoter.
