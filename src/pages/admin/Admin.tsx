@@ -1,5 +1,5 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,10 +14,9 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Progress } from '@/components/ui/progress';
 import {
   Settings, Loader2, Shield, Calendar,
-  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles, ClipboardPaste, CalendarDays, Eraser,
+  Save, LayoutGrid, List, Sparkles, ClipboardPaste, CalendarDays, Eraser,
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,14 +29,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
 import { LeaderListView } from '@/components/admin/LeaderListView';
-import { LeaderActivationTab } from '@/components/admin/LeaderActivationTab';
 import { PasteLeaderContentSheet } from '@/components/admin/PasteLeaderContentSheet';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
 
-
-// Lazy-load the heavy HomeConfig section (includes @dnd-kit)
-const HomeConfigSection = lazy(() => import('@/components/admin/HomeConfigTab'));
 
 type Leader = Tables<'leaders'>;
 type AppRole = 'superadmin' | 'admin' | 'nurse' | 'leader';
@@ -75,8 +70,6 @@ export default function Admin() {
   const [isSavingActivities, setIsSavingActivities] = useState(false);
 
   // UI state
-  const [isHomeConfigOpen, setIsHomeConfigOpen] = useState(false);
-  const [isActivationOpen, setIsActivationOpen] = useState(false);
   const [leaderViewMode, setLeaderViewMode] = useState<'grid' | 'list'>('grid');
   const [isActivitiesSheetOpen, setIsActivitiesSheetOpen] = useState(false);
   const [isPasteSheetOpen, setIsPasteSheetOpen] = useState(false);
