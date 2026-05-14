@@ -101,29 +101,31 @@ export default function ShiftPlanner() {
   const generate = async () => {
     setGenerating(true);
     try {
-      let { data, error } = await supabase.functions.invoke('generate-shift-schedule', {
-        body: { period_number: periodNumber, year, period_length: periodLength },
+      const publishedSchedule = schedules.find(
+        (schedule) => schedule.period_number === periodNumber && schedule.year === year && schedule.status === 'published',
+      );
+
+      const shouldForceRegenerate = publishedSchedule
+        ? confirm('Denne perioden er publisert. Arkivér og generer på nytt?')
+        : false;
+
+      if (publishedSchedule && !shouldForceRegenerate) {
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('generate-shift-schedule', {
+        body: {
+          period_number: periodNumber,
+          year,
+          period_length: periodLength,
+          force_regenerate: shouldForceRegenerate,
+        },
       });
+
       let errMsg = (error as any)?.message || data?.error || '';
       const ctx = (error as any)?.context;
       if (ctx && typeof ctx.json === 'function') {
         try { const body = await ctx.clone().json(); errMsg = body?.error || errMsg; } catch {}
-      }
-      if (errMsg && /published/i.test(errMsg)) {
-        if (!confirm('Denne perioden er publisert. Arkivér og generer på nytt?')) {
-          setGenerating(false);
-          return;
-        }
-        const { error: archErr } = await supabase
-          .from('shift_schedules')
-          .update({ status: 'archived' })
-          .eq('period_number', periodNumber)
-          .eq('year', year)
-          .eq('status', 'published');
-        if (archErr) throw archErr;
-        ({ data, error } = await supabase.functions.invoke('generate-shift-schedule', {
-          body: { period_number: periodNumber, year, period_length: periodLength },
-        }));
       }
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
