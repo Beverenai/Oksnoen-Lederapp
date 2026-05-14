@@ -14,10 +14,20 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Progress } from '@/components/ui/progress';
 import {
   Settings, Loader2, Shield, Calendar,
-  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles, ClipboardPaste, CalendarDays,
+  Save, ChevronDown, ChevronUp, LayoutGrid, List, UserCog, Sparkles, ClipboardPaste, CalendarDays, Eraser,
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
 import { LeaderListView } from '@/components/admin/LeaderListView';
 import { LeaderActivationTab } from '@/components/admin/LeaderActivationTab';
@@ -70,6 +80,8 @@ export default function Admin() {
   const [leaderViewMode, setLeaderViewMode] = useState<'grid' | 'list'>('grid');
   const [isActivitiesSheetOpen, setIsActivitiesSheetOpen] = useState(false);
   const [isPasteSheetOpen, setIsPasteSheetOpen] = useState(false);
+  const [isClearAllOpen, setIsClearAllOpen] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -142,6 +154,38 @@ export default function Admin() {
     } catch { showError('Kunne ikke laste data'); } finally { setIsLoading(false); }
   };
 
+  const handleClearAllDailyFields = async () => {
+    setIsClearingAll(true);
+    try {
+      const { error, count } = await supabase
+        .from('leader_content')
+        .update({
+          current_activity: null,
+          extra_activity: null,
+          personal_notes: null,
+          obs_message: null,
+          extra_2: null,
+          extra_3: null,
+          extra_4: null,
+          extra_5: null,
+          updated_at: new Date().toISOString(),
+        }, { count: 'exact' })
+        .not('leader_id', 'is', null);
+      if (error) throw error;
+      hapticSuccess();
+      showSuccess(`Tømte daglige felt for ${count ?? 'alle'} ledere`);
+      setIsClearAllOpen(false);
+      await loadData();
+      rqClient.invalidateQueries();
+    } catch (err) {
+      console.error('Clear all error:', err);
+      hapticError();
+      showError('Kunne ikke tømme felt');
+    } finally {
+      setIsClearingAll(false);
+    }
+  };
+
 
   if (!isAdmin) {
     return (
@@ -197,6 +241,16 @@ export default function Admin() {
           >
             <ClipboardPaste className="h-4 w-4" />
             <span className="hidden sm:inline sm:ml-2">Lim inn</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsClearAllOpen(true)}
+            title="Tøm daglige felt for alle ledere"
+            className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Eraser className="h-4 w-4" />
+            <span className="hidden sm:inline sm:ml-2">Tøm</span>
           </Button>
         </div>
       </div>
@@ -315,6 +369,28 @@ export default function Admin() {
         leaders={leaders}
         onSaved={loadData}
       />
+
+      <AlertDialog open={isClearAllOpen} onOpenChange={setIsClearAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tøm daglige felt for ALLE ledere?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dette tømmer nåværende aktivitet, ekstra aktivitet, notat til lederen, OBS-melding og ekstra info 2–5 for samtlige ledere. Team, hytte, ministerpost og overnatting (ekstra 1) beholdes. Handlingen kan ikke angres.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isClearingAll}>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleClearAllDailyFields(); }}
+              disabled={isClearingAll}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isClearingAll ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Eraser className="w-4 h-4 mr-2" />}
+              Ja, tøm alle
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
