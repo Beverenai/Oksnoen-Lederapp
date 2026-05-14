@@ -1,65 +1,64 @@
-## Diagnose: hvorfor 65 advarsler?
+## Mål
+Gi hver leder en kompakt visning av sine egne vakter for inneværende periode, tilgjengelig fra menyen. Trygg mot navneendringer; krever manuell handling fra admin når nye ledere legges til.
 
-Validatoren rapporterer kun *leder + dag + regel* — ikke hvilke vakter som kolliderer. Alle 65 er sannsynligvis **11t-hvile-brudd**, fordi generatoren plasserer:
+## Trygghet ved endringer (svar på spørsmålet)
+- **Navneendring:** Helt trygt. `shift_assignments` lagrer `leader_id` (UUID), navnet hentes via join til `leaders`. Endrer navn → vises nytt navn overalt umiddelbart.
+- **Endre alle navnene:** Samme som over — ingen risiko.
+- **Ny leder midt i periode:** Hen får ingen vakter automatisk. Admin må enten regenerere perioden eller tildele manuelt i ShiftPlanner. Vi viser et lite varsel i admin-UI når dette oppdages.
+- **Slettet/inaktiv leder:** Vakter blir liggende med `leader_id` som peker på fjernet rad. Vi håndterer dette ved å vise "Ukjent" og logge en advarsel.
 
-| Kollisjon | Hvile | Antall pr. dag |
-|---|---|---|
-| `legging` (slutt 01:00) → `personalmoete` 10:45 neste dag | 9t 45m | ~17 ledere (team1+team2) |
-| `nattevakt` (slutt 05:00) → `okt1` 11:00 neste dag | 6t | 2 ledere |
-| `legging_ankomst` (slutt 01:00 dag 1) → PM1 dag 1 | 9t 45m | 17 ledere |
+## Det som skal bygges
 
-Over 7 dager → 60+ brudd.
+### 1. Ny side: `src/pages/MyShifts.tsx` (rute `/my-shifts`)
+- Henter aktiv `shift_schedule` (status = `published`, evt. nyeste `draft` hvis ingen publisert) for inneværende år/periode.
+- Henter `shift_assignments` filtrert på innlogget leder (`leader_id = currentLeader.id`) + `excluded_leader_ids` ikke inneholder min id.
+- Henter `shift_types` for navn/tider.
+- Gruppert per dag (`day_index`), sortert på `start_time`.
+- Per vakt: tid (HH:MM–HH:MM), navn på vakt, varighet, evt. `note`.
+- Sum-rad nederst per dag (totalt antall timer) og totalt for perioden.
+- Pull-to-refresh + React Query (`['my-shifts', leaderId]`, stale 30s).
+- Tom-tilstand: "Ingen vakter publisert ennå" med RefreshCw-knapp.
+- Respekterer impersonation (`effectiveLeader.id`) så admins kan "View as".
 
-## Reglene som skal håndheves
+### 2. Meny-integrasjon i `src/components/layout/AppLayout.tsx`
+- Legg til `myShiftsNavItem = { to: '/my-shifts', icon: ClipboardList, label: 'Min vakt' }`.
+- Legg inn i leder/nurse/admin-menyene (etter "Din Hytte"). Behold eksisterende `/schedule` (aktivitetsprogram-bildet) — det er noe annet.
 
-**A. Legging-ledere (slutter 01:00):** Har fri til **PM2 (15:45)** neste dag. Skal ikke plasseres i: vekking, frokost, PM1, økt1, middag, bings/seilern/morgenvakt/kjøkken neste dag.
+### 3. Rute i `src/App.tsx`
+- `<Route path="/my-shifts" element={<MyShifts />} />`
 
-**B. Tidligvakt-unntak:** Én leder per team som har "tidlig morgen" neste dag (PM1 10:45) skal **ikke** gjøre legging — i stedet **slutte 23:45** dagen før (okt3 forkortes til 23:45, eller egen "tidligvakt-avslutning"). Sikrer 11t hvile (23:45 → 10:45 = 11t).
+### 4. Admin-varsel i `ShiftPlanner.tsx` (lite tillegg)
+- Når en publisert plan finnes og det finnes aktive ledere uten en eneste tildeling i den planen → vis gul banner: "X ledere har ingen vakter (lagt til etter generering). Regenerer eller tildel manuelt."
 
-**C. Nattevakt-ledere (slutter 05:00):** Har fri til **etter 16:00** neste dag. Skal ikke plasseres i noe før okt2 (16:00). 11t hvile fra 05:00 = 16:00, så okt2-start er OK.
+### 5. (Valgfritt) Hjem-kort
+Ikke bygd nå — du valgte kun egen side.
 
-## Endringer
-
-### `supabase/functions/generate-shift-schedule/index.ts`
-
-1. **Track per dag hvem som var i legging og nattevakt forrige dag.** Bygg `prevLeggingIds: Set<string>` og `prevNattIds: Set<string>` ved starten av hver dag-iterasjon basert på allerede pushede vakter.
-
-2. **Ekskluder `prevLeggingIds` fra disse team-vaktene på gjeldende dag** (legg til i `excluded`-array i hvert `pushTeam`-kall):
-   - `vekking` (08:30)
-   - `frokost` (09:00)
-   - `personalmoete` (10:45)
-   - `okt1` (11:00)
-   - `middag` (14:00)
-   
-   Også for leder-vakter samme tidspunkt: hopp over kandidater i `prevLeggingIds` (morgenvakt, frokost-leder, bings_morgen, seilern_box, kjokkenvakt).
-
-3. **Ekskluder `prevNattIds` fra alle vakter før kl 16:00** på gjeldende dag — i praksis alt unntatt `personalmoete2`, `okt2` og senere.
-
-4. **Tidligvakt-mekanisme for legging-dagen:**
-   - Når `legging` (22:00–01:00) skal pushes for et team, identifiser én leder som *trengs* i PM1 neste dag (en "kandidat for tidligvakt").
-   - Ekskluder denne lederen fra `legging`. I stedet: opprett spesiell vakt-tildeling — enten ny `shift_type` `okt3_tidlig` (20:30–23:45, 3.25t) eller forkort `okt3` for kun denne lederen.
-   - Enkleste implementasjon: pushe `okt3` som vanlig (slutter 00:00), men ekskluder tidligvakt-lederen fra `okt3` og legg dem på en ny `tidligvakt_avslutning`-vakt (f.eks. 22:00–23:45). Krever ny rad i `shift_types`.
-   - Alternativ enklere variant: definer at "tidligvakt" kun teller innen okt3 og at lederen avslutter 23:45 — registrer som `okt3` med `note: 'avslutter 23:45'` og la validator se på `note` og redusere endAbs. (Mindre ren, men ingen schema-endring.)
-
-### `supabase/functions/revalidate-shift-schedule/index.ts`
-
-Speil samme `prevLeggingIds`/`prevNattIds`-logikk hvis vi velger å *undertrykke* advarsler i stedet for å fikse generatoren — men anbefalt: la validator forbli streng, og fikse generatoren slik at bruddene aldri oppstår.
-
-Hvis vi tar `note`-varianten for tidligvakt: validator må parse `note` og bruke 23:45 som faktisk slutt for `okt3`-tildelinger med den noten.
-
-### Migrasjon (kun hvis vi velger ny shift_type)
-
-```sql
-INSERT INTO shift_types (slug, name, day_type, start_time, end_time, duration_hours, sort_order)
-VALUES ('tidligvakt_avslutning', 'Tidligvakt (avslutter 23:45)', 'normal', '22:00', '23:45', 1.75, 95);
+## UI-skisse (mobil)
+```
+┌─ Min vakt ──────────────────┐
+│  Periode 1 · 2026           │
+├──────────────────────────────┤
+│  Lørdag 21. juni            │
+│   13:00–15:00  Ankomst (2t) │
+│   17:00–18:30  Middag (1.5t)│
+│                Sum: 3.5 t   │
+├──────────────────────────────┤
+│  Søndag 22. juni            │
+│   …                         │
+├──────────────────────────────┤
+│  Totalt: 38.5 timer         │
+└──────────────────────────────┘
 ```
 
-## Beslutningspunkter før implementasjon
+## Tekniske detaljer
+- RLS: `shift_assignments_select` tillater alle authenticated → ingen endring nødvendig.
+- Query: ett SELECT med embedded join `shift_types(name,start_time,end_time,duration_hours)`.
+- Sortering: `day_index ASC`, deretter `shift_types.start_time ASC`.
+- Dato-mapping: `period.start_date + day_index` (hvis perioden har startdato — sjekk `shift_schedules`-skjema; ellers vis kun "Dag 1, Dag 2…" eller ukedag).
+- Ingen schema-endringer.
 
-1. **Tidligvakt-modell:** Ny `shift_type` (renere, krever migrasjon) eller `note` på eksisterende `okt3` (ingen schema-endring, validator må endres)?
-2. **Hvor mange tidligvakt-ledere per team?** Én totalt, eller én per team (team1 + team2 = 2)?
-3. **Skal "tidligvakt" rotere** mellom ledere over perioden, eller kan samme person ha det flere dager?
-
-## Forventet resultat
-
-Etter implementasjon: 65 → ~0 advarsler (alle 11t-brudd løst ved riktig ekskludering). Eventuelle gjenværende advarsler er reelle problemer som krever manuell håndtering.
+## Filer som endres / opprettes
+- `src/pages/MyShifts.tsx` (ny)
+- `src/App.tsx` (ny rute)
+- `src/components/layout/AppLayout.tsx` (nytt menypunkt)
+- `src/pages/admin/ShiftPlanner.tsx` (advarsel om uassignerte ledere)
