@@ -191,7 +191,6 @@ export async function exportShiftScheduleXlsx(opts: {
     });
 
     // Replace col A labels with merged day-name cell
-    ws.unMergeCells(dayStartRow, 1, dayStartRow + ROW_TEAMS.length - 1, 1);
     for (let ri = 0; ri < ROW_TEAMS.length; ri++) ws.getCell(dayStartRow + ri, 1).value = '';
     ws.mergeCells(dayStartRow, 1, dayStartRow + ROW_TEAMS.length - 1, 1);
     const dayCell = ws.getCell(dayStartRow, 1);
