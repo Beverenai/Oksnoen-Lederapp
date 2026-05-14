@@ -1,4 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +24,8 @@ import { RopeControlTab } from '@/components/admin/RopeControlTab';
 import { ActivitiesTab } from '@/components/admin/ActivitiesTab';
 import { SkjaerTab } from '@/components/admin/SkjaerTab';
 import { StoriesTab } from '@/components/admin/StoriesTab';
+import { LeaderActivationTab } from '@/components/admin/LeaderActivationTab';
+const HomeConfigTab = lazy(() => import('@/components/admin/HomeConfigTab'));
 import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
@@ -51,6 +54,13 @@ interface AdminSettingsContentProps {
   newLeaderIsAdmin: boolean;
   setNewLeaderIsAdmin: (value: boolean) => void;
   addLeader: () => Promise<void>;
+  // Activation + home config
+  isSuperAdmin: boolean;
+  homeConfig: any[];
+  localHomeConfig: any[];
+  setLocalHomeConfig: React.Dispatch<React.SetStateAction<any[]>>;
+  setHomeConfig: React.Dispatch<React.SetStateAction<any[]>>;
+  onLeaderUpdated: () => void | Promise<void>;
 }
 
 export function AdminSettingsContent({
@@ -70,6 +80,12 @@ export function AdminSettingsContent({
   newLeaderIsAdmin,
   setNewLeaderIsAdmin,
   addLeader,
+  isSuperAdmin,
+  homeConfig,
+  localHomeConfig,
+  setLocalHomeConfig,
+  setHomeConfig,
+  onLeaderUpdated,
 }: AdminSettingsContentProps) {
   switch (activeSection) {
     case 'leaders':
@@ -273,6 +289,21 @@ export function AdminSettingsContent({
     case 'stories':
       return <StoriesTab />;
 
+    case 'activation':
+      return <LeaderActivationTab leaders={leaders} onLeaderUpdated={onLeaderUpdated} isSuperAdmin={isSuperAdmin} />;
+
+    case 'home-config':
+      return (
+        <Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}>
+          <HomeConfigTab
+            homeConfig={homeConfig}
+            localHomeConfig={localHomeConfig}
+            setLocalHomeConfig={setLocalHomeConfig}
+            onSaved={onLeaderUpdated}
+            setHomeConfig={setHomeConfig}
+          />
+        </Suspense>
+      );
 
     default:
       return (
