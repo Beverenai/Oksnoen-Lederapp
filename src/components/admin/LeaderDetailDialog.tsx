@@ -88,6 +88,8 @@ export function LeaderDetailDialog({
   // Role
   const [role, setRole] = useState<AppRole>('leader');
 
+  const leaderId = leader?.id;
+
   // Populate form when leader changes
   // Only repopulate when the leader ID changes (not on every refetch),
   // otherwise auto-save → parent refetch → useEffect would wipe in-progress edits.
@@ -193,41 +195,51 @@ export function LeaderDetailDialog({
     saveLeaderFieldsRef.current = saveLeaderFields;
   }, [saveLeaderFields]);
 
-  // Debounced auto-save for all fields (1s debounce)
+  // Debounced auto-save for all fields (350ms debounce). Use the ref so that
+  // parent refetches (which produce a new `leader` reference) don't retrigger
+  // phantom saves.
   useEffect(() => {
-    if (!isInitializedRef.current || !leader) return;
+    if (!isInitializedRef.current || !leaderId) return;
 
-    // Show "Lagrer…" immediately so the user feels the change registered.
     setAutoSaveStatus('saving');
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
-      saveLeaderFields();
+      saveLeaderFieldsRef.current?.();
     }, 350);
-  }, [name, phone, email, age, team, cabin, ministerpost, hasCar, hasDriversLicense, hasBoatLicense, canRappelling, canClimbing, canZipline, canRopeSetup, saveLeaderFields, leader]);
+  }, [name, phone, email, age, team, cabin, ministerpost, hasCar, hasDriversLicense, hasBoatLicense, canRappelling, canClimbing, canZipline, canRopeSetup, leaderId]);
+
+  // Keep latest callbacks in refs so the role-save effect doesn't re-run
+  // every time the parent refetches and passes new function identities.
+  const onSavedRef = useRef(onSaved);
+  const showErrorRef = useRef(showError);
+  useEffect(() => { onSavedRef.current = onSaved; }, [onSaved]);
+  useEffect(() => { showErrorRef.current = showError; }, [showError]);
 
   // Auto-save role changes (separate because it uses edge function)
   useEffect(() => {
-    if (!isInitializedRef.current || !leader) return;
-    
+    if (!isInitializedRef.current || !leaderId) return;
+    if (role === originalValuesRef.current.role) return;
+
     if (roleSaveTimerRef.current) clearTimeout(roleSaveTimerRef.current);
     roleSaveTimerRef.current = setTimeout(async () => {
       setAutoSaveStatus('saving');
       try {
         const { error } = await supabase.functions.invoke('manage-roles', {
-          body: { action: 'set', leader_id: leader.id, role }
+          body: { action: 'set', leader_id: leaderId, role }
         });
         if (error) throw error;
+        originalValuesRef.current.role = role;
         setAutoSaveStatus('saved');
         hapticSuccess();
-        onSaved();
+        onSavedRef.current();
         setTimeout(() => setAutoSaveStatus('idle'), 2000);
       } catch (err) {
         console.error('Role save error:', err);
         setAutoSaveStatus('idle');
-        showError('Kunne ikke lagre rolle');
+        showErrorRef.current('Kunne ikke lagre rolle');
       }
     }, 500);
-  }, [role, leader, onSaved, showError]);
+  }, [role, leaderId]);
 
   const getFirstName = (fullName: string) => fullName.split(' ')[0];
 
