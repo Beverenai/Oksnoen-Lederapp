@@ -429,7 +429,6 @@ export function LeaderContentSheet({
     setExtraActivity('');
     setPersonalNotes('');
     setObsMessage('');
-    setExtra1('');
     setExtra2('');
     setExtra3('');
     setExtra4('');
