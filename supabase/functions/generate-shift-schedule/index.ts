@@ -24,6 +24,7 @@ interface AssignmentInsert {
   leader_id: string | null;
   role: string;
   note: string | null;
+  excluded_leader_ids: string[];
 }
 interface SpecialDutyInsert {
   schedule_id: string;
@@ -347,6 +348,7 @@ Deno.serve(async (req) => {
         schedule_id: scheduleId, day_index: day, day_type: dt,
         shift_type_id: st.id, assignment_type: 'leader',
         team_name: null, leader_id: leader.id, role, note: note ?? null,
+        excluded_leader_ids: [],
       });
       recordWork(leader.id, day, st);
     };
