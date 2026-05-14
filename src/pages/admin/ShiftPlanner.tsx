@@ -564,6 +564,22 @@ export default function ShiftPlanner() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {missingLeaders.length > 0 && (
+              <div className="mb-4 border border-orange-500/50 bg-orange-500/10 rounded-lg p-3">
+                <div className="flex items-center gap-2 font-semibold text-sm mb-1">
+                  <AlertTriangle className="w-4 h-4 text-orange-600" />
+                  {missingLeaders.length} leder{missingLeaders.length === 1 ? '' : 'e'} uten vakter
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Disse er sannsynligvis lagt til etter generering. Regenerer hele perioden, eller tildel manuelt nedenfor.
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {missingLeaders.map((l) => (
+                    <Badge key={l.id} variant="outline" className="text-xs">{l.name}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
             {warnings.length > 0 && (
               <div className="mb-4 border border-yellow-500/50 bg-yellow-500/10 rounded-lg p-3">
                 <div className="flex items-center gap-2 font-semibold text-sm mb-2">
