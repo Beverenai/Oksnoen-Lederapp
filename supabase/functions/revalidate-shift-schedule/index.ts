@@ -53,16 +53,30 @@ Deno.serve(async (req) => {
     const stById = new Map<string, any>((stRes.data || []).map((s: any) => [s.id, s]));
     const ldrById = new Map<string, any>((ldrRes.data || []).map((l: any) => [l.id, l]));
 
-    // Build per-leader intervals (only individual assignments — team rows aren't a single person).
+    // Group leaders by team key so team-type assignments can be expanded to members.
+    const TEAM_OF: Record<string, string> = { '1': 'team1', '2': 'team2', '1f': 'team1f', '2f': 'team2f' };
+    const teamMembers: Record<string, any[]> = { team1: [], team2: [], team1f: [], team2f: [] };
+    for (const l of ldrRes.data || []) {
+      const k = TEAM_OF[(l.team || '').trim().toLowerCase()];
+      if (k) teamMembers[k].push(l);
+    }
+
+    // Build per-leader intervals. Expand team assignments to all members of that team.
     const work = new Map<string, { startAbs: number; endAbs: number; dayIndex: number; st: any }[]>();
+    const addInterval = (leaderId: string, dayIndex: number, st: any) => {
+      const iv = shiftInterval(st.start_time, st.end_time, dayIndex);
+      const arr = work.get(leaderId) || [];
+      arr.push({ ...iv, dayIndex, st });
+      work.set(leaderId, arr);
+    };
     for (const a of assRes.data || []) {
-      if (a.assignment_type !== 'leader' || !a.leader_id) continue;
       const st = stById.get(a.shift_type_id);
       if (!st) continue;
-      const iv = shiftInterval(st.start_time, st.end_time, a.day_index);
-      const arr = work.get(a.leader_id) || [];
-      arr.push({ ...iv, dayIndex: a.day_index, st });
-      work.set(a.leader_id, arr);
+      if (a.assignment_type === 'leader' && a.leader_id) {
+        addInterval(a.leader_id, a.day_index, st);
+      } else if (a.assignment_type === 'team' && a.team_name && teamMembers[a.team_name]) {
+        for (const m of teamMembers[a.team_name]) addInterval(m.id, a.day_index, st);
+      }
     }
 
     const warnings: Warning[] = [];
