@@ -486,17 +486,26 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 11h rest: sort intervals by startAbs, check gap between consecutive
-      const sorted = [...intervals].sort((a, b) => a.startAbs - b.startAbs);
-      for (let i = 1; i < sorted.length; i++) {
-        const gap = sorted[i].startAbs - sorted[i - 1].endAbs;
-        // Only warn for gaps spanning to next "work episode" (gap >= 0 and < 11h means insufficient rest)
-        // skip if same continuous shift block (gap <= 30 min counts as same block)
-        if (gap > 30 && gap < 11 * 60) {
+      // 11h rest: only check BETWEEN workdays (last shift dayN → first shift dayN+1).
+      // Within-day gaps (lunch breaks etc.) are normal and must NOT trigger this rule.
+      const lastEndPerDay = new Map<number, number>();
+      const firstStartPerDay = new Map<number, number>();
+      for (const iv of intervals) {
+        const prevEnd = lastEndPerDay.get(iv.dayIndex);
+        if (prevEnd === undefined || iv.endAbs > prevEnd) lastEndPerDay.set(iv.dayIndex, iv.endAbs);
+        const prevStart = firstStartPerDay.get(iv.dayIndex);
+        if (prevStart === undefined || iv.startAbs < prevStart) firstStartPerDay.set(iv.dayIndex, iv.startAbs);
+      }
+      const workDays = [...lastEndPerDay.keys()].sort((a, b) => a - b);
+      for (let i = 1; i < workDays.length; i++) {
+        const prevEnd = lastEndPerDay.get(workDays[i - 1])!;
+        const nextStart = firstStartPerDay.get(workDays[i])!;
+        const gap = nextStart - prevEnd;
+        if (gap > 0 && gap < 11 * 60) {
           warnings.push({
-            leader_id: leaderId, leader_name: ldr.name, day_index: sorted[i].dayIndex,
+            leader_id: leaderId, leader_name: ldr.name, day_index: workDays[i],
             rule: '11h_rest',
-            detail: `Kun ${(gap / 60).toFixed(1)}t hvile etter ${sorted[i - 1].st.slug} (krav 11t)`,
+            detail: `Kun ${(gap / 60).toFixed(1)}t hvile mellom dag ${workDays[i - 1]} og dag ${workDays[i]} (krav 11t)`,
           });
         }
       }
