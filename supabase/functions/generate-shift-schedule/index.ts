@@ -285,15 +285,14 @@ Deno.serve(async (req) => {
       // 6) Nattevakt — 2 from team1+team2, prefer one of each
       const nattPool = [...grouped.team1, ...grouped.team2];
       let natt = pickFairest(nattPool, 2, busy);
-      // try to enforce mix (1 from each team) if possible
-      if (natt.length === 2 && grouped[natt[0].team as Team]?.length) {
-        const team0 = (natt[0].team || '').toLowerCase();
-        const team1 = (natt[1].team || '').toLowerCase();
-        if (team0 === team1) {
-          const otherTeamKey: Team = team0 === '1' ? 'team2' : 'team1';
+      // try to enforce mix (1 from each 18+ team) if possible
+      if (natt.length === 2) {
+        const t0 = (natt[0].team || '').trim().toLowerCase();
+        const t1 = (natt[1].team || '').trim().toLowerCase();
+        if (t0 === t1) {
+          const otherTeamKey: Team = t0 === '1' ? 'team2' : 'team1';
           const replacement = pickFairest(
-            grouped[otherTeamKey],
-            1,
+            grouped[otherTeamKey], 1,
             new Set([...busy, natt[0].id]),
           );
           if (replacement[0]) natt = [natt[0], replacement[0]];
