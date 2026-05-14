@@ -225,11 +225,13 @@ export default function Leaders() {
       // Priority order helper: Statsminister first, then Visestatsminister/Admin, then Nurse
       const getPriority = (leader: LeaderWithContent) => {
         const ministerpost = leader.ministerpost?.toLowerCase() || '';
-        
+        const team = leader.team?.toLowerCase() || '';
+
         if (ministerpost === 'statsminister') return 0;
         if (ministerpost === 'visestatsminister' || ministerpost === 'vise-statsminister') return 1;
         if (leader.isAdmin) return 1; // Other admins at same level as visestatsminister
         if (leader.isNurse) return 2;
+        if (team === 'kordinator') return 3;
         return 10; // Normal priority
       };
       
