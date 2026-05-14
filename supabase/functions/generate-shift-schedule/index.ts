@@ -124,36 +124,27 @@ Deno.serve(async (req) => {
     // Service-role client for writes
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Fetch leaders + their team for this period
-    const { data: teamRows, error: teamErr } = await admin
-      .from('leader_teams')
-      .select('leader_id, team')
-      .eq('period_number', period_number)
-      .eq('year', year);
-    if (teamErr) throw teamErr;
-    if (!teamRows || teamRows.length === 0) {
-      return new Response(JSON.stringify({ error: 'No team setup for this period' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const leaderIds = teamRows.map((r) => r.leader_id);
+    // Fetch active leaders and group by their profile.team field
+    // Only "1" / "2" / "1f" / "2f" count for vaktplan; Kjøkken / Sjef / Nurse / Kordinator are excluded
     const { data: leadersData, error: leadersErr } = await admin
       .from('leaders')
-      .select('id, name, age')
-      .in('id', leaderIds)
-      .eq('is_active', true);
+      .select('id, name, age, team')
+      .eq('is_active', true)
+      .neq('phone', '12345678');
     if (leadersErr) throw leadersErr;
 
-    const leaderMap = new Map<string, LeaderRow>(
-      (leadersData || []).map((l) => [l.id, l as LeaderRow]),
-    );
-    const teamFor = new Map<string, Team>(teamRows.map((r) => [r.leader_id, r.team as Team]));
-
+    const teamMapNorm: Record<string, Team> = {
+      '1': 'team1', '2': 'team2', '1f': 'team1f', '2f': 'team2f',
+    };
     const groupedAll: Record<Team, LeaderRow[]> = { team1: [], team2: [], team1f: [], team2f: [] };
-    for (const r of teamRows) {
-      const ldr = leaderMap.get(r.leader_id);
-      if (ldr) groupedAll[r.team as Team].push(ldr);
+    for (const l of (leadersData || [])) {
+      const t = teamMapNorm[(l.team || '').trim()];
+      if (t) groupedAll[t].push({ id: l.id, name: l.name, age: l.age });
+    }
+    if (groupedAll.team1.length + groupedAll.team2.length + groupedAll.team1f.length + groupedAll.team2f.length === 0) {
+      return new Response(JSON.stringify({ error: 'Ingen ledere er tildelt team 1/2/1f/2f i lederprofilene' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const validation: { passed: boolean; warnings: string[]; errors: string[] } = {
