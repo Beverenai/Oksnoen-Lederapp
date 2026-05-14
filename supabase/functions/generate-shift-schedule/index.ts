@@ -215,80 +215,101 @@ Deno.serve(async (req) => {
       work.set(leaderId, arr);
     };
 
-    // ----- Pre-build rotations -----
-    // For under-18: morgen rotates within UNDER18A (alternates by day type),
-    // bings rotates within UNDER18B (alternates by day type)
-    const morgenRot = { team1f: shuffle(grouped.team1f), team2f: shuffle(grouped.team2f) };
-    const morgenCur = { team1f: { i: 0 }, team2f: { i: 0 } };
-    const bingsRot = { team1f: pairsWithin(grouped.team1f), team2f: pairsWithin(grouped.team2f) };
-    const bingsCur = { team1f: { i: 0 }, team2f: { i: 0 } };
-    // Kjokken rotates across all F-team leaders
-    const kjokkenRot = shuffle([...grouped.team1f, ...grouped.team2f]);
-    const kjokkenCur = { i: 0 };
-    // Nattevakt: pairs across team1+team2 (18+)
-    const nattRot = pairsAcross(grouped.team1, grouped.team2);
-    const nattCur = { i: 0 };
-    // Frokostvakt: pair from current dagteam
-    const frokostRot = { team1: pairsWithin(grouped.team1), team2: pairsWithin(grouped.team2) };
-    const frokostCur = { team1: { i: 0 }, team2: { i: 0 } };
+    // ===== FAIRNESS-DRIVEN DUTY PICKER =====
+    // Per-leader counter of special duties received this generation.
+    const dutyCount = new Map<string, number>();
+    const inc = (id: string, n = 1) => dutyCount.set(id, (dutyCount.get(id) || 0) + n);
+    const cnt = (id: string) => dutyCount.get(id) || 0;
 
-    // We need to know the NEXT day's frokostvakt-pair while building today's middag.
-    // So compute all special duty selections per day FIRST, then build assignments.
+    /** Pick the N candidates with the lowest duty count, random tiebreak,
+     *  excluding any leader id in `busy`. */
+    const pickFairest = (pool: LeaderRow[], n: number, busy: Set<string>): LeaderRow[] => {
+      const eligible = pool.filter((l) => !busy.has(l.id));
+      const shuffled = shuffle(eligible);
+      shuffled.sort((a, b) => cnt(a.id) - cnt(b.id));
+      return shuffled.slice(0, n);
+    };
+
     type DayPlan = {
       isA: boolean;
-      dagteam: Team; kveldsteam: Team;
-      under18a: 'team1f' | 'team2f';
-      under18b: 'team1f' | 'team2f';
-      morgen: LeaderRow | null;
-      bings: LeaderRow[];
-      kjokken: LeaderRow | null;
-      natt: LeaderRow[];
-      frokost: LeaderRow[];
+      morning18: 'team1' | 'team2';   // does Økt 1
+      evening18: 'team1' | 'team2';   // does Økt 2 + Økt 3 + Legging
+      morgenF:  'team1f' | 'team2f';  // does Vekking + Morgenvakt + Seilern
+      bingsF:   'team1f' | 'team2f';  // does Bingsvakt
+      morgen: LeaderRow | null;       // 1 person, from morgenF
+      frokost: LeaderRow | null;      // 1 person, from morning18
+      bings: LeaderRow[];             // 2 people, from bingsF, all 3 bings-shifts
+      seilern: LeaderRow[];           // 2 people, from morgenF
+      kjokken: LeaderRow | null;      // 1 person, from any F-team
+      natt: LeaderRow[];              // 2 people, mix from team1+team2 (= sanitas+box)
+      legging: LeaderRow[];           // 2 people, from evening18 (not Økt 1 folks)
     };
     const days: (DayPlan | null)[] = new Array(period_length).fill(null);
 
-    for (let d = 1; d < period_length - 1; d++) {
-      const isA = d % 2 === 1;
-      const dagteam: Team = isA ? 'team1' : 'team2';
-      const kveldsteam: Team = isA ? 'team2' : 'team1';
-      const under18a = (isA ? 'team1f' : 'team2f') as 'team1f' | 'team2f';
-      const under18b = (isA ? 'team2f' : 'team1f') as 'team1f' | 'team2f';
+    const NORMAL_FROM = 1;
+    const NORMAL_TO = period_length - 1; // exclusive
 
-      // pick kjokken first; if same as morgen/bings candidate, advance
-      const morgen = next(morgenRot[under18a], morgenCur[under18a]);
-      const bings = (() => {
-        const p = bingsRot[under18b];
-        if (!p.length) return [];
-        const v = p[bingsCur[under18b].i % p.length];
-        bingsCur[under18b].i += 1;
-        return v;
-      })();
-      // kjokken rotation: pick next that isn't morgen/bings
-      let kjokken: LeaderRow | null = null;
-      for (let tries = 0; tries < kjokkenRot.length; tries++) {
-        const candidate = kjokkenRot[kjokkenCur.i % kjokkenRot.length];
-        kjokkenCur.i += 1;
-        if (!candidate) break;
-        if (morgen && candidate.id === morgen.id) continue;
-        if (bings.find((b) => b.id === candidate.id)) continue;
-        kjokken = candidate;
-        break;
+    for (let d = NORMAL_FROM; d < NORMAL_TO; d++) {
+      const isA = (d - NORMAL_FROM) % 2 === 0;
+      const morning18: 'team1' | 'team2' = isA ? 'team1' : 'team2';
+      const evening18: 'team1' | 'team2' = isA ? 'team2' : 'team1';
+      const morgenF:  'team1f' | 'team2f' = isA ? 'team1f' : 'team2f';
+      const bingsF:   'team1f' | 'team2f' = isA ? 'team2f' : 'team1f';
+
+      const busy = new Set<string>();
+
+      // 1) Morgenvakt — 1 from morgenF
+      const morgenPick = pickFairest(grouped[morgenF], 1, busy);
+      const morgen = morgenPick[0] || null;
+      if (morgen) { busy.add(morgen.id); inc(morgen.id); }
+
+      // 2) Frokostvakt — 1 from morning18
+      const frokostPick = pickFairest(grouped[morning18], 1, busy);
+      const frokost = frokostPick[0] || null;
+      if (frokost) { busy.add(frokost.id); inc(frokost.id); }
+
+      // 3) Bings pair — 2 from bingsF (same pair across all 3 bings shifts)
+      const bings = pickFairest(grouped[bingsF], 2, busy);
+      bings.forEach((l) => { busy.add(l.id); inc(l.id, 1); });
+
+      // 4) Seilern — 2 from morgenF, avoid busy
+      const seilern = pickFairest(grouped[morgenF], 2, busy);
+      seilern.forEach((l) => { busy.add(l.id); inc(l.id); });
+
+      // 5) Kjøkkenvakt — 1 from all F-team, avoid busy
+      const kjokkenPool = [...grouped.team1f, ...grouped.team2f];
+      const kjokkenPick = pickFairest(kjokkenPool, 1, busy);
+      const kjokken = kjokkenPick[0] || null;
+      if (kjokken) { busy.add(kjokken.id); inc(kjokken.id); }
+
+      // 6) Nattevakt — 2 from team1+team2, prefer one of each
+      const nattPool = [...grouped.team1, ...grouped.team2];
+      let natt = pickFairest(nattPool, 2, busy);
+      // try to enforce mix (1 from each team) if possible
+      if (natt.length === 2 && grouped[natt[0].team as Team]?.length) {
+        const team0 = (natt[0].team || '').toLowerCase();
+        const team1 = (natt[1].team || '').toLowerCase();
+        if (team0 === team1) {
+          const otherTeamKey: Team = team0 === '1' ? 'team2' : 'team1';
+          const replacement = pickFairest(
+            grouped[otherTeamKey],
+            1,
+            new Set([...busy, natt[0].id]),
+          );
+          if (replacement[0]) natt = [natt[0], replacement[0]];
+        }
       }
-      const natt = (() => {
-        if (!nattRot.length) return [];
-        const v = nattRot[nattCur.i % nattRot.length];
-        nattCur.i += 1;
-        return v;
-      })();
-      const frokost = (() => {
-        const r = frokostRot[dagteam];
-        if (!r.length) return [];
-        const v = r[frokostCur[dagteam].i % r.length];
-        frokostCur[dagteam].i += 1;
-        return v;
-      })();
+      natt.forEach((l) => { busy.add(l.id); inc(l.id); });
 
-      days[d] = { isA, dagteam, kveldsteam, under18a, under18b, morgen, bings, kjokken, natt, frokost };
+      // 7) Legging — 2 from evening18 (the team that did Økt 1 = morning18 is excluded automatically)
+      // exclude nattevakt and anyone busy from the evening team
+      const legging = pickFairest(grouped[evening18], 2, busy);
+      legging.forEach((l) => { busy.add(l.id); inc(l.id); });
+
+      days[d] = {
+        isA, morning18, evening18, morgenF, bingsF,
+        morgen, frokost, bings, seilern, kjokken, natt, legging,
+      };
     }
 
     // ----- BUILD ASSIGNMENTS -----
