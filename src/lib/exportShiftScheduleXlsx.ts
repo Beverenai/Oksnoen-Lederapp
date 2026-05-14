@@ -36,6 +36,7 @@ const DEPARTURE_SLUGS = [
 const DAY_NAMES = ['Lørdag', 'Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
 
 function timeRange(st: ShiftType): string {
+  if (st.slug === 'kjokkenvakt') return 'Hele dagen';
   return `${(st.start_time || '').slice(0, 5)}–${(st.end_time || '').slice(0, 5)}`;
 }
 
