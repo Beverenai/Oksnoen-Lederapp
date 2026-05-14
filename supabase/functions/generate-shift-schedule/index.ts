@@ -276,9 +276,8 @@ Deno.serve(async (req) => {
       const seilern = pickFairest(grouped[morgenF], 2, busy);
       seilern.forEach((l) => { busy.add(l.id); inc(l.id); });
 
-      // 5) Kjøkkenvakt — 1 from all F-team, avoid busy
-      const kjokkenPool = [...grouped.team1f, ...grouped.team2f];
-      const kjokkenPick = pickFairest(kjokkenPool, 1, busy);
+      // 5) Kjøkkenvakt — 1 from UNDER18B (same F-team as bings), avoid busy
+      const kjokkenPick = pickFairest(grouped[bingsF], 1, busy);
       const kjokken = kjokkenPick[0] || null;
       if (kjokken) { busy.add(kjokken.id); inc(kjokken.id); }
 
@@ -300,14 +299,12 @@ Deno.serve(async (req) => {
       }
       natt.forEach((l) => { busy.add(l.id); inc(l.id); });
 
-      // 7) Legging — 2 from evening18 (the team that did Økt 1 = morning18 is excluded automatically)
-      // exclude nattevakt and anyone busy from the evening team
-      const legging = pickFairest(grouped[evening18], 2, busy);
-      legging.forEach((l) => { busy.add(l.id); inc(l.id); });
+      // Note: legging is the WHOLE evening18 team (minus nattevakt). No separate pair pick.
+      // Tracked as team-push below; no individual rotation needed here.
 
       days[d] = {
         isA, morning18, evening18, morgenF, bingsF,
-        morgen, frokost, bings, seilern, kjokken, natt, legging,
+        morgen, frokost, bings, seilern, kjokken, natt,
       };
     }
 
