@@ -10,10 +10,10 @@ type Leader = Tables<'leaders'>;
 type Team = 'team1' | 'team2' | 'team1f' | 'team2f';
 
 const TEAM_FILL: Record<Team, string> = {
-  team1: 'FFEF4444',  // red
-  team2: 'FFF97316',  // orange
-  team1f: 'FFEAB308', // yellow
-  team2f: 'FF3B82F6', // blue
+  team1: 'FFFF0300',  // red    #ff0300
+  team2: 'FFFFC001',  // orange #ffc001
+  team1f: 'FFFFFE01', // yellow #fffe01
+  team2f: 'FF0070C0', // blue   #0070c0
 };
 const TEAM_LABEL: Record<Team, string> = {
   team1: 'Team 1', team2: 'Team 2', team1f: 'Team 1F', team2f: 'Team 2F',
@@ -79,6 +79,50 @@ function teamCellForShift(
     });
   if (names.length === 0) return { text: '', filled: false };
   return { text: names.join('\n'), filled: true };
+}
+
+/**
+ * Skriv en team-rad og slå sammen sammenhengende kolonner som har identisk
+ * `text` og er `filled`. Tomme/ulike celler skrives individuelt.
+ */
+function writeTeamRowMerged(
+  ws: ExcelJS.Worksheet,
+  row: number,
+  firstCol: number,
+  cells: { text: string; filled: boolean }[],
+  team: Team,
+  borderTop: ExcelJS.Border,
+  borderOther: ExcelJS.Border,
+) {
+  const fillColor = TEAM_FILL[team];
+  const fontColor = team === 'team1f' ? 'FF000000' : 'FFFFFFFF';
+  let i = 0;
+  while (i < cells.length) {
+    const cur = cells[i];
+    let j = i;
+    if (cur.filled && cur.text) {
+      while (j + 1 < cells.length && cells[j + 1].filled && cells[j + 1].text === cur.text) j++;
+    }
+    const startCol = firstCol + i;
+    const endCol = firstCol + j;
+    if (endCol > startCol) {
+      ws.mergeCells(row, startCol, row, endCol);
+    }
+    const cell = ws.getCell(row, startCol);
+    cell.value = cur.text;
+    if (cur.filled) {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
+      cell.font = { color: { argb: fontColor }, bold: true, size: 9 };
+    }
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = {
+      top: borderTop,
+      bottom: borderOther,
+      left: borderOther,
+      right: borderOther,
+    };
+    i = j + 1;
+  }
 }
 
 export async function exportShiftScheduleXlsx(opts: {
@@ -152,26 +196,8 @@ export async function exportShiftScheduleXlsx(opts: {
 
     ROW_TEAMS.forEach((team, ri) => {
       const r = currentRow + ri;
-      normalTypes.forEach((st, i) => {
-        const cell = ws.getCell(r, i + 2);
-        const { text, filled } = teamCellForShift(dayAss, st, team, leaderById);
-        cell.value = text;
-        if (filled) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAM_FILL[team] } };
-          cell.font = {
-            color: { argb: team === 'team1f' ? 'FF000000' : 'FFFFFFFF' },
-            bold: true,
-            size: 9,
-          };
-        }
-        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-        cell.border = {
-          top: ri === 0 ? topDivider : thinBorder,
-          bottom: thinBorder,
-          left: thinBorder,
-          right: thinBorder,
-        };
-      });
+      const cells = normalTypes.map((st) => teamCellForShift(dayAss, st, team, leaderById));
+      writeTeamRowMerged(ws, r, 2, cells, team, ri === 0 ? topDivider : thinBorder, thinBorder);
     });
 
     // Merged day-name cell in column A
@@ -272,29 +298,12 @@ async function writeSpecialBlock(
   // Rows: 4 teams (one per row) for clarity
   const dayAss = assignments.filter((a) => a.day_index === dayIndex);
   const TEAMS: Team[] = ['team1', 'team2', 'team1f', 'team2f'];
+  const thinBorder = { style: 'thin' as const, color: { argb: 'FFCCCCCC' } };
   TEAMS.forEach((t, ti) => {
     const r = startRow + 3 + ti;
     ws.getCell(r, 1).value = TEAM_LABEL[t];
     ws.getCell(r, 1).font = { bold: true };
-    types.forEach((st, i) => {
-      const cell = ws.getCell(r, i + 2);
-      const { text, filled } = teamCellForShift(dayAss, st, t, leaderById);
-      cell.value = text;
-      if (filled) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAM_FILL[t] } };
-        cell.font = {
-          color: { argb: t === 'team1f' ? 'FF000000' : 'FFFFFFFF' },
-          bold: true,
-          size: 9,
-        };
-      }
-      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-      cell.border = {
-        top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-        bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-        left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-        right: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-      };
-    });
+    const cells = types.map((st) => teamCellForShift(dayAss, st, t, leaderById));
+    writeTeamRowMerged(ws, r, 2, cells, t, thinBorder, thinBorder);
   });
 }
