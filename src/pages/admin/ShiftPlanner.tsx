@@ -307,7 +307,13 @@ export default function ShiftPlanner() {
       } else if (a.assignment_type === 'team' && a.team_name) {
         const members = teamMembers[a.team_name as Team];
         if (!members) continue;
-        for (const m of members) addInterval(m.id, a.day_index, st);
+        const excluded = new Set<string>(
+          Array.isArray((a as any).excluded_leader_ids) ? (a as any).excluded_leader_ids : []
+        );
+        for (const m of members) {
+          if (excluded.has(m.id)) continue;
+          addInterval(m.id, a.day_index, st);
+        }
       }
     }
 
