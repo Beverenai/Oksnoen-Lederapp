@@ -136,9 +136,6 @@ export async function exportShiftScheduleXlsx(opts: {
   // ===== NORMAL DAY ROWS =====
   // 5 rows per day: Single + Team 1 + Team 1F + Team 2 + Team 2F
   const ROW_TEAMS: (Team | 'single')[] = ['single', 'team1', 'team1f', 'team2', 'team2f'];
-  const ROW_LABELS: Record<Team | 'single', string> = {
-    single: 'Single navn', team1: 'Team 1', team1f: 'Team 1F', team2: 'Team 2', team2f: 'Team 2F',
-  };
   const thinBorder = { style: 'thin' as const, color: { argb: 'FFCCCCCC' } };
   const topDivider = { style: 'medium' as const, color: { argb: 'FF666666' } };
 
