@@ -14,8 +14,10 @@ import {
 } from '@/components/ui/select';
 import {
   Shield, ArrowLeft, CalendarDays, Loader2, Sparkles, Send, Archive, Trash2, Users, Eye,
+  Download, AlertTriangle,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import { exportShiftScheduleXlsx } from '@/lib/exportShiftScheduleXlsx';
 
 type Leader = Tables<'leaders'>;
 type ShiftSchedule = Tables<'shift_schedules'>;
@@ -54,6 +56,7 @@ export default function ShiftPlanner() {
   const [viewScheduleId, setViewScheduleId] = useState<string | null>(null);
   const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
   const [loadingGrid, setLoadingGrid] = useState(false);
+  const [warnings, setWarnings] = useState<Array<{ leader_id: string; leader_name: string; day_index: number | null; rule: string; detail: string }>>([]);
 
   const loadAll = async () => {
     setLoading(true);
@@ -104,6 +107,7 @@ export default function ShiftPlanner() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       showSuccess(`Generert: ${data.assignments_count} tildelinger over ${data.days} dager`);
+      setWarnings(data.validation?.warnings || []);
       loadAll();
     } catch (e) {
       console.error(e);
@@ -134,6 +138,20 @@ export default function ShiftPlanner() {
       loadAll();
     } catch {
       showError('Kunne ikke slette');
+    }
+  };
+
+  const downloadXlsx = async (s: ShiftSchedule) => {
+    try {
+      const { data, error } = await supabase.from('shift_assignments').select('*').eq('schedule_id', s.id);
+      if (error) throw error;
+      await exportShiftScheduleXlsx({
+        schedule: s, assignments: data || [], shiftTypes, leaders,
+      });
+      showSuccess('Excel lastet ned');
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke lage Excel');
     }
   };
 
@@ -319,6 +337,9 @@ export default function ShiftPlanner() {
                   <div className="flex flex-wrap gap-1.5">
                     <Button size="sm" variant={viewScheduleId === s.id ? 'default' : 'secondary'} onClick={() => loadGrid(s.id)}>
                       <Eye className="w-3.5 h-3.5 mr-1" /> Vis
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => downloadXlsx(s)}>
+                      <Download className="w-3.5 h-3.5 mr-1" /> Excel
                     </Button>
                     {s.status !== 'published' && (
                       <Button size="sm" onClick={() => setStatus(s.id, 'published')}>
