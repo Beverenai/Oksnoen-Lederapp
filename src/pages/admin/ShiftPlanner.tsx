@@ -13,8 +13,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
+  Popover, PopoverContent, PopoverTrigger,
+} from '@/components/ui/popover';
+import {
   Shield, ArrowLeft, CalendarDays, Loader2, Sparkles, Send, Archive, Trash2, Users, Eye,
-  Download, AlertTriangle,
+  Download, AlertTriangle, Pencil,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { exportShiftScheduleXlsx } from '@/lib/exportShiftScheduleXlsx';
@@ -57,6 +60,8 @@ export default function ShiftPlanner() {
   const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
   const [loadingGrid, setLoadingGrid] = useState(false);
   const [warnings, setWarnings] = useState<Array<{ leader_id: string; leader_name: string; day_index: number | null; rule: string; detail: string }>>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const loadAll = async () => {
     setLoading(true);
@@ -194,6 +199,67 @@ export default function ShiftPlanner() {
   };
 
   const viewedSchedule = schedules.find((s) => s.id === viewScheduleId) || null;
+
+  // Eligible leaders for manual swap: all active, excluding kitchen/chef/nurse profiles.
+  const eligibleLeaders = useMemo(() => {
+    return leaders.filter((l) => {
+      const t = (l.team || '').trim().toLowerCase();
+      return t === '1' || t === '2' || t === '1f' || t === '2f';
+    });
+  }, [leaders]);
+
+  const revalidate = async (scheduleId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('revalidate-shift-schedule', {
+        body: { schedule_id: scheduleId },
+      });
+      if (error) throw error;
+      setWarnings(data?.warnings || []);
+    } catch (e) {
+      console.error('revalidate failed', e);
+    }
+  };
+
+  const swapAssignmentLeader = async (assignmentId: string, newLeaderId: string) => {
+    if (!viewedSchedule) return;
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase
+        .from('shift_assignments')
+        .update({ leader_id: newLeaderId, assignment_type: 'leader', team_name: null })
+        .eq('id', assignmentId);
+      if (error) throw error;
+      setAssignments((prev) => prev.map((a) =>
+        a.id === assignmentId ? { ...a, leader_id: newLeaderId, assignment_type: 'leader', team_name: null } : a
+      ));
+      setEditingId(null);
+      await revalidate(viewedSchedule.id);
+      showSuccess('Vakt oppdatert');
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke endre tildeling');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const warningSummary = useMemo(() => {
+    const byRule: Record<string, { count: number; leaders: Set<string> }> = {};
+    for (const w of warnings) {
+      const k = w.rule;
+      if (!byRule[k]) byRule[k] = { count: 0, leaders: new Set() };
+      byRule[k].count += 1;
+      byRule[k].leaders.add(w.leader_name);
+    }
+    const RULE_LABEL: Record<string, string> = {
+      '8h_max': 'Over 8t/dag',
+      '11h_rest': 'Under 11t hvile mellom dager',
+      'f_team_after_21': 'F-team etter 21:00',
+    };
+    return Object.entries(byRule).map(([rule, v]) => ({
+      rule, label: RULE_LABEL[rule] || rule, count: v.count, leaderCount: v.leaders.size,
+    }));
+  }, [warnings]);
 
   const grid = useMemo(() => {
     if (!viewedSchedule) return [];
@@ -413,6 +479,15 @@ export default function ShiftPlanner() {
                   <AlertTriangle className="w-4 h-4 text-yellow-600" />
                   {warnings.length} advarsel{warnings.length === 1 ? '' : 'er'}
                 </div>
+                {warningSummary.length > 0 && (
+                  <div className="mb-2 text-xs space-y-0.5">
+                    {warningSummary.map((s) => (
+                      <div key={s.rule}>
+                        <strong>{s.label}:</strong> {s.count} tilfeller ({s.leaderCount} ledere)
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <ul className="text-xs space-y-0.5 max-h-40 overflow-y-auto">
                   {warnings.map((w, i) => (
                     <li key={i}>
