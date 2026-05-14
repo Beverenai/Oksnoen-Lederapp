@@ -250,6 +250,10 @@ Deno.serve(async (req) => {
     const NORMAL_FROM = 1;
     const NORMAL_TO = period_length - 1; // exclusive
 
+    // Frokostvakt på dag D+1 reserveres mens dag D bygges, så samme person
+    // tas med på Økt 1 på D og blir frokostvakt på D+1.
+    const frokostByDay = new Map<number, LeaderRow>();
+
     for (let d = NORMAL_FROM; d < NORMAL_TO; d++) {
       const isA = (d - NORMAL_FROM) % 2 === 0;
       const morning18: 'team1' | 'team2' = isA ? 'team1' : 'team2';
@@ -264,10 +268,16 @@ Deno.serve(async (req) => {
       const morgen = morgenPick[0] || null;
       if (morgen) { busy.add(morgen.id); inc(morgen.id); }
 
-      // 2) Frokostvakt — 1 from morning18
-      const frokostPick = pickFairest(grouped[morning18], 1, busy);
-      const frokost = frokostPick[0] || null;
-      if (frokost) { busy.add(frokost.id); inc(frokost.id); }
+      // 2) Frokostvakt — reservert fra gårsdagens nesteFrokost-pick.
+      //    Unntak: første normale dag har ingen forrige dag, så pickFairest.
+      let frokost: LeaderRow | null = frokostByDay.get(d) || null;
+      if (frokost) {
+        busy.add(frokost.id); inc(frokost.id);
+      } else {
+        const frokostPick = pickFairest(grouped[morning18], 1, busy);
+        frokost = frokostPick[0] || null;
+        if (frokost) { busy.add(frokost.id); inc(frokost.id); }
+      }
 
       // 3) Bings pair — 2 from bingsF (same pair across all 3 bings shifts)
       const bings = pickFairest(grouped[bingsF], 2, busy);
@@ -286,11 +296,18 @@ Deno.serve(async (req) => {
       const natt = pickFairest(grouped[morning18], 2, busy);
       natt.forEach((l) => { busy.add(l.id); inc(l.id); });
 
-      // 7) Neste-dags frokostvakt — 1 from evening18 (Økt 2+3-team)
+      // 7) Neste-dags frokostvakt — 1 from evening18 (= D+1's morning18).
       //    Deltar i PM1+Økt1+PM2+Økt2+Kveldsmat, men IKKE Økt 3 (*****).
-      const nesteFrokostPick = pickFairest(grouped[evening18], 1, busy);
-      const nesteFrokost = nesteFrokostPick[0] || null;
-      if (nesteFrokost) { busy.add(nesteFrokost.id); inc(nesteFrokost.id); }
+      //    Hopp over på siste normale dag (D+1 er avreisedag).
+      let nesteFrokost: LeaderRow | null = null;
+      if (d + 1 < NORMAL_TO) {
+        const nesteFrokostPick = pickFairest(grouped[evening18], 1, busy);
+        nesteFrokost = nesteFrokostPick[0] || null;
+        if (nesteFrokost) {
+          busy.add(nesteFrokost.id); inc(nesteFrokost.id);
+          frokostByDay.set(d + 1, nesteFrokost);
+        }
+      }
 
       // 8) Sanitas — 2 from morning18 (leggeteamet), MÅ være forskjellig fra nattevakt
       const sanitas = pickFairest(grouped[morning18], 2, busy);

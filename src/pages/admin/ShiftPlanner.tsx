@@ -262,6 +262,40 @@ export default function ShiftPlanner() {
     }));
   }, [warnings]);
 
+  // Timer per leder per dag (speiler generator/revalidate-logikken: team-vakter
+  // ekspanderes til alle medlemmer av teamet).
+  const hoursMatrix = useMemo(() => {
+    if (!viewedSchedule) return null;
+    const days = viewedSchedule.period_length;
+    const stById = new Map(shiftTypes.map((s) => [s.id, s]));
+    const teamMembers: Record<Team, Leader[]> = { team1: [], team2: [], team1f: [], team2f: [] };
+    const teamLeaders: Leader[] = [];
+    for (const l of leaders) {
+      const k = PROFILE_TO_TEAM[(l.team || '').trim()];
+      if (k) { teamMembers[k].push(l); teamLeaders.push(l); }
+    }
+    teamLeaders.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+    const hours = new Map<string, number[]>();
+    for (const l of teamLeaders) hours.set(l.id, new Array(days).fill(0));
+    for (const a of assignments) {
+      const st = stById.get(a.shift_type_id);
+      if (!st) continue;
+      const dur = Number(st.duration_hours) || 0;
+      if (a.assignment_type === 'leader' && a.leader_id) {
+        const row = hours.get(a.leader_id);
+        if (row) row[a.day_index] += dur;
+      } else if (a.assignment_type === 'team' && a.team_name) {
+        const members = teamMembers[a.team_name as Team];
+        if (!members) continue;
+        for (const m of members) {
+          const row = hours.get(m.id);
+          if (row) row[a.day_index] += dur;
+        }
+      }
+    }
+    return { days, leaders: teamLeaders, hours };
+  }, [viewedSchedule, shiftTypes, assignments, leaders]);
+
   const grid = useMemo(() => {
     if (!viewedSchedule) return [];
     const days: { dayIndex: number; dayType: string; rows: { st: ShiftType; items: ShiftAssignment[] }[] }[] = [];
@@ -602,6 +636,84 @@ export default function ShiftPlanner() {
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Hours per leader */}
+      {viewedSchedule && hoursMatrix && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Timer per leder</CardTitle>
+            <CardDescription>
+              Totale arbeidstimer per leder per dag. Røde celler er over 8t/dag.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="border rounded-lg overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left p-2 sticky left-0 bg-muted/50 z-10">Leder</th>
+                    {Array.from({ length: hoursMatrix.days }, (_, d) => (
+                      <th key={d} className="text-center p-2 tabular-nums font-medium whitespace-nowrap">
+                        Dag {d + 1}
+                      </th>
+                    ))}
+                    <th className="text-center p-2 tabular-nums font-semibold whitespace-nowrap">Sum</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {hoursMatrix.leaders.map((l) => {
+                    const row = hoursMatrix.hours.get(l.id) || [];
+                    const sum = row.reduce((s, x) => s + x, 0);
+                    return (
+                      <tr key={l.id} className="border-t">
+                        <td className="p-2 font-medium sticky left-0 bg-background whitespace-nowrap">
+                          {l.name}
+                          {l.team ? <span className="ml-1 text-xs text-muted-foreground">({l.team})</span> : null}
+                        </td>
+                        {row.map((h, d) => (
+                          <td
+                            key={d}
+                            className={`text-center p-2 tabular-nums ${
+                              h > 8.01
+                                ? 'bg-destructive/10 text-destructive font-semibold'
+                                : h === 0
+                                ? 'text-muted-foreground/40'
+                                : ''
+                            }`}
+                          >
+                            {h === 0 ? '–' : h.toFixed(1)}
+                          </td>
+                        ))}
+                        <td className="text-center p-2 tabular-nums font-semibold">{sum.toFixed(1)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t bg-muted/30 font-semibold">
+                    <td className="p-2 sticky left-0 bg-muted/30">Sum dag</td>
+                    {Array.from({ length: hoursMatrix.days }, (_, d) => {
+                      const total = hoursMatrix.leaders.reduce(
+                        (s, l) => s + ((hoursMatrix.hours.get(l.id) || [])[d] || 0),
+                        0,
+                      );
+                      return (
+                        <td key={d} className="text-center p-2 tabular-nums">{total.toFixed(1)}</td>
+                      );
+                    })}
+                    <td className="text-center p-2 tabular-nums">
+                      {hoursMatrix.leaders.reduce(
+                        (s, l) => s + (hoursMatrix.hours.get(l.id) || []).reduce((a, b) => a + b, 0),
+                        0,
+                      ).toFixed(1)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </CardContent>
         </Card>
       )}

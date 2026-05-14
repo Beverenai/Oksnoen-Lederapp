@@ -1,23 +1,33 @@
-## Hva er galt
+## 1. Sammenkobling av frokostvakt (D → D+1)
 
-To bugs gjør at advarsler forsvinner:
+I `supabase/functions/generate-shift-schedule/index.ts`:
 
-1. **`loadGrid` revaliderer ikke.** Når du klikker "Vis" på en plan (eller laster siden på nytt), forblir `warnings`-state tom og UI viser feilaktig "Ingen regelbrudd oppdaget".
-2. **`revalidate-shift-schedule` ignorerer team-tildelinger.** Den teller bare `assignment_type='leader'`. Men generatoren lagrer mange vakter som hele team (Økt 1, Middag, osv.) — generator-valideringen teller hver leder i teamet, revalidate gjør det ikke. Resultat: 134 → 0 etter første revalidering, selv om planen ikke er endret.
+- Legg til `const frokostByDay = new Map<number, LeaderRow>();` før normal-dag-loopen.
+- I dag-loopen, før `frokost` plukkes:
+  - Hvis `frokostByDay.has(d)` → bruk den lagrede personen som dagens `frokost` (og marker `busy.add(...)` + `inc(...)`).
+  - Ellers (kun første normale dag) → `pickFairest(grouped[morning18], 1, busy)` som nå.
+- Bytt ut nåværende `nesteFrokost`-blokk:
+  - Hopp over hvis `d + 1 >= NORMAL_TO` (siste normale dag — ingen frokostvakt morgen etter).
+  - Ellers `pickFairest(grouped[evening18], 1, busy)`, mark `busy`/`inc`, og lagre i `frokostByDay.set(d + 1, leader)`. Personen tas fortsatt med på dagens Økt 1, personalmøte og Bings-personalmøte slik som nå.
+- Behold `duties`-radene `frokostvakt` og `neste_frokostvakt` uendret.
 
-## Fiks
+Effekt: personen som har `frokostvakt` på dag D+1 var alltid med på Økt 1 på dag D. Unntak: dag 1's frokostvakt (ingen forrige dag).
 
-### 1. `supabase/functions/revalidate-shift-schedule/index.ts`
-Ekspander team-tildelinger til medlemmene før beregning:
+## 2. Timer-oversikt i vaktplan-visningen
 
-- Bygg `teamMembers: Record<Team, Leader[]>` ved å gruppere aktive ledere på `team`-feltet (mapping: `'1'→team1`, `'2'→team2`, `'1f'→team1f`, `'2f'→team2f`).
-- For hver assignment: hvis `assignment_type='team'` og `team_name` matcher en av de fire team-keys, loop over medlemmene og legg ett intervall per medlem inn i `work`-mappen.
-- Hvis `assignment_type='leader'`: som i dag, ett intervall.
-- Resten av valideringen (8t/dag, 11t-hvile, F-team-etter-21) er uendret og gir nå samme resultat som generatoren.
+I `src/pages/admin/ShiftPlanner.tsx`, under Grid-visningen, legg til en ny `Card` ("Timer per leder"):
 
-### 2. `src/pages/admin/ShiftPlanner.tsx` — `loadGrid`
-Etter `setAssignments(...)`, kall `revalidate(id)` slik at advarsler alltid reflekterer den viste planen. `revalidate`-helperen finnes allerede.
+- Tabell: **rad per leder** (kun aktive ledere med team 1/2/1F/2F, alfabetisk), **kolonne per dag** + en sum-kolonne til slutt.
+- Hver celle viser totale timer den lederen jobber den dagen, beregnet ved å:
+  - Iterere over `assignments` for `schedule_id`.
+  - For `assignment_type='leader'` med matchende `leader_id`: legg til `shift_type.duration_hours`.
+  - For `assignment_type='team'`: hvis lederens team-key (via samme `PROFILE_TO_TEAM` som finnes i fila) matcher `team_name`, legg til `shift_type.duration_hours`. (Dette speiler hvordan generatoren og revalidate teller.)
+- Fargekoding: tom = nøytral; > 8t = rød bakgrunn (matcher `8h_max`-regelen); 0t / "fri" = lys grå tekst "–".
+- Tom-rad / sum-rad nederst med totaler per dag og totalt for perioden.
+- Bruk semantiske design-tokens (ikke direkte farger), eks. `bg-destructive/10 text-destructive`.
 
-## Berørte filer
-- `supabase/functions/revalidate-shift-schedule/index.ts`
+Logikken bygges som en `useMemo` `hoursByLeaderDay: Map<leaderId, number[]>` som leser fra `assignments`, `shiftTypes`, og `leaders`.
+
+### Berørte filer
+- `supabase/functions/generate-shift-schedule/index.ts`
 - `src/pages/admin/ShiftPlanner.tsx`
