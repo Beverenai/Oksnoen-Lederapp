@@ -47,25 +47,33 @@ function shortName(fullName: string): string {
   return `${firstName} ${lastInitials}`;
 }
 
-/** Build the cell content lines for a (day, shift) cell */
-function cellLines(
+/** Single (leader) names for a shift cell, joined by line breaks. */
+function singleNamesForShift(
   dayAssignments: Assignment[],
   st: ShiftType,
   leaderById: Map<string, Leader>,
-): { team?: Team; text: string }[] {
-  const items = dayAssignments.filter((a) => a.shift_type_id === st.id);
-  const lines: { team?: Team; text: string }[] = [];
-  for (const a of items) {
-    if (a.assignment_type === 'team' && a.team_name) {
-      const t = a.team_name as Team;
-      lines.push({ team: t, text: `${TEAM_LABEL[t] || t}${a.note ? a.note : ''}` });
-    } else if (a.assignment_type === 'leader' && a.leader_id) {
-      const ldr = leaderById.get(a.leader_id);
+): string {
+  const names = dayAssignments
+    .filter((a) => a.shift_type_id === st.id && a.assignment_type === 'leader' && a.leader_id)
+    .map((a) => {
+      const ldr = leaderById.get(a.leader_id!);
       const name = ldr?.name ? shortName(ldr.name) : 'Ukjent';
-      lines.push({ text: a.note ? `${name} (${a.note})` : name });
-    }
-  }
-  return lines;
+      return a.note ? `${name} (${a.note})` : name;
+    });
+  return names.join('\n');
+}
+
+/** Returns "Team 1*" if team is on this shift, else null. */
+function teamLabelForShift(
+  dayAssignments: Assignment[],
+  st: ShiftType,
+  team: Team,
+): string | null {
+  const a = dayAssignments.find(
+    (x) => x.shift_type_id === st.id && x.assignment_type === 'team' && x.team_name === team,
+  );
+  if (!a) return null;
+  return `${TEAM_LABEL[team]}${a.note ?? ''}`;
 }
 
 export async function exportShiftScheduleXlsx(opts: {
@@ -126,42 +134,64 @@ export async function exportShiftScheduleXlsx(opts: {
   });
 
   // ===== NORMAL DAY ROWS =====
-  // Each day uses up to 4 stacked sub-rows (one per team band) = use cell line breaks
+  // 5 rows per day: Single + Team 1 + Team 1F + Team 2 + Team 2F
+  const ROW_TEAMS: (Team | 'single')[] = ['single', 'team1', 'team1f', 'team2', 'team2f'];
+  const thinBorder = { style: 'thin' as const, color: { argb: 'FFCCCCCC' } };
+  const topDivider = { style: 'medium' as const, color: { argb: 'FF666666' } };
+
   let currentRow = 7;
   for (let d = 1; d < schedule.period_length - 1; d++) {
     const dayAss = assignments.filter((a) => a.day_index === d);
     const dayLabel = DAY_NAMES[d] || `Dag ${d + 1}`;
-    ws.getCell(currentRow, 1).value = dayLabel;
-    ws.getCell(currentRow, 1).font = { bold: true };
-    ws.getRow(currentRow).height = 60;
+    const dayStartRow = currentRow;
 
-    normalTypes.forEach((st, i) => {
-      const lines = cellLines(dayAss, st, leaderById);
-      const cell = ws.getCell(currentRow, i + 2);
-      if (lines.length === 0) {
-        cell.value = '';
-      } else {
-        cell.value = { richText: lines.map((ln, idx) => ({
-          text: (idx > 0 ? '\n' : '') + ln.text,
-          font: ln.team
-            ? { color: { argb: ln.team === 'team2f' ? 'FF000000' : 'FFFFFFFF' }, bold: true, size: 9 }
-            : { color: { argb: 'FF111111' }, size: 9 },
-        })) };
-        // Use the FIRST team band as the cell fill (closest to Excel template look)
-        const firstTeam = lines.find((l) => l.team)?.team;
-        if (firstTeam) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAM_FILL[firstTeam] } };
+    ROW_TEAMS.forEach((rowKind, ri) => {
+      const r = currentRow + ri;
+      normalTypes.forEach((st, i) => {
+        const cell = ws.getCell(r, i + 2);
+        if (rowKind === 'single') {
+          const txt = singleNamesForShift(dayAss, st, leaderById);
+          cell.value = txt;
+          cell.font = { color: { argb: 'FF111111' }, size: 9 };
+          cell.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
+        } else {
+          const team = rowKind as Team;
+          const label = teamLabelForShift(dayAss, st, team);
+          if (label) {
+            cell.value = label;
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAM_FILL[team] } };
+            cell.font = {
+              color: { argb: team === 'team2f' ? 'FF000000' : 'FFFFFFFF' },
+              bold: true,
+              size: 9,
+            };
+          } else {
+            cell.value = '';
+          }
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
         }
-      }
-      cell.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
-      cell.border = {
-        top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-        bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-        left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-        right: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-      };
+        cell.border = {
+          top: ri === 0 ? topDivider : thinBorder,
+          bottom: thinBorder,
+          left: thinBorder,
+          right: thinBorder,
+        };
+      });
+
+      ws.getRow(r).height = rowKind === 'single' ? 32 : 16;
     });
-    currentRow += 1;
+
+    // Merged day-name cell in column A
+    ws.mergeCells(dayStartRow, 1, dayStartRow + ROW_TEAMS.length - 1, 1);
+    const dayCell = ws.getCell(dayStartRow, 1);
+    dayCell.value = dayLabel;
+    dayCell.font = { bold: true, size: 12 };
+    dayCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    dayCell.border = {
+      top: topDivider, bottom: thinBorder, left: thinBorder, right: thinBorder,
+    };
+
+    currentRow += ROW_TEAMS.length;
   }
 
   // ===== ASTERISK FOOTNOTES =====
