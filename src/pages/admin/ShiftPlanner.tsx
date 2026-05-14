@@ -359,6 +359,16 @@ export default function ShiftPlanner() {
     return days;
   }, [viewedSchedule, shiftTypes, assignments]);
 
+  // Active leaders that have ZERO hours in the viewed schedule — typically because
+  // they were added after generation. Admin must regenerate or assign manually.
+  const missingLeaders = useMemo(() => {
+    if (!viewedSchedule || !hoursMatrix) return [];
+    return hoursMatrix.leaders.filter((l) => {
+      const row = hoursMatrix.hours.get(l.id) || [];
+      return row.every((h) => h === 0);
+    });
+  }, [viewedSchedule, hoursMatrix]);
+
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
