@@ -1,25 +1,51 @@
-# Plan: Hard grense på 8 timer per leder per dag
+## Mål
 
-## Regel
-Ingen leder skal noen gang få tildelt mer enn 8 timer på én dag. Hvis en tildeling vil bryte grensen, må generatoren velge en annen leder eller ekskludere personen fra teamvakta.
+Nattevakt skal kun jobbe Økt 1 + selve nattevakta — ingen andre fellesvakter den dagen. Total blir 3,0 + 5,5 = 8,5 t (akseptert regel for nattevakt).
 
-## Endringer i `generate-shift-schedule`
-1. **Live timeregnskap per leder per dag** under genereringen (union av intervaller, samme metode som UI bruker — så overlappende vakter ikke dobbelttelles).
-2. **`pickFairest` blir `pickUnderCap`**: kandidater som ville passert 8t for spesialvakta filtreres bort før fairness-sorteringen. Hvis ingen er under taket, velges den med færrest timer (minst overskridelse) — men dette skal være siste utvei.
-3. **Spesialvakter (morgen, frokost, bings, seilern, kjøkken, natt, sanitas, neste-frokost) tildeles først**, før team-vakter regnes inn — slik at vi vet hvor mye "rom" hver leder har igjen.
-4. **Team-vakter ekskluderer automatisk** ledere som ville passert 8t. `pushTeam` får en intern sjekk: for hvert teammedlem, hvis `current_hours[day] + shift_duration > 8`, legg til i `excluded_leader_ids` for raden.
-5. **`recordWork` oppdateres synkront** så timeregnskapet alltid er ferskt før neste tildeling.
-6. **Beholder F-team-21:00 og 11t-hvile** som tilleggsregler, men 8t er den harde grensen.
+I tillegg: rette opp tegnforklaring (asterisker) og sikre at frokostvakt fortsatt droppes fra middag.
 
-## Endringer i `revalidate-shift-schedule` og UI
-- Advarselen `8h_max` skal nå være ekstremt sjelden. Hvis den oppstår = bug eller faktisk umulig bemanning.
-- UI viser timetabellen som før, men forventet maks blir 8.0.
+## Endringer i `supabase/functions/generate-shift-schedule/index.ts`
+
+**Ekskluder nattevakt-paret (`p.natt`) fra følgende team-vakter på samme dag:**
+
+| Vakt | I dag | Etter |
+|---|---|---|
+| Personalmøte 1 (10:45) | inkluderer natt | **ekskluder natt** |
+| Økt 1 (11:00–14:00) | inkluderer natt | inkluderer natt (uendret) |
+| Middag (14:00–15:30) | ekskluderer natt | uendret |
+| Personalmøte 2 (15:45) | inkluderer natt | **ekskluder natt** |
+| Legging (22:00–01:00) | ekskluderer natt | uendret |
+
+Konkret: legg til `...p.natt` i `excluded`-arrayene for `personalmoete` (linje 438, kun `p.morning18`-pushet), og `personalmoete2` (linje 458, kun `p.morning18`-pushet).
+
+For `personalmoete2` som i dag pusher alle 4 team i en løkke, splittes den slik at `p.morning18` får `p.natt` ekskludert mens de andre tre teamene pushes som før.
+
+**8t-cap-håndtering:** `dayHoursIfAdded`-sjekken vil ellers automatisk ekskludere nattevakt fra alle tunge vakter (Økt 1 inkludert) når nattevakta legges inn først. For å beholde Økt 1 som eneste tillatte fellesvakt, hever vi taket til 8,6 t spesifikt for nattevakt-personer den dagen — eller (enklere) lar vi nattevakt-paret få et fast unntak fra cap-sjekken på den dagen de har nattevakt. Implementeres ved å registrere et `nattLeaderIds: Set<string>` per dag og hoppe over cap-sjekken i `pushTeam` for disse på `okt1`.
+
+## Endring i `src/lib/exportShiftScheduleXlsx.ts`
+
+Oppdater linje 197:
+
+```diff
+- '***** De som jobbet Økt 1 jobber IKKE legging',
++ '***** Den som jobbet første økt jobber IKKE legging',
+```
+
+(De fire andre asterisk-linjene matcher allerede ønsket tekst.)
+
+## Resultat per nattevakt-person på en normal dag
+
+| Vakt | Tid | Timer |
+|---|---|---|
+| Økt 1 | 11:00–14:00 | 3,00 |
+| Nattevakt | 23:30–05:00 | 5,50 |
+| **Sum** | | **8,50** |
+
+`8h_max`-advarsel undertrykkes for nattevakt-personer på dagen de har natt (8,5 t er regelen). 11t-hvile fortsatt validert som før.
 
 ## Hva vi ikke endrer
-- `min_leaders` per spesialvakt respekteres fortsatt — hvis ingen leder kan ta vakta uten å bryte 8t, lar vi vakta gå over (med advarsel) i stedet for å la den stå tom.
-- Vekking, frokost, måltider og personalmøter er korte (15–60 min) og rammer hele team — disse skal sjelden trigge ekskludering, men logikken behandler dem likt.
 
-## Resultat
-- Ingen leder over 8 t/dag i normal drift
-- `Over 8t/dag`-advarsler forsvinner i praksis
-- Hvis bemanningen er for tynn én dag, får dere en tydelig advarsel om hvilken vakt som ikke kunne fylles innenfor regelen — i stedet for stille overbelastning
+- Frokostvakts ekskludering fra middag (`*`) — beholdes.
+- Bings-, morgen- og kjøkkenvakts logikk — uendret.
+- Sanitas-paret (eget pushLeader 23:30–01:00) — uendret.
+- F-team 21:00-regel og 11t-hvile — uendret.
