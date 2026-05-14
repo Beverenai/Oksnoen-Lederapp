@@ -28,7 +28,7 @@ interface AssignmentInsert {
 interface SpecialDutyInsert {
   schedule_id: string;
   day_index: number;
-  duty_type: 'morgenvakt' | 'bingsvakt' | 'nattevakt' | 'frokostvakt' | 'kjokkenvakt';
+  duty_type: 'morgenvakt' | 'bingsvakt' | 'nattevakt' | 'frokostvakt' | 'kjokkenvakt' | 'sanitas' | 'seilern_box' | 'neste_frokostvakt';
   leader_id: string;
 }
 interface Warning {
