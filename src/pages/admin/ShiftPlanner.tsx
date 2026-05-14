@@ -27,9 +27,9 @@ type Team = 'team1' | 'team2' | 'team1f' | 'team2f';
 
 const TEAM_META: Record<Team, { label: string; className: string }> = {
   team1:  { label: 'Team 1',  className: 'bg-red-500 text-white hover:bg-red-600' },
-  team2:  { label: 'Team 2',  className: 'bg-blue-500 text-white hover:bg-blue-600' },
-  team1f: { label: 'Team 1F', className: 'bg-orange-500 text-white hover:bg-orange-600' },
-  team2f: { label: 'Team 2F', className: 'bg-yellow-400 text-foreground hover:bg-yellow-500' },
+  team2:  { label: 'Team 2',  className: 'bg-orange-500 text-white hover:bg-orange-600' },
+  team1f: { label: 'Team 1F', className: 'bg-yellow-400 text-foreground hover:bg-yellow-500' },
+  team2f: { label: 'Team 2F', className: 'bg-blue-500 text-white hover:bg-blue-600' },
 };
 
 const PROFILE_TO_TEAM: Record<string, Team> = { '1': 'team1', '2': 'team2', '1f': 'team1f', '2f': 'team2f' };
