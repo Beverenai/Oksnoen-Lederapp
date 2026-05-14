@@ -1131,6 +1131,7 @@ export type Database = {
           id: string
           period_length: number
           period_number: number
+          start_date: string | null
           status: string
           updated_at: string | null
           year: number
@@ -1141,6 +1142,7 @@ export type Database = {
           id?: string
           period_length?: number
           period_number: number
+          start_date?: string | null
           status?: string
           updated_at?: string | null
           year?: number
@@ -1151,6 +1153,7 @@ export type Database = {
           id?: string
           period_length?: number
           period_number?: number
+          start_date?: string | null
           status?: string
           updated_at?: string | null
           year?: number

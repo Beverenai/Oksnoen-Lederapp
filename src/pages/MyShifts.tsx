@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, ClipboardList, RefreshCw, CalendarX } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
@@ -27,6 +26,22 @@ const DAY_TYPE_LABEL: Record<string, string> = {
 const TEAM_LABEL: Record<string, string> = {
   team1: 'Team 1', team2: 'Team 2', team1f: 'Team 1F', team2f: 'Team 2F',
 };
+
+const WEEKDAYS = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
+const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
+
+function dateForDay(startDate: string | null | undefined, dayIndex: number): { weekday: string; dateStr: string } | null {
+  if (!startDate) return null;
+  // Parse YYYY-MM-DD as local date to avoid TZ shift
+  const [y, m, d] = startDate.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + dayIndex);
+  return {
+    weekday: WEEKDAYS[date.getDay()],
+    dateStr: `${date.getDate()}. ${MONTHS[date.getMonth()]}`,
+  };
+}
 
 export default function MyShifts() {
   const navigate = useNavigate();
@@ -85,7 +100,7 @@ export default function MyShifts() {
       return false;
     });
 
-    const days: { dayIndex: number; dayType: string; rows: { st: ShiftType; note: string | null }[]; totalHours: number }[] = [];
+    const days: { dayIndex: number; dayType: string; rows: { st: ShiftType; note: string | null }[] }[] = [];
     for (let d = 0; d < schedule.period_length; d++) {
       const dayItems = myAssignments
         .filter((a) => a.day_index === d)
@@ -93,13 +108,12 @@ export default function MyShifts() {
         .filter((r) => r.st)
         .sort((a, b) => (a.st.start_time || '').localeCompare(b.st.start_time || ''));
       const dayType = d === 0 ? 'arrival' : d === schedule.period_length - 1 ? 'departure' : 'normal';
-      const totalHours = dayItems.reduce((sum, r) => sum + Number(r.st.duration_hours || 0), 0);
-      days.push({ dayIndex: d, dayType, rows: dayItems, totalHours });
+      days.push({ dayIndex: d, dayType, rows: dayItems });
     }
     return days;
   }, [data, leaderId]);
 
-  const totalPeriodHours = useMemo(() => grouped.reduce((s, d) => s + d.totalHours, 0), [grouped]);
+  const startDate = (data?.schedule as any)?.start_date as string | null | undefined;
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
@@ -154,54 +168,46 @@ export default function MyShifts() {
       ) : (
         <>
           {grouped.map((day) => (
-            <Card key={day.dayIndex} className={day.rows.length === 0 ? 'opacity-60' : ''}>
-              <CardHeader className="pb-3">
-                <div className="flex items-baseline justify-between gap-2">
-                  <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                    Dag {day.dayIndex + 1}
-                    {DAY_TYPE_LABEL[day.dayType] && (
-                      <Badge variant="outline" className="text-[10px] uppercase font-normal">
-                        {DAY_TYPE_LABEL[day.dayType]}
-                      </Badge>
+            (() => {
+              const dateInfo = dateForDay(startDate, day.dayIndex);
+              return (
+                <Card key={day.dayIndex} className={day.rows.length === 0 ? 'opacity-70' : ''}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <div className="min-w-0">
+                        <CardTitle className="text-lg sm:text-xl font-heading">
+                          {dateInfo ? dateInfo.weekday : `Dag ${day.dayIndex + 1}`}
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {dateInfo ? `${dateInfo.dateStr} · Dag ${day.dayIndex + 1}` : `Dag ${day.dayIndex + 1}`}
+                          {DAY_TYPE_LABEL[day.dayType] && ` · ${DAY_TYPE_LABEL[day.dayType]}`}
+                        </p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    {day.rows.length === 0 ? (
+                      <p className="text-sm text-muted-foreground italic">Fri</p>
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {day.rows.map((r, i) => (
+                          <li key={i} className="flex items-baseline justify-between gap-3 py-1">
+                            <div className="min-w-0">
+                              <div className="font-medium text-sm">{r.st.name}</div>
+                              {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
+                            </div>
+                            <div className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                              {r.st.start_time?.slice(0, 5)}–{r.st.end_time?.slice(0, 5)}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                  </CardTitle>
-                  {day.rows.length > 0 && (
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                      {day.totalHours.toFixed(day.totalHours % 1 === 0 ? 0 : 1)} t
-                    </span>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {day.rows.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic">Fri</p>
-                ) : (
-                  <ul className="divide-y">
-                    {day.rows.map((r, i) => (
-                      <li key={i} className="py-2 flex items-baseline justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="font-medium text-sm">{r.st.name}</div>
-                          {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
-                        </div>
-                        <div className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                          {r.st.start_time?.slice(0, 5)}–{r.st.end_time?.slice(0, 5)}
-                          <span className="ml-2 text-[10px]">({Number(r.st.duration_hours)}t)</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              );
+            })()
           ))}
-          <Card className="bg-muted/40">
-            <CardContent className="py-3 flex items-center justify-between">
-              <span className="text-sm font-medium">Totalt for perioden</span>
-              <span className="text-base font-heading font-semibold tabular-nums">
-                {totalPeriodHours.toFixed(totalPeriodHours % 1 === 0 ? 0 : 1)} timer
-              </span>
-            </CardContent>
-          </Card>
           {data.schedule.status !== 'published' && (
             <p className="text-xs text-muted-foreground text-center">
               ⚠️ Denne planen er ikke publisert ennå (status: {data.schedule.status}).

@@ -1,0 +1,1 @@
+ALTER TABLE public.shift_schedules ADD COLUMN start_date date;
