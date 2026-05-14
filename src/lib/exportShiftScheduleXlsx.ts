@@ -81,6 +81,50 @@ function teamCellForShift(
   return { text: names.join('\n'), filled: true };
 }
 
+/**
+ * Skriv en team-rad og slå sammen sammenhengende kolonner som har identisk
+ * `text` og er `filled`. Tomme/ulike celler skrives individuelt.
+ */
+function writeTeamRowMerged(
+  ws: ExcelJS.Worksheet,
+  row: number,
+  firstCol: number,
+  cells: { text: string; filled: boolean }[],
+  team: Team,
+  borderTop: ExcelJS.Border,
+  borderOther: ExcelJS.Border,
+) {
+  const fillColor = TEAM_FILL[team];
+  const fontColor = team === 'team1f' ? 'FF000000' : 'FFFFFFFF';
+  let i = 0;
+  while (i < cells.length) {
+    const cur = cells[i];
+    let j = i;
+    if (cur.filled && cur.text) {
+      while (j + 1 < cells.length && cells[j + 1].filled && cells[j + 1].text === cur.text) j++;
+    }
+    const startCol = firstCol + i;
+    const endCol = firstCol + j;
+    if (endCol > startCol) {
+      ws.mergeCells(row, startCol, row, endCol);
+    }
+    const cell = ws.getCell(row, startCol);
+    cell.value = cur.text;
+    if (cur.filled) {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
+      cell.font = { color: { argb: fontColor }, bold: true, size: 9 };
+    }
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = {
+      top: borderTop,
+      bottom: borderOther,
+      left: borderOther,
+      right: borderOther,
+    };
+    i = j + 1;
+  }
+}
+
 export async function exportShiftScheduleXlsx(opts: {
   schedule: Schedule;
   assignments: Assignment[];
