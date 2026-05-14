@@ -244,14 +244,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }, [location.pathname, hasScheduleImage]);
 
   // Collapsible header scroll tracking (Facebook/Instagram-style)
+  // Listen on window so the body can scroll natively — fixes iOS PWA bottom strip.
   useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    if (!scrollContainer) return;
-
-    const SCROLL_THRESHOLD = 50; // Always show header when near top
+    const SCROLL_THRESHOLD = 50;
 
     const handleScroll = () => {
-      const currentScrollY = scrollContainer.scrollTop;
+      const currentScrollY = window.scrollY;
       const delta = currentScrollY - lastScrollY.current;
 
       if (currentScrollY < SCROLL_THRESHOLD) {
@@ -268,8 +266,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
       lastScrollY.current = currentScrollY;
     };
 
-    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   // Fetch schedule image availability and subscribe to changes
@@ -409,7 +407,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
-    <div className="bg-background flex h-[100dvh] lg:h-auto lg:min-h-dvh flex-col overflow-hidden lg:overflow-visible overflow-x-hidden w-full max-w-full pl-safe pr-safe">
+    <div className="bg-background flex min-h-[100svh] lg:min-h-dvh flex-col overflow-x-hidden w-full max-w-full pl-safe pr-safe">
       {/* View As Banner */}
       {viewAsLeader && (
         <div className="bg-amber-500 dark:bg-amber-600 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
@@ -762,11 +760,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       )}
 
-      {/* Main Content */}
+      {/* Main Content — body/window scrolls natively for proper iOS PWA height */}
       <main 
         ref={scrollContainerRef}
-        className="lg:pl-64 lg:pt-0 flex-1 w-full min-w-0 lg:min-h-[100dvh] app-content lg:pb-0 overflow-y-auto lg:overflow-visible overflow-x-hidden max-w-full"
-        style={{ overscrollBehaviorY: 'contain' }}
+        className="lg:pl-64 lg:pt-0 flex-1 w-full min-w-0 lg:min-h-[100dvh] overflow-x-hidden max-w-full"
       >
         {/* Spacer for mobile header - animates with header visibility */}
         <div 
