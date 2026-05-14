@@ -88,6 +88,8 @@ export function LeaderDetailDialog({
   // Role
   const [role, setRole] = useState<AppRole>('leader');
 
+  const leaderId = leader?.id;
+
   // Populate form when leader changes
   // Only repopulate when the leader ID changes (not on every refetch),
   // otherwise auto-save → parent refetch → useEffect would wipe in-progress edits.
@@ -214,7 +216,6 @@ export function LeaderDetailDialog({
   useEffect(() => { showErrorRef.current = showError; }, [showError]);
 
   // Auto-save role changes (separate because it uses edge function)
-  const leaderId = leader?.id;
   useEffect(() => {
     if (!isInitializedRef.current || !leaderId) return;
     if (role === originalValuesRef.current.role) return;
