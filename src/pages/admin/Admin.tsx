@@ -299,63 +299,6 @@ export default function Admin() {
         </SheetContent>
       </Sheet>
 
-      {/* Leader activation management */}
-      <Collapsible open={isActivationOpen} onOpenChange={setIsActivationOpen}>
-        <Card>
-          <CardHeader>
-            <CollapsibleTrigger className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-2">
-                <UserCog className="w-5 h-5" />
-                <div className="text-left">
-                  <CardTitle>Lederaktivering</CardTitle>
-                  <CardDescription>Styr hvem som kan logge inn i appen</CardDescription>
-                </div>
-              </div>
-              {isActivationOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
-            </CollapsibleTrigger>
-          </CardHeader>
-          <CollapsibleContent>
-            <CardContent>
-              <LeaderActivationTab leaders={leaders} onLeaderUpdated={loadData} isSuperAdmin={isSuperAdmin} />
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
-
-
-      {/* Home screen config - lazy loaded */}
-      <Collapsible open={isHomeConfigOpen} onOpenChange={setIsHomeConfigOpen}>
-        <Card>
-          <CardHeader>
-            <CollapsibleTrigger className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                <div className="text-left">
-                  <CardTitle>Hjemskjerm-elementer</CardTitle>
-                  <CardDescription>Konfigurer tittel, ikon og synlighet for hvert element på hjemskjermen</CardDescription>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {isHomeConfigOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
-              </div>
-            </CollapsibleTrigger>
-          </CardHeader>
-          <CollapsibleContent>
-            <CardContent>
-              <Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}>
-                <HomeConfigSection
-                  homeConfig={homeConfig}
-                  localHomeConfig={localHomeConfig}
-                  setLocalHomeConfig={setLocalHomeConfig}
-                  onSaved={loadData}
-                  setHomeConfig={setHomeConfig}
-                />
-              </Suspense>
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
-
       <PasteLeaderContentSheet
         open={isPasteSheetOpen}
         onOpenChange={setIsPasteSheetOpen}
