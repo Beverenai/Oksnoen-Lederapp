@@ -197,7 +197,9 @@ export default function MyShifts() {
                               {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
                             </div>
                             <div className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                              {r.st.start_time?.slice(0, 5)}–{r.st.end_time?.slice(0, 5)}
+                              {r.st.slug === 'kjokkenvakt'
+                                ? 'Hele dagen'
+                                : `${r.st.start_time?.slice(0, 5)}–${r.st.end_time?.slice(0, 5)}`}
                             </div>
                           </li>
                         ))}

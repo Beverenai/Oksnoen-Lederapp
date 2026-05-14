@@ -654,7 +654,9 @@ export default function ShiftPlanner() {
                           {day.rows.map(({ st, items }) => (
                             <tr key={st.id} className="border-t align-top">
                               <td className="p-2 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                                {st.start_time?.slice(0, 5)}–{st.end_time?.slice(0, 5)}
+                                {st.slug === 'kjokkenvakt'
+                                  ? 'Hele dagen'
+                                  : `${st.start_time?.slice(0, 5)}–${st.end_time?.slice(0, 5)}`}
                               </td>
                               <td className="p-2 font-medium">{st.name}</td>
                               <td className="p-2">

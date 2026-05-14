@@ -535,7 +535,10 @@ Deno.serve(async (req) => {
       for (const l of p.sanitas) pushLeader(d, dt, 'sanitas', l, 'sanitas');
 
       // Hele dagen Kjøkkenvakt — 1 from F-teams
-      if (p.kjokken) pushLeader(d, dt, 'kjokkenvakt', p.kjokken, 'kjokkenvakt');
+      if (p.kjokken) pushLeader(
+        d, dt, 'kjokkenvakt', p.kjokken, 'kjokkenvakt',
+        'Snakk med Kjøkkenet dagen før vakten din. Du skal følge kjøkkenet hele denne vakten',
+      );
 
       // Special duties log
       if (p.morgen)  duties.push({ schedule_id: scheduleId, day_index: d, duty_type: 'morgenvakt',  leader_id: p.morgen.id });
