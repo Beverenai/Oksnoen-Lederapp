@@ -325,7 +325,7 @@ Deno.serve(async (req) => {
     for (let d = 1; d < period_length - 1; d++) {
       const dt: DayType = 'normal';
       const p = days[d]!;
-      const next = days[d + 1]; // for frokost-from-tomorrow
+      const tomorrow = days[d + 1]; // for frokost-from-tomorrow
 
       // morgenvakt (1 leader)
       if (p.morgen) pushLeader(d, dt, 'morgenvakt', p.morgen, 'morgenvakt');
@@ -353,7 +353,7 @@ Deno.serve(async (req) => {
       // Middag — dagteam* (minus frokost+natt) + under18b + tomorrow's frokostvakt
       pushTeam(d, dt, 'middag', p.dagteam, [...p.frokost, ...p.natt], '*');
       pushTeam(d, dt, 'middag', p.under18b, [], null);
-      if (next) for (const l of next.frokost) {
+      if (tomorrow) for (const l of tomorrow.frokost) {
         pushLeader(d, dt, 'middag', l, 'frokostvakt_neste_dag', 'fra dagen etter');
       }
 
