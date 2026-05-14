@@ -123,12 +123,18 @@ Deno.serve(async (req) => {
       });
     }
     if (![7, 8].includes(period_length)) {
-      return new Response(JSON.stringify({ error: 'period_length must be 7 or 8' }), {
+      return new Response(JSON.stringify({ error: 'period_length must be 7 or 8 (5 eller 6 normale dager + 2)' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const admin = createClient(supabaseUrl, serviceKey);
+
+    // Ensure new shift_types exist (idempotent)
+    await admin.from('shift_types').upsert([
+      { slug: 'seilern',     day_type: 'normal', name: 'Seilern',       start_time: '09:15:00', end_time: '10:00:00', duration_hours: 0.75, sort_order: 17, min_leaders: 2, requires_18_plus: false, all_must_attend: false },
+      { slug: 'sanitas_box', day_type: 'normal', name: 'Sanitas + Box', start_time: '23:30:00', end_time: '05:00:00', duration_hours: 5.50, sort_order: 18, min_leaders: 2, requires_18_plus: true,  all_must_attend: false },
+    ], { onConflict: 'slug,day_type' });
 
     // Load active leaders, group by profile.team
     const { data: leadersData, error: ldrErr } = await admin
@@ -150,7 +156,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Load shift_types
+    // Load shift_types (after upsert)
     const { data: stData, error: stErr } = await admin
       .from('shift_types').select('id, slug, day_type, sort_order, start_time, end_time, duration_hours');
     if (stErr) throw stErr;
