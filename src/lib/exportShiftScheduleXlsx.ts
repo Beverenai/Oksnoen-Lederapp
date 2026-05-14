@@ -10,10 +10,10 @@ type Leader = Tables<'leaders'>;
 type Team = 'team1' | 'team2' | 'team1f' | 'team2f';
 
 const TEAM_FILL: Record<Team, string> = {
-  team1: 'FFEF4444',  // red
-  team2: 'FFF97316',  // orange
-  team1f: 'FFEAB308', // yellow
-  team2f: 'FF3B82F6', // blue
+  team1: 'FFFF0300',  // red    #ff0300
+  team2: 'FFFFC001',  // orange #ffc001
+  team1f: 'FFFFFE01', // yellow #fffe01
+  team2f: 'FF0070C0', // blue   #0070c0
 };
 const TEAM_LABEL: Record<Team, string> = {
   team1: 'Team 1', team2: 'Team 2', team1f: 'Team 1F', team2f: 'Team 2F',
