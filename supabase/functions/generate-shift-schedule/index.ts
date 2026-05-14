@@ -259,6 +259,10 @@ Deno.serve(async (req) => {
     const inc = (id: string, n = 1) => dutyCount.set(id, (dutyCount.get(id) || 0) + n);
     const cnt = (id: string) => dutyCount.get(id) || 0;
 
+    // Hard cap for kjøkkenvakt — each F-leader should only have it 1× per period.
+    const kjokkenCount = new Map<string, number>();
+    const KJOKKEN_MAX = 1;
+
     /** Pick the N candidates with the lowest duty count, random tiebreak,
      *  excluding any leader id in `busy`. */
     const pickFairest = (pool: LeaderRow[], n: number, busy: Set<string>): LeaderRow[] => {
@@ -326,9 +330,28 @@ Deno.serve(async (req) => {
       seilern.forEach((l) => { busy.add(l.id); inc(l.id); });
 
       // 5) Kjøkkenvakt — 1 from UNDER18B (same F-team as bings), avoid busy
-      const kjokkenPick = pickFairest(grouped[bingsF], 1, busy);
+      // Pool = ALL F-leaders (rotate across both F-teams), each leader max 1 per period.
+      // Fall back to the bingsF pool if everyone has already had it.
+      const allF = [...grouped['team1f'], ...grouped['team2f']];
+      const kjokkenEligible = allF.filter(
+        (l) => !busy.has(l.id) && (kjokkenCount.get(l.id) || 0) < KJOKKEN_MAX,
+      );
+      let kjokkenPick: LeaderRow[];
+      if (kjokkenEligible.length > 0) {
+        // Sort by lowest dutyCount for fairness, random tiebreak via shuffle
+        const shuffled = shuffle(kjokkenEligible);
+        shuffled.sort((a, b) => cnt(a.id) - cnt(b.id));
+        kjokkenPick = shuffled.slice(0, 1);
+      } else {
+        // All F-leaders already had kjøkken once; fall back to fairness without cap
+        kjokkenPick = pickFairest(grouped[bingsF], 1, busy);
+      }
       const kjokken = kjokkenPick[0] || null;
-      if (kjokken) { busy.add(kjokken.id); inc(kjokken.id); }
+      if (kjokken) {
+        busy.add(kjokken.id);
+        inc(kjokken.id);
+        kjokkenCount.set(kjokken.id, (kjokkenCount.get(kjokken.id) || 0) + 1);
+      }
 
       // 6) Nattevakt — 2 from morning18 (Økt 1-team, 18+)
       const natt = pickFairest(grouped[morning18], 2, busy);
