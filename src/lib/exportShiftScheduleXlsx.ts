@@ -11,9 +11,9 @@ type Team = 'team1' | 'team2' | 'team1f' | 'team2f';
 
 const TEAM_FILL: Record<Team, string> = {
   team1: 'FFEF4444',  // red
-  team2: 'FF3B82F6',  // blue
-  team1f: 'FFF97316', // orange
-  team2f: 'FFEAB308', // yellow
+  team2: 'FFF97316',  // orange
+  team1f: 'FFEAB308', // yellow
+  team2f: 'FF3B82F6', // blue
 };
 const TEAM_LABEL: Record<Team, string> = {
   team1: 'Team 1', team2: 'Team 2', team1f: 'Team 1F', team2f: 'Team 2F',
@@ -159,7 +159,7 @@ export async function exportShiftScheduleXlsx(opts: {
         if (filled) {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAM_FILL[team] } };
           cell.font = {
-            color: { argb: team === 'team2f' ? 'FF000000' : 'FFFFFFFF' },
+            color: { argb: team === 'team1f' ? 'FF000000' : 'FFFFFFFF' },
             bold: true,
             size: 9,
           };
@@ -283,7 +283,7 @@ async function writeSpecialBlock(
       if (filled) {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAM_FILL[t] } };
         cell.font = {
-          color: { argb: t === 'team2f' ? 'FF000000' : 'FFFFFFFF' },
+          color: { argb: t === 'team1f' ? 'FF000000' : 'FFFFFFFF' },
           bold: true,
           size: 9,
         };
