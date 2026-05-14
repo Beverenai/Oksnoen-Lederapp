@@ -191,6 +191,7 @@ export default function ShiftPlanner() {
         .select('*').eq('schedule_id', id);
       if (error) throw error;
       setAssignments(data || []);
+      await revalidate(id);
     } catch {
       showError('Kunne ikke laste vaktplan-grid');
     } finally {
