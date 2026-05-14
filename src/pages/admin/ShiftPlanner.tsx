@@ -537,21 +537,55 @@ export default function ShiftPlanner() {
                                 ) : (
                                   <div className="flex flex-wrap gap-1.5">
                                     {items.map((a) => {
+                                      const isEditable = viewedSchedule.status !== 'archived';
+                                      const editButton = isEditable ? (
+                                        <Popover open={editingId === a.id} onOpenChange={(o) => setEditingId(o ? a.id : null)}>
+                                          <PopoverTrigger asChild>
+                                            <button
+                                              type="button"
+                                              className="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-background/40"
+                                              aria-label="Endre"
+                                            >
+                                              <Pencil className="w-3 h-3" />
+                                            </button>
+                                          </PopoverTrigger>
+                                          <PopoverContent className="w-64 p-2 space-y-2">
+                                            <p className="text-xs font-medium">Bytt person</p>
+                                            <Select
+                                              disabled={savingEdit}
+                                              onValueChange={(v) => swapAssignmentLeader(a.id, v)}
+                                            >
+                                              <SelectTrigger><SelectValue placeholder="Velg leder" /></SelectTrigger>
+                                              <SelectContent>
+                                                {eligibleLeaders.map((l) => (
+                                                  <SelectItem key={l.id} value={l.id}>
+                                                    {l.name}
+                                                    {l.age != null ? ` (${l.age})` : ''}
+                                                    {l.team ? ` · ${l.team}` : ''}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          </PopoverContent>
+                                        </Popover>
+                                      ) : null;
                                       if (a.assignment_type === 'team' && a.team_name) {
                                         const t = a.team_name as Team;
                                         const meta = TEAM_META[t];
                                         return (
-                                          <Badge key={a.id} className={meta?.className || ''}>
+                                          <Badge key={a.id} className={`${meta?.className || ''} gap-1`}>
                                             {meta?.label || a.team_name}
                                             {a.note ? <span className="ml-1 opacity-80">{a.note}</span> : null}
+                                            {editButton}
                                           </Badge>
                                         );
                                       }
                                       const ldr = a.leader_id ? leaderById.get(a.leader_id) : null;
                                       return (
-                                        <Badge key={a.id} variant="outline">
+                                        <Badge key={a.id} variant="outline" className="gap-1">
                                           {ldr?.name || 'Ukjent'}
                                           {a.role && a.role !== 'standard' ? <span className="ml-1 text-[10px] opacity-70">({a.role})</span> : null}
+                                          {editButton}
                                         </Badge>
                                       );
                                     })}
