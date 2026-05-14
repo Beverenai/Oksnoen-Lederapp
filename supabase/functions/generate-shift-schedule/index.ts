@@ -407,8 +407,18 @@ Deno.serve(async (req) => {
         for (const t of teams) pushTeam(0, dt, slug, t, [], null);
       }
       // 18+ shifts
-      for (const slug of ['kiosk', 'legging_ankomst', 'nattevakt_ankomst']) {
+      // Kiosk og nattevakt_ankomst: begge 18+-team.
+      for (const slug of ['kiosk', 'nattevakt_ankomst']) {
         for (const t of ['team1', 'team2'] as Team[]) pushTeam(0, dt, slug, t, [], null);
+      }
+      // legging_ankomst (22:30→01:00): KUN team som blir evening18 på dag 1.
+      // Det andre 18+-teamet (= morning18 på dag 1) trenger 11t hvile før PM1 10:45,
+      // så de avslutter med kiosk 22:30. NORMAL_FROM=1 ⇒ isA=true ⇒ morning18=team1,
+      // evening18=team2. legging_ankomst → team2.
+      {
+        const day1IsA = ((NORMAL_FROM - NORMAL_FROM) % 2) === 0;
+        const day1Evening18: Team = day1IsA ? 'team2' : 'team1';
+        pushTeam(0, dt, 'legging_ankomst', day1Evening18, [], null);
       }
     }
 
@@ -417,6 +427,17 @@ Deno.serve(async (req) => {
       const dt: DayType = 'normal';
       const p = days[d]!;
       const tomorrow = days[d + 1]; // may be null on last normal day
+
+      // Gårsdagens nattevakt-ledere (sluttet 05:00 i dag) må ha 11t hvile.
+      // 05:00 + 11t = 16:00 ⇒ de kan tidligst starte på Økt 2 (16:00).
+      // Ekskluder dem derfor fra PM2 (15:45) i dag.
+      const prevNattIds = new Set<string>(
+        d > NORMAL_FROM && days[d - 1]
+          ? (days[d - 1]!.natt || []).map((l) => l.id)
+          : [],
+      );
+      const prevNattLeaders = (team: Team): LeaderRow[] =>
+        teamLeaders(team).filter((l) => prevNattIds.has(l.id));
 
       // 06:00–08:30 Morgenvakt — 1 person
       if (p.morgen) pushLeader(d, dt, 'morgenvakt', p.morgen, 'morgenvakt');
@@ -458,9 +479,11 @@ Deno.serve(async (req) => {
 
       // 15:45–16:00 Personalmøte 2 — alle 4 team
       // Nattevakt skal IKKE delta på personalmøte (de jobber kun Økt 1 + nattevakt)
-      pushTeam(d, dt, 'personalmoete2', p.morning18, p.natt, null);
+      // Gårsdagens nattevakt (nå i evening18-teamet) trenger 11t hvile fra 05:00 ⇒
+      // ekskluderes fra PM2 (15:45). De starter først Økt 2 (16:00).
+      pushTeam(d, dt, 'personalmoete2', p.morning18, [...p.natt, ...prevNattLeaders(p.morning18)], null);
       for (const t of teams.filter((t) => t !== p.morning18)) {
-        pushTeam(d, dt, 'personalmoete2', t, [], null);
+        pushTeam(d, dt, 'personalmoete2', t, prevNattLeaders(t), null);
       }
 
       // 16:00–19:00 Økt 2 — Økt 2+3-team (evening18) + UNDER18A*** (minus morgen) + UNDER18B (minus kjøkken)
