@@ -242,7 +242,6 @@ Deno.serve(async (req) => {
       seilern: LeaderRow[];           // 2 people, from morgenF
       kjokken: LeaderRow | null;      // 1 person, from any F-team
       natt: LeaderRow[];              // 2 people, mix from team1+team2 (= sanitas+box)
-      legging: LeaderRow[];           // 2 people, from evening18 (not Økt 1 folks)
     };
     const days: (DayPlan | null)[] = new Array(period_length).fill(null);
 
@@ -276,9 +275,8 @@ Deno.serve(async (req) => {
       const seilern = pickFairest(grouped[morgenF], 2, busy);
       seilern.forEach((l) => { busy.add(l.id); inc(l.id); });
 
-      // 5) Kjøkkenvakt — 1 from all F-team, avoid busy
-      const kjokkenPool = [...grouped.team1f, ...grouped.team2f];
-      const kjokkenPick = pickFairest(kjokkenPool, 1, busy);
+      // 5) Kjøkkenvakt — 1 from UNDER18B (same F-team as bings), avoid busy
+      const kjokkenPick = pickFairest(grouped[bingsF], 1, busy);
       const kjokken = kjokkenPick[0] || null;
       if (kjokken) { busy.add(kjokken.id); inc(kjokken.id); }
 
@@ -300,14 +298,12 @@ Deno.serve(async (req) => {
       }
       natt.forEach((l) => { busy.add(l.id); inc(l.id); });
 
-      // 7) Legging — 2 from evening18 (the team that did Økt 1 = morning18 is excluded automatically)
-      // exclude nattevakt and anyone busy from the evening team
-      const legging = pickFairest(grouped[evening18], 2, busy);
-      legging.forEach((l) => { busy.add(l.id); inc(l.id); });
+      // Note: legging is the WHOLE evening18 team (minus nattevakt). No separate pair pick.
+      // Tracked as team-push below; no individual rotation needed here.
 
       days[d] = {
         isA, morning18, evening18, morgenF, bingsF,
-        morgen, frokost, bings, seilern, kjokken, natt, legging,
+        morgen, frokost, bings, seilern, kjokken, natt,
       };
     }
 
@@ -364,11 +360,12 @@ Deno.serve(async (req) => {
       // 06:00–08:30 Morgenvakt — 1 person
       if (p.morgen) pushLeader(d, dt, 'morgenvakt', p.morgen, 'morgenvakt');
 
-      // 08:30–09:00 Vekking — entire morgenF team (minus morgen who is busy)
-      pushTeam(d, dt, 'vekking', p.morgenF, p.morgen ? [p.morgen] : [], null);
+      // 08:30–09:00 Vekking — entire UNDER18A (incl. morgenvakt who is already up)
+      pushTeam(d, dt, 'vekking', p.morgenF, p.kjokken && p.kjokken.team?.toLowerCase() === (p.morgenF === 'team1f' ? '1f' : '2f') ? [p.kjokken] : [], null);
 
-      // 09:00–10:00 Frokost — 1 frokostvakt (from morning18)
+      // 09:00–10:00 Frokost — 1 frokostvakt (from morning18) + entire UNDER18A (minus kjøkkenvakt)
       if (p.frokost) pushLeader(d, dt, 'frokost', p.frokost, 'frokostvakt');
+      pushTeam(d, dt, 'frokost', p.morgenF, p.kjokken && p.kjokken.team?.toLowerCase() === (p.morgenF === 'team1f' ? '1f' : '2f') ? [p.kjokken] : [], null);
 
       // 09:15–10:00 Seilern — 2 from morgenF
       for (const l of p.seilern) pushLeader(d, dt, 'seilern', l, 'seilern');
@@ -376,19 +373,20 @@ Deno.serve(async (req) => {
       // 09:30–11:00 Bings morgen — bings pair
       for (const l of p.bings) pushLeader(d, dt, 'bings_morgen', l, 'bingsvakt');
 
-      // 10:45–11:00 Personalmøte 1 — alle 4 team til stede
-      for (const t of teams) pushTeam(d, dt, 'personalmoete', t, [], null);
+      // 10:45–11:00 Personalmøte 1 — Økt 1+2-team + UNDER18A + UNDER18B (IKKE Økt 3-team)
+      for (const t of [p.morning18, p.morgenF, p.bingsF] as Team[]) pushTeam(d, dt, 'personalmoete', t, [], null);
 
-      // 11:00–14:00 Økt 1 — morning18 + morgenF + bingsF**
-      pushTeam(d, dt, 'okt1', p.morning18, p.frokost ? [p.frokost] : [], null);
+      // 11:00–14:00 Økt 1 — morning18 (incl. frokostvakt) + morgenF*** + bingsF**
+      pushTeam(d, dt, 'okt1', p.morning18, [], null);
       pushTeam(d, dt, 'okt1', p.morgenF, [...(p.morgen ? [p.morgen] : []), ...p.seilern], null);
       pushTeam(d, dt, 'okt1', p.bingsF, p.bings, '**');
 
-      // 14:00–15:30 Middag — morning18* (minus frokost+natt) + tomorrow's frokostvakt as guest
+      // 14:00–15:30 Middag — morning18* (minus frokost + natt) + UNDER18B (minus kjøkken) + tomorrow's frokostvakt
       pushTeam(d, dt, 'middag', p.morning18, [
         ...(p.frokost ? [p.frokost] : []),
         ...p.natt.filter((n) => n.team?.toLowerCase() === (p.morning18 === 'team1' ? '1' : '2')),
       ], '*');
+      pushTeam(d, dt, 'middag', p.bingsF, p.kjokken ? [p.kjokken] : [], null);
       if (tomorrow?.frokost) {
         pushLeader(d, dt, 'middag', tomorrow.frokost, 'frokostvakt_neste_dag', 'fra dagen etter');
       }
@@ -399,11 +397,12 @@ Deno.serve(async (req) => {
       // 15:45–16:00 Personalmøte 2 — alle 4 team
       for (const t of teams) pushTeam(d, dt, 'personalmoete2', t, [], null);
 
-      // 16:00–19:00 Økt 2 — evening18 + morgenF*** (minus morgen)
-      pushTeam(d, dt, 'okt2', p.evening18, [], null);
+      // 16:00–19:00 Økt 2 — morning18 (Økt 1+2-team) + UNDER18A*** (minus morgen) + UNDER18B (minus kjøkken)
+      pushTeam(d, dt, 'okt2', p.morning18, [], null);
       pushTeam(d, dt, 'okt2', p.morgenF, p.morgen ? [p.morgen] : [], '***');
+      pushTeam(d, dt, 'okt2', p.bingsF, p.kjokken ? [p.kjokken] : [], null);
 
-      // 19:00–20:00 Kveldsmat — morgenF*** (minus morgen) + evening18
+      // 19:00–20:00 Kveldsmat — UNDER18A*** (minus morgen) + Økt 3-team (evening18)
       pushTeam(d, dt, 'kveldsmat', p.morgenF, p.morgen ? [p.morgen] : [], '***');
       pushTeam(d, dt, 'kveldsmat', p.evening18, [], null);
 
@@ -413,8 +412,8 @@ Deno.serve(async (req) => {
       // 20:30–00:00 Økt 3 — evening18**** (minus nattevakt). De med Økt 1 neste dag slutter 23:45.
       pushTeam(d, dt, 'okt3', p.evening18, p.natt, '****');
 
-      // 22:00–01:00 Legging — 2 from evening18 (Økt 1 folks excluded; nattevakt excluded)
-      for (const l of p.legging) pushLeader(d, dt, 'legging', l, 'legging', '*****');
+      // 22:00–01:00 Legging — Økt 3-team**** (minus nattevakt). Folk med Økt 1 neste dag slutter 23:45.
+      pushTeam(d, dt, 'legging', p.evening18, p.natt, '****');
 
       // 23:30–05:00 Nattevakt — 2
       for (const l of p.natt) pushLeader(d, dt, 'nattevakt', l, 'nattevakt');
