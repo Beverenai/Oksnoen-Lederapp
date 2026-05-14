@@ -101,9 +101,26 @@ export default function ShiftPlanner() {
   const generate = async () => {
     setGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-shift-schedule', {
+      let { data, error } = await supabase.functions.invoke('generate-shift-schedule', {
         body: { period_number: periodNumber, year, period_length: periodLength },
       });
+      const errMsg = (error as any)?.message || data?.error || '';
+      if (errMsg && /published/i.test(errMsg)) {
+        if (!confirm('Denne perioden er publisert. Arkivér og generer på nytt?')) {
+          setGenerating(false);
+          return;
+        }
+        const { error: archErr } = await supabase
+          .from('shift_schedules')
+          .update({ status: 'archived' })
+          .eq('period_number', periodNumber)
+          .eq('year', year)
+          .eq('status', 'published');
+        if (archErr) throw archErr;
+        ({ data, error } = await supabase.functions.invoke('generate-shift-schedule', {
+          body: { period_number: periodNumber, year, period_length: periodLength },
+        }));
+      }
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       showSuccess(`Generert: ${data.assignments_count} tildelinger over ${data.days} dager`);
