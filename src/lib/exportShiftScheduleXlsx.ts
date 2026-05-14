@@ -108,19 +108,29 @@ function writeTeamRowMerged(
     if (endCol > startCol) {
       ws.mergeCells(row, startCol, row, endCol);
     }
-    const cell = ws.getCell(row, startCol);
-    cell.value = cur.text;
+    // Skriv verdi/fyll/font på topp-venstre celle
+    const head = ws.getCell(row, startCol);
+    head.value = cur.text;
     if (cur.filled) {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
-      cell.font = { color: { argb: fontColor }, bold: true, size: 9 };
+      head.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
+      head.font = { color: { argb: fontColor }, bold: true, size: 9 };
     }
-    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-    cell.border = {
-      top: borderTop,
-      bottom: borderOther,
-      left: borderOther,
-      right: borderOther,
-    };
+    head.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    // Sett kantlinjer på ALLE celler i den sammenslåtte regionen, slik at
+    // ytre rammen tegnes uten doble streker (kun ytterkanter, ingen indre).
+    for (let c = startCol; c <= endCol; c++) {
+      const cell = ws.getCell(row, c);
+      cell.border = {
+        top: borderTop,
+        bottom: borderOther,
+        left: c === startCol ? borderOther : undefined,
+        right: c === endCol ? borderOther : undefined,
+      };
+      if (cur.filled && c !== startCol) {
+        // Sørg for at fyll dekker hele den sammenslåtte regionen ved rendering
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
+      }
+    }
     i = j + 1;
   }
 }
