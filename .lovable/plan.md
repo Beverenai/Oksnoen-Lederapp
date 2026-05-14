@@ -1,46 +1,63 @@
 ## Mål
 
-Flytte ankomst- og avreise-blokkene ut av hovedarket og inn i hvert sitt eget regneark i den genererte Excel-filen.
+1. Vis kjøkkenvakt som "Hele dagen" i stedet for klokkeslett (09–17), men behold 8t i timeoversikten.
+2. Legg automatisk en merknad på kjøkkenvakt-tildelinger: *"Snakk med Kjøkkenet dagen før vakten din. Du skal følge kjøkkenet hele denne vakten"*.
 
 ## Endringer
 
-Kun én fil: `src/lib/exportShiftScheduleXlsx.ts`
+### 1. Visning av tid — frontend kun, ingen DB-endring
 
-### Nye ark-struktur
+`shift_types.start_time/end_time` forblir 09:00/17:00 i databasen (kolonnene er NOT NULL og `duration_hours = 8` brukes for timeberegning). Vi spesialbehandler kun rendering når `slug === 'kjokkenvakt'`.
 
-I dag genereres alt på ett ark `Periode N` i denne rekkefølgen:
-1. Tittel
-2. Normaldager (header + 4 team-rader per dag)
-3. Asterisk-fotnoter
-4. "Ankomst (Lørdag)"-blokk
-5. "Avreise (Lørdag)"-blokk
+Tre filer:
 
-Ny struktur — tre ark per periode:
-
-```text
-[ Periode N ]   ← normaldager + asterisk-fotnoter (uendret innhold)
-[ Ankomst  ]   ← samme blokk som før, men på eget ark
-[ Avreise  ]   ← samme blokk som før, men på eget ark
+**`src/pages/MyShifts.tsx`** (rundt linje 200) — tid-cellen:
+```tsx
+{r.st.slug === 'kjokkenvakt'
+  ? 'Hele dagen'
+  : `${r.st.start_time?.slice(0,5)}–${r.st.end_time?.slice(0,5)}`}
 ```
 
-### Implementasjon
+**`src/pages/admin/ShiftPlanner.tsx`** (linje 657) — samme erstatning i grid-visningen.
 
-1. Behold hovedarket `Periode N` som det er, men fjern alt fra og med `===== ARRIVAL BLOCK =====` og nedover.
-2. Legg til to nye worksheets:
-   - `wb.addWorksheet('Ankomst')`
-   - `wb.addWorksheet('Avreise')`
-3. På hvert nye ark:
-   - Sett `defaultColWidth = 16` og kolonnebredder for kolonne 1 + alle vakt-kolonner.
-   - Skriv tittel-rad ("Ankomst (Lørdag) — Periode N / Y" / tilsvarende for avreise) merget over kolonnene, samme styling som dagens blokk-tittel.
-   - Kall `writeSpecialBlock(...)` med `startRow = 3`, slik at funksjonen skriver header (Vakt/Tid/Timer) + 4 team-rader på det aktuelle arket.
-4. `writeSpecialBlock` trenger ingen endringer — den tar allerede `ws` som parameter.
+**`src/lib/exportShiftScheduleXlsx.ts`** (`timeRange`, linje 38–40) — endres til å ta `ShiftType` og returnere `'Hele dagen'` for kjøkkenvakt-slug. Funksjonen kalles allerede med `st`, ingen kallesignatur endres.
+
+### 2. Automatisk merknad på kjøkkenvakt
+
+**`supabase/functions/generate-shift-schedule/index.ts`** (linje 538):
+```ts
+if (p.kjokken) pushLeader(
+  d, dt, 'kjokkenvakt', p.kjokken, 'kjokkenvakt',
+  'Snakk med Kjøkkenet dagen før vakten din. Du skal følge kjøkkenet hele denne vakten',
+);
+```
+
+`pushLeader` tar allerede en valgfri `note`-parameter (linje 413, `note?: string | null`) og lagrer den i `shift_assignments.note`. Notatet vises automatisk i:
+- Admin-grid (linje 704: `{a.note ? <span>{a.note}</span> : null}`)
+- Min vakt — sjekk at note-rendering finnes; hvis ikke, legg den til i samme commit (vises under vakt-navnet).
+
+Notatet vises også i Excel via `teamCellForShift` for individuelle ledere (linje 78: `${name} (${a.note})`).
+
+### Backfill av eksisterende planer
+
+Eksisterende publiserte planer får ikke notatet automatisk. Admin må regenerere perioden for å få merknaden inn — alternativt kan vi kjøre en engangs UPDATE:
+```sql
+UPDATE shift_assignments
+SET note = 'Snakk med Kjøkkenet dagen før vakten din. Du skal følge kjøkkenet hele denne vakten'
+WHERE shift_type_id IN (SELECT id FROM shift_types WHERE slug = 'kjokkenvakt')
+  AND (note IS NULL OR note = '');
+```
+
+Jeg legger denne med som en migration så det er ryddig fra dag én.
 
 ### Uendret
 
-- Datamodell, sammenslåing av sammenhengende celler, farger og fonter er som før.
-- Hovedarket beholder normaldagene og fotnotene nederst.
-- Filnavn på nedlastingen er uendret.
+- `shift_types`-tabellen.
+- Timeberegning (`hoursMatrix`) bruker fortsatt `duration_hours = 8`.
+- Kjøkken-fairness (max 1/leder/periode) er allerede på plass.
 
 ## Resultat
 
-Excel-filen får tre faner nederst: `Periode N`, `Ankomst`, `Avreise` — hver med sin egen oversiktlige tabell.
+- Ledere ser "Hele dagen" + merknadsteksten på kjøkkenvakt-dagen sin.
+- Excel-eksport viser samme.
+- Eksisterende planer får merknaden via migrasjon.
