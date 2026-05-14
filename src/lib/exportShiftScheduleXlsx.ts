@@ -278,11 +278,17 @@ async function writeSpecialBlock(
     ws.getCell(r, 1).font = { bold: true };
     types.forEach((st, i) => {
       const cell = ws.getCell(r, i + 2);
-      const has = dayAss.find((a) => a.shift_type_id === st.id && a.assignment_type === 'team' && a.team_name === t);
-      if (has) {
-        cell.value = '';
+      const { text, filled } = teamCellForShift(dayAss, st, t, leaderById);
+      cell.value = text;
+      if (filled) {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAM_FILL[t] } };
+        cell.font = {
+          color: { argb: t === 'team2f' ? 'FF000000' : 'FFFFFFFF' },
+          bold: true,
+          size: 9,
+        };
       }
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
       cell.border = {
         top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
         bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
