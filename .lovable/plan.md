@@ -1,54 +1,25 @@
-## Problem
+# Plan: Hard grense på 8 timer per leder per dag
 
-`revalidate-shift-schedule` (edge function) gir 184 advarsler både på 7- og 8-dagers planer fordi den har samme dobbelttellings-bug som UI hadde:
+## Regel
+Ingen leder skal noen gang få tildelt mer enn 8 timer på én dag. Hvis en tildeling vil bryte grensen, må generatoren velge en annen leder eller ekskludere personen fra teamvakta.
 
-- Generator (`generate-shift-schedule`) ekskluderer ledere med egen-vakt (kjøkken, morgen, natt, bings, sanitas, frokost) fra team-vakter via `recordWork`.
-- Men `shift_assignments`-radene lagrer kun `team_name` — ikke hvem som er ekskludert.
-- Både UI og `revalidate` ekspanderer derfor team-vakta til ALLE medlemmer av teamet → hver leder får ~16 t/dag → `8h_max`-regelen fyrer for nesten alle ledere på nesten alle dager.
+## Endringer i `generate-shift-schedule`
+1. **Live timeregnskap per leder per dag** under genereringen (union av intervaller, samme metode som UI bruker — så overlappende vakter ikke dobbelttelles).
+2. **`pickFairest` blir `pickUnderCap`**: kandidater som ville passert 8t for spesialvakta filtreres bort før fairness-sorteringen. Hvis ingen er under taket, velges den med færrest timer (minst overskridelse) — men dette skal være siste utvei.
+3. **Spesialvakter (morgen, frokost, bings, seilern, kjøkken, natt, sanitas, neste-frokost) tildeles først**, før team-vakter regnes inn — slik at vi vet hvor mye "rom" hver leder har igjen.
+4. **Team-vakter ekskluderer automatisk** ledere som ville passert 8t. `pushTeam` får en intern sjekk: for hvert teammedlem, hvis `current_hours[day] + shift_duration > 8`, legg til i `excluded_leader_ids` for raden.
+5. **`recordWork` oppdateres synkront** så timeregnskapet alltid er ferskt før neste tildeling.
+6. **Beholder F-team-21:00 og 11t-hvile** som tilleggsregler, men 8t er den harde grensen.
 
-Tallet er likt på 7 og 8 dager fordi feilen er per (leder, dag) og treffer hver normaldag uavhengig av periodelengde.
+## Endringer i `revalidate-shift-schedule` og UI
+- Advarselen `8h_max` skal nå være ekstremt sjelden. Hvis den oppstår = bug eller faktisk umulig bemanning.
+- UI viser timetabellen som før, men forventet maks blir 8.0.
 
-UI-fixen (intervall-union) hjalp delvis der egen-vakt og team-vakter overlapper i tid, men løser ikke selve datamodell-problemet, og treffer ikke `revalidate` i det hele tatt.
+## Hva vi ikke endrer
+- `min_leaders` per spesialvakt respekteres fortsatt — hvis ingen leder kan ta vakta uten å bryte 8t, lar vi vakta gå over (med advarsel) i stedet for å la den stå tom.
+- Vekking, frokost, måltider og personalmøter er korte (15–60 min) og rammer hele team — disse skal sjelden trigge ekskludering, men logikken behandler dem likt.
 
-## Løsning
-
-Persistér ekskluderingslisten på team-tildelingen. Da har UI, revalidate og Excel-eksport én sannhetskilde og slipper å rekonstruere generator-logikken.
-
-### 1. Skjema-migrasjon
-
-`shift_assignments`: legg til kolonne
-```
-excluded_leader_ids uuid[] not null default '{}'
-```
-Ingen RLS-endring.
-
-### 2. Generator (`supabase/functions/generate-shift-schedule/index.ts`)
-
-I `pushTeam`: ta `excluded` (LeaderRow[]) og skriv `excluded_leader_ids: excluded.map(l => l.id)` på rad-objektet. Alle eksisterende kall passerer allerede `excluded`.
-
-### 3. Revalidate (`supabase/functions/revalidate-shift-schedule/index.ts`)
-
-Når team-tildeling ekspanderes til medlemmer, hopp over `m.id` som finnes i `a.excluded_leader_ids`. Behold `union-of-intervals` for `8h_max` (sikkert mot fremtidige overlapp), men hovedeffekten er at de ekskluderte ikke lenger blir inkludert i det hele tatt.
-
-### 4. UI (`src/pages/admin/ShiftPlanner.tsx`)
-
-I `hoursMatrix`: samme exclusion-sjekk under team-ekspansjon. Behold union-logikken — den er fortsatt riktig for ledere som faktisk jobber overlappende vakter.
-
-### 5. Excel-eksport (`src/lib/exportShiftScheduleXlsx.ts`)
-
-Sjekk om filen ekspanderer team-vakter til ledere; hvis ja, samme exclusion-sjekk.
-
-### Verifisering
-
-- Kjør generate på 7-dagers og 8-dagers periode, åpne planen → forvent 0 eller noen få advarsler (kun ekte brudd, f.eks. F-team-natt eller manglende hvile).
-- Sjekk timer-tabellen: ledere uten egen-vakt ≈ 8 t/dag på normaldag; ledere med egen-vakt ≈ 8 t også (egen-vakt erstatter team-vakt, ikke legges til).
-- Sumkolonnen "Sum dag" ≈ antall ledere × 8 på normaldager.
-
-### Filer som endres
-
-- ny migrasjon: `supabase/migrations/<ts>_add_excluded_leaders_to_shift_assignments.sql`
-- `supabase/functions/generate-shift-schedule/index.ts` (pushTeam + insert payload)
-- `supabase/functions/revalidate-shift-schedule/index.ts` (team-ekspansjon)
-- `src/pages/admin/ShiftPlanner.tsx` (hoursMatrix team-ekspansjon)
-- `src/lib/exportShiftScheduleXlsx.ts` (kun hvis den ekspanderer team-vakter)
-- `.lovable/plan.md`
+## Resultat
+- Ingen leder over 8 t/dag i normal drift
+- `Over 8t/dag`-advarsler forsvinner i praksis
+- Hvis bemanningen er for tynn én dag, får dere en tydelig advarsel om hvilken vakt som ikke kunne fylles innenfor regelen — i stedet for stille overbelastning

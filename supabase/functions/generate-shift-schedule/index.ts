@@ -216,6 +216,43 @@ Deno.serve(async (req) => {
       work.set(leaderId, arr);
     };
 
+    // ===== 8H/DAY HARD CAP =====
+    // Compute total worked hours on `day` for `leaderId` if `extra` is added.
+    // Uses interval UNION so overlapping shifts (e.g. kjøkkenvakt 09–17 over
+    // frokost+økt1+middag) don't double-count.
+    const HARD_CAP_HOURS = 8;
+    const dayHoursIfAdded = (
+      leaderId: string,
+      day: number,
+      extra: ShiftType | null,
+    ): number => {
+      const ivs: [number, number][] = [];
+      for (const iv of work.get(leaderId) || []) {
+        if (iv.dayIndex !== day) continue;
+        const s = toMinutes(iv.st.start_time);
+        let e = toMinutes(iv.st.end_time);
+        if (e <= s) e += 24 * 60;
+        ivs.push([s, e]);
+      }
+      if (extra) {
+        const s = toMinutes(extra.start_time);
+        let e = toMinutes(extra.end_time);
+        if (e <= s) e += 24 * 60;
+        ivs.push([s, e]);
+      }
+      if (ivs.length === 0) return 0;
+      ivs.sort((a, b) => a[0] - b[0]);
+      let total = 0;
+      let [cs, ce] = ivs[0];
+      for (let i = 1; i < ivs.length; i++) {
+        const [s, e] = ivs[i];
+        if (s <= ce) ce = Math.max(ce, e);
+        else { total += ce - cs; [cs, ce] = [s, e]; }
+      }
+      total += ce - cs;
+      return total / 60;
+    };
+
     // ===== FAIRNESS-DRIVEN DUTY PICKER =====
     // Per-leader counter of special duties received this generation.
     const dutyCount = new Map<string, number>();
@@ -329,13 +366,22 @@ Deno.serve(async (req) => {
       excluded: LeaderRow[], note: string | null,
     ) => {
       const st = ST(dt, slug);
+      // Auto-exclude any team member who would exceed the 8h/day cap by
+      // joining this shift. This keeps the cap as a hard rule even on
+      // long whole-team shifts (Økt 1/2/3, måltider, personalmøter).
+      const exIds = new Set(excluded.map((l) => l.id));
+      for (const l of teamLeaders(team)) {
+        if (exIds.has(l.id)) continue;
+        if (dayHoursIfAdded(l.id, day, st) > HARD_CAP_HOURS + 0.01) {
+          exIds.add(l.id);
+        }
+      }
       assignments.push({
         schedule_id: scheduleId, day_index: day, day_type: dt,
         shift_type_id: st.id, assignment_type: 'team',
         team_name: team, leader_id: null, role: 'standard', note,
-        excluded_leader_ids: excluded.map((l) => l.id),
+        excluded_leader_ids: [...exIds],
       });
-      const exIds = new Set(excluded.map((l) => l.id));
       for (const l of teamLeaders(team)) {
         if (!exIds.has(l.id)) recordWork(l.id, day, st);
       }
