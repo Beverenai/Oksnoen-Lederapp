@@ -1,51 +1,65 @@
-## Mål
+## Diagnose: hvorfor 65 advarsler?
 
-Nattevakt skal kun jobbe Økt 1 + selve nattevakta — ingen andre fellesvakter den dagen. Total blir 3,0 + 5,5 = 8,5 t (akseptert regel for nattevakt).
+Validatoren rapporterer kun *leder + dag + regel* — ikke hvilke vakter som kolliderer. Alle 65 er sannsynligvis **11t-hvile-brudd**, fordi generatoren plasserer:
 
-I tillegg: rette opp tegnforklaring (asterisker) og sikre at frokostvakt fortsatt droppes fra middag.
-
-## Endringer i `supabase/functions/generate-shift-schedule/index.ts`
-
-**Ekskluder nattevakt-paret (`p.natt`) fra følgende team-vakter på samme dag:**
-
-| Vakt | I dag | Etter |
+| Kollisjon | Hvile | Antall pr. dag |
 |---|---|---|
-| Personalmøte 1 (10:45) | inkluderer natt | **ekskluder natt** |
-| Økt 1 (11:00–14:00) | inkluderer natt | inkluderer natt (uendret) |
-| Middag (14:00–15:30) | ekskluderer natt | uendret |
-| Personalmøte 2 (15:45) | inkluderer natt | **ekskluder natt** |
-| Legging (22:00–01:00) | ekskluderer natt | uendret |
+| `legging` (slutt 01:00) → `personalmoete` 10:45 neste dag | 9t 45m | ~17 ledere (team1+team2) |
+| `nattevakt` (slutt 05:00) → `okt1` 11:00 neste dag | 6t | 2 ledere |
+| `legging_ankomst` (slutt 01:00 dag 1) → PM1 dag 1 | 9t 45m | 17 ledere |
 
-Konkret: legg til `...p.natt` i `excluded`-arrayene for `personalmoete` (linje 438, kun `p.morning18`-pushet), og `personalmoete2` (linje 458, kun `p.morning18`-pushet).
+Over 7 dager → 60+ brudd.
 
-For `personalmoete2` som i dag pusher alle 4 team i en løkke, splittes den slik at `p.morning18` får `p.natt` ekskludert mens de andre tre teamene pushes som før.
+## Reglene som skal håndheves
 
-**8t-cap-håndtering:** `dayHoursIfAdded`-sjekken vil ellers automatisk ekskludere nattevakt fra alle tunge vakter (Økt 1 inkludert) når nattevakta legges inn først. For å beholde Økt 1 som eneste tillatte fellesvakt, hever vi taket til 8,6 t spesifikt for nattevakt-personer den dagen — eller (enklere) lar vi nattevakt-paret få et fast unntak fra cap-sjekken på den dagen de har nattevakt. Implementeres ved å registrere et `nattLeaderIds: Set<string>` per dag og hoppe over cap-sjekken i `pushTeam` for disse på `okt1`.
+**A. Legging-ledere (slutter 01:00):** Har fri til **PM2 (15:45)** neste dag. Skal ikke plasseres i: vekking, frokost, PM1, økt1, middag, bings/seilern/morgenvakt/kjøkken neste dag.
 
-## Endring i `src/lib/exportShiftScheduleXlsx.ts`
+**B. Tidligvakt-unntak:** Én leder per team som har "tidlig morgen" neste dag (PM1 10:45) skal **ikke** gjøre legging — i stedet **slutte 23:45** dagen før (okt3 forkortes til 23:45, eller egen "tidligvakt-avslutning"). Sikrer 11t hvile (23:45 → 10:45 = 11t).
 
-Oppdater linje 197:
+**C. Nattevakt-ledere (slutter 05:00):** Har fri til **etter 16:00** neste dag. Skal ikke plasseres i noe før okt2 (16:00). 11t hvile fra 05:00 = 16:00, så okt2-start er OK.
 
-```diff
-- '***** De som jobbet Økt 1 jobber IKKE legging',
-+ '***** Den som jobbet første økt jobber IKKE legging',
+## Endringer
+
+### `supabase/functions/generate-shift-schedule/index.ts`
+
+1. **Track per dag hvem som var i legging og nattevakt forrige dag.** Bygg `prevLeggingIds: Set<string>` og `prevNattIds: Set<string>` ved starten av hver dag-iterasjon basert på allerede pushede vakter.
+
+2. **Ekskluder `prevLeggingIds` fra disse team-vaktene på gjeldende dag** (legg til i `excluded`-array i hvert `pushTeam`-kall):
+   - `vekking` (08:30)
+   - `frokost` (09:00)
+   - `personalmoete` (10:45)
+   - `okt1` (11:00)
+   - `middag` (14:00)
+   
+   Også for leder-vakter samme tidspunkt: hopp over kandidater i `prevLeggingIds` (morgenvakt, frokost-leder, bings_morgen, seilern_box, kjokkenvakt).
+
+3. **Ekskluder `prevNattIds` fra alle vakter før kl 16:00** på gjeldende dag — i praksis alt unntatt `personalmoete2`, `okt2` og senere.
+
+4. **Tidligvakt-mekanisme for legging-dagen:**
+   - Når `legging` (22:00–01:00) skal pushes for et team, identifiser én leder som *trengs* i PM1 neste dag (en "kandidat for tidligvakt").
+   - Ekskluder denne lederen fra `legging`. I stedet: opprett spesiell vakt-tildeling — enten ny `shift_type` `okt3_tidlig` (20:30–23:45, 3.25t) eller forkort `okt3` for kun denne lederen.
+   - Enkleste implementasjon: pushe `okt3` som vanlig (slutter 00:00), men ekskluder tidligvakt-lederen fra `okt3` og legg dem på en ny `tidligvakt_avslutning`-vakt (f.eks. 22:00–23:45). Krever ny rad i `shift_types`.
+   - Alternativ enklere variant: definer at "tidligvakt" kun teller innen okt3 og at lederen avslutter 23:45 — registrer som `okt3` med `note: 'avslutter 23:45'` og la validator se på `note` og redusere endAbs. (Mindre ren, men ingen schema-endring.)
+
+### `supabase/functions/revalidate-shift-schedule/index.ts`
+
+Speil samme `prevLeggingIds`/`prevNattIds`-logikk hvis vi velger å *undertrykke* advarsler i stedet for å fikse generatoren — men anbefalt: la validator forbli streng, og fikse generatoren slik at bruddene aldri oppstår.
+
+Hvis vi tar `note`-varianten for tidligvakt: validator må parse `note` og bruke 23:45 som faktisk slutt for `okt3`-tildelinger med den noten.
+
+### Migrasjon (kun hvis vi velger ny shift_type)
+
+```sql
+INSERT INTO shift_types (slug, name, day_type, start_time, end_time, duration_hours, sort_order)
+VALUES ('tidligvakt_avslutning', 'Tidligvakt (avslutter 23:45)', 'normal', '22:00', '23:45', 1.75, 95);
 ```
 
-(De fire andre asterisk-linjene matcher allerede ønsket tekst.)
+## Beslutningspunkter før implementasjon
 
-## Resultat per nattevakt-person på en normal dag
+1. **Tidligvakt-modell:** Ny `shift_type` (renere, krever migrasjon) eller `note` på eksisterende `okt3` (ingen schema-endring, validator må endres)?
+2. **Hvor mange tidligvakt-ledere per team?** Én totalt, eller én per team (team1 + team2 = 2)?
+3. **Skal "tidligvakt" rotere** mellom ledere over perioden, eller kan samme person ha det flere dager?
 
-| Vakt | Tid | Timer |
-|---|---|---|
-| Økt 1 | 11:00–14:00 | 3,00 |
-| Nattevakt | 23:30–05:00 | 5,50 |
-| **Sum** | | **8,50** |
+## Forventet resultat
 
-`8h_max`-advarsel undertrykkes for nattevakt-personer på dagen de har natt (8,5 t er regelen). 11t-hvile fortsatt validert som før.
-
-## Hva vi ikke endrer
-
-- Frokostvakts ekskludering fra middag (`*`) — beholdes.
-- Bings-, morgen- og kjøkkenvakts logikk — uendret.
-- Sanitas-paret (eget pushLeader 23:30–01:00) — uendret.
-- F-team 21:00-regel og 11t-hvile — uendret.
+Etter implementasjon: 65 → ~0 advarsler (alle 11t-brudd løst ved riktig ekskludering). Eventuelle gjenværende advarsler er reelle problemer som krever manuell håndtering.
