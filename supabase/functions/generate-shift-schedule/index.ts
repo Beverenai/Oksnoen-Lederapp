@@ -115,6 +115,7 @@ Deno.serve(async (req) => {
     const period_number = Number(body.period_number);
     const year = Number(body.year ?? 2026);
     const period_length = Number(body.period_length ?? 7);
+    const force_regenerate = Boolean(body.force_regenerate);
 
     if (!period_number || period_number < 1 || period_number > 20) {
       return new Response(JSON.stringify({ error: 'period_number must be 1-20' }), {
@@ -163,16 +164,23 @@ Deno.serve(async (req) => {
       return v;
     };
 
-    // Schedule row (replace existing draft, refuse if published)
+    // Schedule row (replace existing draft, refuse if published unless force_regenerate)
     const { data: existing } = await admin.from('shift_schedules')
       .select('id, status').eq('period_number', period_number).eq('year', year).maybeSingle();
-    if (existing && existing.status === 'published') {
+    if (existing && existing.status === 'published' && !force_regenerate) {
       return new Response(JSON.stringify({ error: 'Period is published — archive first to regenerate' }), {
         status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
     let scheduleId: string;
     if (existing) {
+      if (existing.status === 'published' && force_regenerate) {
+        const { error: archiveErr } = await admin
+          .from('shift_schedules')
+          .update({ status: 'archived' })
+          .eq('id', existing.id);
+        if (archiveErr) throw archiveErr;
+      }
       await admin.from('shift_assignments').delete().eq('schedule_id', existing.id);
       await admin.from('special_duties').delete().eq('schedule_id', existing.id);
       await admin.from('shift_schedules').update({
