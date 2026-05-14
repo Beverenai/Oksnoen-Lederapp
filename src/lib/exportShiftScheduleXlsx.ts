@@ -196,26 +196,8 @@ export async function exportShiftScheduleXlsx(opts: {
 
     ROW_TEAMS.forEach((team, ri) => {
       const r = currentRow + ri;
-      normalTypes.forEach((st, i) => {
-        const cell = ws.getCell(r, i + 2);
-        const { text, filled } = teamCellForShift(dayAss, st, team, leaderById);
-        cell.value = text;
-        if (filled) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAM_FILL[team] } };
-          cell.font = {
-            color: { argb: team === 'team1f' ? 'FF000000' : 'FFFFFFFF' },
-            bold: true,
-            size: 9,
-          };
-        }
-        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-        cell.border = {
-          top: ri === 0 ? topDivider : thinBorder,
-          bottom: thinBorder,
-          left: thinBorder,
-          right: thinBorder,
-        };
-      });
+      const cells = normalTypes.map((st) => teamCellForShift(dayAss, st, team, leaderById));
+      writeTeamRowMerged(ws, r, 2, cells, team, ri === 0 ? topDivider : thinBorder, thinBorder);
     });
 
     // Merged day-name cell in column A
