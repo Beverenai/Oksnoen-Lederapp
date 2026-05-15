@@ -680,17 +680,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </nav>
       </div>
 
-      {/* Mobile Top Tab Bar — horizontal scrollable tabs under header */}
+      {/* Mobile Bottom Nav — fixed til bunnen, fyller hele safe-area */}
       {!mobileMenuOpen && (
-        <div
+        <nav
           ref={tabBarRef}
-          className="lg:hidden top-tabs scrollbar-hide"
-          style={{
-            top: `calc(56px + var(--safe-top))`,
-            transform: headerVisible ? 'translateY(0)' : 'translateY(calc(-100% - 56px - var(--safe-top)))',
-          }}
+          className="lg:hidden bottom-nav-fixed bottom-nav"
+          aria-label="Hovednavigasjon"
         >
-          <div className="flex items-stretch h-full px-2 min-w-full w-max">
+          <div className="flex items-stretch justify-around h-[var(--nav-h)] px-1">
             {getBottomNavItems(isAdmin, isNurse).map((item) => {
               const isActive = item.isHajolo ? false : location.pathname === item.to;
 
@@ -704,18 +701,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
                           hapticImpact('medium');
                           handleHajoloClick();
                         }}
-                        className="flex items-center gap-1.5 px-3 py-2 whitespace-nowrap relative"
+                        className="flex flex-col items-center justify-center gap-0.5 flex-1 relative"
                       >
-                        <Check className={cn('w-4 h-4', hasRead ? 'text-primary' : 'text-destructive')} strokeWidth={2.5} />
-                        <span className={cn('text-sm font-semibold', hasRead ? 'text-primary' : 'text-destructive')}>
+                        <Check className={cn('w-5 h-5', hasRead ? 'text-primary' : 'text-destructive')} strokeWidth={2.5} />
+                        <span className={cn('text-[10px] font-semibold leading-none', hasRead ? 'text-primary' : 'text-destructive')}>
                           {hasRead ? 'Bekreftet' : 'Hajolo'}
                         </span>
                         {!hasRead && (
-                          <span className="w-2 h-2 bg-destructive rounded-full animate-pulse ml-0.5" />
+                          <span className="absolute top-1 right-1/3 w-2 h-2 bg-destructive rounded-full animate-pulse" />
                         )}
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent side="bottom" className="max-w-[280px] p-4" sideOffset={8}>
+                    <PopoverContent side="top" className="max-w-[280px] p-4" sideOffset={8}>
                       <div className="text-center space-y-3">
                         <p className="text-sm font-semibold">Hva er Hajolo-knappen?</p>
                         <p className="text-xs text-muted-foreground leading-relaxed">
@@ -740,39 +737,36 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   data-active={isActive}
                   onClick={() => hapticImpact('light')}
                   className={cn(
-                    'flex items-center gap-1.5 px-3 py-2 whitespace-nowrap relative transition-colors border-b-2',
-                    isActive
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground/80'
+                    'flex flex-col items-center justify-center gap-0.5 flex-1 relative transition-colors',
+                    isActive ? 'text-primary' : 'text-muted-foreground/80'
                   )}
                 >
-                  <item.icon className="w-4 h-4" strokeWidth={isActive ? 2.5 : 2} />
-                  <span className={cn('text-sm', isActive ? 'font-semibold' : 'font-medium')}>
+                  <item.icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+                  <span className={cn('text-[10px] leading-none', isActive ? 'font-semibold' : 'font-medium')}>
                     {item.label}
                   </span>
                   {isHomeWithUnread && (
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full animate-pulse" />
+                    <span className="absolute top-1 right-1/3 w-2 h-2 bg-destructive rounded-full animate-pulse" />
                   )}
                 </NavLink>
               );
             })}
           </div>
-        </div>
+        </nav>
       )}
 
       {/* Main Content — body/window scrolls natively for proper iOS PWA height */}
       <main 
         ref={scrollContainerRef}
-        className="lg:pl-64 lg:pt-0 flex-1 w-full min-w-0 lg:min-h-[100dvh] overflow-x-hidden max-w-full"
+        className="lg:pl-64 lg:pt-0 flex-1 w-full min-w-0 overflow-x-hidden max-w-full"
+        style={{
+          paddingBottom: 'calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px)',
+        }}
       >
-        {/* Spacer for mobile header - animates with header visibility */}
-        <div 
-          className={cn(
-            "lg:hidden transition-all duration-300 ease-out shrink-0",
-          )}
-          style={{
-            height: headerVisible ? 'calc(56px + var(--safe-top) + 44px)' : '0'
-          }}
+        {/* Spacer for fixed mobile header */}
+        <div
+          className="lg:hidden shrink-0"
+          style={{ height: 'calc(56px + var(--safe-top))' }}
         />
         <div className="p-4 lg:p-6 min-w-0 w-full">
           {children}
