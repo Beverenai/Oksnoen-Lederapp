@@ -381,14 +381,18 @@ header, nav {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  /* Bruk visualViewport-offset (satt fra JS) så menyen følger faktisk synlig viewport
+     i stedet for layout-viewport. Default 0 hvis ikke satt. */
+  bottom: var(--vv-bottom-offset, 0px);
   z-index: 40;
   background: hsl(var(--card) / 0.95);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border-top: 0.5px solid hsl(var(--border) / 0.5);
-  /* Pill innhold sitter trygt over home-indicator, bakgrunnen går helt ned */
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* Trekk pillen så langt ned som mulig — beholder kun et minimum (8px) over
+     home-indicator slik at knappene fortsatt er trykkbare. Bakgrunnen fyller
+     hele safe-area under. */
+  padding-bottom: max(env(safe-area-inset-bottom, 0px) - 20px, 4px);
   will-change: transform;
   transition: transform 300ms ease-out;
 }
