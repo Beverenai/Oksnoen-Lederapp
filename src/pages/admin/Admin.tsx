@@ -20,7 +20,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
 import { LeaderListView } from '@/components/admin/LeaderListView';
 import type { Tables } from '@/integrations/supabase/types';
-import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 
 type Leader = Tables<'leaders'>;
