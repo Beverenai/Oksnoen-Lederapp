@@ -75,7 +75,7 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
             )}
           </div>
 
-          {hasObs && (
+          {hasObs && !isAdminOrNurse && (
             <span className="sm:hidden w-2.5 h-2.5 rounded-full bg-destructive shrink-0 animate-pulse" title="OBS-melding" />
           )}
 
