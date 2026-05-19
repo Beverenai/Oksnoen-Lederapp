@@ -1,40 +1,55 @@
-## Hyttefilter + custom aktivitet i masseregistrering
+# Fiks bunnmenyen i iOS PWA
 
-**Fil:** `src/components/passport/BulkActivityRegistration.tsx`
+## Diagnose
 
-### 1. Custom aktivitet
-Legg til en "Egendefinert"-rad nederst i `<Select>` for aktivitet. Når valgt, vises et `<Input>` der lederen skriver inn fritt navn på aktiviteten (validert: trimmet, 1–60 tegn).
+Du har helt rett i analysen. To ting er allerede på plass:
 
-Endringer:
-- Ny state: `const [isCustom, setIsCustom] = useState(false)` og `const [customName, setCustomName] = useState('')`.
-- `Select.onValueChange`: hvis verdien er `'__custom__'` → `setIsCustom(true); setSelectedActivity('')`. Ellers → `setIsCustom(false); setSelectedActivity(value)`.
-- Når `isCustom`, render `<Input placeholder="Skriv aktivitetsnavn..." maxLength={60} value={customName} onChange={...}>` rett under selecten. `selectedActivity` settes (debounced via onChange) til `customName.trim()`.
-- `handleSubmit` bruker `selectedActivity` som før — siden tekststrengen lagres direkte i `participant_activities.activity`, krever det ingen DB-endring.
-- Filter "har gjort allerede" overhopper custom-treff bare hvis navnet er identisk (case-insensitive) — eksisterende logikk dekker dette.
+- `viewport-fit=cover` ✅ (linje 5 i `index.html`)
+- `.bottom-nav-fixed` har `padding-bottom: calc(8px + var(--pwa-safe-bottom, env(safe-area-inset-bottom, 34px)))` ✅
+- JS-probe i `AppLayout.tsx` setter `--pwa-safe-bottom` dynamisk for iOS 26-bugen ✅
 
-### 2. Hyttefilter
-Legg en `<Select>` for hytte ved siden av søkefeltet (eller over deltakerlisten).
+**Det som mangler — og som forklarer "menyen skjules under skjermkanten":**
 
-- Beregn `availableCabins` via `useMemo`: unike `participant.cabins?.name` fra inputlisten, sortert med `localeCompare('nb')`.
-- Ny state: `const [cabinFilter, setCabinFilter] = useState<string>('all')`.
-- Select-verdier: `"all"` (Alle hytter) + én rad per hytte + `"none"` (Uten hytte).
-- I `filteredParticipants`: legg til `matchesCabin`:
-  ```
-  const matchesCabin =
-    cabinFilter === 'all' ||
-    (cabinFilter === 'none' && !p.cabins?.name) ||
-    p.cabins?.name === cabinFilter;
-  ```
-- Vises som chip-row over deltakerlisten, justert med søkefeltet. Bruker eksisterende `<Select>`-komponent.
+`index.html` peker på `<link rel="manifest" href="/manifest.webmanifest" />`, men **filen finnes ikke** i `public/`. Resultat:
 
-### Layout-rekkefølge i kortet
-1. Aktivitet-velger (med "Egendefinert"-rad)
-2. Input for custom navn (kun hvis valgt)
-3. Søk (deltaker)
-4. Hyttefilter-select
-5. "Velg alle / Fjern valg"
-6. Deltakerliste
-7. Registrer-knapp (bruker `selectedActivity` direkte)
+- iOS PWA installeres uten manifest-`background_color` → faller tilbake til hvit/transparent
+- Området under bunnmenyen (safe-area) viser PWA-vinduets bakgrunn — ikke menyen din
+- Det ser ut som menyen er klippet av, men det er egentlig en hvit/lys stripe under menyens mørke flate
 
-### Ikke berørt
-- DB-skjema (`participant_activities.activity` er fri tekst), RLS, andre sider, `PassportActivity.tsx`-wrapperen.
+Dette stemmer 100% med rådet ditt: *"the gap is actually the background of the PWA window showing through"*.
+
+## Endringer
+
+### 1. Ny fil: `public/manifest.webmanifest`
+
+Lager manifest med:
+- `name`, `short_name`: "Øksnøen Leder", "Øksnøen"
+- `start_url`: `/`
+- `scope`: `/`
+- `display`: `standalone`
+- `orientation`: `portrait`
+- `background_color`: `#0a0f1c` (matcher `<meta name="theme-color">` og mørk bakgrunn — ingen synlig stripe)
+- `theme_color`: `#0a0f1c`
+- `icons`: alle eksisterende `pwa-*.png` (72→512) + `app-icon-1024.png` som `maskable`
+
+### 2. `index.html` (mindre justering)
+
+Bekrefte at `<meta name="theme-color">` er `#0a0f1c` (allerede tilfellet). Ingen kode-endring nødvendig der.
+
+### 3. Ingenting i `src/index.css` eller `AppLayout.tsx`
+
+Eksisterende safe-area-logikk er korrekt. Problemet er ikke i CSS-en — det er PWA-vinduets background_color som lekker gjennom.
+
+## Viktig for deg etter deploy
+
+iOS cacher manifest **ved installasjon**. Eksisterende installerte PWA-er fortsetter å vise hvit stripe selv etter ny deploy. For at fiksen skal vises må du:
+
+1. Slett appen fra hjemskjermen
+2. Åpne `app.oksnoen.com` i Safari på nytt
+3. Del → "Legg til på Hjem-skjerm"
+
+Etter reinstall blir safe-area-området under menyen mørkt og menyen ser sammenhengende ut.
+
+## Teknisk note
+
+Vi bruker `.webmanifest`-endelsen fordi `index.html` allerede refererer til den. Alternativt kunne vi byttet både filnavn og lenke til `manifest.json`, men det er unødvendig — `.webmanifest` er den offisielle MIME-typen (`application/manifest+json`).
