@@ -1,41 +1,31 @@
-## 1. Profilbilder fyller hele ringen
+## Bygg "Ren hierarki"-kortet i `src/pages/Leaders.tsx`
 
-**Fil:** `src/components/ui/avatar.tsx` (linje 22)
+Erstatter dagens leder-kort (linje 505–586) med valgt prototype-struktur. Beholder all eksisterende data, ring-farge-logikk, telefon-handler og semantiske tokens.
 
-Den globale CSS-regelen `img { object-fit: contain }` i `index.css` overstyrer Radix sin standard, så bildene letterboxes inni avataren (synlig gap mellom bilde og fargeringen).
+### Struktur (matcher valgt prototype)
 
-Fiks: legg `object-cover` på `AvatarImage`-default:
-```tsx
-<AvatarPrimitive.Image
-  ref={ref}
-  className={cn("aspect-square h-full w-full object-cover", className)}
-  {...props}
-/>
+```
+Card  rounded-[24px]  shadow-sm  p-4
+ └ flex items-center gap-4
+    ├ Avatar 64×64  ring + ring-offset-2
+    ├ Info (flex-1)
+    │   ├ Navn      text-[17px] font-bold
+    │   └ Minister  text-[11px] uppercase tracking-wider text-muted-foreground
+    │   ├ Chips     h-4 rounded-md text-[10px] font-bold  (team m/farge + hytte m/Home-ikon)
+    │   └ Aktivitet pt-1 border-t  •  grønn pulserende prikk + text-sm font-semibold
+    └ Actions (gap-3)
+        ├ Nurse-kors  22×22 (kun hvis isNurse)
+        └ Telefon     w-11 h-11 grønn rund, shadow, active:scale-90
 ```
 
-Dette gjelder hele appen automatisk — alle steder som bruker `<AvatarImage>` får riktig fylt rundt bilde.
+### Konkrete endringer
+- **Card**: `rounded-[24px] shadow-sm border-slate-100`, CardContent `p-4`, root `flex items-center gap-4`.
+- **Avatar**: `w-12 h-12` → `w-16 h-16` + `ring-offset-2 ring-offset-background`. Beholder `getAvatarBorderClass(leader)` (sjef=grønn, nurse, has_read osv.). Fallback får `font-semibold`.
+- **Navn**: `text-lg` → `text-[17px] font-bold` i `<h3>` for semantikk.
+- **Ministerpost**: kompakt meta — `text-[11px] font-medium uppercase tracking-wider text-muted-foreground`.
+- **Chips**: byttes fra `<Badge>` til kompakt span med fast `h-4`, `rounded-md`, `text-[10px] font-bold`. Team-chip beholder `getTeamStyles()` for farge. Hytte-chip bruker `bg-muted`/`border-border` (semantiske tokens) + `Home` 10×10 ikon.
+- **Aktivitet**: står alene under chips med `pt-1 border-t border-border/50`, prefiks med `1.5×1.5` grønn `animate-pulse` prikk, tekst `text-sm font-semibold` med truncate.
+- **Actions-kolonne**: ny `flex items-center gap-3 shrink-0` som grupperer nurse-kors + telefon. Telefon-knappen vokser fra `h-9 w-9` → `h-11 w-11`, ikon 20px, `shadow-md`, `active:scale-90 transition-transform`.
 
-## 2. Team + hytte over aktiviteten + kompakt team-badge
-
-**Fil:** `src/pages/Leaders.tsx`
-
-**a. Kompakt team-label** (linje 74–81): Endre `formatTeamDisplay` til kun å returnere short-koden:
-```ts
-const formatTeamDisplay = (team: string | null): string => {
-  if (!team) return '';
-  const t = team.trim();
-  if (['1', '2', '1f', '2f'].includes(t.toLowerCase())) return t.toUpperCase();
-  return t; // 'Kjøkken', 'Kordinator' osv. uendret
-};
-```
-Resultat: i kortet vises bare "1", "2", "1F", "2F" med team-farge — tar minimal plass.
-
-**b. Flytt badges over aktivitet** (linje 519–562): Rekkefølge på info-kolonnen:
-1. Navn (uendret)
-2. Ministerpost (uendret)
-3. **Badges** (team + hytte) — flytt opp fra under aktiviteten, plasseres rett under ministerpost med `mt-1.5`.
-4. Aktivitet — beholder skillelinjen (`mt-2 pt-2 border-t border-border/50`) under badges.
-
-## Ikke endret
-- Ring-farge-logikk, telefonknapp, sortering, filtre, backend.
-- Andre avatar-bruk fortsetter å fungere — de drar fordel av samme fiks.
+### Ikke berørt
+- `getAvatarBorderClass`, `getTeamStyles`, `formatTeamDisplay`, `formatCabinsDisplay`, sortering, filtre, "Fri"-separator, tom-tilstand, sheet-åpning, telefon-handler, RLS/backend.
