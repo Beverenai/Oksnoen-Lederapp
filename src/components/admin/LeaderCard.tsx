@@ -129,6 +129,8 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
               <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
               <span className="text-[11px] truncate">{content?.obs_message}</span>
             </div>
+          ) : isAdminOrNurse ? (
+            <span className="text-[11px] text-muted-foreground/60" />
           ) : (
             <span className="text-[11px] text-muted-foreground/60">
               {content?.has_read ? 'Lest' : 'Ulest'}
