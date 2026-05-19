@@ -780,9 +780,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <nav
           ref={tabBarRef}
           className="lg:hidden bottom-nav-fixed bottom-nav box-content transition-transform duration-300 ease-out will-change-transform"
-          style={{
-            transform: headerVisible ? 'translateY(0)' : 'translateY(calc(100% + var(--safe-bottom, 0px)))',
-          }}
           aria-label="Hovednavigasjon"
         >
           <div className="flex items-stretch justify-around px-1">
