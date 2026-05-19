@@ -4,9 +4,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, RefreshCw, Save, FileSpreadsheet, Check, AlertTriangle, Eye } from 'lucide-react';
+import { Loader2, RefreshCw, Save, FileSpreadsheet, Check, AlertTriangle, Eye, ClipboardPaste, Eraser } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { PasteLeaderContentSheet } from '@/components/admin/PasteLeaderContentSheet';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import type { Tables } from '@/integrations/supabase/types';
+
+type Leader = Tables<'leaders'>;
 
 interface SyncResult {
   preview?: boolean;
@@ -29,6 +44,15 @@ export function GoogleSheetSyncTab() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [result, setResult] = useState<SyncResult | null>(null);
+  const [leaders, setLeaders] = useState<Leader[]>([]);
+  const [isPasteSheetOpen, setIsPasteSheetOpen] = useState(false);
+  const [isClearAllOpen, setIsClearAllOpen] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
+
+  const loadLeaders = async () => {
+    const { data } = await supabase.from('leaders').select('*').order('created_at');
+    setLeaders(data || []);
+  };
 
   useEffect(() => {
     (async () => {
@@ -41,9 +65,40 @@ export function GoogleSheetSyncTab() {
           if (cfg.lastSyncAt) setLastSyncAt(cfg.lastSyncAt);
         } catch { /* ignore */ }
       }
+      await loadLeaders();
       setIsLoading(false);
     })();
   }, []);
+
+  const handleClearAllDailyFields = async () => {
+    setIsClearingAll(true);
+    try {
+      const { error, count } = await supabase
+        .from('leader_content')
+        .update({
+          current_activity: null,
+          extra_activity: null,
+          personal_notes: null,
+          obs_message: null,
+          extra_2: null,
+          extra_3: null,
+          extra_4: null,
+          extra_5: null,
+          updated_at: new Date().toISOString(),
+        }, { count: 'exact' })
+        .not('leader_id', 'is', null);
+      if (error) throw error;
+      hapticSuccess();
+      showSuccess(`Tømte daglige felt for ${count ?? 'alle'} ledere`);
+      setIsClearAllOpen(false);
+    } catch (err) {
+      console.error('Clear all error:', err);
+      hapticError();
+      showError('Kunne ikke tømme felt');
+    } finally {
+      setIsClearingAll(false);
+    }
+  };
 
   const handleSaveConfig = async () => {
     setIsSaving(true);
@@ -207,6 +262,61 @@ export function GoogleSheetSyncTab() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ClipboardPaste className="w-4 h-4" />
+            Manuelle verktøy
+          </CardTitle>
+          <CardDescription>
+            Alternative måter å oppdatere lederdata på.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setIsPasteSheetOpen(true)}>
+            <ClipboardPaste className="w-4 h-4 mr-2" />
+            Lim inn rader
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setIsClearAllOpen(true)}
+            className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Eraser className="w-4 h-4 mr-2" />
+            Tøm daglige felt for alle ledere
+          </Button>
+        </CardContent>
+      </Card>
+
+      <PasteLeaderContentSheet
+        open={isPasteSheetOpen}
+        onOpenChange={setIsPasteSheetOpen}
+        leaders={leaders}
+        onSaved={loadLeaders}
+      />
+
+      <AlertDialog open={isClearAllOpen} onOpenChange={setIsClearAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tøm daglige felt for ALLE ledere?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dette tømmer nåværende aktivitet, ekstra aktivitet, notat til lederen, OBS-melding og ekstra info 2–5 for samtlige ledere. Team, hytte, ministerpost og overnatting (ekstra 1) beholdes. Handlingen kan ikke angres.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isClearingAll}>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleClearAllDailyFields(); }}
+              disabled={isClearingAll}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isClearingAll ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Eraser className="w-4 h-4 mr-2" />}
+              Ja, tøm alle
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
