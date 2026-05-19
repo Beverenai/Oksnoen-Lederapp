@@ -26,6 +26,7 @@ import { ActivitiesTab } from '@/components/admin/ActivitiesTab';
 import { SkjaerTab } from '@/components/admin/SkjaerTab';
 import { StoriesTab } from '@/components/admin/StoriesTab';
 import { LeaderImportDialog } from '@/components/admin/LeaderImportDialog';
+import { GoogleSheetSyncTab } from '@/components/admin/GoogleSheetSyncTab';
 const HomeConfigTab = lazy(() => import('@/components/admin/HomeConfigTab'));
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -304,6 +305,9 @@ export function AdminSettingsContent({
 
     case 'stories':
       return <StoriesTab />;
+
+    case 'google-sheet':
+      return <GoogleSheetSyncTab />;
 
     case 'home-config':
       return (

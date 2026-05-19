@@ -19,6 +19,7 @@ import {
   MapIcon,
   BookOpen,
   LayoutGrid,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
@@ -47,12 +48,14 @@ const navItems = [
   { key: 'push', label: 'Push-varsler', desc: 'Send push-varsler', icon: Bell, color: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' },
   { key: 'rope-control', label: 'Tau-kontroll', desc: 'Tau-kontroll oppsett', icon: Anchor, color: 'bg-red-500/15 text-red-600 dark:text-red-400' },
   { key: 'home-config', label: 'Hjemskjerm', desc: 'Tittel, ikon og synlighet', icon: LayoutGrid, color: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400' },
+  { key: 'google-sheet', label: 'Google Sheet sync', desc: 'Synk ledere fra Google Sheet', icon: FileSpreadsheet, color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
 ];
 
 const sectionLabels: Record<string, string> = {
   leaders: 'Ledere', participants: 'Deltakere', cabins: 'Hytter', schedule: 'Vaktplan',
   activities: 'Aktiviteter', skjaer: 'Skjær', stories: 'Historier', push: 'Push-varsler',
   'rope-control': 'Tau-kontroll', 'home-config': 'Hjemskjerm-elementer',
+  'google-sheet': 'Google Sheet sync',
 };
 
 export default function AdminSettings() {
