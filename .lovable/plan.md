@@ -1,55 +1,41 @@
-# Fiks bunnmenyen i iOS PWA
+# Bunnmeny: fit-content høyde med padding + safe-area
 
 ## Diagnose
 
-Du har helt rett i analysen. To ting er allerede på plass:
+I dag:
+- `src/index.css` line 20: `--nav-h: 49px` (hardkodet)
+- `AppLayout.tsx` line 763: indre `<div>` har `h-[var(--nav-h)]` → tvinger fast høyde
+- `.bottom-nav-fixed` (index.css line 400) har bare `padding-bottom: calc(8px + safe-area)` — ingen top-padding
+- `main` (line 836) reserverer plass med `var(--nav-h) + env(safe-area-inset-bottom) + 12px`
 
-- `viewport-fit=cover` ✅ (linje 5 i `index.html`)
-- `.bottom-nav-fixed` har `padding-bottom: calc(8px + var(--pwa-safe-bottom, env(safe-area-inset-bottom, 34px)))` ✅
-- JS-probe i `AppLayout.tsx` setter `--pwa-safe-bottom` dynamisk for iOS 26-bugen ✅
-
-**Det som mangler — og som forklarer "menyen skjules under skjermkanten":**
-
-`index.html` peker på `<link rel="manifest" href="/manifest.webmanifest" />`, men **filen finnes ikke** i `public/`. Resultat:
-
-- iOS PWA installeres uten manifest-`background_color` → faller tilbake til hvit/transparent
-- Området under bunnmenyen (safe-area) viser PWA-vinduets bakgrunn — ikke menyen din
-- Det ser ut som menyen er klippet av, men det er egentlig en hvit/lys stripe under menyens mørke flate
-
-Dette stemmer 100% med rådet ditt: *"the gap is actually the background of the PWA window showing through"*.
+Resultat: ikoner/labels klippes hvis innholdet er høyere enn 49px, og det er ingen luftig topp-padding.
 
 ## Endringer
 
-### 1. Ny fil: `public/manifest.webmanifest`
+### 1. `src/components/layout/AppLayout.tsx` (line 763)
+Fjern `h-[var(--nav-h)]` på indre `<div>` → la innholdet definere høyden:
+```
+<div className="flex items-stretch justify-around px-1">
+```
 
-Lager manifest med:
-- `name`, `short_name`: "Øksnøen Leder", "Øksnøen"
-- `start_url`: `/`
-- `scope`: `/`
-- `display`: `standalone`
-- `orientation`: `portrait`
-- `background_color`: `#0a0f1c` (matcher `<meta name="theme-color">` og mørk bakgrunn — ingen synlig stripe)
-- `theme_color`: `#0a0f1c`
-- `icons`: alle eksisterende `pwa-*.png` (72→512) + `app-icon-1024.png` som `maskable`
+### 2. `src/index.css` (`.bottom-nav-fixed`, ca. line 385-403)
+Legg til symmetrisk top-padding så menyen får luft over ikonene:
+```css
+padding-top: 10px;
+padding-bottom: calc(10px + var(--pwa-safe-bottom, env(safe-area-inset-bottom, 34px)));
+```
+(Bytter 8px → 10px begge veier for symmetri.)
 
-### 2. `index.html` (mindre justering)
+### 3. `src/components/layout/AppLayout.tsx` (line 836, `main` paddingBottom)
+`--nav-h` er ikke lenger korrekt — bunnmenyen kan variere. Erstatt med en `ResizeObserver` på `tabBarRef` som setter en CSS-var `--nav-actual-h` på `documentElement`, og bruk den her:
+```ts
+paddingBottom: 'calc(var(--nav-actual-h, 64px) + 12px)'
+```
+(Safe-area er allerede inkludert i menyens egen høyde via dens padding, så vi skal ikke dobbelttelle.)
 
-Bekrefte at `<meta name="theme-color">` er `#0a0f1c` (allerede tilfellet). Ingen kode-endring nødvendig der.
-
-### 3. Ingenting i `src/index.css` eller `AppLayout.tsx`
-
-Eksisterende safe-area-logikk er korrekt. Problemet er ikke i CSS-en — det er PWA-vinduets background_color som lekker gjennom.
-
-## Viktig for deg etter deploy
-
-iOS cacher manifest **ved installasjon**. Eksisterende installerte PWA-er fortsetter å vise hvit stripe selv etter ny deploy. For at fiksen skal vises må du:
-
-1. Slett appen fra hjemskjermen
-2. Åpne `app.oksnoen.com` i Safari på nytt
-3. Del → "Legg til på Hjem-skjerm"
-
-Etter reinstall blir safe-area-området under menyen mørkt og menyen ser sammenhengende ut.
+### 4. `src/index.css` (line 20)
+Behold `--nav-h: 49px` som fallback (brukes ikke aktivt etter dette, men noen debug-komponenter refererer det implisitt — trygt å la stå).
 
 ## Teknisk note
 
-Vi bruker `.webmanifest`-endelsen fordi `index.html` allerede refererer til den. Alternativt kunne vi byttet både filnavn og lenke til `manifest.json`, men det er unødvendig — `.webmanifest` er den offisielle MIME-typen (`application/manifest+json`).
+ResizeObserver-tilnærmingen sikrer at hovedinnhold alltid reserverer riktig plass uavhengig av faktisk menyhøyde (forskjellig font-rendering, dynamiske badges, fremtidige endringer). Initial verdi `64px` er trygt estimat før observer kjører.
