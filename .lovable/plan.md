@@ -1,26 +1,19 @@
-Tre endringer:
+## Problem
+Bunnmenyen viser et synlig gap under nav-pillen i PWA (skjermbilder 18:32 og 18:48). Selv om `.bottom-nav-fixed` allerede setter `box-sizing: content-box` i `src/index.css`, blir denne i praksis overstyrt/inkonsistent (Tailwind preflight + `*` universal-regel + inline transform-styling kan skape containing-block-issues hvor `padding-bottom: env(safe-area-inset-bottom)` ikke ekspanderer bakgrunnen som forventet).
 
-## 1. Standard lightmode på mobil
-- `src/App.tsx`: Endre `<ThemeProvider defaultTheme="system" enableSystem>` → `defaultTheme="light"` og fjern `enableSystem` (eller behold men la "light" være default). next-themes husker valg i localStorage, så Innstillinger-bryteren overstyrer fortsatt.
-- Innstillinger-skjermen (`ThemeSwitcher`) er allerede koblet til next-themes — ingen UI-endring nødvendig.
+Kjent fix (samme som daisyUI-issue #1732): tving `box-sizing: content-box` direkte på nav-elementet via Tailwind-klassen `box-content`.
 
-## 2. Bunnmeny skjules ved scroll (som toppmenyen)
-- `src/components/layout/AppLayout.tsx`: Bunnmenyen (`<nav className="bottom-nav-fixed">` rundt linje 755) bruker samme `headerVisible`-state som toppmenyen.
-- Legg til `style={{ transform: headerVisible ? 'translateY(0)' : 'translateY(calc(100% + var(--safe-bottom,0px)))' }}` og samme `transition-transform duration-300 ease-out will-change-transform`-klasser.
-- FAB-knappen (Hajolo midtknapp er allerede inni samme nav, så den følger med automatisk).
-- Scroll-thresholden (50px ned/10px delta) er allerede konfigurert — gjenbrukes.
+## Endring
 
-## 3. Litt større skala på iPhone
-- `src/index.css`: Legg til en media query som øker root font-size på mobile viewports (≤640px):
-  ```css
-  @media (max-width: 640px) {
-    :root { font-size: 17px; } /* default er 16px → ~6% større */
-  }
-  ```
-- Siden hele appen bruker `rem`-baserte Tailwind-tokens, skalerer dette knapper, tekst, padding og ikoner proporsjonalt uten å bryte layout.
-- Touch-targets (44px min på iOS) er allerede over minimum; dette gir bare litt ekstra luft.
+**`src/components/layout/AppLayout.tsx`** (linje 757):
+Legg til `box-content` i className-listen på `<nav>`:
+
+```tsx
+className="lg:hidden bottom-nav-fixed bottom-nav box-content transition-transform duration-300 ease-out will-change-transform"
+```
+
+Dette sikrer at `padding-bottom` (som inneholder safe-area-inset) legger seg utenpå nav-høyden i stedet for å bli klemt inn, så bakgrunnen til pillen strekker seg helt ned til skjermkanten under home-indikatoren.
 
 ## Ikke endret
-- Desktop-layout (sidebar) påvirkes ikke av font-size endringen siden den er ≥640px.
-- Eksisterende safe-area/100dvh-oppsett beholdes.
-- Backend, RLS, sync-funksjonalitet urørt.
+- CSS-tokens, safe-area-variabler, scroll-hide-logikk, FAB, backend.
+- `.bottom-nav-fixed`-regelen i `index.css` beholdes (defense in depth).

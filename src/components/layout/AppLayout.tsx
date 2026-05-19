@@ -754,7 +754,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {!mobileMenuOpen && (
         <nav
           ref={tabBarRef}
-          className="lg:hidden bottom-nav-fixed bottom-nav transition-transform duration-300 ease-out will-change-transform"
+          className="lg:hidden bottom-nav-fixed bottom-nav box-content transition-transform duration-300 ease-out will-change-transform"
           style={{
             transform: headerVisible ? 'translateY(0)' : 'translateY(calc(100% + var(--safe-bottom, 0px)))',
           }}
