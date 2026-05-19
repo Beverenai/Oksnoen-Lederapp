@@ -1,19 +1,31 @@
-## Problem
-Bunnmenyen viser et synlig gap under nav-pillen i PWA (skjermbilder 18:32 og 18:48). Selv om `.bottom-nav-fixed` allerede setter `box-sizing: content-box` i `src/index.css`, blir denne i praksis overstyrt/inkonsistent (Tailwind preflight + `*` universal-regel + inline transform-styling kan skape containing-block-issues hvor `padding-bottom: env(safe-area-inset-bottom)` ikke ekspanderer bakgrunnen som forventet).
+## 1. Ledere-listen — bedre hierarki + fjerne grønn aktivitets-ikon
 
-Kjent fix (samme som daisyUI-issue #1732): tving `box-sizing: content-box` direkte på nav-elementet via Tailwind-klassen `box-content`.
+**Fil:** `src/pages/Leaders.tsx` (linje 503–585)
 
-## Endring
+Endre kortet slik at det er tydeligere visuelt hierarki — navn er hovedinfo, aktivitet er nest viktigst, så metadata (post + badges) trer i bakgrunnen.
 
-**`src/components/layout/AppLayout.tsx`** (linje 757):
-Legg til `box-content` i className-listen på `<nav>`:
+- **Navn (linje 521–523):** behold `font-semibold`, øk til `text-base`/`text-lg` (litt større), beholder farge.
+- **Ministerpost (linje 525–529):** flytt opp som liten label-tekst (`text-[11px] uppercase tracking-wide text-muted-foreground`) over navnet — fungerer som "rolle-etikett" likt iOS subhead-mønster. Alternativt under navnet, men mindre og lysere.
+- **Aktivitet (linje 531–539):** Fjern `<Activity>`-ikonet. Vis bare teksten i `text-foreground font-bold text-base` (svart/foreground, ikke grønn primary). Beholder `mt-1.5` og `truncate`.
+- **Badges (linje 542–561):** krymp til `text-[10px]` (allerede) og bruk muted-stil — disse skal være sekundære.
+- **Telefonknapp:** uendret (grønn rund).
 
-```tsx
-className="lg:hidden bottom-nav-fixed bottom-nav box-content transition-transform duration-300 ease-out will-change-transform"
-```
+Resultat: Navn dominerer, aktivitet leses tydelig i fet svart uten ikon-støy, badges/post er rolig metadata.
 
-Dette sikrer at `padding-bottom` (som inneholder safe-area-inset) legger seg utenpå nav-høyden i stedet for å bli klemt inn, så bakgrunnen til pillen strekker seg helt ned til skjermkanten under home-indikatoren.
+## 2. Passkontroll — større "Aktivitet"-knapp som åpner egen side
+
+**Filer:**
+- `src/pages/Passport.tsx` (linje 367–399, 402–409)
+- `src/App.tsx` (rute-registrering)
+- Ny fil: `src/pages/PassportActivity.tsx`
+
+**Endringer:**
+- Bytt `size="sm"` → `size="default"` (eller `lg`) på Aktivitet-knappen, gjør den til primær variant så den skiller seg ut. Litt mer padding, tydeligere ikon.
+- Fjern `showBulkRegistration` toggle-state + inline `<BulkActivityRegistration>`-blokk. `onClick` navigerer i stedet til ny rute, f.eks. `/passkontor/aktivitet`.
+- Ny side `PassportActivity.tsx`: full-side wrapper som henter `participants` (gjenbruk samme query/hook som Passport bruker) og rendrer eksisterende `<BulkActivityRegistration>` på hel skjerm med tilbake-knapp som navigerer til `/passkontor`. `onComplete` → invalider query + navigate tilbake.
+- Registrer ruten i `src/App.tsx` ved siden av eksisterende `/passport`/`/passkontor`-rute (samme RoleGuard som Passport).
 
 ## Ikke endret
-- CSS-tokens, safe-area-variabler, scroll-hide-logikk, FAB, backend.
-- `.bottom-nav-fixed`-regelen i `index.css` beholdes (defense in depth).
+- Backend, RLS, sync, datahenting.
+- BulkActivityRegistration-komponenten internt (kun ny wrapper-side).
+- Andre handlinger på Passport (Viktig Info, Min hytte).
