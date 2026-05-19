@@ -1,37 +1,26 @@
-## Mål
-Sync fra Google Sheet skal speile arket: alle felter som er knyttet til hver leder via telefonnummer skal oppdateres — inkludert tomme celler som **tømmer** feltet i appen. Ledere som ikke finnes i arket forblir urørt.
+Tre endringer:
 
-## Endring i `supabase/functions/sync-leaders-from-sheet/index.ts`
+## 1. Standard lightmode på mobil
+- `src/App.tsx`: Endre `<ThemeProvider defaultTheme="system" enableSystem>` → `defaultTheme="light"` og fjern `enableSystem` (eller behold men la "light" være default). next-themes husker valg i localStorage, så Innstillinger-bryteren overstyrer fortsatt.
+- Innstillinger-skjermen (`ThemeSwitcher`) er allerede koblet til next-themes — ingen UI-endring nødvendig.
 
-### 1. Match KUN på telefon
-Fjern fallback til navne-match. Hvis raden ikke har telefon som matcher en aktiv leder → legges i `unmatched` og hoppes over.
+## 2. Bunnmeny skjules ved scroll (som toppmenyen)
+- `src/components/layout/AppLayout.tsx`: Bunnmenyen (`<nav className="bottom-nav-fixed">` rundt linje 755) bruker samme `headerVisible`-state som toppmenyen.
+- Legg til `style={{ transform: headerVisible ? 'translateY(0)' : 'translateY(calc(100% + var(--safe-bottom,0px)))' }}` og samme `transition-transform duration-300 ease-out will-change-transform`-klasser.
+- FAB-knappen (Hajolo midtknapp er allerede inni samme nav, så den følger med automatisk).
+- Scroll-thresholden (50px ned/10px delta) er allerede konfigurert — gjenbrukes.
 
-Begrunnelse: telefon er stabil nøkkel, navn endres / dupliseres. Bruker bekreftet "knyttet til telefonr".
-
-### 2. Tom celle = tøm felt (for alle synkede kolonner)
-I dag: linje 165 dropper tomme verdier (`if (v) vals[key] = v`). Endres til å beholde dem som `null`.
-
-For hver matchet leder, for hver kolonne som finnes i sheet-headeren:
-- Celle har verdi → sett feltet til verdien
-- Celle er tom → sett feltet til `null`
-- Kolonne finnes ikke i sheet → la feltet være urørt
-
-Gjelder begge tabeller:
-- **`leader_content`**: `current_activity`, `extra_activity` (Ansvar), `personal_notes` (Notater), `personal_message` (Til deg), `obs_message` (OBS!), `extra_1`–`extra_5`
-- **`leaders`**: `cabin` (Hytte Ansvar), `ministerpost`, `team`
-- **`phone`** og **`name`**: aldri tømmes (phone er match-nøkkel og NOT NULL; name er NOT NULL)
-
-### 3. Insert vs update for `leader_content`
-Hvis leder mangler `leader_content`-rad og raden i sheet bare har tomme verdier → ikke opprett tom rad (unngå støy). Bare oppdater hvis rad finnes, eller insert hvis minst én verdi er ikke-null.
-
-### 4. Ledere ikke i sheet
-Ingen endring — de forblir urørt (bekreftet av bruker).
-
-### 5. Response
-Returner som før: `saved`, `failed`, `unmatched`, `unknownHeaders`, `lastSyncAt`. Toast i Admin-UI fungerer uendret.
+## 3. Litt større skala på iPhone
+- `src/index.css`: Legg til en media query som øker root font-size på mobile viewports (≤640px):
+  ```css
+  @media (max-width: 640px) {
+    :root { font-size: 17px; } /* default er 16px → ~6% større */
+  }
+  ```
+- Siden hele appen bruker `rem`-baserte Tailwind-tokens, skalerer dette knapper, tekst, padding og ikoner proporsjonalt uten å bryte layout.
+- Touch-targets (44px min på iOS) er allerede over minimum; dette gir bare litt ekstra luft.
 
 ## Ikke endret
-- Frontend (`Admin.tsx` "Synk"-knapp, `GoogleSheetSyncTab.tsx` manuelle verktøy)
-- RLS, autentisering, admin-sjekk
-- HEADER_ALIASES (samme kolonne-navn støttes)
-- `last_synced_at`-stempel
+- Desktop-layout (sidebar) påvirkes ikke av font-size endringen siden den er ≥640px.
+- Eksisterende safe-area/100dvh-oppsett beholdes.
+- Backend, RLS, sync-funksjonalitet urørt.
