@@ -119,7 +119,7 @@ export default function Passport() {
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
-  const [showBulkRegistration, setShowBulkRegistration] = useState(false);
+  // (bulk activity registration moved to dedicated route /passport/activity)
 
   // React Query for cached data fetching
   const { data: participants = [], isLoading: isLoadingParticipants, refetch: refetchParticipants } = useQuery({
@@ -367,12 +367,13 @@ export default function Passport() {
         {/* Action buttons in a row */}
         <div className="flex gap-2 flex-wrap">
           <Button
-            variant={showBulkRegistration ? 'secondary' : 'outline'}
-            size="sm"
-            onClick={() => setShowBulkRegistration(!showBulkRegistration)}
+            variant="default"
+            size="default"
+            onClick={() => navigate('/passport/activity')}
+            className="font-semibold"
           >
-            <Users className="w-4 h-4 mr-1.5" />
-            {showBulkRegistration ? 'Skjul' : 'Aktivitet'}
+            <Users className="w-5 h-5 mr-2" />
+            Aktivitet
           </Button>
           
           <Button
@@ -398,15 +399,6 @@ export default function Passport() {
           )}
         </div>
       </div>
-
-      {/* Bulk Activity Registration */}
-      {showBulkRegistration && (
-        <BulkActivityRegistration
-          participants={participants}
-          onComplete={loadData}
-          onClose={() => setShowBulkRegistration(false)}
-        />
-      )}
 
       {/* Search Field */}
       <div className="relative">
