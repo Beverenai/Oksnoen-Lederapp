@@ -16,7 +16,6 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
-import { BulkActivityRegistration } from '@/components/passport/BulkActivityRegistration';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { VirtualizedParticipantList } from '@/components/passport/VirtualizedParticipantList';
