@@ -226,6 +226,52 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Content nav items for hamburger menu
   const mobileContentNavItems = contentNavItems;
 
+  // iOS PWA safe-area workaround — probe env() and set CSS variable dynamically
+  // Fixes the iOS 26 bug where env(safe-area-inset-bottom) returns 0 in standalone mode
+  useEffect(() => {
+    const isStandalone = (window.navigator as { standalone?: boolean }).standalone === true ||
+                         window.matchMedia('(display-mode: standalone)').matches;
+    if (!isStandalone) return;
+
+    const setPwaSafeBottom = () => {
+      const probe = document.createElement('div');
+      probe.style.cssText = 'position:fixed;bottom:env(safe-area-inset-bottom);visibility:hidden;height:0;pointer-events:none;';
+      document.body.appendChild(probe);
+      const envValue = parseFloat(getComputedStyle(probe).bottom) || 0;
+      document.body.removeChild(probe);
+
+      if (envValue > 0) {
+        document.documentElement.style.setProperty('--pwa-safe-bottom', `${envValue}px`);
+        return;
+      }
+      if (window.visualViewport) {
+        const diff = window.innerHeight - window.visualViewport.height;
+        if (diff > 0 && diff < 100) {
+          document.documentElement.style.setProperty('--pwa-safe-bottom', `${diff}px`);
+          return;
+        }
+      }
+      document.documentElement.style.setProperty('--pwa-safe-bottom', '34px');
+    };
+
+    setPwaSafeBottom();
+    const t1 = setTimeout(setPwaSafeBottom, 100);
+    const t2 = setTimeout(setPwaSafeBottom, 500);
+    const t3 = setTimeout(setPwaSafeBottom, 1000);
+    const t4 = setTimeout(setPwaSafeBottom, 2000);
+    window.visualViewport?.addEventListener('resize', setPwaSafeBottom);
+    window.visualViewport?.addEventListener('scroll', setPwaSafeBottom);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+      window.visualViewport?.removeEventListener('resize', setPwaSafeBottom);
+      window.visualViewport?.removeEventListener('scroll', setPwaSafeBottom);
+    };
+  }, []);
+
   // Auto-expand groups based on current route
   useEffect(() => {
     const leaderPaths = leaderNavItems.map(i => i.to);
