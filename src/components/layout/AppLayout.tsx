@@ -272,6 +272,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
     };
   }, []);
 
+  // Measure actual bottom-nav height so main content reserves correct space
+  useEffect(() => {
+    const el = tabBarRef.current;
+    if (!el) return;
+    const update = () => {
+      const h = el.getBoundingClientRect().height;
+      if (h > 0) {
+        document.documentElement.style.setProperty('--nav-actual-h', `${Math.round(h)}px`);
+      }
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [mobileMenuOpen]);
+
   // Auto-expand groups based on current route
   useEffect(() => {
     const leaderPaths = leaderNavItems.map(i => i.to);
@@ -760,7 +776,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           }}
           aria-label="Hovednavigasjon"
         >
-          <div className="flex items-stretch justify-around h-[var(--nav-h)] px-1">
+          <div className="flex items-stretch justify-around px-1 py-1">
             {getBottomNavItems(isAdmin, isNurse).map((item) => {
               const isActive = item.isHajolo ? false : location.pathname === item.to;
 
@@ -833,7 +849,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         ref={scrollContainerRef}
         className="lg:pl-64 lg:pt-0 flex-1 w-full min-w-0 overflow-x-hidden max-w-full"
         style={{
-          paddingBottom: 'calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px)',
+          paddingBottom: 'calc(var(--nav-actual-h, 64px) + 12px)',
         }}
       >
         {/* Spacer for fixed mobile header */}
