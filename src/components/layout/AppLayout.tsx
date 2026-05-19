@@ -338,6 +338,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
     const vv = window.visualViewport;
     if (!vv) return;
 
+    const isStandalone = (window.navigator as { standalone?: boolean }).standalone === true ||
+                         window.matchMedia('(display-mode: standalone)').matches;
+    if (isStandalone) {
+      // I PWA standalone: ingen URL-bar, ingen offset trengs.
+      // Safe-area-padding inni nav håndterer home indicator.
+      document.documentElement.style.setProperty('--vv-bottom-offset', '0px');
+      return;
+    }
+
     const updateOffset = () => {
       // Avstand fra visualViewport sin bunnkant til layout-viewport sin bunnkant.
       // Når iOS Safari sin URL-bar er synlig blir denne > 0, og menyen flytter seg opp.
