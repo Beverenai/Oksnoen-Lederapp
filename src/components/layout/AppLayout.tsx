@@ -776,7 +776,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           }}
           aria-label="Hovednavigasjon"
         >
-          <div className="flex items-stretch justify-around px-1 py-1">
+          <div className="flex items-stretch justify-around px-1">
             {getBottomNavItems(isAdmin, isNurse).map((item) => {
               const isActive = item.isHajolo ? false : location.pathname === item.to;
 
