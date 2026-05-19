@@ -397,7 +397,8 @@ header, nav {
   border-top: 0.5px solid hsl(var(--border) / 0.5);
   /* iOS PWA safe-area: bruk --pwa-safe-bottom (satt fra JS-probe i AppLayout)
      med fallback til env() og hardkodet 34px for iOS 26 cold-start-bug. */
-  padding-bottom: calc(8px + var(--pwa-safe-bottom, env(safe-area-inset-bottom, 34px)));
+  padding-top: 10px;
+  padding-bottom: calc(10px + var(--pwa-safe-bottom, env(safe-area-inset-bottom, 34px)));
   will-change: transform;
   transition: transform 300ms ease-out;
 }
