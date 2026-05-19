@@ -379,6 +379,7 @@ header, nav {
 /* Bottom nav — fixed mot bunnen, fyller safe-area med app-bakgrunn */
 .bottom-nav-fixed {
   position: fixed;
+  box-sizing: content-box;
   left: 0;
   right: 0;
   /* Bruk visualViewport-offset (satt fra JS) så menyen følger faktisk synlig viewport
@@ -389,10 +390,9 @@ header, nav {
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border-top: 0.5px solid hsl(var(--border) / 0.5);
-  /* Trekk pillen så langt ned som mulig — beholder kun et minimum (8px) over
-     home-indicator slik at knappene fortsatt er trykkbare. Bakgrunnen fyller
-     hele safe-area under. */
-  padding-bottom: max(env(safe-area-inset-bottom, 0px) - 20px, 4px);
+  /* iOS PWA safe-area: bruk --pwa-safe-bottom (satt fra JS-probe i AppLayout)
+     med fallback til env() og hardkodet 34px for iOS 26 cold-start-bug. */
+  padding-bottom: calc(8px + var(--pwa-safe-bottom, env(safe-area-inset-bottom, 34px)));
   will-change: transform;
   transition: transform 300ms ease-out;
 }
