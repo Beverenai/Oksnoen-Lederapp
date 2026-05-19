@@ -4,6 +4,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Slightly larger base scale on phones — Tailwind rem-tokens scale proportionally */
+@media (max-width: 640px) {
+  :root { font-size: 17px; }
+}
+
 /* iOS/Capacitor Safe Area Variables & Navigation Tokens */
 :root {
   --safe-top: env(safe-area-inset-top);
