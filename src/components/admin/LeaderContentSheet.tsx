@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ChevronDown, ChevronUp, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, Check, Home, Trash2, Search } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronLeft, X, Save, Phone, AlertTriangle, Loader2, Pencil, Bell, Send, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, Check, Home, Trash2, Search } from 'lucide-react';
 import { icons } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -608,8 +608,41 @@ export function LeaderContentSheet({
   return (
     <>
       <Sheet open={open} onOpenChange={handleSheetOpenChange}>
-        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-          <SheetHeader className="pb-4">
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-lg p-0 flex flex-col [&>button.absolute]:hidden"
+        >
+          {/* Top bar with back + close, respecting safe-area */}
+          <div
+            className="flex items-center justify-between px-2 border-b border-border/40"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)', paddingBottom: '0.5rem' }}
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleSheetOpenChange(false)}
+              className="h-11 px-3 gap-1 text-base font-medium"
+              aria-label="Tilbake"
+            >
+              <ChevronLeft className="w-6 h-6" />
+              Tilbake
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleSheetOpenChange(false)}
+              className="h-11 w-11"
+              aria-label="Lukk"
+            >
+              <X className="w-6 h-6" />
+            </Button>
+          </div>
+
+          <div
+            className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+          <SheetHeader className="pb-4 pt-4">
             <div className="flex items-start gap-4">
               <Avatar className="w-16 h-16 border-2 border-primary/20">
                 {leader.profile_image_url && (
