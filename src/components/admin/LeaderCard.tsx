@@ -27,7 +27,8 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
 
   const isFri = content?.current_activity?.toLowerCase().includes('fri');
   const isKitchen = leader.team?.toLowerCase() === 'kjøkken' || leader.team?.toLowerCase() === 'kjokken';
-  const isLeaderAdmin = leader.isAdmin;
+  const isSjefTeam = leader.team?.toLowerCase().trim() === 'sjef';
+  const isLeaderAdmin = leader.isAdmin || isSjefTeam;
   const isNurse = leader.isNurse;
   const isAdminOrNurse = isLeaderAdmin || isNurse;
 
