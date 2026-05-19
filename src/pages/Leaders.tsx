@@ -73,9 +73,9 @@ const getTeamStyles = (team: string | null): string => {
 // Format team display: "1" -> "Team 1", "2f" -> "Team 2F", others unchanged
 const formatTeamDisplay = (team: string | null): string => {
   if (!team) return '';
-  const teamLower = team.toLowerCase().trim();
-  if (['1', '2', '1f', '2f'].includes(teamLower)) {
-    return `Team ${team.toUpperCase()}`;
+  const t = team.trim();
+  if (['1', '2', '1f', '2f'].includes(t.toLowerCase())) {
+    return t.toUpperCase();
   }
   return team;
 };
@@ -530,17 +530,8 @@ export default function Leaders() {
                       </p>
                     )}
 
-                    {/* Activity - clearly separated from identity */}
-                    {leader.content?.current_activity && (
-                      <div className="mt-2 pt-2 border-t border-border/50">
-                        <p className="text-sm font-bold text-foreground truncate">
-                          {leader.content.current_activity}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Badges */}
-                    <div className="flex flex-wrap gap-1 mt-2">
+                    {/* Badges - team + cabin above activity */}
+                    <div className="flex flex-wrap gap-1 mt-1.5">
                       {leader.team && (
                         <Badge className={`text-[10px] px-1.5 py-0 ${getTeamStyles(leader.team)}`}>
                           {formatTeamDisplay(leader.team)}
@@ -560,6 +551,15 @@ export default function Leaders() {
                         </Badge>
                       )}
                     </div>
+
+                    {/* Activity - clearly separated, below badges */}
+                    {leader.content?.current_activity && (
+                      <div className="mt-2 pt-2 border-t border-border/50">
+                        <p className="text-sm font-bold text-foreground truncate">
+                          {leader.content.current_activity}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Nurse indicator */}
