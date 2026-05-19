@@ -317,10 +317,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
       if (currentScrollY < SCROLL_THRESHOLD) {
         // Always show header when near top
         setHeaderVisible(true);
-      } else if (delta > 10) {
+      } else if (delta > 5) {
         // Scrolling down - hide header
         setHeaderVisible(false);
-      } else if (delta < -10) {
+      } else if (delta < -5) {
         // Scrolling up - show header
         setHeaderVisible(true);
       }
