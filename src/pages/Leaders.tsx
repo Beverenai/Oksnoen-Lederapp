@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Users, Phone, Activity, Cross, ArrowUpDown, Check, Search, X, Home, Coffee } from 'lucide-react';
+import { Users, Phone, Cross, ArrowUpDown, Check, Search, X, Home, Coffee } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/leaders/LeaderDetailDialog';
 import {
   DropdownMenu,
@@ -518,28 +518,25 @@ export default function Leaders() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground">
-                      {getFirstName(leader.name)}
-                    </p>
-                    
                     {leader.ministerpost && (
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground/80 truncate leading-tight">
                         {leader.ministerpost}
                       </p>
                     )}
-                    
-                    {/* Activity - prominent */}
+
+                    <p className="text-lg font-semibold text-foreground leading-tight truncate">
+                      {getFirstName(leader.name)}
+                    </p>
+
+                    {/* Activity - prominent, plain bold */}
                     {leader.content?.current_activity && (
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <Activity className="w-5 h-5 text-primary shrink-0" />
-                        <span className="text-base font-semibold text-primary truncate">
-                          {leader.content.current_activity}
-                        </span>
-                      </div>
+                      <p className="text-base font-bold text-foreground truncate mt-0.5">
+                        {leader.content.current_activity}
+                      </p>
                     )}
 
                     {/* Badges */}
-                    <div className="flex flex-wrap gap-1 mt-1.5">
+                    <div className="flex flex-wrap gap-1 mt-2">
                       {leader.team && (
                         <Badge className={`text-[10px] px-1.5 py-0 ${getTeamStyles(leader.team)}`}>
                           {formatTeamDisplay(leader.team)}
