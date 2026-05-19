@@ -502,85 +502,94 @@ export default function Leaders() {
               </div>
             )}
             
-            <Card 
-              className="cursor-pointer overflow-hidden"
+            <Card
+              className="cursor-pointer overflow-hidden rounded-[24px] shadow-sm"
               onClick={() => setSelectedLeader(leader)}
             >
-              <CardContent className="p-3">
-                <div className="flex items-center gap-3">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
                   {/* Profile image with status ring */}
-                  <Avatar className={cn("w-12 h-12 shrink-0", getAvatarBorderClass(leader))}>
+                  <Avatar
+                    className={cn(
+                      "w-16 h-16 shrink-0 ring-offset-2 ring-offset-background",
+                      getAvatarBorderClass(leader)
+                    )}
+                  >
                     {leader.profile_image_url && (
                       <AvatarImage src={leader.profile_image_url} alt={leader.name} />
                     )}
-                    <AvatarFallback className="bg-primary/10 text-primary text-base">
+                    <AvatarFallback className="bg-primary/10 text-primary text-base font-semibold">
                       {getFirstName(leader.name).slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
 
                   {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-lg font-semibold text-foreground leading-tight truncate">
-                      {getFirstName(leader.name)}
-                    </p>
-
-                    {leader.ministerpost && (
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {leader.ministerpost}
-                      </p>
-                    )}
-
-                    {/* Badges - team + cabin above activity */}
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {leader.team && (
-                        <Badge className={`text-[10px] px-1.5 py-0 ${getTeamStyles(leader.team)}`}>
-                          {formatTeamDisplay(leader.team)}
-                        </Badge>
-                      )}
-                      {leader.linkedCabins && leader.linkedCabins.length > 0 ? (
-                        <Badge 
-                          variant="outline" 
-                          className="text-[10px] px-1.5 py-0 flex items-center gap-1"
-                        >
-                          <Home className="w-3 h-3" />
-                          {formatCabinsDisplay(leader.linkedCabins)}
-                        </Badge>
-                      ) : leader.cabin && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          {leader.cabin}
-                        </Badge>
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    <div className="flex flex-col mb-1.5">
+                      <h3 className="text-[17px] font-bold text-foreground leading-tight truncate">
+                        {getFirstName(leader.name)}
+                      </h3>
+                      {leader.ministerpost && (
+                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mt-0.5 truncate">
+                          {leader.ministerpost}
+                        </p>
                       )}
                     </div>
 
-                    {/* Activity - clearly separated, below badges */}
+                    {(leader.team || (leader.linkedCabins && leader.linkedCabins.length > 0) || leader.cabin) && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {leader.team && (
+                          <span
+                            className={cn(
+                              "text-[10px] font-bold px-2 py-0.5 rounded-md leading-none flex items-center h-4 border",
+                              getTeamStyles(leader.team)
+                            )}
+                          >
+                            {formatTeamDisplay(leader.team)}
+                          </span>
+                        )}
+                        {leader.linkedCabins && leader.linkedCabins.length > 0 ? (
+                          <span className="bg-muted text-muted-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md border border-border leading-none flex items-center h-4 gap-1">
+                            <Home className="w-2.5 h-2.5" />
+                            {formatCabinsDisplay(leader.linkedCabins)}
+                          </span>
+                        ) : leader.cabin ? (
+                          <span className="bg-muted text-muted-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md border border-border leading-none flex items-center h-4">
+                            {leader.cabin}
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
+
                     {leader.content?.current_activity && (
-                      <div className="mt-2 pt-2 border-t border-border/50">
-                        <p className="text-sm font-bold text-foreground truncate">
-                          {leader.content.current_activity}
+                      <div className="pt-1 border-t border-border/50">
+                        <p className="text-sm font-semibold text-foreground flex items-center gap-1.5 truncate">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0 animate-pulse" />
+                          <span className="truncate">{leader.content.current_activity}</span>
                         </p>
                       </div>
                     )}
                   </div>
 
-                  {/* Nurse indicator */}
-                  {leader.isNurse && (
-                    <span className="shrink-0 text-red-600 flex items-center" title="Sykepleier">
-                      <Cross className="w-6 h-6" fill="currentColor" />
-                    </span>
-                  )}
-
-                  {/* Call button - smaller */}
-                  <Button
-                    variant="default"
-                    size="icon"
-                    className="shrink-0 bg-green-600 hover:bg-green-700 text-white rounded-full h-9 w-9"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.location.href = `tel:${leader.phone}`;
-                    }}
-                  >
-                    <Phone className="w-4 h-4" />
-                  </Button>
+                  {/* Actions */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    {leader.isNurse && (
+                      <span className="text-red-600 flex items-center" title="Sykepleier">
+                        <Cross className="w-[22px] h-[22px]" fill="currentColor" />
+                      </span>
+                    )}
+                    <Button
+                      variant="default"
+                      size="icon"
+                      className="bg-green-600 hover:bg-green-700 text-white rounded-full h-11 w-11 shadow-md active:scale-90 transition-transform"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = `tel:${leader.phone}`;
+                      }}
+                    >
+                      <Phone className="w-5 h-5" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
