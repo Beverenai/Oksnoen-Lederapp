@@ -13,6 +13,7 @@ import { hapticImpact } from '@/lib/capacitorHaptics';
 export type WalkieParticipant = {
   identity: string;
   name: string;
+  avatarUrl?: string | null;
   isLocal: boolean;
   isSpeaking: boolean;
 };
@@ -25,6 +26,7 @@ export function useWalkieTalkie() {
   const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [canPlayAudio, setCanPlayAudio] = useState(true);
 
   const refreshParticipants = useCallback(() => {
     const room = roomRef.current;
@@ -36,9 +38,19 @@ export function useWalkieTalkie() {
     const speakingIds = new Set(room.activeSpeakers.map((p) => p.identity));
     const all: Participant[] = [room.localParticipant, ...Array.from(room.remoteParticipants.values())];
     for (const p of all) {
+      let avatarUrl: string | null = null;
+      if (p.metadata) {
+        try {
+          const meta = JSON.parse(p.metadata);
+          avatarUrl = meta?.avatar_url ?? null;
+        } catch {
+          /* ignore */
+        }
+      }
       list.push({
         identity: p.identity,
         name: p.name || p.identity,
+        avatarUrl,
         isLocal: p === room.localParticipant,
         isSpeaking: speakingIds.has(p.identity),
       });
@@ -53,7 +65,12 @@ export function useWalkieTalkie() {
       .on(RoomEvent.ParticipantDisconnected, refreshParticipants)
       .on(RoomEvent.ActiveSpeakersChanged, refreshParticipants)
       .on(RoomEvent.TrackSubscribed, refreshParticipants)
-      .on(RoomEvent.TrackUnsubscribed, refreshParticipants);
+      .on(RoomEvent.TrackUnsubscribed, refreshParticipants)
+      .on(RoomEvent.ParticipantMetadataChanged, refreshParticipants)
+      .on(RoomEvent.ParticipantNameChanged, refreshParticipants)
+      .on(RoomEvent.AudioPlaybackStatusChanged, () => {
+        setCanPlayAudio(room.canPlaybackAudio);
+      });
   }, [refreshParticipants]);
 
   const connect = useCallback(async (channelId: string) => {
@@ -80,6 +97,14 @@ export function useWalkieTalkie() {
       roomRef.current = room;
 
       await room.connect(data.url, data.token);
+      // Try to start audio playback. Will succeed if there is a user gesture context;
+      // otherwise we expose canPlayAudio=false and UI shows a tap-to-enable button.
+      try {
+        await room.startAudio();
+      } catch {
+        /* expected on first connect without prior gesture */
+      }
+      setCanPlayAudio(room.canPlaybackAudio);
       // Publish mic but start disabled (push-to-talk)
       try {
         await room.localParticipant.setMicrophoneEnabled(false);
@@ -109,6 +134,11 @@ export function useWalkieTalkie() {
     const room = roomRef.current;
     if (!room) return;
     try {
+      // Any PTT press is a user gesture — kick off audio playback if blocked.
+      if (!room.canPlaybackAudio) {
+        try { await room.startAudio(); } catch { /* ignore */ }
+        setCanPlayAudio(room.canPlaybackAudio);
+      }
       await room.localParticipant.setMicrophoneEnabled(true);
       setIsTalking(true);
       hapticImpact('medium');
@@ -133,12 +163,24 @@ export function useWalkieTalkie() {
     hapticImpact('light');
   }, []);
 
+  const startAudio = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room) return;
+    try {
+      await room.startAudio();
+      setCanPlayAudio(room.canPlaybackAudio);
+    } catch (e) {
+      console.warn('startAudio', e);
+    }
+  }, []);
+
   const toggleMute = useCallback(() => {
     const room = roomRef.current;
     if (!room) return;
     const next = !isMuted;
     setIsMuted(next);
     room.remoteParticipants.forEach((rp: RemoteParticipant) => {
+      try { (rp as any).setVolume?.(next ? 0 : 1); } catch { /* ignore */ }
       rp.audioTrackPublications.forEach((pub) => {
         if (pub.track && pub.track.kind === Track.Kind.Audio) {
           (pub.track as any).setVolume?.(next ? 0 : 1);
@@ -173,6 +215,8 @@ export function useWalkieTalkie() {
     startTalking,
     stopTalking,
     toggleMute,
+    startAudio,
+    canPlayAudio,
     participants,
     isTalking,
     isMuted,
