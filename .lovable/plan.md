@@ -1,41 +1,47 @@
-# Bunnmeny: fit-content høyde med padding + safe-area
+## Problem
+Bunnmenyen er for høy fordi den har padding på tre nivåer som legges sammen:
 
-## Diagnose
+- `.bottom-nav-fixed`: `padding-top: 10px` + `padding-bottom: 10px + safe-area (~34px)` = 14px topp / 44px bunn
+- Indre `<div>`: `py-1` = 4px topp + 4px bunn
+- Ikoner/labels: ~36–40px innhold
 
-I dag:
-- `src/index.css` line 20: `--nav-h: 49px` (hardkodet)
-- `AppLayout.tsx` line 763: indre `<div>` har `h-[var(--nav-h)]` → tvinger fast høyde
-- `.bottom-nav-fixed` (index.css line 400) har bare `padding-bottom: calc(8px + safe-area)` — ingen top-padding
-- `main` (line 836) reserverer plass med `var(--nav-h) + env(safe-area-inset-bottom) + 12px`
+Total høyde i PWA: ~95–100px. Det er ~30px mer enn nødvendig.
 
-Resultat: ikoner/labels klippes hvis innholdet er høyere enn 49px, og det er ingen luftig topp-padding.
+## Fiks
+Behold safe-area-respekt (det er hele poenget med `box-content`-fiksen), men fjern den ekstra "luft"-padden vi la på sist runde.
 
-## Endringer
+### Endring 1 — `src/index.css` (`.bottom-nav-fixed`, linje 400–401)
+```css
+/* FRA */
+padding-top: 10px;
+padding-bottom: calc(10px + var(--pwa-safe-bottom, env(safe-area-inset-bottom, 34px)));
 
-### 1. `src/components/layout/AppLayout.tsx` (line 763)
-Fjern `h-[var(--nav-h)]` på indre `<div>` → la innholdet definere høyden:
+/* TIL */
+padding-top: 4px;
+padding-bottom: calc(4px + var(--pwa-safe-bottom, env(safe-area-inset-bottom, 34px)));
 ```
+
+### Endring 2 — `src/components/layout/AppLayout.tsx` (linje 779)
+```tsx
+/* FRA */
+<div className="flex items-stretch justify-around px-1 py-1">
+
+/* TIL */
 <div className="flex items-stretch justify-around px-1">
 ```
 
-### 2. `src/index.css` (`.bottom-nav-fixed`, ca. line 385-403)
-Legg til symmetrisk top-padding så menyen får luft over ikonene:
-```css
-padding-top: 10px;
-padding-bottom: calc(10px + var(--pwa-safe-bottom, env(safe-area-inset-bottom, 34px)));
-```
-(Bytter 8px → 10px begge veier for symmetri.)
+Fjerner `py-1` (8px ekstra) siden CSS nå håndterer topp/bunn-padding sentralt.
 
-### 3. `src/components/layout/AppLayout.tsx` (line 836, `main` paddingBottom)
-`--nav-h` er ikke lenger korrekt — bunnmenyen kan variere. Erstatt med en `ResizeObserver` på `tabBarRef` som setter en CSS-var `--nav-actual-h` på `documentElement`, og bruk den her:
-```ts
-paddingBottom: 'calc(var(--nav-actual-h, 64px) + 12px)'
-```
-(Safe-area er allerede inkludert i menyens egen høyde via dens padding, så vi skal ikke dobbelttelle.)
+## Resultat
+- Topp: 4px
+- Bunn: 4px + safe-area (~38px på iPhone med home indicator, 4px ellers)
+- Innhold: ikon + label-høyden
+- Total høyde: ~70px på iPhone (mot ~100px nå), ~40px på Android/desktop
 
-### 4. `src/index.css` (line 20)
-Behold `--nav-h: 49px` som fallback (brukes ikke aktivt etter dette, men noen debug-komponenter refererer det implisitt — trygt å la stå).
+`box-content` + `ResizeObserver` på `--nav-actual-h` står urørt, så main-content-padding følger automatisk den nye høyden.
 
-## Teknisk note
-
-ResizeObserver-tilnærmingen sikrer at hovedinnhold alltid reserverer riktig plass uavhengig av faktisk menyhøyde (forskjellig font-rendering, dynamiske badges, fremtidige endringer). Initial verdi `64px` er trygt estimat før observer kjører.
+## Verifisering
+Reinstaller PWA på iPhone og sjekk at:
+1. Menyen ikke har stor luft over/under ikonene
+2. Home indicator fortsatt har plass under menyen (safe-area)
+3. Innhold over menyen ikke dekkes (ResizeObserver oppdaterer main padding)
