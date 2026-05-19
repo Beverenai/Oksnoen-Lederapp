@@ -73,12 +73,35 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const spreadsheetIdInput: string = body.spreadsheetId || body.spreadsheetUrl || '';
-    const range: string = body.range || 'Ark1!A1:Z1000';
+    const rangeInput: string = (body.range || '').trim();
     const dryRun: boolean = !!body.dryRun;
     if (!spreadsheetIdInput) {
       return new Response(JSON.stringify({ error: 'spreadsheetId required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     const spreadsheetId = extractSpreadsheetId(spreadsheetIdInput);
+
+    // Resolve range: if user didn't supply one, or supplied bare A1 notation without a sheet name,
+    // fetch spreadsheet metadata and prefix with the first sheet's title.
+    let range = rangeInput || 'A1:Z1000';
+    if (!range.includes('!')) {
+      const metaRes = await fetch(`${GATEWAY_URL}/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`, {
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'X-Connection-Api-Key': GOOGLE_SHEETS_API_KEY,
+        },
+      });
+      const metaText = await metaRes.text();
+      if (!metaRes.ok) {
+        return new Response(JSON.stringify({ error: `Kunne ikke hente arkinfo [${metaRes.status}]: ${metaText}` }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      const meta = JSON.parse(metaText);
+      const firstTitle: string | undefined = meta?.sheets?.[0]?.properties?.title;
+      if (!firstTitle) {
+        return new Response(JSON.stringify({ error: 'Fant ingen faner i Google Sheet.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      const sheetPrefix = /[^A-Za-z0-9_]/.test(firstTitle) ? `'${firstTitle.replace(/'/g, "''")}'` : firstTitle;
+      range = `${sheetPrefix}!${range}`;
+    }
 
     // Fetch sheet via gateway
     const sheetUrl = `${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${range}`;
