@@ -124,19 +124,21 @@ Deno.serve(async (req) => {
     const header = values[0];
     const headerMap: Record<number, string> = {};
     const unknownHeaders: string[] = [];
+    const presentKeys = new Set<string>();
     let nameCol = -1, phoneCol = -1;
     header.forEach((h, idx) => {
       const key = HEADER_ALIASES[norm(h)];
       if (key) {
         headerMap[idx] = key;
+        presentKeys.add(key);
         if (key === 'name') nameCol = idx;
         if (key === 'phone') phoneCol = idx;
       } else if ((h || '').trim()) {
         unknownHeaders.push(h);
       }
     });
-    if (nameCol === -1 && phoneCol === -1) {
-      return new Response(JSON.stringify({ error: 'Fant ingen "Navn"- eller "Tlf"-kolonne.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (phoneCol === -1) {
+      return new Response(JSON.stringify({ error: 'Fant ingen "Tlf"-kolonne. Telefon kreves for matching.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -153,25 +155,24 @@ Deno.serve(async (req) => {
     type ParsedRow = {
       rawName: string;
       matchedLeader?: { id: string; name: string };
-      values: Record<string, string>;
+      values: Record<string, string | null>;
     };
     const rows: ParsedRow[] = values.slice(1).map((r) => {
       const rawName = nameCol >= 0 ? (r[nameCol] || '').trim() : '';
-      const rawPhone = phoneCol >= 0 ? (r[phoneCol] || '').trim() : '';
-      const vals: Record<string, string> = {};
+      const rawPhone = (r[phoneCol] || '').trim();
+      const vals: Record<string, string | null> = {};
       for (const [idxStr, key] of Object.entries(headerMap)) {
-        if (key === 'name') continue;
+        if (key === 'name' || key === 'phone') continue;
         const v = (r[Number(idxStr)] || '').trim();
-        if (v) vals[key] = v;
+        vals[key] = v === '' ? null : v;
       }
       let matchedLeader: { id: string; name: string } | undefined;
       const phoneKey = normPhone(rawPhone);
       if (phoneKey) matchedLeader = byPhone.get(phoneKey);
-      if (!matchedLeader && rawName) matchedLeader = byName.get(norm(rawName));
       return { rawName: rawName || rawPhone, matchedLeader, values: vals };
     }).filter((r) => r.rawName);
 
-    const matched = rows.filter(r => r.matchedLeader && Object.keys(r.values).length > 0);
+    const matched = rows.filter(r => r.matchedLeader);
     const unmatched = rows.filter(r => !r.matchedLeader).map(r => r.rawName);
 
     if (dryRun) {
@@ -192,21 +193,25 @@ Deno.serve(async (req) => {
 
     for (const row of matched) {
       const leaderId = row.matchedLeader!.id;
-      const contentPayload: Record<string, string> = {};
-      const leaderPayload: Record<string, string> = {};
+      const contentPayload: Record<string, string | null> = {};
+      const leaderPayload: Record<string, string | null> = {};
+      // Include every column present in the sheet header — empty cells become null (clears field)
       for (const k of CONTENT_KEYS) {
-        if (row.values[k] !== undefined) contentPayload[k] = row.values[k];
+        if (presentKeys.has(k)) contentPayload[k] = row.values[k] ?? null;
       }
       for (const k of LEADER_KEYS) {
-        if (row.values[k] !== undefined) leaderPayload[k] = row.values[k];
+        // phone is match key + NOT NULL, never touch it
+        if (k === 'phone') continue;
+        if (presentKeys.has(k)) leaderPayload[k] = row.values[k] ?? null;
       }
       let rowFailed = false;
       if (Object.keys(contentPayload).length > 0) {
+        const hasAnyValue = Object.values(contentPayload).some(v => v !== null);
         const payload = { ...contentPayload, last_synced_at: nowIso };
         if (existingSet.has(leaderId)) {
           const { error } = await admin.from('leader_content').update(payload).eq('leader_id', leaderId);
           if (error) { rowFailed = true; console.error('content update', leaderId, error); }
-        } else {
+        } else if (hasAnyValue) {
           const { error } = await admin.from('leader_content').insert({ leader_id: leaderId, ...payload });
           if (error) { rowFailed = true; console.error('content insert', leaderId, error); }
         }

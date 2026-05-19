@@ -1,26 +1,37 @@
-## Endringer
+## Mål
+Sync fra Google Sheet skal speile arket: alle felter som er knyttet til hver leder via telefonnummer skal oppdateres — inkludert tomme celler som **tømmer** feltet i appen. Ledere som ikke finnes i arket forblir urørt.
 
-### 1. `src/pages/admin/Admin.tsx` — bytt header-knapper
-- Fjern "Lim inn"- og "Tøm"-knappene (linje 229–247).
-- Erstatt med én **"Synk"**-knapp (`RefreshCw`-ikon, viser `Loader2` mens den kjører).
-- Knappen leser `app_config.google_sheet_sync` og kaller `supabase.functions.invoke('sync-leaders-from-sheet', { body: { spreadsheetId, range, dryRun: false } })` direkte.
-- Toast viser `X oppdatert · Y feilet · Z ikke matchet`, deretter `loadData()` + `rqClient.invalidateQueries()`.
-- Hvis ingen config lagret: feilmelding "Konfigurer Google Sheet i Innstillinger først".
-- Fjern `PasteLeaderContentSheet`-import + render, `AlertDialog`-import + render, `handleClearAllDailyFields`, og state `isPasteSheetOpen` / `isClearAllOpen` / `isClearingAll` (erstattes med `isSyncing`).
-- Fjern ikonimporter `ClipboardPaste`, `Eraser`; legg til `RefreshCw`.
+## Endring i `supabase/functions/sync-leaders-from-sheet/index.ts`
 
-### 2. `src/components/admin/GoogleSheetSyncTab.tsx` — legg til Lim inn + Tøm
-- Last `leaders` (id, name, phone) ved mount for å gi til `PasteLeaderContentSheet`.
-- Nytt `<Card>` "Manuelle verktøy" under den eksisterende sync-cardet:
-  - **"Lim inn rader"** (`ClipboardPaste`) → åpner `<PasteLeaderContentSheet>` (samme komponent, `onSaved` = reload leaders).
-  - **"Tøm daglige felt for alle ledere"** (`Eraser`, destructive) → åpner `<AlertDialog>` med samme tekst og samme update-spørring mot `leader_content` som lå i `Admin.tsx`.
-- Importer `PasteLeaderContentSheet`, `AlertDialog*`, `ClipboardPaste`, `Eraser`, `hapticSuccess/Error`.
+### 1. Match KUN på telefon
+Fjern fallback til navne-match. Hvis raden ikke har telefon som matcher en aktiv leder → legges i `unmatched` og hoppes over.
+
+Begrunnelse: telefon er stabil nøkkel, navn endres / dupliseres. Bruker bekreftet "knyttet til telefonr".
+
+### 2. Tom celle = tøm felt (for alle synkede kolonner)
+I dag: linje 165 dropper tomme verdier (`if (v) vals[key] = v`). Endres til å beholde dem som `null`.
+
+For hver matchet leder, for hver kolonne som finnes i sheet-headeren:
+- Celle har verdi → sett feltet til verdien
+- Celle er tom → sett feltet til `null`
+- Kolonne finnes ikke i sheet → la feltet være urørt
+
+Gjelder begge tabeller:
+- **`leader_content`**: `current_activity`, `extra_activity` (Ansvar), `personal_notes` (Notater), `personal_message` (Til deg), `obs_message` (OBS!), `extra_1`–`extra_5`
+- **`leaders`**: `cabin` (Hytte Ansvar), `ministerpost`, `team`
+- **`phone`** og **`name`**: aldri tømmes (phone er match-nøkkel og NOT NULL; name er NOT NULL)
+
+### 3. Insert vs update for `leader_content`
+Hvis leder mangler `leader_content`-rad og raden i sheet bare har tomme verdier → ikke opprett tom rad (unngå støy). Bare oppdater hvis rad finnes, eller insert hvis minst én verdi er ikke-null.
+
+### 4. Ledere ikke i sheet
+Ingen endring — de forblir urørt (bekreftet av bruker).
+
+### 5. Response
+Returner som før: `saved`, `failed`, `unmatched`, `unknownHeaders`, `lastSyncAt`. Toast i Admin-UI fungerer uendret.
 
 ## Ikke endret
-- `PasteLeaderContentSheet`-komponent
-- `sync-leaders-from-sheet` edge function
-- Andre admin-sider, RLS, design tokens
-
-## Filer
-- `src/pages/admin/Admin.tsx` (rediger)
-- `src/components/admin/GoogleSheetSyncTab.tsx` (rediger)
+- Frontend (`Admin.tsx` "Synk"-knapp, `GoogleSheetSyncTab.tsx` manuelle verktøy)
+- RLS, autentisering, admin-sjekk
+- HEADER_ALIASES (samme kolonne-navn støttes)
+- `last_synced_at`-stempel
