@@ -1,42 +1,26 @@
-## Mål
-Admin kobler til et Google Sheet og trykker "Synk nå" for å oppdatere ledere + leder-innhold med samme felter som dagens lim-inn-funksjon (Tlf, Navn, Aktivitet, Notater, Til deg, OBS!, Ekstra #1–5, Hytte, Ansvar, Ministerpost, Team).
+## Endringer
 
-## Trinn
+### 1. `src/pages/admin/Admin.tsx` — bytt header-knapper
+- Fjern "Lim inn"- og "Tøm"-knappene (linje 229–247).
+- Erstatt med én **"Synk"**-knapp (`RefreshCw`-ikon, viser `Loader2` mens den kjører).
+- Knappen leser `app_config.google_sheet_sync` og kaller `supabase.functions.invoke('sync-leaders-from-sheet', { body: { spreadsheetId, range, dryRun: false } })` direkte.
+- Toast viser `X oppdatert · Y feilet · Z ikke matchet`, deretter `loadData()` + `rqClient.invalidateQueries()`.
+- Hvis ingen config lagret: feilmelding "Konfigurer Google Sheet i Innstillinger først".
+- Fjern `PasteLeaderContentSheet`-import + render, `AlertDialog`-import + render, `handleClearAllDailyFields`, og state `isPasteSheetOpen` / `isClearAllOpen` / `isClearingAll` (erstattes med `isSyncing`).
+- Fjern ikonimporter `ClipboardPaste`, `Eraser`; legg til `RefreshCw`.
 
-### 1. Koble til Google Sheets
-Bruk Lovable sin Google Sheets connector (OAuth). Når du godkjenner kobles din Google-konto, og appen kan lese ark du har tilgang til via en edge function.
+### 2. `src/components/admin/GoogleSheetSyncTab.tsx` — legg til Lim inn + Tøm
+- Last `leaders` (id, name, phone) ved mount for å gi til `PasteLeaderContentSheet`.
+- Nytt `<Card>` "Manuelle verktøy" under den eksisterende sync-cardet:
+  - **"Lim inn rader"** (`ClipboardPaste`) → åpner `<PasteLeaderContentSheet>` (samme komponent, `onSaved` = reload leaders).
+  - **"Tøm daglige felt for alle ledere"** (`Eraser`, destructive) → åpner `<AlertDialog>` med samme tekst og samme update-spørring mot `leader_content` som lå i `Admin.tsx`.
+- Importer `PasteLeaderContentSheet`, `AlertDialog*`, `ClipboardPaste`, `Eraser`, `hapticSuccess/Error`.
 
-### 2. Lagre hvilket ark som skal synkes
-Ny rad i `app_config`:
-- `key = 'google_sheet_sync'`
-- `value` = JSON med `{ spreadsheetId, range, lastSyncAt }`
+## Ikke endret
+- `PasteLeaderContentSheet`-komponent
+- `sync-leaders-from-sheet` edge function
+- Andre admin-sider, RLS, design tokens
 
-Ingen ny tabell — gjenbruker eksisterende `app_config`.
-
-### 3. Edge function: `sync-leaders-from-sheet`
-- Kalles fra admin med spreadsheetId + range
-- Henter rader via `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/{id}/values/{range}`
-- Header-rad gjenkjennes med samme aliaser som `PasteLeaderContentSheet` (Tlf, Navn, Aktivitet, …)
-- Matcher mot `leaders` på telefon (siste 8 siffer), så navn
-- Oppdaterer `leaders` (Tlf, Hytte, Ministerpost, Team) og upserter `leader_content` (Aktivitet, Notater, Til deg, OBS!, Ekstra #1–5, Ansvar)
-- Returnerer `{ matched, updated, unmatched: [...navn] }`
-
-### 4. UI i admin
-Ny seksjon i `AdminSettingsContent` ("Google Sheet sync"):
-- Input for Spreadsheet-URL/ID + range (default `Ark1!A1:Z1000`)
-- "Lagre kobling"-knapp → skriver til `app_config`
-- "Synk nå"-knapp → kaller edge function, viser resultat (matched/updated/unmatched) i samme stil som lim-inn-forhåndsvisningen
-- Viser sist synket-tidspunkt
-
-### 5. Hjelpetekst
-Liten guide: "Del arket med Google-kontoen som er koblet til. Første rad må være headere: Tlf, Navn, Aktivitet, …"
-
-## Tekniske detaljer
-- Connector: `google_sheets` (krever `standard_connectors--connect` først)
-- Edge function bruker `LOVABLE_API_KEY` + `GOOGLE_SHEETS_API_KEY` via gateway, `verify_jwt = false` med manuell admin-sjekk i koden (kun `is_admin()` får kjøre)
-- Parser/matcher-logikk lånes direkte fra `PasteLeaderContentSheet.tsx` (HEADER_ALIASES, normPhone, field-mapping) — flyttes til en delt utility i `src/lib/leaderImportParser.ts` så både lim-inn og sheet-sync bruker samme kode
-- Ingen endring av RLS — edge function bruker service role for skriving
-- Ingen sletting av ledere; kun oppdatering av matchede rader
-
-## Ikke berørt
-Eksisterende lim-inn-funksjon, andre admin-faner, RLS, auth, design system, leder-app for vanlige brukere.
+## Filer
+- `src/pages/admin/Admin.tsx` (rediger)
+- `src/components/admin/GoogleSheetSyncTab.tsx` (rediger)
