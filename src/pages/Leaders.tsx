@@ -287,9 +287,11 @@ export default function Leaders() {
   const getAvatarBorderClass = (leader: LeaderWithContent) => {
     const isFri = leader.content?.current_activity?.toLowerCase().includes('fri');
     const isKitchen = leader.team?.toLowerCase() === 'kjøkken';
+    const isSjef = leader.team?.toLowerCase() === 'sjef';
     
     if (isKitchen) return 'ring-4 ring-purple-500';
     if (isFri) return 'ring-4 ring-blue-500';
+    if (isSjef) return 'ring-4 ring-green-500';
     if (leader.isAdmin || leader.isNurse || leader.content?.has_read) return 'ring-4 ring-green-500';
     return 'ring-4 ring-red-500';
   };
@@ -518,21 +520,23 @@ export default function Leaders() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    {leader.ministerpost && (
-                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground/80 truncate leading-tight">
-                        {leader.ministerpost}
-                      </p>
-                    )}
-
                     <p className="text-lg font-semibold text-foreground leading-tight truncate">
                       {getFirstName(leader.name)}
                     </p>
 
-                    {/* Activity - prominent, plain bold */}
-                    {leader.content?.current_activity && (
-                      <p className="text-base font-bold text-foreground truncate mt-0.5">
-                        {leader.content.current_activity}
+                    {leader.ministerpost && (
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {leader.ministerpost}
                       </p>
+                    )}
+
+                    {/* Activity - clearly separated from identity */}
+                    {leader.content?.current_activity && (
+                      <div className="mt-2 pt-2 border-t border-border/50">
+                        <p className="text-sm font-bold text-foreground truncate">
+                          {leader.content.current_activity}
+                        </p>
+                      </div>
                     )}
 
                     {/* Badges */}
