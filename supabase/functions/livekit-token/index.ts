@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { AccessToken } from "npm:livekit-server-sdk@2";
+import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -84,20 +84,33 @@ Deno.serve(async (req) => {
     }
 
     const roomName = `channel_${channelId}`;
-    const at = new AccessToken(apiKey, apiSecret, {
-      identity: leader.id,
-      name: leader.name,
-      ttl: 60 * 60, // 1 hour
-    });
-    at.addGrant({
-      room: roomName,
-      roomJoin: true,
-      canPublish: true,
-      canSubscribe: true,
-      canPublishData: true,
-    });
-
-    const jwt = await at.toJwt();
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(apiSecret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign", "verify"],
+    );
+    const now = Math.floor(Date.now() / 1000);
+    const jwt = await create(
+      { alg: "HS256", typ: "JWT" },
+      {
+        iss: apiKey,
+        sub: leader.id,
+        name: leader.name,
+        nbf: now,
+        iat: now,
+        exp: now + 60 * 60,
+        video: {
+          room: roomName,
+          roomJoin: true,
+          canPublish: true,
+          canSubscribe: true,
+          canPublishData: true,
+        },
+      },
+      cryptoKey,
+    );
 
     return new Response(
       JSON.stringify({ token: jwt, url, room: roomName, identity: leader.id }),
