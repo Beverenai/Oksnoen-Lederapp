@@ -549,9 +549,12 @@ export default function Leaders() {
                           </span>
                         )}
                         {leader.linkedCabins && leader.linkedCabins.length > 0 ? (
-                          <span className="bg-muted text-muted-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md border border-border leading-none flex items-center h-4 gap-1">
-                            <Home className="w-2.5 h-2.5" />
-                            {formatCabinsDisplay(leader.linkedCabins)}
+                          <span className="bg-muted text-muted-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md border border-border leading-none flex items-center h-4 gap-1 max-w-[160px]">
+                            <Home className="w-2.5 h-2.5 shrink-0" />
+                            <span className="truncate">{leader.linkedCabins[0].name}</span>
+                            {leader.linkedCabins.length > 1 && (
+                              <span className="shrink-0 font-bold">+{leader.linkedCabins.length - 1}</span>
+                            )}
                           </span>
                         ) : leader.cabin ? (
                           <span className="bg-muted text-muted-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md border border-border leading-none flex items-center h-4">
