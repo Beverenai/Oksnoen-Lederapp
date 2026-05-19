@@ -4,9 +4,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, RefreshCw, Save, FileSpreadsheet, Check, AlertTriangle, Eye } from 'lucide-react';
+import { Loader2, RefreshCw, Save, FileSpreadsheet, Check, AlertTriangle, Eye, ClipboardPaste, Eraser } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { PasteLeaderContentSheet } from '@/components/admin/PasteLeaderContentSheet';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import type { Tables } from '@/integrations/supabase/types';
+
+type Leader = Tables<'leaders'>;
 
 interface SyncResult {
   preview?: boolean;
@@ -29,6 +44,15 @@ export function GoogleSheetSyncTab() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [result, setResult] = useState<SyncResult | null>(null);
+  const [leaders, setLeaders] = useState<Leader[]>([]);
+  const [isPasteSheetOpen, setIsPasteSheetOpen] = useState(false);
+  const [isClearAllOpen, setIsClearAllOpen] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
+
+  const loadLeaders = async () => {
+    const { data } = await supabase.from('leaders').select('*').order('created_at');
+    setLeaders(data || []);
+  };
 
   useEffect(() => {
     (async () => {
@@ -41,9 +65,40 @@ export function GoogleSheetSyncTab() {
           if (cfg.lastSyncAt) setLastSyncAt(cfg.lastSyncAt);
         } catch { /* ignore */ }
       }
+      await loadLeaders();
       setIsLoading(false);
     })();
   }, []);
+
+  const handleClearAllDailyFields = async () => {
+    setIsClearingAll(true);
+    try {
+      const { error, count } = await supabase
+        .from('leader_content')
+        .update({
+          current_activity: null,
+          extra_activity: null,
+          personal_notes: null,
+          obs_message: null,
+          extra_2: null,
+          extra_3: null,
+          extra_4: null,
+          extra_5: null,
+          updated_at: new Date().toISOString(),
+        }, { count: 'exact' })
+        .not('leader_id', 'is', null);
+      if (error) throw error;
+      hapticSuccess();
+      showSuccess(`Tømte daglige felt for ${count ?? 'alle'} ledere`);
+      setIsClearAllOpen(false);
+    } catch (err) {
+      console.error('Clear all error:', err);
+      hapticError();
+      showError('Kunne ikke tømme felt');
+    } finally {
+      setIsClearingAll(false);
+    }
+  };
 
   const handleSaveConfig = async () => {
     setIsSaving(true);
