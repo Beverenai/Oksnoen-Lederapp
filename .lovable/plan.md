@@ -1,31 +1,55 @@
-## 1. Ledere-listen — bedre hierarki + fjerne grønn aktivitets-ikon
+## 1. Admin leder-sheet: tilbake-knapp, X større, safe-area-toppadding
 
-**Fil:** `src/pages/Leaders.tsx` (linje 503–585)
+**Fil:** `src/components/admin/LeaderContentSheet.tsx` (linje 608–632)
 
-Endre kortet slik at det er tydeligere visuelt hierarki — navn er hovedinfo, aktivitet er nest viktigst, så metadata (post + badges) trer i bakgrunnen.
+- Bytt ut/utvid `SheetHeader` slik at den får topp-safe-area-padding: `pt-[calc(env(safe-area-inset-top)+0.5rem)]`.
+- Legg til en stor "Tilbake"-knapp øverst (venstrejustert, `<ChevronLeft>` ikon + tekst "Tilbake", min 44×44 touch-target) som kaller samme `handleSheetOpenChange(false)`-flyt. Plasseres over avatar-raden.
+- Erstatt standard liten X (fra `sheet.tsx`) ved å rendre vår egen lukkeknapp i headeren — minst `h-10 w-10` med `h-6 w-6` ikon, plassert i øvre høyre hjørne med samme safe-area-offset.
+- For å unngå at standard-X dukker opp dobbelt: legg `[&_button[type=button]:has(svg.lucide-x)]:hidden`-trick eller (renere) bytt `SheetContent`-importen for å skjule innebygd close. Enkleste: legg `className="[&>button.absolute]:hidden"` på `SheetContent`.
 
-- **Navn (linje 521–523):** behold `font-semibold`, øk til `text-base`/`text-lg` (litt større), beholder farge.
-- **Ministerpost (linje 525–529):** flytt opp som liten label-tekst (`text-[11px] uppercase tracking-wide text-muted-foreground`) over navnet — fungerer som "rolle-etikett" likt iOS subhead-mønster. Alternativt under navnet, men mindre og lysere.
-- **Aktivitet (linje 531–539):** Fjern `<Activity>`-ikonet. Vis bare teksten i `text-foreground font-bold text-base` (svart/foreground, ikke grønn primary). Beholder `mt-1.5` og `truncate`.
-- **Badges (linje 542–561):** krymp til `text-[10px]` (allerede) og bruk muted-stil — disse skal være sekundære.
-- **Telefonknapp:** uendret (grønn rund).
+## 2. Scroll skal aldri låses
 
-Resultat: Navn dominerer, aktivitet leses tydelig i fet svart uten ikon-støy, badges/post er rolig metadata.
+**Fil:** `src/components/admin/LeaderContentSheet.tsx` (linje 611, 699–703)
 
-## 2. Passkontroll — større "Aktivitet"-knapp som åpner egen side
+- Sørg for at `SheetContent` ikke har `overflow: hidden` på iOS. Bytt fra `overflow-y-auto` på selve `SheetContent` til en intern scroll-wrapper `<div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch overscroll-contain">` rundt body-innholdet, så headeren ligger stille.
+- Fjern `onWheel`/`onTouchMove` stopPropagation som ligger inni popover-listen (linje 700–702) — disse blokkerer naturlig scroll når brukeren prøver å scrolle utenfor popover.
+- Sjekk at `body` ikke får varig `overflow: hidden` igjen etter at sheet lukkes (Radix gjør dette automatisk, men bekreft via DOM-inspeksjon).
 
-**Filer:**
-- `src/pages/Passport.tsx` (linje 367–399, 402–409)
-- `src/App.tsx` (rute-registrering)
-- Ny fil: `src/pages/PassportActivity.tsx`
+## 3. Sjefer alltid med grønn ring
 
-**Endringer:**
-- Bytt `size="sm"` → `size="default"` (eller `lg`) på Aktivitet-knappen, gjør den til primær variant så den skiller seg ut. Litt mer padding, tydeligere ikon.
-- Fjern `showBulkRegistration` toggle-state + inline `<BulkActivityRegistration>`-blokk. `onClick` navigerer i stedet til ny rute, f.eks. `/passkontor/aktivitet`.
-- Ny side `PassportActivity.tsx`: full-side wrapper som henter `participants` (gjenbruk samme query/hook som Passport bruker) og rendrer eksisterende `<BulkActivityRegistration>` på hel skjerm med tilbake-knapp som navigerer til `/passkontor`. `onComplete` → invalider query + navigate tilbake.
-- Registrer ruten i `src/App.tsx` ved siden av eksisterende `/passport`/`/passkontor`-rute (samme RoleGuard som Passport).
+**Fil:** `src/pages/Leaders.tsx` (linje 287–295)
+
+Legg til regel før red default:
+```ts
+const isSjef = leader.team?.toLowerCase() === 'sjef';
+if (isSjef) return 'ring-4 ring-green-500';
+```
+Plasseres etter kitchen/fri-sjekkene, før admin/nurse/has_read-regelen (eller flettes inn — sjef-team trumfer "ikke lest").
+
+## 4. Ledere-kort: tydeligere hierarki
+
+**Fil:** `src/pages/Leaders.tsx` (linje 519–562)
+
+Nåværende: rolle-label → navn → aktivitet → badges, alt limt sammen. Skap visuelt skille mellom **identitet** (navn + rolle) og **status** (aktivitet):
+
+```
+┌─────────────────────────────────┐
+│ 🟢 Navn (text-lg, semibold)     │
+│    Statsminister (xs muted)     │
+│ ─────────────────────────────── │  ← border-top eller mt-2 luft
+│ Slutt å leke (base, bold)       │
+│ [Sjef] [Hytte]                  │
+└─────────────────────────────────┘
+```
+
+Konkret:
+- Navn: `text-lg font-semibold text-foreground leading-tight` (øverst).
+- Ministerpost: `text-xs text-muted-foreground truncate mt-0.5` (under navn, ikke uppercase label).
+- Aktivitet: i en egen blokk `mt-2 pt-2 border-t border-border/50` med tekst `text-sm font-bold text-foreground truncate`. Bordet gir det visuelle skillet brukeren etterspør.
+- Badges: `mt-2`, uendret styling.
+
+Resultat: navn dominerer øverst, rolle er liten metadata, og aktiviteten står klart adskilt under en svak skillelinje slik at det aldri blandes med navnet.
 
 ## Ikke endret
-- Backend, RLS, sync, datahenting.
-- BulkActivityRegistration-komponenten internt (kun ny wrapper-side).
-- Andre handlinger på Passport (Viktig Info, Min hytte).
+- Backend, RLS, datahenting, telefon-knapp, FAB, bunnmeny.
+- Andre sheets/dialoger som ikke ble nevnt.
