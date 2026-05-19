@@ -5,6 +5,7 @@ import { useWalkieTalkie } from '@/hooks/useWalkieTalkie';
 import { useOfflineStatus } from '@/hooks/useOfflineStatus';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, Mic, MicOff, Radio, Users, Megaphone, Home, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ConnectionState } from 'livekit-client';
@@ -111,6 +112,16 @@ export default function WalkieTalkiePage() {
           </Card>
         )}
 
+        {!walkie.canPlayAudio && walkie.isConnected && (
+          <button
+            onClick={() => walkie.startAudio()}
+            className="p-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium flex items-center justify-center gap-2"
+          >
+            <Volume2 className="w-4 h-4" />
+            Trykk for å aktivere lyd
+          </button>
+        )}
+
         {/* Participants */}
         <Card className="p-4">
           <h2 className="text-sm font-medium text-muted-foreground mb-3">
@@ -119,21 +130,40 @@ export default function WalkieTalkiePage() {
           {walkie.participants.length === 0 ? (
             <p className="text-sm text-muted-foreground">Ingen tilkoblet ennå.</p>
           ) : (
-            <ul className="space-y-2">
-              {walkie.participants.map((p) => (
-                <li key={p.identity} className="flex items-center justify-between">
-                  <span className="text-sm">
-                    {p.name}{p.isLocal && <span className="text-muted-foreground ml-1">(du)</span>}
-                  </span>
-                  <span className={cn(
-                    'flex items-center gap-1 text-xs',
-                    p.isSpeaking ? 'text-primary' : 'text-muted-foreground'
-                  )}>
-                    <Mic className={cn('w-4 h-4', p.isSpeaking && 'animate-pulse')} />
-                    {p.isSpeaking ? 'Snakker' : ''}
-                  </span>
-                </li>
-              ))}
+            <ul className="space-y-3">
+              {walkie.participants.map((p) => {
+                const initials = p.name
+                  .split(/\s+/)
+                  .map((s) => s[0])
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .join('')
+                  .toUpperCase();
+                return (
+                  <li key={p.identity} className="flex items-center gap-3">
+                    <div className={cn(
+                      'relative rounded-full transition-shadow',
+                      p.isSpeaking && 'ring-2 ring-primary ring-offset-2 ring-offset-background animate-pulse'
+                    )}>
+                      <Avatar className="w-10 h-10">
+                        {p.avatarUrl && <AvatarImage src={p.avatarUrl} alt={p.name} />}
+                        <AvatarFallback>{initials || '?'}</AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {p.name}
+                        {p.isLocal && <span className="text-muted-foreground ml-1">(du)</span>}
+                      </p>
+                      {p.isSpeaking && (
+                        <p className="text-xs text-primary flex items-center gap-1">
+                          <Mic className="w-3 h-3" /> Snakker
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>

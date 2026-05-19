@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     // Look up leader row for the authenticated user
     const { data: leader, error: leaderErr } = await supabase
       .from("leaders")
-      .select("id, name")
+      .select("id, name, profile_image_url")
       .eq("auth_user_id", claimsData.claims.sub)
       .maybeSingle();
 
@@ -84,6 +84,11 @@ Deno.serve(async (req) => {
     }
 
     const roomName = `channel_${channelId}`;
+    const parts = (leader.name || "").trim().split(/\s+/).filter(Boolean);
+    const displayName = parts.length > 1
+      ? `${parts[0]} ${parts[parts.length - 1][0]}.`
+      : (parts[0] || "Leder");
+    const metadata = JSON.stringify({ avatar_url: leader.profile_image_url ?? null });
     const cryptoKey = await crypto.subtle.importKey(
       "raw",
       new TextEncoder().encode(apiSecret),
@@ -97,7 +102,8 @@ Deno.serve(async (req) => {
       {
         iss: apiKey,
         sub: leader.id,
-        name: leader.name,
+        name: displayName,
+        metadata,
         nbf: now,
         iat: now,
         exp: now + 60 * 60,
