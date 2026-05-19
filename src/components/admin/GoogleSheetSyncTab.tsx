@@ -262,6 +262,61 @@ export function GoogleSheetSyncTab() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ClipboardPaste className="w-4 h-4" />
+            Manuelle verktøy
+          </CardTitle>
+          <CardDescription>
+            Alternative måter å oppdatere lederdata på.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setIsPasteSheetOpen(true)}>
+            <ClipboardPaste className="w-4 h-4 mr-2" />
+            Lim inn rader
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setIsClearAllOpen(true)}
+            className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Eraser className="w-4 h-4 mr-2" />
+            Tøm daglige felt for alle ledere
+          </Button>
+        </CardContent>
+      </Card>
+
+      <PasteLeaderContentSheet
+        open={isPasteSheetOpen}
+        onOpenChange={setIsPasteSheetOpen}
+        leaders={leaders}
+        onSaved={loadLeaders}
+      />
+
+      <AlertDialog open={isClearAllOpen} onOpenChange={setIsClearAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tøm daglige felt for ALLE ledere?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dette tømmer nåværende aktivitet, ekstra aktivitet, notat til lederen, OBS-melding og ekstra info 2–5 for samtlige ledere. Team, hytte, ministerpost og overnatting (ekstra 1) beholdes. Handlingen kan ikke angres.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isClearingAll}>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleClearAllDailyFields(); }}
+              disabled={isClearingAll}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isClearingAll ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Eraser className="w-4 h-4 mr-2" />}
+              Ja, tøm alle
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
