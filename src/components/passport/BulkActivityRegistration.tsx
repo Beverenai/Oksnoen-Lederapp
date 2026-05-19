@@ -1,6 +1,6 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useMemo } from 'react';
-import { Search, Check, X, Users } from 'lucide-react';
+import { Search, Check, X, Users, Home, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,9 +37,22 @@ export function BulkActivityRegistration({
   const { leader } = useAuth();
   const { activities } = useActivities(true);
   const [selectedActivity, setSelectedActivity] = useState<string>('');
+  const [isCustom, setIsCustom] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [cabinFilter, setCabinFilter] = useState<string>('all');
   const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Unique cabins from participants list, sorted (no)
+  const availableCabins = useMemo(() => {
+    const names = new Set<string>();
+    participants.forEach((p) => {
+      const name = p.cabins?.name?.trim();
+      if (name) names.add(name);
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b, 'nb'));
+  }, [participants]);
 
   // Filter participants based on search and who hasn't done the activity
   const filteredParticipants = useMemo(() => {
@@ -47,12 +60,33 @@ export function BulkActivityRegistration({
 
     return participants.filter((p) => {
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCabin =
+        cabinFilter === 'all' ||
+        (cabinFilter === 'none' && !p.cabins?.name) ||
+        p.cabins?.name === cabinFilter;
       const hasActivity = p.participant_activities?.some(
         (a) => a.activity.toLowerCase() === selectedActivity.toLowerCase()
       );
-      return matchesSearch && !hasActivity;
+      return matchesSearch && matchesCabin && !hasActivity;
     });
-  }, [participants, selectedActivity, searchQuery]);
+  }, [participants, selectedActivity, searchQuery, cabinFilter]);
+
+  const handleActivityChange = (value: string) => {
+    if (value === '__custom__') {
+      setIsCustom(true);
+      setSelectedActivity(customName.trim());
+    } else {
+      setIsCustom(false);
+      setCustomName('');
+      setSelectedActivity(value);
+    }
+    setSelectedParticipants(new Set());
+  };
+
+  const handleCustomNameChange = (value: string) => {
+    setCustomName(value);
+    setSelectedActivity(value.trim());
+  };
 
   const toggleParticipant = (id: string) => {
     const newSelected = new Set(selectedParticipants);
@@ -77,9 +111,15 @@ export function BulkActivityRegistration({
 
     setIsSubmitting(true);
     try {
+      const activityName = (isCustom ? customName : selectedActivity).trim();
+      if (!activityName) {
+        showError('Aktivitetsnavnet kan ikke være tomt');
+        setIsSubmitting(false);
+        return;
+      }
       const inserts = Array.from(selectedParticipants).map((participantId) => ({
         participant_id: participantId,
-        activity: selectedActivity,
+        activity: activityName,
         registered_by: leader?.id,
       }));
 
@@ -87,9 +127,11 @@ export function BulkActivityRegistration({
 
       if (error) throw error;
 
-      showSuccess(`${selectedActivity} registrert for ${selectedParticipants.size} deltakere!`);
+      showSuccess(`${activityName} registrert for ${selectedParticipants.size} deltakere!`);
       setSelectedParticipants(new Set());
       setSelectedActivity('');
+      setCustomName('');
+      setIsCustom(false);
       onComplete();
     } catch (error) {
       console.error('Error registering activities:', error);
@@ -116,7 +158,10 @@ export function BulkActivityRegistration({
         {/* Activity Selection */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Velg aktivitet</label>
-          <Select value={selectedActivity} onValueChange={setSelectedActivity}>
+          <Select
+            value={isCustom ? '__custom__' : selectedActivity}
+            onValueChange={handleActivityChange}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Velg en aktivitet..." />
             </SelectTrigger>
@@ -126,8 +171,23 @@ export function BulkActivityRegistration({
                   {activity.title}
                 </SelectItem>
               ))}
+              <SelectItem value="__custom__">
+                <span className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Egendefinert aktivitet…
+                </span>
+              </SelectItem>
             </SelectContent>
           </Select>
+          {isCustom && (
+            <Input
+              autoFocus
+              placeholder="Skriv aktivitetsnavn..."
+              maxLength={60}
+              value={customName}
+              onChange={(e) => handleCustomNameChange(e.target.value)}
+            />
+          )}
         </div>
 
         {selectedActivity && (
@@ -141,6 +201,27 @@ export function BulkActivityRegistration({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
+            </div>
+
+            {/* Cabin filter */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <Home className="w-3 h-3" /> Filtrer på hytte
+              </label>
+              <Select value={cabinFilter} onValueChange={setCabinFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle hytter</SelectItem>
+                  {availableCabins.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="none">Uten hytte</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Select all / Deselect all */}

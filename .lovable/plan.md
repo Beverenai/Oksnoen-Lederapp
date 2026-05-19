@@ -1,38 +1,40 @@
-## Kompakt hytte-chip: "Første hytte + antall"
+## Hyttefilter + custom aktivitet i masseregistrering
 
-**Fil:** `src/pages/Leaders.tsx` (kun leder-listen)
+**Fil:** `src/components/passport/BulkActivityRegistration.tsx`
 
-### Endring i `formatCabinsDisplay` (linje 171–174)
-```ts
-const formatCabinsDisplay = (cabins: CabinInfo[] | undefined): string => {
-  if (!cabins || cabins.length === 0) return '';
-  if (cabins.length === 1) return cabins[0].name;
-  return `${cabins[0].name} +${cabins.length - 1}`;
-};
-```
+### 1. Custom aktivitet
+Legg til en "Egendefinert"-rad nederst i `<Select>` for aktivitet. Når valgt, vises et `<Input>` der lederen skriver inn fritt navn på aktiviteten (validert: trimmet, 1–60 tegn).
 
-Resultat:
-- 1 hytte: `Beritbu front`
-- 2 hytter: `Beritbu front +1`
-- 4 hytter: `Beritbu front +3`
+Endringer:
+- Ny state: `const [isCustom, setIsCustom] = useState(false)` og `const [customName, setCustomName] = useState('')`.
+- `Select.onValueChange`: hvis verdien er `'__custom__'` → `setIsCustom(true); setSelectedActivity('')`. Ellers → `setIsCustom(false); setSelectedActivity(value)`.
+- Når `isCustom`, render `<Input placeholder="Skriv aktivitetsnavn..." maxLength={60} value={customName} onChange={...}>` rett under selecten. `selectedActivity` settes (debounced via onChange) til `customName.trim()`.
+- `handleSubmit` bruker `selectedActivity` som før — siden tekststrengen lagres direkte i `participant_activities.activity`, krever det ingen DB-endring.
+- Filter "har gjort allerede" overhopper custom-treff bare hvis navnet er identisk (case-insensitive) — eksisterende logikk dekker dette.
 
-### Chip-styling i kort (linje 549–556)
-Beholder enkel-linje. Legger til `whitespace-nowrap` og `max-w-[140px] truncate` på chip-spanet så veldig lange enkeltnavn også kuttes pent — `+N` suffikset står alltid synlig fordi det er en del av tekststrengen som truncates fra slutten? Da risikerer vi å miste `+3`. Bedre: splitte i to spans:
+### 2. Hyttefilter
+Legg en `<Select>` for hytte ved siden av søkefeltet (eller over deltakerlisten).
 
-```tsx
-<span className="bg-muted text-muted-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md border border-border leading-none flex items-center h-4 gap-1 max-w-[160px]">
-  <Home className="w-2.5 h-2.5 shrink-0" />
-  <span className="truncate">{leader.linkedCabins[0].name}</span>
-  {leader.linkedCabins.length > 1 && (
-    <span className="shrink-0 font-bold">+{leader.linkedCabins.length - 1}</span>
-  )}
-</span>
-```
+- Beregn `availableCabins` via `useMemo`: unike `participant.cabins?.name` fra inputlisten, sortert med `localeCompare('nb')`.
+- Ny state: `const [cabinFilter, setCabinFilter] = useState<string>('all')`.
+- Select-verdier: `"all"` (Alle hytter) + én rad per hytte + `"none"` (Uten hytte).
+- I `filteredParticipants`: legg til `matchesCabin`:
+  ```
+  const matchesCabin =
+    cabinFilter === 'all' ||
+    (cabinFilter === 'none' && !p.cabins?.name) ||
+    p.cabins?.name === cabinFilter;
+  ```
+- Vises som chip-row over deltakerlisten, justert med søkefeltet. Bruker eksisterende `<Select>`-komponent.
 
-Da kuttes første navn med "…", og `+3` står alltid synlig.
-
-### Full liste fortsatt tilgjengelig
-Full hytteliste vises uendret i detalj-sheet (`LeaderDetailSheet` / `LeaderContentSheet`) ved tap på kortet. Ingen endring der.
+### Layout-rekkefølge i kortet
+1. Aktivitet-velger (med "Egendefinert"-rad)
+2. Input for custom navn (kun hvis valgt)
+3. Søk (deltaker)
+4. Hyttefilter-select
+5. "Velg alle / Fjern valg"
+6. Deltakerliste
+7. Registrer-knapp (bruker `selectedActivity` direkte)
 
 ### Ikke berørt
-- Backend, RLS, filtre, sortering, andre formaterings-funksjoner i `LeaderDetailDialog`/`LeaderDetailSheet`.
+- DB-skjema (`participant_activities.activity` er fri tekst), RLS, andre sider, `PassportActivity.tsx`-wrapperen.
