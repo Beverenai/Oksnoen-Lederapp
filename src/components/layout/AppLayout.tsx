@@ -790,15 +790,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
                           hapticImpact('medium');
                           handleHajoloClick();
                         }}
-                        className="flex flex-col items-center justify-center gap-0.5 flex-1 relative"
+                        className="flex items-center justify-center flex-1 relative"
+                        aria-label={hasRead ? 'Bekreftet' : 'Hajolo — trykk for å bekrefte'}
                       >
-                        <Check className={cn('w-5 h-5', hasRead ? 'text-primary' : 'text-destructive')} strokeWidth={2.5} />
-                        <span className={cn('text-[10px] font-semibold leading-none', hasRead ? 'text-primary' : 'text-destructive')}>
-                          {hasRead ? 'Bekreftet' : 'Hajolo'}
+                        <span
+                          className={cn(
+                            'flex items-center justify-center w-11 h-11 rounded-full shadow-md transition-colors',
+                            hasRead
+                              ? 'bg-green-500 text-white'
+                              : 'bg-destructive text-white animate-pulse'
+                          )}
+                        >
+                          <Check className="w-6 h-6" strokeWidth={3} />
                         </span>
-                        {!hasRead && (
-                          <span className="absolute top-1 right-1/3 w-2 h-2 bg-destructive rounded-full animate-pulse" />
-                        )}
                       </button>
                     </PopoverTrigger>
                     <PopoverContent side="top" className="max-w-[280px] p-4" sideOffset={8}>

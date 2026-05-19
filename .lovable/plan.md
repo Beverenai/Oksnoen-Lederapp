@@ -1,47 +1,38 @@
-## Problem
-Bunnmenyen er for høy fordi den har padding på tre nivåer som legges sammen:
+## Mål
+Erstatt Hajolo-knappen i bunnmenyen med en sirkulær knapp (grønn for sett, rød for usett) — som i en tidligere versjon.
 
-- `.bottom-nav-fixed`: `padding-top: 10px` + `padding-bottom: 10px + safe-area (~34px)` = 14px topp / 44px bunn
-- Indre `<div>`: `py-1` = 4px topp + 4px bunn
-- Ikoner/labels: ~36–40px innhold
+## Endring — `src/components/layout/AppLayout.tsx`, linjene 783–817
 
-Total høyde i PWA: ~95–100px. Det er ~30px mer enn nødvendig.
+Bytt ut nåværende layout (Check-ikon + tekst stablet + animerende prikk) med én rund knapp.
 
-## Fiks
-Behold safe-area-respekt (det er hele poenget med `box-content`-fiksen), men fjern den ekstra "luft"-padden vi la på sist runde.
-
-### Endring 1 — `src/index.css` (`.bottom-nav-fixed`, linje 400–401)
-```css
-/* FRA */
-padding-top: 10px;
-padding-bottom: calc(10px + var(--pwa-safe-bottom, env(safe-area-inset-bottom, 34px)));
-
-/* TIL */
-padding-top: 4px;
-padding-bottom: calc(4px + var(--pwa-safe-bottom, env(safe-area-inset-bottom, 34px)));
-```
-
-### Endring 2 — `src/components/layout/AppLayout.tsx` (linje 779)
 ```tsx
-/* FRA */
-<div className="flex items-stretch justify-around px-1 py-1">
-
-/* TIL */
-<div className="flex items-stretch justify-around px-1">
+<button
+  data-active={false}
+  onClick={() => { hapticImpact('medium'); handleHajoloClick(); }}
+  className="flex flex-col items-center justify-center flex-1 relative"
+  aria-label={hasRead ? 'Bekreftet' : 'Hajolo — trykk for å bekrefte'}
+>
+  <span
+    className={cn(
+      'flex items-center justify-center w-11 h-11 rounded-full shadow-md transition-colors',
+      hasRead
+        ? 'bg-green-500 text-white'
+        : 'bg-destructive text-white animate-pulse'
+    )}
+  >
+    <Check className="w-6 h-6" strokeWidth={3} />
+  </span>
+</button>
 ```
 
-Fjerner `py-1` (8px ekstra) siden CSS nå håndterer topp/bunn-padding sentralt.
+### Detaljer
+- Sirkelen er 44×44px (`w-11 h-11`) — passer komfortabelt i den nye slimme bunnmenyen
+- Grønn (`bg-green-500`) når `hasRead = true`, rød (`bg-destructive`) når ikke
+- Hvit hake inni — tydelig visuell bekreftelse
+- `animate-pulse` kun når usett, for å trekke oppmerksomhet
+- Ingen tekst-label (sirkelen er selvforklarende, og frigjør plass)
+- Beholder `Popover` med forklarings-tooltip uendret
+- Beholder `data-active`, `hapticImpact`, `handleHajoloClick` uendret
 
 ## Resultat
-- Topp: 4px
-- Bunn: 4px + safe-area (~38px på iPhone med home indicator, 4px ellers)
-- Innhold: ikon + label-høyden
-- Total høyde: ~70px på iPhone (mot ~100px nå), ~40px på Android/desktop
-
-`box-content` + `ResizeObserver` på `--nav-actual-h` står urørt, så main-content-padding følger automatisk den nye høyden.
-
-## Verifisering
-Reinstaller PWA på iPhone og sjekk at:
-1. Menyen ikke har stor luft over/under ikonene
-2. Home indicator fortsatt har plass under menyen (safe-area)
-3. Innhold over menyen ikke dekkes (ResizeObserver oppdaterer main padding)
+Midt-knappen blir en distinkt rund "status-knapp" som visuelt skiller seg fra de andre nav-ikonene, slik den var i tidlig versjon. Grønn = bekreftet, rød (pulserende) = ny info.
