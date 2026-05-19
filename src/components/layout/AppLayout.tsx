@@ -272,6 +272,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
     };
   }, []);
 
+  // Measure actual bottom-nav height so main content reserves correct space
+  useEffect(() => {
+    const el = tabBarRef.current;
+    if (!el) return;
+    const update = () => {
+      const h = el.getBoundingClientRect().height;
+      if (h > 0) {
+        document.documentElement.style.setProperty('--nav-actual-h', `${Math.round(h)}px`);
+      }
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [mobileMenuOpen]);
+
   // Auto-expand groups based on current route
   useEffect(() => {
     const leaderPaths = leaderNavItems.map(i => i.to);
