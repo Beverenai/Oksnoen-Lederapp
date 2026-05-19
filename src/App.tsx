@@ -24,6 +24,7 @@ const Profile = lazy(() => import("@/pages/Profile"));
 const Leaders = lazy(() => import("@/pages/Leaders"));
 const Team = lazy(() => import("@/pages/Team"));
 const Passport = lazy(() => import("@/pages/Passport"));
+const PassportActivity = lazy(() => import("@/pages/PassportActivity"));
 const MyCabins = lazy(() => import("@/pages/MyCabins"));
 const Schedule = lazy(() => import("@/pages/Schedule"));
 const Skjaer = lazy(() => import("@/pages/Skjaer"));
@@ -178,6 +179,7 @@ function AppRoutes() {
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/leaders" element={<ProtectedRoute><Leaders /></ProtectedRoute>} />
         <Route path="/passport" element={<ProtectedRoute><Passport /></ProtectedRoute>} />
+        <Route path="/passport/activity" element={<ProtectedRoute><PassportActivity /></ProtectedRoute>} />
         <Route path="/team/:team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
         <Route path="/my-cabins" element={<ProtectedRoute><MyCabins /></ProtectedRoute>} />
         <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
