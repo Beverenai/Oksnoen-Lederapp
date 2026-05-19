@@ -22,7 +22,7 @@ interface SyncResult {
 export function GoogleSheetSyncTab() {
   const { showSuccess, showError } = useStatusPopup();
   const [spreadsheetId, setSpreadsheetId] = useState('');
-  const [range, setRange] = useState('Ark1!A1:Z1000');
+  const [range, setRange] = useState('');
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -119,7 +119,7 @@ export function GoogleSheetSyncTab() {
             <Label htmlFor="sheet-range">Range</Label>
             <Input
               id="sheet-range"
-              placeholder="Ark1!A1:Z1000"
+              placeholder="(tom = første fane automatisk) eller f.eks. Ledere!A1:Z1000"
               value={range}
               onChange={(e) => setRange(e.target.value)}
             />
