@@ -39,7 +39,6 @@ const ParticipantStats = lazy(() => import("@/pages/admin/ParticipantStats"));
 const Checkout = lazy(() => import("@/pages/admin/Checkout"));
 const ShiftPlanner = lazy(() => import("@/pages/admin/ShiftPlanner"));
 const MyShifts = lazy(() => import("@/pages/MyShifts"));
-const WalkieTalkie = lazy(() => import("@/pages/WalkieTalkie"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -196,7 +195,6 @@ function AppRoutes() {
         <Route path="/rope-control" element={<ProtectedRoute><RopeControl /></ProtectedRoute>} />
         <Route path="/skjaer" element={<ProtectedRoute><Skjaer /></ProtectedRoute>} />
         <Route path="/stories" element={<ProtectedRoute><Stories /></ProtectedRoute>} />
-        <Route path="/walkie" element={<ProtectedRoute><WalkieTalkie /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
