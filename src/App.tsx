@@ -39,7 +39,6 @@ const ParticipantStats = lazy(() => import("@/pages/admin/ParticipantStats"));
 const Checkout = lazy(() => import("@/pages/admin/Checkout"));
 const ShiftPlanner = lazy(() => import("@/pages/admin/ShiftPlanner"));
 const MyShifts = lazy(() => import("@/pages/MyShifts"));
-const WalkieTalkie = lazy(() => import("@/pages/WalkieTalkie"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
