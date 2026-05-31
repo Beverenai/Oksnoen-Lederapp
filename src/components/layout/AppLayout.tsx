@@ -34,6 +34,7 @@ import confetti from 'canvas-confetti';
 import { hapticSuccess, hapticImpact } from '@/lib/capacitorHaptics';
 import { PassIcon } from '@/components/icons/PassIcon';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
+import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
 import {
   Collapsible,
   CollapsibleContent,
@@ -885,6 +886,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
         open={notificationSheetOpen} 
         onOpenChange={setNotificationSheetOpen} 
       />
+
+      {/* Auto-prompt for push notifications on first login */}
+      <PushPermissionPrompt />
     </div>
   );
 }
