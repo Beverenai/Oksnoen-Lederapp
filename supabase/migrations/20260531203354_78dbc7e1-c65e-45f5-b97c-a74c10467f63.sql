@@ -1,0 +1,1 @@
+ALTER TABLE public.leaders ADD COLUMN IF NOT EXISTS has_seen_push_prompt boolean NOT NULL DEFAULT false;
