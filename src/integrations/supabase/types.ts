@@ -451,6 +451,7 @@ export type Database = {
           has_boat_license: boolean | null
           has_car: boolean | null
           has_drivers_license: boolean | null
+          has_seen_push_prompt: boolean
           id: string
           is_active: boolean | null
           last_app_edit_at: string
@@ -476,6 +477,7 @@ export type Database = {
           has_boat_license?: boolean | null
           has_car?: boolean | null
           has_drivers_license?: boolean | null
+          has_seen_push_prompt?: boolean
           id?: string
           is_active?: boolean | null
           last_app_edit_at?: string
@@ -501,6 +503,7 @@ export type Database = {
           has_boat_license?: boolean | null
           has_car?: boolean | null
           has_drivers_license?: boolean | null
+          has_seen_push_prompt?: boolean
           id?: string
           is_active?: boolean | null
           last_app_edit_at?: string
