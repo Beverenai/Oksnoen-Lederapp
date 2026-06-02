@@ -442,6 +442,55 @@ export function ParticipantImportTab() {
     reader.readAsArrayBuffer(file);
   };
 
+  // Convert pasted text (TSV from spreadsheet OR newline-per-field from PDF copy)
+  // into a tab-separated string the CSV parser understands.
+  const normalizePastedText = (raw: string): string => {
+    const text = raw.replace(/\r\n?/g, '\n');
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length === 0) return '';
+
+    // If any line already has tabs (or commas/semicolons), assume it's table-shaped already.
+    if (lines.some(l => l.includes('\t'))) return lines.join('\n');
+    if (lines[0].includes(';') || lines[0].includes(',')) return lines.join('\n');
+
+    // Newline-per-field format: detect consecutive header lines at the top.
+    const headerNames = [
+      'fornavn', 'etternavn', 'født', 'fodt', 'hytte',
+      'deltatt tidligere', 'tidligere', 'notater', 'notat',
+      'info', 'kommentar', 'bilde', 'har ankommet', 'ankommet'
+    ];
+    let headerEnd = 0;
+    while (headerEnd < lines.length && headerNames.includes(lines[headerEnd].toLowerCase())) {
+      headerEnd++;
+    }
+    if (headerEnd < 2) return lines.join('\n');
+
+    const headers = lines.slice(0, headerEnd);
+    const data = lines.slice(headerEnd);
+    const rows: string[] = [headers.join('\t')];
+    for (let i = 0; i < data.length; i += headers.length) {
+      const chunk = data.slice(i, i + headers.length);
+      while (chunk.length < headers.length) chunk.push('');
+      rows.push(chunk.join('\t'));
+    }
+    return rows.join('\n');
+  };
+
+  const handlePasteImport = () => {
+    if (!pastedText.trim()) {
+      showError('Lim inn data først');
+      return;
+    }
+    const normalized = normalizePastedText(pastedText);
+    const parsed = parseCSV(normalized);
+    if (parsed.length === 0) {
+      showError('Kunne ikke tolke innholdet. Sjekk at det er overskrifter og data.');
+      return;
+    }
+    setParsedData(parsed);
+    setImportResult(null);
+  };
+
   const importParticipants = async () => {
     const validParticipants = parsedData.filter(p => p.valid);
     if (validParticipants.length === 0) return;
