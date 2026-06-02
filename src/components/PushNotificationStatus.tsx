@@ -22,6 +22,7 @@ export function PushNotificationStatus({
     isSyncing,
     permission,
     error,
+    isNative,
     enablePushNotifications,
     retrySync,
   } = usePushNotifications();
@@ -62,7 +63,9 @@ export function PushNotificationStatus({
           <span className="text-sm font-medium">Varsler er blokkert</span>
         </div>
         <p className="text-xs text-muted-foreground">
-          Gå til innstillinger i nettleseren for å tillate varsler fra denne appen.
+          {isNative
+            ? 'Gå til Innstillinger → Varslinger → Øksnøen LederApp for å tillate varsler.'
+            : 'Gå til innstillinger i nettleseren for å tillate varsler fra denne appen.'}
         </p>
       </div>
     );

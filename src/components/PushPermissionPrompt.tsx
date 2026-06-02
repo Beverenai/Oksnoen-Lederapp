@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 
 export function PushPermissionPrompt() {
   const { leader, isProfileComplete, refreshLeader } = useAuth();
-  const { enablePushNotifications, isSupported, isEnabled, permission, isLoading, isNative } = usePushNotifications();
+  const { enablePushNotifications, isSupported, isEnabled, permission, isLoading, isNative, error } = usePushNotifications();
   const [open, setOpen] = useState(false);
   const [deniedMode, setDeniedMode] = useState(false);
   const [hasEvaluated, setHasEvaluated] = useState(false);
@@ -30,31 +30,33 @@ export function PushPermissionPrompt() {
   };
 
   useEffect(() => {
-    if (hasEvaluated) return;
     if (!leader || !isProfileComplete) return;
     if (isLoading) return;
     if (!isSupported) return;
     if (isEnabled) return;
-    if (leader.has_seen_push_prompt && !(isNative && permission === 'default')) return;
-
-    setHasEvaluated(true);
-
-    // Already granted — silently mark seen
     if (permission === 'granted') {
       void markSeen();
       return;
     }
 
+    const shouldAskForNativePermission = isNative && permission === 'default';
+    if (!shouldAskForNativePermission && hasEvaluated) return;
+    if (leader.has_seen_push_prompt && !shouldAskForNativePermission) return;
+
+    setHasEvaluated(true);
+
     const timer = setTimeout(() => {
       if (permission === 'denied') {
         setDeniedMode(true);
+      } else {
+        setDeniedMode(false);
       }
       setOpen(true);
-    }, 1500);
+    }, shouldAskForNativePermission ? 600 : 1500);
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leader?.id, leader?.has_seen_push_prompt, isProfileComplete, isSupported, isEnabled, isLoading, isNative, permission]);
+  }, [leader?.id, leader?.has_seen_push_prompt, isProfileComplete, isSupported, isEnabled, isLoading, isNative, permission, hasEvaluated]);
 
   const handleEnable = async () => {
     const success = await enablePushNotifications();
@@ -88,6 +90,9 @@ export function PushPermissionPrompt() {
               ? 'Du har avslått varslinger tidligere. For å aktivere må du gå til Innstillinger → Notifications → Øksnøen LederApp.'
               : 'Aktiver varslinger så du får viktig info, vaktendringer og hurtigvarslinger direkte på telefonen — også når appen er lukket.'}
           </DialogDescription>
+          {error && !deniedMode && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
         </DialogHeader>
         <DialogFooter className="flex-col gap-2 sm:flex-col">
           {deniedMode ? (
