@@ -66,6 +66,54 @@ function pemToPkcs8Bytes(pem: string): Uint8Array {
   return bytes;
 }
 
+// Some Web Crypto runtimes return ECDSA signatures in DER (ASN.1) instead of
+// raw IEEE P1363 (r||s). Apple's APNs JWT requires raw 64-byte (R||S) format.
+// This helper normalizes either format to the required 64 bytes.
+function ecdsaSignatureToJoseRaw(sig: ArrayBuffer): Uint8Array {
+  const bytes = new Uint8Array(sig);
+  // Already raw r||s for P-256
+  if (bytes.length === 64) return bytes;
+
+  // Try to parse as DER: 0x30 len 0x02 rLen r 0x02 sLen s
+  if (bytes[0] !== 0x30) {
+    throw new Error(`Unexpected ECDSA signature format, length=${bytes.length}`);
+  }
+  let offset = 2;
+  // Handle long-form length (>=128)
+  if ((bytes[1] & 0x80) !== 0) {
+    offset = 2 + (bytes[1] & 0x7f);
+  }
+  if (bytes[offset] !== 0x02) throw new Error("Invalid DER: expected INTEGER for R");
+  const rLen = bytes[offset + 1];
+  let rStart = offset + 2;
+  let r = bytes.slice(rStart, rStart + rLen);
+
+  const sOffset = rStart + rLen;
+  if (bytes[sOffset] !== 0x02) throw new Error("Invalid DER: expected INTEGER for S");
+  const sLen = bytes[sOffset + 1];
+  const sStart = sOffset + 2;
+  let s = bytes.slice(sStart, sStart + sLen);
+
+  // Strip leading zero pad and left-pad to 32 bytes
+  const trim = (b: Uint8Array) => {
+    let i = 0;
+    while (i < b.length - 1 && b[i] === 0x00) i++;
+    return b.slice(i);
+  };
+  const pad32 = (b: Uint8Array) => {
+    if (b.length > 32) throw new Error(`ECDSA component too long: ${b.length}`);
+    const out = new Uint8Array(32);
+    out.set(b, 32 - b.length);
+    return out;
+  };
+  r = pad32(trim(r));
+  s = pad32(trim(s));
+  const out = new Uint8Array(64);
+  out.set(r, 0);
+  out.set(s, 32);
+  return out;
+}
+
 // Cache the signed JWT for up to ~50 minutes (Apple allows max 60 min, min 20 min refresh).
 let cachedToken: { token: string; iat: number; keyId: string } | null = null;
 
@@ -94,7 +142,8 @@ async function createApnsJwt(cfg: ApnsConfig): Promise<string> {
     new TextEncoder().encode(signingInput),
   );
 
-  const token = `${signingInput}.${b64urlEncode(sig)}`;
+  const rawSig = ecdsaSignatureToJoseRaw(sig);
+  const token = `${signingInput}.${b64urlEncode(rawSig)}`;
   cachedToken = { token, iat: now, keyId: cfg.keyId };
   return token;
 }
@@ -147,6 +196,17 @@ export async function sendApnsAlert(
     reason = j?.reason;
   } catch {
     // ignore
+  }
+
+  // Surface diagnostic info (no secrets) so misconfig is easy to spot in logs.
+  console.error(
+    `[APNs] send failed status=${res.status} reason=${reason ?? "?"} ` +
+      `env=${cfg.env} topic=${cfg.topic} kid=${cfg.keyId} team=${cfg.teamId} ` +
+      `tokenPrefix=${deviceToken.slice(0, 8)}…`,
+  );
+  // If Apple rejects the provider token, drop the JWT cache so the next call re-signs.
+  if (reason === "InvalidProviderToken" || reason === "ExpiredProviderToken") {
+    cachedToken = null;
   }
 
   const unregistered = res.status === 410 ||
