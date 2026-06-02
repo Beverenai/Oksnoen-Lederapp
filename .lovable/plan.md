@@ -1,24 +1,31 @@
-## Endring i `ParticipantDetailDialog`
+# Plan for å fikse Æ/Ø/Å-problemet helt
 
-Erstatt dagens bred banner-crop med en sentrert rund avatar — trykk åpner hele bildet i fullskjerm uten beskjæring.
+## Mål
+Sørge for at deltakerimport håndterer norske tegn korrekt hver gang, og rydde opp i deltakere som allerede har blitt lagret med ødelagte tegn.
 
-### Header-layout
-- Fjern `h-32 sm:h-48`-banneret som beskjærer bildet.
-- Vis en sentrert rund avatar (`h-28 w-28 sm:h-32 sm:w-32`, `rounded-full`, `object-cover`, `ring-2 ring-border`) over navnet.
-- Initialer som fallback i samme sirkel.
-- Kamera-knappen (last opp nytt bilde) flyttes som liten FAB nederst-høyre på selve avatar-sirkelen — samme funksjon som i dag.
+## Hva jeg vil gjøre
+1. **Herd importen i appen**
+   - Forbedre CSV-dekodingen slik at importen ikke bare prøver én fallback, men også normaliserer vanlige mojibake-mønstre før data sendes videre.
+   - Sikre at både navn, hyttenavn og romverdier som `høyre` / `venstre` blir normalisert før preview og import.
 
-### Tap for fullbilde
-- Avataren blir trykkbar (kun når `image_url` finnes).
-- Trykk åpner en `Dialog` med svart bakgrunn som viser hele bildet i `object-contain`, maks `90vh`/`95vw`, ingen beskjæring.
-- Lukk via tap utenfor, Esc, eller en lukk-knapp øverst.
-- Bruker eksisterende `Dialog`-komponenter; ingen nye avhengigheter.
+2. **Legge inn server-side beskyttelse i backend-funksjonen**
+   - Normalisere tekst en gang til i importfunksjonen, så dårlige tegn ikke kan slippe gjennom selv om en fil eller klient oppfører seg rart.
+   - Bruke samme normalisering på `firstName`, `lastName`, `cabinName`, `room`, `info` og relevante aktivitets-/tekstfelter.
 
-### Det vi IKKE rør
-- Opplastings-/komprimeringslogikken (`handleImageUpload`, `compressImage`).
-- Resten av dialogen (Nurse-info, Styrkeprøve, Aktiviteter).
-- Listevisningen av deltagere (kun detalj-dialogen endres).
-- Ingen DB-endringer; ingen ny `object-position`-lagring.
+3. **Rydde opp i eksisterende ødelagte data**
+   - Lage en migrering som retter opp kjente feilaktige tegnsekvenser i allerede lagrede deltakerdata.
+   - Fokus på feltene som vises i skjermbildet: navn og rom/hytte-relaterte verdier.
 
-### Filer
-- `src/components/passport/ParticipantDetailDialog.tsx` — kun header-blokken (linje ~238–277) + ny lokal state `lightboxOpen` og en liten `Dialog` for fullbildet.
+4. **Verifisere mot visningen som fortsatt er feil**
+   - Bekrefte at lister som bruker `participant.name` og `room` viser riktig etter opprydding, spesielt deltakerlister der du nå ser `�`.
+
+## Teknisk detalj
+- Frontend: `src/components/admin/ParticipantImportTab.tsx`
+- Backend-funksjon: `supabase/functions/import-participants-background/index.ts`
+- Datarydding: ny SQL-migrering i `supabase/migrations/`
+- Berørte visninger er allerede avhengige av lagret data, så når dataene blir normalisert skal skjermbildene også bli riktige uten ekstra UI-endringer.
+
+## Forventet resultat
+- Nye importer lagres korrekt med `Æ`, `Ø`, `Å`.
+- `høyre` og `venstre` fungerer stabilt i import og visning.
+- Eksisterende deltakere med `�` eller feil norske bokstaver blir ryddet opp.
