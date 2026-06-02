@@ -1,18 +1,22 @@
 import imageCompression from 'browser-image-compression';
 
+interface CompressImageOptions {
+  maxSizeMB?: number;
+  maxWidthOrHeight?: number;
+  initialQuality?: number;
+}
+
 /**
  * Compresses an image file for optimal upload and display
- * - Max 100KB file size
- * - Max 800px width/height
  * - Converts to JPEG format
  */
-export const compressImage = async (file: File): Promise<File> => {
+export const compressImage = async (file: File, overrides: CompressImageOptions = {}): Promise<File> => {
   const options = {
-    maxSizeMB: 0.1,           // Max 100KB
-    maxWidthOrHeight: 800,    // Max 800px
+    maxSizeMB: overrides.maxSizeMB ?? 0.1,
+    maxWidthOrHeight: overrides.maxWidthOrHeight ?? 800,
     useWebWorker: true,
     fileType: 'image/jpeg' as const,
-    initialQuality: 0.8,
+    initialQuality: overrides.initialQuality ?? 0.8,
   };
   
   try {

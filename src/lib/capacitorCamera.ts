@@ -38,12 +38,10 @@ export const takePhoto = async (): Promise<File | null> => {
   
   try {
     const photo = await Camera.getPhoto({
-      quality: 80,
+      quality: 100,
       allowEditing: false,
       resultType: CameraResultType.DataUrl,
       source: CameraSource.Prompt, // Let user choose camera or gallery
-      width: 1200,
-      height: 1200,
       correctOrientation: true,
     });
     
@@ -78,12 +76,10 @@ export const pickFromGallery = async (): Promise<File | null> => {
   
   try {
     const photo = await Camera.getPhoto({
-      quality: 80,
+      quality: 100,
       allowEditing: false,
       resultType: CameraResultType.DataUrl,
       source: CameraSource.Photos,
-      width: 1200,
-      height: 1200,
       correctOrientation: true,
     });
     

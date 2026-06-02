@@ -56,25 +56,53 @@ export const registerNativePush = async (): Promise<string | null> => {
   if (!PushNotifications) return null;
   
   try {
-    await PushNotifications.register();
-    
     return new Promise((resolve) => {
+      let didResolve = false;
+      let registrationHandle: { remove?: () => Promise<void> } | null = null;
+      let errorHandle: { remove?: () => Promise<void> } | null = null;
+
+      const finish = async (token: string | null) => {
+        if (didResolve) return;
+        didResolve = true;
+        clearTimeout(timeout);
+        await registrationHandle?.remove?.();
+        await errorHandle?.remove?.();
+        resolve(token);
+      };
+
       const timeout = setTimeout(() => {
         console.log('[CapacitorPush] Registration timeout');
-        resolve(null);
-      }, 10000);
+        void finish(null);
+      }, 20000);
       
       PushNotifications.addListener('registration', (token: { value: string }) => {
-        clearTimeout(timeout);
         console.log('[CapacitorPush] Registered with token:', token.value.substring(0, 20) + '...');
-        resolve(token.value);
+        void finish(token.value);
+      }).then((handle: { remove?: () => Promise<void> }) => {
+        registrationHandle = handle;
+      }).catch((error: unknown) => {
+        console.error('[CapacitorPush] Could not attach registration listener:', error);
+        void finish(null);
       });
       
       PushNotifications.addListener('registrationError', (error: any) => {
-        clearTimeout(timeout);
         console.error('[CapacitorPush] Registration error:', error);
-        resolve(null);
+        void finish(null);
+      }).then((handle: { remove?: () => Promise<void> }) => {
+        errorHandle = handle;
+      }).catch((error: unknown) => {
+        console.error('[CapacitorPush] Could not attach registration error listener:', error);
+        void finish(null);
       });
+
+      setTimeout(() => {
+        if (!didResolve) {
+          PushNotifications.register().catch((error: unknown) => {
+            console.error('[CapacitorPush] Registration failed:', error);
+            void finish(null);
+          });
+        }
+      }, 0);
     });
   } catch (e) {
     console.error('[CapacitorPush] Registration failed:', e);

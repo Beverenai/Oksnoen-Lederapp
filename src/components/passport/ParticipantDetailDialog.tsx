@@ -155,7 +155,11 @@ export const ParticipantDetailDialog = ({
 
     setIsUploadingImage(true);
     try {
-      const compressedFile = await compressImage(file);
+      const compressedFile = await compressImage(file, {
+        maxSizeMB: 3,
+        maxWidthOrHeight: 2400,
+        initialQuality: 0.95,
+      });
       const fileName = `${participant.id}.jpg`;
       const filePath = `${fileName}`;
 
