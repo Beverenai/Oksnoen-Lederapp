@@ -32,13 +32,32 @@ export interface ApnsSendResult {
   unregistered?: boolean;
 }
 
+function normalizeSecretValue(value: string | null | undefined): string | null {
+  if (!value) return null;
+  let normalized = value.trim();
+
+  const eqIndex = normalized.indexOf("=");
+  if (eqIndex > 0 && /^[A-Z0-9_]+$/i.test(normalized.slice(0, eqIndex))) {
+    normalized = normalized.slice(eqIndex + 1).trim();
+  }
+
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1).trim();
+  }
+
+  return normalized || null;
+}
+
 export function getApnsConfig(): ApnsConfig | null {
-  const keyId = Deno.env.get("APNS_KEY_ID");
-  const teamId = Deno.env.get("APNS_TEAM_ID");
-  const privateKeyPem = Deno.env.get("APNS_PRIVATE_KEY");
+  const keyId = normalizeSecretValue(Deno.env.get("APNS_KEY_ID"));
+  const teamId = normalizeSecretValue(Deno.env.get("APNS_TEAM_ID"));
+  const privateKeyPem = normalizeSecretValue(Deno.env.get("APNS_PRIVATE_KEY"));
   if (!keyId || !teamId || !privateKeyPem) return null;
-  const topic = Deno.env.get("APNS_TOPIC") || "com.oksnoen.lederapp";
-  const env = (Deno.env.get("APNS_ENV") || "production").toLowerCase() === "sandbox"
+  const topic = normalizeSecretValue(Deno.env.get("APNS_TOPIC")) || "com.oksnoen.lederapp";
+  const env = (normalizeSecretValue(Deno.env.get("APNS_ENV")) || "production").toLowerCase() === "sandbox"
     ? "sandbox"
     : "production";
   return { keyId, teamId, privateKeyPem, topic, env };
