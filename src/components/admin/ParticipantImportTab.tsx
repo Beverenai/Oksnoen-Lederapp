@@ -394,12 +394,22 @@ export function ParticipantImportTab() {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = e.target?.result as string;
+      const buffer = e.target?.result as ArrayBuffer;
+      const bytes = new Uint8Array(buffer);
+      // Try UTF-8 first (strict). If it fails or contains the replacement char (U+FFFD),
+      // fall back to windows-1252 — common when Excel exports CSV on macOS/Windows.
+      let text: string;
+      try {
+        text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+        if (text.includes('\uFFFD')) throw new Error('replacement char');
+      } catch {
+        text = new TextDecoder('windows-1252').decode(bytes);
+      }
       const parsed = parseCSV(text);
       setParsedData(parsed);
       setImportResult(null);
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   };
 
   const importParticipants = async () => {
