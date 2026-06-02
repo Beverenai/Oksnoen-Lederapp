@@ -16,7 +16,7 @@ struct LeaderEntry: TimelineEntry {
 }
 
 struct LeaderTimelineProvider: TimelineProvider {
-    private let appGroupId = "group.com.oksnoen.lederapp"
+    private let appGroupId = "group.com.oksnoen.lederapp.shared"
 
     func placeholder(in context: Context) -> LeaderEntry {
         LeaderEntry(

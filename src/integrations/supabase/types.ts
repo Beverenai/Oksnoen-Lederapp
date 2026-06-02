@@ -815,30 +815,39 @@ export type Database = {
       push_subscriptions: {
         Row: {
           auth: string
+          channel: string
           created_at: string | null
           endpoint: string
           id: string
           last_used_at: string | null
           leader_id: string
+          native_token: string | null
           p256dh: string
+          platform: string | null
         }
         Insert: {
           auth: string
+          channel?: string
           created_at?: string | null
           endpoint: string
           id?: string
           last_used_at?: string | null
           leader_id: string
+          native_token?: string | null
           p256dh: string
+          platform?: string | null
         }
         Update: {
           auth?: string
+          channel?: string
           created_at?: string | null
           endpoint?: string
           id?: string
           last_used_at?: string | null
           leader_id?: string
+          native_token?: string | null
           p256dh?: string
+          platform?: string | null
         }
         Relationships: []
       }

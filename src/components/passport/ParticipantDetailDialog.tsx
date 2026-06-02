@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { compressImage } from '@/lib/imageUtils';
 import { CachedImage } from '@/components/ui/cached-image';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { isNativeCameraAvailable, takePhoto } from '@/lib/capacitorCamera';
 
 interface ParticipantWithCabin {
   id: string;
@@ -149,8 +150,7 @@ export const ParticipantDetailDialog = ({
     }
   };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const uploadParticipantImage = async (file: File) => {
     if (!file || !participant) return;
 
     setIsUploadingImage(true);
@@ -187,6 +187,25 @@ export const ParticipantDetailDialog = ({
     } finally {
       setIsUploadingImage(false);
     }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    await uploadParticipantImage(file);
+  };
+
+  const handleImageButtonClick = async () => {
+    if (isNativeCameraAvailable()) {
+      const file = await takePhoto();
+      if (file) {
+        await uploadParticipantImage(file);
+      }
+      return;
+    }
+
+    fileInputRef.current?.click();
   };
 
   const toggleArrival = async () => {
@@ -258,7 +277,7 @@ export const ParticipantDetailDialog = ({
                 variant="secondary"
                 size="icon"
                 className="absolute bottom-2 right-2 rounded-full h-8 w-8 sm:h-10 sm:w-10 shadow-lg"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={handleImageButtonClick}
                 disabled={isUploadingImage}
               >
                 {isUploadingImage ? (

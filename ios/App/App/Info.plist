@@ -24,6 +24,12 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Oksnøen LederApp bruker kameraet for å ta profilbilder av deltakere og bilder til fiksmeldinger.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Oksnøen LederApp bruker bildebiblioteket når du velger bilder til deltakere, profil og fiksmeldinger.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Oksnøen LederApp kan lagre bilder du velger å bruke i appen.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

@@ -130,7 +130,12 @@ export default function ShiftPlanner() {
       let errMsg = (error as any)?.message || data?.error || '';
       const ctx = (error as any)?.context;
       if (ctx && typeof ctx.json === 'function') {
-        try { const body = await ctx.clone().json(); errMsg = body?.error || errMsg; } catch {}
+        try {
+          const body = await ctx.clone().json();
+          errMsg = body?.error || errMsg;
+        } catch (parseError) {
+          console.warn('Could not parse schedule generation error response:', parseError);
+        }
       }
       if (error) throw error;
       if (data?.error) throw new Error(data.error);

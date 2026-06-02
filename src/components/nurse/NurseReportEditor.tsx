@@ -376,7 +376,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
 
         if (healthInfo && healthInfo.length > 0) {
           const current = healthInfo[0].info || '';
-          const cleaned = current.replace(/\[Nurse\][^\[]*/s, '').trim();
+          const cleaned = current.replace(/\[Nurse\][^[]*/s, '').trim();
           if (cleaned) {
             await supabase.from('participant_health_info').update({ info: cleaned, updated_at: new Date().toISOString() }).eq('id', healthInfo[0].id);
           } else {
@@ -424,7 +424,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
 
       if (healthInfo && healthInfo.length > 0) {
         const current = healthInfo[0].info || '';
-        const cleaned = current.replace(/\[Nurse\][^\[]*/s, '').trim();
+        const cleaned = current.replace(/\[Nurse\][^[]*/s, '').trim();
         if (cleaned) {
           await supabase.from('participant_health_info').update({ info: cleaned, updated_at: new Date().toISOString() }).eq('id', healthInfo[0].id);
         } else {
@@ -556,7 +556,6 @@ ${sectionsHtml}
     const mentionPattern = /@([^\n@]+)/g;
     let match;
     const foundPairs: { participant: Participant; text: string }[] = [];
-    let lastEnd = 0;
 
     while ((match = mentionPattern.exec(text)) !== null) {
       const mentionName = match[1].trim();

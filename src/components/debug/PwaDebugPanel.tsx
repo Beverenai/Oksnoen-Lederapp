@@ -92,7 +92,6 @@ export function PwaDebugPanel() {
     update();
     // Log once after mount so it's easy to copy from console
     setTimeout(() => {
-      // eslint-disable-next-line no-console
       console.log('CONTAINING BLOCK CULPRITS:', findCulprits());
     }, 300);
     const id = window.setInterval(update, 500);

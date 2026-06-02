@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { isCapacitor } from '@/lib/capacitor';
 import {
+  initCapacitorPush,
   isNativePushAvailable,
   requestNativePushPermission,
   registerNativePush,
@@ -150,7 +151,8 @@ export function usePushNotifications() {
   useEffect(() => {
     const checkSupport = async () => {
       // Check for native push first
-      if (isCapacitor() && isNativePushAvailable()) {
+      const nativePushReady = isCapacitor() && (isNativePushAvailable() || await initCapacitorPush());
+      if (nativePushReady) {
         console.log('[Push] Native push available');
         setState({
           isSupported: true,

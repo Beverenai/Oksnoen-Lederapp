@@ -11,7 +11,7 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "reloadWidgets", returnType: CAPPluginReturnPromise)
     ]
 
-    private let appGroupId = "group.com.oksnoen.lederapp"
+    private let appGroupId = "group.com.oksnoen.lederapp.shared"
 
     @objc func updateWidgetData(_ call: CAPPluginCall) {
         let currentActivity = call.getString("currentActivity")

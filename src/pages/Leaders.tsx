@@ -259,15 +259,19 @@ export default function Leaders() {
       switch (sortBy) {
         case 'activity':
           // Alfabetisk sortering basert på aktivitetsinnhold
+        {
           const aActivity = a.content?.current_activity || 'zzz';
           const bActivity = b.content?.current_activity || 'zzz';
           if (aActivity !== bActivity) return aActivity.localeCompare(bActivity, 'nb');
           return a.name.localeCompare(b.name, 'nb');
+        }
         case 'team':
+        {
           const aTeam = a.team || 'zzz';
           const bTeam = b.team || 'zzz';
           if (aTeam !== bTeam) return aTeam.localeCompare(bTeam, 'nb');
           return a.name.localeCompare(b.name, 'nb');
+        }
         default:
           return a.name.localeCompare(b.name, 'nb');
       }

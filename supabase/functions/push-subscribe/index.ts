@@ -15,11 +15,22 @@ serve(async (req) => {
   try {
     const body = await req.json();
     // Support both nested keys and flat keys for iOS/Safari compatibility
-    const { endpoint, keys, p256dh: directP256dh, auth: directAuth, leader_id } = body;
+    const {
+      endpoint,
+      keys,
+      p256dh: directP256dh,
+      auth: directAuth,
+      leader_id,
+      is_native,
+      native_token,
+      platform,
+    } = body;
 
     // Extract keys - prefer direct keys, fall back to nested
     const p256dh = directP256dh || keys?.p256dh;
     const auth = directAuth || keys?.auth;
+    const isNative = is_native === true || endpoint?.startsWith("native://");
+    const nativeToken = native_token || (isNative ? endpoint?.replace("native://", "") : null);
 
     console.log("push-subscribe request received:", {
       hasEndpoint: !!endpoint,
@@ -29,6 +40,7 @@ serve(async (req) => {
       hasNestedKeys: !!keys,
       hasNestedP256dh: !!keys?.p256dh,
       hasNestedAuth: !!keys?.auth,
+      isNative,
     });
 
     // Validate required fields
@@ -48,7 +60,15 @@ serve(async (req) => {
       );
     }
 
-    if (!p256dh || !auth) {
+    if (isNative && !nativeToken) {
+      console.error("Missing native token");
+      return new Response(
+        JSON.stringify({ error: "Native token is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!isNative && (!p256dh || !auth)) {
       console.error("Missing subscription keys:", { p256dh: !!p256dh, auth: !!auth });
       return new Response(
         JSON.stringify({ error: "Subscription keys (p256dh, auth) are required" }),
@@ -86,8 +106,11 @@ serve(async (req) => {
         {
           leader_id: leader.id,
           endpoint,
-          p256dh,
-          auth,
+          p256dh: isNative ? "native" : p256dh,
+          auth: isNative ? "native" : auth,
+          channel: isNative ? "apns" : "web",
+          native_token: nativeToken,
+          platform: platform || (isNative ? "ios" : "web"),
           last_used_at: new Date().toISOString(),
         },
         { onConflict: "endpoint" }
