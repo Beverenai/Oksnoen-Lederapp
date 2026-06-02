@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Upload, 
@@ -18,7 +19,8 @@ import {
   ChevronDown,
   Search,
   Edit2,
-  MapPin
+  MapPin,
+  ClipboardPaste
 } from 'lucide-react';
 import { ParticipantEditDialog } from './ParticipantEditDialog';
 import { hapticSuccess, hapticWarning, hapticError } from '@/lib/capacitorHaptics';
@@ -128,6 +130,7 @@ export function ParticipantImportTab() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pastedText, setPastedText] = useState('');
 
   // Participant list state
   const [allParticipants, setAllParticipants] = useState<ParticipantWithCabin[]>([]);
@@ -288,7 +291,7 @@ export function ParticipantImportTab() {
     if (lines.length < 2) return [];
 
     // Parse header - handle both comma and semicolon as separators
-    const separator = lines[0].includes(';') ? ';' : ',';
+    const separator = lines[0].includes('\t') ? '\t' : lines[0].includes(';') ? ';' : ',';
     const headers = lines[0].split(separator).map(h => h.trim().toLowerCase());
     
     // Find column indices for basic fields
@@ -309,7 +312,7 @@ export function ParticipantImportTab() {
     // Debug logging for column detection
     console.log('CSV Headers found:', headers);
     console.log('Times column index:', timesIdx, timesIdx >= 0 ? `(found: "${headers[timesIdx]}")` : '(not found)');
-    const infoIdx = headers.findIndex(h => h === 'info' || h === 'kommentar' || h === 'kommentarer');
+    const infoIdx = headers.findIndex(h => h === 'info' || h === 'kommentar' || h === 'kommentarer' || h === 'notater' || h === 'notat');
     const imageIdx = headers.findIndex(h => h === 'bilde' || h === 'image' || h === 'image_url');
     const arrivedIdx = headers.findIndex(h => h.includes('ankommet') || h.includes('arrived'));
 
