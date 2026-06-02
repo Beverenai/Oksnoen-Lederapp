@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Upload, 
@@ -18,7 +19,8 @@ import {
   ChevronDown,
   Search,
   Edit2,
-  MapPin
+  MapPin,
+  ClipboardPaste
 } from 'lucide-react';
 import { ParticipantEditDialog } from './ParticipantEditDialog';
 import { hapticSuccess, hapticWarning, hapticError } from '@/lib/capacitorHaptics';
@@ -128,6 +130,7 @@ export function ParticipantImportTab() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pastedText, setPastedText] = useState('');
 
   // Participant list state
   const [allParticipants, setAllParticipants] = useState<ParticipantWithCabin[]>([]);
@@ -288,7 +291,7 @@ export function ParticipantImportTab() {
     if (lines.length < 2) return [];
 
     // Parse header - handle both comma and semicolon as separators
-    const separator = lines[0].includes(';') ? ';' : ',';
+    const separator = lines[0].includes('\t') ? '\t' : lines[0].includes(';') ? ';' : ',';
     const headers = lines[0].split(separator).map(h => h.trim().toLowerCase());
     
     // Find column indices for basic fields
@@ -309,7 +312,7 @@ export function ParticipantImportTab() {
     // Debug logging for column detection
     console.log('CSV Headers found:', headers);
     console.log('Times column index:', timesIdx, timesIdx >= 0 ? `(found: "${headers[timesIdx]}")` : '(not found)');
-    const infoIdx = headers.findIndex(h => h === 'info' || h === 'kommentar' || h === 'kommentarer');
+    const infoIdx = headers.findIndex(h => h === 'info' || h === 'kommentar' || h === 'kommentarer' || h === 'notater' || h === 'notat');
     const imageIdx = headers.findIndex(h => h === 'bilde' || h === 'image' || h === 'image_url');
     const arrivedIdx = headers.findIndex(h => h.includes('ankommet') || h.includes('arrived'));
 
@@ -437,6 +440,55 @@ export function ParticipantImportTab() {
       setImportResult(null);
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  // Convert pasted text (TSV from spreadsheet OR newline-per-field from PDF copy)
+  // into a tab-separated string the CSV parser understands.
+  const normalizePastedText = (raw: string): string => {
+    const text = raw.replace(/\r\n?/g, '\n');
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length === 0) return '';
+
+    // If any line already has tabs (or commas/semicolons), assume it's table-shaped already.
+    if (lines.some(l => l.includes('\t'))) return lines.join('\n');
+    if (lines[0].includes(';') || lines[0].includes(',')) return lines.join('\n');
+
+    // Newline-per-field format: detect consecutive header lines at the top.
+    const headerNames = [
+      'fornavn', 'etternavn', 'født', 'fodt', 'hytte',
+      'deltatt tidligere', 'tidligere', 'notater', 'notat',
+      'info', 'kommentar', 'bilde', 'har ankommet', 'ankommet'
+    ];
+    let headerEnd = 0;
+    while (headerEnd < lines.length && headerNames.includes(lines[headerEnd].toLowerCase())) {
+      headerEnd++;
+    }
+    if (headerEnd < 2) return lines.join('\n');
+
+    const headers = lines.slice(0, headerEnd);
+    const data = lines.slice(headerEnd);
+    const rows: string[] = [headers.join('\t')];
+    for (let i = 0; i < data.length; i += headers.length) {
+      const chunk = data.slice(i, i + headers.length);
+      while (chunk.length < headers.length) chunk.push('');
+      rows.push(chunk.join('\t'));
+    }
+    return rows.join('\n');
+  };
+
+  const handlePasteImport = () => {
+    if (!pastedText.trim()) {
+      showError('Lim inn data først');
+      return;
+    }
+    const normalized = normalizePastedText(pastedText);
+    const parsed = parseCSV(normalized);
+    if (parsed.length === 0) {
+      showError('Kunne ikke tolke innholdet. Sjekk at det er overskrifter og data.');
+      return;
+    }
+    setParsedData(parsed);
+    setImportResult(null);
   };
 
   const importParticipants = async () => {
@@ -600,6 +652,39 @@ export function ParticipantImportTab() {
               <p className="text-muted-foreground mt-2 text-xs">
                 Eksporter fra Numbers som CSV og last opp her. Aktiviteter støtter "Ja", tall (1,2,3), og spesialverdier som "Store"/"Lille" for Skrikern/Styrkeprøven.
               </p>
+            </div>
+          </div>
+
+          {/* Paste import */}
+          <div className="space-y-2 pt-2 border-t">
+            <div className="flex items-center gap-2">
+              <ClipboardPaste className="w-4 h-4 text-muted-foreground" />
+              <p className="font-medium text-sm">Eller lim inn data</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Lim inn fra Numbers/Excel (tab-separert) eller fra PDF (én verdi per linje). Første rader må være kolonneoverskrifter, f.eks. Fornavn, Etternavn, Født, Hytte, Deltatt tidligere, Notater.
+            </p>
+            <Textarea
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+              placeholder={'Fornavn\nEtternavn\nFødt\nHytte\nDeltatt tidligere\nNotater\nCornelius\nNix\n2011-01-01\nKnoll venstre\n2\n'}
+              rows={6}
+              className="font-mono text-xs"
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                onClick={handlePasteImport}
+                disabled={isImporting || !pastedText.trim()}
+              >
+                <ClipboardPaste className="w-4 h-4 mr-2" />
+                Tolk innlimt data
+              </Button>
+              {pastedText && (
+                <Button variant="ghost" onClick={() => setPastedText('')} disabled={isImporting}>
+                  Tøm
+                </Button>
+              )}
             </div>
           </div>
 
