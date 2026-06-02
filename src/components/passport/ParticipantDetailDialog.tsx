@@ -295,9 +295,22 @@ export const ParticipantDetailDialog = ({
                   <img
                     src={participant.image_url}
                     alt={participant.name}
-                    className="w-full max-h-[85vh] object-contain"
+                    className="w-full max-h-[75vh] object-contain"
                   />
                 )}
+                <div
+                  className="flex justify-center"
+                  style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+                >
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    onClick={() => setLightboxOpen(false)}
+                    className="rounded-full px-8"
+                  >
+                    Lukk
+                  </Button>
+                </div>
               </DialogContent>
             </Dialog>
 
