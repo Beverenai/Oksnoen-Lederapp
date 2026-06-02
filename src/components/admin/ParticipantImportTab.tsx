@@ -258,23 +258,37 @@ export function ParticipantImportTab() {
   };
 
   const parseCabinField = (cabinField: string): { cabinName: string; room: string | null } => {
-    const lowered = cabinField.toLowerCase().trim();
-    
-    // Check for room suffix
+    // Collapse internal whitespace and trim
+    const cleaned = cabinField.replace(/\s+/g, ' ').trim();
+    const lowered = cleaned.toLowerCase();
+
+    let cabinName = cleaned;
+    let room: string | null = null;
+
+    // Check for room suffix (venstre / høyre)
     if (lowered.endsWith(' venstre')) {
-      return {
-        cabinName: cabinField.slice(0, -8).trim(),
-        room: 'venstre'
-      };
+      cabinName = cleaned.slice(0, -8).trim();
+      room = 'venstre';
+    } else if (lowered.endsWith(' høyre')) {
+      cabinName = cleaned.slice(0, -6).trim();
+      room = 'høyre';
     }
-    if (lowered.endsWith(' høyre')) {
-      return {
-        cabinName: cabinField.slice(0, -6).trim(),
-        room: 'høyre'
-      };
+
+    // Normalize Seilern variants: "Seileren X" / "seilern x" → "Seilern <Sub>"
+    const seilernSubs = ['haui', 'halua', 'maui', 'tipi', 'oahu', 'honolulu', 'hawaii', 'waikikii'];
+    const cabinLower = cabinName.toLowerCase();
+    const seilernMatch = cabinLower.match(/^seiler(?:e)?n\s+(.+)$/);
+    if (seilernMatch) {
+      const subRaw = seilernMatch[1].trim().toLowerCase();
+      const canonicalSub = seilernSubs.find(s => s === subRaw);
+      if (canonicalSub) {
+        cabinName = 'Seilern ' + canonicalSub.charAt(0).toUpperCase() + canonicalSub.slice(1);
+      }
+    } else if (cabinLower === 'seilern' || cabinLower === 'seileren') {
+      cabinName = 'Seileren';
     }
-    
-    return { cabinName: cabinField.trim(), room: null };
+
+    return { cabinName, room };
   };
 
   // Helper to parse activity value (handles "Ja", "1", "2", "1 plass!", etc.)
@@ -834,7 +848,7 @@ export function ParticipantImportTab() {
                 </tr>
                 <tr>
                   <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Hytte</code></td>
-                  <td className="py-2 px-3 text-muted-foreground">Hyttenavn (inkl. rom: "Marcusbu bak venstre") <Badge variant="destructive" className="ml-1 text-[10px]">Påkrevd</Badge></td>
+                  <td className="py-2 px-3 text-muted-foreground">Hyttenavn (inkl. rom: "Marcusbu bak venstre"). Seilern-hyttene godtas som "Seilern Haui"/"Seileren Maui" osv. <Badge variant="destructive" className="ml-1 text-[10px]">Påkrevd</Badge></td>
                 </tr>
                 <tr>
                   <td className="py-2 px-3">
