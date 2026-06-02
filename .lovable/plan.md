@@ -1,31 +1,33 @@
-# Plan for å fikse Æ/Ø/Å-problemet helt
-
 ## Mål
-Sørge for at deltakerimport håndterer norske tegn korrekt hver gang, og rydde opp i deltakere som allerede har blitt lagret med ødelagte tegn.
+Når CSV-en inneholder en Seilern-hytte (f.eks. `Seilern Haui`, `Seileren Maui`, `Seilern tipi`), skal importen rute deltakeren til riktig eksisterende hytte i databasen. Under-hyttene beholdes som egne `cabins`-rader (slik de er nå).
 
-## Hva jeg vil gjøre
-1. **Herd importen i appen**
-   - Forbedre CSV-dekodingen slik at importen ikke bare prøver én fallback, men også normaliserer vanlige mojibake-mønstre før data sendes videre.
-   - Sikre at både navn, hyttenavn og romverdier som `høyre` / `venstre` blir normalisert før preview og import.
+## Bakgrunn
+I databasen finnes:
+- Hovedoppføring: `Seileren`
+- Under-hytter: `Seilern Haui`, `Seilern Halua`, `Seilern Maui`, `Seilern Tipi`, `Seilern Oahu`, `Seilern Honolulu`, `Seilern Hawaii`, `Seilern Waikikii`
 
-2. **Legge inn server-side beskyttelse i backend-funksjonen**
-   - Normalisere tekst en gang til i importfunksjonen, så dårlige tegn ikke kan slippe gjennom selv om en fil eller klient oppfører seg rart.
-   - Bruke samme normalisering på `firstName`, `lastName`, `cabinName`, `room`, `info` og relevante aktivitets-/tekstfelter.
+CSV-en bruker trolig varianter som `Seileren Haui` / `seilern  maui` / `Seilern haui venstre`. I dag stripper `parseCabinField` bare ` venstre` / ` høyre` og sender resten videre som hyttenavn — så ekstra mellomrom, stor/liten bokstav, og "Seileren" vs "Seilern" gir bom.
 
-3. **Rydde opp i eksisterende ødelagte data**
-   - Lage en migrering som retter opp kjente feilaktige tegnsekvenser i allerede lagrede deltakerdata.
-   - Fokus på feltene som vises i skjermbildet: navn og rom/hytte-relaterte verdier.
+## Endringer
 
-4. **Verifisere mot visningen som fortsatt er feil**
-   - Bekrefte at lister som bruker `participant.name` og `room` viser riktig etter opprydding, spesielt deltakerlister der du nå ser `�`.
+### 1) `src/components/admin/ParticipantImportTab.tsx` — `parseCabinField`
+- Normaliser whitespace (kollapser doble mellomrom, trimmer).
+- Behold eksisterende håndtering av ` venstre` / ` høyre` suffiks.
+- Etter suffiks-strip: hvis navnet starter med `seileren ` eller `seilern `, normaliser til `Seilern <Sub>` med stor forbokstav på under-navnet, slik at det matcher kanoniske rader (`Seilern Haui`, `Seilern Maui`, osv.).
+- Hvis navnet er bare `seileren` / `seilern` uten suffiks, behold `Seileren` (hovedbygget).
 
-## Teknisk detalj
-- Frontend: `src/components/admin/ParticipantImportTab.tsx`
-- Backend-funksjon: `supabase/functions/import-participants-background/index.ts`
-- Datarydding: ny SQL-migrering i `supabase/migrations/`
-- Berørte visninger er allerede avhengige av lagret data, så når dataene blir normalisert skal skjermbildene også bli riktige uten ekstra UI-endringer.
+### 2) `supabase/functions/import-participants-background/index.ts` — match mot `cabins`
+- Gjør cabin-oppslaget case-insensitivt og whitespace-tolerant (`lower(trim(replace_double_spaces(name)))`) på begge sider, så små variasjoner i CSV ikke gir "cabin ikke funnet"-feil.
+- Hvis CSV-en gir `Seilern X` men DB tilfeldigvis bare har `Seileren X` (eller omvendt), prøv også begge formene som fallback før vi gir opp.
 
-## Forventet resultat
-- Nye importer lagres korrekt med `Æ`, `Ø`, `Å`.
-- `høyre` og `venstre` fungerer stabilt i import og visning.
-- Eksisterende deltakere med `�` eller feil norske bokstaver blir ryddet opp.
+### 3) Brukerinfo i import-UI
+- I "Støttede kolonner"-boksen i `ParticipantImportTab.tsx`, legg til en kort linje som forklarer at både `Seilern Haui`, `Seileren Haui` osv. fungerer, og at " venstre"/" høyre" kan legges til på slutten som før.
+
+## Ikke i scope
+- Ingen schema-endringer.
+- Ingen sammenslåing av Seilern-under-hyttene til `room`-felt på en `Seileren`-rad (det var alternativ 2; ble valgt bort).
+- Ingen sletting/flytting av eksisterende deltaker-data.
+
+## Verifisering
+- Last opp en test-CSV med blanding av `Seilern Haui`, `Seileren maui`, `SEILERN  TIPI`, `Seilern Oahu venstre` → alle skal vises som "gyldige" i forhåndsvisningen og lande på riktig hytte i `participants.cabin_id`.
+- Eksisterende `Knoll venstre` / `Knoll høyre`-flyt skal være uendret.
