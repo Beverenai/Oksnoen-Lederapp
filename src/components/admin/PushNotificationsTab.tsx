@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Bell, Send, Users, Key, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { getPushResultMessage } from '@/lib/pushResult';
 
 export function PushNotificationsTab() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
@@ -116,10 +117,17 @@ export function PushNotificationsTab() {
       }
 
       if (data?.success) {
-        showSuccess(`Sendt til ${data.sent} mottakere`);
-        setTitle('');
-        setMessage('');
-        setUrl('');
+        const result = getPushResultMessage(data);
+        if (result.type === 'success') {
+          showSuccess(result.message);
+          setTitle('');
+          setMessage('');
+          setUrl('');
+        } else if (result.type === 'warning') {
+          showInfo(result.message);
+        } else {
+          showError(result.message);
+        }
         
         // Reload to update counts
         loadData();

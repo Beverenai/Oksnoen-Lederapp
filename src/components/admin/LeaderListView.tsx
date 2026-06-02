@@ -15,6 +15,7 @@ import { LeaderContentSheet } from './LeaderContentSheet';
 import { LeaderFilters } from './LeaderFilters';
 import { useLeaderDashboardData, type LeaderWithContent } from '@/hooks/useLeaderDashboardData';
 import { getTeamStyles, formatTeamDisplay, formatTeamDisplayMobile, getFirstName } from '@/lib/teamUtils';
+import { getPushResultMessage } from '@/lib/pushResult';
 
 type Leader = Tables<'leaders'>;
 
@@ -58,11 +59,18 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
     if (!currentLeader) { showError('Du må være logget inn'); return; }
     setSendingNotification(leader.id);
     try {
-      const { error } = await supabase.functions.invoke('push-send', {
+      const { data, error } = await supabase.functions.invoke('push-send', {
         body: { title: 'Melding fra admin', message: 'Sjekk appen for oppdateringer', url: '/', single_leader_id: leader.id, sender_leader_id: currentLeader.id },
       });
       if (error) throw error;
-      showSuccess(`Varsling sendt til ${getFirstName(leader.name)}`);
+      const result = getPushResultMessage(data);
+      if (result.type === 'success') {
+        showSuccess(`Varsling sendt til ${getFirstName(leader.name)}`);
+      } else if (result.type === 'warning') {
+        showInfo(result.message);
+      } else {
+        showError(result.message);
+      }
     } catch { showError('Kunne ikke sende varsling'); } finally { setSendingNotification(null); }
   };
 

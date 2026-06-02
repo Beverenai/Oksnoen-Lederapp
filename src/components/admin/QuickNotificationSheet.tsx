@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { getPushResultMessage } from '@/lib/pushResult';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 interface QuickNotificationSheetProps {
@@ -108,8 +109,15 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
 
       if (error) throw error;
 
-      showSuccess(`Varsling sendt til ${data.sent} mottakere`);
-      onOpenChange(false);
+      const result = getPushResultMessage(data);
+      if (result.type === 'success') {
+        showSuccess(result.message);
+        onOpenChange(false);
+      } else if (result.type === 'warning') {
+        showInfo(result.message);
+      } else {
+        showError(result.message);
+      }
     } catch (error) {
       console.error('Error sending notification:', error);
       showError('Kunne ikke sende varsling');

@@ -32,6 +32,43 @@ export function isApnsConfigured(): boolean {
   );
 }
 
+function normalizeEcdsaSignature(signature: Uint8Array): Uint8Array {
+  if (signature.length === 64) {
+    return signature;
+  }
+
+  // Some Web Crypto runtimes return ASN.1 DER for ECDSA. JWT ES256/APNs
+  // requires the raw JOSE form: 32-byte R followed by 32-byte S.
+  if (signature.length < 8 || signature[0] !== 0x30) {
+    throw new Error(`Unsupported ECDSA signature format (${signature.length} bytes)`);
+  }
+
+  let offset = 2;
+  if (signature[1] & 0x80) {
+    offset = 2 + (signature[1] & 0x7f);
+  }
+
+  if (signature[offset] !== 0x02) {
+    throw new Error("Invalid DER ECDSA signature: missing R");
+  }
+  const rLength = signature[offset + 1];
+  const rStart = offset + 2;
+  const r = signature.slice(rStart, rStart + rLength);
+
+  const sOffset = rStart + rLength;
+  if (signature[sOffset] !== 0x02) {
+    throw new Error("Invalid DER ECDSA signature: missing S");
+  }
+  const sLength = signature[sOffset + 1];
+  const sStart = sOffset + 2;
+  const s = signature.slice(sStart, sStart + sLength);
+
+  const raw = new Uint8Array(64);
+  raw.set(r.slice(Math.max(0, r.length - 32)), 32 - Math.min(32, r.length));
+  raw.set(s.slice(Math.max(0, s.length - 32)), 64 - Math.min(32, s.length));
+  return raw;
+}
+
 async function createApnsJwt(): Promise<string> {
   const keyId = Deno.env.get("APNS_KEY_ID");
   const teamId = Deno.env.get("APNS_TEAM_ID");
@@ -58,13 +95,13 @@ async function createApnsJwt(): Promise<string> {
     ["sign"],
   );
 
-  const signature = new Uint8Array(
+  const signature = normalizeEcdsaSignature(new Uint8Array(
     await crypto.subtle.sign(
       { name: "ECDSA", hash: "SHA-256" },
       key,
       encoder.encode(signingInput),
     ),
-  );
+  ));
 
   const token = `${signingInput}.${base64UrlEncode(signature)}`;
   cachedJwt = { token, issuedAt: now };
