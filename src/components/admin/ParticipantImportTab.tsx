@@ -655,6 +655,39 @@ export function ParticipantImportTab() {
             </div>
           </div>
 
+          {/* Paste import */}
+          <div className="space-y-2 pt-2 border-t">
+            <div className="flex items-center gap-2">
+              <ClipboardPaste className="w-4 h-4 text-muted-foreground" />
+              <p className="font-medium text-sm">Eller lim inn data</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Lim inn fra Numbers/Excel (tab-separert) eller fra PDF (én verdi per linje). Første rader må være kolonneoverskrifter, f.eks. Fornavn, Etternavn, Født, Hytte, Deltatt tidligere, Notater.
+            </p>
+            <Textarea
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+              placeholder={'Fornavn\nEtternavn\nFødt\nHytte\nDeltatt tidligere\nNotater\nCornelius\nNix\n2011-01-01\nKnoll venstre\n2\n'}
+              rows={6}
+              className="font-mono text-xs"
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                onClick={handlePasteImport}
+                disabled={isImporting || !pastedText.trim()}
+              >
+                <ClipboardPaste className="w-4 h-4 mr-2" />
+                Tolk innlimt data
+              </Button>
+              {pastedText && (
+                <Button variant="ghost" onClick={() => setPastedText('')} disabled={isImporting}>
+                  Tøm
+                </Button>
+              )}
+            </div>
+          </div>
+
           {/* Progress indicator when importing */}
           {isImporting && importProgress && (
             <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 space-y-3">
