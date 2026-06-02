@@ -5,6 +5,7 @@ import {
   type PushSubscription,
   Urgency,
 } from "jsr:@negrel/webpush@0.5.0";
+import { getApnsConfig, sendApnsAlert } from "../_shared/apns.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -162,19 +163,27 @@ serve(async (req) => {
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
     const vapidSubject = Deno.env.get("VAPID_SUBJECT") || "mailto:support@oksnoen.com";
+    const apnsCfg = getApnsConfig();
 
-    if (!vapidPublicKey || !vapidPrivateKey) {
+    let appServer: Awaited<ReturnType<typeof ApplicationServer.new>> | null = null;
+    if (vapidPublicKey && vapidPrivateKey) {
+      const vapidKeys = await importVapidKeysToCryptoKeyPair(vapidPublicKey, vapidPrivateKey);
+      appServer = await ApplicationServer.new({
+        contactInformation: vapidSubject,
+        vapidKeys: vapidKeys,
+      });
+    } else {
+      console.warn("VAPID keys not configured — web push will be skipped");
+    }
+    if (!apnsCfg) {
+      console.warn("APNs secrets not configured — native push will be skipped");
+    }
+    if (!appServer && !apnsCfg) {
       return new Response(
-        JSON.stringify({ error: "VAPID keys not configured" }),
+        JSON.stringify({ error: "No push transport configured" }),
         { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const vapidKeys = await importVapidKeysToCryptoKeyPair(vapidPublicKey, vapidPrivateKey);
-    const appServer = await ApplicationServer.new({
-      contactInformation: vapidSubject,
-      vapidKeys: vapidKeys,
-    });
 
     const payloadData = JSON.stringify({ 
       title, 
@@ -185,24 +194,36 @@ serve(async (req) => {
     let sent = 0;
     let failed = 0;
     const deadSubscriptions: string[] = [];
+    let nativeSkipped = 0;
+    let webSkipped = 0;
 
     for (const sub of subscriptions) {
+      if (sub.channel === "apns") {
+        if (!apnsCfg) { nativeSkipped++; continue; }
+        const res = await sendApnsAlert(apnsCfg, sub.native_token, { title, body: message, url: url || "/admin-settings" });
+        if (res.ok) {
+          sent++;
+        } else {
+          failed++;
+          console.error(`APNs admin alert failed ${sub.id}: ${res.status} ${res.reason ?? ""}`);
+          if (res.unregistered) deadSubscriptions.push(sub.id);
+        }
+        continue;
+      }
+
+      if (!appServer) { webSkipped++; continue; }
       try {
         const pushSubscription: PushSubscription = {
           endpoint: sub.endpoint,
           keys: { p256dh: sub.p256dh, auth: sub.auth },
         };
-
         const subscriber = await appServer.subscribe(pushSubscription);
         await subscriber.pushTextMessage(payloadData, { urgency: Urgency.High, ttl: 3600 });
-
         sent++;
-        console.log(`Successfully sent to admin ${sub.leader_id}`);
       } catch (error: unknown) {
         failed++;
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`Error sending to ${sub.id}:`, errorMessage);
-        
         if (errorMessage.toLowerCase().includes("gone") || errorMessage.includes("410") || errorMessage.includes("404")) {
           deadSubscriptions.push(sub.id);
         }
@@ -218,7 +239,7 @@ serve(async (req) => {
     console.log(`Admin alert complete: ${sent} sent, ${failed} failed`);
 
     return new Response(
-      JSON.stringify({ success: true, sent, failed, removed: deadSubscriptions.length }),
+      JSON.stringify({ success: true, sent, failed, removed: deadSubscriptions.length, nativeSkipped, webSkipped }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
