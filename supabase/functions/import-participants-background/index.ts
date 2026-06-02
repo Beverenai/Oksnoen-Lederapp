@@ -115,14 +115,40 @@ async function processParticipants(supabase: any, participants: ParsedParticipan
   };
 
   try {
+    // Normalize a cabin name for lookup: collapse whitespace + lowercase.
+    // Also stores variants for "Seileren X" ⇄ "Seilern X".
+    const normalizeCabinKey = (n: string) => n.replace(/\s+/g, ' ').trim().toLowerCase();
+    const cabinAliases = (n: string): string[] => {
+      const base = normalizeCabinKey(n);
+      const aliases = new Set<string>([base]);
+      const m = base.match(/^seiler(?:e)?n(\s+.+)?$/);
+      if (m) {
+        const rest = m[1] ?? '';
+        aliases.add('seilern' + rest);
+        aliases.add('seileren' + rest);
+      }
+      return Array.from(aliases);
+    };
+
     // Fetch all cabins
     const { data: cabins } = await supabase.from('cabins').select('id, name');
-    const cabinMap = new Map<string, string>((cabins || []).map((c: any) => [c.name.toLowerCase(), c.id]));
+    const cabinMap = new Map<string, string>();
+    (cabins || []).forEach((c: any) => {
+      cabinAliases(c.name).forEach(k => cabinMap.set(k, c.id));
+    });
+
+    const findCabinId = (rawName: string): string | undefined => {
+      for (const k of cabinAliases(rawName)) {
+        const id = cabinMap.get(k);
+        if (id) return id;
+      }
+      return undefined;
+    };
 
     // Find and create missing cabins
     const missingCabins = new Set<string>();
     participants.forEach(p => {
-      if (!cabinMap.has(p.cabinName.toLowerCase())) {
+      if (!findCabinId(p.cabinName)) {
         missingCabins.add(p.cabinName);
       }
     });
@@ -144,7 +170,9 @@ async function processParticipants(supabase: any, participants: ParsedParticipan
       if (error) {
         progress.errors.push(`Could not create cabins: ${error.message}`);
       } else if (newCabins) {
-        newCabins.forEach((c: any) => cabinMap.set(c.name.toLowerCase(), c.id));
+        newCabins.forEach((c: any) => {
+          cabinAliases(c.name).forEach(k => cabinMap.set(k, c.id));
+        });
       }
     }
 
@@ -194,7 +222,19 @@ async function processParticipant(
   cabinMap: Map<string, string>,
   progress: ImportProgress
 ) {
-  const cabinId = cabinMap.get(participant.cabinName.toLowerCase());
+  const normalizeCabinKey = (n: string) => n.replace(/\s+/g, ' ').trim().toLowerCase();
+  const base = normalizeCabinKey(participant.cabinName);
+  const candidates = [base];
+  const m = base.match(/^seiler(?:e)?n(\s+.+)?$/);
+  if (m) {
+    const rest = m[1] ?? '';
+    candidates.push('seilern' + rest, 'seileren' + rest);
+  }
+  let cabinId: string | undefined;
+  for (const k of candidates) {
+    cabinId = cabinMap.get(k);
+    if (cabinId) break;
+  }
   if (!cabinId) {
     progress.errors.push(`${participant.firstName} ${participant.lastName}: Cabin "${participant.cabinName}" not found`);
     return;
