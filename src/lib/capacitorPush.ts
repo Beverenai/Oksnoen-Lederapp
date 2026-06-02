@@ -38,6 +38,20 @@ export const requestNativePushPermission = async (): Promise<'granted' | 'denied
   }
 };
 
+export const checkNativePushPermission = async (): Promise<'granted' | 'denied' | 'default'> => {
+  if (!PushNotifications) return 'default';
+
+  try {
+    const result = await PushNotifications.checkPermissions();
+    if (result.receive === 'granted') return 'granted';
+    if (result.receive === 'denied') return 'denied';
+    return 'default';
+  } catch (e) {
+    console.error('[CapacitorPush] Permission check failed:', e);
+    return 'default';
+  }
+};
+
 export const registerNativePush = async (): Promise<string | null> => {
   if (!PushNotifications) return null;
   

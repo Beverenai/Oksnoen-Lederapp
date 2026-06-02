@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { isCapacitor } from '@/lib/capacitor';
 import {
+  checkNativePushPermission,
   initCapacitorPush,
   isNativePushAvailable,
   requestNativePushPermission,
@@ -89,6 +90,48 @@ export function usePushNotifications() {
       return false;
     }
 
+    if (isCapacitor()) {
+      const nativePushReady = isNativePushAvailable() || await initCapacitorPush();
+      if (!nativePushReady) {
+        setState(prev => ({ ...prev, isSyncing: false, error: 'Native push-plugin er ikke tilgjengelig' }));
+        return false;
+      }
+
+      const permission = await checkNativePushPermission();
+      if (permission !== 'granted') {
+        setState(prev => ({ ...prev, isSyncing: false, isEnabled: false, permission }));
+        return false;
+      }
+
+      setState(prev => ({ ...prev, isSyncing: true, permission }));
+      const token = await registerNativePush();
+      if (!token) {
+        setState(prev => ({ ...prev, isSyncing: false, isEnabled: false, error: 'Kunne ikke registrere APNs-token' }));
+        return false;
+      }
+
+      const { error: syncError } = await supabase.functions.invoke('push-subscribe', {
+        body: {
+          endpoint: `native://${token}`,
+          p256dh: 'native',
+          auth: 'native',
+          leader_id: leader.id,
+          is_native: true,
+          native_token: token,
+          platform: 'ios',
+        },
+      });
+
+      if (syncError) {
+        console.error('Error syncing native subscription:', syncError);
+        setState(prev => ({ ...prev, isSyncing: false, isEnabled: false, error: 'Kunne ikke lagre APNs-token' }));
+        return false;
+      }
+
+      setState(prev => ({ ...prev, isSyncing: false, isEnabled: true, permission: 'granted', error: null }));
+      return true;
+    }
+
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
       console.log('Permission not granted, skipping sync');
       return false;
@@ -154,12 +197,13 @@ export function usePushNotifications() {
       const nativePushReady = isCapacitor() && (isNativePushAvailable() || await initCapacitorPush());
       if (nativePushReady) {
         console.log('[Push] Native push available');
+        const permission = await checkNativePushPermission();
         setState({
           isSupported: true,
-          isEnabled: false, // Will be updated after registration
+          isEnabled: false, // Will be updated after APNs registration succeeds
           isLoading: false,
           isSyncing: false,
-          permission: 'default',
+          permission,
           error: null,
           isNative: true,
         });
@@ -240,7 +284,18 @@ export function usePushNotifications() {
 
     try {
       // Native push flow (Capacitor)
-      if (isCapacitor() && isNativePushAvailable()) {
+      if (isCapacitor()) {
+        const nativePushReady = isNativePushAvailable() || await initCapacitorPush();
+        if (!nativePushReady) {
+          setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            isSupported: false,
+            error: 'Native push-plugin er ikke tilgjengelig i denne builden',
+          }));
+          return false;
+        }
+
         console.log('[Push] Using native push flow');
         
         const permission = await requestNativePushPermission();
@@ -274,6 +329,7 @@ export function usePushNotifications() {
             leader_id: leader.id,
             is_native: true,
             native_token: token,
+            platform: 'ios',
           },
         });
 

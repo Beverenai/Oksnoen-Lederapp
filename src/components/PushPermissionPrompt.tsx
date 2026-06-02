@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 
 export function PushPermissionPrompt() {
   const { leader, isProfileComplete, refreshLeader } = useAuth();
-  const { enablePushNotifications, isSupported, permission, isLoading } = usePushNotifications();
+  const { enablePushNotifications, isSupported, isEnabled, permission, isLoading, isNative } = usePushNotifications();
   const [open, setOpen] = useState(false);
   const [deniedMode, setDeniedMode] = useState(false);
   const [hasEvaluated, setHasEvaluated] = useState(false);
@@ -32,8 +32,10 @@ export function PushPermissionPrompt() {
   useEffect(() => {
     if (hasEvaluated) return;
     if (!leader || !isProfileComplete) return;
-    if (leader.has_seen_push_prompt) return;
+    if (isLoading) return;
     if (!isSupported) return;
+    if (isEnabled) return;
+    if (leader.has_seen_push_prompt && !(isNative && permission === 'default')) return;
 
     setHasEvaluated(true);
 
@@ -52,16 +54,17 @@ export function PushPermissionPrompt() {
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leader?.id, leader?.has_seen_push_prompt, isProfileComplete, isSupported, permission]);
+  }, [leader?.id, leader?.has_seen_push_prompt, isProfileComplete, isSupported, isEnabled, isLoading, isNative, permission]);
 
   const handleEnable = async () => {
-    await enablePushNotifications();
-    await markSeen();
+    const success = await enablePushNotifications();
+    if (success || permission === 'denied') {
+      await markSeen();
+    }
     setOpen(false);
   };
 
-  const handleLater = async () => {
-    await markSeen();
+  const handleLater = () => {
     setOpen(false);
   };
 

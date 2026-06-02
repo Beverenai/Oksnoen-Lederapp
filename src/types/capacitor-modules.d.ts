@@ -29,6 +29,7 @@ declare module '@capacitor/push-notifications' {
   }
 
   export const PushNotifications: {
+    checkPermissions(): Promise<PermissionStatus>;
     requestPermissions(): Promise<PermissionStatus>;
     register(): Promise<void>;
     addListener(
