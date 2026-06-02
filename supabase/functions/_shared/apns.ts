@@ -41,6 +41,12 @@ function normalizeSecretValue(value: string | null | undefined): string | null {
     normalized = normalized.slice(eqIndex + 1).trim();
   }
 
+  // Strip any leading '=' characters (common paste mistake where the
+  // value was copied with the '=' separator still attached).
+  while (normalized.startsWith("=")) {
+    normalized = normalized.slice(1).trim();
+  }
+
   if (
     (normalized.startsWith('"') && normalized.endsWith('"')) ||
     (normalized.startsWith("'") && normalized.endsWith("'"))
