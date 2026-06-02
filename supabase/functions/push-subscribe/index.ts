@@ -15,20 +15,32 @@ serve(async (req) => {
   try {
     const body = await req.json();
     // Support both nested keys and flat keys for iOS/Safari compatibility
-    const { endpoint, keys, p256dh: directP256dh, auth: directAuth, leader_id } = body;
+    const {
+      endpoint,
+      keys,
+      p256dh: directP256dh,
+      auth: directAuth,
+      leader_id,
+      is_native,
+      native_token,
+      platform: platformInput,
+      channel: channelInput,
+    } = body;
 
     // Extract keys - prefer direct keys, fall back to nested
     const p256dh = directP256dh || keys?.p256dh;
     const auth = directAuth || keys?.auth;
 
+    // Determine channel: explicit > native token > default web
+    const isNative = !!(is_native || native_token || channelInput === "apns");
+    const channel = isNative ? "apns" : "web";
+    const platform = isNative ? (platformInput || "ios") : null;
+
     console.log("push-subscribe request received:", {
       hasEndpoint: !!endpoint,
       hasLeaderId: !!leader_id,
-      hasDirectP256dh: !!directP256dh,
-      hasDirectAuth: !!directAuth,
-      hasNestedKeys: !!keys,
-      hasNestedP256dh: !!keys?.p256dh,
-      hasNestedAuth: !!keys?.auth,
+      channel,
+      hasNativeToken: !!native_token,
     });
 
     // Validate required fields
@@ -40,20 +52,26 @@ serve(async (req) => {
       );
     }
 
-    if (!endpoint) {
-      console.error("Missing endpoint in request");
-      return new Response(
-        JSON.stringify({ error: "Endpoint is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!p256dh || !auth) {
-      console.error("Missing subscription keys:", { p256dh: !!p256dh, auth: !!auth });
-      return new Response(
-        JSON.stringify({ error: "Subscription keys (p256dh, auth) are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (channel === "web") {
+      if (!endpoint) {
+        return new Response(
+          JSON.stringify({ error: "Endpoint is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (!p256dh || !auth) {
+        return new Response(
+          JSON.stringify({ error: "Subscription keys (p256dh, auth) are required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      if (!native_token) {
+        return new Response(
+          JSON.stringify({ error: "native_token is required for native subscriptions" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Use service role to verify leader exists and insert subscription
@@ -77,21 +95,33 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Saving push subscription for leader ${leader.id}`);
+    console.log(`Saving ${channel} push subscription for leader ${leader.id}`);
 
-    // Upsert subscription (update if endpoint exists, insert if not)
+    // Use a stable endpoint identifier for native tokens so upserts work.
+    const effectiveEndpoint = channel === "apns"
+      ? (endpoint || `apns://${native_token}`)
+      : endpoint;
+
+    const row: Record<string, unknown> = {
+      leader_id: leader.id,
+      endpoint: effectiveEndpoint,
+      channel,
+      native_token: channel === "apns" ? native_token : null,
+      platform,
+      last_used_at: new Date().toISOString(),
+    };
+    if (channel === "web") {
+      row.p256dh = p256dh;
+      row.auth = auth;
+    } else {
+      // Keep columns non-null-friendly for legacy rows but harmless for new rows.
+      row.p256dh = null;
+      row.auth = null;
+    }
+
     const { error: insertError } = await supabaseAdmin
       .from("push_subscriptions")
-      .upsert(
-        {
-          leader_id: leader.id,
-          endpoint,
-          p256dh,
-          auth,
-          last_used_at: new Date().toISOString(),
-        },
-        { onConflict: "endpoint" }
-      );
+      .upsert(row, { onConflict: "endpoint" });
 
     if (insertError) {
       console.error("Error saving subscription:", insertError);
