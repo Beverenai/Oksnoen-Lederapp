@@ -195,9 +195,9 @@ export function LeaderDetailDialog({
     saveLeaderFieldsRef.current = saveLeaderFields;
   }, [saveLeaderFields]);
 
-  // Debounced auto-save for all fields (350ms debounce). Use the ref so that
-  // parent refetches (which produce a new `leader` reference) don't retrigger
-  // phantom saves.
+  // Debounced auto-save for all fields (1500ms debounce). Longer debounce so
+  // admins can fill out multiple fields in a row before the save fires and
+  // triggers the parent refetch.
   useEffect(() => {
     if (!isInitializedRef.current || !leaderId) return;
 
@@ -205,7 +205,7 @@ export function LeaderDetailDialog({
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
       saveLeaderFieldsRef.current?.();
-    }, 350);
+    }, 1500);
   }, [name, phone, email, age, team, cabin, ministerpost, hasCar, hasDriversLicense, hasBoatLicense, canRappelling, canClimbing, canZipline, canRopeSetup, leaderId]);
 
   // Keep latest callbacks in refs so the role-save effect doesn't re-run
