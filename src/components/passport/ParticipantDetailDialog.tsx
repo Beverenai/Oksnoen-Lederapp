@@ -8,6 +8,7 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from '@/components/ui/responsive-dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -105,6 +106,7 @@ export const ParticipantDetailDialog = ({
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isTogglingArrival, setIsTogglingArrival] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch participant detail with caching
@@ -258,46 +260,69 @@ export const ParticipantDetailDialog = ({
           </div>
         ) : participant ? (
           <>
-            {/* Large hero image at top */}
-            <div className="relative w-full h-32 sm:h-48 bg-muted flex-shrink-0">
-              {participant.image_url ? (
-                <CachedImage
-                  src={participant.image_url}
-                  alt={participant.name}
-                  className="w-full h-full object-cover"
-                  loading="eager"
-                  fallback={
+            {/* Round avatar at top — tap to view full image */}
+            <div className="flex justify-center pt-6 pb-2 flex-shrink-0">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => participant.image_url && setLightboxOpen(true)}
+                  disabled={!participant.image_url}
+                  className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full overflow-hidden bg-muted ring-2 ring-border shadow-md disabled:cursor-default focus:outline-none focus:ring-4 focus:ring-primary/40"
+                  aria-label={participant.image_url ? 'Vis bilde' : 'Ingen bilde'}
+                >
+                  {participant.image_url ? (
+                    <CachedImage
+                      src={participant.image_url}
+                      alt={participant.name}
+                      className="w-full h-full object-cover"
+                      loading="eager"
+                      fallback={
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/20">
+                          <span className="text-3xl font-bold text-muted-foreground/50">{initials}</span>
+                        </div>
+                      }
+                    />
+                  ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/20">
-                      <span className="text-4xl sm:text-6xl font-bold text-muted-foreground/50">{initials}</span>
+                      <span className="text-3xl font-bold text-muted-foreground/50">{initials}</span>
                     </div>
-                  }
+                  )}
+                </button>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="absolute bottom-0 right-0 rounded-full h-8 w-8 shadow-lg"
+                  onClick={handleImageButtonClick}
+                  disabled={isUploadingImage}
+                >
+                  {isUploadingImage ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
                 />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/20">
-                  <span className="text-4xl sm:text-6xl font-bold text-muted-foreground/50">{initials}</span>
-                </div>
-              )}
-              <Button
-                variant="secondary"
-                size="icon"
-                className="absolute bottom-2 right-2 rounded-full h-8 w-8 sm:h-10 sm:w-10 shadow-lg"
-                onClick={handleImageButtonClick}
-                disabled={isUploadingImage}
-              >
-                {isUploadingImage ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Camera className="h-4 w-4" />
-                )}
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
+              </div>
             </div>
+
+            {/* Lightbox: full image, no crop */}
+            <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+              <DialogContent className="max-w-[95vw] sm:max-w-2xl p-0 bg-black/95 border-none">
+                {participant.image_url && (
+                  <img
+                    src={participant.image_url}
+                    alt={participant.name}
+                    className="w-full max-h-[85vh] object-contain"
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
 
             {/* Content below image */}
             <div className="p-4 sm:p-6">

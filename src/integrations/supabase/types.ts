@@ -814,7 +814,7 @@ export type Database = {
       }
       push_subscriptions: {
         Row: {
-          auth: string
+          auth: string | null
           channel: string
           created_at: string | null
           endpoint: string
@@ -822,11 +822,11 @@ export type Database = {
           last_used_at: string | null
           leader_id: string
           native_token: string | null
-          p256dh: string
+          p256dh: string | null
           platform: string | null
         }
         Insert: {
-          auth: string
+          auth?: string | null
           channel?: string
           created_at?: string | null
           endpoint: string
@@ -834,11 +834,11 @@ export type Database = {
           last_used_at?: string | null
           leader_id: string
           native_token?: string | null
-          p256dh: string
+          p256dh?: string | null
           platform?: string | null
         }
         Update: {
-          auth?: string
+          auth?: string | null
           channel?: string
           created_at?: string | null
           endpoint?: string
@@ -846,7 +846,7 @@ export type Database = {
           last_used_at?: string | null
           leader_id?: string
           native_token?: string | null
-          p256dh?: string
+          p256dh?: string | null
           platform?: string | null
         }
         Relationships: []
