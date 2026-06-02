@@ -396,14 +396,10 @@ export function ParticipantImportTab() {
     reader.onload = (e) => {
       const buffer = e.target?.result as ArrayBuffer;
       const bytes = new Uint8Array(buffer);
-      // Try UTF-8 first (strict). If it fails or contains the replacement char (U+FFFD),
-      // fall back to windows-1252 — common when Excel exports CSV on macOS/Windows.
-      let text: string;
-      try {
-        text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-        if (text.includes('\uFFFD')) throw new Error('replacement char');
-      } catch {
-        text = new TextDecoder('windows-1252').decode(bytes);
+      const text = decodeCsvBytes(bytes);
+      if (text.includes('\uFFFD')) {
+        showError('Filen inneholder ugjenkjennelige tegn (�). Eksporter CSV-en på nytt som UTF-8 og prøv igjen.');
+        return;
       }
       const parsed = parseCSV(text);
       setParsedData(parsed);
