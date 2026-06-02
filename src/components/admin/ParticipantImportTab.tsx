@@ -86,6 +86,37 @@ function calculateAge(birthDate: string | null): number | null {
   return age;
 }
 
+// Decode CSV bytes, trying UTF-8 (with and without BOM), then windows-1252.
+// Also repairs common double-encoded mojibake like "Ã¸" -> "ø".
+function decodeCsvBytes(bytes: Uint8Array): string {
+  // Strip UTF-8 BOM
+  let buf = bytes;
+  if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+    buf = bytes.subarray(3);
+  }
+
+  let text: string;
+  try {
+    text = new TextDecoder('utf-8', { fatal: true }).decode(buf);
+  } catch {
+    text = new TextDecoder('windows-1252').decode(buf);
+  }
+
+  // Repair double-encoded UTF-8 (e.g. "HÃ¸yre" -> "Høyre")
+  if (/Ã[\u0080-\u00BF]/.test(text)) {
+    try {
+      const reencoded = new Uint8Array(text.length);
+      for (let i = 0; i < text.length; i++) reencoded[i] = text.charCodeAt(i) & 0xff;
+      const fixed = new TextDecoder('utf-8', { fatal: true }).decode(reencoded);
+      if (!fixed.includes('\uFFFD')) text = fixed;
+    } catch {
+      // keep original
+    }
+  }
+
+  return text;
+}
+
 export function ParticipantImportTab() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [cabins, setCabins] = useState<Cabin[]>([]);
