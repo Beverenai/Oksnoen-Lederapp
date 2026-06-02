@@ -1,20 +1,24 @@
-## Fjern walkie-talkie funksjonen
+## Endring i `ParticipantDetailDialog`
 
-### Frontend
-- Slett `src/pages/WalkieTalkie.tsx` og `src/hooks/useWalkieTalkie.ts`.
-- I `src/App.tsx`: fjern lazy import av `WalkieTalkie` og `/walkie`-ruten.
-- I `src/components/layout/AppLayout.tsx`: fjern Walkie-lenken (Radio-ikonet) fra bunnnavigasjonen.
+Erstatt dagens bred banner-crop med en sentrert rund avatar — trykk åpner hele bildet i fullskjerm uten beskjæring.
 
-### Backend
-- Slett edge function `supabase/functions/livekit-token/` (kode + deploy-fjerning via `supabase--delete_edge_functions`).
-- Ny migrasjon som dropper alt walkie-relatert i DB:
-  - DROP TRIGGER/FUNCTION for `sync_walkie_member_*` og evt. resterende walkie-funksjoner.
-  - DROP TABLE `public.walkie_channel_members`, `public.walkie_channels` (CASCADE).
+### Header-layout
+- Fjern `h-32 sm:h-48`-banneret som beskjærer bildet.
+- Vis en sentrert rund avatar (`h-28 w-28 sm:h-32 sm:w-32`, `rounded-full`, `object-cover`, `ring-2 ring-border`) over navnet.
+- Initialer som fallback i samme sirkel.
+- Kamera-knappen (last opp nytt bilde) flyttes som liten FAB nederst-høyre på selve avatar-sirkelen — samme funksjon som i dag.
 
-### Avhengigheter
-- Fjern `livekit-client` fra `package.json` (bun remove).
+### Tap for fullbilde
+- Avataren blir trykkbar (kun når `image_url` finnes).
+- Trykk åpner en `Dialog` med svart bakgrunn som viser hele bildet i `object-contain`, maks `90vh`/`95vw`, ingen beskjæring.
+- Lukk via tap utenfor, Esc, eller en lukk-knapp øverst.
+- Bruker eksisterende `Dialog`-komponenter; ingen nye avhengigheter.
 
-### Secrets (valgfritt)
-- `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_URL` kan stå – de er ufarlige uten funksjonen. Jeg lar dem være, du kan slette dem manuelt i Cloud-innstillinger om du vil.
+### Det vi IKKE rør
+- Opplastings-/komprimeringslogikken (`handleImageUpload`, `compressImage`).
+- Resten av dialogen (Nurse-info, Styrkeprøve, Aktiviteter).
+- Listevisningen av deltagere (kun detalj-dialogen endres).
+- Ingen DB-endringer; ingen ny `object-position`-lagring.
 
-Bekreft, så fjerner jeg alt.
+### Filer
+- `src/components/passport/ParticipantDetailDialog.tsx` — kun header-blokken (linje ~238–277) + ny lokal state `lightboxOpen` og en liten `Dialog` for fullbildet.
