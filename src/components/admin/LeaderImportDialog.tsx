@@ -22,8 +22,11 @@ const HEADER_HINT = /(navn|name|telefon|phone)/i;
 
 function normalizePhone(raw: string): string {
   const trimmed = raw.trim();
-  const plus = trimmed.startsWith('+') ? '+' : '';
-  return plus + trimmed.replace(/[^\d]/g, '');
+  let digits = trimmed.replace(/[^\d]/g, '');
+  // Strip Norwegian country code (+47 / 0047) so duplicates match across formats
+  if (digits.startsWith('0047')) digits = digits.slice(4);
+  else if (digits.length > 8 && digits.startsWith('47')) digits = digits.slice(2);
+  return digits;
 }
 
 function parseInput(text: string): { valid: ParsedRow[]; invalid: string[] } {
@@ -56,6 +59,10 @@ function parseInput(text: string): { valid: ParsedRow[]; invalid: string[] } {
   return { valid, invalid };
 }
 
+function phoneKey(p: string): string {
+  return p.replace(/\D/g, '').slice(-8);
+}
+
 export function LeaderImportDialog({ open, onOpenChange, existingPhones, onImported }: LeaderImportDialogProps) {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [text, setText] = useState('');
@@ -83,16 +90,17 @@ export function LeaderImportDialog({ open, onOpenChange, existingPhones, onImpor
         return;
       }
 
-      const existing = new Set(existingPhones);
+      const existing = new Set(existingPhones.map(phoneKey));
       const toInsert: ParsedRow[] = [];
       const seen = new Set<string>();
       let duplicates = 0;
       valid.forEach(row => {
-        if (existing.has(row.phone) || seen.has(row.phone)) {
+        const key = phoneKey(row.phone);
+        if (existing.has(key) || seen.has(key)) {
           duplicates++;
           return;
         }
-        seen.add(row.phone);
+        seen.add(key);
         toInsert.push(row);
       });
 
