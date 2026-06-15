@@ -22,8 +22,11 @@ const HEADER_HINT = /(navn|name|telefon|phone)/i;
 
 function normalizePhone(raw: string): string {
   const trimmed = raw.trim();
-  const plus = trimmed.startsWith('+') ? '+' : '';
-  return plus + trimmed.replace(/[^\d]/g, '');
+  let digits = trimmed.replace(/[^\d]/g, '');
+  // Strip Norwegian country code (+47 / 0047) so duplicates match across formats
+  if (digits.startsWith('0047')) digits = digits.slice(4);
+  else if (digits.length > 8 && digits.startsWith('47')) digits = digits.slice(2);
+  return digits;
 }
 
 function parseInput(text: string): { valid: ParsedRow[]; invalid: string[] } {
