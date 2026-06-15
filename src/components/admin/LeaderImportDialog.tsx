@@ -59,6 +59,10 @@ function parseInput(text: string): { valid: ParsedRow[]; invalid: string[] } {
   return { valid, invalid };
 }
 
+function phoneKey(p: string): string {
+  return p.replace(/\D/g, '').slice(-8);
+}
+
 export function LeaderImportDialog({ open, onOpenChange, existingPhones, onImported }: LeaderImportDialogProps) {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [text, setText] = useState('');
@@ -86,16 +90,17 @@ export function LeaderImportDialog({ open, onOpenChange, existingPhones, onImpor
         return;
       }
 
-      const existing = new Set(existingPhones);
+      const existing = new Set(existingPhones.map(phoneKey));
       const toInsert: ParsedRow[] = [];
       const seen = new Set<string>();
       let duplicates = 0;
       valid.forEach(row => {
-        if (existing.has(row.phone) || seen.has(row.phone)) {
+        const key = phoneKey(row.phone);
+        if (existing.has(key) || seen.has(key)) {
           duplicates++;
           return;
         }
-        seen.add(row.phone);
+        seen.add(key);
         toInsert.push(row);
       });
 
