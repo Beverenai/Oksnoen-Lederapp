@@ -13,6 +13,7 @@ import { Camera, User, Car, Check, Upload, Bell, Anchor, Mountain, Cable, Wrench
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
 import { compressImage } from '@/lib/imageUtils';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { isNativeCameraAvailable, takePhoto } from '@/lib/capacitorCamera';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -34,9 +35,8 @@ export default function Onboarding() {
   const [canZipline, setCanZipline] = useState(leader?.can_zipline || false);
   const [canRopeSetup, setCanRopeSetup] = useState(leader?.can_rope_setup || false);
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !leader) return;
+  const uploadFile = async (file: File) => {
+    if (!leader) return;
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -78,6 +78,30 @@ export default function Onboarding() {
       // Reset input so the same file can be re-selected after an error
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await uploadFile(file);
+  };
+
+  const handlePickImage = async () => {
+    if (isUploading) return;
+    // On native (iOS/Android via Capacitor) use Camera plugin which prompts
+    // the user to choose between camera and photo library.
+    if (isNativeCameraAvailable()) {
+      try {
+        const file = await takePhoto();
+        if (file) await uploadFile(file);
+      } catch (e: any) {
+        console.error('Native camera error:', e);
+        showError(`Kunne ikke åpne kamera: ${e?.message || 'Ukjent feil'}`);
+      }
+      return;
+    }
+    // Web fallback: standard file input
+    fileInputRef.current?.click();
   };
 
   const handleSubmit = async () => {
@@ -162,7 +186,8 @@ export default function Onboarding() {
                   </AvatarFallback>
                 </Avatar>
                 <button
-                  onClick={() => fileInputRef.current?.click()}
+                  type="button"
+                  onClick={handlePickImage}
                   disabled={isUploading}
                   className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
