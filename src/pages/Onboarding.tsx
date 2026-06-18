@@ -183,10 +183,18 @@ export default function Onboarding() {
         {/* Profile Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Din profil</CardTitle>
-            <CardDescription>Denne informasjonen brukes av andre ledere</CardDescription>
+            <CardTitle className="text-lg">
+              {step === 1 ? 'Steg 1: Om deg' : 'Steg 2: Profilbilde'}
+            </CardTitle>
+            <CardDescription>
+              {step === 1
+                ? 'Denne informasjonen brukes av andre ledere'
+                : 'Last opp et profilbilde for å fullføre'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+          {step === 2 && (
+            <>
             {/* Profile Image */}
             <div className="flex flex-col items-center space-y-4">
               <div className="relative">
@@ -217,10 +225,28 @@ export default function Onboarding() {
                 className="hidden"
               />
               <p className="text-sm text-muted-foreground">
-                {imageUrl ? 'Trykk for å endre bilde' : 'Last opp et profilbilde *'}
+                {imageUrl ? 'Trykk for å endre bilde' : 'Trykk på kamera-ikonet for å laste opp bilde'}
               </p>
             </div>
-
+            <Button
+              onClick={finishOnboarding}
+              disabled={isSaving || isUploading}
+              className="w-full gap-2"
+              size="lg"
+            >
+              {isSaving ? 'Lagrer...' : (<><Check className="w-5 h-5" />{imageUrl ? 'Fullfør profil' : 'Hopp over og fullfør'}</>)}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setStep(1)}
+              className="w-full"
+            >
+              Tilbake
+            </Button>
+            </>
+          )}
+          {step === 1 && (
+            <>
             {/* Age */}
             <div className="space-y-2">
               <Label htmlFor="age">Alder *</Label>
@@ -344,8 +370,8 @@ export default function Onboarding() {
 
             {/* Submit Button */}
             <Button
-              onClick={handleSubmit}
-              disabled={!isFormValid || isSaving}
+              onClick={saveInfoAndContinue}
+              disabled={!isInfoValid || isSaving}
               className="w-full gap-2"
               size="lg"
             >
@@ -353,11 +379,12 @@ export default function Onboarding() {
                 'Lagrer...'
               ) : (
                 <>
-                  <Check className="w-5 h-5" />
-                  Fullfør profil
+                  Neste: Profilbilde
                 </>
               )}
             </Button>
+            </>
+          )}
           </CardContent>
         </Card>
 
