@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useActivities } from '@/hooks/useActivities';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { toast } from 'sonner';
 
 type Participant = Tables<'participants'>;
 type Cabin = Tables<'cabins'>;
