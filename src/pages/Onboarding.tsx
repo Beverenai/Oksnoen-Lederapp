@@ -240,6 +240,28 @@ export default function Onboarding() {
                 {imageUrl ? 'Trykk for å endre bilde' : 'Trykk på kamera-ikonet for å laste opp bilde'}
               </p>
             </div>
+            {uploadError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 space-y-2">
+                <div className="flex items-start gap-2 text-sm text-destructive">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium">Opplasting feilet</p>
+                    <p className="text-xs opacity-90 break-words">{uploadError}</p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={retryUpload}
+                  disabled={isUploading}
+                  className="w-full gap-2"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isUploading ? 'animate-spin' : ''}`} />
+                  {lastFile ? 'Prøv samme bilde igjen' : 'Velg bilde på nytt'}
+                </Button>
+              </div>
+            )}
             <Button
               onClick={finishOnboarding}
               disabled={isSaving || isUploading}
