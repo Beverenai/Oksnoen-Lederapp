@@ -538,7 +538,7 @@ Deno.serve(async (req) => {
       // Hele dagen Kjøkkenvakt — 1 from F-teams
       if (p.kjokken) pushLeader(
         d, dt, 'kjokkenvakt', p.kjokken, 'kjokkenvakt',
-        'Snakk med Kjøkkenet dagen før vakten din. Du skal følge kjøkkenet hele denne vakten',
+        null,
       );
 
       // Special duties log
