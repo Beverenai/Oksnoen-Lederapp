@@ -192,18 +192,71 @@ Deno.serve(async (req) => {
           .eq('id', existing.id);
         if (archiveErr) throw archiveErr;
       }
-      await admin.from('shift_assignments').delete().eq('schedule_id', existing.id);
+      if (preserve_locked) {
+        await admin.from('shift_assignments').delete()
+          .eq('schedule_id', existing.id).eq('is_locked', false);
+      } else {
+        await admin.from('shift_assignments').delete().eq('schedule_id', existing.id);
+      }
       await admin.from('special_duties').delete().eq('schedule_id', existing.id);
       await admin.from('shift_schedules').update({
         period_length, status: 'draft', generated_at: new Date().toISOString(),
       }).eq('id', existing.id);
       scheduleId = existing.id;
     } else {
+      if (preserve_locked) {
+        return new Response(JSON.stringify({ error: 'Ingen plan å beholde — generér først uten å låse.' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       const { data: ins, error: insErr } = await admin.from('shift_schedules')
         .insert({ period_number, year, period_length, status: 'draft' })
         .select('id').single();
       if (insErr) throw insErr;
       scheduleId = ins.id;
+    }
+
+    // ===== LOAD LOCKED ROWS (preserve_locked) =====
+    const leaderByIdEarly = new Map<string, LeaderRow>(
+      (leadersData || []).map((l) => [l.id, l as LeaderRow]),
+    );
+    const lockedRows = preserve_locked
+      ? ((await admin.from('shift_assignments').select('*')
+          .eq('schedule_id', scheduleId).eq('is_locked', true)).data || [])
+      : [];
+    const lockedKjokken = new Map<number, LeaderRow>();
+    const lockedMorgen = new Map<number, LeaderRow>();
+    const lockedFrokost = new Map<number, LeaderRow>();
+    const lockedNatt = new Map<number, LeaderRow[]>();
+    const lockedSanitas = new Map<number, LeaderRow[]>();
+    const lockedSeilern = new Map<number, LeaderRow[]>();
+    const lockedBings = new Map<number, LeaderRow[]>();
+    const lockedNesteFrokost = new Map<number, LeaderRow>();
+    const lockedKeySet = new Set<string>();
+    const lockedKey = (a: { day_index: number; shift_type_id: string; role: string; assignment_type: string; team_name: string | null; leader_id: string | null }) =>
+      `${a.day_index}|${a.shift_type_id}|${a.role}|${a.assignment_type}|${a.team_name ?? ''}|${a.leader_id ?? ''}`;
+    for (const r of lockedRows as any[]) {
+      lockedKeySet.add(lockedKey(r));
+      if (r.assignment_type !== 'leader' || !r.leader_id) continue;
+      const ldr = leaderByIdEarly.get(r.leader_id);
+      if (!ldr) continue;
+      const st = stById.get(r.shift_type_id);
+      if (!st) continue;
+      const slug = st.slug;
+      const role = r.role;
+      const day = r.day_index;
+      const pushArr = (m: Map<number, LeaderRow[]>, l: LeaderRow) => {
+        const a = m.get(day) || []; if (!a.find((x) => x.id === l.id)) a.push(l); m.set(day, a);
+      };
+      if (role === 'frokostvakt_neste_dag') lockedNesteFrokost.set(day, ldr);
+      else if (slug === 'morgenvakt') lockedMorgen.set(day, ldr);
+      else if (slug === 'frokost' && role === 'frokostvakt') lockedFrokost.set(day, ldr);
+      else if (slug === 'kjokkenvakt') lockedKjokken.set(day, ldr);
+      else if (slug === 'nattevakt') pushArr(lockedNatt, ldr);
+      else if (slug === 'sanitas') pushArr(lockedSanitas, ldr);
+      else if (slug === 'seilern_box') pushArr(lockedSeilern, ldr);
+      else if (slug === 'bings_morgen' || slug === 'bings_ettermiddag' || slug === 'bings_kveld')
+        pushArr(lockedBings, ldr);
     }
 
     const assignments: AssignmentInsert[] = [];
