@@ -284,7 +284,7 @@ Deno.serve(async (req) => {
       bings: LeaderRow[];             // 2 people, from bingsF, all 3 bings-shifts
       seilern: LeaderRow[];           // 2 people, from morgenF
       kjokken: LeaderRow | null;      // 1 person, from any F-team
-      natt: LeaderRow[];              // 2 people, from morning18 (Økt 1-team)
+      natt: LeaderRow[];              // 1 person, from morning18 (Økt 1-team)
       nesteFrokost: LeaderRow | null; // 1 person from evening18 = next-day's frokostvakt
       sanitas: LeaderRow[];           // 2 people from morning18 (leggeteamet), NOT nattevakt
     };
@@ -352,7 +352,7 @@ Deno.serve(async (req) => {
       seilern.forEach((l) => { busy.add(l.id); inc(l.id); });
 
       // 6) Nattevakt — 2 from morning18 (Økt 1-team, 18+)
-      const natt = pickFairest(grouped[morning18], 2, busy);
+      const natt = pickFairest(grouped[morning18], 1, busy);
       natt.forEach((l) => { busy.add(l.id); inc(l.id); });
 
       // 7) Neste-dags frokostvakt — 1 from evening18 (= D+1's morning18).
