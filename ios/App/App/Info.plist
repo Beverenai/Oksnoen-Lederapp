@@ -49,5 +49,11 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Vi trenger tilgang til kameraet for å ta profilbilde og bilder til Fix-meldinger.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Vi trenger tilgang til bildebiblioteket for å velge profilbilde og bilder til Fix-meldinger.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Vi trenger tilgang for å lagre bilder du tar i appen.</string>
 </dict>
 </plist>
