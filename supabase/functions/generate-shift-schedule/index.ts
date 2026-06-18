@@ -366,14 +366,16 @@ Deno.serve(async (req) => {
       //    Plukkes før de andre vaktene slik at vi ikke "går tom" fordi alle
       //    F-ledere allerede er bundet opp i andre vakter den dagen.
       const allF = [...grouped['team1f'], ...grouped['team2f']];
-      const kjokkenEligible = allF.filter(
-        (l) => (kjokkenCount.get(l.id) || 0) < KJOKKEN_MAX,
-      );
-      let kjokken: LeaderRow | null = null;
-      if (kjokkenEligible.length > 0) {
-        const shuffled = shuffle(kjokkenEligible);
-        shuffled.sort((a, b) => cnt(a.id) - cnt(b.id));
-        kjokken = shuffled[0] || null;
+      let kjokken: LeaderRow | null = lockedKjokken.get(d) || null;
+      if (!kjokken) {
+        const kjokkenEligible = allF.filter(
+          (l) => (kjokkenCount.get(l.id) || 0) < KJOKKEN_MAX && !busy.has(l.id),
+        );
+        if (kjokkenEligible.length > 0) {
+          const shuffled = shuffle(kjokkenEligible);
+          shuffled.sort((a, b) => cnt(a.id) - cnt(b.id));
+          kjokken = shuffled[0] || null;
+        }
       }
       // Hvis alle F-ledere allerede har hatt kjøkkenvakt: la den stå tom
       // (admin kan fylle inn manuelt) — vi gjentar ALDRI samme leder.
@@ -384,13 +386,12 @@ Deno.serve(async (req) => {
       }
 
       // 2) Morgenvakt — 1 from morgenF
-      const morgenPick = pickFairest(grouped[morgenF], 1, busy);
-      const morgen = morgenPick[0] || null;
+      const morgen: LeaderRow | null = lockedMorgen.get(d) || pickFairest(grouped[morgenF], 1, busy)[0] || null;
       if (morgen) { busy.add(morgen.id); inc(morgen.id); }
 
       // 3) Frokostvakt — reservert fra gårsdagens nesteFrokost-pick.
       //    Unntak: første normale dag har ingen forrige dag, så pickFairest.
-      let frokost: LeaderRow | null = frokostByDay.get(d) || null;
+      let frokost: LeaderRow | null = lockedFrokost.get(d) || frokostByDay.get(d) || null;
       if (frokost) {
         busy.add(frokost.id); inc(frokost.id);
       } else {
@@ -400,15 +401,24 @@ Deno.serve(async (req) => {
       }
 
       // 4) Bings pair — 2 from bingsF (same pair across all 3 bings shifts)
-      const bings = pickFairest(grouped[bingsF], 2, busy);
+      const lockedBingsArr = lockedBings.get(d) || [];
+      lockedBingsArr.forEach((l) => busy.add(l.id));
+      const bingsExtra = pickFairest(grouped[bingsF], Math.max(0, 2 - lockedBingsArr.length), busy);
+      const bings = [...lockedBingsArr, ...bingsExtra];
       bings.forEach((l) => { busy.add(l.id); inc(l.id, 1); });
 
       // 5) Seilern — 2 from morgenF, avoid busy
-      const seilern = pickFairest(grouped[morgenF], 2, busy);
+      const lockedSeilernArr = lockedSeilern.get(d) || [];
+      lockedSeilernArr.forEach((l) => busy.add(l.id));
+      const seilernExtra = pickFairest(grouped[morgenF], Math.max(0, 2 - lockedSeilernArr.length), busy);
+      const seilern = [...lockedSeilernArr, ...seilernExtra];
       seilern.forEach((l) => { busy.add(l.id); inc(l.id); });
 
       // 6) Nattevakt — 2 from morning18 (Økt 1-team, 18+)
-      const natt = pickFairest(grouped[morning18], 1, busy);
+      const lockedNattArr = lockedNatt.get(d) || [];
+      lockedNattArr.forEach((l) => busy.add(l.id));
+      const nattExtra = pickFairest(grouped[morning18], Math.max(0, 1 - lockedNattArr.length), busy);
+      const natt = [...lockedNattArr, ...nattExtra];
       natt.forEach((l) => { busy.add(l.id); inc(l.id); });
 
       // 7) Neste-dags frokostvakt — 1 from evening18 (= D+1's morning18).
@@ -416,8 +426,7 @@ Deno.serve(async (req) => {
       //    Hopp over på siste normale dag (D+1 er avreisedag).
       let nesteFrokost: LeaderRow | null = null;
       if (d + 1 < NORMAL_TO) {
-        const nesteFrokostPick = pickFairest(grouped[evening18], 1, busy);
-        nesteFrokost = nesteFrokostPick[0] || null;
+        nesteFrokost = lockedNesteFrokost.get(d) || pickFairest(grouped[evening18], 1, busy)[0] || null;
         if (nesteFrokost) {
           busy.add(nesteFrokost.id); inc(nesteFrokost.id);
           frokostByDay.set(d + 1, nesteFrokost);
@@ -425,7 +434,10 @@ Deno.serve(async (req) => {
       }
 
       // 8) Sanitas — 2 from morning18 (leggeteamet), MÅ være forskjellig fra nattevakt
-      const sanitas = pickFairest(grouped[morning18], 2, busy);
+      const lockedSanitasArr = lockedSanitas.get(d) || [];
+      lockedSanitasArr.forEach((l) => busy.add(l.id));
+      const sanitasExtra = pickFairest(grouped[morning18], Math.max(0, 2 - lockedSanitasArr.length), busy);
+      const sanitas = [...lockedSanitasArr, ...sanitasExtra];
       sanitas.forEach((l) => { busy.add(l.id); inc(l.id); });
 
       days[d] = {
