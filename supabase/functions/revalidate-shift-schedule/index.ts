@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     const [assRes, stRes, ldrRes] = await Promise.all([
       admin.from('shift_assignments').select('*').eq('schedule_id', schedule_id),
       admin.from('shift_types').select('*'),
-      admin.from('leaders').select('id, name, team'),
+      admin.from('leaders').select('id, name, team, is_active').eq('is_active', true),
     ]);
     if (assRes.error) throw assRes.error;
     if (stRes.error) throw stRes.error;
