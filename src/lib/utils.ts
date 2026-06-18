@@ -14,3 +14,16 @@ export function formatFullRoom(cabinName: string | null | undefined, room: strin
   }
   return room;
 }
+
+/**
+ * Normalize a Norwegian phone number for storage:
+ * strips whitespace/dashes and the +47/0047/47 country prefix (when
+ * followed by 8 digits), so numbers persist as bare 8-digit strings.
+ */
+export function normalizePhone(input: string | null | undefined): string {
+  if (!input) return '';
+  const cleaned = input.replace(/[\s\-()]/g, '');
+  return cleaned
+    .replace(/^\+?47(\d{8})$/, '$1')
+    .replace(/^00?47(\d{8})$/, '$1');
+}

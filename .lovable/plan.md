@@ -1,33 +1,38 @@
 ## Mål
-Når CSV-en inneholder en Seilern-hytte (f.eks. `Seilern Haui`, `Seileren Maui`, `Seilern tipi`), skal importen rute deltakeren til riktig eksisterende hytte i databasen. Under-hyttene beholdes som egne `cabins`-rader (slik de er nå).
 
-## Bakgrunn
-I databasen finnes:
-- Hovedoppføring: `Seileren`
-- Under-hytter: `Seilern Haui`, `Seilern Halua`, `Seilern Maui`, `Seilern Tipi`, `Seilern Oahu`, `Seilern Honolulu`, `Seilern Hawaii`, `Seilern Waikikii`
+1. Rydde +47 fra eksisterende ledere så telefon-pålogging og Sheet-sync matcher riktig.
+2. Verifisere at admin kan oppdatere ledere manuelt (RLS).
 
-CSV-en bruker trolig varianter som `Seileren Haui` / `seilern  maui` / `Seilern haui venstre`. I dag stripper `parseCabinField` bare ` venstre` / ` høyre` og sender resten videre som hyttenavn — så ekstra mellomrom, stor/liten bokstav, og "Seileren" vs "Seilern" gir bom.
+## 1. Rydd opp telefon-numre i databasen
 
-## Endringer
+28 av 64 ledere har `+47` foran nummeret. `phone-login` edge-funksjonen normaliserer innkommende nummer ved å fjerne alt som ikke er siffer, men sammenligner deretter mot lagret `phone`-felt — så `+4791234567` (lagret) ≠ `91234567` (normalisert input) og innlogging feiler.
 
-### 1) `src/components/admin/ParticipantImportTab.tsx` — `parseCabinField`
-- Normaliser whitespace (kollapser doble mellomrom, trimmer).
-- Behold eksisterende håndtering av ` venstre` / ` høyre` suffiks.
-- Etter suffiks-strip: hvis navnet starter med `seileren ` eller `seilern `, normaliser til `Seilern <Sub>` med stor forbokstav på under-navnet, slik at det matcher kanoniske rader (`Seilern Haui`, `Seilern Maui`, osv.).
-- Hvis navnet er bare `seileren` / `seilern` uten suffiks, behold `Seileren` (hovedbygget).
+**Engangs-migrasjon** som rydder opp i `leaders.phone`:
+- Fjern ledende `+47`, `0047`, `47` (kun når det etterfølges av 8 siffer).
+- Fjern alle mellomrom.
+- Resultat: alle nummer lagres som rene 8 sifre.
 
-### 2) `supabase/functions/import-participants-background/index.ts` — match mot `cabins`
-- Gjør cabin-oppslaget case-insensitivt og whitespace-tolerant (`lower(trim(replace_double_spaces(name)))`) på begge sider, så små variasjoner i CSV ikke gir "cabin ikke funnet"-feil.
-- Hvis CSV-en gir `Seilern X` men DB tilfeldigvis bare har `Seileren X` (eller omvendt), prøv også begge formene som fallback før vi gir opp.
+```text
++47 912 34 567  →  91234567
+0047 91234567   →  91234567
+4791234567      →  91234567
+91234567        →  91234567 (uendret)
+```
 
-### 3) Brukerinfo i import-UI
-- I "Støttede kolonner"-boksen i `ParticipantImportTab.tsx`, legg til en kort linje som forklarer at både `Seilern Haui`, `Seileren Haui` osv. fungerer, og at " venstre"/" høyre" kan legges til på slutten som før.
+Dette gjør også at Google Sheet-sync (som matcher på siste 8 sifre) blir konsistent med innloggingsflyten.
 
-## Ikke i scope
-- Ingen schema-endringer.
-- Ingen sammenslåing av Seilern-under-hyttene til `room`-felt på en `Seileren`-rad (det var alternativ 2; ble valgt bort).
-- Ingen sletting/flytting av eksisterende deltaker-data.
+## 2. Strip +47 også på lagring fra admin-UI
 
-## Verifisering
-- Last opp en test-CSV med blanding av `Seilern Haui`, `Seileren maui`, `SEILERN  TIPI`, `Seilern Oahu venstre` → alle skal vises som "gyldige" i forhåndsvisningen og lande på riktig hytte i `participants.cabin_id`.
-- Eksisterende `Knoll venstre` / `Knoll høyre`-flyt skal være uendret.
+I `LeaderDetailDialog.tsx` og ny-leder-skjemaet i `AdminSettingsContent.tsx` legger jeg på samme normalisering før `phone` skrives til DB, slik at problemet ikke kommer tilbake hvis noen taster inn et nummer med +47 manuelt.
+
+## 3. Verifiser admin-oppdatering
+
+RLS-policy på `leaders`:
+```text
+UPDATE: id = current_leader_id() OR is_admin()
+```
+Dette er korrekt — admins kan oppdatere alle ledere. Jeg sjekker at lagre-knappen i `LeaderDetailDialog` faktisk treffer denne pathen (ingen bug i oppdaterings-payloaden), og at feilmeldinger vises tydelig hvis noe skulle feile (toast i stedet for stille fail).
+
+## Hva jeg IKKE rører
+- `auth.users` (telefon der bruker Supabase sitt eget format og brukes ikke som match-nøkkel).
+- `is_active` toggle / aktiverings-flyt — ikke en del av denne oppgaven.

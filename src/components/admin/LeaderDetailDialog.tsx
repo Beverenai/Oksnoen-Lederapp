@@ -1,6 +1,7 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { normalizePhone } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -158,7 +159,7 @@ export function LeaderDetailDialog({
         .from('leaders')
         .update({
           name,
-          phone: phone.replace(/\s/g, ''),
+          phone: normalizePhone(phone),
           email: email || null,
           age: age || null,
           team: team || null,
