@@ -158,7 +158,7 @@ export function LeaderDetailDialog({
         .from('leaders')
         .update({
           name,
-          phone: phone.replace(/\s/g, ''),
+          phone: normalizePhone(phone),
           email: email || null,
           age: age || null,
           team: team || null,

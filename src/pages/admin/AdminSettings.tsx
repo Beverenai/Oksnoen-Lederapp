@@ -181,7 +181,7 @@ export default function AdminSettings() {
     try {
       const { data: leader, error } = await supabase
         .from('leaders')
-        .insert({ name: newLeaderName, phone: newLeaderPhone.replace(/\s/g, '') })
+        .insert({ name: newLeaderName, phone: normalizePhone(newLeaderPhone) })
         .select()
         .single();
 
