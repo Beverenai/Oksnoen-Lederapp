@@ -132,7 +132,7 @@ export default function ShiftPlanner() {
       if (ctx && typeof ctx.json === 'function') {
         try { const body = await ctx.clone().json(); errMsg = body?.error || errMsg; } catch {}
       }
-      if (error) throw error;
+      if (error) throw new Error(errMsg || (error as Error).message);
       if (data?.error) throw new Error(data.error);
       showSuccess(`Generert: ${data.assignments_count} tildelinger over ${data.days} dager`);
       setWarnings(data.validation?.warnings || []);
