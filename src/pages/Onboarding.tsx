@@ -23,6 +23,7 @@ export default function Onboarding() {
   
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [step, setStep] = useState<1 | 2>(leader?.age ? 2 : 1);
   const [imageUrl, setImageUrl] = useState(leader?.profile_image_url || '');
   const [age, setAge] = useState(leader?.age?.toString() || '');
   const [hasCar, setHasCar] = useState(leader?.has_car || false);
@@ -104,26 +105,17 @@ export default function Onboarding() {
     fileInputRef.current?.click();
   };
 
-  const handleSubmit = async () => {
+  const saveInfoAndContinue = async () => {
     if (!leader) return;
-
-    if (!imageUrl) {
-      showError('Vennligst last opp et profilbilde');
-      return;
-    }
-
     if (!age || parseInt(age) < 15 || parseInt(age) > 100) {
       showError('Vennligst oppgi gyldig alder');
       return;
     }
-
     setIsSaving(true);
-
     try {
       const { error } = await supabase
         .from('leaders')
         .update({
-          profile_image_url: imageUrl,
           age: parseInt(age),
           has_car: hasCar,
           has_drivers_license: hasDriversLicense,
@@ -134,10 +126,29 @@ export default function Onboarding() {
           can_rope_setup: canRopeSetup,
         })
         .eq('id', leader.id);
-
       if (error) throw error;
-
       await refreshLeader();
+      setStep(2);
+    } catch (error) {
+      console.error('Save error:', error);
+      showError('Kunne ikke lagre profil');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const finishOnboarding = async () => {
+    if (!leader) return;
+    setIsSaving(true);
+    try {
+      if (imageUrl && imageUrl !== leader.profile_image_url) {
+        const { error } = await supabase
+          .from('leaders')
+          .update({ profile_image_url: imageUrl })
+          .eq('id', leader.id);
+        if (error) throw error;
+        await refreshLeader();
+      }
       showSuccess('Profil fullført!');
       navigate('/');
     } catch (error) {
@@ -148,7 +159,7 @@ export default function Onboarding() {
     }
   };
 
-  const isFormValid = imageUrl && age && parseInt(age) >= 15;
+  const isInfoValid = !!age && parseInt(age) >= 15;
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-green-50 to-white">
@@ -172,10 +183,18 @@ export default function Onboarding() {
         {/* Profile Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Din profil</CardTitle>
-            <CardDescription>Denne informasjonen brukes av andre ledere</CardDescription>
+            <CardTitle className="text-lg">
+              {step === 1 ? 'Steg 1: Om deg' : 'Steg 2: Profilbilde'}
+            </CardTitle>
+            <CardDescription>
+              {step === 1
+                ? 'Denne informasjonen brukes av andre ledere'
+                : 'Last opp et profilbilde for å fullføre'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+          {step === 2 && (
+            <>
             {/* Profile Image */}
             <div className="flex flex-col items-center space-y-4">
               <div className="relative">
@@ -206,10 +225,28 @@ export default function Onboarding() {
                 className="hidden"
               />
               <p className="text-sm text-muted-foreground">
-                {imageUrl ? 'Trykk for å endre bilde' : 'Last opp et profilbilde *'}
+                {imageUrl ? 'Trykk for å endre bilde' : 'Trykk på kamera-ikonet for å laste opp bilde'}
               </p>
             </div>
-
+            <Button
+              onClick={finishOnboarding}
+              disabled={isSaving || isUploading}
+              className="w-full gap-2"
+              size="lg"
+            >
+              {isSaving ? 'Lagrer...' : (<><Check className="w-5 h-5" />{imageUrl ? 'Fullfør profil' : 'Hopp over og fullfør'}</>)}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setStep(1)}
+              className="w-full"
+            >
+              Tilbake
+            </Button>
+            </>
+          )}
+          {step === 1 && (
+            <>
             {/* Age */}
             <div className="space-y-2">
               <Label htmlFor="age">Alder *</Label>
@@ -333,8 +370,8 @@ export default function Onboarding() {
 
             {/* Submit Button */}
             <Button
-              onClick={handleSubmit}
-              disabled={!isFormValid || isSaving}
+              onClick={saveInfoAndContinue}
+              disabled={!isInfoValid || isSaving}
               className="w-full gap-2"
               size="lg"
             >
@@ -342,11 +379,12 @@ export default function Onboarding() {
                 'Lagrer...'
               ) : (
                 <>
-                  <Check className="w-5 h-5" />
-                  Fullfør profil
+                  Neste: Profilbilde
                 </>
               )}
             </Button>
+            </>
+          )}
           </CardContent>
         </Card>
 
