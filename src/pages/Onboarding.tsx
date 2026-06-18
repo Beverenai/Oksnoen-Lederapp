@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, User, Car, Check, Upload, Bell, Anchor, Mountain, Cable, Wrench } from 'lucide-react';
+import { Camera, User, Car, Check, Upload, Bell, Anchor, Mountain, Cable, Wrench, LogOut } from 'lucide-react';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
 import { compressImage } from '@/lib/imageUtils';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
@@ -17,7 +17,7 @@ import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 export default function Onboarding() {
   const navigate = useNavigate();
   const { showSuccess, showError, showInfo } = useStatusPopup();
-  const { leader, refreshLeader } = useAuth();
+  const { leader, refreshLeader, logout } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isUploading, setIsUploading] = useState(false);
@@ -128,9 +128,18 @@ export default function Onboarding() {
       <div className="min-h-[100dvh] flex flex-col items-center justify-center p-4 pt-safe">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-2 relative">
           <h1 className="text-2xl font-bold text-foreground">Velkommen, {leader?.name?.split(' ')[0]}!</h1>
           <p className="text-muted-foreground">Fullfør profilen din for å komme i gang</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { logout(); navigate('/login'); }}
+            className="mt-2 text-muted-foreground gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Logg ut (feil bruker?)
+          </Button>
         </div>
 
         {/* Profile Card */}
