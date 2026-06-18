@@ -115,6 +115,7 @@ export function BulkActivityRegistration({
       const activityName = (isCustom ? customName : selectedActivity).trim();
       if (!activityName) {
         showError('Aktivitetsnavnet kan ikke være tomt');
+        hapticError();
         setIsSubmitting(false);
         return;
       }
@@ -128,7 +129,11 @@ export function BulkActivityRegistration({
 
       if (error) throw error;
 
-      showSuccess(`${activityName} registrert for ${selectedParticipants.size} deltakere!`);
+      const successMessage = `${activityName} registrert for ${selectedParticipants.size} deltakere!`;
+      showSuccess(successMessage);
+      toast.success(successMessage);
+      hapticSuccess();
+
       setSelectedParticipants(new Set());
       setSelectedActivity('');
       setCustomName('');
@@ -137,6 +142,8 @@ export function BulkActivityRegistration({
     } catch (error) {
       console.error('Error registering activities:', error);
       showError('Kunne ikke registrere aktiviteter');
+      toast.error('Kunne ikke registrere aktiviteter');
+      hapticError();
     } finally {
       setIsSubmitting(false);
     }
