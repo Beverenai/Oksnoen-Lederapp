@@ -23,6 +23,7 @@ export default function Onboarding() {
   
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [step, setStep] = useState<1 | 2>(leader?.age ? 2 : 1);
   const [imageUrl, setImageUrl] = useState(leader?.profile_image_url || '');
   const [age, setAge] = useState(leader?.age?.toString() || '');
   const [hasCar, setHasCar] = useState(leader?.has_car || false);
@@ -104,26 +105,17 @@ export default function Onboarding() {
     fileInputRef.current?.click();
   };
 
-  const handleSubmit = async () => {
+  const saveInfoAndContinue = async () => {
     if (!leader) return;
-
-    if (!imageUrl) {
-      showError('Vennligst last opp et profilbilde');
-      return;
-    }
-
     if (!age || parseInt(age) < 15 || parseInt(age) > 100) {
       showError('Vennligst oppgi gyldig alder');
       return;
     }
-
     setIsSaving(true);
-
     try {
       const { error } = await supabase
         .from('leaders')
         .update({
-          profile_image_url: imageUrl,
           age: parseInt(age),
           has_car: hasCar,
           has_drivers_license: hasDriversLicense,
@@ -134,10 +126,29 @@ export default function Onboarding() {
           can_rope_setup: canRopeSetup,
         })
         .eq('id', leader.id);
-
       if (error) throw error;
-
       await refreshLeader();
+      setStep(2);
+    } catch (error) {
+      console.error('Save error:', error);
+      showError('Kunne ikke lagre profil');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const finishOnboarding = async () => {
+    if (!leader) return;
+    setIsSaving(true);
+    try {
+      if (imageUrl && imageUrl !== leader.profile_image_url) {
+        const { error } = await supabase
+          .from('leaders')
+          .update({ profile_image_url: imageUrl })
+          .eq('id', leader.id);
+        if (error) throw error;
+        await refreshLeader();
+      }
       showSuccess('Profil fullført!');
       navigate('/');
     } catch (error) {
@@ -148,7 +159,7 @@ export default function Onboarding() {
     }
   };
 
-  const isFormValid = imageUrl && age && parseInt(age) >= 15;
+  const isInfoValid = !!age && parseInt(age) >= 15;
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-green-50 to-white">
