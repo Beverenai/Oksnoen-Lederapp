@@ -739,8 +739,21 @@ export default function ShiftPlanner() {
                                                 ))}
                                               </SelectContent>
                                             </Select>
+                                            {a.is_locked && (
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="w-full"
+                                                onClick={() => { toggleAssignmentLock(a.id, false); setEditingId(null); }}
+                                              >
+                                                <Unlock className="w-3 h-3 mr-2" /> Lås opp
+                                              </Button>
+                                            )}
                                           </PopoverContent>
                                         </Popover>
+                                      ) : null;
+                                      const lockBadge = a.is_locked ? (
+                                        <Lock className="w-3 h-3 text-primary" />
                                       ) : null;
                                       if (a.assignment_type === 'team' && a.team_name) {
                                         const t = a.team_name as Team;
@@ -749,15 +762,17 @@ export default function ShiftPlanner() {
                                           <Badge key={a.id} className={`${meta?.className || ''} gap-1`}>
                                             {meta?.label || a.team_name}
                                             {a.note ? <span className="ml-1 opacity-80">{a.note}</span> : null}
+                                            {lockBadge}
                                             {editButton}
                                           </Badge>
                                         );
                                       }
                                       const ldr = a.leader_id ? leaderById.get(a.leader_id) : null;
                                       return (
-                                        <Badge key={a.id} variant="outline" className="gap-1">
+                                        <Badge key={a.id} variant="outline" className={`gap-1 ${a.is_locked ? 'border-primary ring-1 ring-primary/40' : ''}`}>
                                           {ldr?.name || 'Ukjent'}
                                           {a.role && a.role !== 'standard' ? <span className="ml-1 text-[10px] opacity-70">({a.role})</span> : null}
+                                          {lockBadge}
                                           {editButton}
                                         </Badge>
                                       );
