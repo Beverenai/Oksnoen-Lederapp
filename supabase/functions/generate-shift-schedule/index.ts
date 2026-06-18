@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -99,8 +99,9 @@ Deno.serve(async (req) => {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user } } = await userClient.auth.getUser();
-    if (!user) {
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: 'Not authenticated' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -537,7 +538,7 @@ Deno.serve(async (req) => {
       // Hele dagen Kjøkkenvakt — 1 from F-teams
       if (p.kjokken) pushLeader(
         d, dt, 'kjokkenvakt', p.kjokken, 'kjokkenvakt',
-        'Snakk med Kjøkkenet dagen før vakten din. Du skal følge kjøkkenet hele denne vakten',
+        null,
       );
 
       // Special duties log

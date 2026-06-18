@@ -137,7 +137,7 @@ export default function ShiftPlanner() {
           console.warn('Could not parse schedule generation error response:', parseError);
         }
       }
-      if (error) throw error;
+      if (error) throw new Error(errMsg || (error as Error).message);
       if (data?.error) throw new Error(data.error);
       showSuccess(`Generert: ${data.assignments_count} tildelinger over ${data.days} dager`);
       setWarnings(data.validation?.warnings || []);

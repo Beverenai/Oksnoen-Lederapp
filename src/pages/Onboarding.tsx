@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, User, Car, Check, Upload, Bell, Anchor, Mountain, Cable, Wrench, LogOut } from 'lucide-react';
+import { Camera, User, Car, Check, Upload, Bell, Anchor, Mountain, Cable, Wrench, LogOut, RefreshCw, AlertCircle } from 'lucide-react';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
 import { compressImage } from '@/lib/imageUtils';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
@@ -23,7 +23,10 @@ export default function Onboarding() {
   
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [step, setStep] = useState<1 | 2>(leader?.age ? 2 : 1);
   const [imageUrl, setImageUrl] = useState(leader?.profile_image_url || '');
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [lastFile, setLastFile] = useState<File | null>(null);
   const [age, setAge] = useState(leader?.age?.toString() || '');
   const [hasCar, setHasCar] = useState(leader?.has_car || false);
   const [hasDriversLicense, setHasDriversLicense] = useState(leader?.has_drivers_license || false);
@@ -51,6 +54,8 @@ export default function Onboarding() {
     }
 
     setIsUploading(true);
+    setUploadError(null);
+    setLastFile(file);
 
     try {
       // Compress image before upload
@@ -68,16 +73,24 @@ export default function Onboarding() {
         .getPublicUrl(filePath);
 
       setImageUrl(publicUrl);
+      setUploadError(null);
+      setLastFile(null);
       showSuccess('Bilde lastet opp!');
     } catch (error: any) {
       console.error('Upload error:', error);
       const msg = error?.message || error?.error_description || 'Ukjent feil';
+      setUploadError(msg);
       showError(`Kunne ikke laste opp bilde: ${msg}`);
     } finally {
       setIsUploading(false);
       // Reset input so the same file can be re-selected after an error
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const retryUpload = async () => {
+    if (lastFile) await uploadFile(lastFile);
+    else handlePickImage();
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,26 +117,17 @@ export default function Onboarding() {
     fileInputRef.current?.click();
   };
 
-  const handleSubmit = async () => {
+  const saveInfoAndContinue = async () => {
     if (!leader) return;
-
-    if (!imageUrl) {
-      showError('Vennligst last opp et profilbilde');
-      return;
-    }
-
     if (!age || parseInt(age) < 15 || parseInt(age) > 100) {
       showError('Vennligst oppgi gyldig alder');
       return;
     }
-
     setIsSaving(true);
-
     try {
       const { error } = await supabase
         .from('leaders')
         .update({
-          profile_image_url: imageUrl,
           age: parseInt(age),
           has_car: hasCar,
           has_drivers_license: hasDriversLicense,
@@ -134,10 +138,29 @@ export default function Onboarding() {
           can_rope_setup: canRopeSetup,
         })
         .eq('id', leader.id);
-
       if (error) throw error;
-
       await refreshLeader();
+      setStep(2);
+    } catch (error) {
+      console.error('Save error:', error);
+      showError('Kunne ikke lagre profil');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const finishOnboarding = async () => {
+    if (!leader) return;
+    setIsSaving(true);
+    try {
+      if (imageUrl && imageUrl !== leader.profile_image_url) {
+        const { error } = await supabase
+          .from('leaders')
+          .update({ profile_image_url: imageUrl })
+          .eq('id', leader.id);
+        if (error) throw error;
+        await refreshLeader();
+      }
       showSuccess('Profil fullført!');
       navigate('/');
     } catch (error) {
@@ -148,7 +171,7 @@ export default function Onboarding() {
     }
   };
 
-  const isFormValid = imageUrl && age && parseInt(age) >= 15;
+  const isInfoValid = !!age && parseInt(age) >= 15;
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-green-50 to-white">
@@ -172,10 +195,18 @@ export default function Onboarding() {
         {/* Profile Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Din profil</CardTitle>
-            <CardDescription>Denne informasjonen brukes av andre ledere</CardDescription>
+            <CardTitle className="text-lg">
+              {step === 1 ? 'Steg 1: Om deg' : 'Steg 2: Profilbilde'}
+            </CardTitle>
+            <CardDescription>
+              {step === 1
+                ? 'Denne informasjonen brukes av andre ledere'
+                : 'Last opp et profilbilde for å fullføre'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+          {step === 2 && (
+            <>
             {/* Profile Image */}
             <div className="flex flex-col items-center space-y-4">
               <div className="relative">
@@ -206,10 +237,50 @@ export default function Onboarding() {
                 className="hidden"
               />
               <p className="text-sm text-muted-foreground">
-                {imageUrl ? 'Trykk for å endre bilde' : 'Last opp et profilbilde *'}
+                {imageUrl ? 'Trykk for å endre bilde' : 'Trykk på kamera-ikonet for å laste opp bilde'}
               </p>
             </div>
-
+            {uploadError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 space-y-2">
+                <div className="flex items-start gap-2 text-sm text-destructive">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium">Opplasting feilet</p>
+                    <p className="text-xs opacity-90 break-words">{uploadError}</p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={retryUpload}
+                  disabled={isUploading}
+                  className="w-full gap-2"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isUploading ? 'animate-spin' : ''}`} />
+                  {lastFile ? 'Prøv samme bilde igjen' : 'Velg bilde på nytt'}
+                </Button>
+              </div>
+            )}
+            <Button
+              onClick={finishOnboarding}
+              disabled={isSaving || isUploading}
+              className="w-full gap-2"
+              size="lg"
+            >
+              {isSaving ? 'Lagrer...' : (<><Check className="w-5 h-5" />{imageUrl ? 'Fullfør profil' : 'Hopp over og fullfør'}</>)}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setStep(1)}
+              className="w-full"
+            >
+              Tilbake
+            </Button>
+            </>
+          )}
+          {step === 1 && (
+            <>
             {/* Age */}
             <div className="space-y-2">
               <Label htmlFor="age">Alder *</Label>
@@ -333,8 +404,8 @@ export default function Onboarding() {
 
             {/* Submit Button */}
             <Button
-              onClick={handleSubmit}
-              disabled={!isFormValid || isSaving}
+              onClick={saveInfoAndContinue}
+              disabled={!isInfoValid || isSaving}
               className="w-full gap-2"
               size="lg"
             >
@@ -342,11 +413,12 @@ export default function Onboarding() {
                 'Lagrer...'
               ) : (
                 <>
-                  <Check className="w-5 h-5" />
-                  Fullfør profil
+                  Neste: Profilbilde
                 </>
               )}
             </Button>
+            </>
+          )}
           </CardContent>
         </Card>
 
