@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, User, Car, Check, Upload, Bell, Anchor, Mountain, Cable, Wrench, LogOut } from 'lucide-react';
+import { Camera, User, Car, Check, Upload, Bell, Anchor, Mountain, Cable, Wrench, LogOut, RefreshCw, AlertCircle } from 'lucide-react';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
 import { compressImage } from '@/lib/imageUtils';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
@@ -25,6 +25,8 @@ export default function Onboarding() {
   const [isSaving, setIsSaving] = useState(false);
   const [step, setStep] = useState<1 | 2>(leader?.age ? 2 : 1);
   const [imageUrl, setImageUrl] = useState(leader?.profile_image_url || '');
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [lastFile, setLastFile] = useState<File | null>(null);
   const [age, setAge] = useState(leader?.age?.toString() || '');
   const [hasCar, setHasCar] = useState(leader?.has_car || false);
   const [hasDriversLicense, setHasDriversLicense] = useState(leader?.has_drivers_license || false);
@@ -52,6 +54,8 @@ export default function Onboarding() {
     }
 
     setIsUploading(true);
+    setUploadError(null);
+    setLastFile(file);
 
     try {
       // Compress image before upload
@@ -69,16 +73,24 @@ export default function Onboarding() {
         .getPublicUrl(filePath);
 
       setImageUrl(publicUrl);
+      setUploadError(null);
+      setLastFile(null);
       showSuccess('Bilde lastet opp!');
     } catch (error: any) {
       console.error('Upload error:', error);
       const msg = error?.message || error?.error_description || 'Ukjent feil';
+      setUploadError(msg);
       showError(`Kunne ikke laste opp bilde: ${msg}`);
     } finally {
       setIsUploading(false);
       // Reset input so the same file can be re-selected after an error
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const retryUpload = async () => {
+    if (lastFile) await uploadFile(lastFile);
+    else handlePickImage();
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -228,6 +240,28 @@ export default function Onboarding() {
                 {imageUrl ? 'Trykk for å endre bilde' : 'Trykk på kamera-ikonet for å laste opp bilde'}
               </p>
             </div>
+            {uploadError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 space-y-2">
+                <div className="flex items-start gap-2 text-sm text-destructive">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium">Opplasting feilet</p>
+                    <p className="text-xs opacity-90 break-words">{uploadError}</p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={retryUpload}
+                  disabled={isUploading}
+                  className="w-full gap-2"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isUploading ? 'animate-spin' : ''}`} />
+                  {lastFile ? 'Prøv samme bilde igjen' : 'Velg bilde på nytt'}
+                </Button>
+              </div>
+            )}
             <Button
               onClick={finishOnboarding}
               disabled={isSaving || isUploading}
