@@ -620,12 +620,27 @@ export default function ShiftPlanner() {
       {viewedSchedule && (
         <Card>
           <CardHeader>
-            <CardTitle>
-              Vaktplan · Periode {viewedSchedule.period_number}/{viewedSchedule.year}
-            </CardTitle>
-            <CardDescription>
-              {viewedSchedule.period_length} dager · {STATUS_META[viewedSchedule.status]?.label || viewedSchedule.status}
-            </CardDescription>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>
+                  Vaktplan · Periode {viewedSchedule.period_number}/{viewedSchedule.year}
+                </CardTitle>
+                <CardDescription>
+                  {viewedSchedule.period_length} dager · {STATUS_META[viewedSchedule.status]?.label || viewedSchedule.status}
+                </CardDescription>
+              </div>
+              {viewedSchedule.status !== 'archived' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={regenerateKeepLocked}
+                  disabled={generating}
+                >
+                  {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                  Regenerér (behold låste)
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {missingLeaders.length > 0 && (
