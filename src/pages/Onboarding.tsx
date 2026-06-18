@@ -69,11 +69,14 @@ export default function Onboarding() {
 
       setImageUrl(publicUrl);
       showSuccess('Bilde lastet opp!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
-      showError('Kunne ikke laste opp bilde');
+      const msg = error?.message || error?.error_description || 'Ukjent feil';
+      showError(`Kunne ikke laste opp bilde: ${msg}`);
     } finally {
       setIsUploading(false);
+      // Reset input so the same file can be re-selected after an error
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
