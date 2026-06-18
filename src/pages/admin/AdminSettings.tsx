@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { normalizePhone } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -181,7 +182,7 @@ export default function AdminSettings() {
     try {
       const { data: leader, error } = await supabase
         .from('leaders')
-        .insert({ name: newLeaderName, phone: newLeaderPhone.replace(/\s/g, '') })
+        .insert({ name: newLeaderName, phone: normalizePhone(newLeaderPhone) })
         .select()
         .single();
 

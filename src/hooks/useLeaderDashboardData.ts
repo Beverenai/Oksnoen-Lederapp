@@ -131,7 +131,7 @@ export function useLeaderDashboardData(leaders: Leader[]) {
       if (post === 'statsminister') return 0;
       if (post === 'visestatsminister' || post === 'vise-statsminister') return 1;
       if (l.isAdmin) return 1;
-      if (l.isNurse) return 2;
+      if (l.isNurse) return 1;
       if (team === 'kordinator') return 3;
       return 10;
     };

@@ -1,144 +1,243 @@
-const encoder = new TextEncoder();
+// Shared APNs helper for sending push notifications to iOS devices.
+// Uses Apple's HTTP/2 APNs API with ES256 JWT auth (token-based, not cert-based).
+//
+// Required env vars:
+//   APNS_KEY_ID       - 10 char Key ID from Apple Developer
+//   APNS_TEAM_ID      - 10 char Team ID
+//   APNS_PRIVATE_KEY  - .p8 contents (PEM, may include BEGIN/END lines)
+//   APNS_TOPIC        - bundle id (default com.oksnoen.lederapp)
+//   APNS_ENV          - 'production' (default) or 'sandbox'
 
-function base64UrlEncode(input: string | Uint8Array): string {
-  const bytes = typeof input === "string" ? encoder.encode(input) : input;
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+export interface ApnsConfig {
+  keyId: string;
+  teamId: string;
+  privateKeyPem: string;
+  topic: string;
+  env: "production" | "sandbox";
 }
 
-function pemToPkcs8(pem: string): Uint8Array {
-  const base64 = pem
-    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
-    .replace(/-----END PRIVATE KEY-----/g, "")
-    .replace(/\s/g, "");
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
+export interface ApnsAlertPayload {
+  title: string;
+  body: string;
+  url?: string;
+  badge?: number;
+  sound?: string;
+}
+
+export interface ApnsSendResult {
+  ok: boolean;
+  status: number;
+  reason?: string;
+  /** True when Apple says the token is invalid and should be removed. */
+  unregistered?: boolean;
+}
+
+function normalizeSecretValue(value: string | null | undefined): string | null {
+  if (!value) return null;
+  let normalized = value.trim();
+
+  const eqIndex = normalized.indexOf("=");
+  if (eqIndex > 0 && /^[A-Z0-9_]+$/i.test(normalized.slice(0, eqIndex))) {
+    normalized = normalized.slice(eqIndex + 1).trim();
   }
+
+  // Strip any leading '=' characters (common paste mistake where the
+  // value was copied with the '=' separator still attached).
+  while (normalized.startsWith("=")) {
+    normalized = normalized.slice(1).trim();
+  }
+
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1).trim();
+  }
+
+  return normalized || null;
+}
+
+export function getApnsConfig(): ApnsConfig | null {
+  const keyId = normalizeSecretValue(Deno.env.get("APNS_KEY_ID"));
+  const teamId = normalizeSecretValue(Deno.env.get("APNS_TEAM_ID"));
+  const privateKeyPem = normalizeSecretValue(Deno.env.get("APNS_PRIVATE_KEY"));
+  if (!keyId || !teamId || !privateKeyPem) return null;
+  const topic = normalizeSecretValue(Deno.env.get("APNS_TOPIC")) || "com.oksnoen.lederapp";
+  const env = (normalizeSecretValue(Deno.env.get("APNS_ENV")) || "production").toLowerCase() === "sandbox"
+    ? "sandbox"
+    : "production";
+  return { keyId, teamId, privateKeyPem, topic, env };
+}
+
+function b64urlEncode(bytes: Uint8Array | ArrayBuffer): string {
+  const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  let s = "";
+  for (let i = 0; i < arr.length; i++) s += String.fromCharCode(arr[i]);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function b64urlString(input: string): string {
+  return b64urlEncode(new TextEncoder().encode(input));
+}
+
+function pemToPkcs8Bytes(pem: string): Uint8Array {
+  const cleaned = pem
+    .replace(/-----BEGIN [^-]+-----/g, "")
+    .replace(/-----END [^-]+-----/g, "")
+    .replace(/\s+/g, "");
+  const bin = atob(cleaned);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes;
 }
 
-let cachedJwt: { token: string; issuedAt: number } | null = null;
+// Some Web Crypto runtimes return ECDSA signatures in DER (ASN.1) instead of
+// raw IEEE P1363 (r||s). Apple's APNs JWT requires raw 64-byte (R||S) format.
+// This helper normalizes either format to the required 64 bytes.
+function ecdsaSignatureToJoseRaw(sig: ArrayBuffer): Uint8Array {
+  const bytes = new Uint8Array(sig);
+  // Already raw r||s for P-256
+  if (bytes.length === 64) return bytes;
 
-export function isApnsConfigured(): boolean {
-  return !!(
-    Deno.env.get("APNS_KEY_ID") &&
-    Deno.env.get("APNS_TEAM_ID") &&
-    Deno.env.get("APNS_PRIVATE_KEY")
-  );
-}
-
-function normalizeEcdsaSignature(signature: Uint8Array): Uint8Array {
-  if (signature.length === 64) {
-    return signature;
+  // Try to parse as DER: 0x30 len 0x02 rLen r 0x02 sLen s
+  if (bytes[0] !== 0x30) {
+    throw new Error(`Unexpected ECDSA signature format, length=${bytes.length}`);
   }
-
-  // Some Web Crypto runtimes return ASN.1 DER for ECDSA. JWT ES256/APNs
-  // requires the raw JOSE form: 32-byte R followed by 32-byte S.
-  if (signature.length < 8 || signature[0] !== 0x30) {
-    throw new Error(`Unsupported ECDSA signature format (${signature.length} bytes)`);
-  }
-
   let offset = 2;
-  if (signature[1] & 0x80) {
-    offset = 2 + (signature[1] & 0x7f);
+  // Handle long-form length (>=128)
+  if ((bytes[1] & 0x80) !== 0) {
+    offset = 2 + (bytes[1] & 0x7f);
   }
-
-  if (signature[offset] !== 0x02) {
-    throw new Error("Invalid DER ECDSA signature: missing R");
-  }
-  const rLength = signature[offset + 1];
+  if (bytes[offset] !== 0x02) throw new Error("Invalid DER: expected INTEGER for R");
+  const rLen = bytes[offset + 1];
   const rStart = offset + 2;
-  const r = signature.slice(rStart, rStart + rLength);
+  let r = bytes.slice(rStart, rStart + rLen);
 
-  const sOffset = rStart + rLength;
-  if (signature[sOffset] !== 0x02) {
-    throw new Error("Invalid DER ECDSA signature: missing S");
-  }
-  const sLength = signature[sOffset + 1];
+  const sOffset = rStart + rLen;
+  if (bytes[sOffset] !== 0x02) throw new Error("Invalid DER: expected INTEGER for S");
+  const sLen = bytes[sOffset + 1];
   const sStart = sOffset + 2;
-  const s = signature.slice(sStart, sStart + sLength);
+  let s = bytes.slice(sStart, sStart + sLen);
 
-  const raw = new Uint8Array(64);
-  raw.set(r.slice(Math.max(0, r.length - 32)), 32 - Math.min(32, r.length));
-  raw.set(s.slice(Math.max(0, s.length - 32)), 64 - Math.min(32, s.length));
-  return raw;
+  // Strip leading zero pad and left-pad to 32 bytes
+  const trim = (b: Uint8Array) => {
+    let i = 0;
+    while (i < b.length - 1 && b[i] === 0x00) i++;
+    return b.slice(i);
+  };
+  const pad32 = (b: Uint8Array) => {
+    if (b.length > 32) throw new Error(`ECDSA component too long: ${b.length}`);
+    const out = new Uint8Array(32);
+    out.set(b, 32 - b.length);
+    return out;
+  };
+  r = pad32(trim(r));
+  s = pad32(trim(s));
+  const out = new Uint8Array(64);
+  out.set(r, 0);
+  out.set(s, 32);
+  return out;
 }
 
-async function createApnsJwt(): Promise<string> {
-  const keyId = Deno.env.get("APNS_KEY_ID");
-  const teamId = Deno.env.get("APNS_TEAM_ID");
-  const privateKey = Deno.env.get("APNS_PRIVATE_KEY");
+// Cache the signed JWT for up to ~50 minutes (Apple allows max 60 min, min 20 min refresh).
+let cachedToken: { token: string; iat: number; keyId: string } | null = null;
 
-  if (!keyId || !teamId || !privateKey) {
-    throw new Error("APNs is not configured");
-  }
-
+async function createApnsJwt(cfg: ApnsConfig): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  if (cachedJwt && now - cachedJwt.issuedAt < 50 * 60) {
-    return cachedJwt.token;
+  if (cachedToken && cachedToken.keyId === cfg.keyId && now - cachedToken.iat < 50 * 60) {
+    return cachedToken.token;
   }
 
-  const header = base64UrlEncode(JSON.stringify({ alg: "ES256", kid: keyId }));
-  const payload = base64UrlEncode(JSON.stringify({ iss: teamId, iat: now }));
-  const signingInput = `${header}.${payload}`;
+  const header = { alg: "ES256", kid: cfg.keyId, typ: "JWT" };
+  const claims = { iss: cfg.teamId, iat: now };
+  const signingInput = `${b64urlString(JSON.stringify(header))}.${b64urlString(JSON.stringify(claims))}`;
 
+  const pkcs8 = pemToPkcs8Bytes(cfg.privateKeyPem);
   const key = await crypto.subtle.importKey(
     "pkcs8",
-    pemToPkcs8(privateKey),
+    pkcs8,
     { name: "ECDSA", namedCurve: "P-256" },
     false,
     ["sign"],
   );
 
-  const signature = normalizeEcdsaSignature(new Uint8Array(
-    await crypto.subtle.sign(
-      { name: "ECDSA", hash: "SHA-256" },
-      key,
-      encoder.encode(signingInput),
-    ),
-  ));
+  const sig = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    key,
+    new TextEncoder().encode(signingInput),
+  );
 
-  const token = `${signingInput}.${base64UrlEncode(signature)}`;
-  cachedJwt = { token, issuedAt: now };
+  const rawSig = ecdsaSignatureToJoseRaw(sig);
+  const token = `${signingInput}.${b64urlEncode(rawSig)}`;
+  cachedToken = { token, iat: now, keyId: cfg.keyId };
   return token;
 }
 
-export async function sendApplePush(
+export async function sendApnsAlert(
+  cfg: ApnsConfig,
   deviceToken: string,
-  title: string,
-  body: string,
-  url = "/",
-): Promise<void> {
-  const topic = Deno.env.get("APNS_TOPIC") || "com.oksnoen.lederapp";
-  const environment = Deno.env.get("APNS_ENV") || "production";
-  const host = environment === "sandbox" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
-  const jwt = await createApnsJwt();
+  payload: ApnsAlertPayload,
+): Promise<ApnsSendResult> {
+  const host = cfg.env === "production"
+    ? "https://api.push.apple.com"
+    : "https://api.sandbox.push.apple.com";
+  const url = `${host}/3/device/${deviceToken}`;
 
-  const response = await fetch(`https://${host}/3/device/${deviceToken}`, {
-    method: "POST",
-    headers: {
-      authorization: `bearer ${jwt}`,
-      "apns-topic": topic,
-      "apns-push-type": "alert",
-      "apns-priority": "10",
-      "content-type": "application/json",
+  const jwt = await createApnsJwt(cfg);
+
+  const apsPayload: Record<string, unknown> = {
+    aps: {
+      alert: { title: payload.title, body: payload.body },
+      sound: payload.sound ?? "default",
+      ...(payload.badge !== undefined ? { badge: payload.badge } : {}),
     },
-    body: JSON.stringify({
-      aps: {
-        alert: { title, body },
-        sound: "default",
-      },
-      url,
-    }),
-  });
+  };
+  if (payload.url) apsPayload.url = payload.url;
 
-  if (!response.ok) {
-    const details = await response.text();
-    throw new Error(`APNs ${response.status}: ${details}`);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "authorization": `bearer ${jwt}`,
+        "apns-topic": cfg.topic,
+        "apns-push-type": "alert",
+        "apns-priority": "10",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(apsPayload),
+    });
+  } catch (e) {
+    return { ok: false, status: 0, reason: (e as Error).message };
   }
+
+  if (res.status === 200) {
+    return { ok: true, status: 200 };
+  }
+
+  let reason: string | undefined;
+  try {
+    const j = await res.json();
+    reason = j?.reason;
+  } catch {
+    // ignore
+  }
+
+  // Surface diagnostic info (no secrets) so misconfig is easy to spot in logs.
+  console.error(
+    `[APNs] send failed status=${res.status} reason=${reason ?? "?"} ` +
+      `env=${cfg.env} topic=${cfg.topic} kid=${cfg.keyId} team=${cfg.teamId} ` +
+      `tokenPrefix=${deviceToken.slice(0, 8)}…`,
+  );
+  // If Apple rejects the provider token, drop the JWT cache so the next call re-signs.
+  if (reason === "InvalidProviderToken" || reason === "ExpiredProviderToken") {
+    cachedToken = null;
+  }
+
+  const unregistered = res.status === 410 ||
+    reason === "Unregistered" ||
+    reason === "BadDeviceToken" ||
+    reason === "DeviceTokenNotForTopic";
+
+  return { ok: false, status: res.status, reason, unregistered };
 }

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Upload, 
@@ -18,7 +19,8 @@ import {
   ChevronDown,
   Search,
   Edit2,
-  MapPin
+  MapPin,
+  ClipboardPaste
 } from 'lucide-react';
 import { ParticipantEditDialog } from './ParticipantEditDialog';
 import { hapticSuccess, hapticWarning, hapticError } from '@/lib/capacitorHaptics';
@@ -86,6 +88,37 @@ function calculateAge(birthDate: string | null): number | null {
   return age;
 }
 
+// Decode CSV bytes, trying UTF-8 (with and without BOM), then windows-1252.
+// Also repairs common double-encoded mojibake like "Ã¸" -> "ø".
+function decodeCsvBytes(bytes: Uint8Array): string {
+  // Strip UTF-8 BOM
+  let buf = bytes;
+  if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+    buf = bytes.subarray(3);
+  }
+
+  let text: string;
+  try {
+    text = new TextDecoder('utf-8', { fatal: true }).decode(buf);
+  } catch {
+    text = new TextDecoder('windows-1252').decode(buf);
+  }
+
+  // Repair double-encoded UTF-8 (e.g. "HÃ¸yre" -> "Høyre")
+  if (/Ã[\u0080-\u00BF]/.test(text)) {
+    try {
+      const reencoded = new Uint8Array(text.length);
+      for (let i = 0; i < text.length; i++) reencoded[i] = text.charCodeAt(i) & 0xff;
+      const fixed = new TextDecoder('utf-8', { fatal: true }).decode(reencoded);
+      if (!fixed.includes('\uFFFD')) text = fixed;
+    } catch {
+      // keep original
+    }
+  }
+
+  return text;
+}
+
 export function ParticipantImportTab() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [cabins, setCabins] = useState<Cabin[]>([]);
@@ -97,6 +130,7 @@ export function ParticipantImportTab() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pastedText, setPastedText] = useState('');
 
   // Participant list state
   const [allParticipants, setAllParticipants] = useState<ParticipantWithCabin[]>([]);
@@ -224,23 +258,37 @@ export function ParticipantImportTab() {
   };
 
   const parseCabinField = (cabinField: string): { cabinName: string; room: string | null } => {
-    const lowered = cabinField.toLowerCase().trim();
-    
-    // Check for room suffix
+    // Collapse internal whitespace and trim
+    const cleaned = cabinField.replace(/\s+/g, ' ').trim();
+    const lowered = cleaned.toLowerCase();
+
+    let cabinName = cleaned;
+    let room: string | null = null;
+
+    // Check for room suffix (venstre / høyre)
     if (lowered.endsWith(' venstre')) {
-      return {
-        cabinName: cabinField.slice(0, -8).trim(),
-        room: 'venstre'
-      };
+      cabinName = cleaned.slice(0, -8).trim();
+      room = 'venstre';
+    } else if (lowered.endsWith(' høyre')) {
+      cabinName = cleaned.slice(0, -6).trim();
+      room = 'høyre';
     }
-    if (lowered.endsWith(' høyre')) {
-      return {
-        cabinName: cabinField.slice(0, -6).trim(),
-        room: 'høyre'
-      };
+
+    // Normalize Seilern variants: "Seileren X" / "seilern x" → "Seilern <Sub>"
+    const seilernSubs = ['haui', 'halua', 'maui', 'tipi', 'oahu', 'honolulu', 'hawaii', 'waikikii'];
+    const cabinLower = cabinName.toLowerCase();
+    const seilernMatch = cabinLower.match(/^seiler(?:e)?n\s+(.+)$/);
+    if (seilernMatch) {
+      const subRaw = seilernMatch[1].trim().toLowerCase();
+      const canonicalSub = seilernSubs.find(s => s === subRaw);
+      if (canonicalSub) {
+        cabinName = 'Seilern ' + canonicalSub.charAt(0).toUpperCase() + canonicalSub.slice(1);
+      }
+    } else if (cabinLower === 'seilern' || cabinLower === 'seileren') {
+      cabinName = 'Seileren';
     }
-    
-    return { cabinName: cabinField.trim(), room: null };
+
+    return { cabinName, room };
   };
 
   // Helper to parse activity value (handles "Ja", "1", "2", "1 plass!", etc.)
@@ -257,7 +305,7 @@ export function ParticipantImportTab() {
     if (lines.length < 2) return [];
 
     // Parse header - handle both comma and semicolon as separators
-    const separator = lines[0].includes(';') ? ';' : ',';
+    const separator = lines[0].includes('\t') ? '\t' : lines[0].includes(';') ? ';' : ',';
     const headers = lines[0].split(separator).map(h => h.trim().toLowerCase());
     
     // Find column indices for basic fields
@@ -278,7 +326,7 @@ export function ParticipantImportTab() {
     // Debug logging for column detection
     console.log('CSV Headers found:', headers);
     console.log('Times column index:', timesIdx, timesIdx >= 0 ? `(found: "${headers[timesIdx]}")` : '(not found)');
-    const infoIdx = headers.findIndex(h => h === 'info' || h === 'kommentar' || h === 'kommentarer');
+    const infoIdx = headers.findIndex(h => h === 'info' || h === 'kommentar' || h === 'kommentarer' || h === 'notater' || h === 'notat');
     const imageIdx = headers.findIndex(h => h === 'bilde' || h === 'image' || h === 'image_url');
     const arrivedIdx = headers.findIndex(h => h.includes('ankommet') || h.includes('arrived'));
 
@@ -394,12 +442,67 @@ export function ParticipantImportTab() {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = e.target?.result as string;
+      const buffer = e.target?.result as ArrayBuffer;
+      const bytes = new Uint8Array(buffer);
+      const text = decodeCsvBytes(bytes);
+      if (text.includes('\uFFFD')) {
+        showError('Filen inneholder ugjenkjennelige tegn (�). Eksporter CSV-en på nytt som UTF-8 og prøv igjen.');
+        return;
+      }
       const parsed = parseCSV(text);
       setParsedData(parsed);
       setImportResult(null);
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
+  };
+
+  // Convert pasted text (TSV from spreadsheet OR newline-per-field from PDF copy)
+  // into a tab-separated string the CSV parser understands.
+  const normalizePastedText = (raw: string): string => {
+    const text = raw.replace(/\r\n?/g, '\n');
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length === 0) return '';
+
+    // If any line already has tabs (or commas/semicolons), assume it's table-shaped already.
+    if (lines.some(l => l.includes('\t'))) return lines.join('\n');
+    if (lines[0].includes(';') || lines[0].includes(',')) return lines.join('\n');
+
+    // Newline-per-field format: detect consecutive header lines at the top.
+    const headerNames = [
+      'fornavn', 'etternavn', 'født', 'fodt', 'hytte',
+      'deltatt tidligere', 'tidligere', 'notater', 'notat',
+      'info', 'kommentar', 'bilde', 'har ankommet', 'ankommet'
+    ];
+    let headerEnd = 0;
+    while (headerEnd < lines.length && headerNames.includes(lines[headerEnd].toLowerCase())) {
+      headerEnd++;
+    }
+    if (headerEnd < 2) return lines.join('\n');
+
+    const headers = lines.slice(0, headerEnd);
+    const data = lines.slice(headerEnd);
+    const rows: string[] = [headers.join('\t')];
+    for (let i = 0; i < data.length; i += headers.length) {
+      const chunk = data.slice(i, i + headers.length);
+      while (chunk.length < headers.length) chunk.push('');
+      rows.push(chunk.join('\t'));
+    }
+    return rows.join('\n');
+  };
+
+  const handlePasteImport = () => {
+    if (!pastedText.trim()) {
+      showError('Lim inn data først');
+      return;
+    }
+    const normalized = normalizePastedText(pastedText);
+    const parsed = parseCSV(normalized);
+    if (parsed.length === 0) {
+      showError('Kunne ikke tolke innholdet. Sjekk at det er overskrifter og data.');
+      return;
+    }
+    setParsedData(parsed);
+    setImportResult(null);
   };
 
   const importParticipants = async () => {
@@ -566,6 +669,39 @@ export function ParticipantImportTab() {
             </div>
           </div>
 
+          {/* Paste import */}
+          <div className="space-y-2 pt-2 border-t">
+            <div className="flex items-center gap-2">
+              <ClipboardPaste className="w-4 h-4 text-muted-foreground" />
+              <p className="font-medium text-sm">Eller lim inn data</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Lim inn fra Numbers/Excel (tab-separert) eller fra PDF (én verdi per linje). Første rader må være kolonneoverskrifter, f.eks. Fornavn, Etternavn, Født, Hytte, Deltatt tidligere, Notater.
+            </p>
+            <Textarea
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+              placeholder={'Fornavn\nEtternavn\nFødt\nHytte\nDeltatt tidligere\nNotater\nCornelius\nNix\n2011-01-01\nKnoll venstre\n2\n'}
+              rows={6}
+              className="font-mono text-xs"
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                onClick={handlePasteImport}
+                disabled={isImporting || !pastedText.trim()}
+              >
+                <ClipboardPaste className="w-4 h-4 mr-2" />
+                Tolk innlimt data
+              </Button>
+              {pastedText && (
+                <Button variant="ghost" onClick={() => setPastedText('')} disabled={isImporting}>
+                  Tøm
+                </Button>
+              )}
+            </div>
+          </div>
+
           {/* Progress indicator when importing */}
           {isImporting && importProgress && (
             <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 space-y-3">
@@ -712,7 +848,7 @@ export function ParticipantImportTab() {
                 </tr>
                 <tr>
                   <td className="py-2 px-3"><code className="text-xs bg-muted px-1 rounded">Hytte</code></td>
-                  <td className="py-2 px-3 text-muted-foreground">Hyttenavn (inkl. rom: "Marcusbu bak venstre") <Badge variant="destructive" className="ml-1 text-[10px]">Påkrevd</Badge></td>
+                  <td className="py-2 px-3 text-muted-foreground">Hyttenavn (inkl. rom: "Marcusbu bak venstre"). Seilern-hyttene godtas som "Seilern Haui"/"Seileren Maui" osv. <Badge variant="destructive" className="ml-1 text-[10px]">Påkrevd</Badge></td>
                 </tr>
                 <tr>
                   <td className="py-2 px-3">
