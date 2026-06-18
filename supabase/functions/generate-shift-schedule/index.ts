@@ -118,6 +118,7 @@ Deno.serve(async (req) => {
     const year = Number(body.year ?? 2026);
     const period_length = Number(body.period_length ?? 7);
     const force_regenerate = Boolean(body.force_regenerate);
+    const preserve_locked = Boolean(body.preserve_locked);
 
     if (!period_number || period_number < 1 || period_number > 20) {
       return new Response(JSON.stringify({ error: 'period_number must be 1-20' }), {
@@ -163,8 +164,10 @@ Deno.serve(async (req) => {
       .from('shift_types').select('id, slug, day_type, sort_order, start_time, end_time, duration_hours');
     if (stErr) throw stErr;
     const stByKey = new Map<string, ShiftType>();
+    const stById = new Map<string, ShiftType>();
     for (const st of (stData || []) as ShiftType[]) {
       stByKey.set(`${st.day_type}:${st.slug}`, st);
+      stById.set(st.id, st);
     }
     const ST = (dt: DayType, slug: string): ShiftType => {
       const v = stByKey.get(`${dt}:${slug}`);
