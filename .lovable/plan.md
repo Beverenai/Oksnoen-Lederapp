@@ -1,38 +1,45 @@
-## Mål
+# Plan: Lås manuelle endringer, regenerér resten
 
-1. Rydde +47 fra eksisterende ledere så telefon-pålogging og Sheet-sync matcher riktig.
-2. Verifisere at admin kan oppdatere ledere manuelt (RLS).
+Når du endrer en vakt manuelt skal den endringen "låses". Når du så trykker Generér på nytt, beholdes alle låste celler urørt, og resten av planen bygges opp rundt dem — slik at fairness, 8t-regel, 11t hvile, F-team etter 21, og kjøkken-cap fortsatt overholdes.
 
-## 1. Rydd opp telefon-numre i databasen
+## Hva som bygges
 
-28 av 64 ledere har `+47` foran nummeret. `phone-login` edge-funksjonen normaliserer innkommende nummer ved å fjerne alt som ikke er siffer, men sammenligner deretter mot lagret `phone`-felt — så `+4791234567` (lagret) ≠ `91234567` (normalisert input) og innlogging feiler.
+### 1. Database
+Ny kolonne `is_locked boolean default false` på `shift_assignments`. Settes til `true` automatisk når en rad opprettes/endres manuelt fra admin-grid.
 
-**Engangs-migrasjon** som rydder opp i `leaders.phone`:
-- Fjern ledende `+47`, `0047`, `47` (kun når det etterfølges av 8 siffer).
-- Fjern alle mellomrom.
-- Resultat: alle nummer lagres som rene 8 sifre.
+### 2. Admin-grid (ShiftPlanner)
+- Når du bytter leder i en celle → raden lagres med `is_locked = true`.
+- Låste celler markeres visuelt (f.eks. liten 🔒-ikon eller blå ramme) så det er tydelig hva som er beskyttet.
+- Ny knapp "Lås opp" på celle for å fjerne låsen hvis du vil at generatoren skal kunne overskrive den igjen.
+- Knapp "Regenerér (behold låste)" ved siden av eksisterende generér-knapp.
+
+### 3. Edge function `generate-shift-schedule`
+Ny parameter `preserve_locked: boolean`. Når `true`:
+1. Hent alle låste rader for `schedule_id`.
+2. Slett kun de **ulåste** radene (i stedet for å slette alt).
+3. Bygg `busy`-sett per dag fra de låste radene før vi velger nye ledere — så samme leder ikke får dobbel vakt.
+4. Forhåndsutfyll tellerne (`dutyCount`, `kjokkenCount`, frokostByDay) fra låste rader, slik at fairness og kjøkken-cap fortsatt holder.
+5. Hopp over duty-typer som allerede er fylt av låst rad den dagen (f.eks. hvis nattevakt er låst, ikke pick ny natt).
+6. Sett inn de nye genererte radene sammen med de låste.
+
+### 4. Validering
+Etter regenerering kjøres `revalidate-shift-schedule` som før, og advarsler som oppstår pga. en låst rad merkes med "(låst manuelt)" så du ser hvilke som krever din vurdering.
+
+## Teknisk
 
 ```text
-+47 912 34 567  →  91234567
-0047 91234567   →  91234567
-4791234567      →  91234567
-91234567        →  91234567 (uendret)
+ShiftPlanner (UI)
+  ├─ endre celle ──► UPDATE shift_assignments SET leader_id=…, is_locked=true
+  └─ "Regenerér (behold låste)" ──► invoke generate-shift-schedule { preserve_locked: true }
+
+generate-shift-schedule
+  ├─ load locked rows
+  ├─ DELETE FROM shift_assignments WHERE schedule_id=… AND is_locked=false
+  ├─ seed busy/dutyCount/kjokkenCount/frokostByDay from locked
+  ├─ for each day & duty-slot:
+  │     if locked covers slot → skip
+  │     else → pick fairest, avoiding busy
+  └─ insert new rows (is_locked=false)
 ```
 
-Dette gjør også at Google Sheet-sync (som matcher på siste 8 sifre) blir konsistent med innloggingsflyten.
-
-## 2. Strip +47 også på lagring fra admin-UI
-
-I `LeaderDetailDialog.tsx` og ny-leder-skjemaet i `AdminSettingsContent.tsx` legger jeg på samme normalisering før `phone` skrives til DB, slik at problemet ikke kommer tilbake hvis noen taster inn et nummer med +47 manuelt.
-
-## 3. Verifiser admin-oppdatering
-
-RLS-policy på `leaders`:
-```text
-UPDATE: id = current_leader_id() OR is_admin()
-```
-Dette er korrekt — admins kan oppdatere alle ledere. Jeg sjekker at lagre-knappen i `LeaderDetailDialog` faktisk treffer denne pathen (ingen bug i oppdaterings-payloaden), og at feilmeldinger vises tydelig hvis noe skulle feile (toast i stedet for stille fail).
-
-## Hva jeg IKKE rører
-- `auth.users` (telefon der bruker Supabase sitt eget format og brukes ikke som match-nøkkel).
-- `is_active` toggle / aktiverings-flyt — ikke en del av denne oppgaven.
+Migrasjonen kommer som første steg (du godkjenner SQL-en), deretter kode-endringer i edge function og ShiftPlanner.
