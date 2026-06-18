@@ -1074,6 +1074,7 @@ export type Database = {
           day_type: string
           excluded_leader_ids: string[]
           id: string
+          is_locked: boolean
           leader_id: string | null
           note: string | null
           role: string | null
@@ -1089,6 +1090,7 @@ export type Database = {
           day_type: string
           excluded_leader_ids?: string[]
           id?: string
+          is_locked?: boolean
           leader_id?: string | null
           note?: string | null
           role?: string | null
@@ -1104,6 +1106,7 @@ export type Database = {
           day_type?: string
           excluded_leader_ids?: string[]
           id?: string
+          is_locked?: boolean
           leader_id?: string | null
           note?: string | null
           role?: string | null
