@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, ClipboardList, RefreshCw, CalendarX } from 'lucide-react';
+import { ArrowLeft, ClipboardList, RefreshCw, CalendarX, ZoomIn, X } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type ShiftSchedule = Tables<'shift_schedules'>;
@@ -47,6 +47,16 @@ export default function MyShifts() {
   const navigate = useNavigate();
   const { effectiveLeader, isAdmin } = useAuth();
   const leaderId = effectiveLeader?.id;
+  const [zoomOpen, setZoomOpen] = useState(false);
+
+  useEffect(() => {
+    if (!zoomOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setZoomOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [zoomOpen]);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['my-shifts', leaderId],
