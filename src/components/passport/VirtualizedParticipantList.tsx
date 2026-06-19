@@ -58,6 +58,7 @@ interface VirtualizedParticipantListProps {
   activitiesMap: Map<string, string[]>;
   expandedCabins: Set<string>;
   onToggleCabin: (cabinId: string) => void;
+  onFilterByCabin?: (cabinId: string) => void;
   onParticipantClick: (participantId: string) => void;
   onPrefetchParticipant: (participantId: string) => void;
 }
@@ -145,7 +146,8 @@ const CabinHeader = memo(({
   totalCount, 
   leaders,
   isExpanded,
-  onToggle 
+  onToggle,
+  onFilter,
 }: { 
   cabin: Cabin;
   arrivedCount: number;
@@ -153,18 +155,22 @@ const CabinHeader = memo(({
   leaders: { id: string; name: string }[];
   isExpanded: boolean;
   onToggle: () => void;
+  onFilter?: () => void;
 }) => {
   const leaderFirstNames = leaders.map(l => l.name.split(' ')[0]);
   
   return (
     <Card className="mx-4 overflow-hidden">
-      <CardHeader 
-        className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-        onClick={onToggle}
-      >
+      <CardHeader className="p-3">
         <div className="flex items-center gap-2">
-          {/* Chevron */}
-          <div className="w-5 shrink-0 flex items-center justify-center">
+          {/* Chevron — toggles expand/collapse */}
+          <div 
+            className="w-5 shrink-0 flex items-center justify-center cursor-pointer hover:bg-muted/50 rounded transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle();
+            }}
+          >
             {isExpanded ? (
               <ChevronDown className="w-5 h-5 text-muted-foreground" />
             ) : (
@@ -173,8 +179,16 @@ const CabinHeader = memo(({
           </div>
           {/* Home icon */}
           <Home className="w-5 h-5 text-primary shrink-0" />
-          {/* Title */}
-          <CardTitle className="text-base shrink-0">{cabin.name}</CardTitle>
+          {/* Title — click to filter by this cabin */}
+          <CardTitle 
+            className="text-base shrink-0 cursor-pointer hover:text-primary transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onFilter) onFilter();
+            }}
+          >
+            {cabin.name}
+          </CardTitle>
           {/* Leaders badges - wrap freely in remaining space */}
           {leaderFirstNames.length > 0 && (
             <div className="flex gap-1 flex-wrap flex-1 min-w-0">
