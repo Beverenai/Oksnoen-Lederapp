@@ -159,7 +159,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
           // Position dropdown near the textarea
           if (inputRef.current) {
             const rect = inputRef.current.getBoundingClientRect();
-            setMentionPosition({ top: rect.height + 4, left: 0 });
+            setMentionPosition({ top: rect.top, left: rect.left });
           }
           return;
         }
