@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, ClipboardList, RefreshCw, CalendarX } from 'lucide-react';
+import { ArrowLeft, ClipboardList, RefreshCw, CalendarX, ZoomIn, X } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type ShiftSchedule = Tables<'shift_schedules'>;
@@ -47,6 +47,16 @@ export default function MyShifts() {
   const navigate = useNavigate();
   const { effectiveLeader, isAdmin } = useAuth();
   const leaderId = effectiveLeader?.id;
+  const [zoomOpen, setZoomOpen] = useState(false);
+
+  useEffect(() => {
+    if (!zoomOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setZoomOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [zoomOpen]);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['my-shifts', leaderId],
@@ -140,6 +150,27 @@ export default function MyShifts() {
         </Button>
       </div>
 
+      <Card
+        className="overflow-hidden cursor-zoom-in"
+        onClick={() => setZoomOpen(true)}
+      >
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-heading flex items-center gap-2">
+            <ZoomIn className="w-4 h-4" />
+            Vaktplan oversikt
+          </CardTitle>
+          <CardDescription>Trykk på bildet for å zoome</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <img
+            src="/vaktplan-2026.png"
+            alt="Vaktplan 2026"
+            className="w-full h-auto rounded-md border"
+            loading="lazy"
+          />
+        </CardContent>
+      </Card>
+
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32" />)}
@@ -220,6 +251,26 @@ export default function MyShifts() {
             </p>
           )}
         </>
+      )}
+
+      {zoomOpen && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setZoomOpen(false)}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20"
+            onClick={(e) => { e.stopPropagation(); setZoomOpen(false); }}
+            aria-label="Lukk"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src="/vaktplan-2026.png"
+            alt="Vaktplan 2026"
+            className="max-w-full max-h-full object-contain"
+          />
+        </div>
       )}
     </div>
   );
