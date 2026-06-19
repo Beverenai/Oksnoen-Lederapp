@@ -328,6 +328,7 @@ export function VirtualizedParticipantList({
               leaders={item.leaders}
               isExpanded={item.isExpanded}
               onToggle={() => onToggleCabin(item.cabin.id)}
+              onFilter={onFilterByCabin ? () => onFilterByCabin(item.cabin.id) : undefined}
             />
           );
         }
