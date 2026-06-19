@@ -252,6 +252,26 @@ export default function MyShifts() {
           )}
         </>
       )}
+
+      {zoomOpen && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setZoomOpen(false)}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20"
+            onClick={(e) => { e.stopPropagation(); setZoomOpen(false); }}
+            aria-label="Lukk"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src="/vaktplan-2026.png"
+            alt="Vaktplan 2026"
+            className="max-w-full max-h-full object-contain"
+          />
+        </div>
+      )}
     </div>
   );
 }
