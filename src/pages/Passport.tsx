@@ -174,6 +174,17 @@ export default function Passport() {
     return () => { supabase.removeChannel(channel); };
   }, [queryClient]);
 
+  // Realtime subscription for participants — keeps arrival count live
+  useEffect(() => {
+    const channel = supabase
+      .channel('passport-participants')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['participants-with-cabins'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const { data: myCabinIds = [] } = useQuery({
     queryKey: ['my-cabin-ids', effectiveLeader?.id],
     queryFn: async () => {
