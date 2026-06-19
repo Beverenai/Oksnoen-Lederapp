@@ -124,8 +124,10 @@ export default function Passport() {
   const { data: participants = [], isLoading: isLoadingParticipants, refetch: refetchParticipants } = useQuery({
     queryKey: ['participants-with-cabins'],
     queryFn: fetchParticipants,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
     gcTime: 24 * 60 * 60 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const { data: activitiesMap = new Map<string, string[]>(), refetch: refetchActivities } = useQuery({
