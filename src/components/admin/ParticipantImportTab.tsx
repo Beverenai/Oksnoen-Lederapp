@@ -575,6 +575,12 @@ export function ParticipantImportTab() {
 
     setIsDeleting(true);
     try {
+      // Delete related data first (activities, health info/notes/events) so a new period starts clean
+      await supabase.from('participant_activities').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('participant_health_notes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('participant_health_events').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('participant_health_info').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
       const { error } = await supabase
         .from('participants')
         .delete()
