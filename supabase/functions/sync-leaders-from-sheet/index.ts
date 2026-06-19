@@ -37,6 +37,43 @@ const LEADER_KEYS = ['phone', 'cabin', 'ministerpost', 'team'] as const;
 const norm = (s: string) => (s || '').toLowerCase().trim().replace(/\s+/g, ' ');
 const normPhone = (s: string | null | undefined) => (s || '').replace(/\D/g, '').slice(-8);
 
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+function matchCabinIds(text: string | null | undefined, cabins: { id: string; name: string }[]): string[] {
+  if (!text) return [];
+  let working = String(text);
+  const placeholders = new Map<string, string>();
+  cabins.forEach((c, i) => {
+    if (!/[+&]/.test(c.name)) return;
+    const ph = `\u0000CAB${i}\u0000`;
+    const re = new RegExp(escapeRegex(c.name).replace(/\s+/g, '\\s*'), 'gi');
+    if (re.test(working)) {
+      working = working.replace(re, ph);
+      placeholders.set(ph, c.id);
+    }
+  });
+  const parts = working.split(/\s*[+&,]\s*|\s+og\s+/gi).map((s) => s.trim()).filter(Boolean);
+  const ids: string[] = [];
+  for (const part of parts) {
+    if (placeholders.has(part)) { ids.push(placeholders.get(part)!); continue; }
+    const lower = norm(part);
+    if (!lower) continue;
+    const exact = cabins.filter((c) => norm(c.name) === lower);
+    if (exact.length > 0) { exact.forEach((c) => ids.push(c.id)); continue; }
+    const starts = cabins.filter((c) => {
+      const n = norm(c.name);
+      return n === lower || n.startsWith(lower + ' ');
+    });
+    if (starts.length > 0) { starts.forEach((c) => ids.push(c.id)); continue; }
+    const sub = cabins.filter((c) => {
+      const n = norm(c.name);
+      return n.includes(lower) || lower.includes(n);
+    });
+    if (sub.length > 0) sub.forEach((c) => ids.push(c.id));
+  }
+  return Array.from(new Set(ids));
+}
+
 function extractSpreadsheetId(input: string): string {
   const m = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
   return m ? m[1] : input.trim();
@@ -144,6 +181,8 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: leaders, error: leadersErr } = await admin.from('leaders').select('id, name, phone');
     if (leadersErr) throw leadersErr;
+    const { data: allCabinsData } = await admin.from('cabins').select('id, name');
+    const cabinList = allCabinsData || [];
     const byName = new Map<string, { id: string; name: string }>();
     const byPhone = new Map<string, { id: string; name: string }>();
     for (const l of leaders || []) {
@@ -219,6 +258,19 @@ Deno.serve(async (req) => {
       if (Object.keys(leaderPayload).length > 0) {
         const { error } = await admin.from('leaders').update(leaderPayload).eq('id', leaderId);
         if (error) { rowFailed = true; console.error('leader update', leaderId, error); }
+      }
+      // Sync leader_cabins from the cabin text (split on + / &, with multi-cabin names protected)
+      if (presentKeys.has('cabin')) {
+        const cabinText = row.values['cabin'];
+        const cabinIds = matchCabinIds(cabinText, cabinList);
+        const { error: delErr } = await admin.from('leader_cabins').delete().eq('leader_id', leaderId);
+        if (delErr) { rowFailed = true; console.error('leader_cabins delete', leaderId, delErr); }
+        if (cabinIds.length > 0) {
+          const { error: insErr } = await admin
+            .from('leader_cabins')
+            .insert(cabinIds.map((cabin_id) => ({ leader_id: leaderId, cabin_id })));
+          if (insErr) { rowFailed = true; console.error('leader_cabins insert', leaderId, insErr); }
+        }
       }
       if (rowFailed) failed++; else saved++;
     }
