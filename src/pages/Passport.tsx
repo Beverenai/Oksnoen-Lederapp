@@ -13,7 +13,8 @@ import {
   ArrowLeft,
   Users,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
@@ -250,9 +251,14 @@ export default function Passport() {
         ? myCabinIds.includes(p.cabin_id || '') 
         : true;
       
-      return matchesSearch && matchesCabin;
+      // Filter by cabin URL param if present
+      const matchesUrlCabin = cabinFilterFromUrl
+        ? p.cabin_id === cabinFilterFromUrl
+        : true;
+      
+      return matchesSearch && matchesCabin && matchesUrlCabin;
     });
-  }, [participants, searchQuery, myCabinsFilter, myCabinIds]);
+  }, [participants, searchQuery, myCabinsFilter, myCabinIds, cabinFilterFromUrl]);
 
   // Group participants by cabin
   const cabinGroups = useMemo((): CabinGroup[] => {
