@@ -222,6 +222,13 @@ export default function Passport() {
     setSearchParams({});
   };
 
+  // Filter by specific cabin — triggered from cabin header click
+  const handleFilterByCabin = useCallback((cabinId: string) => {
+    setSearchQuery('');
+    setMyCabinsFilter(false);
+    setSearchParams({ cabin: cabinId });
+  }, [setSearchParams]);
+
   // Handler for opening participant detail dialog
   const handleParticipantClick = (participantId: string) => {
     setSelectedParticipantId(participantId);
@@ -419,15 +426,37 @@ export default function Passport() {
       </div>
 
       {/* Search Field */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          (e.currentTarget.querySelector('input') as HTMLInputElement)?.blur();
+        }}
+        className="relative"
+      >
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
         <Input
+          type="search"
+          inputMode="search"
+          enterKeyHint="search"
           placeholder="Søk etter navn..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
+          className="pl-10 pr-10"
         />
-      </div>
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('');
+              (document.activeElement as HTMLElement)?.blur();
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-muted transition-colors"
+            aria-label="Tøm søk"
+          >
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+        )}
+      </form>
 
       {/* Checkout button - prominent placement when enabled */}
       {checkoutEnabled && (
@@ -451,6 +480,7 @@ export default function Passport() {
         activitiesMap={activitiesMap}
         expandedCabins={expandedCabins}
         onToggleCabin={toggleCabinExpanded}
+        onFilterByCabin={handleFilterByCabin}
         onParticipantClick={handleParticipantClick}
         onPrefetchParticipant={prefetchParticipant}
       />
