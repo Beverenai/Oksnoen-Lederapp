@@ -159,7 +159,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
           // Position dropdown near the textarea
           if (inputRef.current) {
             const rect = inputRef.current.getBoundingClientRect();
-            setMentionPosition({ top: rect.height + 4, left: 0 });
+            setMentionPosition({ top: rect.top, left: rect.left });
           }
           return;
         }
@@ -710,13 +710,25 @@ ${sectionsHtml}
             rows={3}
           />
 
-          {/* Mention dropdown */}
-          {mentionQuery !== null && filteredMentionParticipants.length > 0 && (
+          {/* Mention dropdown — fixed-positioned to escape scroll containers */}
+          {mentionQuery !== null && (
             <div
               ref={mentionDropdownRef}
-              className="absolute left-0 right-0 bottom-full mb-2 bg-popover border border-border rounded-lg shadow-xl p-1 max-h-72 overflow-y-auto z-50"
+              style={{
+                position: 'fixed',
+                left: mentionPosition.left,
+                top: mentionPosition.top,
+                width: inputRef.current?.getBoundingClientRect().width ?? 320,
+                transform: 'translateY(-100%)',
+                marginTop: -8,
+              }}
+              className="bg-popover border border-border rounded-lg shadow-xl p-1 max-h-72 overflow-y-auto z-[60]"
             >
-              {filteredMentionParticipants.map((p, i) => (
+              {filteredMentionParticipants.length === 0 ? (
+                <div className="px-3 py-3 text-sm text-muted-foreground text-center">
+                  Ingen deltakere matcher «{mentionQuery}»
+                </div>
+              ) : filteredMentionParticipants.map((p, i) => (
                 <button
                   key={p.id}
                   className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-3 transition-colors ${
