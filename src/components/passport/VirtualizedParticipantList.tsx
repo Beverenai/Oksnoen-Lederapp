@@ -261,10 +261,16 @@ export function VirtualizedParticipantList({
           { side: 'venstre', name: formatFullRoom(cabin.name, 'venstre') || 'Venstre', participants: participants.filter(p => p.room === 'venstre').sort((a, b) => a.name.localeCompare(b.name, 'nb')) },
           { side: 'none', name: 'Uten rom', participants: participants.filter(p => !p.room || (p.room !== 'høyre' && p.room !== 'venstre')).sort((a, b) => a.name.localeCompare(b.name, 'nb')) },
         ];
-        
+
+        const hasSidedParticipants = roomGroups[0].participants.length > 0 || roomGroups[1].participants.length > 0;
+
         roomGroups.forEach(({ side, name, participants: roomParticipants }) => {
           if (roomParticipants.length > 0) {
-            items.push({ type: 'room-header', roomName: name, participantCount: roomParticipants.length, roomSide: side });
+            // If all participants in cabin are without a room, skip the "Uten rom" subheader
+            // (cabin header already identifies the location).
+            if (!(side === 'none' && !hasSidedParticipants)) {
+              items.push({ type: 'room-header', roomName: name, participantCount: roomParticipants.length, roomSide: side });
+            }
             
             roomParticipants.forEach(participant => {
               const completedActivities = activitiesMap.get(participant.id) || [];
