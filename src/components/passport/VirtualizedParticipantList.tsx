@@ -247,6 +247,7 @@ export function VirtualizedParticipantList({
   activitiesMap,
   expandedCabins,
   onToggleCabin,
+  onFilterByCabin,
   onParticipantClick,
   onPrefetchParticipant,
 }: VirtualizedParticipantListProps) {
