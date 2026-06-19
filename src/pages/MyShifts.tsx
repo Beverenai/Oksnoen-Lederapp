@@ -150,6 +150,27 @@ export default function MyShifts() {
         </Button>
       </div>
 
+      <Card
+        className="overflow-hidden cursor-zoom-in"
+        onClick={() => setZoomOpen(true)}
+      >
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-heading flex items-center gap-2">
+            <ZoomIn className="w-4 h-4" />
+            Vaktplan oversikt
+          </CardTitle>
+          <CardDescription>Trykk på bildet for å zoome</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <img
+            src="/vaktplan-2026.png"
+            alt="Vaktplan 2026"
+            className="w-full h-auto rounded-md border"
+            loading="lazy"
+          />
+        </CardContent>
+      </Card>
+
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32" />)}
