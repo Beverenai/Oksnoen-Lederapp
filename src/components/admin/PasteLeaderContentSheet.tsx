@@ -7,6 +7,7 @@ import { ClipboardPaste, Check, AlertTriangle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { hapticSuccess } from '@/lib/capacitorHaptics';
+import { matchCabinIds } from '@/lib/cabinMatcher';
 
 interface Leader { id: string; name: string; phone?: string | null }
 
@@ -212,6 +213,10 @@ export function PasteLeaderContentSheet({ open, onOpenChange, leaders, onSaved }
         .in('leader_id', ids);
       const existingByLeader = new Map((existing || []).map(e => [e.leader_id, e.id]));
 
+      // Load all cabins so we can resolve "Marcusbu + Hulder + Bedewins" etc.
+      const { data: allCabins } = await supabase.from('cabins').select('id, name');
+      const cabinList = allCabins || [];
+
       const nowIso = new Date().toISOString();
       let saved = 0, failed = 0;
       for (const row of matched) {
@@ -245,6 +250,22 @@ export function PasteLeaderContentSheet({ open, onOpenChange, leaders, onSaved }
         if (Object.keys(leaderPayload).length > 0) {
           const { error } = await supabase.from('leaders').update(leaderPayload).eq('id', leaderId);
           if (error) { rowFailed = true; console.error('Leader update failed', leaderId, error); }
+        }
+
+        // If a cabin column was provided, parse it (split on + / &) and sync leader_cabins
+        if (row.values.cabin !== undefined) {
+          const cabinIds = matchCabinIds(row.values.cabin, cabinList);
+          const { error: delErr } = await supabase
+            .from('leader_cabins')
+            .delete()
+            .eq('leader_id', leaderId);
+          if (delErr) { rowFailed = true; console.error('leader_cabins delete failed', leaderId, delErr); }
+          if (cabinIds.length > 0) {
+            const { error: insErr } = await supabase
+              .from('leader_cabins')
+              .insert(cabinIds.map((cabin_id) => ({ leader_id: leaderId, cabin_id })));
+            if (insErr) { rowFailed = true; console.error('leader_cabins insert failed', leaderId, insErr); }
+          }
         }
 
         if (rowFailed) failed++; else saved++;
