@@ -714,8 +714,7 @@ ${sectionsHtml}
           {mentionQuery !== null && filteredMentionParticipants.length > 0 && (
             <div
               ref={mentionDropdownRef}
-              className="absolute left-0 right-0 bg-popover border border-border rounded-lg shadow-lg p-1 max-h-64 overflow-y-auto z-50"
-              style={{ top: mentionPosition.top }}
+              className="absolute left-0 right-0 bottom-full mb-2 bg-popover border border-border rounded-lg shadow-xl p-1 max-h-72 overflow-y-auto z-50"
             >
               {filteredMentionParticipants.map((p, i) => (
                 <button
@@ -729,16 +728,16 @@ ${sectionsHtml}
                   }}
                   onMouseEnter={() => setSelectedMentionIndex(i)}
                 >
-                  <Avatar className="w-8 h-8">
+                  <Avatar className="w-10 h-10 flex-shrink-0">
                     <AvatarImage src={p.image_url || undefined} alt={p.name} />
-                    <AvatarFallback className="text-xs">
-                      <User className="w-3 h-3" />
+                    <AvatarFallback className="text-xs bg-muted">
+                      <User className="w-4 h-4" />
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <span className="font-medium">{p.name}</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-medium truncate">{p.name}</span>
                     {p.cabin && (
-                      <span className="text-xs text-muted-foreground ml-2">{p.cabin.name}</span>
+                      <span className="text-xs text-muted-foreground truncate">{p.cabin.name}</span>
                     )}
                   </div>
                 </button>
