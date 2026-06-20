@@ -503,7 +503,7 @@ export default function Leaders() {
             )}
             
             <Card
-              className="cursor-pointer overflow-hidden rounded-[24px] shadow-sm"
+              className="cursor-pointer overflow-hidden rounded-[24px] shadow-sm [content-visibility:auto] [contain-intrinsic-size:96px]"
               onClick={() => setSelectedLeader(leader)}
             >
               <CardContent className="p-4">
@@ -567,7 +567,7 @@ export default function Leaders() {
                     {leader.content?.current_activity && (
                       <div className="pt-1 border-t border-border/50">
                         <p className="text-sm font-semibold text-foreground flex items-center gap-1.5 truncate">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0 animate-pulse" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
                           <span className="truncate">{leader.content.current_activity}</span>
                         </p>
                       </div>
