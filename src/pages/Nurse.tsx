@@ -925,14 +925,33 @@ export default function Nurse() {
                     onChange={(e) => setNewNote(e.target.value)}
                     className="min-h-[150px]"
                   />
-                  <Button onClick={saveHealthNote} disabled={isSaving}>
-                    {isSaving ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4 mr-2" />
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={saveHealthNote} disabled={isSaving}>
+                      {isSaving ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Lagre notat
+                    </Button>
+                    {selectedParticipant?.healthNotes[0]?.id && (
+                      <Button
+                        variant="outline"
+                        className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={() =>
+                          setDeleteTarget({
+                            type: 'note',
+                            id: selectedParticipant.healthNotes[0].id,
+                            label: 'notatet',
+                          })
+                        }
+                        disabled={isSaving}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Slett notat
+                      </Button>
                     )}
-                    Lagre notat
-                  </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
