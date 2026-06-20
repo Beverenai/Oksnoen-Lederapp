@@ -23,8 +23,10 @@ import {
   MapPin,
   Anchor,
   Wrench,
+  Bed,
   type LucideIcon
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
