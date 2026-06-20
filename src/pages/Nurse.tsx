@@ -779,6 +779,11 @@ export default function Nurse() {
                 {selectedParticipant?.cabin && (
                   <p className="text-sm font-normal text-muted-foreground">{selectedParticipant.cabin.name}</p>
                 )}
+                {selectedParticipant?.birth_date && (
+                  <p className="text-sm font-normal text-muted-foreground">
+                    {format(new Date(selectedParticipant.birth_date), 'dd.MM.yyyy')} · {differenceInYears(new Date(), new Date(selectedParticipant.birth_date))} år
+                  </p>
+                )}
                 <p className="text-xs font-normal text-muted-foreground flex items-center gap-1 mt-1">
                   <Eye className="w-3 h-3" />
                   Klikk på bildet for å forstørre
