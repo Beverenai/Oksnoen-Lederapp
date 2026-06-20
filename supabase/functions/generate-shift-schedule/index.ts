@@ -118,6 +118,7 @@ Deno.serve(async (req) => {
     const year = Number(body.year ?? 2026);
     const period_length = Number(body.period_length ?? 7);
     const force_regenerate = Boolean(body.force_regenerate);
+    const preserve_locked = Boolean(body.preserve_locked);
 
     if (!period_number || period_number < 1 || period_number > 20) {
       return new Response(JSON.stringify({ error: 'period_number must be 1-20' }), {
@@ -163,8 +164,10 @@ Deno.serve(async (req) => {
       .from('shift_types').select('id, slug, day_type, sort_order, start_time, end_time, duration_hours');
     if (stErr) throw stErr;
     const stByKey = new Map<string, ShiftType>();
+    const stById = new Map<string, ShiftType>();
     for (const st of (stData || []) as ShiftType[]) {
       stByKey.set(`${st.day_type}:${st.slug}`, st);
+      stById.set(st.id, st);
     }
     const ST = (dt: DayType, slug: string): ShiftType => {
       const v = stByKey.get(`${dt}:${slug}`);
@@ -189,18 +192,71 @@ Deno.serve(async (req) => {
           .eq('id', existing.id);
         if (archiveErr) throw archiveErr;
       }
-      await admin.from('shift_assignments').delete().eq('schedule_id', existing.id);
+      if (preserve_locked) {
+        await admin.from('shift_assignments').delete()
+          .eq('schedule_id', existing.id).eq('is_locked', false);
+      } else {
+        await admin.from('shift_assignments').delete().eq('schedule_id', existing.id);
+      }
       await admin.from('special_duties').delete().eq('schedule_id', existing.id);
       await admin.from('shift_schedules').update({
         period_length, status: 'draft', generated_at: new Date().toISOString(),
       }).eq('id', existing.id);
       scheduleId = existing.id;
     } else {
+      if (preserve_locked) {
+        return new Response(JSON.stringify({ error: 'Ingen plan å beholde — generér først uten å låse.' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       const { data: ins, error: insErr } = await admin.from('shift_schedules')
         .insert({ period_number, year, period_length, status: 'draft' })
         .select('id').single();
       if (insErr) throw insErr;
       scheduleId = ins.id;
+    }
+
+    // ===== LOAD LOCKED ROWS (preserve_locked) =====
+    const leaderByIdEarly = new Map<string, LeaderRow>(
+      (leadersData || []).map((l) => [l.id, l as LeaderRow]),
+    );
+    const lockedRows = preserve_locked
+      ? ((await admin.from('shift_assignments').select('*')
+          .eq('schedule_id', scheduleId).eq('is_locked', true)).data || [])
+      : [];
+    const lockedKjokken = new Map<number, LeaderRow>();
+    const lockedMorgen = new Map<number, LeaderRow>();
+    const lockedFrokost = new Map<number, LeaderRow>();
+    const lockedNatt = new Map<number, LeaderRow[]>();
+    const lockedSanitas = new Map<number, LeaderRow[]>();
+    const lockedSeilern = new Map<number, LeaderRow[]>();
+    const lockedBings = new Map<number, LeaderRow[]>();
+    const lockedNesteFrokost = new Map<number, LeaderRow>();
+    const lockedKeySet = new Set<string>();
+    const lockedKey = (a: { day_index: number; shift_type_id: string; role: string; assignment_type: string; team_name: string | null; leader_id: string | null }) =>
+      `${a.day_index}|${a.shift_type_id}|${a.role}|${a.assignment_type}|${a.team_name ?? ''}|${a.leader_id ?? ''}`;
+    for (const r of lockedRows as any[]) {
+      lockedKeySet.add(lockedKey(r));
+      if (r.assignment_type !== 'leader' || !r.leader_id) continue;
+      const ldr = leaderByIdEarly.get(r.leader_id);
+      if (!ldr) continue;
+      const st = stById.get(r.shift_type_id);
+      if (!st) continue;
+      const slug = st.slug;
+      const role = r.role;
+      const day = r.day_index;
+      const pushArr = (m: Map<number, LeaderRow[]>, l: LeaderRow) => {
+        const a = m.get(day) || []; if (!a.find((x) => x.id === l.id)) a.push(l); m.set(day, a);
+      };
+      if (role === 'frokostvakt_neste_dag') lockedNesteFrokost.set(day, ldr);
+      else if (slug === 'morgenvakt') lockedMorgen.set(day, ldr);
+      else if (slug === 'frokost' && role === 'frokostvakt') lockedFrokost.set(day, ldr);
+      else if (slug === 'kjokkenvakt') lockedKjokken.set(day, ldr);
+      else if (slug === 'nattevakt') pushArr(lockedNatt, ldr);
+      else if (slug === 'sanitas') pushArr(lockedSanitas, ldr);
+      else if (slug === 'seilern_box') pushArr(lockedSeilern, ldr);
+      else if (slug === 'bings_morgen' || slug === 'bings_ettermiddag' || slug === 'bings_kveld')
+        pushArr(lockedBings, ldr);
     }
 
     const assignments: AssignmentInsert[] = [];
@@ -284,7 +340,7 @@ Deno.serve(async (req) => {
       bings: LeaderRow[];             // 2 people, from bingsF, all 3 bings-shifts
       seilern: LeaderRow[];           // 2 people, from morgenF
       kjokken: LeaderRow | null;      // 1 person, from any F-team
-      natt: LeaderRow[];              // 2 people, from morning18 (Økt 1-team)
+      natt: LeaderRow[];              // 1 person, from morning18 (Økt 1-team)
       nesteFrokost: LeaderRow | null; // 1 person from evening18 = next-day's frokostvakt
       sanitas: LeaderRow[];           // 2 people from morning18 (leggeteamet), NOT nattevakt
     };
@@ -306,14 +362,36 @@ Deno.serve(async (req) => {
 
       const busy = new Set<string>();
 
-      // 1) Morgenvakt — 1 from morgenF
-      const morgenPick = pickFairest(grouped[morgenF], 1, busy);
-      const morgen = morgenPick[0] || null;
+      // 1) Kjøkkenvakt FIRST — 1 from any F-team, hard cap 1 per leader per periode.
+      //    Plukkes før de andre vaktene slik at vi ikke "går tom" fordi alle
+      //    F-ledere allerede er bundet opp i andre vakter den dagen.
+      const allF = [...grouped['team1f'], ...grouped['team2f']];
+      let kjokken: LeaderRow | null = lockedKjokken.get(d) || null;
+      if (!kjokken) {
+        const kjokkenEligible = allF.filter(
+          (l) => (kjokkenCount.get(l.id) || 0) < KJOKKEN_MAX && !busy.has(l.id),
+        );
+        if (kjokkenEligible.length > 0) {
+          const shuffled = shuffle(kjokkenEligible);
+          shuffled.sort((a, b) => cnt(a.id) - cnt(b.id));
+          kjokken = shuffled[0] || null;
+        }
+      }
+      // Hvis alle F-ledere allerede har hatt kjøkkenvakt: la den stå tom
+      // (admin kan fylle inn manuelt) — vi gjentar ALDRI samme leder.
+      if (kjokken) {
+        busy.add(kjokken.id);
+        inc(kjokken.id);
+        kjokkenCount.set(kjokken.id, (kjokkenCount.get(kjokken.id) || 0) + 1);
+      }
+
+      // 2) Morgenvakt — 1 from morgenF
+      const morgen: LeaderRow | null = lockedMorgen.get(d) || pickFairest(grouped[morgenF], 1, busy)[0] || null;
       if (morgen) { busy.add(morgen.id); inc(morgen.id); }
 
-      // 2) Frokostvakt — reservert fra gårsdagens nesteFrokost-pick.
+      // 3) Frokostvakt — reservert fra gårsdagens nesteFrokost-pick.
       //    Unntak: første normale dag har ingen forrige dag, så pickFairest.
-      let frokost: LeaderRow | null = frokostByDay.get(d) || null;
+      let frokost: LeaderRow | null = lockedFrokost.get(d) || frokostByDay.get(d) || null;
       if (frokost) {
         busy.add(frokost.id); inc(frokost.id);
       } else {
@@ -322,40 +400,25 @@ Deno.serve(async (req) => {
         if (frokost) { busy.add(frokost.id); inc(frokost.id); }
       }
 
-      // 3) Bings pair — 2 from bingsF (same pair across all 3 bings shifts)
-      const bings = pickFairest(grouped[bingsF], 2, busy);
+      // 4) Bings pair — 2 from bingsF (same pair across all 3 bings shifts)
+      const lockedBingsArr = lockedBings.get(d) || [];
+      lockedBingsArr.forEach((l) => busy.add(l.id));
+      const bingsExtra = pickFairest(grouped[bingsF], Math.max(0, 2 - lockedBingsArr.length), busy);
+      const bings = [...lockedBingsArr, ...bingsExtra];
       bings.forEach((l) => { busy.add(l.id); inc(l.id, 1); });
 
-      // 4) Seilern — 2 from morgenF, avoid busy
-      const seilern = pickFairest(grouped[morgenF], 2, busy);
+      // 5) Seilern — 2 from morgenF, avoid busy
+      const lockedSeilernArr = lockedSeilern.get(d) || [];
+      lockedSeilernArr.forEach((l) => busy.add(l.id));
+      const seilernExtra = pickFairest(grouped[morgenF], Math.max(0, 2 - lockedSeilernArr.length), busy);
+      const seilern = [...lockedSeilernArr, ...seilernExtra];
       seilern.forEach((l) => { busy.add(l.id); inc(l.id); });
 
-      // 5) Kjøkkenvakt — 1 from UNDER18B (same F-team as bings), avoid busy
-      // Pool = ALL F-leaders (rotate across both F-teams), each leader max 1 per period.
-      // Fall back to the bingsF pool if everyone has already had it.
-      const allF = [...grouped['team1f'], ...grouped['team2f']];
-      const kjokkenEligible = allF.filter(
-        (l) => !busy.has(l.id) && (kjokkenCount.get(l.id) || 0) < KJOKKEN_MAX,
-      );
-      let kjokkenPick: LeaderRow[];
-      if (kjokkenEligible.length > 0) {
-        // Sort by lowest dutyCount for fairness, random tiebreak via shuffle
-        const shuffled = shuffle(kjokkenEligible);
-        shuffled.sort((a, b) => cnt(a.id) - cnt(b.id));
-        kjokkenPick = shuffled.slice(0, 1);
-      } else {
-        // All F-leaders already had kjøkken once; fall back to fairness without cap
-        kjokkenPick = pickFairest(grouped[bingsF], 1, busy);
-      }
-      const kjokken = kjokkenPick[0] || null;
-      if (kjokken) {
-        busy.add(kjokken.id);
-        inc(kjokken.id);
-        kjokkenCount.set(kjokken.id, (kjokkenCount.get(kjokken.id) || 0) + 1);
-      }
-
       // 6) Nattevakt — 2 from morning18 (Økt 1-team, 18+)
-      const natt = pickFairest(grouped[morning18], 2, busy);
+      const lockedNattArr = lockedNatt.get(d) || [];
+      lockedNattArr.forEach((l) => busy.add(l.id));
+      const nattExtra = pickFairest(grouped[morning18], Math.max(0, 1 - lockedNattArr.length), busy);
+      const natt = [...lockedNattArr, ...nattExtra];
       natt.forEach((l) => { busy.add(l.id); inc(l.id); });
 
       // 7) Neste-dags frokostvakt — 1 from evening18 (= D+1's morning18).
@@ -363,8 +426,7 @@ Deno.serve(async (req) => {
       //    Hopp over på siste normale dag (D+1 er avreisedag).
       let nesteFrokost: LeaderRow | null = null;
       if (d + 1 < NORMAL_TO) {
-        const nesteFrokostPick = pickFairest(grouped[evening18], 1, busy);
-        nesteFrokost = nesteFrokostPick[0] || null;
+        nesteFrokost = lockedNesteFrokost.get(d) || pickFairest(grouped[evening18], 1, busy)[0] || null;
         if (nesteFrokost) {
           busy.add(nesteFrokost.id); inc(nesteFrokost.id);
           frokostByDay.set(d + 1, nesteFrokost);
@@ -372,7 +434,10 @@ Deno.serve(async (req) => {
       }
 
       // 8) Sanitas — 2 from morning18 (leggeteamet), MÅ være forskjellig fra nattevakt
-      const sanitas = pickFairest(grouped[morning18], 2, busy);
+      const lockedSanitasArr = lockedSanitas.get(d) || [];
+      lockedSanitasArr.forEach((l) => busy.add(l.id));
+      const sanitasExtra = pickFairest(grouped[morning18], Math.max(0, 2 - lockedSanitasArr.length), busy);
+      const sanitas = [...lockedSanitasArr, ...sanitasExtra];
       sanitas.forEach((l) => { busy.add(l.id); inc(l.id); });
 
       days[d] = {
@@ -637,10 +702,12 @@ Deno.serve(async (req) => {
 
     // ===== Bulk insert =====
     if (assignments.length) {
-      const safeAssignments = assignments.map((a) => ({
-        ...a,
-        excluded_leader_ids: Array.isArray(a.excluded_leader_ids) ? a.excluded_leader_ids : [],
-      }));
+      const safeAssignments = assignments
+        .filter((a) => !lockedKeySet.has(lockedKey(a)))
+        .map((a) => ({
+          ...a,
+          excluded_leader_ids: Array.isArray(a.excluded_leader_ids) ? a.excluded_leader_ids : [],
+        }));
       const { error: aErr } = await admin.from('shift_assignments').insert(safeAssignments);
       if (aErr) throw aErr;
     }

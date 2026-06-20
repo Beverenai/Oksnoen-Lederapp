@@ -1074,6 +1074,7 @@ export type Database = {
           day_type: string
           excluded_leader_ids: string[]
           id: string
+          is_locked: boolean
           leader_id: string | null
           note: string | null
           role: string | null
@@ -1089,6 +1090,7 @@ export type Database = {
           day_type: string
           excluded_leader_ids?: string[]
           id?: string
+          is_locked?: boolean
           leader_id?: string | null
           note?: string | null
           role?: string | null
@@ -1104,6 +1106,7 @@ export type Database = {
           day_type?: string
           excluded_leader_ids?: string[]
           id?: string
+          is_locked?: boolean
           leader_id?: string | null
           note?: string | null
           role?: string | null
@@ -1325,7 +1328,35 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      leader_activities_public: {
+        Row: {
+          current_activity: string | null
+          extra_activity: string | null
+          leader_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          current_activity?: string | null
+          extra_activity?: string | null
+          leader_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          current_activity?: string | null
+          extra_activity?: string | null
+          leader_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_content_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: true
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       current_leader_id: { Args: never; Returns: string }

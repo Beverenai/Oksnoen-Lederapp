@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/popover';
 import {
   Shield, ArrowLeft, CalendarDays, Loader2, Sparkles, Send, Archive, Trash2, Users, Eye,
-  Download, AlertTriangle, Pencil,
+  Download, AlertTriangle, Pencil, Lock, Unlock,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { exportShiftScheduleXlsx } from '@/lib/exportShiftScheduleXlsx';
@@ -150,6 +150,33 @@ export default function ShiftPlanner() {
     }
   };
 
+  const regenerateKeepLocked = async () => {
+    if (!viewedSchedule) return;
+    if (!confirm('Regenerér resten av planen? Manuelt endrede (låste) celler beholdes.')) return;
+    setGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-shift-schedule', {
+        body: {
+          period_number: viewedSchedule.period_number,
+          year: viewedSchedule.year,
+          period_length: viewedSchedule.period_length,
+          preserve_locked: true,
+        },
+      });
+      let errMsg = (error as any)?.message || data?.error || '';
+      if (error) throw new Error(errMsg || (error as Error).message);
+      if (data?.error) throw new Error(data.error);
+      showSuccess('Regenerert — låste celler beholdt');
+      setWarnings(data.validation?.warnings || []);
+      await loadGrid(viewedSchedule.id);
+    } catch (e) {
+      console.error(e);
+      showError((e as Error).message || 'Kunne ikke regenerere');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const setStatus = async (id: string, status: 'draft' | 'published' | 'archived') => {
     try {
       const { error } = await supabase.from('shift_schedules').update({ status }).eq('id', id);
@@ -232,20 +259,38 @@ export default function ShiftPlanner() {
     try {
       const { error } = await supabase
         .from('shift_assignments')
-        .update({ leader_id: newLeaderId, assignment_type: 'leader', team_name: null })
+        .update({ leader_id: newLeaderId, assignment_type: 'leader', team_name: null, is_locked: true })
         .eq('id', assignmentId);
       if (error) throw error;
       setAssignments((prev) => prev.map((a) =>
-        a.id === assignmentId ? { ...a, leader_id: newLeaderId, assignment_type: 'leader', team_name: null } : a
+        a.id === assignmentId ? { ...a, leader_id: newLeaderId, assignment_type: 'leader', team_name: null, is_locked: true } : a
       ));
       setEditingId(null);
       await revalidate(viewedSchedule.id);
-      showSuccess('Vakt oppdatert');
+      showSuccess('Vakt låst og oppdatert');
     } catch (e) {
       console.error(e);
       showError('Kunne ikke endre tildeling');
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  const toggleAssignmentLock = async (assignmentId: string, nextLocked: boolean) => {
+    if (!viewedSchedule) return;
+    try {
+      const { error } = await supabase
+        .from('shift_assignments')
+        .update({ is_locked: nextLocked })
+        .eq('id', assignmentId);
+      if (error) throw error;
+      setAssignments((prev) => prev.map((a) =>
+        a.id === assignmentId ? { ...a, is_locked: nextLocked } : a
+      ));
+      showSuccess(nextLocked ? 'Cellen er nå låst' : 'Lås fjernet');
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke endre lås');
     }
   };
 
@@ -580,12 +625,27 @@ export default function ShiftPlanner() {
       {viewedSchedule && (
         <Card>
           <CardHeader>
-            <CardTitle>
-              Vaktplan · Periode {viewedSchedule.period_number}/{viewedSchedule.year}
-            </CardTitle>
-            <CardDescription>
-              {viewedSchedule.period_length} dager · {STATUS_META[viewedSchedule.status]?.label || viewedSchedule.status}
-            </CardDescription>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>
+                  Vaktplan · Periode {viewedSchedule.period_number}/{viewedSchedule.year}
+                </CardTitle>
+                <CardDescription>
+                  {viewedSchedule.period_length} dager · {STATUS_META[viewedSchedule.status]?.label || viewedSchedule.status}
+                </CardDescription>
+              </div>
+              {viewedSchedule.status !== 'archived' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={regenerateKeepLocked}
+                  disabled={generating}
+                >
+                  {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                  Regenerér (behold låste)
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {missingLeaders.length > 0 && (
@@ -699,8 +759,21 @@ export default function ShiftPlanner() {
                                                 ))}
                                               </SelectContent>
                                             </Select>
+                                            {a.is_locked && (
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="w-full"
+                                                onClick={() => { toggleAssignmentLock(a.id, false); setEditingId(null); }}
+                                              >
+                                                <Unlock className="w-3 h-3 mr-2" /> Lås opp
+                                              </Button>
+                                            )}
                                           </PopoverContent>
                                         </Popover>
+                                      ) : null;
+                                      const lockBadge = a.is_locked ? (
+                                        <Lock className="w-3 h-3 text-primary" />
                                       ) : null;
                                       if (a.assignment_type === 'team' && a.team_name) {
                                         const t = a.team_name as Team;
@@ -709,15 +782,17 @@ export default function ShiftPlanner() {
                                           <Badge key={a.id} className={`${meta?.className || ''} gap-1`}>
                                             {meta?.label || a.team_name}
                                             {a.note ? <span className="ml-1 opacity-80">{a.note}</span> : null}
+                                            {lockBadge}
                                             {editButton}
                                           </Badge>
                                         );
                                       }
                                       const ldr = a.leader_id ? leaderById.get(a.leader_id) : null;
                                       return (
-                                        <Badge key={a.id} variant="outline" className="gap-1">
+                                        <Badge key={a.id} variant="outline" className={`gap-1 ${a.is_locked ? 'border-primary ring-1 ring-primary/40' : ''}`}>
                                           {ldr?.name || 'Ukjent'}
                                           {a.role && a.role !== 'standard' ? <span className="ml-1 text-[10px] opacity-70">({a.role})</span> : null}
+                                          {lockBadge}
                                           {editButton}
                                         </Badge>
                                       );

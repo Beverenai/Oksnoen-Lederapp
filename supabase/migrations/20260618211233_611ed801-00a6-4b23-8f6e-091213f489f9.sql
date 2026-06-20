@@ -1,0 +1,2 @@
+ALTER TABLE public.shift_assignments ADD COLUMN IF NOT EXISTS is_locked boolean NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS shift_assignments_schedule_locked_idx ON public.shift_assignments (schedule_id, is_locked);
