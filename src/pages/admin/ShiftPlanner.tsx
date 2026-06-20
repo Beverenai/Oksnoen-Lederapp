@@ -127,7 +127,7 @@ export default function ShiftPlanner() {
         },
       });
 
-      let errMsg = (error as any)?.message || data?.error || '';
+      const errMsg = (error as any)?.message || data?.error || '';
       const ctx = (error as any)?.context;
       if (ctx && typeof ctx.json === 'function') {
         try {
@@ -163,7 +163,7 @@ export default function ShiftPlanner() {
           preserve_locked: true,
         },
       });
-      let errMsg = (error as any)?.message || data?.error || '';
+      const errMsg = (error as any)?.message || data?.error || '';
       if (error) throw new Error(errMsg || (error as Error).message);
       if (data?.error) throw new Error(data.error);
       showSuccess('Regenerert — låste celler beholdt');
