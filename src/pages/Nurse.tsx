@@ -1033,16 +1033,32 @@ export default function Nurse() {
                             key={event.id} 
                             className="p-3 rounded-lg bg-muted/50 border border-border"
                           >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between mb-2 gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <Badge variant="outline">{eventType?.label || event.event_type}</Badge>
                                 <Badge className={severity?.color || 'bg-muted'}>
                                   {severity?.label || event.severity}
                                 </Badge>
                               </div>
-                              <span className="text-xs text-muted-foreground">
-                                {format(new Date(event.created_at), 'dd. MMM yyyy HH:mm', { locale: nb })}
-                              </span>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-xs text-muted-foreground">
+                                  {format(new Date(event.created_at), 'dd. MMM yyyy HH:mm', { locale: nb })}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                  onClick={() =>
+                                    setDeleteTarget({
+                                      type: 'event',
+                                      id: event.id,
+                                      label: 'hendelsen',
+                                    })
+                                  }
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
                             </div>
                             <p className="text-sm text-foreground">{event.description}</p>
                           </div>
