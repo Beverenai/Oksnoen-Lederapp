@@ -49,7 +49,8 @@ import {
   Home,
   Eye,
   Trophy,
-  Download
+  Download,
+  Trash2
 } from 'lucide-react';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
