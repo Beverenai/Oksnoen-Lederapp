@@ -570,6 +570,9 @@ export default function Nurse() {
     const age = participant.birth_date 
       ? differenceInYears(new Date(), new Date(participant.birth_date)) 
       : null;
+    const birthDateFormatted = participant.birth_date
+      ? format(new Date(participant.birth_date), 'dd.MM.yyyy')
+      : null;
     
     return (
       <div
@@ -595,7 +598,12 @@ export default function Nurse() {
               )}
             </div>
             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-              {age && (
+              {age && birthDateFormatted && (
+                <Badge variant="outline" className="text-xs">
+                  {birthDateFormatted} · {age} år
+                </Badge>
+              )}
+              {age && !birthDateFormatted && (
                 <Badge variant="outline" className="text-xs">
                   {age} år
                 </Badge>
