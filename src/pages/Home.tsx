@@ -143,6 +143,11 @@ export default function Home() {
   const [leaderCabins, setLeaderCabins] = useState<LeaderCabin[]>([]);
   const [assignedFixTasks, setAssignedFixTasks] = useState<FixTask[]>([]);
   const [pendingRopeControls, setPendingRopeControls] = useState<PendingRopeControl[]>([]);
+  const [overnattingEnabled, setOvernattingEnabled] = useState(false);
+  const [overnattingTitle, setOvernattingTitle] = useState('Overnatting');
+  const [overnattingQuestion, setOvernattingQuestion] = useState('Vil du være med på overnatting?');
+  const [overnattingJoining, setOvernattingJoining] = useState(false);
+  const [overnattingSaving, setOvernattingSaving] = useState(false);
 
   useEffect(() => {
     if (!effectiveLeader) return;
