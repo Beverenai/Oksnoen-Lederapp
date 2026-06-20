@@ -1,6 +1,6 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState } from 'react';
-import { Calendar, Play, Coffee, Send, Loader2, Bell } from 'lucide-react';
+import { Calendar, Play, Coffee, Send, Loader2, Bell, RefreshCw } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -79,6 +79,17 @@ const quickNotifications: QuickNotification[] = [
     target: 'unread_with_content',
     url: '/',
     color: 'bg-red-500',
+  },
+  {
+    id: 'session-changed',
+    icon: RefreshCw,
+    title: 'Økten er endret',
+    description: 'Be alle ledere sjekke appen for endringer',
+    notificationTitle: '🔄 Økten har blitt endret!',
+    notificationMessage: 'Sjekk appen nå for å se de oppdaterte detaljene for økten.',
+    target: 'all',
+    url: '/',
+    color: 'bg-amber-500',
   },
 ];
 
