@@ -128,6 +128,7 @@ export default function Nurse() {
   const [newEventSeverity, setNewEventSeverity] = useState('low');
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'note' | 'event'; id: string; label: string } | null>(null);
 
   useEffect(() => {
     loadParticipants();
