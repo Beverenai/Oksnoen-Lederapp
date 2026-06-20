@@ -739,32 +739,41 @@ ${sectionsHtml}
                 <div className="px-3 py-3 text-sm text-muted-foreground text-center">
                   Ingen deltakere matcher «{mentionQuery}»
                 </div>
-              ) : filteredMentionParticipants.map((p, i) => (
-                <button
-                  key={p.id}
-                  className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-3 transition-colors ${
-                    i === selectedMentionIndex ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
-                  }`}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    selectMentionParticipant(p);
-                  }}
-                  onMouseEnter={() => setSelectedMentionIndex(i)}
-                >
-                  <Avatar className="w-10 h-10 flex-shrink-0">
-                    <AvatarImage src={p.image_url || undefined} alt={p.name} />
-                    <AvatarFallback className="text-xs bg-muted">
-                      <User className="w-4 h-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col min-w-0">
-                    <span className="font-medium truncate">{p.name}</span>
-                    {p.cabin && (
-                      <span className="text-xs text-muted-foreground truncate">{p.cabin.name}</span>
-                    )}
-                  </div>
-                </button>
-              ))}
+              ) : filteredMentionParticipants.map((p, i) => {
+                const age = p.birth_date
+                  ? differenceInYears(new Date(), new Date(p.birth_date))
+                  : null;
+                const birthDateFormatted = p.birth_date
+                  ? format(new Date(p.birth_date), 'dd.MM.yyyy')
+                  : null;
+                return (
+                  <button
+                    key={p.id}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-3 transition-colors ${
+                      i === selectedMentionIndex ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
+                    }`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selectMentionParticipant(p);
+                    }}
+                    onMouseEnter={() => setSelectedMentionIndex(i)}
+                  >
+                    <Avatar className="w-10 h-10 flex-shrink-0">
+                      <AvatarImage src={p.image_url || undefined} alt={p.name} />
+                      <AvatarFallback className="text-xs bg-muted">
+                        <User className="w-4 h-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-medium truncate">{p.name}</span>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {p.cabin?.name || 'Ingen hytte'}
+                        {age && birthDateFormatted ? ` · ${birthDateFormatted} · ${age} år` : age ? ` · ${age} år` : ''}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
 
