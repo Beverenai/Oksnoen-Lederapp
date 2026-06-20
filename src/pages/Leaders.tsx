@@ -95,7 +95,7 @@ export default function Leaders() {
   const { data: leadersData, isLoading, refetch } = useQuery({
     queryKey: ['leaders-with-content'],
     queryFn: async () => {
-      // Fetch leaders, content, roles, extra fields config, and leader_cabins in parallel
+      // Fetch leaders, public activities, roles, extra fields config, and leader_cabins in parallel
       const [leadersRes, contentRes, rolesRes, configRes, leaderCabinsRes] = await Promise.all([
         supabase
           .from('leaders')
@@ -103,8 +103,8 @@ export default function Leaders() {
           .eq('is_active', true)
           .order('name'),
         supabase
-          .from('leader_content')
-          .select('*'),
+          .from('leader_activities_public' as any)
+          .select('leader_id, current_activity, extra_activity'),
         supabase.rpc('get_all_leader_roles'),
         supabase
           .from('extra_fields_config')
@@ -123,7 +123,7 @@ export default function Leaders() {
       ]);
 
       const leadersRaw = leadersRes.data || [];
-      const contentData = contentRes.data || [];
+      const contentData = (contentRes.data || []) as Array<{ leader_id: string; current_activity: string | null; extra_activity: string | null }>;
       const rolesData = rolesRes.data || [];
       const configData = configRes.data || [];
       const leaderCabinsData = leaderCabinsRes.data || [];
@@ -147,7 +147,7 @@ export default function Leaders() {
         .filter((leader) => leader.name.toLowerCase() !== 'superadmin')
         .map((leader) => ({
           ...leader,
-          content: contentMap.get(leader.id) || null,
+          content: (contentMap.get(leader.id) as unknown as LeaderContent) || null,
           isAdmin: adminIds.has(leader.id),
           isNurse: nurseIds.has(leader.id) || leader.team?.toLowerCase() === 'nurse',
           linkedCabins: leaderCabinsMap.get(leader.id) || [],
