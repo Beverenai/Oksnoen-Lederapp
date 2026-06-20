@@ -4,6 +4,21 @@ import { LeaderFilters } from './LeaderFilters';
 import { LeaderCard } from './LeaderCard';
 import { useLeaderDashboardData, type LeaderWithContent } from '@/hooks/useLeaderDashboardData';
 import type { Tables } from '@/integrations/supabase/types';
+import { Button } from '@/components/ui/button';
+import { RotateCcw, Loader2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 type Leader = Tables<'leaders'>;
 
@@ -31,6 +46,7 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated }: Leader
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [activeTeamFilter, setActiveTeamFilter] = useState<string | null>(null);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const { leadersWithContent, activeLeaders, isLoading, refetchContent, filterAndSort } = useLeaderDashboardData(leaders);
 
@@ -47,6 +63,23 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated }: Leader
   const handleContentSaved = () => {
     onLeaderUpdated();
     refetchContent();
+  };
+
+  const handleResetAllUnread = async () => {
+    setIsResetting(true);
+    try {
+      const { error } = await supabase
+        .from('leader_content')
+        .update({ has_read: false })
+        .eq('has_read', true);
+      if (error) throw error;
+      toast.success('Alle ledere er markert som ulest');
+      refetchContent();
+    } catch (err: any) {
+      toast.error('Kunne ikke nullstille', { description: err?.message });
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   if (isLoading) {
@@ -69,6 +102,31 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated }: Leader
         totalCount={activeLeaders.length}
         filteredCount={sortedLeaders.length}
       />
+
+      <div className="flex justify-end">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm" disabled={isResetting} className="gap-1.5">
+              {isResetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              Marker alle som ulest
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Nullstill Hajolo for alle?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Alle ledere får rød Hajolo-knapp igjen og må bekrefte på nytt.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Avbryt</AlertDialogCancel>
+              <AlertDialogAction onClick={handleResetAllUnread}>
+                Nullstill
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4">
         {sortedLeaders.map(leader => (
