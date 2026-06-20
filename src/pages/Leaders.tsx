@@ -123,7 +123,7 @@ export default function Leaders() {
       ]);
 
       const leadersRaw = leadersRes.data || [];
-      const contentData = (contentRes.data || []) as Array<{ leader_id: string; current_activity: string | null; extra_activity: string | null }>;
+      const contentData = ((contentRes.data || []) as unknown) as Array<{ leader_id: string; current_activity: string | null; extra_activity: string | null }>;
       const rolesData = rolesRes.data || [];
       const configData = configRes.data || [];
       const leaderCabinsData = leaderCabinsRes.data || [];
