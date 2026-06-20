@@ -23,8 +23,10 @@ import {
   MapPin,
   Anchor,
   Wrench,
+  Bed,
   type LucideIcon
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
@@ -141,6 +143,11 @@ export default function Home() {
   const [leaderCabins, setLeaderCabins] = useState<LeaderCabin[]>([]);
   const [assignedFixTasks, setAssignedFixTasks] = useState<FixTask[]>([]);
   const [pendingRopeControls, setPendingRopeControls] = useState<PendingRopeControl[]>([]);
+  const [overnattingEnabled, setOvernattingEnabled] = useState(false);
+  const [overnattingTitle, setOvernattingTitle] = useState('Overnatting');
+  const [overnattingQuestion, setOvernattingQuestion] = useState('Vil du være med på overnatting?');
+  const [overnattingJoining, setOvernattingJoining] = useState(false);
+  const [overnattingSaving, setOvernattingSaving] = useState(false);
 
   useEffect(() => {
     if (!effectiveLeader) return;
@@ -194,6 +201,16 @@ export default function Home() {
           .eq('assigned_to', effectiveLeader.id)
           .is('fixed_at', null),
       ]);
+
+      const [overCfgRes, overRespRes] = await Promise.all([
+        supabase.from('app_config').select('key,value').in('key', ['overnatting_enabled', 'overnatting_title', 'overnatting_question']),
+        supabase.from('overnatting_responses').select('is_joining').eq('leader_id', effectiveLeader.id).maybeSingle(),
+      ]);
+      const cfgMap = new Map((overCfgRes.data || []).map((r: { key: string; value: string }) => [r.key, r.value]));
+      setOvernattingEnabled(cfgMap.get('overnatting_enabled') === 'true');
+      setOvernattingTitle(cfgMap.get('overnatting_title') || 'Overnatting');
+      setOvernattingQuestion(cfgMap.get('overnatting_question') || 'Vil du være med på overnatting?');
+      setOvernattingJoining(overRespRes.data?.is_joining ?? false);
 
       setContent(contentRes.data);
       updateWidgetData({
@@ -327,6 +344,23 @@ export default function Home() {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const handleOvernattingToggle = async (next: boolean) => {
+    if (!effectiveLeader) return;
+    setOvernattingJoining(next);
+    setOvernattingSaving(true);
+    try {
+      const { error } = await supabase
+        .from('overnatting_responses')
+        .upsert({ leader_id: effectiveLeader.id, is_joining: next, updated_at: new Date().toISOString() }, { onConflict: 'leader_id' });
+      if (error) throw error;
+    } catch (e) {
+      console.error('Overnatting toggle failed', e);
+      setOvernattingJoining(!next);
+    } finally {
+      setOvernattingSaving(false);
+    }
   };
 
   if (isLoading && !loadFailed) {
@@ -504,6 +538,32 @@ export default function Home() {
         )}
 
         {/* HERO: Main Activity - Large Display with premium styling */}
+        {overnattingEnabled && (
+          <Card className="border-2 border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-sm">
+            <CardContent className="py-4 sm:py-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-indigo-500/15 shrink-0">
+                  <Bed className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] uppercase tracking-wide text-indigo-600/80 dark:text-indigo-400/80 font-medium mb-0.5">
+                    {overnattingTitle}
+                  </p>
+                  <p className="text-sm sm:text-base font-medium text-foreground">{overnattingQuestion}</p>
+                </div>
+                <Switch
+                  checked={overnattingJoining}
+                  onCheckedChange={handleOvernattingToggle}
+                  disabled={overnattingSaving}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                {overnattingJoining ? 'Du er påmeldt ✓' : 'Skyv på for å melde deg på'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {isElementVisible('current_activity') && (() => {
           const activityConfig = getConfigForElement('current_activity');
           return (

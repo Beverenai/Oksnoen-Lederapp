@@ -21,6 +21,7 @@ import {
   BookOpen,
   LayoutGrid,
   FileSpreadsheet,
+  Bed,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
@@ -50,6 +51,7 @@ const navItems = [
   { key: 'rope-control', label: 'Tau-kontroll', desc: 'Tau-kontroll oppsett', icon: Anchor, color: 'bg-red-500/15 text-red-600 dark:text-red-400' },
   { key: 'home-config', label: 'Hjemskjerm', desc: 'Tittel, ikon og synlighet', icon: LayoutGrid, color: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400' },
   { key: 'google-sheet', label: 'Google Sheet sync', desc: 'Synk ledere fra Google Sheet', icon: FileSpreadsheet, color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
+  { key: 'overnatting', label: 'Overnatting', desc: 'Se hvem som vil overnatte', icon: Bed, color: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400' },
 ];
 
 const sectionLabels: Record<string, string> = {
@@ -57,6 +59,7 @@ const sectionLabels: Record<string, string> = {
   activities: 'Aktiviteter', skjaer: 'Skjær', stories: 'Historier', push: 'Push-varsler',
   'rope-control': 'Tau-kontroll', 'home-config': 'Hjemskjerm-elementer',
   'google-sheet': 'Google Sheet sync',
+  overnatting: 'Overnatting',
 };
 
 export default function AdminSettings() {
