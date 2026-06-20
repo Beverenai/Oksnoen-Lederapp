@@ -310,6 +310,9 @@ export function AdminSettingsContent({
     case 'google-sheet':
       return <GoogleSheetSyncTab />;
 
+    case 'overnatting':
+      return <OvernattingTab />;
+
     case 'home-config':
       return (
         <Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}>
