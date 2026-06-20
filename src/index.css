@@ -387,9 +387,9 @@ header, nav {
   box-sizing: content-box;
   left: 0;
   right: 0;
-  /* Bruk visualViewport-offset (satt fra JS) så menyen følger faktisk synlig viewport
-     i stedet for layout-viewport. Default 0 hvis ikke satt. */
-  bottom: var(--vv-bottom-offset, 0px);
+  /* Fast nede — ikke følg visualViewport. Dette gjør at menyen alltid sitter
+     ved bunnen av skjermen, selv om iOS Safari sin URL-bar endrer høyde. */
+  bottom: 0;
   z-index: 40;
   background: hsl(var(--card) / 0.95);
   -webkit-backdrop-filter: blur(10px);
