@@ -1,6 +1,6 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState } from 'react';
-import { Calendar, Play, Coffee, Send, Loader2, Bell, RefreshCw } from 'lucide-react';
+import { Calendar, Play, Coffee, Send, Loader2, Bell, RefreshCw, MessageSquare, ArrowLeft } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -9,6 +9,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -97,6 +99,9 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader } = useAuth();
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [customMode, setCustomMode] = useState(false);
+  const [customTitle, setCustomTitle] = useState('');
+  const [customMessage, setCustomMessage] = useState('');
 
   const handleSendNotification = async (notification: QuickNotification) => {
     if (!leader) return;
@@ -129,17 +134,123 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
     }
   };
 
+  const handleSendCustom = async () => {
+    if (!leader) return;
+    const title = customTitle.trim();
+    const message = customMessage.trim();
+    if (!title || !message) {
+      showError('Tittel og melding må fylles ut');
+      return;
+    }
+    setSendingId('custom');
+    try {
+      const { data, error } = await supabase.functions.invoke('push-send', {
+        body: {
+          title,
+          message,
+          url: '/',
+          broadcast: true,
+          sender_leader_id: leader.id,
+        },
+      });
+      if (error) throw error;
+      showSuccess(`Varsling sendt til ${data.sent} mottakere`);
+      setCustomTitle('');
+      setCustomMessage('');
+      setCustomMode(false);
+      onOpenChange(false);
+    } catch (err) {
+      console.error('Error sending custom notification:', err);
+      showError('Kunne ikke sende varsling');
+    } finally {
+      setSendingId(null);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-auto max-h-[80vh]">
         <SheetHeader className="mb-4">
-          <SheetTitle>Hurtigvarslinger</SheetTitle>
+          <SheetTitle className="flex items-center gap-2">
+            {customMode && (
+              <button
+                onClick={() => setCustomMode(false)}
+                className="p-1 -ml-1 rounded-md hover:bg-muted"
+                aria-label="Tilbake"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
+            {customMode ? 'Egen varsling' : 'Hurtigvarslinger'}
+          </SheetTitle>
           <SheetDescription>
-            Send ut forhåndsdefinerte varslinger med ett trykk
+            {customMode
+              ? 'Skriv din egen melding som sendes til alle ledere'
+              : 'Send ut forhåndsdefinerte varslinger med ett trykk'}
           </SheetDescription>
         </SheetHeader>
-        
+
+        {customMode ? (
+          <div className="space-y-3 pb-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Tittel</label>
+              <Input
+                placeholder="F.eks. Viktig beskjed"
+                value={customTitle}
+                onChange={(e) => setCustomTitle(e.target.value)}
+                maxLength={80}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Melding</label>
+              <Textarea
+                placeholder="Skriv meldingen som skal sendes til alle ledere…"
+                value={customMessage}
+                onChange={(e) => setCustomMessage(e.target.value)}
+                maxLength={300}
+                rows={4}
+              />
+              <div className="text-xs text-muted-foreground text-right">
+                {customMessage.length}/300
+              </div>
+            </div>
+            <Button
+              className="w-full h-12"
+              onClick={handleSendCustom}
+              disabled={sendingId !== null || !customTitle.trim() || !customMessage.trim()}
+            >
+              {sendingId === 'custom' ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Send til alle ledere
+                </>
+              )}
+            </Button>
+          </div>
+        ) : (
         <div className="space-y-3 pb-6">
+          <Button
+            variant="outline"
+            className="w-full h-auto p-4 flex items-start gap-4 justify-start text-left"
+            onClick={() => setCustomMode(true)}
+            disabled={sendingId !== null}
+          >
+            <div className={cn('p-3 rounded-xl text-white shrink-0', 'bg-primary')}>
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-foreground">Egen varsling</div>
+              <div className="text-sm text-muted-foreground mt-0.5">
+                Skriv din egen melding til alle ledere
+              </div>
+            </div>
+            <div className="shrink-0 self-center">
+              <Send className="w-5 h-5 text-muted-foreground" />
+            </div>
+          </Button>
+
           {quickNotifications.map((notification) => {
             const Icon = notification.icon;
             const isSending = sendingId === notification.id;
@@ -170,6 +281,7 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
             );
           })}
         </div>
+        )}
       </SheetContent>
     </Sheet>
   );
