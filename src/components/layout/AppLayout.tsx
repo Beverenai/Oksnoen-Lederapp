@@ -333,38 +333,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Track visualViewport so bottom nav sits flush against the *actual* visible
-  // bottom edge (not the layout viewport). Fixes "dead strip" under nav on iOS.
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-
-    const isStandalone = (window.navigator as { standalone?: boolean }).standalone === true ||
-                         window.matchMedia('(display-mode: standalone)').matches;
-    if (isStandalone) {
-      // I PWA standalone: ingen URL-bar, ingen offset trengs.
-      // Safe-area-padding inni nav håndterer home indicator.
-      document.documentElement.style.setProperty('--vv-bottom-offset', '0px');
-      return;
-    }
-
-    const updateOffset = () => {
-      // Avstand fra visualViewport sin bunnkant til layout-viewport sin bunnkant.
-      // Når iOS Safari sin URL-bar er synlig blir denne > 0, og menyen flytter seg opp.
-      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      document.documentElement.style.setProperty('--vv-bottom-offset', `${offset}px`);
-    };
-
-    updateOffset();
-    vv.addEventListener('resize', updateOffset);
-    vv.addEventListener('scroll', updateOffset);
-    window.addEventListener('orientationchange', updateOffset);
-    return () => {
-      vv.removeEventListener('resize', updateOffset);
-      vv.removeEventListener('scroll', updateOffset);
-      window.removeEventListener('orientationchange', updateOffset);
-    };
-  }, []);
 
   // Fetch schedule image availability and subscribe to changes
   useEffect(() => {
