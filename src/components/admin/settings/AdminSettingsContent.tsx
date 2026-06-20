@@ -27,6 +27,7 @@ import { SkjaerTab } from '@/components/admin/SkjaerTab';
 import { StoriesTab } from '@/components/admin/StoriesTab';
 import { LeaderImportDialog } from '@/components/admin/LeaderImportDialog';
 import { GoogleSheetSyncTab } from '@/components/admin/GoogleSheetSyncTab';
+import { OvernattingTab } from '@/components/admin/OvernattingTab';
 const HomeConfigTab = lazy(() => import('@/components/admin/HomeConfigTab'));
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -308,6 +309,9 @@ export function AdminSettingsContent({
 
     case 'google-sheet':
       return <GoogleSheetSyncTab />;
+
+    case 'overnatting':
+      return <OvernattingTab />;
 
     case 'home-config':
       return (

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
-import { BarChart3, AlertCircle, Cake, ChevronDown, ChevronUp, Users, RefreshCw } from 'lucide-react';
+import { BarChart3, AlertCircle, Cake, ChevronDown, ChevronUp, Users, RefreshCw, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -50,6 +50,7 @@ export function ParticipantStatsCard() {
   const [error, setError] = useState<string | null>(null);
   const [isMissingOpen, setIsMissingOpen] = useState(false);
   const [isBirthdaysOpen, setIsBirthdaysOpen] = useState(true);
+  const [isNotArrivedOpen, setIsNotArrivedOpen] = useState(true);
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -150,6 +151,14 @@ export function ParticipantStatsCard() {
   const arrivalPercentage = totalParticipants > 0 ? (arrivedParticipants / totalParticipants) * 100 : 0;
   const missingActivities = getMissingActivityParticipants();
   const upcomingBirthdays = getUpcomingBirthdays(9);
+  const notArrived = participants
+    .filter(p => !p.has_arrived)
+    .map(p => ({
+      participant: p,
+      cabinName: getCabinName(p.cabin_id),
+      age: p.birth_date ? calculateAge(p.birth_date) : null,
+    }))
+    .sort((a, b) => (a.participant.first_name || a.participant.name).localeCompare(b.participant.first_name || b.participant.name));
 
   const formatBirthdayText = (birthday: UpcomingBirthday): string => {
     if (birthday.daysUntil === 0) {
@@ -224,6 +233,49 @@ export function ParticipantStatsCard() {
             </div>
             <Progress value={arrivalPercentage} className="h-2" />
           </div>
+
+        {/* Not arrived */}
+        {notArrived.length > 0 && (
+          <Collapsible open={isNotArrivedOpen} onOpenChange={setIsNotArrivedOpen}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors">
+              <div className="flex items-center gap-2">
+                <UserX className="w-4 h-4 text-red-500" />
+                <span className="text-sm font-medium">Ikke ankommet</span>
+                <Badge variant="secondary" className="ml-1">
+                  {notArrived.length}
+                </Badge>
+              </div>
+              {isNotArrivedOpen ? (
+                <ChevronUp className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              )}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2">
+              <div className="space-y-1.5 pl-6 max-h-60 overflow-y-auto">
+                {notArrived.map(({ participant, cabinName, age }) => (
+                  <button
+                    key={participant.id}
+                    onClick={() => handleParticipantClick(participant.id)}
+                    className="text-sm flex items-center gap-2 w-full text-left hover:bg-muted/50 p-1 rounded transition-colors"
+                  >
+                    <span className="font-medium">
+                      {participant.first_name || participant.name}
+                    </span>
+                    {age !== null && (
+                      <span className="text-muted-foreground">({age} år)</span>
+                    )}
+                    {cabinName && (
+                      <Badge variant="outline" className="text-xs">
+                        {cabinName}
+                      </Badge>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
         {/* Missing Activities */}
         {missingActivities.length > 0 && (
@@ -317,7 +369,7 @@ export function ParticipantStatsCard() {
         )}
 
           {/* No upcoming events */}
-          {missingActivities.length === 0 && upcomingBirthdays.length === 0 && (
+          {missingActivities.length === 0 && upcomingBirthdays.length === 0 && notArrived.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-2">
               Ingen ventende handlinger
             </p>
