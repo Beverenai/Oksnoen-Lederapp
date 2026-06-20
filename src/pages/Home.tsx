@@ -346,6 +346,23 @@ export default function Home() {
       .slice(0, 2);
   };
 
+  const handleOvernattingToggle = async (next: boolean) => {
+    if (!effectiveLeader) return;
+    setOvernattingJoining(next);
+    setOvernattingSaving(true);
+    try {
+      const { error } = await supabase
+        .from('overnatting_responses')
+        .upsert({ leader_id: effectiveLeader.id, is_joining: next, updated_at: new Date().toISOString() }, { onConflict: 'leader_id' });
+      if (error) throw error;
+    } catch (e) {
+      console.error('Overnatting toggle failed', e);
+      setOvernattingJoining(!next);
+    } finally {
+      setOvernattingSaving(false);
+    }
+  };
+
   if (isLoading && !loadFailed) {
     return (
       <div className="space-y-6 animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8">
