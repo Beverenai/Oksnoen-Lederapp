@@ -202,6 +202,16 @@ export default function Home() {
           .is('fixed_at', null),
       ]);
 
+      const [overCfgRes, overRespRes] = await Promise.all([
+        supabase.from('app_config').select('key,value').in('key', ['overnatting_enabled', 'overnatting_title', 'overnatting_question']),
+        supabase.from('overnatting_responses').select('is_joining').eq('leader_id', effectiveLeader.id).maybeSingle(),
+      ]);
+      const cfgMap = new Map((overCfgRes.data || []).map((r: { key: string; value: string }) => [r.key, r.value]));
+      setOvernattingEnabled(cfgMap.get('overnatting_enabled') === 'true');
+      setOvernattingTitle(cfgMap.get('overnatting_title') || 'Overnatting');
+      setOvernattingQuestion(cfgMap.get('overnatting_question') || 'Vil du være med på overnatting?');
+      setOvernattingJoining(overRespRes.data?.is_joining ?? false);
+
       setContent(contentRes.data);
       updateWidgetData({
         currentActivity: contentRes.data?.current_activity ?? null,
