@@ -573,6 +573,35 @@ export type Database = {
         }
         Relationships: []
       }
+      overnatting_responses: {
+        Row: {
+          created_at: string
+          is_joining: boolean
+          leader_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          is_joining?: boolean
+          leader_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          is_joining?: boolean
+          leader_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overnatting_responses_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: true
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participant_activities: {
         Row: {
           activity: string
