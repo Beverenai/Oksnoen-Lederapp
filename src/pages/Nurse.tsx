@@ -13,6 +13,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   ResponsiveDialog,
   ResponsiveDialogContent,
   ResponsiveDialogHeader,
@@ -39,7 +49,8 @@ import {
   Home,
   Eye,
   Trophy,
-  Download
+  Download,
+  Trash2
 } from 'lucide-react';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -117,6 +128,7 @@ export default function Nurse() {
   const [newEventSeverity, setNewEventSeverity] = useState('low');
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'note' | 'event'; id: string; label: string } | null>(null);
 
   useEffect(() => {
     loadParticipants();
@@ -292,6 +304,63 @@ export default function Nurse() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const deleteHealthEvent = async (eventId: string) => {
+    if (!selectedParticipant) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('participant_health_events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      showSuccess('Hendelse slettet');
+      await loadParticipantDetails(selectedParticipant);
+      loadParticipants();
+    } catch (error) {
+      console.error('Error deleting health event:', error);
+      showError('Kunne ikke slette hendelse');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const deleteHealthNote = async (noteId: string) => {
+    if (!selectedParticipant) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('participant_health_notes')
+        .delete()
+        .eq('id', noteId);
+
+      if (error) throw error;
+
+      showSuccess('Notat slettet');
+      setNewNote('');
+      await loadParticipantDetails(selectedParticipant);
+      loadParticipants();
+    } catch (error) {
+      console.error('Error deleting health note:', error);
+      showError('Kunne ikke slette notat');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteTarget.type === 'event') {
+      await deleteHealthEvent(deleteTarget.id);
+    } else {
+      await deleteHealthNote(deleteTarget.id);
+    }
+    setDeleteTarget(null);
   };
 
   // Get unique cabins for filter
@@ -856,14 +925,33 @@ export default function Nurse() {
                     onChange={(e) => setNewNote(e.target.value)}
                     className="min-h-[150px]"
                   />
-                  <Button onClick={saveHealthNote} disabled={isSaving}>
-                    {isSaving ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4 mr-2" />
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={saveHealthNote} disabled={isSaving}>
+                      {isSaving ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Lagre notat
+                    </Button>
+                    {selectedParticipant?.healthNotes[0]?.id && (
+                      <Button
+                        variant="outline"
+                        className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={() =>
+                          setDeleteTarget({
+                            type: 'note',
+                            id: selectedParticipant.healthNotes[0].id,
+                            label: 'notatet',
+                          })
+                        }
+                        disabled={isSaving}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Slett notat
+                      </Button>
                     )}
-                    Lagre notat
-                  </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -945,16 +1033,32 @@ export default function Nurse() {
                             key={event.id} 
                             className="p-3 rounded-lg bg-muted/50 border border-border"
                           >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between mb-2 gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <Badge variant="outline">{eventType?.label || event.event_type}</Badge>
                                 <Badge className={severity?.color || 'bg-muted'}>
                                   {severity?.label || event.severity}
                                 </Badge>
                               </div>
-                              <span className="text-xs text-muted-foreground">
-                                {format(new Date(event.created_at), 'dd. MMM yyyy HH:mm', { locale: nb })}
-                              </span>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-xs text-muted-foreground">
+                                  {format(new Date(event.created_at), 'dd. MMM yyyy HH:mm', { locale: nb })}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                  onClick={() =>
+                                    setDeleteTarget({
+                                      type: 'event',
+                                      id: event.id,
+                                      label: 'hendelsen',
+                                    })
+                                  }
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
                             </div>
                             <p className="text-sm text-foreground">{event.description}</p>
                           </div>
@@ -1059,6 +1163,29 @@ export default function Nurse() {
           </Tabs>
         </ResponsiveDialogContent>
       </ResponsiveDialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Slette {deleteTarget?.label}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dette kan ikke angres. {deleteTarget?.label === 'hendelsen' ? 'Hendelsen' : 'Notatet'} fjernes permanent.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteTarget(null)}>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isSaving}
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Slett
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Large Image Dialog */}
       <Dialog open={isImageOpen} onOpenChange={setIsImageOpen}>
