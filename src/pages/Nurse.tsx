@@ -306,6 +306,63 @@ export default function Nurse() {
     }
   };
 
+  const deleteHealthEvent = async (eventId: string) => {
+    if (!selectedParticipant) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('participant_health_events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      showSuccess('Hendelse slettet');
+      await loadParticipantDetails(selectedParticipant);
+      loadParticipants();
+    } catch (error) {
+      console.error('Error deleting health event:', error);
+      showError('Kunne ikke slette hendelse');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const deleteHealthNote = async (noteId: string) => {
+    if (!selectedParticipant) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('participant_health_notes')
+        .delete()
+        .eq('id', noteId);
+
+      if (error) throw error;
+
+      showSuccess('Notat slettet');
+      setNewNote('');
+      await loadParticipantDetails(selectedParticipant);
+      loadParticipants();
+    } catch (error) {
+      console.error('Error deleting health note:', error);
+      showError('Kunne ikke slette notat');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteTarget.type === 'event') {
+      await deleteHealthEvent(deleteTarget.id);
+    } else {
+      await deleteHealthNote(deleteTarget.id);
+    }
+    setDeleteTarget(null);
+  };
+
   // Get unique cabins for filter
   const uniqueCabins = Array.from(
     new Set(participants.filter(p => p.cabin?.name).map(p => p.cabin!.name))
