@@ -127,7 +127,7 @@ export default function ShiftPlanner() {
         },
       });
 
-      const errMsg = (error as any)?.message || data?.error || '';
+      let errMsg = (error as any)?.message || data?.error || '';
       const ctx = (error as any)?.context;
       if (ctx && typeof ctx.json === 'function') {
         try {
