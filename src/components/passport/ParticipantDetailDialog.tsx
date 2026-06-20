@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { format } from 'date-fns';
 import { formatFullRoom } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -320,7 +321,15 @@ export const ParticipantDetailDialog = ({
                 <ResponsiveDialogTitle className="text-lg sm:text-xl">{participant.name}</ResponsiveDialogTitle>
 
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground flex-wrap">
-                  {age !== null && <span>{age} år</span>}
+                  {participant.birth_date && (
+                    <span>{format(new Date(participant.birth_date), 'dd.MM.yyyy')}</span>
+                  )}
+                  {age !== null && (
+                    <>
+                      <span>•</span>
+                      <span>{age} år</span>
+                    </>
+                  )}
                   {participant.room && (
                     <>
                       <span>•</span>
