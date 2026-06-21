@@ -30,6 +30,8 @@ interface SyncResult {
   failed?: number;
   unmatched: string[];
   unknownHeaders: string[];
+  range?: string;
+  headers?: string[];
   sample?: { name: string; fields: Record<string, string> }[];
   lastSyncAt?: string;
 }
@@ -122,8 +124,9 @@ export function GoogleSheetSyncTab() {
     if (dryRun) setIsPreviewing(true); else setIsSyncing(true);
     setResult(null);
     try {
+      const legacyDefaultRange = /^'?Sheet1'?!A1:Z{1,2}1000$/i.test(range.trim());
       const { data, error } = await supabase.functions.invoke('sync-leaders-from-sheet', {
-        body: { spreadsheetId: spreadsheetId.trim(), range: range.trim(), dryRun },
+        body: { spreadsheetId: spreadsheetId.trim(), range: legacyDefaultRange ? '' : range.trim(), dryRun },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
@@ -131,8 +134,9 @@ export function GoogleSheetSyncTab() {
       if (!dryRun) {
         const r = data as SyncResult;
         if (r.lastSyncAt) setLastSyncAt(r.lastSyncAt);
+        if (r.range) setRange(r.range);
         if ((r.failed || 0) > 0) showError(`Lagret ${r.saved} (${r.failed} feilet)`);
-        else showSuccess(`Synket ${r.saved} ledere`);
+        else showSuccess(`Synket ${r.saved} ledere${r.range ? ` fra ${r.range.split('!')[0].replace(/^'|'$/g, '')}` : ''}`);
       }
     } catch (e: any) {
       showError(e?.message || 'Synk feilet');
