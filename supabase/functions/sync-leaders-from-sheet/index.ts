@@ -229,8 +229,10 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({
         preview: true,
         matchedCount: matched.length,
+        range,
         unmatched,
         unknownHeaders,
+        headers: header,
         sample: matched.slice(0, 10).map(m => ({ name: m.matchedLeader!.name, fields: m.values })),
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -300,6 +302,8 @@ Deno.serve(async (req) => {
       failed,
       unmatched,
       unknownHeaders,
+      range,
+      headers: header,
       lastSyncAt: nowIso,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (err) {
