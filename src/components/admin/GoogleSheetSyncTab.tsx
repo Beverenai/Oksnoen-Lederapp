@@ -216,6 +216,9 @@ export function GoogleSheetSyncTab() {
                 <Check className="w-3 h-3 mr-1" />
                 {result.preview ? `${result.matchedCount} vil oppdateres` : `${result.saved ?? 0} oppdatert`}
               </Badge>
+              {result.range && (
+                <Badge variant="outline">Fane: {result.range.split('!')[0].replace(/^'|'$/g, '')}</Badge>
+              )}
               {(result.failed || 0) > 0 && (
                 <Badge variant="destructive">{result.failed} feilet</Badge>
               )}
@@ -230,6 +233,12 @@ export function GoogleSheetSyncTab() {
             {result.unknownHeaders.length > 0 && (
               <div className="rounded-md border border-amber-400/40 bg-amber-50 dark:bg-amber-950/30 text-sm p-3">
                 Ukjente kolonner ignoreres: {result.unknownHeaders.join(', ')}
+              </div>
+            )}
+
+            {result.headers && result.headers.length > 0 && (
+              <div className="rounded-md border bg-muted/30 text-xs p-3 text-muted-foreground">
+                Leste kolonner: {result.headers.filter(Boolean).join(', ')}
               </div>
             )}
 
