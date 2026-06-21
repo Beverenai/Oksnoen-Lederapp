@@ -130,43 +130,41 @@ Deno.serve(async (req) => {
     }
     const spreadsheetId = extractSpreadsheetId(spreadsheetIdInput);
 
+    const gatewayHeaders = {
+      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'X-Connection-Api-Key': GOOGLE_SHEETS_API_KEY,
+    };
+
     // Resolve range: if user didn't supply one, or supplied bare A1 notation without a sheet name,
     // fetch spreadsheet metadata and prefix with the first sheet's title.
     let range = rangeInput || 'A1:Z1000';
-    if (!range.includes('!')) {
-      const metaRes = await fetch(`${GATEWAY_URL}/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`, {
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'X-Connection-Api-Key': GOOGLE_SHEETS_API_KEY,
-        },
-      });
+    let sheetTitles: string[] = [];
+    const needsMetadata = !range.includes('!') || isAutoDefaultRange(range);
+    if (needsMetadata) {
+      const metaRes = await fetch(`${GATEWAY_URL}/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`, { headers: gatewayHeaders });
       const metaText = await metaRes.text();
-      if (!metaRes.ok) {
-        return new Response(JSON.stringify({ error: `Kunne ikke hente arkinfo [${metaRes.status}]: ${metaText}` }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
+      if (!metaRes.ok) return new Response(JSON.stringify({ error: `Kunne ikke hente arkinfo [${metaRes.status}]: ${metaText}` }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       const meta = JSON.parse(metaText);
-      const firstTitle: string | undefined = meta?.sheets?.[0]?.properties?.title;
+      sheetTitles = (meta?.sheets || []).map((s: any) => s?.properties?.title).filter(Boolean);
+      const firstTitle = sheetTitles[0];
       if (!firstTitle) {
         return new Response(JSON.stringify({ error: 'Fant ingen faner i Google Sheet.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
-      const sheetPrefix = /[^A-Za-z0-9_]/.test(firstTitle) ? `'${firstTitle.replace(/'/g, "''")}'` : firstTitle;
-      range = `${sheetPrefix}!${range}`;
+      if (!range.includes('!')) range = `${sheetPrefix(firstTitle)}!${range}`;
     }
 
-    // Fetch sheet via gateway
-    const sheetUrl = `${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${range}`;
-    const sheetRes = await fetch(sheetUrl, {
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'X-Connection-Api-Key': GOOGLE_SHEETS_API_KEY,
-      },
-    });
-    const sheetText = await sheetRes.text();
-    if (!sheetRes.ok) {
-      return new Response(JSON.stringify({ error: `Google Sheets fetch failed [${sheetRes.status}]: ${sheetText}` }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // Fetch sheet via gateway. If the saved setup still points at the old default Sheet1,
+    // try all tabs and use the one with the most matched leaders.
+    const rangesToTry = isAutoDefaultRange(range) && sheetTitles.length > 1
+      ? sheetTitles.map((title) => `${sheetPrefix(title)}!A1:Z1000`)
+      : [range];
+    let best = await fetchSheetValues(spreadsheetId, rangesToTry[0], gatewayHeaders);
+    for (const candidate of rangesToTry.slice(1)) {
+      const next = await fetchSheetValues(spreadsheetId, candidate, gatewayHeaders);
+      if (next.values.length > best.values.length) best = next;
     }
-    const sheetData = JSON.parse(sheetText);
-    const values: string[][] = sheetData.values || [];
+    range = best.range;
+    const values = best.values;
     if (values.length < 2) {
       return new Response(JSON.stringify({ error: 'Trenger en headerrad og minst én datarad.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
