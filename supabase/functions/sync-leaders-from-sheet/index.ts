@@ -11,13 +11,15 @@ const GATEWAY_URL = 'https://connector-gateway.lovable.dev/google_sheets/v4';
 const HEADER_ALIASES: Record<string, string> = {
   'navn': 'name', 'name': 'name',
   'tlf': 'phone', 'telefon': 'phone', 'phone': 'phone', 'mobil': 'phone',
-  'aktivitet': 'current_activity', 'activity': 'current_activity',
-  'ansvar': 'extra_activity',
-  'notater': 'personal_notes', 'notes': 'personal_notes',
+  'aktivitet': 'current_activity', 'aktiviteter': 'current_activity', 'activity': 'current_activity',
+  'nåværende aktivitet': 'current_activity', 'naverende aktivitet': 'current_activity',
+  'denne økten skal du': 'current_activity', 'denne okten skal du': 'current_activity',
+  'ansvar': 'extra_activity', 'ekstra ansvar': 'extra_activity', 'oppgave': 'extra_activity',
+  'notater': 'personal_notes', 'notat': 'personal_notes', 'notes': 'personal_notes', 'beskjed': 'personal_notes',
   'notater til deg': 'personal_notes', 'notater/til deg': 'personal_notes',
-  'til deg': 'personal_message', 'til lederen': 'personal_message', 'personal_message': 'personal_message',
-  'obs': 'obs_message', 'obs!': 'obs_message', 'viktig': 'obs_message',
-  'ekstra #1': 'extra_1', 'ekstra 1': 'extra_1', 'ekstra1': 'extra_1',
+  'til deg': 'personal_message', 'til lederen': 'personal_message', 'personlig melding': 'personal_message', 'personal_message': 'personal_message',
+  'obs': 'obs_message', 'obs!': 'obs_message', 'viktig': 'obs_message', 'viktig info': 'obs_message',
+  'ekstra #1': 'extra_1', 'ekstra 1': 'extra_1', 'ekstra1': 'extra_1', 'overnatting': 'extra_1',
   'ekstra #2': 'extra_2', 'ekstra 2': 'extra_2', 'ekstra2': 'extra_2',
   'ekstra #3': 'extra_3', 'ekstra 3': 'extra_3', 'ekstra3': 'extra_3',
   'ekstra #4': 'extra_4', 'ekstra 4': 'extra_4', 'ekstra4': 'extra_4',
@@ -77,6 +79,17 @@ function matchCabinIds(text: string | null | undefined, cabins: { id: string; na
 function extractSpreadsheetId(input: string): string {
   const m = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
   return m ? m[1] : input.trim();
+}
+
+const sheetPrefix = (title: string) => /[^A-Za-z0-9_]/.test(title) ? `'${title.replace(/'/g, "''")}'` : title;
+const isAutoDefaultRange = (range: string) => /^'?Sheet1'?!A1:Z1000$/i.test(range.trim());
+
+async function fetchSheetValues(spreadsheetId: string, range: string, headers: HeadersInit) {
+  const res = await fetch(`${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${range}`, { headers });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Google Sheets fetch failed [${res.status}]: ${text}`);
+  const data = JSON.parse(text);
+  return { range, values: (data.values || []) as string[][] };
 }
 
 Deno.serve(async (req) => {
