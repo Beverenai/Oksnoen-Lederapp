@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
+import { Button } from '@/components/ui/button';
 
 interface Participant {
   id: string;
@@ -12,38 +13,46 @@ interface AgeDistributionChartProps {
   participants: Participant[];
 }
 
+type GroupMode = 'age' | 'birthYear';
+
 export function AgeDistributionChart({ participants }: AgeDistributionChartProps) {
+  const [groupMode, setGroupMode] = useState<GroupMode>('age');
+
   const ageData = useMemo(() => {
     const today = new Date();
     const counts: Record<number, number> = {};
 
     participants.forEach((p) => {
       if (!p.birth_date) return;
-      
       const birthDate = new Date(p.birth_date);
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
+
+      let key: number;
+      if (groupMode === 'birthYear') {
+        key = birthDate.getFullYear();
+      } else {
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        key = age;
       }
 
-      counts[age] = (counts[age] || 0) + 1;
+      counts[key] = (counts[key] || 0) + 1;
     });
 
-    // Sort by age and create data array
     return Object.entries(counts)
-      .map(([age, count]) => ({ age: parseInt(age), count }))
+      .map(([key, count]) => ({ age: parseInt(key), count }))
       .sort((a, b) => a.age - b.age)
       .map((item, index) => ({
-        name: `${item.age} år`,
+        name: groupMode === 'birthYear' ? `${item.age}` : `${item.age} år`,
         count: item.count,
         fill: `hsl(var(--chart-${(index % 5) + 1}))`,
       }));
-  }, [participants]);
+  }, [participants, groupMode]);
 
   const total = ageData.reduce((sum, g) => sum + g.count, 0);
 
-  // Generate chart config dynamically
   const chartConfig = useMemo(() => {
     const config: Record<string, { label: string; color?: string }> = {
       count: { label: 'Antall' },
@@ -62,7 +71,27 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium">Aldersfordeling</CardTitle>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <CardTitle className="text-base font-medium">
+            {groupMode === 'birthYear' ? 'Fødselsårfordeling' : 'Aldersfordeling'}
+          </CardTitle>
+          <div className="flex items-center gap-1">
+            <Button
+              variant={groupMode === 'age' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setGroupMode('age')}
+            >
+              Alder
+            </Button>
+            <Button
+              variant={groupMode === 'birthYear' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setGroupMode('birthYear')}
+            >
+              Fødselsår
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="w-full" style={{ height: chartHeight }}>
@@ -74,7 +103,7 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
                 dataKey="name" 
                 axisLine={false}
                 tickLine={false}
-                width={50}
+                width={groupMode === 'birthYear' ? 44 : 50}
                 tick={{ fontSize: 12 }}
               />
               <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={28}>
@@ -97,3 +126,4 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
     </Card>
   );
 }
+
