@@ -158,10 +158,16 @@ Deno.serve(async (req) => {
     const rangesToTry = isAutoDefaultRange(range) && sheetTitles.length > 1
       ? sheetTitles.map((title) => `${sheetPrefix(title)}!A1:ZZ1000`)
       : [range];
+    const scoreSheet = (values: string[][]) => {
+      const firstRow = values[0] || [];
+      const mappedHeaders = firstRow.map((h) => HEADER_ALIASES[norm(h)]).filter(Boolean);
+      const hasPhone = mappedHeaders.includes('phone');
+      return (hasPhone ? 100000 : 0) + mappedHeaders.length * 1000 + values.length;
+    };
     let best = await fetchSheetValues(spreadsheetId, rangesToTry[0], gatewayHeaders);
     for (const candidate of rangesToTry.slice(1)) {
       const next = await fetchSheetValues(spreadsheetId, candidate, gatewayHeaders);
-      if (next.values.length > best.values.length) best = next;
+      if (scoreSheet(next.values) > scoreSheet(best.values)) best = next;
     }
     range = best.range;
     const values = best.values;
