@@ -82,7 +82,7 @@ function extractSpreadsheetId(input: string): string {
 }
 
 const sheetPrefix = (title: string) => /[^A-Za-z0-9_]/.test(title) ? `'${title.replace(/'/g, "''")}'` : title;
-const isAutoDefaultRange = (range: string) => /^'?Sheet1'?!A1:Z1000$/i.test(range.trim());
+const isAutoDefaultRange = (range: string) => /^'?Sheet1'?!A1:Z{1,2}1000$/i.test(range.trim());
 
 async function fetchSheetValues(spreadsheetId: string, range: string, headers: HeadersInit) {
   const res = await fetch(`${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${range}`, { headers });
@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
 
     // Resolve range: if user didn't supply one, or supplied bare A1 notation without a sheet name,
     // fetch spreadsheet metadata and prefix with the first sheet's title.
-    let range = rangeInput || 'A1:Z1000';
+    let range = rangeInput || 'A1:ZZ1000';
     let sheetTitles: string[] = [];
     const needsMetadata = !range.includes('!') || isAutoDefaultRange(range);
     if (needsMetadata) {
@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
     // Fetch sheet via gateway. If the saved setup still points at the old default Sheet1,
     // try all tabs and use the one with the most matched leaders.
     const rangesToTry = isAutoDefaultRange(range) && sheetTitles.length > 1
-      ? sheetTitles.map((title) => `${sheetPrefix(title)}!A1:Z1000`)
+      ? sheetTitles.map((title) => `${sheetPrefix(title)}!A1:ZZ1000`)
       : [range];
     let best = await fetchSheetValues(spreadsheetId, rangesToTry[0], gatewayHeaders);
     for (const candidate of rangesToTry.slice(1)) {
