@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Phone, AlertTriangle, Car, Anchor, Mountain, Cross, Home, ArrowDown, Cable, Wrench } from 'lucide-react';
+import { Phone, MessageSquare, AlertTriangle, Car, Anchor, Mountain, Cross, Home, ArrowDown, Cable, Wrench } from 'lucide-react';
 import { icons } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
@@ -196,17 +196,29 @@ export function LeaderDetailSheet({
         </SheetHeader>
 
         <div className="space-y-4 overflow-y-auto pb-6">
-          {/* Call button */}
-          <Button 
-            asChild 
-            className="w-full bg-green-600 hover:bg-green-700 text-white"
-            size="lg"
-          >
-            <a href={`tel:${leader.phone}`}>
-              <Phone className="w-5 h-5 mr-2" />
-              Ring {leader.phone}
-            </a>
-          </Button>
+          {/* Call + SMS buttons */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              asChild
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+              size="lg"
+            >
+              <a href={`tel:${leader.phone}`}>
+                <Phone className="w-5 h-5 mr-2" />
+                Ring
+              </a>
+            </Button>
+            <Button
+              asChild
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              size="lg"
+            >
+              <a href={`sms:${leader.phone}`}>
+                <MessageSquare className="w-5 h-5 mr-2" />
+                SMS
+              </a>
+            </Button>
+          </div>
 
           {/* Certifications */}
           {(leader.has_car || leader.has_drivers_license || leader.has_boat_license || 
