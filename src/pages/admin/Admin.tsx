@@ -218,12 +218,6 @@ export default function Admin() {
               <span className="hidden sm:inline sm:ml-2">Vaktplan</span>
             </Button>
           </Link>
-          <Link to="/admin/dynga">
-            <Button variant="outline" size="sm">
-              <ClipboardList className="h-4 w-4" />
-              <span className="hidden sm:inline sm:ml-2">Dynga</span>
-            </Button>
-          </Link>
           <Link to="/admin/settings">
             <Button variant="outline" size="sm">
               <Settings className="h-4 w-4" />
