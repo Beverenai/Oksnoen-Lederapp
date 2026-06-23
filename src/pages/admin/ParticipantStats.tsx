@@ -13,6 +13,7 @@ import { ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity, ArrowLef
 
 
 const navItems = [
+  { key: "dynga", label: "Dynga", desc: "Oversikt over deltakeroppførsel", icon: LayoutDashboard, color: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400", path: "/admin/dynga" },
   { key: "room-swap", label: "Rombytter", desc: "Bytt rom mellom deltakere", icon: ArrowLeftRight, color: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
   { key: "cabin-reports", label: "Hytterapporter", desc: "Se rapporter per hytte", icon: Home, color: "bg-green-500/15 text-green-600 dark:text-green-400" },
   { key: "checkout", label: "Utsjekk", desc: "Håndter utsjekk av deltakere", icon: Sparkles, color: "bg-purple-500/15 text-purple-600 dark:text-purple-400" },
