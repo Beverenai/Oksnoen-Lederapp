@@ -1,85 +1,79 @@
-## Mål
+## Dynga — Kanban-tavle for deltageroppførsel
 
-1. Ledere skal kunne se hva de andre lederne holder på med (aktivitet) på `/ledere`-siden.
-2. Listen skal scrolle jevnt – ingen "frys" når man scroller ned og raskt opp igjen.
+En admin-only Kanban-tavle der du kan dra deltagerkort mellom tilpassbare kolonner og føre en datert kommentartråd per deltager. Helt separat fra resten av appen — ingenting lekker til pass, sykepleier eller Viktig Info.
 
-## Problem 1 — Aktivitet vises ikke for andre
+### Database (ny migrering)
 
-Siden bruker allerede `leader.content?.current_activity`, men RLS på `public.leader_content` er:
+Tre nye tabeller, alle med RLS som kun tillater admin/superadmin (`public.is_admin()`):
 
-```
-USING (leader_id = current_leader_id() OR is_admin())
-```
+- **`dynga_columns`** — `id`, `title`, `color` (hex/token), `sort_order`, `created_at`
+- **`dynga_cards`** — `id`, `participant_id` (FK → participants, unique), `column_id` (FK → dynga_columns), `sort_order`, `created_at`, `updated_at`
+- **`dynga_comments`** — `id`, `card_id` (FK → dynga_cards, on delete cascade), `leader_id` (FK → leaders), `body` (text), `created_at`
 
-Vanlige ledere får derfor bare sin egen rad tilbake → aktivitetslinjen er tom for alle andre. Vi må eksponere aktivitetsfeltene (men ikke private felter som `personal_notes`, `obs_message`, `has_read`, push-tokens osv.) til alle innloggede ledere.
+GRANT til `authenticated` og `service_role`. Policies: alle fire (SELECT/INSERT/UPDATE/DELETE) krever `public.is_admin()`. Standard 4 kolonner seedes: "Observasjon", "Positivt", "Advarsel", "Oppfølging" — admin kan endre/slette/legge til.
 
-### Løsning (DB)
+### Ny side: `/admin/dynga`
 
-Lag en kolonne-begrenset visning og bruk den i Ledere-fetch:
+Rute lagt til i `App.tsx` bak admin-guard. Lenke i Admin-dashboardet (kabana-grid-stil som resten av admin-innstillinger).
 
-```sql
-CREATE OR REPLACE VIEW public.leader_activities_public
-WITH (security_invoker = true) AS
-SELECT leader_id, current_activity, extra_activity, updated_at
-FROM public.leader_content;
+Layout:
 
-GRANT SELECT ON public.leader_activities_public TO authenticated;
-```
-
-Pluss en ekstra RLS-policy på `leader_content` som tillater `SELECT` for `authenticated` *kun gjennom* viewet — enkleste vei: legge til en ekstra SELECT-policy som tillater alle authenticated, og la viewet velge ut de "trygge" kolonnene. Men da lekker andre kolonner via direkte tabell-spørring. Derfor:
-
-- Behold dagens strenge `leader_content_select`-policy.
-- Lag viewet som `SECURITY DEFINER` (ikke `security_invoker`) eid av en rolle som kan lese tabellen, slik at viewet bypasser RLS på de utvalgte kolonnene.
-
-```sql
-CREATE OR REPLACE VIEW public.leader_activities_public AS
-SELECT leader_id, current_activity, extra_activity, updated_at
-FROM public.leader_content;
-
-ALTER VIEW public.leader_activities_public OWNER TO postgres;
-GRANT SELECT ON public.leader_activities_public TO authenticated;
+```text
+┌─────────────────────────────────────────────────────────┐
+│  Dynga                       [+ Legg til deltager] [⚙]  │
+├──────────┬──────────┬──────────┬──────────┬─────────────┤
+│Observasj.│ Positivt │ Advarsel │Oppfølging│ + Ny kolonne│
+│ ┌──────┐ │ ┌──────┐ │          │          │             │
+│ │ 👤   │ │ │ 👤   │ │          │          │             │
+│ │ Navn │ │ │ Navn │ │          │          │             │
+│ │ 💬 3 │ │ │ 💬 1 │ │          │          │             │
+│ └──────┘ │ └──────┘ │          │          │             │
+└──────────┴──────────┴──────────┴──────────┴─────────────┘
 ```
 
-### Løsning (frontend)
+- Horisontal scroll på mobil, kolonner ca. 280px brede.
+- Deltagerkort viser `image_url` (Avatar med fallback til initialer), fullt navn, hytte (liten muted tekst), kommentar-teller med ikon.
+- Drag-and-drop mellom kolonner og innen kolonne — bruker `@dnd-kit/core` + `@dnd-kit/sortable` (allerede vanlig i shadcn-stacker; installeres hvis ikke til stede).
+- "+ Legg til deltager"-knapp åpner sheet med søkbar liste over alle deltagere som ikke allerede er på tavla → velg én eller flere, legges i første kolonne.
+- Tannhjul ⚙ åpner kolonnehåndtering: rediger tittel/farge, slett (med bekreftelse — kort flyttes til første gjenværende kolonne), legg til ny, drag for å endre rekkefølge.
 
-I `src/pages/Leaders.tsx`:
-- Bytt `from('leader_content').select('*')` → `from('leader_activities_public').select('leader_id, current_activity, extra_activity')`.
-- `LeaderWithContent.content` blir kun de offentlige feltene her (resten brukes ikke på denne siden uansett — `has_read`/`obs_message`/`personal_notes` leses ikke i kortet for andre ledere).
-- Type-cast lokalt siden viewet ikke ligger i typegen.
+### Kortdetaljer — sheet
 
-Admin-dashboardet (`useLeaderDashboardData`) er uendret — det fortsetter å bruke `leader_content` direkte (admins har full tilgang via `is_admin()`).
+Trykk på kort → høyre-sheet (Sheet-komponent) med:
 
-## Problem 2 — Hakkete scroll
+- Avatar + fullt navn + hytte øverst
+- Knapp "Fjern fra Dynga" (sletter card + alle kommentarer)
+- Kommentartråd: kronologisk liste, hver kommentar viser leder-navn, relativ tid (`date-fns formatDistanceToNow` med nb), og body. Egne kommentarer kan slettes; admin kan slette alle.
+- Tekstfelt nederst + "Legg til kommentar"-knapp. Lagrer med `leader_id = effectiveLeader.id`.
 
-Tre årsaker, fjernes alle:
+### Datalag
 
-1. **Re-renders på hele listen** ved scroll (ingen memoisering). Pakk lederkortet inn i en egen `LeaderRow`-komponent med `React.memo`.
-2. **`animate-pulse` på grønn prikk** for hver synlig leder + **`ring-4 ring-offset-2`** på avatarer = mange composited layers. Vi fjerner ikke effekten, men slår av `animate-pulse` (statisk grønn prikk holder) og setter `will-change: transform` av (default, men sjekk at den ikke er satt).
-3. **Layout-trashing ved hurtig scroll** fordi alle ~80 kort render samtidig. Legg på CSS `content-visibility: auto; contain-intrinsic-size: 96px 96px;` på hvert kort så off-screen kort skipper layout/paint.
+Ny hook `src/hooks/useDynga.ts` med React Query:
+- `useDyngaColumns()`, `useDyngaCards()` (joiner participants + cabin + comment-count), `useDyngaComments(cardId)`
+- Mutations for move-card, add-card, remove-card, add/edit/delete kolonne, add/delete kommentar — alle invaliderer relevante queries.
+- Realtime-kanal på alle tre tabeller (samme mønster som checkout-config) → flere admins ser endringer live.
 
-### Endringer
+### Filer som opprettes
 
-- Ny `src/components/leaders/LeaderRow.tsx` (memoisert) som rendrer eksisterende markup. Bruker stabile callbacks (`onSelect(leader)`, `onCall(phone)`).
-- `Leaders.tsx`: map `filteredAndSortedLeaders` til `<LeaderRow>` med `key={leader.id}`. Separator-logikken beholdes i parent.
-- Fjern `animate-pulse` fra grønn aktivitets-prikk.
-- Legg til Tailwind-klasser `[content-visibility:auto] [contain-intrinsic-size:96px]` på kort-wrapperen.
+- `supabase/migrations/<timestamp>_dynga.sql`
+- `src/pages/admin/Dynga.tsx`
+- `src/components/admin/dynga/DyngaBoard.tsx` (DnD-kontekst + kolonnegrid)
+- `src/components/admin/dynga/DyngaColumn.tsx`
+- `src/components/admin/dynga/DyngaCard.tsx`
+- `src/components/admin/dynga/DyngaCardSheet.tsx` (detalj + kommentartråd)
+- `src/components/admin/dynga/AddParticipantsSheet.tsx`
+- `src/components/admin/dynga/ManageColumnsSheet.tsx`
+- `src/hooks/useDynga.ts`
 
-## Tekniske detaljer
+### Filer som endres
 
-- Migration oppretter viewet og GRANT.
-- `Leaders.tsx`: ett spørringsbytte + render-refaktor. Sortering/filtrering uendret.
-- Ingen endringer i admin-flyten, push, eller andre sider.
+- `src/App.tsx` — rute `/admin/dynga`
+- `src/components/admin/settings/AdminSettingsContent.tsx` (eller tilsvarende admin-grid) — kort som lenker til Dynga
+- `package.json` — `@dnd-kit/core`, `@dnd-kit/sortable` hvis ikke allerede installert
 
-## Filer som endres
+### Tekniske detaljer
 
-```
-supabase/migrations/<ts>_leader_activities_public_view.sql   (ny)
-src/pages/Leaders.tsx
-src/components/leaders/LeaderRow.tsx                          (ny)
-```
-
-## Verifisering
-
-- Logg inn som vanlig leder → se andre lederes `current_activity` på `/ledere`.
-- Scroll opp/ned raskt på mobil-preview → ingen merkbar frys.
-- Admin-dashboardet viser fortsatt obs/notater/lest-status uendret.
+- Mobile-first: kolonner blir horisontalt scrollbare på smale skjermer; sheets brukes overalt for å unngå modale dialoger.
+- Glassmorphism-stil i tråd med resten av admin (semantiske tokens, ingen hardkodede farger).
+- Sort-order håndteres med heltall — ved drag oppdateres kun de berørte radene via batch-update.
+- Kommentarsletting begrenses til egen kommentar med mindre `is_superadmin()` — håndteres i UI; RLS tillater admin å slette alt.

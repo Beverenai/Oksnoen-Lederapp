@@ -146,6 +146,111 @@ export type Database = {
         }
         Relationships: []
       }
+      dynga_cards: {
+        Row: {
+          column_id: string
+          created_at: string
+          id: string
+          participant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          column_id: string
+          created_at?: string
+          id?: string
+          participant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          column_id?: string
+          created_at?: string
+          id?: string
+          participant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dynga_cards_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "dynga_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dynga_cards_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: true
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dynga_columns: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          title?: string
+        }
+        Relationships: []
+      }
+      dynga_comments: {
+        Row: {
+          body: string
+          card_id: string
+          created_at: string
+          id: string
+          leader_id: string | null
+        }
+        Insert: {
+          body: string
+          card_id: string
+          created_at?: string
+          id?: string
+          leader_id?: string | null
+        }
+        Update: {
+          body?: string
+          card_id?: string
+          created_at?: string
+          id?: string
+          leader_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dynga_comments_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "dynga_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dynga_comments_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       extra_fields_config: {
         Row: {
           created_at: string | null
