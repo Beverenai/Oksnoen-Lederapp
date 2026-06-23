@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DyngaCardWithParticipant } from '@/hooks/useDynga';
