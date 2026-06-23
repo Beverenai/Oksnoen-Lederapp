@@ -73,12 +73,27 @@ const ParticipantStats = () => {
 
       <ParticipantStatsCard />
 
-      <div className="grid grid-cols-2 gap-3 mt-6">
-        {navItems.map(({ key, label, desc, icon: Icon, color, path }) => (
+      <div className="mt-6">
+        <Card
+          className="p-4 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform bg-indigo-500/15 text-indigo-600 dark:text-indigo-400"
+          onClick={() => navigate(dyngaNavItem.path)}
+        >
+          <div className="flex items-start gap-3">
+            <dyngaNavItem.icon className="h-7 w-7 shrink-0" />
+            <div>
+              <p className="font-semibold text-sm">{dyngaNavItem.label}</p>
+              <p className="text-xs opacity-70 mt-0.5">{dyngaNavItem.desc}</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mt-3">
+        {navItems.map(({ key, label, desc, icon: Icon, color }) => (
           <Card
             key={key}
             className={`p-4 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${color}`}
-            onClick={() => path ? navigate(path) : setSearchParams({ tab: key })}
+            onClick={() => setSearchParams({ tab: key })}
           >
             <Icon className="h-7 w-7 mb-2" />
             <p className="font-semibold text-sm">{label}</p>
