@@ -182,7 +182,7 @@ export type Database = {
           {
             foreignKeyName: "dynga_cards_participant_id_fkey"
             columns: ["participant_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "participants"
             referencedColumns: ["id"]
           },

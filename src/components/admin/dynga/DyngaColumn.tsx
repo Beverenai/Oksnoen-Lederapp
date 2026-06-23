@@ -51,7 +51,7 @@ export function DyngaColumn({ column, count, children }: Props) {
         </div>
         <Badge variant="secondary" className="text-xs">{count}</Badge>
       </div>
-      <div className="flex-1 min-h-[200px] p-2 space-y-2 overflow-y-auto max-h-[calc(100dvh-260px)]">
+      <div className="flex-1 min-h-[200px] p-2 space-y-2 overflow-y-auto">
         {children}
         {count === 0 && (
           <p className="text-xs text-muted-foreground text-center py-6">Slipp deltagere her</p>
@@ -96,7 +96,7 @@ export function SortableDyngaColumn({ column, count, children }: SortableColumnP
     >
       <div
         className={cn(
-          'w-[280px] rounded-xl border backdrop-blur-sm flex flex-col',
+          'w-[280px] rounded-xl border backdrop-blur-sm flex flex-col h-full',
           colorClass
         )}
       >
@@ -116,7 +116,7 @@ export function SortableDyngaColumn({ column, count, children }: SortableColumnP
           </div>
           <Badge variant="secondary" className="text-xs">{count}</Badge>
         </div>
-        <div className="flex-1 min-h-[200px] p-2 space-y-2 overflow-y-auto max-h-[calc(100dvh-260px)]">
+        <div className="flex-1 min-h-[200px] p-2 space-y-2 overflow-y-auto">
           {children}
           {count === 0 && (
             <p className="text-xs text-muted-foreground text-center py-6">Slipp deltagere her</p>

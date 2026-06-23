@@ -130,7 +130,7 @@ export function DyngaBoard() {
     <>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <SortableContext items={columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
-          <div className="flex gap-3 overflow-x-auto pb-3 -mx-2 px-2 snap-x items-start">
+          <div className="flex gap-3 overflow-x-auto overflow-y-hidden pb-3 -mx-2 px-2 snap-x items-stretch h-full">
             {columns.map(col => {
               const colCards = cardsByColumn.get(col.id) || [];
               return (
