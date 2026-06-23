@@ -66,11 +66,11 @@ const ParticipantStats = () => {
       <ParticipantStatsCard />
 
       <div className="grid grid-cols-2 gap-3 mt-6">
-        {navItems.map(({ key, label, desc, icon: Icon, color }) => (
+        {navItems.map(({ key, label, desc, icon: Icon, color, path }) => (
           <Card
             key={key}
             className={`p-4 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${color}`}
-            onClick={() => setSearchParams({ tab: key })}
+            onClick={() => path ? navigate(path) : setSearchParams({ tab: key })}
           >
             <Icon className="h-7 w-7 mb-2" />
             <p className="font-semibold text-sm">{label}</p>
