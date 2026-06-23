@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useActivities } from '@/hooks/useActivities';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 interface ActivitySelectorProps {
@@ -19,6 +20,7 @@ export function ActivitySelector({
   onActivityChanged,
 }: ActivitySelectorProps) {
   const { showSuccess, showError, showInfo } = useStatusPopup();
+  const { leader } = useAuth();
   const { activities } = useActivities(true);
   const [isLoading, setIsLoading] = useState<string | null>(null);
 
@@ -34,13 +36,17 @@ export function ActivitySelector({
     try {
       if (isActivityCompleted(activityTitle)) {
         // Remove activity
-        const { error } = await supabase
+        const { error, count } = await supabase
           .from('participant_activities')
-          .delete()
+          .delete({ count: 'exact' })
           .eq('participant_id', participantId)
           .ilike('activity', activityTitle);
 
         if (error) throw error;
+        if (!count) {
+          showError('Kunne ikke fjerne', 'Ingen aktivitet ble fjernet');
+          return;
+        }
         showSuccess(`${activityTitle} fjernet`);
       } else {
         // Add activity
@@ -49,6 +55,7 @@ export function ActivitySelector({
           .insert({
             participant_id: participantId,
             activity: activityTitle,
+            registered_by: leader?.id,
           });
 
         if (error) throw error;
