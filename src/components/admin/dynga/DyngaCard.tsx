@@ -18,9 +18,15 @@ export function DyngaCard({ card, onClick, isOverlay }: Props) {
     id: card.id,
     disabled: isOverlay,
   });
+  const [imageOpen, setImageOpen] = useState(false);
   const p = card.participant;
   const name = p?.name || 'Ukjent';
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+  const openSheet = () => {
+    if (isDragging) return;
+    onClick?.();
+  };
 
   return (
     <div
