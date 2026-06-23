@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Progress } from '@/components/ui/progress';
 import {
   Settings, Loader2, Shield, Calendar,
-  Save, LayoutGrid, List, Sparkles, CalendarDays, RefreshCw, ClipboardList,
+  Save, LayoutGrid, List, Sparkles, CalendarDays, RefreshCw,
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
