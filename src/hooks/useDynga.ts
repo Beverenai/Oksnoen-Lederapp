@@ -112,7 +112,7 @@ export function useMoveCard() {
 export function useAddCards() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ participantIds, columnId }: { participantIds: string[]; columnId: string }) => {
+    mutationFn: async ({ participantIds, columnId, initialComment, leaderId }: { participantIds: string[]; columnId: string; initialComment?: string; leaderId?: string | null }) => {
       const { data: existing } = await supabase
         .from('dynga_cards')
         .select('sort_order')
@@ -125,8 +125,18 @@ export function useAddCards() {
         column_id: columnId,
         sort_order: nextOrder++,
       }));
-      const { error } = await supabase.from('dynga_cards').insert(rows);
+      const { data: inserted, error } = await supabase.from('dynga_cards').insert(rows).select('id');
       if (error) throw error;
+      const trimmed = initialComment?.trim();
+      if (trimmed && leaderId && inserted && inserted.length > 0) {
+        const commentRows = inserted.map((c: any) => ({
+          card_id: c.id,
+          leader_id: leaderId,
+          body: trimmed,
+        }));
+        const { error: cErr } = await supabase.from('dynga_comments').insert(commentRows);
+        if (cErr) throw cErr;
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['dynga-cards'] }),
   });

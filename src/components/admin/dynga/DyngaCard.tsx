@@ -37,23 +37,23 @@ export function DyngaCard({ card, onClick, isOverlay }: Props) {
         isOverlay && 'shadow-lg ring-2 ring-primary/40 rotate-1'
       )}
     >
-      <div className="flex items-center gap-2.5">
-        <Avatar className="h-10 w-10 shrink-0">
-          {p?.image_url ? <AvatarImage src={p.image_url} alt={name} /> : null}
-          <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+      <div className="flex items-center gap-3">
+        <Avatar className="h-16 w-16 shrink-0">
+          {p?.image_url ? <AvatarImage src={p.image_url} alt={name} className="object-cover" /> : null}
+          <AvatarFallback className="text-sm">{initials}</AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-sm truncate">{name}</div>
-          <div className="text-[11px] text-muted-foreground truncate">
+          <div className="font-medium text-sm leading-tight line-clamp-2">{name}</div>
+          <div className="text-[11px] text-muted-foreground truncate mt-0.5">
             {p?.cabins?.name || 'Uten hytte'}
           </div>
+          {card.comment_count > 0 && (
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-1">
+              <MessageSquare className="h-3 w-3" />
+              {card.comment_count}
+            </div>
+          )}
         </div>
-        {card.comment_count > 0 && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-            <MessageSquare className="h-3.5 w-3.5" />
-            {card.comment_count}
-          </div>
-        )}
       </div>
     </div>
   );
