@@ -109,6 +109,20 @@ export function useMoveCard() {
   });
 }
 
+export function useMoveColumn() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ columnId, sortOrder }: { columnId: string; sortOrder: number }) => {
+      const { error } = await supabase
+        .from('dynga_columns')
+        .update({ sort_order: sortOrder })
+        .eq('id', columnId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['dynga-columns'] }),
+  });
+}
+
 export function useAddCards() {
   const qc = useQueryClient();
   return useMutation({

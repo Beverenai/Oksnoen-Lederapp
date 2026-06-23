@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { useDyngaCards, useDyngaColumns, useMoveCard, type DyngaCardWithParticipant } from '@/hooks/useDynga';
-import { DyngaColumn } from './DyngaColumn';
+import { SortableContext, horizontalListSortingStrategy, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useDyngaCards, useDyngaColumns, useMoveCard, useMoveColumn, type DyngaCardWithParticipant } from '@/hooks/useDynga';
+import { SortableDyngaColumn } from './DyngaColumn';
 import { DyngaCard } from './DyngaCard';
 import { DyngaCardSheet } from './DyngaCardSheet';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,6 +11,7 @@ export function DyngaBoard() {
   const { data: columns = [], isLoading: cLoading } = useDyngaColumns();
   const { data: cards = [], isLoading: kLoading } = useDyngaCards();
   const moveCard = useMoveCard();
+  const moveColumn = useMoveColumn();
   const [activeCard, setActiveCard] = useState<DyngaCardWithParticipant | null>(null);
   const [openCardId, setOpenCardId] = useState<string | null>(null);
 
@@ -41,11 +42,38 @@ export function DyngaBoard() {
     setActiveCard(null);
     const { active, over } = e;
     if (!over) return;
-    const card = findCard(String(active.id));
-    if (!card) return;
 
-    // over.id can be a column id (empty column drop) or another card id
+    const activeId = String(active.id);
     const overId = String(over.id);
+
+    const activeCard = findCard(activeId);
+
+    // Column reordering
+    if (!activeCard) {
+      const activeCol = columns.find(c => c.id === activeId);
+      const overCol = columns.find(c => c.id === overId);
+      if (!activeCol || !overCol || activeCol.id === overCol.id) return;
+
+      const sorted = [...columns].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      const currentIndex = sorted.findIndex(c => c.id === activeCol.id);
+      const targetIndex = sorted.findIndex(c => c.id === overCol.id);
+      if (currentIndex === targetIndex) return;
+
+      const list = sorted.filter(c => c.id !== activeCol.id);
+      const before = list[targetIndex - 1]?.sort_order;
+      const after = list[targetIndex]?.sort_order;
+      let newOrder: number;
+      if (before == null && after == null) newOrder = 0;
+      else if (before == null) newOrder = (after as number) - 1;
+      else if (after == null) newOrder = (before as number) + 1;
+      else newOrder = Math.floor(((before as number) + (after as number)) / 2);
+      if (before != null && after != null && newOrder === before) newOrder = before + 1;
+
+      moveColumn.mutate({ columnId: activeCol.id, sortOrder: newOrder });
+      return;
+    }
+
+    // Card dropping
     const overCol = columns.find(c => c.id === overId);
     let targetColumnId: string;
     let targetIndex: number;
@@ -61,14 +89,13 @@ export function DyngaBoard() {
       targetIndex = list.findIndex(c => c.id === overCard.id);
     }
 
-    if (card.column_id === targetColumnId) {
+    if (activeCard.column_id === targetColumnId) {
       const list = cardsByColumn.get(targetColumnId) || [];
-      const currentIndex = list.findIndex(c => c.id === card.id);
+      const currentIndex = list.findIndex(c => c.id === activeCard.id);
       if (currentIndex === targetIndex) return;
     }
 
-    // simple integer sort: insert at targetIndex by averaging neighbours' sort_order
-    const list = (cardsByColumn.get(targetColumnId) || []).filter(c => c.id !== card.id);
+    const list = (cardsByColumn.get(targetColumnId) || []).filter(c => c.id !== activeCard.id);
     const before = list[targetIndex - 1]?.sort_order;
     const after = list[targetIndex]?.sort_order;
     let newOrder: number;
@@ -78,7 +105,7 @@ export function DyngaBoard() {
     else newOrder = Math.floor(((before as number) + (after as number)) / 2);
     if (before != null && after != null && newOrder === before) newOrder = before + 1;
 
-    moveCard.mutate({ cardId: card.id, columnId: targetColumnId, sortOrder: newOrder });
+    moveCard.mutate({ cardId: activeCard.id, columnId: targetColumnId, sortOrder: newOrder });
   };
 
   if (cLoading || kLoading) {
@@ -102,20 +129,22 @@ export function DyngaBoard() {
   return (
     <>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="flex gap-3 overflow-x-auto pb-3 -mx-2 px-2 snap-x">
-          {columns.map(col => {
-            const colCards = cardsByColumn.get(col.id) || [];
-            return (
-              <DyngaColumn key={col.id} column={col} count={colCards.length}>
-                <SortableContext items={colCards.map(c => c.id)} strategy={verticalListSortingStrategy} id={col.id}>
-                  {colCards.map(card => (
-                    <DyngaCard key={card.id} card={card} onClick={() => setOpenCardId(card.id)} />
-                  ))}
-                </SortableContext>
-              </DyngaColumn>
-            );
-          })}
-        </div>
+        <SortableContext items={columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
+          <div className="flex gap-3 overflow-x-auto pb-3 -mx-2 px-2 snap-x items-start">
+            {columns.map(col => {
+              const colCards = cardsByColumn.get(col.id) || [];
+              return (
+                <SortableDyngaColumn key={col.id} column={col} count={colCards.length}>
+                  <SortableContext items={colCards.map(c => c.id)} strategy={verticalListSortingStrategy} id={col.id}>
+                    {colCards.map(card => (
+                      <DyngaCard key={card.id} card={card} onClick={() => setOpenCardId(card.id)} />
+                    ))}
+                  </SortableContext>
+                </SortableDyngaColumn>
+              );
+            })}
+          </div>
+        </SortableContext>
         <DragOverlay>
           {activeCard ? <DyngaCard card={activeCard} isOverlay /> : null}
         </DragOverlay>
