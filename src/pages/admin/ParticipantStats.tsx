@@ -39,6 +39,7 @@ const tabLabels: Record<string, string> = {
 
 const ParticipantStats = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [exportOpen, setExportOpen] = useState(false);
   const currentTab = searchParams.get("tab");
 
