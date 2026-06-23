@@ -1,3 +1,4 @@
+import { useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Badge } from '@/components/ui/badge';
@@ -81,6 +82,9 @@ export function SortableDyngaColumn({ column, count, children }: SortableColumnP
     transition,
   };
 
+  const colorClass = COLOR_CLASSES[column.color] || COLOR_CLASSES.muted;
+  const dotClass = DOT_CLASSES[column.color] || DOT_CLASSES.muted;
+
   return (
     <div
       ref={setNodeRef}
@@ -93,7 +97,7 @@ export function SortableDyngaColumn({ column, count, children }: SortableColumnP
       <div
         className={cn(
           'w-[280px] rounded-xl border backdrop-blur-sm flex flex-col',
-          COLOR_CLASSES[column.color] || COLOR_CLASSES.muted
+          colorClass
         )}
       >
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-border/40">
@@ -104,11 +108,10 @@ export function SortableDyngaColumn({ column, count, children }: SortableColumnP
               {...listeners}
               className="p-1 rounded hover:bg-muted/60 cursor-grab active:cursor-grabbing shrink-0"
               aria-label="Endre kolonnerekkefølge"
-              onPointerDown={(e) => e.stopPropagation()}
             >
               <GripVertical className="h-4 w-4 text-muted-foreground" />
             </button>
-            <span className={cn('w-2 h-2 rounded-full shrink-0', DOT_CLASSES[column.color] || DOT_CLASSES.muted)} />
+            <span className={cn('w-2 h-2 rounded-full shrink-0', dotClass)} />
             <h3 className="font-semibold text-sm truncate">{column.title}</h3>
           </div>
           <Badge variant="secondary" className="text-xs">{count}</Badge>
@@ -123,5 +126,3 @@ export function SortableDyngaColumn({ column, count, children }: SortableColumnP
     </div>
   );
 }
-
-import { useDroppable } from '@dnd-kit/core';
