@@ -52,7 +52,7 @@ const ParticipantStats = () => {
           <Button variant="ghost" size="icon" onClick={() => setSearchParams({})}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold">{tabLabels[currentTab] || "Deltakere"}</h1>
+          <h1 className="text-2xl font-bold">{tabLabels[currentTab] || "Deltakerstatistikk"}</h1>
         </div>
         <ActiveComponent />
       </div>
