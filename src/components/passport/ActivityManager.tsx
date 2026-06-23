@@ -86,26 +86,34 @@ export const ActivityManager = ({
   const removeOneActivity = async (activityTitle: string) => {
     setIsLoading(activityTitle);
     try {
-      const { data } = await supabase
+      // Get one row (prefer ones registered by current leader so RLS won't block)
+      const { data: rows, error: selectError } = await supabase
         .from('participant_activities')
-        .select('id')
+        .select('id, registered_by')
         .eq('participant_id', participantId)
-        .ilike('activity', activityTitle)
-        .limit(1)
-        .single();
+        .ilike('activity', activityTitle);
 
-      if (data) {
-        const { error } = await supabase
-          .from('participant_activities')
-          .delete()
-          .eq('id', data.id);
-
-        if (error) throw error;
-
-
-        showSuccess('Aktivitet fjernet', `En registrering av ${activityTitle} er fjernet`);
-        onActivityChanged();
+      if (selectError) throw selectError;
+      if (!rows || rows.length === 0) {
+        showError('Fant ingen', `Ingen ${activityTitle} å fjerne`);
+        return;
       }
+
+      const preferred = rows.find((r) => r.registered_by === leader?.id) ?? rows[0];
+
+      const { error, count } = await supabase
+        .from('participant_activities')
+        .delete({ count: 'exact' })
+        .eq('id', preferred.id);
+
+      if (error) throw error;
+      if (!count) {
+        showError('Kunne ikke fjerne', 'Aktiviteten ble ikke fjernet');
+        return;
+      }
+
+      showSuccess('Aktivitet fjernet', `En registrering av ${activityTitle} er fjernet`);
+      onActivityChanged();
     } catch (error) {
       console.error('Error removing activity:', error);
       showError('Feil', 'Kunne ikke fjerne aktivitet');
