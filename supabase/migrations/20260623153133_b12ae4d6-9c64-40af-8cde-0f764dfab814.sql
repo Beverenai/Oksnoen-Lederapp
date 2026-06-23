@@ -1,0 +1,1 @@
+ALTER TABLE public.dynga_cards DROP CONSTRAINT IF EXISTS dynga_cards_participant_id_key;
