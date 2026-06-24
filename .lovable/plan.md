@@ -1,75 +1,47 @@
-## Mål
+## Endringer fra forrige iterasjon
 
-Ledere kan raskt ta bilde og registrere et gjenglemt plagg (med eiers navn, kommentar, plaggtype og farge). Admin oppretter leirperioder, og hver periode får en offentlig lenke (`app.oksnoen.com/gjenglemt/<periode>`) hvor besøkende kan bla og søke etter farge/plaggtype — uten navn eller kommentar.
+### 1. Flytt periode-administrasjon inn i Admin → Innstillinger
+- Slett toppknappen **«Gjenglemt»** på `/admin`.
+- Slett ruten `/admin/gjenglemt` og siden `src/pages/admin/Gjenglemt.tsx`.
+- Legg til nytt kort **«Gjenglemt»** i `src/pages/admin/AdminSettings.tsx` (`navItems`-listen, ikon `Shirt`) som åpner en ny tab i `AdminSettingsContent.tsx`.
+- Den nye taben er en enkel komponent `GjenglemtSettingsTab` som kun viser periode-administrasjon (gjenbruker `PeriodManageSheet`-logikken som inline-skjema): liste over perioder, opprett ny periode (kun navn-felt + datoer), toggle offentlig, kopier lenke, åpne offentlig side, slett.
 
-## Brukerflyt
+### 2. Ledere får «Gjenglemt» i appen
+- Ny rute `/gjenglemt` (innen `ProtectedRoute`, tilgjengelig for alle innloggede ledere — ikke kun admin) → ny side `src/pages/Gjenglemt.tsx`.
+- Siden viser: periodevelger øverst (auto = nyeste aktive), filtre (farge + plagg + status), bilde-galleri (gjenbruker `ItemGrid`), og en stor **«+ Nytt funn»**-knapp.
+- Legg til entry i `leaderNavItems` (sidemeny) i `src/components/layout/AppLayout.tsx`: `{ to: '/gjenglemt', icon: Shirt, label: 'Gjenglemt' }`.
+- `AddItemSheet` forenkles drastisk for ledere: kun **Bilde** (kamera/album) + **Notater** (fritekst) + **Lagre**. Ingen manuell plagg/farge-velger. Etter lagring kjøres AI-analyse i bakgrunnen.
 
-**Leder (innlogget):**
-1. Åpner "Gjenglemt" fra admin-/deltager-siden.
-2. Velger aktiv periode (forhåndsvalgt = nyeste).
-3. Trykker "Legg til funn" → tar bilde (kamera eller upload) → fyller plaggtype, farge, evt. navn + kommentar → lagrer.
-4. Ser liste over egne/alle funn i perioden, kan redigere/slette egne (admin alle), markere som "hentet".
+### 3. AI-analyse av bilder for søk
+- Ny tabell-kolonner på `gjenglemt_items`:
+  - `notes text` (lederens fritekst-notat — erstatter `owner_name` + `comment` i den enklere flyten; beholder de eksisterende kolonnene som nullbare for bakoverkompatibilitet).
+  - `ai_status text default 'pending'` (`pending` | `done` | `failed`).
+  - `ai_description text` (kort tekstbeskrivelse fra AI, vises på offentlig side).
+  - `ai_tags text[]` (frie søkeord: farger, materiale, mønster, merker hvis synlig).
+- `garment_type` og `color` gjøres nullbare og fylles av AI (kan fortsatt overstyres manuelt fra admin-grid).
+- Migrer den offentlige visningen `gjenglemt_public` til å inkludere `notes` (lederens notater er nyttige for å finne igjen — bekreft med bruker hvis dette skal være privat; jeg gjør det offentlig fordi det erstatter manuell beskrivelse).
+- Ny edge-funksjon `analyze-gjenglemt`:
+  - Input: `{ item_id, image_path }`.
+  - Henter signert URL for bildet, sender til Lovable AI Gateway (`google/gemini-2.5-flash`) med structured output (Zod-skjema):
+    ```ts
+    { garment_type: enum(GARMENT_TYPES), color: enum(COLORS), description: string, tags: string[] }
+    ```
+  - Skriver tilbake til `gjenglemt_items` via service role, setter `ai_status='done'` (eller `'failed'`).
+- Klient kaller `supabase.functions.invoke('analyze-gjenglemt', ...)` rett etter `insert`. UI viser «AI analyserer…»-badge på kort med `ai_status='pending'`.
 
-**Admin:**
-- Lager nye perioder (navn, start- og sluttdato, auto-generert slug).
-- Aktiverer/deaktiverer offentlig lenke per periode.
-
-**Offentlig besøkende (uten innlogging) på `/gjenglemt/<slug>`:**
-- Ser galleri med bilde + plaggtype + farge + dato funnet.
-- Filtrerer på farge og plaggtype, søker fritekst i plaggtype.
-- Knapp "Kontakt leiren" (mailto/telefon fra app-config) for å hente.
-
-## Datamodell
-
-Tre nye tabeller i Lovable Cloud:
-
-- **`gjenglemt_periods`** — `name`, `slug` (unik), `start_date`, `end_date`, `is_public` (bool).
-- **`gjenglemt_items`** — `period_id`, `image_url`, `garment_type` (enum), `color` (enum), `owner_name` (nullable, privat), `comment` (nullable, privat), `status` ('uavhentet' | 'hentet'), `created_by` (leader id).
-- **Storage-bucket `gjenglemt-images`** (offentlig lesning, kun innloggede ledere kan laste opp).
-
-**Plaggtyper (enum, norske):** genser, t-skjorte, bukse, shorts, sokk, undertøy, jakke, lue, hansker, sko, badetøy, håndkle, drikkeflaske, briller, smykke, elektronikk, annet.
-
-**Farger (enum):** svart, hvit, grå, rød, rosa, oransje, gul, grønn, blå, lilla, brun, beige, flerfarget.
-
-## Sikkerhet (RLS)
-
-- `gjenglemt_periods`: SELECT for `anon` kun der `is_public = true`; INSERT/UPDATE/DELETE kun admin.
-- `gjenglemt_items`: 
-  - `anon` SELECT på offentlige felt (bilde, plagg, farge, status, periode) via dedikert view `public.gjenglemt_public` — slik at navn/kommentar aldri lekker via PostgREST.
-  - `authenticated` (alle ledere): SELECT alt, INSERT egne, UPDATE/DELETE egne; admin UPDATE/DELETE alle.
-- Storage: public read på `gjenglemt-images/*`; write kun for authenticated.
-
-## UI
-
-**Admin-side `/admin/gjenglemt`:**
-- Toppknapper: "Ny periode", periode-velger.
-- Liste over funn i valgt periode med thumbnail, plagg, farge, eier (intern), status. Filtre: farge, plaggtype, status. Sletteknapp og "marker hentet".
-- "Kopier offentlig lenke"-knapp per periode.
-
-**Registreringssheet (mobilvennlig, glassmorphism slik resten av appen):**
-- Stort bildefelt øverst (Capacitor Camera på native, file input på web — bruker eksisterende `capacitorCamera.ts`).
-- Plaggtype-velger (chip-grid med ikoner).
-- Fargevelger (swatch-grid med fargesirkler).
-- Valgfritt: navn (tekst), kommentar (textarea).
-- Lagre-knapp.
-
-**Offentlig side `/gjenglemt/:slug`:**
-- Header med periodenavn + datoer.
-- Filterbar: fargesvatcher + plaggchips + statusfilter.
-- Responsivt bilde-galleri (kort: bilde, plagg, farge-dot, dato). Klikk → lightbox.
-- Tom-state og 404 hvis periode ikke finnes / ikke `is_public`.
+### 4. Søk
+- Offentlig + intern søkebar (`Input`) som gjør case-insensitiv match mot `garment_type`, `color`, `notes`, `ai_description` og `ai_tags`. På klient-siden (lokal filtrering på allerede-hentede rader) — enkelt nok for forventede volumer.
+- Eksisterende farge/plagg-filtre beholdes.
 
 ## Tekniske detaljer
 
-- Ruter i `src/App.tsx`: `/admin/gjenglemt` (admin) og `/gjenglemt/:slug` (public, uten AppLayout/auth-guard).
-- Nye komponenter under `src/components/admin/gjenglemt/` (PeriodManager, ItemSheet, ItemGrid, Filters) og side `src/pages/admin/Gjenglemt.tsx` + `src/pages/PublicGjenglemt.tsx`.
-- Hook `src/hooks/useGjenglemt.ts` med React Query: `usePeriods`, `useItems(periodId, filters)`, `useCreateItem`, `useUpdateItem`, `useDeleteItem`, `usePublicItems(slug)` (kaller view).
-- Bilde-opplasting: komprimer med eksisterende `imageUtils.ts` før upload til `gjenglemt-images/<period-slug>/<uuid>.jpg`.
-- Inngang fra eksisterende admin-dashboard (legges til som nytt kort på `/admin`).
-- Offentlig SEO: `<title>` "Gjenglemt – <periode> | Øksnøen", meta description, canonical, ingen indeksering hvis `is_public=false`.
+- Migrasjoner kjøres i én tur, deretter regenereres types før edge function og UI bruker de nye feltene.
+- Edge function bruker `verify_jwt=false` (default) men leser ikke fra request-bruker — den krever bare `item_id` + verifiserer at item finnes.
+- Bilder forblir i privat bøtte; edge function bruker service role for å lese signert URL.
+- Ingen endring i offentlig rute `/gjenglemt/:slug`.
 
-## Det vi IKKE bygger nå
+## Det vi IKKE gjør
 
-- Ingen melding/booking til eier fra offentlig side (kun "Kontakt leiren"-mailto).
-- Ingen automatisk varsling til foreldre.
-- Ingen QR-kode-generator (lenken kan deles manuelt; kan legges til senere).
+- Ingen embeddings/vector-søk — fritekstmatch er nok.
+- Ingen sletter av `owner_name`/`comment` (kolonnene står tomme i ny flyt).
+- Ingen retry-kø for feilet AI — admin kan trykke «Analyser på nytt» fra grid.
