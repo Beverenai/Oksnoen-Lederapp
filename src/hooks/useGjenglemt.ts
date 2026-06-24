@@ -18,12 +18,16 @@ export interface GjenglemtItem {
   id: string;
   period_id: string;
   image_url: string;
-  garment_type: string;
-  color: string;
+  garment_type: string | null;
+  color: string | null;
   owner_name: string | null;
   comment: string | null;
+  notes: string | null;
   status: 'uavhentet' | 'hentet';
   created_by: string | null;
+  ai_status: 'pending' | 'done' | 'failed';
+  ai_description: string | null;
+  ai_tags: string[];
   created_at: string;
   updated_at: string;
 }
@@ -32,9 +36,13 @@ export interface GjenglemtPublicItem {
   id: string;
   period_id: string;
   image_url: string;
-  garment_type: string;
-  color: string;
+  garment_type: string | null;
+  color: string | null;
   status: string;
+  notes: string | null;
+  ai_status: string;
+  ai_description: string | null;
+  ai_tags: string[];
   created_at: string;
 }
 
@@ -128,28 +136,40 @@ export function useCreateItem() {
     mutationFn: async (input: {
       period_id: string;
       image_url: string;
-      garment_type: string;
-      color: string;
-      owner_name?: string | null;
-      comment?: string | null;
+      notes?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('gjenglemt_items')
         .insert({
           period_id: input.period_id,
           image_url: input.image_url,
-          garment_type: input.garment_type,
-          color: input.color,
-          owner_name: input.owner_name ?? null,
-          comment: input.comment ?? null,
+          notes: input.notes ?? null,
           created_by: effectiveLeader?.id ?? null,
         })
         .select()
         .single();
       if (error) throw error;
+      // Fire-and-forget AI analysis
+      supabase.functions.invoke('analyze-gjenglemt', {
+        body: { item_id: (data as any).id },
+      }).then(() => qc.invalidateQueries({ queryKey: ['gjenglemt-items', input.period_id] }))
+        .catch((e) => console.warn('analyze-gjenglemt failed', e));
       return data as GjenglemtItem;
     },
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['gjenglemt-items', vars.period_id] }),
+  });
+}
+
+export function useReanalyzeItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (itemId: string) => {
+      // Optimistically mark pending
+      await supabase.from('gjenglemt_items').update({ ai_status: 'pending' }).eq('id', itemId);
+      const { error } = await supabase.functions.invoke('analyze-gjenglemt', { body: { item_id: itemId } });
+      if (error) throw error;
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['gjenglemt-items'] }),
   });
 }
 
