@@ -25,6 +25,7 @@ import {
   ChevronDown,
   ArrowLeft,
   ClipboardList,
+  Shirt,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -69,6 +70,7 @@ const leaderNavItems: NavItem[] = [
   { to: '/leaders', icon: Users, label: 'Ledere' },
   { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
   { to: '/rope-control', icon: Anchor, label: 'Tau Kontroll' },
+  { to: '/gjenglemt', icon: Shirt, label: 'Gjenglemt' },
 ];
 
 // Dynamic content items
