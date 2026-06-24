@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Camera, Loader2, ImageIcon, X } from 'lucide-react';
-import { COLORS, GARMENT_TYPES } from '@/lib/gjenglemtConstants';
+import { Camera, Loader2, ImageIcon, X, Sparkles } from 'lucide-react';
 import { compressImage } from '@/lib/imageUtils';
 import { isNativeCameraAvailable, takePhoto } from '@/lib/capacitorCamera';
 import { uploadGjenglemtImage, useCreateItem, type GjenglemtPeriod } from '@/hooks/useGjenglemt';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { cn } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -22,17 +19,13 @@ export function AddItemSheet({ open, onOpenChange, period }: Props) {
   const createItem = useCreateItem();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [garment, setGarment] = useState<string>('');
-  const [color, setColor] = useState<string>('');
-  const [ownerName, setOwnerName] = useState('');
-  const [comment, setComment] = useState('');
+  const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setFile(null); setPreview(null);
-      setGarment(''); setColor('');
-      setOwnerName(''); setComment('');
+      setNotes('');
       setSubmitting(false);
     }
   }, [open]);
@@ -63,7 +56,7 @@ export function AddItemSheet({ open, onOpenChange, period }: Props) {
     if (f) handleFile(f);
   };
 
-  const canSubmit = !!file && !!garment && !!color && !!period && !submitting;
+  const canSubmit = !!file && !!period && !submitting;
 
   const submit = async () => {
     if (!canSubmit || !file || !period) return;
@@ -73,12 +66,9 @@ export function AddItemSheet({ open, onOpenChange, period }: Props) {
       await createItem.mutateAsync({
         period_id: period.id,
         image_url: path,
-        garment_type: garment,
-        color,
-        owner_name: ownerName.trim() || null,
-        comment: comment.trim() || null,
+        notes: notes.trim() || null,
       });
-      showSuccess('Lagret');
+      showSuccess('Lagret · AI analyserer i bakgrunnen');
       onOpenChange(false);
     } catch (e: any) {
       console.error(e);
@@ -127,57 +117,20 @@ export function AddItemSheet({ open, onOpenChange, period }: Props) {
             <input id="gjenglemt-file-input" type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileInput} />
           </div>
 
-          {/* Garment */}
+          {/* Notes */}
           <div>
-            <div className="text-sm font-medium mb-2">Plagg <span className="text-destructive">*</span></div>
-            <div className="flex flex-wrap gap-1.5">
-              {GARMENT_TYPES.map(g => (
-                <button
-                  key={g.value}
-                  type="button"
-                  onClick={() => setGarment(g.value)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-sm border transition-colors',
-                    garment === g.value ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border hover:bg-muted'
-                  )}
-                >
-                  {g.label}
-                </button>
-              ))}
-            </div>
+            <div className="text-sm font-medium mb-1.5">Notater <span className="text-xs text-muted-foreground">(valgfritt)</span></div>
+            <Textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              rows={3}
+              placeholder="F.eks. funnet ved badestranden tirsdag. Eier: Kari fra Kabin 4."
+            />
           </div>
 
-          {/* Color */}
-          <div>
-            <div className="text-sm font-medium mb-2">Farge <span className="text-destructive">*</span></div>
-            <div className="flex flex-wrap gap-2">
-              {COLORS.map(c => (
-                <button
-                  key={c.value}
-                  type="button"
-                  onClick={() => setColor(c.value)}
-                  title={c.label}
-                  aria-label={c.label}
-                  className={cn(
-                    'h-10 w-10 rounded-full border-2 transition-all',
-                    color === c.value ? 'border-primary ring-2 ring-primary/30 scale-110' : 'border-border hover:scale-105',
-                  )}
-                  style={c.hex.startsWith('#') ? { backgroundColor: c.hex } : { background: c.hex }}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Owner */}
-          <div>
-            <div className="text-sm font-medium mb-1.5">Navn på eier <span className="text-xs text-muted-foreground">(privat – vises ikke offentlig)</span></div>
-            <Input value={ownerName} onChange={e => setOwnerName(e.target.value)} placeholder="F.eks. Kari fra Kabin 4" />
-          </div>
-
-          {/* Comment */}
-          <div>
-            <div className="text-sm font-medium mb-1.5">Kommentar <span className="text-xs text-muted-foreground">(privat)</span></div>
-            <Textarea value={comment} onChange={e => setComment(e.target.value)} rows={3} placeholder="F.eks. funnet ved badestranden tirsdag" />
+          <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground flex gap-2 items-start">
+            <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <div>AI gjenkjenner automatisk plaggtype og farge fra bildet, slik at folk kan søke det opp.</div>
           </div>
 
           <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] bg-background/95 backdrop-blur border-t">
