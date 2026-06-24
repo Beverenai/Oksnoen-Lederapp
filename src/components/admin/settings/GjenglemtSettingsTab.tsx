@@ -57,7 +57,7 @@ export function GjenglemtSettingsTab() {
   };
 
   const copyLink = (p: GjenglemtPeriod) => {
-    const url = `${window.location.origin}/gjenglemt/${p.slug}`;
+    const url = `https://app.oksnoen.com/gjenglemt/${p.slug}`;
     navigator.clipboard.writeText(url).then(() => showInfo('Lenke kopiert'));
   };
 
