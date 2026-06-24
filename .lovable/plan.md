@@ -1,79 +1,75 @@
-## Dynga — Kanban-tavle for deltageroppførsel
+## Mål
 
-En admin-only Kanban-tavle der du kan dra deltagerkort mellom tilpassbare kolonner og føre en datert kommentartråd per deltager. Helt separat fra resten av appen — ingenting lekker til pass, sykepleier eller Viktig Info.
+Ledere kan raskt ta bilde og registrere et gjenglemt plagg (med eiers navn, kommentar, plaggtype og farge). Admin oppretter leirperioder, og hver periode får en offentlig lenke (`app.oksnoen.com/gjenglemt/<periode>`) hvor besøkende kan bla og søke etter farge/plaggtype — uten navn eller kommentar.
 
-### Database (ny migrering)
+## Brukerflyt
 
-Tre nye tabeller, alle med RLS som kun tillater admin/superadmin (`public.is_admin()`):
+**Leder (innlogget):**
+1. Åpner "Gjenglemt" fra admin-/deltager-siden.
+2. Velger aktiv periode (forhåndsvalgt = nyeste).
+3. Trykker "Legg til funn" → tar bilde (kamera eller upload) → fyller plaggtype, farge, evt. navn + kommentar → lagrer.
+4. Ser liste over egne/alle funn i perioden, kan redigere/slette egne (admin alle), markere som "hentet".
 
-- **`dynga_columns`** — `id`, `title`, `color` (hex/token), `sort_order`, `created_at`
-- **`dynga_cards`** — `id`, `participant_id` (FK → participants, unique), `column_id` (FK → dynga_columns), `sort_order`, `created_at`, `updated_at`
-- **`dynga_comments`** — `id`, `card_id` (FK → dynga_cards, on delete cascade), `leader_id` (FK → leaders), `body` (text), `created_at`
+**Admin:**
+- Lager nye perioder (navn, start- og sluttdato, auto-generert slug).
+- Aktiverer/deaktiverer offentlig lenke per periode.
 
-GRANT til `authenticated` og `service_role`. Policies: alle fire (SELECT/INSERT/UPDATE/DELETE) krever `public.is_admin()`. Standard 4 kolonner seedes: "Observasjon", "Positivt", "Advarsel", "Oppfølging" — admin kan endre/slette/legge til.
+**Offentlig besøkende (uten innlogging) på `/gjenglemt/<slug>`:**
+- Ser galleri med bilde + plaggtype + farge + dato funnet.
+- Filtrerer på farge og plaggtype, søker fritekst i plaggtype.
+- Knapp "Kontakt leiren" (mailto/telefon fra app-config) for å hente.
 
-### Ny side: `/admin/dynga`
+## Datamodell
 
-Rute lagt til i `App.tsx` bak admin-guard. Lenke i Admin-dashboardet (kabana-grid-stil som resten av admin-innstillinger).
+Tre nye tabeller i Lovable Cloud:
 
-Layout:
+- **`gjenglemt_periods`** — `name`, `slug` (unik), `start_date`, `end_date`, `is_public` (bool).
+- **`gjenglemt_items`** — `period_id`, `image_url`, `garment_type` (enum), `color` (enum), `owner_name` (nullable, privat), `comment` (nullable, privat), `status` ('uavhentet' | 'hentet'), `created_by` (leader id).
+- **Storage-bucket `gjenglemt-images`** (offentlig lesning, kun innloggede ledere kan laste opp).
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│  Dynga                       [+ Legg til deltager] [⚙]  │
-├──────────┬──────────┬──────────┬──────────┬─────────────┤
-│Observasj.│ Positivt │ Advarsel │Oppfølging│ + Ny kolonne│
-│ ┌──────┐ │ ┌──────┐ │          │          │             │
-│ │ 👤   │ │ │ 👤   │ │          │          │             │
-│ │ Navn │ │ │ Navn │ │          │          │             │
-│ │ 💬 3 │ │ │ 💬 1 │ │          │          │             │
-│ └──────┘ │ └──────┘ │          │          │             │
-└──────────┴──────────┴──────────┴──────────┴─────────────┘
-```
+**Plaggtyper (enum, norske):** genser, t-skjorte, bukse, shorts, sokk, undertøy, jakke, lue, hansker, sko, badetøy, håndkle, drikkeflaske, briller, smykke, elektronikk, annet.
 
-- Horisontal scroll på mobil, kolonner ca. 280px brede.
-- Deltagerkort viser `image_url` (Avatar med fallback til initialer), fullt navn, hytte (liten muted tekst), kommentar-teller med ikon.
-- Drag-and-drop mellom kolonner og innen kolonne — bruker `@dnd-kit/core` + `@dnd-kit/sortable` (allerede vanlig i shadcn-stacker; installeres hvis ikke til stede).
-- "+ Legg til deltager"-knapp åpner sheet med søkbar liste over alle deltagere som ikke allerede er på tavla → velg én eller flere, legges i første kolonne.
-- Tannhjul ⚙ åpner kolonnehåndtering: rediger tittel/farge, slett (med bekreftelse — kort flyttes til første gjenværende kolonne), legg til ny, drag for å endre rekkefølge.
+**Farger (enum):** svart, hvit, grå, rød, rosa, oransje, gul, grønn, blå, lilla, brun, beige, flerfarget.
 
-### Kortdetaljer — sheet
+## Sikkerhet (RLS)
 
-Trykk på kort → høyre-sheet (Sheet-komponent) med:
+- `gjenglemt_periods`: SELECT for `anon` kun der `is_public = true`; INSERT/UPDATE/DELETE kun admin.
+- `gjenglemt_items`: 
+  - `anon` SELECT på offentlige felt (bilde, plagg, farge, status, periode) via dedikert view `public.gjenglemt_public` — slik at navn/kommentar aldri lekker via PostgREST.
+  - `authenticated` (alle ledere): SELECT alt, INSERT egne, UPDATE/DELETE egne; admin UPDATE/DELETE alle.
+- Storage: public read på `gjenglemt-images/*`; write kun for authenticated.
 
-- Avatar + fullt navn + hytte øverst
-- Knapp "Fjern fra Dynga" (sletter card + alle kommentarer)
-- Kommentartråd: kronologisk liste, hver kommentar viser leder-navn, relativ tid (`date-fns formatDistanceToNow` med nb), og body. Egne kommentarer kan slettes; admin kan slette alle.
-- Tekstfelt nederst + "Legg til kommentar"-knapp. Lagrer med `leader_id = effectiveLeader.id`.
+## UI
 
-### Datalag
+**Admin-side `/admin/gjenglemt`:**
+- Toppknapper: "Ny periode", periode-velger.
+- Liste over funn i valgt periode med thumbnail, plagg, farge, eier (intern), status. Filtre: farge, plaggtype, status. Sletteknapp og "marker hentet".
+- "Kopier offentlig lenke"-knapp per periode.
 
-Ny hook `src/hooks/useDynga.ts` med React Query:
-- `useDyngaColumns()`, `useDyngaCards()` (joiner participants + cabin + comment-count), `useDyngaComments(cardId)`
-- Mutations for move-card, add-card, remove-card, add/edit/delete kolonne, add/delete kommentar — alle invaliderer relevante queries.
-- Realtime-kanal på alle tre tabeller (samme mønster som checkout-config) → flere admins ser endringer live.
+**Registreringssheet (mobilvennlig, glassmorphism slik resten av appen):**
+- Stort bildefelt øverst (Capacitor Camera på native, file input på web — bruker eksisterende `capacitorCamera.ts`).
+- Plaggtype-velger (chip-grid med ikoner).
+- Fargevelger (swatch-grid med fargesirkler).
+- Valgfritt: navn (tekst), kommentar (textarea).
+- Lagre-knapp.
 
-### Filer som opprettes
+**Offentlig side `/gjenglemt/:slug`:**
+- Header med periodenavn + datoer.
+- Filterbar: fargesvatcher + plaggchips + statusfilter.
+- Responsivt bilde-galleri (kort: bilde, plagg, farge-dot, dato). Klikk → lightbox.
+- Tom-state og 404 hvis periode ikke finnes / ikke `is_public`.
 
-- `supabase/migrations/<timestamp>_dynga.sql`
-- `src/pages/admin/Dynga.tsx`
-- `src/components/admin/dynga/DyngaBoard.tsx` (DnD-kontekst + kolonnegrid)
-- `src/components/admin/dynga/DyngaColumn.tsx`
-- `src/components/admin/dynga/DyngaCard.tsx`
-- `src/components/admin/dynga/DyngaCardSheet.tsx` (detalj + kommentartråd)
-- `src/components/admin/dynga/AddParticipantsSheet.tsx`
-- `src/components/admin/dynga/ManageColumnsSheet.tsx`
-- `src/hooks/useDynga.ts`
+## Tekniske detaljer
 
-### Filer som endres
+- Ruter i `src/App.tsx`: `/admin/gjenglemt` (admin) og `/gjenglemt/:slug` (public, uten AppLayout/auth-guard).
+- Nye komponenter under `src/components/admin/gjenglemt/` (PeriodManager, ItemSheet, ItemGrid, Filters) og side `src/pages/admin/Gjenglemt.tsx` + `src/pages/PublicGjenglemt.tsx`.
+- Hook `src/hooks/useGjenglemt.ts` med React Query: `usePeriods`, `useItems(periodId, filters)`, `useCreateItem`, `useUpdateItem`, `useDeleteItem`, `usePublicItems(slug)` (kaller view).
+- Bilde-opplasting: komprimer med eksisterende `imageUtils.ts` før upload til `gjenglemt-images/<period-slug>/<uuid>.jpg`.
+- Inngang fra eksisterende admin-dashboard (legges til som nytt kort på `/admin`).
+- Offentlig SEO: `<title>` "Gjenglemt – <periode> | Øksnøen", meta description, canonical, ingen indeksering hvis `is_public=false`.
 
-- `src/App.tsx` — rute `/admin/dynga`
-- `src/components/admin/settings/AdminSettingsContent.tsx` (eller tilsvarende admin-grid) — kort som lenker til Dynga
-- `package.json` — `@dnd-kit/core`, `@dnd-kit/sortable` hvis ikke allerede installert
+## Det vi IKKE bygger nå
 
-### Tekniske detaljer
-
-- Mobile-first: kolonner blir horisontalt scrollbare på smale skjermer; sheets brukes overalt for å unngå modale dialoger.
-- Glassmorphism-stil i tråd med resten av admin (semantiske tokens, ingen hardkodede farger).
-- Sort-order håndteres med heltall — ved drag oppdateres kun de berørte radene via batch-update.
-- Kommentarsletting begrenses til egen kommentar med mindre `is_superadmin()` — håndteres i UI; RLS tillater admin å slette alt.
+- Ingen melding/booking til eier fra offentlig side (kun "Kontakt leiren"-mailto).
+- Ingen automatisk varsling til foreldre.
+- Ingen QR-kode-generator (lenken kan deles manuelt; kan legges til senere).

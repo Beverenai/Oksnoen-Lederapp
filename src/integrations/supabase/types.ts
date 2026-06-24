@@ -360,6 +360,96 @@ export type Database = {
           },
         ]
       }
+      gjenglemt_items: {
+        Row: {
+          color: string
+          comment: string | null
+          created_at: string
+          created_by: string | null
+          garment_type: string
+          id: string
+          image_url: string
+          owner_name: string | null
+          period_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          color: string
+          comment?: string | null
+          created_at?: string
+          created_by?: string | null
+          garment_type: string
+          id?: string
+          image_url: string
+          owner_name?: string | null
+          period_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          comment?: string | null
+          created_at?: string
+          created_by?: string | null
+          garment_type?: string
+          id?: string
+          image_url?: string
+          owner_name?: string | null
+          period_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gjenglemt_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gjenglemt_items_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "gjenglemt_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gjenglemt_periods: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          is_public: boolean
+          name: string
+          slug: string
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_public?: boolean
+          name: string
+          slug: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_public?: boolean
+          name?: string
+          slug?: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       home_screen_config: {
         Row: {
           bg_color: string | null
@@ -1462,6 +1552,26 @@ export type Database = {
       }
     }
     Views: {
+      gjenglemt_public: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          garment_type: string | null
+          id: string | null
+          image_url: string | null
+          period_id: string | null
+          status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gjenglemt_items_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "gjenglemt_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leader_activities_public: {
         Row: {
           current_activity: string | null

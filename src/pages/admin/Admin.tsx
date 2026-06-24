@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Progress } from '@/components/ui/progress';
 import {
   Settings, Loader2, Shield, Calendar,
-  Save, LayoutGrid, List, Sparkles, CalendarDays, RefreshCw,
+  Save, LayoutGrid, List, Sparkles, CalendarDays, RefreshCw, Shirt,
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
@@ -216,6 +216,12 @@ export default function Admin() {
             <Button variant="outline" size="sm">
               <CalendarDays className="h-4 w-4" />
               <span className="hidden sm:inline sm:ml-2">Vaktplan</span>
+            </Button>
+          </Link>
+          <Link to="/admin/gjenglemt">
+            <Button variant="outline" size="sm">
+              <Shirt className="h-4 w-4" />
+              <span className="hidden sm:inline sm:ml-2">Gjenglemt</span>
             </Button>
           </Link>
           <Link to="/admin/settings">
