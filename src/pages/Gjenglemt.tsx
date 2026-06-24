@@ -2,14 +2,15 @@ import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, Settings2, Copy, ExternalLink, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Plus, Copy, ExternalLink, ChevronDown, Search } from 'lucide-react';
 import { useGjenglemtPeriods, useGjenglemtItems, useGjenglemtRealtime } from '@/hooks/useGjenglemt';
 import { GjenglemtFilters } from '@/components/admin/gjenglemt/GjenglemtFilters';
 import { ItemGrid } from '@/components/admin/gjenglemt/ItemGrid';
 import { AddItemSheet } from '@/components/admin/gjenglemt/AddItemSheet';
-import { PeriodManageSheet } from '@/components/admin/gjenglemt/PeriodManageSheet';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { garmentLabel, colorMeta } from '@/lib/gjenglemtConstants';
 
 export default function Gjenglemt() {
   const navigate = useNavigate();
@@ -21,8 +22,8 @@ export default function Gjenglemt() {
   const [colorFilter, setColorFilter] = useState<string | null>(null);
   const [garmentFilter, setGarmentFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'uavhentet' | 'hentet'>('uavhentet');
+  const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
-  const [periodSheetOpen, setPeriodSheetOpen] = useState(false);
 
   // Auto-select first period
   useEffect(() => {
@@ -35,12 +36,14 @@ export default function Gjenglemt() {
   const currentPeriod = useMemo(() => periods.find(p => p.id === periodId) ?? null, [periods, periodId]);
 
   const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
     return items.filter(i =>
       (statusFilter === 'all' || i.status === statusFilter) &&
       (!colorFilter || i.color === colorFilter) &&
-      (!garmentFilter || i.garment_type === garmentFilter)
+      (!garmentFilter || i.garment_type === garmentFilter) &&
+      (!q || matchesQuery(i, q))
     );
-  }, [items, statusFilter, colorFilter, garmentFilter]);
+  }, [items, statusFilter, colorFilter, garmentFilter, query]);
 
   if (!leader) {
     return <div className="p-6 text-center text-muted-foreground">Du må være innlogget.</div>;
@@ -56,12 +59,12 @@ export default function Gjenglemt() {
     <div className="flex flex-col animate-fade-in min-h-[calc(100dvh-140px)] gap-3">
       <div className="flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/admin')}>
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-heading font-bold truncate">Gjenglemt</h1>
-            <p className="hidden sm:block text-sm text-muted-foreground">Registrer og del gjenglemte ting</p>
+            <p className="hidden sm:block text-sm text-muted-foreground">Ta bilde – AI gjenkjenner plagget</p>
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
@@ -69,12 +72,6 @@ export default function Gjenglemt() {
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline sm:ml-2">Nytt funn</span>
           </Button>
-          {isAdmin && (
-            <Button variant="outline" size="sm" onClick={() => setPeriodSheetOpen(true)}>
-              <Settings2 className="h-4 w-4" />
-              <span className="hidden sm:inline sm:ml-2">Perioder</span>
-            </Button>
-          )}
         </div>
       </div>
 
@@ -106,6 +103,17 @@ export default function Gjenglemt() {
             </Button>
           </>
         )}
+      </div>
+
+      {/* Search */}
+      <div className="relative shrink-0">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Søk etter plagg, farge, notater…"
+          className="pl-9"
+        />
       </div>
 
       {/* Status tabs */}
@@ -156,7 +164,16 @@ export default function Gjenglemt() {
       </div>
 
       <AddItemSheet open={addOpen} onOpenChange={setAddOpen} period={currentPeriod} />
-      <PeriodManageSheet open={periodSheetOpen} onOpenChange={setPeriodSheetOpen} />
     </div>
   );
+}
+
+function matchesQuery(i: { garment_type: string | null; color: string | null; notes: string | null; ai_description: string | null; ai_tags: string[] }, q: string) {
+  const fields: string[] = [];
+  if (i.garment_type) fields.push(i.garment_type, garmentLabel(i.garment_type).toLowerCase());
+  if (i.color) fields.push(i.color, colorMeta(i.color).label.toLowerCase());
+  if (i.notes) fields.push(i.notes.toLowerCase());
+  if (i.ai_description) fields.push(i.ai_description.toLowerCase());
+  if (i.ai_tags?.length) fields.push(...i.ai_tags.map(t => t.toLowerCase()));
+  return fields.some(f => f.includes(q));
 }
