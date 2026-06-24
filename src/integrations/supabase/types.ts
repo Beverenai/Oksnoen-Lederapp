@@ -362,39 +362,51 @@ export type Database = {
       }
       gjenglemt_items: {
         Row: {
-          color: string
+          ai_description: string | null
+          ai_status: string
+          ai_tags: string[]
+          color: string | null
           comment: string | null
           created_at: string
           created_by: string | null
-          garment_type: string
+          garment_type: string | null
           id: string
           image_url: string
+          notes: string | null
           owner_name: string | null
           period_id: string
           status: string
           updated_at: string
         }
         Insert: {
-          color: string
+          ai_description?: string | null
+          ai_status?: string
+          ai_tags?: string[]
+          color?: string | null
           comment?: string | null
           created_at?: string
           created_by?: string | null
-          garment_type: string
+          garment_type?: string | null
           id?: string
           image_url: string
+          notes?: string | null
           owner_name?: string | null
           period_id: string
           status?: string
           updated_at?: string
         }
         Update: {
-          color?: string
+          ai_description?: string | null
+          ai_status?: string
+          ai_tags?: string[]
+          color?: string | null
           comment?: string | null
           created_at?: string
           created_by?: string | null
-          garment_type?: string
+          garment_type?: string | null
           id?: string
           image_url?: string
+          notes?: string | null
           owner_name?: string | null
           period_id?: string
           status?: string
@@ -1554,11 +1566,15 @@ export type Database = {
     Views: {
       gjenglemt_public: {
         Row: {
+          ai_description: string | null
+          ai_status: string | null
+          ai_tags: string[] | null
           color: string | null
           created_at: string | null
           garment_type: string | null
           id: string | null
           image_url: string | null
+          notes: string | null
           period_id: string | null
           status: string | null
         }

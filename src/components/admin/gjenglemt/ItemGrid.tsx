@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { CheckCircle2, Circle, Trash2, X } from 'lucide-react';
+import { CheckCircle2, Circle, Trash2, X, Sparkles, RefreshCw, AlertTriangle } from 'lucide-react';
 import { SignedImage } from './SignedImage';
 import { colorMeta, garmentLabel } from '@/lib/gjenglemtConstants';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDeleteItem, useUpdateItem, type GjenglemtItem } from '@/hooks/useGjenglemt';
+import { useDeleteItem, useReanalyzeItem, useUpdateItem, type GjenglemtItem } from '@/hooks/useGjenglemt';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 
 interface Props {
@@ -19,6 +19,7 @@ export function ItemGrid({ items, canManageAll }: Props) {
   const { showError, showSuccess } = useStatusPopup();
   const updateItem = useUpdateItem();
   const deleteItem = useDeleteItem();
+  const reanalyze = useReanalyzeItem();
   const [lightbox, setLightbox] = useState<GjenglemtItem | null>(null);
 
   const canEdit = (item: GjenglemtItem) =>
@@ -51,30 +52,46 @@ export function ItemGrid({ items, canManageAll }: Props) {
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
         {items.map(item => {
-          const c = colorMeta(item.color);
+          const c = item.color ? colorMeta(item.color) : null;
           const isHentet = item.status === 'hentet';
+          const aiPending = item.ai_status === 'pending';
+          const aiFailed = item.ai_status === 'failed';
           return (
             <div key={item.id} className={cn('rounded-xl border overflow-hidden bg-card flex flex-col', isHentet && 'opacity-60')}>
-              <button onClick={() => setLightbox(item)} className="relative aspect-square block bg-muted">
-                <SignedImage imageUrl={item.image_url} alt={garmentLabel(item.garment_type)} className="w-full h-full object-cover" />
+              <button onClick={() => setLightbox(item)} className="relative aspect-square block bg-muted w-full">
+                <SignedImage imageUrl={item.image_url} alt={item.garment_type ? garmentLabel(item.garment_type) : 'Gjenglemt'} className="w-full h-full object-cover" />
                 {isHentet && (
                   <div className="absolute top-1.5 left-1.5"><Badge className="bg-green-600 text-white">Hentet</Badge></div>
+                )}
+                {aiPending && (
+                  <div className="absolute top-1.5 right-1.5">
+                    <Badge className="bg-primary/90 text-primary-foreground gap-1"><Sparkles className="h-3 w-3 animate-pulse" /> AI</Badge>
+                  </div>
+                )}
+                {aiFailed && (
+                  <div className="absolute top-1.5 right-1.5">
+                    <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> Feilet</Badge>
+                  </div>
                 )}
               </button>
               <div className="p-2.5 flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span
-                    className="h-4 w-4 rounded-full border shrink-0"
-                    style={c.hex.startsWith('#') ? { backgroundColor: c.hex } : { background: c.hex }}
-                    aria-label={c.label}
-                  />
-                  <span className="text-sm font-medium truncate">{garmentLabel(item.garment_type)}</span>
+                  {c && (
+                    <span
+                      className="h-4 w-4 rounded-full border shrink-0"
+                      style={c.hex.startsWith('#') ? { backgroundColor: c.hex } : { background: c.hex }}
+                      aria-label={c.label}
+                    />
+                  )}
+                  <span className="text-sm font-medium truncate">
+                    {item.garment_type ? garmentLabel(item.garment_type) : (aiPending ? 'Analyserer…' : 'Ukjent')}
+                  </span>
                 </div>
-                {item.owner_name && (
-                  <div className="text-xs text-muted-foreground truncate">👤 {item.owner_name}</div>
+                {item.ai_description && (
+                  <div className="text-xs text-muted-foreground line-clamp-2">{item.ai_description}</div>
                 )}
-                {item.comment && (
-                  <div className="text-xs text-muted-foreground line-clamp-2">{item.comment}</div>
+                {item.notes && (
+                  <div className="text-xs text-muted-foreground line-clamp-2 italic">📝 {item.notes}</div>
                 )}
                 {canEdit(item) && (
                   <div className="flex gap-1 pt-1">
@@ -85,6 +102,11 @@ export function ItemGrid({ items, canManageAll }: Props) {
                       {isHentet ? <Circle className="h-3 w-3 mr-1" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
                       {isHentet ? 'Uavh.' : 'Hentet'}
                     </Button>
+                    {aiFailed && (
+                      <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => reanalyze.mutate(item.id)} title="Analyser på nytt">
+                        <RefreshCw className="h-3 w-3" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="sm" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => remove(item)}>
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -105,11 +127,19 @@ export function ItemGrid({ items, canManageAll }: Props) {
             <X className="h-5 w-5" />
           </button>
           <div className="max-w-3xl w-full" onClick={e => e.stopPropagation()}>
-            <SignedImage imageUrl={lightbox.image_url} alt={garmentLabel(lightbox.garment_type)} className="w-full max-h-[80dvh] object-contain rounded-xl" />
+            <SignedImage imageUrl={lightbox.image_url} alt={lightbox.garment_type ? garmentLabel(lightbox.garment_type) : 'Gjenglemt'} className="w-full max-h-[80dvh] object-contain rounded-xl" />
             <div className="mt-3 text-center space-y-1">
-              <div className="font-medium">{garmentLabel(lightbox.garment_type)} – {colorMeta(lightbox.color).label}</div>
-              {lightbox.owner_name && <div className="text-sm text-muted-foreground">👤 {lightbox.owner_name}</div>}
-              {lightbox.comment && <div className="text-sm text-muted-foreground">{lightbox.comment}</div>}
+              <div className="font-medium">
+                {lightbox.garment_type ? garmentLabel(lightbox.garment_type) : 'Ukjent'}
+                {lightbox.color && ` – ${colorMeta(lightbox.color).label}`}
+              </div>
+              {lightbox.ai_description && <div className="text-sm text-muted-foreground">{lightbox.ai_description}</div>}
+              {lightbox.notes && <div className="text-sm text-muted-foreground italic">📝 {lightbox.notes}</div>}
+              {lightbox.ai_tags?.length > 0 && (
+                <div className="flex flex-wrap gap-1 justify-center pt-2">
+                  {lightbox.ai_tags.map(t => <Badge key={t} variant="secondary" className="text-[10px]">{t}</Badge>)}
+                </div>
+              )}
             </div>
           </div>
         </div>

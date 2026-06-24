@@ -28,6 +28,7 @@ import { StoriesTab } from '@/components/admin/StoriesTab';
 import { LeaderImportDialog } from '@/components/admin/LeaderImportDialog';
 import { GoogleSheetSyncTab } from '@/components/admin/GoogleSheetSyncTab';
 import { OvernattingTab } from '@/components/admin/OvernattingTab';
+import { GjenglemtSettingsTab } from '@/components/admin/settings/GjenglemtSettingsTab';
 const HomeConfigTab = lazy(() => import('@/components/admin/HomeConfigTab'));
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -312,6 +313,9 @@ export function AdminSettingsContent({
 
     case 'overnatting':
       return <OvernattingTab />;
+
+    case 'gjenglemt':
+      return <GjenglemtSettingsTab />;
 
     case 'home-config':
       return (

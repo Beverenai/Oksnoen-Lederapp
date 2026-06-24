@@ -40,7 +40,7 @@ const Checkout = lazy(() => import("@/pages/admin/Checkout"));
 const ShiftPlanner = lazy(() => import("@/pages/admin/ShiftPlanner"));
 const Dynga = lazy(() => import("@/pages/admin/Dynga"));
 const MyShifts = lazy(() => import("@/pages/MyShifts"));
-const Gjenglemt = lazy(() => import("@/pages/admin/Gjenglemt"));
+const Gjenglemt = lazy(() => import("@/pages/Gjenglemt"));
 const PublicGjenglemt = lazy(() => import("@/pages/PublicGjenglemt"));
 
 const queryClient = new QueryClient({
@@ -193,7 +193,7 @@ function AppRoutes() {
         <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
         <Route path="/admin/shifts" element={<ProtectedRoute><ShiftPlanner /></ProtectedRoute>} />
         <Route path="/admin/dynga" element={<ProtectedRoute><Dynga /></ProtectedRoute>} />
-        <Route path="/admin/gjenglemt" element={<ProtectedRoute><Gjenglemt /></ProtectedRoute>} />
+        <Route path="/gjenglemt" element={<ProtectedRoute><Gjenglemt /></ProtectedRoute>} />
         <Route path="/gjenglemt/:slug" element={<PublicGjenglemt />} />
         <Route path="/participant-stats" element={<ProtectedRoute><ParticipantStats /></ProtectedRoute>} />
         <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />

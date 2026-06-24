@@ -5,6 +5,8 @@ import { GjenglemtFilters } from '@/components/admin/gjenglemt/GjenglemtFilters'
 import { SignedImage } from '@/components/admin/gjenglemt/SignedImage';
 import { colorMeta, garmentLabel } from '@/lib/gjenglemtConstants';
 import { Loader2, Search, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 export default function PublicGjenglemt() {
   const { slug } = useParams<{ slug: string }>();
@@ -13,12 +15,17 @@ export default function PublicGjenglemt() {
 
   const [color, setColor] = useState<string | null>(null);
   const [garment, setGarment] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
-  const filtered = useMemo(() => items.filter(i =>
-    (!color || i.color === color) &&
-    (!garment || i.garment_type === garment),
-  ), [items, color, garment]);
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter(i =>
+      (!color || i.color === color) &&
+      (!garment || i.garment_type === garment) &&
+      (!q || matchesQuery(i, q)),
+    );
+  }, [items, color, garment, query]);
 
   // SEO
   useEffect(() => {
@@ -91,9 +98,14 @@ export default function PublicGjenglemt() {
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-5">
         {/* Filters */}
         <section className="rounded-2xl border bg-card p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Søk etter farge og plagg</span>
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Søk: f.eks. blå genser, rød sokk, vannflaske…"
+              className="pl-9"
+            />
           </div>
           <GjenglemtFilters color={color} garment={garment} onColor={setColor} onGarment={setGarment} />
         </section>
@@ -110,7 +122,7 @@ export default function PublicGjenglemt() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {filtered.map((item, idx) => {
-                const c = colorMeta(item.color);
+                const c = item.color ? colorMeta(item.color) : null;
                 return (
                   <button
                     key={item.id}
@@ -118,15 +130,24 @@ export default function PublicGjenglemt() {
                     className="rounded-xl border overflow-hidden bg-card text-left hover:shadow-md transition-shadow"
                   >
                     <div className="aspect-square bg-muted">
-                      <SignedImage imageUrl={item.image_url} alt={garmentLabel(item.garment_type)} className="w-full h-full object-cover" />
+                      <SignedImage imageUrl={item.image_url} alt={item.garment_type ? garmentLabel(item.garment_type) : 'Gjenglemt'} className="w-full h-full object-cover" />
                     </div>
-                    <div className="p-2.5 flex items-center gap-1.5 min-w-0">
-                      <span
-                        className="h-4 w-4 rounded-full border shrink-0"
-                        style={c.hex.startsWith('#') ? { backgroundColor: c.hex } : { background: c.hex }}
-                        aria-label={c.label}
-                      />
-                      <span className="text-sm font-medium truncate">{garmentLabel(item.garment_type)}</span>
+                    <div className="p-2.5 space-y-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {c && (
+                          <span
+                            className="h-4 w-4 rounded-full border shrink-0"
+                            style={c.hex.startsWith('#') ? { backgroundColor: c.hex } : { background: c.hex }}
+                            aria-label={c.label}
+                          />
+                        )}
+                        <span className="text-sm font-medium truncate">
+                          {item.garment_type ? garmentLabel(item.garment_type) : 'Analyseres…'}
+                        </span>
+                      </div>
+                      {item.ai_description && (
+                        <div className="text-[11px] text-muted-foreground line-clamp-2">{item.ai_description}</div>
+                      )}
                     </div>
                   </button>
                 );
@@ -149,14 +170,38 @@ export default function PublicGjenglemt() {
             <X className="h-5 w-5" />
           </button>
           <div className="max-w-3xl w-full" onClick={e => e.stopPropagation()}>
-            <SignedImage imageUrl={filtered[lightboxIdx].image_url} alt={garmentLabel(filtered[lightboxIdx].garment_type)} className="w-full max-h-[80dvh] object-contain rounded-xl" />
-            <div className="mt-3 text-center">
-              <div className="font-medium">{garmentLabel(filtered[lightboxIdx].garment_type)} – {colorMeta(filtered[lightboxIdx].color).label}</div>
-              <div className="text-xs text-muted-foreground mt-1">Bilde-ID: {filtered[lightboxIdx].id.slice(0, 8)}</div>
+            <SignedImage imageUrl={filtered[lightboxIdx].image_url} alt={filtered[lightboxIdx].garment_type ? garmentLabel(filtered[lightboxIdx].garment_type!) : 'Gjenglemt'} className="w-full max-h-[80dvh] object-contain rounded-xl" />
+            <div className="mt-3 text-center space-y-1">
+              <div className="font-medium">
+                {filtered[lightboxIdx].garment_type ? garmentLabel(filtered[lightboxIdx].garment_type!) : 'Ukjent'}
+                {filtered[lightboxIdx].color && ` – ${colorMeta(filtered[lightboxIdx].color!).label}`}
+              </div>
+              {filtered[lightboxIdx].ai_description && (
+                <div className="text-sm text-muted-foreground">{filtered[lightboxIdx].ai_description}</div>
+              )}
+              {filtered[lightboxIdx].notes && (
+                <div className="text-sm text-muted-foreground italic">📝 {filtered[lightboxIdx].notes}</div>
+              )}
+              {filtered[lightboxIdx].ai_tags?.length > 0 && (
+                <div className="flex flex-wrap gap-1 justify-center pt-1">
+                  {filtered[lightboxIdx].ai_tags.map(t => <Badge key={t} variant="secondary" className="text-[10px]">{t}</Badge>)}
+                </div>
+              )}
+              <div className="text-xs text-muted-foreground pt-1">Bilde-ID: {filtered[lightboxIdx].id.slice(0, 8)}</div>
             </div>
           </div>
         </div>
       )}
     </div>
   );
+}
+
+function matchesQuery(i: { garment_type: string | null; color: string | null; notes: string | null; ai_description: string | null; ai_tags: string[] }, q: string) {
+  const fields: string[] = [];
+  if (i.garment_type) fields.push(i.garment_type, garmentLabel(i.garment_type).toLowerCase());
+  if (i.color) fields.push(i.color, colorMeta(i.color).label.toLowerCase());
+  if (i.notes) fields.push(i.notes.toLowerCase());
+  if (i.ai_description) fields.push(i.ai_description.toLowerCase());
+  if (i.ai_tags?.length) fields.push(...i.ai_tags.map(t => t.toLowerCase()));
+  return fields.some(f => f.includes(q));
 }

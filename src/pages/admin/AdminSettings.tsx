@@ -22,6 +22,7 @@ import {
   LayoutGrid,
   FileSpreadsheet,
   Bed,
+  Shirt,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
@@ -52,12 +53,14 @@ const navItems = [
   { key: 'home-config', label: 'Hjemskjerm', desc: 'Tittel, ikon og synlighet', icon: LayoutGrid, color: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400' },
   { key: 'google-sheet', label: 'Google Sheet sync', desc: 'Synk ledere fra Google Sheet', icon: FileSpreadsheet, color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
   { key: 'overnatting', label: 'Overnatting', desc: 'Se hvem som vil overnatte', icon: Bed, color: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400' },
+  { key: 'gjenglemt', label: 'Gjenglemt', desc: 'Perioder og offentlige lenker', icon: Shirt, color: 'bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400' },
 ];
 
 const sectionLabels: Record<string, string> = {
   leaders: 'Ledere', participants: 'Deltakere', cabins: 'Hytter', schedule: 'Vaktplan',
   activities: 'Aktiviteter', skjaer: 'Skjær', stories: 'Historier', push: 'Push-varsler',
   'rope-control': 'Tau-kontroll', 'home-config': 'Hjemskjerm-elementer',
+  gjenglemt: 'Gjenglemt',
   'google-sheet': 'Google Sheet sync',
   overnatting: 'Overnatting',
 };
