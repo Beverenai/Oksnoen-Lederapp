@@ -17,6 +17,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '@/components/ui/drawer';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useActivities } from '@/hooks/useActivities';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { hapticSuccess, hapticImpact } from '@/lib/capacitorHaptics';
