@@ -92,6 +92,7 @@ export const LILLE_STYRKEPROVE_FIXED_REQUIREMENTS = [
 export const LILLE_STYRKEPROVE_HEIGHT_ALTERNATIVES = [
   'Åtte meter',
   'Ti meter',
+  'Tretten meter',
 ];
 
 // Swimming alternatives - at least one must be completed (Skrikeren en vei OR Triatlon)
