@@ -1,85 +1,47 @@
-## Mål
+## Endringer fra forrige iterasjon
 
-1. Ledere skal kunne se hva de andre lederne holder på med (aktivitet) på `/ledere`-siden.
-2. Listen skal scrolle jevnt – ingen "frys" når man scroller ned og raskt opp igjen.
+### 1. Flytt periode-administrasjon inn i Admin → Innstillinger
+- Slett toppknappen **«Gjenglemt»** på `/admin`.
+- Slett ruten `/admin/gjenglemt` og siden `src/pages/admin/Gjenglemt.tsx`.
+- Legg til nytt kort **«Gjenglemt»** i `src/pages/admin/AdminSettings.tsx` (`navItems`-listen, ikon `Shirt`) som åpner en ny tab i `AdminSettingsContent.tsx`.
+- Den nye taben er en enkel komponent `GjenglemtSettingsTab` som kun viser periode-administrasjon (gjenbruker `PeriodManageSheet`-logikken som inline-skjema): liste over perioder, opprett ny periode (kun navn-felt + datoer), toggle offentlig, kopier lenke, åpne offentlig side, slett.
 
-## Problem 1 — Aktivitet vises ikke for andre
+### 2. Ledere får «Gjenglemt» i appen
+- Ny rute `/gjenglemt` (innen `ProtectedRoute`, tilgjengelig for alle innloggede ledere — ikke kun admin) → ny side `src/pages/Gjenglemt.tsx`.
+- Siden viser: periodevelger øverst (auto = nyeste aktive), filtre (farge + plagg + status), bilde-galleri (gjenbruker `ItemGrid`), og en stor **«+ Nytt funn»**-knapp.
+- Legg til entry i `leaderNavItems` (sidemeny) i `src/components/layout/AppLayout.tsx`: `{ to: '/gjenglemt', icon: Shirt, label: 'Gjenglemt' }`.
+- `AddItemSheet` forenkles drastisk for ledere: kun **Bilde** (kamera/album) + **Notater** (fritekst) + **Lagre**. Ingen manuell plagg/farge-velger. Etter lagring kjøres AI-analyse i bakgrunnen.
 
-Siden bruker allerede `leader.content?.current_activity`, men RLS på `public.leader_content` er:
+### 3. AI-analyse av bilder for søk
+- Ny tabell-kolonner på `gjenglemt_items`:
+  - `notes text` (lederens fritekst-notat — erstatter `owner_name` + `comment` i den enklere flyten; beholder de eksisterende kolonnene som nullbare for bakoverkompatibilitet).
+  - `ai_status text default 'pending'` (`pending` | `done` | `failed`).
+  - `ai_description text` (kort tekstbeskrivelse fra AI, vises på offentlig side).
+  - `ai_tags text[]` (frie søkeord: farger, materiale, mønster, merker hvis synlig).
+- `garment_type` og `color` gjøres nullbare og fylles av AI (kan fortsatt overstyres manuelt fra admin-grid).
+- Migrer den offentlige visningen `gjenglemt_public` til å inkludere `notes` (lederens notater er nyttige for å finne igjen — bekreft med bruker hvis dette skal være privat; jeg gjør det offentlig fordi det erstatter manuell beskrivelse).
+- Ny edge-funksjon `analyze-gjenglemt`:
+  - Input: `{ item_id, image_path }`.
+  - Henter signert URL for bildet, sender til Lovable AI Gateway (`google/gemini-2.5-flash`) med structured output (Zod-skjema):
+    ```ts
+    { garment_type: enum(GARMENT_TYPES), color: enum(COLORS), description: string, tags: string[] }
+    ```
+  - Skriver tilbake til `gjenglemt_items` via service role, setter `ai_status='done'` (eller `'failed'`).
+- Klient kaller `supabase.functions.invoke('analyze-gjenglemt', ...)` rett etter `insert`. UI viser «AI analyserer…»-badge på kort med `ai_status='pending'`.
 
-```
-USING (leader_id = current_leader_id() OR is_admin())
-```
-
-Vanlige ledere får derfor bare sin egen rad tilbake → aktivitetslinjen er tom for alle andre. Vi må eksponere aktivitetsfeltene (men ikke private felter som `personal_notes`, `obs_message`, `has_read`, push-tokens osv.) til alle innloggede ledere.
-
-### Løsning (DB)
-
-Lag en kolonne-begrenset visning og bruk den i Ledere-fetch:
-
-```sql
-CREATE OR REPLACE VIEW public.leader_activities_public
-WITH (security_invoker = true) AS
-SELECT leader_id, current_activity, extra_activity, updated_at
-FROM public.leader_content;
-
-GRANT SELECT ON public.leader_activities_public TO authenticated;
-```
-
-Pluss en ekstra RLS-policy på `leader_content` som tillater `SELECT` for `authenticated` *kun gjennom* viewet — enkleste vei: legge til en ekstra SELECT-policy som tillater alle authenticated, og la viewet velge ut de "trygge" kolonnene. Men da lekker andre kolonner via direkte tabell-spørring. Derfor:
-
-- Behold dagens strenge `leader_content_select`-policy.
-- Lag viewet som `SECURITY DEFINER` (ikke `security_invoker`) eid av en rolle som kan lese tabellen, slik at viewet bypasser RLS på de utvalgte kolonnene.
-
-```sql
-CREATE OR REPLACE VIEW public.leader_activities_public AS
-SELECT leader_id, current_activity, extra_activity, updated_at
-FROM public.leader_content;
-
-ALTER VIEW public.leader_activities_public OWNER TO postgres;
-GRANT SELECT ON public.leader_activities_public TO authenticated;
-```
-
-### Løsning (frontend)
-
-I `src/pages/Leaders.tsx`:
-- Bytt `from('leader_content').select('*')` → `from('leader_activities_public').select('leader_id, current_activity, extra_activity')`.
-- `LeaderWithContent.content` blir kun de offentlige feltene her (resten brukes ikke på denne siden uansett — `has_read`/`obs_message`/`personal_notes` leses ikke i kortet for andre ledere).
-- Type-cast lokalt siden viewet ikke ligger i typegen.
-
-Admin-dashboardet (`useLeaderDashboardData`) er uendret — det fortsetter å bruke `leader_content` direkte (admins har full tilgang via `is_admin()`).
-
-## Problem 2 — Hakkete scroll
-
-Tre årsaker, fjernes alle:
-
-1. **Re-renders på hele listen** ved scroll (ingen memoisering). Pakk lederkortet inn i en egen `LeaderRow`-komponent med `React.memo`.
-2. **`animate-pulse` på grønn prikk** for hver synlig leder + **`ring-4 ring-offset-2`** på avatarer = mange composited layers. Vi fjerner ikke effekten, men slår av `animate-pulse` (statisk grønn prikk holder) og setter `will-change: transform` av (default, men sjekk at den ikke er satt).
-3. **Layout-trashing ved hurtig scroll** fordi alle ~80 kort render samtidig. Legg på CSS `content-visibility: auto; contain-intrinsic-size: 96px 96px;` på hvert kort så off-screen kort skipper layout/paint.
-
-### Endringer
-
-- Ny `src/components/leaders/LeaderRow.tsx` (memoisert) som rendrer eksisterende markup. Bruker stabile callbacks (`onSelect(leader)`, `onCall(phone)`).
-- `Leaders.tsx`: map `filteredAndSortedLeaders` til `<LeaderRow>` med `key={leader.id}`. Separator-logikken beholdes i parent.
-- Fjern `animate-pulse` fra grønn aktivitets-prikk.
-- Legg til Tailwind-klasser `[content-visibility:auto] [contain-intrinsic-size:96px]` på kort-wrapperen.
+### 4. Søk
+- Offentlig + intern søkebar (`Input`) som gjør case-insensitiv match mot `garment_type`, `color`, `notes`, `ai_description` og `ai_tags`. På klient-siden (lokal filtrering på allerede-hentede rader) — enkelt nok for forventede volumer.
+- Eksisterende farge/plagg-filtre beholdes.
 
 ## Tekniske detaljer
 
-- Migration oppretter viewet og GRANT.
-- `Leaders.tsx`: ett spørringsbytte + render-refaktor. Sortering/filtrering uendret.
-- Ingen endringer i admin-flyten, push, eller andre sider.
+- Migrasjoner kjøres i én tur, deretter regenereres types før edge function og UI bruker de nye feltene.
+- Edge function bruker `verify_jwt=false` (default) men leser ikke fra request-bruker — den krever bare `item_id` + verifiserer at item finnes.
+- Bilder forblir i privat bøtte; edge function bruker service role for å lese signert URL.
+- Ingen endring i offentlig rute `/gjenglemt/:slug`.
 
-## Filer som endres
+## Det vi IKKE gjør
 
-```
-supabase/migrations/<ts>_leader_activities_public_view.sql   (ny)
-src/pages/Leaders.tsx
-src/components/leaders/LeaderRow.tsx                          (ny)
-```
-
-## Verifisering
-
-- Logg inn som vanlig leder → se andre lederes `current_activity` på `/ledere`.
-- Scroll opp/ned raskt på mobil-preview → ingen merkbar frys.
-- Admin-dashboardet viser fortsatt obs/notater/lest-status uendret.
+- Ingen embeddings/vector-søk — fritekstmatch er nok.
+- Ingen sletter av `owner_name`/`comment` (kolonnene står tomme i ny flyt).
+- Ingen retry-kø for feilet AI — admin kan trykke «Analyser på nytt» fra grid.

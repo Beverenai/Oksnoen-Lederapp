@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { format } from 'date-fns';
 import { formatFullRoom } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,6 +36,11 @@ interface ParticipantWithCabin {
   activity_notes: string | null;
   image_url: string | null;
   times_attended: number | null;
+  pass_written: boolean | null;
+  pass_written_at: string | null;
+  pass_written_by: string | null;
+  pass_text: string | null;
+  pass_suggestion: string | null;
   cabin?: { id: string; name: string } | null;
 }
 
@@ -106,6 +112,7 @@ export const ParticipantDetailDialog = ({
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isTogglingArrival, setIsTogglingArrival] = useState(false);
+  const [isTogglingPass, setIsTogglingPass] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -243,6 +250,41 @@ export const ParticipantDetailDialog = ({
     refetchParticipant();
   };
 
+  const togglePassWritten = async () => {
+    if (!participant || !leader) return;
+    setIsTogglingPass(true);
+    try {
+      const newStatus = !participant.pass_written;
+      const { error } = await supabase
+        .from('participants')
+        .update(
+          newStatus
+            ? {
+                pass_written: true,
+                pass_written_at: new Date().toISOString(),
+                pass_written_by: leader.id,
+              }
+            : {
+                pass_written: false,
+                pass_written_at: null,
+                pass_written_by: null,
+              }
+        )
+        .eq('id', participant.id);
+      if (error) throw error;
+      hapticSuccess();
+      showSuccess(newStatus ? 'Pass markert som skrevet' : 'Markering fjernet');
+      refetchParticipant();
+      onParticipantUpdated?.();
+    } catch (error) {
+      console.error('Error toggling pass_written:', error);
+      hapticError();
+      showError('Feil', 'Kunne ikke oppdatere passtatus');
+    } finally {
+      setIsTogglingPass(false);
+    }
+  };
+
   const age = participant ? calculateAge(participant.birth_date) : null;
   const initials = participant?.name
     ?.split(' ')
@@ -343,7 +385,15 @@ export const ParticipantDetailDialog = ({
                 <ResponsiveDialogTitle className="text-lg sm:text-xl">{participant.name}</ResponsiveDialogTitle>
 
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground flex-wrap">
-                  {age !== null && <span>{age} år</span>}
+                  {participant.birth_date && (
+                    <span>{format(new Date(participant.birth_date), 'dd.MM.yyyy')}</span>
+                  )}
+                  {age !== null && (
+                    <>
+                      <span>•</span>
+                      <span>{age} år</span>
+                    </>
+                  )}
                   {participant.room && (
                     <>
                       <span>•</span>
@@ -442,6 +492,46 @@ export const ParticipantDetailDialog = ({
                   )}
                   {participant.has_arrived ? 'Marker som ikke ankommet' : 'Marker som ankommet'}
                 </Button>
+
+                {/* Pass written toggle */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Trophy className="h-4 w-4 text-emerald-600" />
+                    <span>Pass</span>
+                    {participant.pass_written && (
+                      <Badge variant="default" className="text-xs">Skrevet</Badge>
+                    )}
+                  </div>
+                  {(participant.pass_text || participant.pass_suggestion) ? (
+                    <div className="p-2.5 bg-muted/40 border rounded-lg text-sm whitespace-pre-wrap max-h-48 overflow-y-auto">
+                      {participant.pass_text || participant.pass_suggestion}
+                      {!participant.pass_text && participant.pass_suggestion && (
+                        <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          AI-forslag
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Ingen passtekst generert ennå. Huk av når passet er skrevet manuelt.
+                    </p>
+                  )}
+                  <Button
+                    variant={participant.pass_written ? 'outline' : 'default'}
+                    className="w-full"
+                    onClick={togglePassWritten}
+                    disabled={isTogglingPass}
+                  >
+                    {isTogglingPass ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : participant.pass_written ? (
+                      <XCircle className="h-4 w-4 mr-2" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
+                    {participant.pass_written ? 'Fjern markering' : 'Marker pass som skrevet'}
+                  </Button>
+                </div>
               </div>
             </div>
             {/* Safe area spacer for iOS */}

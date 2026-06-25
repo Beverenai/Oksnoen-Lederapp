@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { ParticipantStatsCard } from "@/components/admin/ParticipantStatsCard";
 import { RoomSwapTab } from "@/components/stats/RoomSwapTab";
 import { CabinReportsTab } from "@/components/stats/CabinReportsTab";
@@ -9,7 +9,17 @@ import { ActivityStatsTab } from "@/components/stats/ActivityStatsTab";
 import { ExportDataSheet } from "@/components/stats/ExportDataSheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity, ArrowLeft } from "lucide-react";
+import { ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity, ArrowLeft, LayoutDashboard } from "lucide-react";
+
+
+const dyngaNavItem = {
+  key: "dynga",
+  label: "Dynga",
+  desc: "Oversikt over deltakeroppførsel",
+  icon: LayoutDashboard,
+  color: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400",
+  path: "/admin/dynga",
+} as const;
 
 const navItems = [
   { key: "room-swap", label: "Rombytter", desc: "Bytt rom mellom deltakere", icon: ArrowLeftRight, color: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
@@ -37,6 +47,7 @@ const tabLabels: Record<string, string> = {
 
 const ParticipantStats = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [exportOpen, setExportOpen] = useState(false);
   const currentTab = searchParams.get("tab");
 
@@ -49,7 +60,7 @@ const ParticipantStats = () => {
           <Button variant="ghost" size="icon" onClick={() => setSearchParams({})}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold">{tabLabels[currentTab] || "Deltakere"}</h1>
+          <h1 className="text-2xl font-bold">{tabLabels[currentTab] || "Deltakerstatistikk"}</h1>
         </div>
         <ActiveComponent />
       </div>
@@ -62,7 +73,22 @@ const ParticipantStats = () => {
 
       <ParticipantStatsCard />
 
-      <div className="grid grid-cols-2 gap-3 mt-6">
+      <div className="mt-6">
+        <Card
+          className="p-4 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform bg-indigo-500/15 text-indigo-600 dark:text-indigo-400"
+          onClick={() => navigate(dyngaNavItem.path)}
+        >
+          <div className="flex items-start gap-3">
+            <dyngaNavItem.icon className="h-7 w-7 shrink-0" />
+            <div>
+              <p className="font-semibold text-sm">{dyngaNavItem.label}</p>
+              <p className="text-xs opacity-70 mt-0.5">{dyngaNavItem.desc}</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mt-3">
         {navItems.map(({ key, label, desc, icon: Icon, color }) => (
           <Card
             key={key}

@@ -146,6 +146,111 @@ export type Database = {
         }
         Relationships: []
       }
+      dynga_cards: {
+        Row: {
+          column_id: string
+          created_at: string
+          id: string
+          participant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          column_id: string
+          created_at?: string
+          id?: string
+          participant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          column_id?: string
+          created_at?: string
+          id?: string
+          participant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dynga_cards_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "dynga_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dynga_cards_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dynga_columns: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          title?: string
+        }
+        Relationships: []
+      }
+      dynga_comments: {
+        Row: {
+          body: string
+          card_id: string
+          created_at: string
+          id: string
+          leader_id: string | null
+        }
+        Insert: {
+          body: string
+          card_id: string
+          created_at?: string
+          id?: string
+          leader_id?: string | null
+        }
+        Update: {
+          body?: string
+          card_id?: string
+          created_at?: string
+          id?: string
+          leader_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dynga_comments_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "dynga_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dynga_comments_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       extra_fields_config: {
         Row: {
           created_at: string | null
@@ -254,6 +359,108 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gjenglemt_items: {
+        Row: {
+          ai_description: string | null
+          ai_status: string
+          ai_tags: string[]
+          color: string | null
+          comment: string | null
+          created_at: string
+          created_by: string | null
+          garment_type: string | null
+          id: string
+          image_url: string
+          notes: string | null
+          owner_name: string | null
+          period_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_description?: string | null
+          ai_status?: string
+          ai_tags?: string[]
+          color?: string | null
+          comment?: string | null
+          created_at?: string
+          created_by?: string | null
+          garment_type?: string | null
+          id?: string
+          image_url: string
+          notes?: string | null
+          owner_name?: string | null
+          period_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_description?: string | null
+          ai_status?: string
+          ai_tags?: string[]
+          color?: string | null
+          comment?: string | null
+          created_at?: string
+          created_by?: string | null
+          garment_type?: string | null
+          id?: string
+          image_url?: string
+          notes?: string | null
+          owner_name?: string | null
+          period_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gjenglemt_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gjenglemt_items_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "gjenglemt_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gjenglemt_periods: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          is_public: boolean
+          name: string
+          slug: string
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_public?: boolean
+          name: string
+          slug: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_public?: boolean
+          name?: string
+          slug?: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       home_screen_config: {
         Row: {
@@ -1357,6 +1564,30 @@ export type Database = {
       }
     }
     Views: {
+      gjenglemt_public: {
+        Row: {
+          ai_description: string | null
+          ai_status: string | null
+          ai_tags: string[] | null
+          color: string | null
+          created_at: string | null
+          garment_type: string | null
+          id: string | null
+          image_url: string | null
+          notes: string | null
+          period_id: string | null
+          status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gjenglemt_items_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "gjenglemt_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leader_activities_public: {
         Row: {
           current_activity: string | null

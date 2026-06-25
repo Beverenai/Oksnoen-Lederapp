@@ -149,16 +149,18 @@ export default function Admin() {
         showError('Mangler Spreadsheet-ID i innstillinger');
         return;
       }
+      const legacyDefaultRange = /^'?Sheet1'?!A1:Z{1,2}1000$/i.test((cfg.range || '').trim());
       const { data, error } = await supabase.functions.invoke('sync-leaders-from-sheet', {
-        body: { spreadsheetId: cfg.spreadsheetId, range: cfg.range || '', dryRun: false },
+        body: { spreadsheetId: cfg.spreadsheetId, range: legacyDefaultRange ? '' : (cfg.range || ''), dryRun: false },
       });
       if (error) throw error;
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
-      const r = data as { saved?: number; failed?: number; unmatched?: string[] };
+      const r = data as { saved?: number; failed?: number; unmatched?: string[]; range?: string };
       hapticSuccess();
       const failed = r.failed || 0;
       const unmatched = r.unmatched?.length || 0;
       const parts = [`${r.saved ?? 0} oppdatert`];
+      if (r.range) parts.push(r.range.split('!')[0].replace(/^'|'$/g, ''));
       if (failed > 0) parts.push(`${failed} feilet`);
       if (unmatched > 0) parts.push(`${unmatched} ikke matchet`);
       if (failed > 0) showError(parts.join(' · '));
