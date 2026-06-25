@@ -35,7 +35,7 @@ function getMissingLille(activities: string[]): string[] {
     if (!matchesRequirement(activities, req)) missing.push(req);
   });
   if (!LILLE_STYRKEPROVE_HEIGHT_ALTERNATIVES.some((a) => matchesRequirement(activities, a))) {
-    missing.push("Åtte/Ti meter");
+    missing.push("Åtte/Ti/Tretten meter");
   }
   if (!LILLE_STYRKEPROVE_SWIMMING_ALTERNATIVES.some((a) => matchesRequirement(activities, a))) {
     missing.push("Skrikeren en vei / Triatlon");
