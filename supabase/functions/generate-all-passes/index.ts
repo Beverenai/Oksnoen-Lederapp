@@ -162,16 +162,22 @@ async function updateProgress(supabase: any, status: string, processed: number, 
 
 async function generatePassForParticipant(participant: ParticipantData, LOVABLE_API_KEY: string): Promise<string> {
   const firstName = participant.name.split(' ')[0];
-  
+
+  const friendlyActivities = participant.activities.map((a) =>
+    a.toLowerCase().trim() === 'rappis' ? 'rappellering ned fjellveggen' : a
+  );
+
   const userPrompt = `Skriv et pass for denne deltakeren:
 
 Fornavn: ${firstName}
 Fullt navn: ${participant.name}
 Alder: ${participant.age ? `${participant.age} år` : 'Ukjent'}
 Hytte: ${participant.cabin || 'Ukjent'}
-Aktiviteter gjort: ${participant.activities.length > 0 ? participant.activities.join(', ') : 'Ingen registrert'}
+Aktiviteter gjort: ${friendlyActivities.length > 0 ? friendlyActivities.join(', ') : 'Ingen registrert'}
 ${participant.activityNotes ? `Aktivitetsnotater fra ledere: ${participant.activityNotes}` : ''}
 Styrkeprøve: ${participant.bigStyrkeprove ? 'Store Styrkeprøven ✅' : participant.littleStyrkeprove ? 'Lille Styrkeprøven ✅' : 'Ingen styrkeprøve'}
+
+VIKTIG ORDLISTE: "Rappis" = rappellering ned fjellveggen (skriv "rappellert ned fjellveggen" eller lignende, aldri "rappis").
 
 Skriv passet nå (5-6 setninger):`;
 
