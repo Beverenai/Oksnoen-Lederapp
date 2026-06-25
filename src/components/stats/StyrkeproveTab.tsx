@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trophy, Medal, AlertCircle, Info, ChevronDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState } from "react";
+import { useState, ReactNode } from "react";
 import { ParticipantDetailDialog } from "@/components/passport/ParticipantDetailDialog";
 import {
   hasStoreStyrkprove,
@@ -211,6 +211,44 @@ export function StyrkeproveTab() {
       </div>
   );
 
+  function MissingCard({
+    title,
+    icon,
+    count,
+    list,
+  }: {
+    title: string;
+    icon: ReactNode;
+    count: number;
+    list: { row: ParticipantRow; missing: string[] }[];
+  }) {
+    const [open, setOpen] = useState(false);
+    return (
+      <Card>
+        <Collapsible open={open} onOpenChange={setOpen}>
+          <CollapsibleTrigger asChild>
+            <button className="w-full text-left">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    {icon} {title}
+                  </CardTitle>
+                  <CardDescription>{count} deltakere</CardDescription>
+                </div>
+                <ChevronDown
+                  className={`h-5 w-5 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+                />
+              </CardHeader>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent>{renderMissing(list)}</CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+    );
+  }
+
   function StyrkeproveInfoCard() {
     return (
       <Card>
@@ -269,30 +307,6 @@ export function StyrkeproveTab() {
   return (
     <div className="space-y-6">
       <StyrkeproveInfoCard />
-      <div className="grid grid-cols-2 gap-3">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <Trophy className="h-5 w-5 text-yellow-500" />
-              <div>
-                <p className="text-2xl font-bold">{storeDone.length}</p>
-                <p className="text-sm text-muted-foreground">Store Styrkeprøven</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <Medal className="h-5 w-5 text-amber-600" />
-              <div>
-                <p className="text-2xl font-bold">{lilleDone.length}</p>
-                <p className="text-sm text-muted-foreground">Lille Styrkeprøven</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       <Card>
         <CardHeader>
@@ -307,26 +321,6 @@ export function StyrkeproveTab() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-orange-500" /> Mangler 1 til Store
-          </CardTitle>
-          <CardDescription>{storeMissing1.length} deltakere</CardDescription>
-        </CardHeader>
-        <CardContent>{renderMissing(storeMissing1)}</CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-orange-400" /> Mangler 2 til Store
-          </CardTitle>
-          <CardDescription>{storeMissing2.length} deltakere</CardDescription>
-        </CardHeader>
-        <CardContent>{renderMissing(storeMissing2)}</CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
             <Medal className="h-5 w-5 text-amber-600" /> Fullført Lille Styrkeprøven
           </CardTitle>
           <CardDescription>{lilleDone.length} deltakere</CardDescription>
@@ -334,25 +328,33 @@ export function StyrkeproveTab() {
         <CardContent>{renderDone(lilleDone)}</CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-orange-500" /> Mangler 1 til Lille
-          </CardTitle>
-          <CardDescription>{lilleMissing1.length} deltakere</CardDescription>
-        </CardHeader>
-        <CardContent>{renderMissing(lilleMissing1)}</CardContent>
-      </Card>
+      <MissingCard
+        title="Mangler 1 til Store"
+        icon={<AlertCircle className="h-5 w-5 text-orange-500" />}
+        count={storeMissing1.length}
+        list={storeMissing1}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-orange-400" /> Mangler 2 til Lille
-          </CardTitle>
-          <CardDescription>{lilleMissing2.length} deltakere</CardDescription>
-        </CardHeader>
-        <CardContent>{renderMissing(lilleMissing2)}</CardContent>
-      </Card>
+      <MissingCard
+        title="Mangler 2 til Store"
+        icon={<AlertCircle className="h-5 w-5 text-orange-400" />}
+        count={storeMissing2.length}
+        list={storeMissing2}
+      />
+
+      <MissingCard
+        title="Mangler 1 til Lille"
+        icon={<AlertCircle className="h-5 w-5 text-orange-500" />}
+        count={lilleMissing1.length}
+        list={lilleMissing1}
+      />
+
+      <MissingCard
+        title="Mangler 2 til Lille"
+        icon={<AlertCircle className="h-5 w-5 text-orange-400" />}
+        count={lilleMissing2.length}
+        list={lilleMissing2}
+      />
 
       <ParticipantDetailDialog
         participantId={selectedParticipantId}
