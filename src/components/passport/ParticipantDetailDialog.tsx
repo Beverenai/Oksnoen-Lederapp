@@ -38,6 +38,8 @@ interface ParticipantWithCabin {
   pass_written: boolean | null;
   pass_written_at: string | null;
   pass_written_by: string | null;
+  pass_text: string | null;
+  pass_suggestion: string | null;
   cabin?: { id: string; name: string } | null;
 }
 
@@ -477,9 +479,20 @@ export const ParticipantDetailDialog = ({
                       <Badge variant="default" className="text-xs">Skrevet</Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Huk av når passet er skrevet manuelt.
-                  </p>
+                  {(participant.pass_text || participant.pass_suggestion) ? (
+                    <div className="p-2.5 bg-muted/40 border rounded-lg text-sm whitespace-pre-wrap max-h-48 overflow-y-auto">
+                      {participant.pass_text || participant.pass_suggestion}
+                      {!participant.pass_text && participant.pass_suggestion && (
+                        <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          AI-forslag
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Ingen passtekst generert ennå. Huk av når passet er skrevet manuelt.
+                    </p>
+                  )}
                   <Button
                     variant={participant.pass_written ? 'outline' : 'default'}
                     className="w-full"
