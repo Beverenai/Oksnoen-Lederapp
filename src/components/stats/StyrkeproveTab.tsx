@@ -209,6 +209,7 @@ export function StyrkeproveTab() {
 
   return (
     <div className="space-y-6">
+      <StyrkeproveInfoCard />
       <div className="grid grid-cols-2 gap-3">
         <Card>
           <CardContent className="pt-6">
