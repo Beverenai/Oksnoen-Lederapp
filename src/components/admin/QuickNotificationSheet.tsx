@@ -169,8 +169,8 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-auto max-h-[80vh]">
-        <SheetHeader className="mb-4">
+      <SheetContent side="bottom" className="h-auto max-h-[85dvh] flex flex-col overflow-hidden">
+        <SheetHeader className="mb-4 shrink-0">
           <SheetTitle className="flex items-center gap-2">
             {customMode && (
               <button
@@ -191,7 +191,7 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
         </SheetHeader>
 
         {customMode ? (
-          <div className="space-y-3 pb-6">
+          <div className="space-y-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] overflow-y-auto flex-1 min-h-0 -mx-1 px-1">
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Tittel</label>
               <Input
@@ -230,7 +230,7 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
             </Button>
           </div>
         ) : (
-        <div className="space-y-3 pb-6">
+        <div className="space-y-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] overflow-y-auto flex-1 min-h-0 -mx-1 px-1">
           <Button
             variant="outline"
             className="w-full h-auto p-4 flex items-start gap-4 justify-start text-left"
