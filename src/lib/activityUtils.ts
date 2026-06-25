@@ -241,6 +241,6 @@ export function getTotalActivities(): number {
 // Export requirements for display purposes
 export const LILLE_STYRKEPROVE_REQUIREMENTS = [
   ...LILLE_STYRKEPROVE_FIXED_REQUIREMENTS,
-  'Åtte meter eller Ti meter',
+  'Åtte meter, Ti meter eller Tretten meter',
   'Skrikeren en vei eller Triatlon',
 ];

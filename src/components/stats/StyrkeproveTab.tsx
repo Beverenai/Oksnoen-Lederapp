@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Medal, AlertCircle } from "lucide-react";
+import { Trophy, Medal, AlertCircle, Info } from "lucide-react";
 import {
   hasStoreStyrkprove,
   hasLilleStyrkprove,
@@ -11,6 +11,7 @@ import {
   getLilleStyrkproveProgress,
   matchesRequirement,
   STORE_STYRKEPROVE_REQUIREMENTS,
+  LILLE_STYRKEPROVE_REQUIREMENTS,
   LILLE_STYRKEPROVE_FIXED_REQUIREMENTS,
   LILLE_STYRKEPROVE_HEIGHT_ALTERNATIVES,
   LILLE_STYRKEPROVE_SWIMMING_ALTERNATIVES,
@@ -165,10 +166,50 @@ export function StyrkeproveTab() {
             </div>
           ))}
       </div>
+  );
+
+  function StyrkeproveInfoCard() {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Info className="h-5 w-5 text-primary" />
+            Hva teller som Store/Lille Styrkeprøven?
+          </CardTitle>
+          <CardDescription>Oversikt over aktiviteter og høyder som må registreres.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <p className="font-medium text-sm">Store Styrkeprøven</p>
+            <ul className="mt-1.5 text-sm text-muted-foreground list-disc pl-4 space-y-1">
+              {STORE_STYRKEPROVE_REQUIREMENTS.map((req) => (
+                <li key={req}>
+                  {req}
+                  {req === "Skrikeren begge veier" && (
+                    <span className="block text-xs text-muted-foreground/80 mt-0.5">
+                      Triatlon teller som én vei til Skrikeren — «Skrikeren en vei» + «Triatlon» = begge veier.
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="font-medium text-sm">Lille Styrkeprøven</p>
+            <ul className="mt-1.5 text-sm text-muted-foreground list-disc pl-4 space-y-1">
+              {LILLE_STYRKEPROVE_REQUIREMENTS.map((req) => (
+                <li key={req}>{req}</li>
+              ))}
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
     );
+  }
 
   return (
     <div className="space-y-6">
+      <StyrkeproveInfoCard />
       <div className="grid grid-cols-2 gap-3">
         <Card>
           <CardContent className="pt-6">
