@@ -101,28 +101,43 @@ export const LILLE_STYRKEPROVE_SWIMMING_ALTERNATIVES = [
   'Triatlon',
 ];
 
+function matchesRequirementRaw(completedActivities: string[], requirement: string): boolean {
+  const normalizedReq = requirement.toLowerCase().trim();
+  const altNames = ACTIVITY_NAME_MAPPING[normalizedReq] || [];
+
+  return completedActivities.some((a) => {
+    const normalized = a.toLowerCase().trim();
+
+    // Exact match with requirement
+    if (normalized === normalizedReq) return true;
+
+    // Match with any alternative name
+    if (altNames.includes(normalized)) return true;
+
+    // Partial match - activity starts with requirement or vice versa
+    if (normalized.startsWith(normalizedReq) || normalizedReq.startsWith(normalized)) return true;
+
+    // Partial match with alternatives
+    if (altNames.some(alt => normalized.startsWith(alt) || alt.startsWith(normalized))) return true;
+
+    return false;
+  });
+}
+
 // Check if activity matches requirement (including shortened names and alternatives)
 export function matchesRequirement(completedActivities: string[], requirement: string): boolean {
   const normalizedReq = requirement.toLowerCase().trim();
-  const altNames = ACTIVITY_NAME_MAPPING[normalizedReq] || [];
-  
-  return completedActivities.some((a) => {
-    const normalized = a.toLowerCase().trim();
-    
-    // Exact match with requirement
-    if (normalized === normalizedReq) return true;
-    
-    // Match with any alternative name
-    if (altNames.includes(normalized)) return true;
-    
-    // Partial match - activity starts with requirement or vice versa
-    if (normalized.startsWith(normalizedReq) || normalizedReq.startsWith(normalized)) return true;
-    
-    // Partial match with alternatives
-    if (altNames.some(alt => normalized.startsWith(alt) || alt.startsWith(normalized))) return true;
-    
-    return false;
-  });
+
+  // Triatlon counts as one way to Skrikeren, so "Skrikeren en vei" + "Triatlon" = "Skrikeren begge veier"
+  if (normalizedReq === 'skrikeren begge veier') {
+    if (matchesRequirementRaw(completedActivities, 'Skrikeren begge veier')) return true;
+    return (
+      matchesRequirementRaw(completedActivities, 'Skrikeren en vei') &&
+      matchesRequirementRaw(completedActivities, 'Triatlon')
+    );
+  }
+
+  return matchesRequirementRaw(completedActivities, requirement);
 }
 
 // Check if any of the alternatives are completed
