@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Medal, AlertCircle } from "lucide-react";
+import { Trophy, Medal, AlertCircle, Info } from "lucide-react";
 import {
   hasStoreStyrkprove,
   hasLilleStyrkprove,
@@ -11,9 +11,7 @@ import {
   getLilleStyrkproveProgress,
   matchesRequirement,
   STORE_STYRKEPROVE_REQUIREMENTS,
-  LILLE_STYRKEPROVE_FIXED_REQUIREMENTS,
-  LILLE_STYRKEPROVE_HEIGHT_ALTERNATIVES,
-  LILLE_STYRKEPROVE_SWIMMING_ALTERNATIVES,
+  LILLE_STYRKEPROVE_REQUIREMENTS,
 } from "@/lib/activityUtils";
 
 interface ParticipantRow {
