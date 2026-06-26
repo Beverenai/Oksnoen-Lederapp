@@ -129,10 +129,34 @@ export default function Nurse() {
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'note' | 'event'; id: string; label: string } | null>(null);
+  const [periods, setPeriods] = useState<Array<{ id: string; name: string; start_date: string; end_date: string; is_active: boolean }>>([]);
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string>('all');
 
   useEffect(() => {
     loadParticipants();
+    loadPeriods();
   }, []);
+
+  const loadPeriods = async () => {
+    const { data } = await supabase
+      .from('nurse_periods')
+      .select('*')
+      .order('start_date', { ascending: false });
+    const list = (data || []) as Array<{ id: string; name: string; start_date: string; end_date: string; is_active: boolean }>;
+    setPeriods(list);
+    const active = list.find((p) => p.is_active);
+    if (active) setSelectedPeriodId(active.id);
+  };
+
+  const activePeriod = periods.find((p) => p.id === selectedPeriodId);
+  const periodRange = activePeriod
+    ? { start: new Date(activePeriod.start_date + 'T00:00:00'), end: new Date(activePeriod.end_date + 'T23:59:59') }
+    : null;
+  const inPeriod = (iso: string) => {
+    if (!periodRange) return true;
+    const d = new Date(iso);
+    return d >= periodRange.start && d <= periodRange.end;
+  };
 
   const loadParticipants = async () => {
     try {
@@ -397,10 +421,16 @@ export default function Nurse() {
   const generateNurseReport = () => {
     const now = new Date();
     const dateStr = format(now, "d. MMMM yyyy", { locale: nb });
-    
-    const participantsToExport = participants.filter(p => 
+
+    const filteredParticipantsForExport = participants.map((p) => ({
+      ...p,
+      healthNotes: p.healthNotes.filter((n) => inPeriod(n.created_at)),
+      healthEvents: p.healthEvents.filter((e) => inPeriod(e.created_at)),
+    }));
+    const participantsToExport = filteredParticipantsForExport.filter(p =>
       p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info
     );
+    const periodLabel = activePeriod ? ` | ${activePeriod.name}` : '';
     
     let html = `
 <!DOCTYPE html>
@@ -448,7 +478,7 @@ export default function Nurse() {
 </head>
 <body>
   <h1>Nurse Rapport - Oksnøen</h1>
-  <p class="meta">Eksportert: ${dateStr} | Antall deltakere med helsedata: ${participantsToExport.length}</p>
+  <p class="meta">Eksportert: ${dateStr}${periodLabel} | Antall deltakere med helsedata: ${participantsToExport.length}</p>
 `;
 
     participantsToExport.forEach(participant => {
