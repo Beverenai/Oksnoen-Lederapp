@@ -24,6 +24,7 @@ import {
   Bed,
   Shirt,
   Heart,
+  Dices,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
@@ -56,6 +57,7 @@ const navItems = [
   { key: 'overnatting', label: 'Overnatting', desc: 'Se hvem som vil overnatte', icon: Bed, color: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400' },
   { key: 'gjenglemt', label: 'Gjenglemt', desc: 'Perioder og offentlige lenker', icon: Shirt, color: 'bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400' },
   { key: 'nurse-periods', label: 'Periode', desc: 'Velg aktiv periode (1–7)', icon: Heart, color: 'bg-rose-500/15 text-rose-600 dark:text-rose-400' },
+  { key: 'roulette', label: 'Oppgave-roulette', desc: 'Legg inn senior/U18-oppgaver', icon: Dices, color: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
 ];
 
 const sectionLabels: Record<string, string> = {
@@ -66,6 +68,7 @@ const sectionLabels: Record<string, string> = {
   'google-sheet': 'Google Sheet sync',
   overnatting: 'Overnatting',
   'nurse-periods': 'Periode',
+  roulette: 'Oppgave-roulette',
 };
 
 export default function AdminSettings() {
