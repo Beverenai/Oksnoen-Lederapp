@@ -1,14 +1,13 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, Copy, ExternalLink, ChevronDown, Search } from 'lucide-react';
-import { useGjenglemtPeriods, useGjenglemtItems, useGjenglemtRealtime } from '@/hooks/useGjenglemt';
+import { ArrowLeft, Plus, Copy, ExternalLink, ChevronDown, Search, Loader2 } from 'lucide-react';
+import { useActivePeriod, useGjenglemtItems, useGjenglemtRealtime } from '@/hooks/useGjenglemt';
 import { GjenglemtFilters } from '@/components/admin/gjenglemt/GjenglemtFilters';
 import { ItemGrid } from '@/components/admin/gjenglemt/ItemGrid';
 import { AddItemSheet } from '@/components/admin/gjenglemt/AddItemSheet';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { garmentLabel, colorMeta } from '@/lib/gjenglemtConstants';
 
@@ -16,26 +15,17 @@ export default function Gjenglemt() {
   const navigate = useNavigate();
   const { isAdmin, leader } = useAuth();
   const { showInfo } = useStatusPopup();
-  const { data: periods = [], isLoading: pLoading } = useGjenglemtPeriods();
+  const { data: currentPeriod = null, isLoading: pLoading } = useActivePeriod();
 
-  const [periodId, setPeriodId] = useState<string | null>(null);
   const [colorFilter, setColorFilter] = useState<string | null>(null);
   const [garmentFilter, setGarmentFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'uavhentet' | 'hentet'>('uavhentet');
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
 
-  // Auto-select the ACTIVE period (leaders only work in the active period)
-  useEffect(() => {
-    if (periods.length === 0) return;
-    const active = periods.find(p => p.is_active) ?? periods[0];
-    if (active && active.id !== periodId) setPeriodId(active.id);
-  }, [periods, periodId]);
-
+  const periodId = currentPeriod?.id ?? null;
   useGjenglemtRealtime(periodId);
   const { data: items = [], isLoading: iLoading } = useGjenglemtItems(periodId);
-
-  const currentPeriod = useMemo(() => periods.find(p => p.id === periodId) ?? null, [periods, periodId]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -80,7 +70,13 @@ export default function Gjenglemt() {
       {/* Active period badge + public link */}
       <div className="flex flex-wrap items-center gap-2 shrink-0">
         <div className="px-3 py-1.5 rounded-md border bg-muted/40 text-sm font-medium">
-          {pLoading ? 'Laster…' : currentPeriod ? `Aktiv: ${currentPeriod.name}` : 'Ingen aktiv periode'}
+          {pLoading ? (
+            <span className="inline-flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Laster…</span>
+          ) : currentPeriod ? (
+            `Aktiv: ${currentPeriod.name}`
+          ) : (
+            'Ingen aktiv periode'
+          )}
         </div>
         {currentPeriod?.is_public && (
           <>
@@ -145,13 +141,15 @@ export default function Gjenglemt() {
       </details>
 
       <div className="flex-1 min-h-0">
-        {iLoading ? (
+        {pLoading || (currentPeriod && iLoading) ? (
           <div className="text-center text-muted-foreground py-10 text-sm">Laster...</div>
         ) : currentPeriod ? (
           <ItemGrid items={filtered} canManageAll={isAdmin} />
         ) : (
           <div className="text-center text-muted-foreground py-10 text-sm">
-            {isAdmin ? 'Opprett en periode for å komme i gang.' : 'Ingen perioder ennå. Be admin opprette en.'}
+            {isAdmin
+              ? 'Ingen aktiv periode. Sett en aktiv i Admin → Periode.'
+              : 'Ingen aktiv periode ennå. Be admin sette en aktiv periode.'}
           </div>
         )}
       </div>
