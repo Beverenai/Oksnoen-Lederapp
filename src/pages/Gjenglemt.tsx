@@ -43,7 +43,7 @@ export default function Gjenglemt() {
 
   const copyPublicLink = () => {
     if (!currentPeriod) return;
-    const url = `${window.location.origin}/gjenglemt/${currentPeriod.slug}`;
+    const url = `${getPublicBase()}/gjenglemt/${currentPeriod.slug}`;
     navigator.clipboard.writeText(url).then(() => showInfo('Lenke kopiert'));
   };
 
@@ -85,7 +85,7 @@ export default function Gjenglemt() {
               <span className="hidden sm:inline">Kopier lenke</span>
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <a href={`/gjenglemt/${currentPeriod.slug}`} target="_blank" rel="noreferrer">
+              <a href={`${getPublicBase()}/gjenglemt/${currentPeriod.slug}`} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-3.5 w-3.5 sm:mr-1.5" />
                 <span className="hidden sm:inline">Åpne offentlig side</span>
               </a>
