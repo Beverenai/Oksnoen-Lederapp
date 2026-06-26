@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { Home, Save, Loader2, Search, Users } from "lucide-react";
 import { hapticSuccess, hapticError } from "@/lib/capacitorHaptics";
+import { useActivePeriod } from "@/hooks/useGjenglemt";
 
 interface Cabin {
   id: string;
@@ -27,6 +28,7 @@ interface CabinWithLeaders extends Cabin {
 
 export const CabinReportsTab = () => {
   const { showSuccess, showError, showInfo } = useStatusPopup();
+  const { data: activePeriod } = useActivePeriod();
   const [cabinsWithLeaders, setCabinsWithLeaders] = useState<CabinWithLeaders[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -34,8 +36,8 @@ export const CabinReportsTab = () => {
   const [editedReports, setEditedReports] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (activePeriod?.id) loadData();
+  }, [activePeriod?.id]);
 
   const loadData = async () => {
     setLoading(true);
@@ -65,7 +67,8 @@ export const CabinReportsTab = () => {
       // Fetch cabin reports
       const { data: reports, error: reportsError } = await supabase
         .from("cabin_reports")
-        .select("cabin_id, content, updated_at");
+        .select("cabin_id, content, updated_at")
+        .eq("period_id", activePeriod!.id);
 
       if (reportsError) throw reportsError;
 
@@ -115,15 +118,17 @@ export const CabinReportsTab = () => {
     setSavingCabin(cabinId);
     try {
       const content = editedReports[cabinId] || "";
-      
+      if (!activePeriod?.id) throw new Error("Ingen aktiv periode");
+
       const { error } = await supabase
         .from("cabin_reports")
         .upsert({
           cabin_id: cabinId,
+          period_id: activePeriod.id,
           content,
           updated_at: new Date().toISOString(),
         }, {
-          onConflict: "cabin_id"
+          onConflict: "cabin_id,period_id"
         });
 
       if (error) throw error;
