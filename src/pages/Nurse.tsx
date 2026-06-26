@@ -752,11 +752,27 @@ export default function Nurse() {
         </TabsList>
 
         <TabsContent value="participants" className="space-y-6 mt-4">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground">
               Helsenotater og hendelseslogg for deltakere
             </p>
-            <DropdownMenu>
+            <div className="flex items-center gap-2">
+              {periods.length > 0 && (
+                <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Velg periode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle perioder</SelectItem>
+                    {periods.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}{p.is_active ? ' (aktiv)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
@@ -780,7 +796,8 @@ export default function Nurse() {
                   Eksporter som CSV
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+              </DropdownMenu>
+            </div>
           </div>
 
           {/* Search and Filter */}
