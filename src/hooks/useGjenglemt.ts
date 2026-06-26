@@ -161,6 +161,8 @@ export function useCreateItem() {
       period_id: string;
       image_url: string;
       notes?: string | null;
+      owner_name?: string | null;
+      bag_label?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('gjenglemt_items')
@@ -168,6 +170,8 @@ export function useCreateItem() {
           period_id: input.period_id,
           image_url: input.image_url,
           notes: input.notes ?? null,
+          owner_name: input.owner_name ?? null,
+          bag_label: input.bag_label ?? null,
           created_by: effectiveLeader?.id ?? null,
         })
         .select()
