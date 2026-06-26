@@ -77,19 +77,38 @@ export const CabinReportSheet = ({
       const content = reports[cabinId] || "";
       if (!activePeriod?.id) throw new Error("Ingen aktiv periode");
 
-      const { error } = await supabase
+      // Manual upsert (avoids dependency on a specific unique constraint name
+      // — older cached clients sent on_conflict=cabin_id which no longer exists).
+      const { data: existing, error: selErr } = await supabase
         .from("cabin_reports")
-        .upsert({
-          cabin_id: cabinId,
-          period_id: activePeriod.id,
-          content,
-          updated_at: new Date().toISOString(),
-          updated_by: leaderId || null,
-        }, {
-          onConflict: "cabin_id,period_id"
-        });
+        .select("id")
+        .eq("cabin_id", cabinId)
+        .eq("period_id", activePeriod.id)
+        .maybeSingle();
+      if (selErr) throw selErr;
 
-      if (error) throw error;
+      if (existing?.id) {
+        const { error } = await supabase
+          .from("cabin_reports")
+          .update({
+            content,
+            updated_at: new Date().toISOString(),
+            updated_by: leaderId || null,
+          })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("cabin_reports")
+          .insert({
+            cabin_id: cabinId,
+            period_id: activePeriod.id,
+            content,
+            updated_at: new Date().toISOString(),
+            updated_by: leaderId || null,
+          });
+        if (error) throw error;
+      }
       showSuccess("Hytterapport lagret");
     } catch (error) {
       console.error("Error saving cabin report:", error);
