@@ -47,7 +47,12 @@ export function NursePeriodsTab() {
     }
     const { error } = await supabase
       .from('periods')
-      .insert({ name, start_date: startDate, end_date: endDate });
+      .insert({
+        name,
+        slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `periode-${Date.now()}`,
+        start_date: startDate,
+        end_date: endDate,
+      });
     if (error) { showError('Kunne ikke opprette periode'); return; }
     setName(''); setStartDate(''); setEndDate('');
     showSuccess('Periode opprettet');
