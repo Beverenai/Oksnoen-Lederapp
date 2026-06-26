@@ -111,9 +111,10 @@ export function useLeaderDashboardData(leaders: Leader[]) {
         leader.team?.toLowerCase().trim() === activeTeamFilter.toLowerCase();
 
       const isKitchen = leader.team?.toLowerCase() === 'kjøkken' || leader.team?.toLowerCase() === 'kjokken';
+      const friRegex = /(^|\s)fri(\s|$|[.,!?-])/i;
       const hasFriActivity =
-        leader.content?.current_activity?.toLowerCase().includes('fri') ||
-        leader.content?.extra_activity?.toLowerCase().includes('fri');
+        friRegex.test(leader.content?.current_activity?.trim() ?? '') ||
+        friRegex.test(leader.content?.extra_activity?.trim() ?? '');
       const matchesUnread = !showUnreadOnly || (
         !leader.isAdmin &&
         !leader.isNurse &&
