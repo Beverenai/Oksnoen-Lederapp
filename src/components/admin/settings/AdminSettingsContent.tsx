@@ -29,6 +29,7 @@ import { LeaderImportDialog } from '@/components/admin/LeaderImportDialog';
 import { GoogleSheetSyncTab } from '@/components/admin/GoogleSheetSyncTab';
 import { OvernattingTab } from '@/components/admin/OvernattingTab';
 import { GjenglemtSettingsTab } from '@/components/admin/settings/GjenglemtSettingsTab';
+import { NursePeriodsTab } from '@/components/admin/NursePeriodsTab';
 const HomeConfigTab = lazy(() => import('@/components/admin/HomeConfigTab'));
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -316,6 +317,9 @@ export function AdminSettingsContent({
 
     case 'gjenglemt':
       return <GjenglemtSettingsTab />;
+
+    case 'nurse-periods':
+      return <NursePeriodsTab />;
 
     case 'home-config':
       return (

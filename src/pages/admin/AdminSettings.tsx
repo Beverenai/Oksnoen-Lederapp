@@ -23,6 +23,7 @@ import {
   FileSpreadsheet,
   Bed,
   Shirt,
+  Heart,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
@@ -54,6 +55,7 @@ const navItems = [
   { key: 'google-sheet', label: 'Google Sheet sync', desc: 'Synk ledere fra Google Sheet', icon: FileSpreadsheet, color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
   { key: 'overnatting', label: 'Overnatting', desc: 'Se hvem som vil overnatte', icon: Bed, color: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400' },
   { key: 'gjenglemt', label: 'Gjenglemt', desc: 'Perioder og offentlige lenker', icon: Shirt, color: 'bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400' },
+  { key: 'nurse-periods', label: 'Nurse-perioder', desc: 'Perioder for nurse-rapporter', icon: Heart, color: 'bg-rose-500/15 text-rose-600 dark:text-rose-400' },
 ];
 
 const sectionLabels: Record<string, string> = {
@@ -63,6 +65,7 @@ const sectionLabels: Record<string, string> = {
   gjenglemt: 'Gjenglemt',
   'google-sheet': 'Google Sheet sync',
   overnatting: 'Overnatting',
+  'nurse-periods': 'Nurse-perioder',
 };
 
 export default function AdminSettings() {
