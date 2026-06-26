@@ -201,14 +201,22 @@ export function ItemGrid({ items, canManageAll }: Props) {
 
       {lightbox && (
         <div
-          className="fixed inset-0 z-50 bg-background/95 backdrop-blur flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-background/95 backdrop-blur overflow-y-auto"
           onClick={() => setLightbox(null)}
         >
-          <button className="absolute top-4 right-4 bg-background border rounded-full p-2" aria-label="Lukk" onClick={() => setLightbox(null)}>
-            <X className="h-5 w-5" />
-          </button>
-          <div className="max-w-3xl w-full" onClick={e => e.stopPropagation()}>
-            <SignedImage imageUrl={lightbox.image_url} alt={lightbox.garment_type ? garmentLabel(lightbox.garment_type) : 'Gjenglemt'} className="w-full max-h-[80dvh] object-contain rounded-xl" />
+          <div
+            className="min-h-full flex flex-col items-center justify-start sm:justify-center p-4"
+            style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+          >
+          <div className="max-w-3xl w-full relative" onClick={e => e.stopPropagation()}>
+            <button
+              className="absolute top-2 right-2 z-10 bg-background/90 border rounded-full p-2 shadow-md"
+              aria-label="Lukk"
+              onClick={() => setLightbox(null)}
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <SignedImage imageUrl={lightbox.image_url} alt={lightbox.garment_type ? garmentLabel(lightbox.garment_type) : 'Gjenglemt'} className="w-full max-h-[70dvh] object-contain rounded-xl" />
             <div className="mt-3 text-center space-y-1">
               <div className="font-medium">
                 {lightbox.garment_type ? garmentLabel(lightbox.garment_type) : 'Ukjent'}
@@ -224,6 +232,10 @@ export function ItemGrid({ items, canManageAll }: Props) {
                 </div>
               )}
             </div>
+            <Button className="w-full mt-4" variant="secondary" onClick={() => setLightbox(null)}>
+              Lukk
+            </Button>
+          </div>
           </div>
         </div>
       )}
