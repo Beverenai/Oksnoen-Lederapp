@@ -11,6 +11,16 @@ import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Input } from '@/components/ui/input';
 import { garmentLabel, colorMeta } from '@/lib/gjenglemtConstants';
 
+function getPublicBase() {
+  if (typeof window === 'undefined') return 'https://app.oksnoen.com';
+  const h = window.location.hostname;
+  // Lovable preview origins are auth-gated — share the public production domain.
+  if (h.endsWith('lovableproject.com') || h.endsWith('lovable.app') || h.endsWith('lovable.dev')) {
+    return 'https://app.oksnoen.com';
+  }
+  return window.location.origin;
+}
+
 export default function Gjenglemt() {
   const navigate = useNavigate();
   const { isAdmin, leader } = useAuth();
