@@ -30,7 +30,7 @@ export function NursePeriodsTab() {
   const load = async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from('nurse_periods')
+      .from('periods')
       .select('*')
       .order('start_date', { ascending: false });
     if (error) showError('Kunne ikke laste perioder');
@@ -46,7 +46,7 @@ export function NursePeriodsTab() {
       return;
     }
     const { error } = await supabase
-      .from('nurse_periods')
+      .from('periods')
       .insert({ name, start_date: startDate, end_date: endDate });
     if (error) { showError('Kunne ikke opprette periode'); return; }
     setName(''); setStartDate(''); setEndDate('');
@@ -56,10 +56,10 @@ export function NursePeriodsTab() {
 
   const toggleActive = async (p: NursePeriod) => {
     if (!p.is_active) {
-      await supabase.from('nurse_periods').update({ is_active: false }).neq('id', p.id);
+      await supabase.from('periods').update({ is_active: false }).neq('id', p.id);
     }
     const { error } = await supabase
-      .from('nurse_periods')
+      .from('periods')
       .update({ is_active: !p.is_active })
       .eq('id', p.id);
     if (error) showError('Kunne ikke oppdatere');
@@ -68,7 +68,7 @@ export function NursePeriodsTab() {
 
   const deletePeriod = async (id: string) => {
     if (!confirm('Slett denne perioden?')) return;
-    const { error } = await supabase.from('nurse_periods').delete().eq('id', id);
+    const { error } = await supabase.from('periods').delete().eq('id', id);
     if (error) showError('Kunne ikke slette');
     else { showSuccess('Slettet'); load(); }
   };

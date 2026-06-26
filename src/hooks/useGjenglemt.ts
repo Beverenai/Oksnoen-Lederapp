@@ -53,7 +53,7 @@ export function useGjenglemtPeriods() {
     queryKey: ['gjenglemt-periods'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('gjenglemt_periods')
+        .from('periods')
         .select('*')
         .order('start_date', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
@@ -87,7 +87,7 @@ export function useCreatePeriod() {
   return useMutation({
     mutationFn: async (input: { name: string; slug: string; start_date?: string | null; end_date?: string | null; is_public?: boolean }) => {
       const { data, error } = await supabase
-        .from('gjenglemt_periods')
+        .from('periods')
         .insert({
           name: input.name,
           slug: input.slug,
@@ -108,7 +108,7 @@ export function useUpdatePeriod() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...patch }: Partial<GjenglemtPeriod> & { id: string }) => {
-      const { error } = await supabase.from('gjenglemt_periods').update(patch).eq('id', id);
+      const { error } = await supabase.from('periods').update(patch).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['gjenglemt-periods'] }),
@@ -119,7 +119,7 @@ export function useDeletePeriod() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('gjenglemt_periods').delete().eq('id', id);
+      const { error } = await supabase.from('periods').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -222,7 +222,7 @@ export function usePublicPeriod(slug: string | undefined) {
     queryFn: async () => {
       if (!slug) return null;
       const { data, error } = await supabase
-        .from('gjenglemt_periods')
+        .from('periods')
         .select('id,name,slug,start_date,end_date,is_public')
         .eq('slug', slug)
         .eq('is_public', true)
