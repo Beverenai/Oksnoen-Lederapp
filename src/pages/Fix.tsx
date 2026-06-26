@@ -23,7 +23,9 @@ import {
   MessageSquare,
   Loader2,
   Image as ImageIcon,
-  Trash2
+  Trash2,
+  Pencil,
+  Save
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -74,7 +76,20 @@ export default function Fix() {
   // Assignment state
   const [assigningTaskId, setAssigningTaskId] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
-  
+
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editWhatToFix, setEditWhatToFix] = useState('');
+  const [editAdminNotes, setEditAdminNotes] = useState('');
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = async () => {
@@ -117,6 +132,15 @@ export default function Fix() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Keep selectedTask in sync when tasks list refreshes (realtime / reload)
+  useEffect(() => {
+    if (!selectedTask) return;
+    const fresh = tasks.find(t => t.id === selectedTask.id);
+    if (fresh && fresh !== selectedTask) {
+      setSelectedTask(fresh);
+    }
+  }, [tasks]);
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -202,6 +226,7 @@ export default function Fix() {
   };
 
   const handleAssign = async (taskId: string, leaderId: string) => {
+    setIsAssigning(true);
     try {
       const task = tasks.find(t => t.id === taskId);
       
@@ -210,12 +235,28 @@ export default function Fix() {
         .update({
           assigned_to: leaderId,
           assigned_at: new Date().toISOString(),
-          admin_notes: adminNotes.trim() || null,
+          admin_notes: adminNotes.trim() || task?.admin_notes || null,
           status: 'assigned'
         })
         .eq('id', taskId);
 
       if (error) throw error;
+
+      // Optimistic local update so the dialog reflects the change immediately
+      setTasks(prev => prev.map(t => t.id === taskId ? {
+        ...t,
+        assigned_to: leaderId,
+        assigned_at: new Date().toISOString(),
+        admin_notes: adminNotes.trim() || t.admin_notes,
+        status: 'assigned'
+      } : t));
+      setSelectedTask(prev => prev && prev.id === taskId ? {
+        ...prev,
+        assigned_to: leaderId,
+        assigned_at: new Date().toISOString(),
+        admin_notes: adminNotes.trim() || prev.admin_notes,
+        status: 'assigned'
+      } : prev);
 
       // Send push notification to assigned leader
       try {
@@ -239,6 +280,84 @@ export default function Fix() {
     } catch (error) {
       console.error('Error assigning task:', error);
       showError('Kunne ikke tildele oppgave');
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const startEdit = (task: FixTask) => {
+    setIsEditing(true);
+    setEditTitle(task.title);
+    setEditDescription(task.description || '');
+    setEditLocation(task.location || '');
+    setEditWhatToFix(task.what_to_fix || '');
+    setEditAdminNotes(task.admin_notes || '');
+    setEditImageFile(null);
+    setEditImagePreview(task.image_url);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setEditImageFile(null);
+    setEditImagePreview(null);
+  };
+
+  const handleEditImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file);
+      setEditImageFile(compressed);
+      const reader = new FileReader();
+      reader.onloadend = () => setEditImagePreview(reader.result as string);
+      reader.readAsDataURL(compressed);
+    } catch {
+      showError('Kunne ikke laste bilde');
+    }
+  };
+
+  const saveEdit = async () => {
+    if (!selectedTask) return;
+    if (!editTitle.trim()) {
+      showError('Tittel kan ikke være tom');
+      return;
+    }
+    setIsSavingEdit(true);
+    try {
+      let imageUrl: string | null | undefined = undefined;
+      if (editImageFile) {
+        imageUrl = await uploadImage(editImageFile);
+      } else if (editImagePreview === null) {
+        imageUrl = null; // removed
+      }
+
+      const payload: any = {
+        title: editTitle.trim(),
+        description: editDescription.trim() || null,
+        location: editLocation.trim() || null,
+        what_to_fix: editWhatToFix.trim() || null,
+        admin_notes: editAdminNotes.trim() || null,
+      };
+      if (imageUrl !== undefined) payload.image_url = imageUrl;
+
+      const { error } = await supabase
+        .from('fix_tasks')
+        .update(payload)
+        .eq('id', selectedTask.id);
+      if (error) throw error;
+
+      // Optimistic update
+      setTasks(prev => prev.map(t => t.id === selectedTask.id ? { ...t, ...payload } : t));
+      setSelectedTask(prev => prev ? { ...prev, ...payload } : prev);
+      hapticSuccess();
+      showSuccess('Endringer lagret');
+      setIsEditing(false);
+    } catch (e) {
+      console.error('Error saving edit:', e);
+      hapticError();
+      showError('Kunne ikke lagre endringer');
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -441,13 +560,75 @@ export default function Fix() {
       </Dialog>
 
       {/* Task Detail Dialog */}
-      <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
+      <Dialog open={!!selectedTask} onOpenChange={(o) => { if (!o) { setSelectedTask(null); setIsEditing(false); } }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           {selectedTask && (
             <>
               <DialogHeader>
-                <DialogTitle className="font-heading">{selectedTask.title}</DialogTitle>
+                <DialogTitle className="font-heading flex items-center justify-between gap-2 pr-6">
+                  {isEditing ? 'Rediger oppgave' : selectedTask.title}
+                  {!isEditing && (isAdmin || selectedTask.created_by === leader?.id) && selectedTask.status !== 'fixed' && (
+                    <Button variant="ghost" size="icon" onClick={() => startEdit(selectedTask)}>
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  )}
+                </DialogTitle>
               </DialogHeader>
+              {isEditing ? (
+                <div className="space-y-4">
+                  <input
+                    ref={editFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleEditImageSelect}
+                    className="hidden"
+                  />
+                  {editImagePreview ? (
+                    <div className="relative">
+                      <img src={editImagePreview} alt="" className="w-full h-48 object-cover rounded-lg" />
+                      <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2"
+                        onClick={() => { setEditImageFile(null); setEditImagePreview(null); }}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button type="button" variant="outline" className="w-full h-24 flex flex-col gap-2"
+                      onClick={() => editFileInputRef.current?.click()}>
+                      <Camera className="w-6 h-6 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Legg til bilde</span>
+                    </Button>
+                  )}
+                  <div className="space-y-2">
+                    <Label>Tittel *</Label>
+                    <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sted</Label>
+                    <Input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Beskrivelse</Label>
+                    <Textarea rows={3} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Hva trengs</Label>
+                    <Textarea rows={2} value={editWhatToFix} onChange={(e) => setEditWhatToFix(e.target.value)} />
+                  </div>
+                  {isAdmin && (
+                    <div className="space-y-2">
+                      <Label>Admin-notat</Label>
+                      <Textarea rows={2} value={editAdminNotes} onChange={(e) => setEditAdminNotes(e.target.value)} />
+                    </div>
+                  )}
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" className="flex-1" onClick={cancelEdit} disabled={isSavingEdit}>Avbryt</Button>
+                    <Button className="flex-1" onClick={saveEdit} disabled={isSavingEdit}>
+                      {isSavingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : (<><Save className="w-4 h-4 mr-1" />Lagre</>)}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
               <div className="space-y-4">
                 {selectedTask.image_url && (
                   <img 
@@ -512,13 +693,17 @@ export default function Fix() {
                 {/* Admin Assignment Section */}
                 {isAdmin && selectedTask.status !== 'fixed' && (
                   <div className="border-t pt-4 space-y-3">
-                    <Label>Tildel til leder</Label>
+                    <Label className="flex items-center gap-2">
+                      Tildel til leder
+                      {isAssigning && <Loader2 className="w-3 h-3 animate-spin" />}
+                    </Label>
                     <Select 
                       value={selectedTask.assigned_to || ''} 
                       onValueChange={(value) => {
                         setAssigningTaskId(selectedTask.id);
                         handleAssign(selectedTask.id, value);
                       }}
+                      disabled={isAssigning}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Velg leder..." />
@@ -568,6 +753,7 @@ export default function Fix() {
                   )}
                 </div>
               </div>
+              )}
             </>
           )}
         </DialogContent>
