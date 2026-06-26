@@ -4,9 +4,13 @@ import { usePublicItems, usePublicPeriod } from '@/hooks/useGjenglemt';
 import { GjenglemtFilters } from '@/components/admin/gjenglemt/GjenglemtFilters';
 import { SignedImage } from '@/components/admin/gjenglemt/SignedImage';
 import { colorMeta, garmentLabel } from '@/lib/gjenglemtConstants';
-import { Loader2, Search, X } from 'lucide-react';
+import { Loader2, Search, X, Lock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+
+const PUBLIC_PASSWORD = '2026';
+const SS_KEY = 'gjenglemt-public-auth';
 
 export default function PublicGjenglemt() {
   const { slug } = useParams<{ slug: string }>();
@@ -17,6 +21,22 @@ export default function PublicGjenglemt() {
   const [garment, setGarment] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+  const [unlocked, setUnlocked] = useState<boolean>(() => {
+    try { return sessionStorage.getItem(SS_KEY) === '1'; } catch { return false; }
+  });
+  const [pwInput, setPwInput] = useState('');
+  const [pwError, setPwError] = useState(false);
+
+  const tryUnlock = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (pwInput.trim() === PUBLIC_PASSWORD) {
+      setUnlocked(true);
+      setPwError(false);
+      try { sessionStorage.setItem(SS_KEY, '1'); } catch {}
+    } else {
+      setPwError(true);
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -68,6 +88,36 @@ export default function PublicGjenglemt() {
         <h1 className="text-2xl font-bold">Fant ikke perioden</h1>
         <p className="text-muted-foreground">Lenken er feil, eller perioden er ikke offentlig tilgjengelig.</p>
         <a href="https://oksnoen.com" className="mt-4 text-primary underline">Tilbake til oksnoen.com</a>
+      </div>
+    );
+  }
+
+  if (!unlocked) {
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background p-6">
+        <form onSubmit={tryUnlock} className="w-full max-w-sm rounded-2xl border bg-card p-6 space-y-4 shadow-sm">
+          <div className="flex flex-col items-center text-center gap-2">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Lock className="h-6 w-6 text-primary" />
+            </div>
+            <h1 className="text-xl font-bold">Gjenglemt – {period.name}</h1>
+            <p className="text-sm text-muted-foreground">Skriv inn passordet for å se gjenglemte ting.</p>
+          </div>
+          <div className="space-y-2">
+            <Input
+              type="password"
+              autoFocus
+              inputMode="numeric"
+              value={pwInput}
+              onChange={e => { setPwInput(e.target.value); setPwError(false); }}
+              placeholder="Passord"
+              className={pwError ? 'border-destructive' : ''}
+            />
+            {pwError && <p className="text-xs text-destructive">Feil passord. Prøv igjen.</p>}
+          </div>
+          <Button type="submit" className="w-full">Lås opp</Button>
+          <p className="text-[11px] text-muted-foreground text-center">Får du ikke tilgang? Kontakt leiren på post@oksnoen.com</p>
+        </form>
       </div>
     );
   }
@@ -169,14 +219,22 @@ export default function PublicGjenglemt() {
 
       {lightboxIdx !== null && filtered[lightboxIdx] && (
         <div
-          className="fixed inset-0 z-50 bg-background/95 backdrop-blur flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-background/95 backdrop-blur overflow-y-auto"
           onClick={() => setLightboxIdx(null)}
         >
-          <button className="absolute top-4 right-4 bg-background border rounded-full p-2" aria-label="Lukk" onClick={() => setLightboxIdx(null)}>
-            <X className="h-5 w-5" />
-          </button>
-          <div className="max-w-3xl w-full" onClick={e => e.stopPropagation()}>
-            <SignedImage imageUrl={filtered[lightboxIdx].image_url} alt={filtered[lightboxIdx].garment_type ? garmentLabel(filtered[lightboxIdx].garment_type!) : 'Gjenglemt'} className="w-full max-h-[80dvh] object-contain rounded-xl" />
+          <div
+            className="min-h-full flex flex-col items-center justify-start sm:justify-center p-4"
+            style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+          >
+          <div className="max-w-3xl w-full relative" onClick={e => e.stopPropagation()}>
+            <button
+              className="absolute top-2 right-2 z-10 bg-background/90 border rounded-full p-2 shadow-md"
+              aria-label="Lukk"
+              onClick={() => setLightboxIdx(null)}
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <SignedImage imageUrl={filtered[lightboxIdx].image_url} alt={filtered[lightboxIdx].garment_type ? garmentLabel(filtered[lightboxIdx].garment_type!) : 'Gjenglemt'} className="w-full max-h-[70dvh] object-contain rounded-xl" />
             <div className="mt-3 text-center space-y-1">
               <div className="font-medium">
                 {filtered[lightboxIdx].garment_type ? garmentLabel(filtered[lightboxIdx].garment_type!) : 'Ukjent'}
@@ -201,6 +259,10 @@ export default function PublicGjenglemt() {
               )}
               <div className="text-xs text-muted-foreground pt-1">Bilde-ID: {filtered[lightboxIdx].id.slice(0, 8)}</div>
             </div>
+            <Button className="w-full mt-4" variant="secondary" onClick={() => setLightboxIdx(null)}>
+              Lukk
+            </Button>
+          </div>
           </div>
         </div>
       )}
