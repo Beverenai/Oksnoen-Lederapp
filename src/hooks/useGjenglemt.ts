@@ -22,6 +22,7 @@ export interface GjenglemtItem {
   garment_type: string | null;
   color: string | null;
   owner_name: string | null;
+  bag_label: string | null;
   comment: string | null;
   notes: string | null;
   status: 'uavhentet' | 'hentet';
@@ -41,6 +42,8 @@ export interface GjenglemtPublicItem {
   color: string | null;
   status: string;
   notes: string | null;
+  owner_name: string | null;
+  bag_label: string | null;
   ai_status: string;
   ai_description: string | null;
   ai_tags: string[];
@@ -158,6 +161,8 @@ export function useCreateItem() {
       period_id: string;
       image_url: string;
       notes?: string | null;
+      owner_name?: string | null;
+      bag_label?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('gjenglemt_items')
@@ -165,6 +170,8 @@ export function useCreateItem() {
           period_id: input.period_id,
           image_url: input.image_url,
           notes: input.notes ?? null,
+          owner_name: input.owner_name ?? null,
+          bag_label: input.bag_label ?? null,
           created_by: effectiveLeader?.id ?? null,
         })
         .select()

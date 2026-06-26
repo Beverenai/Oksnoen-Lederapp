@@ -365,6 +365,7 @@ export type Database = {
           ai_description: string | null
           ai_status: string
           ai_tags: string[]
+          bag_label: string | null
           color: string | null
           comment: string | null
           created_at: string
@@ -382,6 +383,7 @@ export type Database = {
           ai_description?: string | null
           ai_status?: string
           ai_tags?: string[]
+          bag_label?: string | null
           color?: string | null
           comment?: string | null
           created_at?: string
@@ -399,6 +401,7 @@ export type Database = {
           ai_description?: string | null
           ai_status?: string
           ai_tags?: string[]
+          bag_label?: string | null
           color?: string | null
           comment?: string | null
           created_at?: string
@@ -1623,12 +1626,14 @@ export type Database = {
           ai_description: string | null
           ai_status: string | null
           ai_tags: string[] | null
+          bag_label: string | null
           color: string | null
           created_at: string | null
           garment_type: string | null
           id: string | null
           image_url: string | null
           notes: string | null
+          owner_name: string | null
           period_id: string | null
           status: string | null
         }

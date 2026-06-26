@@ -100,7 +100,7 @@ export default function Gjenglemt() {
         <Input
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="Søk etter plagg, farge, notater…"
+          placeholder="Søk etter navn, pose, plagg, farge, notater…"
           className="pl-9"
         />
       </div>
@@ -159,11 +159,13 @@ export default function Gjenglemt() {
   );
 }
 
-function matchesQuery(i: { garment_type: string | null; color: string | null; notes: string | null; ai_description: string | null; ai_tags: string[] }, q: string) {
+function matchesQuery(i: { garment_type: string | null; color: string | null; notes: string | null; ai_description: string | null; ai_tags: string[]; owner_name?: string | null; bag_label?: string | null }, q: string) {
   const fields: string[] = [];
   if (i.garment_type) fields.push(i.garment_type, garmentLabel(i.garment_type).toLowerCase());
   if (i.color) fields.push(i.color, colorMeta(i.color).label.toLowerCase());
   if (i.notes) fields.push(i.notes.toLowerCase());
+  if (i.owner_name) fields.push(i.owner_name.toLowerCase());
+  if (i.bag_label) fields.push(i.bag_label.toLowerCase(), `pose ${i.bag_label.toLowerCase()}`);
   if (i.ai_description) fields.push(i.ai_description.toLowerCase());
   if (i.ai_tags?.length) fields.push(...i.ai_tags.map(t => t.toLowerCase()));
   return fields.some(f => f.includes(q));

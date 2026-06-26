@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Camera, Loader2, ImageIcon, X, Sparkles } from 'lucide-react';
 import { compressImage } from '@/lib/imageUtils';
 import { isNativeCameraAvailable, takePhoto } from '@/lib/capacitorCamera';
@@ -20,12 +22,16 @@ export function AddItemSheet({ open, onOpenChange, period }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
+  const [ownerName, setOwnerName] = useState('');
+  const [bagLabel, setBagLabel] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setFile(null); setPreview(null);
       setNotes('');
+      setOwnerName('');
+      setBagLabel('');
       setSubmitting(false);
     }
   }, [open]);
@@ -67,6 +73,8 @@ export function AddItemSheet({ open, onOpenChange, period }: Props) {
         period_id: period.id,
         image_url: path,
         notes: notes.trim() || null,
+        owner_name: ownerName.trim() || null,
+        bag_label: bagLabel.trim() || null,
       });
       showSuccess('Lagret · AI analyserer i bakgrunnen');
       onOpenChange(false);
@@ -115,6 +123,18 @@ export function AddItemSheet({ open, onOpenChange, period }: Props) {
               </div>
             )}
             <input id="gjenglemt-file-input" type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileInput} />
+          </div>
+
+          {/* Navn + Pose */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-sm font-medium">Navn <span className="text-xs text-muted-foreground font-normal">(valgfritt)</span></Label>
+              <Input value={ownerName} onChange={e => setOwnerName(e.target.value)} placeholder="Hvis det står et navn" />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Pose <span className="text-xs text-muted-foreground font-normal">(valgfritt)</span></Label>
+              <Input value={bagLabel} onChange={e => setBagLabel(e.target.value)} placeholder="F.eks. 3" />
+            </div>
           </div>
 
           {/* Notes */}

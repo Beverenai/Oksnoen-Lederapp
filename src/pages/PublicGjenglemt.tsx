@@ -103,7 +103,7 @@ export default function PublicGjenglemt() {
             <Input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Søk: f.eks. blå genser, rød sokk, vannflaske…"
+              placeholder="Søk: navn, pose, blå genser, rød sokk…"
               className="pl-9"
             />
           </div>
@@ -148,6 +148,12 @@ export default function PublicGjenglemt() {
                       {item.ai_description && (
                         <div className="text-[11px] text-muted-foreground line-clamp-2">{item.ai_description}</div>
                       )}
+                      {item.owner_name && (
+                        <div className="text-[11px] font-medium text-primary truncate">👤 {item.owner_name}</div>
+                      )}
+                      {item.bag_label && (
+                        <div className="text-[11px] text-muted-foreground truncate">📦 Pose {item.bag_label}</div>
+                      )}
                     </div>
                   </button>
                 );
@@ -179,6 +185,12 @@ export default function PublicGjenglemt() {
               {filtered[lightboxIdx].ai_description && (
                 <div className="text-sm text-muted-foreground">{filtered[lightboxIdx].ai_description}</div>
               )}
+              {filtered[lightboxIdx].owner_name && (
+                <div className="text-sm font-medium text-primary">Navn: {filtered[lightboxIdx].owner_name}</div>
+              )}
+              {filtered[lightboxIdx].bag_label && (
+                <div className="text-sm text-muted-foreground">Pose {filtered[lightboxIdx].bag_label}</div>
+              )}
               {filtered[lightboxIdx].notes && (
                 <div className="text-sm text-muted-foreground italic">📝 {filtered[lightboxIdx].notes}</div>
               )}
@@ -196,11 +208,13 @@ export default function PublicGjenglemt() {
   );
 }
 
-function matchesQuery(i: { garment_type: string | null; color: string | null; notes: string | null; ai_description: string | null; ai_tags: string[] }, q: string) {
+function matchesQuery(i: { garment_type: string | null; color: string | null; notes: string | null; ai_description: string | null; ai_tags: string[]; owner_name?: string | null; bag_label?: string | null }, q: string) {
   const fields: string[] = [];
   if (i.garment_type) fields.push(i.garment_type, garmentLabel(i.garment_type).toLowerCase());
   if (i.color) fields.push(i.color, colorMeta(i.color).label.toLowerCase());
   if (i.notes) fields.push(i.notes.toLowerCase());
+  if (i.owner_name) fields.push(i.owner_name.toLowerCase());
+  if (i.bag_label) fields.push(i.bag_label.toLowerCase(), `pose ${i.bag_label.toLowerCase()}`);
   if (i.ai_description) fields.push(i.ai_description.toLowerCase());
   if (i.ai_tags?.length) fields.push(...i.ai_tags.map(t => t.toLowerCase()));
   return fields.some(f => f.includes(q));

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { CheckCircle2, Circle, Trash2, X, Sparkles, RefreshCw, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CheckCircle2, Circle, Trash2, X, Sparkles, RefreshCw, AlertTriangle, Pencil, Save, User, Package } from 'lucide-react';
 import { SignedImage } from './SignedImage';
 import { colorMeta, garmentLabel } from '@/lib/gjenglemtConstants';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,9 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDeleteItem, useReanalyzeItem, useUpdateItem, type GjenglemtItem } from '@/hooks/useGjenglemt';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 interface Props {
   items: GjenglemtItem[];
@@ -21,6 +24,19 @@ export function ItemGrid({ items, canManageAll }: Props) {
   const deleteItem = useDeleteItem();
   const reanalyze = useReanalyzeItem();
   const [lightbox, setLightbox] = useState<GjenglemtItem | null>(null);
+  const [editing, setEditing] = useState<GjenglemtItem | null>(null);
+  const [editOwner, setEditOwner] = useState('');
+  const [editBag, setEditBag] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  useEffect(() => {
+    if (editing) {
+      setEditOwner(editing.owner_name ?? '');
+      setEditBag(editing.bag_label ?? '');
+      setEditNotes(editing.notes ?? '');
+    }
+  }, [editing?.id]);
 
   const canEdit = (item: GjenglemtItem) =>
     canManageAll || item.created_by === effectiveLeader?.id;
@@ -38,6 +54,25 @@ export function ItemGrid({ items, canManageAll }: Props) {
     if (!confirm('Slette denne?')) return;
     try { await deleteItem.mutateAsync(item); showSuccess('Slettet'); }
     catch (e: any) { showError(e?.message ?? 'Kunne ikke slette'); }
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    setSavingEdit(true);
+    try {
+      await updateItem.mutateAsync({
+        id: editing.id,
+        owner_name: editOwner.trim() || null,
+        bag_label: editBag.trim() || null,
+        notes: editNotes.trim() || null,
+      });
+      showSuccess('Lagret');
+      setEditing(null);
+    } catch (e: any) {
+      showError(e?.message ?? 'Kunne ikke lagre');
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   if (items.length === 0) {
@@ -90,6 +125,16 @@ export function ItemGrid({ items, canManageAll }: Props) {
                 {item.ai_description && (
                   <div className="text-xs text-muted-foreground line-clamp-2">{item.ai_description}</div>
                 )}
+                {item.owner_name && (
+                  <div className="text-xs font-medium text-primary flex items-center gap-1 truncate">
+                    <User className="h-3 w-3 shrink-0" /> {item.owner_name}
+                  </div>
+                )}
+                {item.bag_label && (
+                  <div className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                    <Package className="h-3 w-3 shrink-0" /> Pose {item.bag_label}
+                  </div>
+                )}
                 {item.notes && (
                   <div className="text-xs text-muted-foreground line-clamp-2 italic">📝 {item.notes}</div>
                 )}
@@ -101,6 +146,9 @@ export function ItemGrid({ items, canManageAll }: Props) {
                     >
                       {isHentet ? <Circle className="h-3 w-3 mr-1" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
                       {isHentet ? 'Uavh.' : 'Hentet'}
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setEditing(item)} title="Rediger">
+                      <Pencil className="h-3 w-3" />
                     </Button>
                     {aiFailed && (
                       <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => reanalyze.mutate(item.id)} title="Analyser på nytt">
@@ -118,6 +166,39 @@ export function ItemGrid({ items, canManageAll }: Props) {
         })}
       </div>
 
+      {/* Edit modal */}
+      {editing && (
+        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur flex items-center justify-center p-4" onClick={() => !savingEdit && setEditing(null)}>
+          <div className="max-w-md w-full bg-card rounded-xl border p-4 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Rediger funn</h3>
+              <Button variant="ghost" size="icon" onClick={() => setEditing(null)} disabled={savingEdit}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <SignedImage imageUrl={editing.image_url} alt="" className="w-full h-40 object-cover rounded-lg" />
+            <div className="space-y-2">
+              <Label>Navn (hvis det står på plagget)</Label>
+              <Input value={editOwner} onChange={e => setEditOwner(e.target.value)} placeholder="F.eks. Ola Nordmann" />
+            </div>
+            <div className="space-y-2">
+              <Label>Pose</Label>
+              <Input value={editBag} onChange={e => setEditBag(e.target.value)} placeholder="F.eks. 3, A, Blå" />
+            </div>
+            <div className="space-y-2">
+              <Label>Notater</Label>
+              <Textarea rows={3} value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Ekstra info…" />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setEditing(null)} disabled={savingEdit}>Avbryt</Button>
+              <Button className="flex-1" onClick={saveEdit} disabled={savingEdit}>
+                <Save className="h-4 w-4 mr-1" /> {savingEdit ? 'Lagrer…' : 'Lagre'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {lightbox && (
         <div
           className="fixed inset-0 z-50 bg-background/95 backdrop-blur flex items-center justify-center p-4"
@@ -133,6 +214,8 @@ export function ItemGrid({ items, canManageAll }: Props) {
                 {lightbox.garment_type ? garmentLabel(lightbox.garment_type) : 'Ukjent'}
                 {lightbox.color && ` – ${colorMeta(lightbox.color).label}`}
               </div>
+              {lightbox.owner_name && <div className="text-sm font-medium text-primary">Navn: {lightbox.owner_name}</div>}
+              {lightbox.bag_label && <div className="text-sm text-muted-foreground">Pose {lightbox.bag_label}</div>}
               {lightbox.ai_description && <div className="text-sm text-muted-foreground">{lightbox.ai_description}</div>}
               {lightbox.notes && <div className="text-sm text-muted-foreground italic">📝 {lightbox.notes}</div>}
               {lightbox.ai_tags?.length > 0 && (
