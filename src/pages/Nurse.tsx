@@ -50,7 +50,9 @@ import {
   Eye,
   Trophy,
   Download,
-  Trash2
+  Trash2,
+  Pencil,
+  X
 } from 'lucide-react';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -129,6 +131,10 @@ export default function Nurse() {
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'note' | 'event'; id: string; label: string } | null>(null);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editEventDescription, setEditEventDescription] = useState('');
+  const [editEventType, setEditEventType] = useState('observation');
+  const [editEventSeverity, setEditEventSeverity] = useState('low');
   const [periods, setPeriods] = useState<Array<{ id: string; name: string; start_date: string; end_date: string; is_active: boolean }>>([]);
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>('all');
 
