@@ -25,9 +25,11 @@ export default function Gjenglemt() {
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
 
-  // Auto-select first period
+  // Auto-select the ACTIVE period (leaders only work in the active period)
   useEffect(() => {
-    if (!periodId && periods.length > 0) setPeriodId(periods[0].id);
+    if (periods.length === 0) return;
+    const active = periods.find(p => p.is_active) ?? periods[0];
+    if (active && active.id !== periodId) setPeriodId(active.id);
   }, [periods, periodId]);
 
   useGjenglemtRealtime(periodId);
@@ -75,20 +77,11 @@ export default function Gjenglemt() {
         </div>
       </div>
 
-      {/* Period selector + public link */}
+      {/* Active period badge + public link */}
       <div className="flex flex-wrap items-center gap-2 shrink-0">
-        <Select value={periodId ?? ''} onValueChange={v => setPeriodId(v)}>
-          <SelectTrigger className="w-auto min-w-[200px] flex-1 sm:flex-none">
-            <SelectValue placeholder={pLoading ? 'Laster...' : 'Velg periode'} />
-          </SelectTrigger>
-          <SelectContent>
-            {periods.map(p => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name} {!p.is_public && '· skjult'}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="px-3 py-1.5 rounded-md border bg-muted/40 text-sm font-medium">
+          {pLoading ? 'Laster…' : currentPeriod ? `Aktiv: ${currentPeriod.name}` : 'Ingen aktiv periode'}
+        </div>
         {currentPeriod?.is_public && (
           <>
             <Button variant="outline" size="sm" onClick={copyPublicLink}>
