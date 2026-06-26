@@ -812,9 +812,13 @@ export default function Nurse() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportPdf}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Last ned PDF
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportHtml}>
                   <FileText className="w-4 h-4 mr-2" />
-                  Eksporter som HTML
+                  Åpne som HTML
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportCsv}>
                   <Download className="w-4 h-4 mr-2" />
