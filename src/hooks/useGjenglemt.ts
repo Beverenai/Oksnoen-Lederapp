@@ -22,6 +22,7 @@ export interface GjenglemtItem {
   garment_type: string | null;
   color: string | null;
   owner_name: string | null;
+  bag_label: string | null;
   comment: string | null;
   notes: string | null;
   status: 'uavhentet' | 'hentet';
@@ -41,6 +42,8 @@ export interface GjenglemtPublicItem {
   color: string | null;
   status: string;
   notes: string | null;
+  owner_name: string | null;
+  bag_label: string | null;
   ai_status: string;
   ai_description: string | null;
   ai_tags: string[];
