@@ -135,19 +135,27 @@ export default function AdminSettings() {
   };
 
   const toggleLeaderActive = async (leader: Leader) => {
+    const newValue = !leader.is_active;
+    const originalLeaders = [...leaders];
+
+    // Optimistic update: flip locally immediately
+    setLeaders(prev => prev.map(l =>
+      l.id === leader.id ? { ...l, is_active: newValue } : l
+    ));
+
     try {
       const { error } = await supabase
         .from('leaders')
-        .update({ is_active: !leader.is_active })
+        .update({ is_active: newValue })
         .eq('id', leader.id);
 
       if (error) throw error;
-      
-      loadData();
-      showSuccess(leader.is_active ? 'Leder deaktivert' : 'Leder aktivert');
+      showSuccess(newValue ? 'Leder aktivert' : 'Leder deaktivert');
     } catch (error) {
       console.error('Error toggling leader active:', error);
       showError('Kunne ikke oppdatere leder');
+      // Rollback on error
+      setLeaders(originalLeaders);
     }
   };
 
