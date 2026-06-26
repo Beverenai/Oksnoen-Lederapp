@@ -616,18 +616,44 @@ export default function Nurse() {
     setIsExporting(true);
     try {
       const html = generateNurseReport();
-      // Inject auto-print so the browser opens the save-as-PDF dialog
-      const htmlWithPrint = html.replace(
-        '</body>',
-        `<script>window.addEventListener('load', function(){ setTimeout(function(){ window.focus(); window.print(); }, 400); });<\/script></body>`
-      );
-      const newWindow = window.open('', '_blank');
-      if (!newWindow) {
-        showError('Tillat popup for å laste ned PDF');
+      // Use hidden iframe to trigger print dialog without popup blocker
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!doc) {
+        showError('Kunne ikke åpne utskrift');
         return;
       }
-      newWindow.document.write(htmlWithPrint);
-      newWindow.document.close();
+      doc.open();
+      doc.write(html);
+      doc.close();
+
+      const triggerPrint = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (e) {
+          console.error('Print error:', e);
+        }
+        // Clean up after a delay (print is async)
+        setTimeout(() => {
+          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        }, 60000);
+      };
+
+      if (iframe.contentWindow?.document.readyState === 'complete') {
+        setTimeout(triggerPrint, 500);
+      } else {
+        iframe.onload = () => setTimeout(triggerPrint, 500);
+      }
+
       showSuccess('Velg "Lagre som PDF" i utskriftsdialogen');
     } catch (error) {
       console.error('Error exporting PDF:', error);
