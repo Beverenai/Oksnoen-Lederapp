@@ -65,6 +65,26 @@ export function useGjenglemtPeriods() {
   });
 }
 
+// Returns the single active period — used by leader-facing Gjenglemt page.
+// Queries `periods` directly with is_active=true so we don't depend on the
+// whole list arriving first (avoids stale-cache empty-state on mobile).
+export function useActivePeriod() {
+  return useQuery({
+    queryKey: ['active-period', 'gjenglemt'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('periods')
+        .select('id,name,slug,is_public,is_active,start_date,end_date,created_at,updated_at')
+        .eq('is_active', true)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as GjenglemtPeriod | null) ?? null;
+    },
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
 export function useGjenglemtItems(periodId: string | null) {
   return useQuery({
     queryKey: ['gjenglemt-items', periodId],
