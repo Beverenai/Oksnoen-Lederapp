@@ -162,6 +162,7 @@ export type Database = {
           created_at: string
           id: string
           participant_id: string
+          period_id: string | null
           sort_order: number
           updated_at: string
         }
@@ -170,6 +171,7 @@ export type Database = {
           created_at?: string
           id?: string
           participant_id: string
+          period_id?: string | null
           sort_order?: number
           updated_at?: string
         }
@@ -178,6 +180,7 @@ export type Database = {
           created_at?: string
           id?: string
           participant_id?: string
+          period_id?: string | null
           sort_order?: number
           updated_at?: string
         }
@@ -194,6 +197,13 @@ export type Database = {
             columns: ["participant_id"]
             isOneToOne: false
             referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dynga_cards_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
         ]
