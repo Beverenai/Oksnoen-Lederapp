@@ -241,9 +241,10 @@ export default function Leaders() {
       // Priority leaders always at top
       if (aPriority !== bPriority) return aPriority - bPriority;
       
-      // Check if leader has "Fri" as activity
-      const aIsFri = a.content?.current_activity?.toLowerCase().includes('fri');
-      const bIsFri = b.content?.current_activity?.toLowerCase().includes('fri');
+      // Check if leader has "Fri" as activity (whole word match)
+      const friRegex = /(^|\s)fri(\s|$|[.,!?-])/i;
+      const aIsFri = friRegex.test(a.content?.current_activity?.trim() ?? '');
+      const bIsFri = friRegex.test(b.content?.current_activity?.trim() ?? '');
       
       const aIsKitchen = a.team?.toLowerCase() === 'kjøkken';
       const bIsKitchen = b.team?.toLowerCase() === 'kjøkken';
@@ -278,14 +279,14 @@ export default function Leaders() {
 
   // Find index of first "Fri" leader for separator (now at the very bottom, after Kjøkken)
   const firstFriIndex = useMemo(() => {
-    return filteredAndSortedLeaders.findIndex(leader => 
-      leader.content?.current_activity?.toLowerCase().includes('fri')
+    return filteredAndSortedLeaders.findIndex(leader =>
+      /(^|\s)fri(\s|$|[.,!?-])/i.test(leader.content?.current_activity?.trim() ?? '')
     );
   }, [filteredAndSortedLeaders]);
   
   // Get avatar border color class based on leader status
   const getAvatarBorderClass = (leader: LeaderWithContent) => {
-    const isFri = leader.content?.current_activity?.toLowerCase().includes('fri');
+    const isFri = /(^|\s)fri(\s|$|[.,!?-])/i.test(leader.content?.current_activity?.trim() ?? '');
     const isKitchen = leader.team?.toLowerCase() === 'kjøkken';
     const isSjef = leader.team?.toLowerCase() === 'sjef';
     
