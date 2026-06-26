@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +19,15 @@ export default function Roulette() {
   const navigate = useNavigate();
   const { effectiveLeader } = useAuth();
   const { showSuccess, showError, showInfo } = useStatusPopup();
+
+  const { data: rouletteEnabled, isLoading: cfgLoading } = useQuery({
+    queryKey: ['app_config', 'roulette_enabled'],
+    queryFn: async () => {
+      const { data } = await supabase.from('app_config').select('value').eq('key', 'roulette_enabled').maybeSingle();
+      return data?.value === 'true';
+    },
+  });
+  const inRoulette = !!(effectiveLeader as any)?.in_roulette;
 
   const { data: isU18 = false, isLoading: u18Loading } = useIsU18(effectiveLeader?.id);
   const { data: assignment, isLoading: aLoading } = useCurrentAssignment(effectiveLeader?.id);
@@ -57,7 +68,9 @@ export default function Roulette() {
     }
   };
 
-  const loading = u18Loading || aLoading;
+  const loading = u18Loading || aLoading || cfgLoading;
+
+  const blocked = !cfgLoading && (!rouletteEnabled || !inRoulette);
 
   return (
     <div className="flex flex-col animate-fade-in min-h-[calc(100dvh-140px)]">
@@ -79,6 +92,20 @@ export default function Roulette() {
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
+      ) : blocked ? (
+        <Card className="border-dashed">
+          <CardContent className="py-10 flex flex-col items-center text-center gap-3">
+            <div className="p-4 rounded-full bg-muted">
+              <Dices className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h2 className="text-lg font-heading font-semibold">Ikke tilgjengelig</h2>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              {rouletteEnabled
+                ? 'Du er ikke lagt til i Oppgave-rouletten av admin.'
+                : 'Oppgave-roulette er ikke aktivert akkurat nå.'}
+            </p>
+          </CardContent>
+        </Card>
       ) : assignment ? (
         <Card className="overflow-hidden border-primary/30 shadow-sm">
           <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5 border-b border-primary/10">

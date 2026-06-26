@@ -149,6 +149,9 @@ export default function Home() {
   const [overnattingQuestion, setOvernattingQuestion] = useState('Vil du være med på overnatting?');
   const [overnattingJoining, setOvernattingJoining] = useState(false);
   const [overnattingSaving, setOvernattingSaving] = useState(false);
+  const [rouletteEnabled, setRouletteEnabled] = useState(false);
+  const inRoulette = !!(effectiveLeader as any)?.in_roulette;
+  const showRoulette = rouletteEnabled && inRoulette;
 
   useEffect(() => {
     if (!effectiveLeader) return;
@@ -204,7 +207,7 @@ export default function Home() {
       ]);
 
       const [overCfgRes, overRespRes] = await Promise.all([
-        supabase.from('app_config').select('key,value').in('key', ['overnatting_enabled', 'overnatting_title', 'overnatting_question']),
+        supabase.from('app_config').select('key,value').in('key', ['overnatting_enabled', 'overnatting_title', 'overnatting_question', 'roulette_enabled']),
         supabase.from('overnatting_responses').select('is_joining').eq('leader_id', effectiveLeader.id).maybeSingle(),
       ]);
       const cfgMap = new Map((overCfgRes.data || []).map((r: { key: string; value: string }) => [r.key, r.value]));
@@ -212,6 +215,7 @@ export default function Home() {
       setOvernattingTitle(cfgMap.get('overnatting_title') || 'Overnatting');
       setOvernattingQuestion(cfgMap.get('overnatting_question') || 'Vil du være med på overnatting?');
       setOvernattingJoining(overRespRes.data?.is_joining ?? false);
+      setRouletteEnabled(cfgMap.get('roulette_enabled') === 'true');
 
       setContent(contentRes.data);
       updateWidgetData({
@@ -491,6 +495,7 @@ export default function Home() {
       {/* Content Cards - consistent spacing */}
       <div className="px-4 mt-4 sm:mt-6 space-y-3 sm:space-y-4">
         {/* Oppgave-roulette */}
+        {showRoulette && (
         <Card
           className="border border-violet-500/30 bg-violet-50/50 dark:bg-violet-950/20 cursor-pointer hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors shadow-sm"
           onClick={() => navigate('/roulette')}
@@ -511,6 +516,7 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
+        )}
 
         {/* Fix Task Alert - consistent with secondary cards */}
         {assignedFixTasks.length > 0 && (

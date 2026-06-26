@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Dices, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Dices, Plus, Pencil, Trash2, Loader2, Search, Users } from 'lucide-react';
 import {
   useRouletteTasks,
   useUpsertTask,
@@ -38,6 +41,58 @@ export function RouletteTasksTab() {
 
   const [editing, setEditing] = useState<RouletteTask | null>(null);
   const [open, setOpen] = useState(false);
+
+  // Global enable toggle
+  const qc = useQueryClient();
+  const { data: enabledCfg } = useQuery({
+    queryKey: ['app_config', 'roulette_enabled'],
+    queryFn: async () => {
+      const { data } = await supabase.from('app_config').select('value').eq('key', 'roulette_enabled').maybeSingle();
+      return data?.value === 'true';
+    },
+  });
+  const [enabled, setEnabled] = useState<boolean>(false);
+  useEffect(() => { if (enabledCfg !== undefined) setEnabled(enabledCfg); }, [enabledCfg]);
+
+  const toggleEnabled = async (v: boolean) => {
+    setEnabled(v);
+    const { error } = await supabase.from('app_config').upsert({ key: 'roulette_enabled', value: String(v) }, { onConflict: 'key' });
+    if (error) { setEnabled(!v); showError('Kunne ikke lagre'); return; }
+    qc.invalidateQueries({ queryKey: ['app_config', 'roulette_enabled'] });
+    showSuccess(v ? 'Oppgave-roulette aktivert' : 'Oppgave-roulette deaktivert');
+  };
+
+  // Participating leaders
+  const { data: leaders = [], refetch: refetchLeaders } = useQuery({
+    queryKey: ['roulette-participants-admin'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leaders')
+        .select('id, name, profile_image_url, in_roulette, is_active')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const [search, setSearch] = useState('');
+  const toggleLeader = async (id: string, next: boolean) => {
+    // optimistic
+    qc.setQueryData(['roulette-participants-admin'], (old: any) =>
+      (old ?? []).map((l: any) => l.id === id ? { ...l, in_roulette: next } : l)
+    );
+    const { error } = await supabase.from('leaders').update({ in_roulette: next }).eq('id', id);
+    if (error) { showError('Kunne ikke lagre'); refetchLeaders(); }
+  };
+  const setAll = async (next: boolean) => {
+    qc.setQueryData(['roulette-participants-admin'], (old: any) => (old ?? []).map((l: any) => ({ ...l, in_roulette: next })));
+    const ids = leaders.filter(l => filtered.some(f => f.id === l.id)).map(l => l.id);
+    const { error } = await supabase.from('leaders').update({ in_roulette: next }).in('id', ids);
+    if (error) { showError('Kunne ikke lagre'); refetchLeaders(); }
+    else showSuccess(next ? 'Alle valgt' : 'Alle fjernet');
+  };
+  const filtered = leaders.filter(l => l.name?.toLowerCase().includes(search.toLowerCase()));
+  const selectedCount = leaders.filter(l => l.in_roulette).length;
 
   const openNew = () => {
     setEditing({
@@ -78,6 +133,59 @@ export function RouletteTasksTab() {
 
   return (
     <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Dices className="w-5 h-5 text-primary" /> Vis Oppgave-roulette i appen
+          </CardTitle>
+          <CardDescription>
+            Når dette er av, vises ikke Oppgave-roulette noen steder i appen.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <div className="font-medium text-sm">Aktivert</div>
+              <div className="text-xs text-muted-foreground">Synlig kun for ledere du har valgt under.</div>
+            </div>
+            <Switch checked={enabled} onCheckedChange={toggleEnabled} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Users className="w-4 h-4" /> Hvem er med på rouletten
+          </CardTitle>
+          <CardDescription>{selectedCount} av {leaders.length} aktive ledere valgt</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input className="pl-8" placeholder="Søk ledere…" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setAll(true)}>Velg alle{search ? ' (filtrerte)' : ''}</Button>
+            <Button variant="outline" size="sm" onClick={() => setAll(false)}>Fjern alle{search ? ' (filtrerte)' : ''}</Button>
+          </div>
+          <div className="max-h-[50vh] overflow-y-auto divide-y rounded-lg border">
+            {filtered.length === 0 ? (
+              <p className="text-sm text-muted-foreground p-3 text-center">Ingen ledere funnet.</p>
+            ) : filtered.map(l => (
+              <div key={l.id} className="flex items-center gap-3 p-2">
+                <Avatar className="h-8 w-8">
+                  {l.profile_image_url && <AvatarImage src={l.profile_image_url} />}
+                  <AvatarFallback className="text-xs">{(l.name ?? '?').slice(0,2)}</AvatarFallback>
+                </Avatar>
+                <span className="flex-1 text-sm truncate">{l.name}</span>
+                <Switch checked={!!l.in_roulette} onCheckedChange={v => toggleLeader(l.id, v)} />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

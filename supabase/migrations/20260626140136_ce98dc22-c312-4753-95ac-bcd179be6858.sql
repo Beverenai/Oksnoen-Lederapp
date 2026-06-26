@@ -1,0 +1,2 @@
+ALTER TABLE public.leaders ADD COLUMN IF NOT EXISTS in_roulette boolean NOT NULL DEFAULT false;
+INSERT INTO public.app_config (key, value) VALUES ('roulette_enabled', 'false') ON CONFLICT (key) DO NOTHING;

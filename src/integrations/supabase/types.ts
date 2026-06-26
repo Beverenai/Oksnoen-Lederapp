@@ -640,6 +640,7 @@ export type Database = {
           has_drivers_license: boolean | null
           has_seen_push_prompt: boolean
           id: string
+          in_roulette: boolean
           is_active: boolean | null
           last_app_edit_at: string
           last_synced_at: string | null
@@ -666,6 +667,7 @@ export type Database = {
           has_drivers_license?: boolean | null
           has_seen_push_prompt?: boolean
           id?: string
+          in_roulette?: boolean
           is_active?: boolean | null
           last_app_edit_at?: string
           last_synced_at?: string | null
@@ -692,6 +694,7 @@ export type Database = {
           has_drivers_license?: boolean | null
           has_seen_push_prompt?: boolean
           id?: string
+          in_roulette?: boolean
           is_active?: boolean | null
           last_app_edit_at?: string
           last_synced_at?: string | null
