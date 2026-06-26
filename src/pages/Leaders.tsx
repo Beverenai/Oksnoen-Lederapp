@@ -9,6 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Users, Phone, Cross, ArrowUpDown, Check, Search, X, Home, Coffee } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/leaders/LeaderDetailDialog';
+import { LeaderContentSheet } from '@/components/admin/LeaderContentSheet';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -89,6 +91,8 @@ const formatTeamDisplay = (team: string | null): string => {
 };
 
 export default function Leaders() {
+  const { isAdmin, isSuperAdmin } = useAuth();
+  const canEdit = isAdmin || isSuperAdmin;
   const [selectedLeader, setSelectedLeader] = useState<LeaderWithContent | null>(null);
   
   // Filter, sort and search state
@@ -169,6 +173,45 @@ export default function Leaders() {
 
   const leaders = leadersData?.leaders || [];
   const extraFieldsConfig = leadersData?.extraFieldsConfig || [];
+
+  // Admin-only: fetch full leader_content (public view hides personal_notes/obs/extras)
+  // and home_screen_config so the editable sheet can render every field.
+  const { data: fullContentData, refetch: refetchFullContent } = useQuery({
+    queryKey: ['leader-content-full'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('leader_content').select('*');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: canEdit,
+    staleTime: 30_000,
+  });
+
+  const { data: homeConfig } = useQuery({
+    queryKey: ['home-screen-config'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('home_screen_config')
+        .select('id, element_key, label, title, icon, is_visible, sort_order');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: canEdit,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const fullContentMap = useMemo(() => {
+    const m = new Map<string, LeaderContent>();
+    (fullContentData || []).forEach((c) => m.set(c.leader_id, c as LeaderContent));
+    return m;
+  }, [fullContentData]);
+
+  // Merge full content into the selected leader for the edit sheet.
+  const editableSelectedLeader = useMemo(() => {
+    if (!canEdit || !selectedLeader) return null;
+    const full = fullContentMap.get(selectedLeader.id);
+    return full ? { ...selectedLeader, content: full } : selectedLeader;
+  }, [canEdit, selectedLeader, fullContentMap]);
 
   // Pull-to-refresh
   const { pullRef, isPulling, pullProgress, isRefreshing } = usePullToRefresh({
@@ -634,11 +677,24 @@ export default function Leaders() {
       )}
 
       {/* Leader detail dialog */}
-      <LeaderDetailDialog
-        leader={selectedLeader}
-        open={!!selectedLeader}
-        onOpenChange={(open) => !open && setSelectedLeader(null)}
-      />
+      {canEdit ? (
+        <LeaderContentSheet
+          leader={editableSelectedLeader as any}
+          open={!!selectedLeader}
+          onOpenChange={(open) => !open && setSelectedLeader(null)}
+          homeConfig={(homeConfig || []) as any}
+          onSaved={() => {
+            refetch();
+            refetchFullContent();
+          }}
+        />
+      ) : (
+        <LeaderDetailDialog
+          leader={selectedLeader}
+          open={!!selectedLeader}
+          onOpenChange={(open) => !open && setSelectedLeader(null)}
+        />
+      )}
     </div>
   );
 }
