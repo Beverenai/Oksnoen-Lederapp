@@ -19,7 +19,7 @@ export function AddParticipantsSheet({ open, onOpenChange, periodId }: Props) {
   const { effectiveLeader } = useAuth();
   const { data: participants = [] } = useParticipants();
   const { data: cards = [] } = useDyngaCards(periodId);
-  const { data: columns = [] } = useDyngaColumns();
+  const { data: columns = [] } = useDyngaColumns(periodId);
   const addCards = useAddCards();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
