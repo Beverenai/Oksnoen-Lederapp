@@ -50,7 +50,9 @@ import {
   Eye,
   Trophy,
   Download,
-  Trash2
+  Trash2,
+  Pencil,
+  X
 } from 'lucide-react';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -129,6 +131,10 @@ export default function Nurse() {
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'note' | 'event'; id: string; label: string } | null>(null);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editEventDescription, setEditEventDescription] = useState('');
+  const [editEventType, setEditEventType] = useState('observation');
+  const [editEventSeverity, setEditEventSeverity] = useState('low');
   const [periods, setPeriods] = useState<Array<{ id: string; name: string; start_date: string; end_date: string; is_active: boolean }>>([]);
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>('all');
 
@@ -348,6 +354,46 @@ export default function Nurse() {
     } catch (error) {
       console.error('Error deleting health event:', error);
       showError('Kunne ikke slette hendelse');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const startEditEvent = (event: HealthEvent) => {
+    setEditingEventId(event.id);
+    setEditEventDescription(event.description);
+    setEditEventType(event.event_type);
+    setEditEventSeverity(event.severity || 'low');
+  };
+
+  const cancelEditEvent = () => {
+    setEditingEventId(null);
+    setEditEventDescription('');
+  };
+
+  const saveEditedEvent = async () => {
+    if (!selectedParticipant || !editingEventId || !editEventDescription.trim()) {
+      showError('Skriv inn en beskrivelse');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('participant_health_events')
+        .update({
+          description: editEventDescription,
+          event_type: editEventType,
+          severity: editEventSeverity,
+        })
+        .eq('id', editingEventId);
+      if (error) throw error;
+      showSuccess('Hendelse oppdatert');
+      cancelEditEvent();
+      await loadParticipantDetails(selectedParticipant);
+      loadParticipants();
+    } catch (error) {
+      console.error('Error updating health event:', error);
+      showError('Kunne ikke oppdatere hendelse');
     } finally {
       setIsSaving(false);
     }
@@ -1134,7 +1180,7 @@ export default function Nurse() {
                       {selectedParticipant?.healthEvents.map((event) => {
                         const severity = severityLevels.find(s => s.value === event.severity);
                         const eventType = eventTypes.find(t => t.value === event.event_type);
-                        
+                        const isEditing = editingEventId === event.id;
                         return (
                           <div 
                             key={event.id} 
@@ -1151,6 +1197,16 @@ export default function Nurse() {
                                 <span className="text-xs text-muted-foreground">
                                   {format(new Date(event.created_at), 'dd. MMM yyyy HH:mm', { locale: nb })}
                                 </span>
+                                {!isEditing && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                    onClick={() => startEditEvent(event)}
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1167,7 +1223,45 @@ export default function Nurse() {
                                 </Button>
                               </div>
                             </div>
-                            <p className="text-sm text-foreground">{event.description}</p>
+                            {isEditing ? (
+                              <div className="space-y-2">
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  <Select value={editEventType} onValueChange={setEditEventType}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      {eventTypes.map((t) => (
+                                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Select value={editEventSeverity} onValueChange={setEditEventSeverity}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      {severityLevels.map((l) => (
+                                        <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <Textarea
+                                  value={editEventDescription}
+                                  onChange={(e) => setEditEventDescription(e.target.value)}
+                                  className="min-h-[80px]"
+                                />
+                                <div className="flex gap-2">
+                                  <Button size="sm" onClick={saveEditedEvent} disabled={isSaving}>
+                                    {isSaving ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1" />}
+                                    Lagre
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={cancelEditEvent} disabled={isSaving}>
+                                    <X className="w-3.5 h-3.5 mr-1" />
+                                    Avbryt
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-foreground whitespace-pre-wrap">{event.description}</p>
+                            )}
                           </div>
                         );
                       })}
