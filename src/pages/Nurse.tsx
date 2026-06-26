@@ -359,6 +359,46 @@ export default function Nurse() {
     }
   };
 
+  const startEditEvent = (event: HealthEvent) => {
+    setEditingEventId(event.id);
+    setEditEventDescription(event.description);
+    setEditEventType(event.event_type);
+    setEditEventSeverity(event.severity || 'low');
+  };
+
+  const cancelEditEvent = () => {
+    setEditingEventId(null);
+    setEditEventDescription('');
+  };
+
+  const saveEditedEvent = async () => {
+    if (!selectedParticipant || !editingEventId || !editEventDescription.trim()) {
+      showError('Skriv inn en beskrivelse');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('participant_health_events')
+        .update({
+          description: editEventDescription,
+          event_type: editEventType,
+          severity: editEventSeverity,
+        })
+        .eq('id', editingEventId);
+      if (error) throw error;
+      showSuccess('Hendelse oppdatert');
+      cancelEditEvent();
+      await loadParticipantDetails(selectedParticipant);
+      loadParticipants();
+    } catch (error) {
+      console.error('Error updating health event:', error);
+      showError('Kunne ikke oppdatere hendelse');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const deleteHealthNote = async (noteId: string) => {
     if (!selectedParticipant) return;
 
