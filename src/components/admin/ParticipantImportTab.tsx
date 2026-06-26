@@ -495,14 +495,112 @@ export function ParticipantImportTab() {
       showError('Lim inn data først');
       return;
     }
+    // First try blob parser (handles text copied from rendered tables / PDFs
+    // where all newlines/tabs are lost and rows are concatenated).
+    const blobRows = parseConcatenatedBlob(pastedText);
+    if (blobRows.length >= 3) {
+      setParsedData(blobRows);
+      setImportResult(null);
+      showInfo(`Tolket ${blobRows.length} rader fra sammensmeltet tekst`);
+      return;
+    }
     const normalized = normalizePastedText(pastedText);
     const parsed = parseCSV(normalized);
     if (parsed.length === 0) {
+      // Fall back to blob even if it gave <3 rows
+      if (blobRows.length > 0) {
+        setParsedData(blobRows);
+        setImportResult(null);
+        return;
+      }
       showError('Kunne ikke tolke innholdet. Sjekk at det er overskrifter og data.');
       return;
     }
     setParsedData(parsed);
     setImportResult(null);
+  };
+
+  // Parse a single concatenated blob (no tabs / newlines between cells) where each
+  // row is shaped: <Name><YYYY-MM-DD><digit(timesAttended)><CabinName><optional notes>
+  // Uses the cabin list from the DB to anchor row boundaries.
+  const parseConcatenatedBlob = (raw: string): ParsedParticipant[] => {
+    if (!raw) return [];
+    // Strip leading header tokens like "FornavnEtternavnFødtDeltatt tidligereHytteNotater"
+    let text = raw.replace(/\r?\n/g, ' ').replace(/\t/g, ' ');
+    text = text.replace(
+      /^\s*(?:Fornavn|Etternavn|F(?:ø|o)dt|Deltatt\s+tidligere|Tidligere|Deltatt|Hytte|Notater|Notat|Kommentar(?:er)?|Info|Bilde|Har\s+ankommet|Ankommet|\s)+/i,
+      ''
+    );
+
+    if (cabins.length === 0) return [];
+    const cabinPatterns = cabins
+      .map(c => c.name)
+      .flatMap(n => {
+        const esc = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return [`${esc}\\s+venstre`, `${esc}\\s+h(?:ø|o)yre`, esc];
+      })
+      .sort((a, b) => b.length - a.length);
+    if (cabinPatterns.length === 0) return [];
+
+    const cabinAlt = cabinPatterns.join('|');
+    const re = new RegExp(
+      `([\\p{Lu}][\\p{L} .'\\-]*?)(\\d{4}-\\d{2}-\\d{2})\\s*(\\d+)\\s*(${cabinAlt})`,
+      'gu'
+    );
+
+    type Hit = { idx: number; end: number; name: string; date: string; times: string; cabin: string };
+    const hits: Hit[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      hits.push({
+        idx: m.index,
+        end: m.index + m[0].length,
+        name: m[1].trim(),
+        date: m[2],
+        times: m[3],
+        cabin: m[4].replace(/\s+/g, ' '),
+      });
+    }
+    if (hits.length === 0) return [];
+
+    return hits.map((h, i) => {
+      const nextIdx = i + 1 < hits.length ? hits[i + 1].idx : text.length;
+      const notes = text.slice(h.end, nextIdx).trim();
+
+      // Split full name into first / last. Prefer existing space; else camel-case split.
+      const fullName = h.name.replace(/\s+/g, ' ').trim();
+      let firstName = fullName;
+      let lastName = '';
+      if (fullName.includes(' ')) {
+        const parts = fullName.split(' ');
+        firstName = parts[0];
+        lastName = parts.slice(1).join(' ');
+      } else {
+        const camel = fullName.match(/^(.*[\p{Ll}])([\p{Lu}].*)$/u);
+        if (camel) {
+          firstName = camel[1];
+          lastName = camel[2];
+        }
+      }
+
+      const { cabinName, room } = parseCabinField(h.cabin);
+      const timesAttended = parseInt(h.times, 10) || 0;
+      const valid = firstName.length > 0 && cabinName.length > 0;
+      return {
+        firstName,
+        lastName,
+        birthDate: h.date,
+        cabinName,
+        room,
+        timesAttended,
+        info: notes,
+        imageUrl: null,
+        hasArrived: false,
+        activities: [],
+        valid,
+        error: valid ? undefined : 'Mangler navn eller hytte',
+      };
+    });
   };
 
   const importParticipants = async () => {
