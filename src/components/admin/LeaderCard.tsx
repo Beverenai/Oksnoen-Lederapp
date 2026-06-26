@@ -25,7 +25,7 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
   const hasExtraActivity = !!content?.extra_activity;
   const hasNotes = !!content?.personal_notes;
 
-  const isFri = content?.current_activity?.toLowerCase().includes('fri');
+  const isFri = /(^|\s)fri(\s|$|[.,!?-])/i.test(content?.current_activity?.trim() ?? '');
   const isKitchen = leader.team?.toLowerCase() === 'kjøkken' || leader.team?.toLowerCase() === 'kjokken';
   const isSjefTeam = leader.team?.toLowerCase().trim() === 'sjef';
   const isLeaderAdmin = leader.isAdmin || isSjefTeam;

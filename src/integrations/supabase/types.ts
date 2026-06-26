@@ -365,6 +365,7 @@ export type Database = {
           ai_description: string | null
           ai_status: string
           ai_tags: string[]
+          bag_label: string | null
           color: string | null
           comment: string | null
           created_at: string
@@ -382,6 +383,7 @@ export type Database = {
           ai_description?: string | null
           ai_status?: string
           ai_tags?: string[]
+          bag_label?: string | null
           color?: string | null
           comment?: string | null
           created_at?: string
@@ -399,6 +401,7 @@ export type Database = {
           ai_description?: string | null
           ai_status?: string
           ai_tags?: string[]
+          bag_label?: string | null
           color?: string | null
           comment?: string | null
           created_at?: string
@@ -1326,6 +1329,95 @@ export type Database = {
           },
         ]
       }
+      roulette_assignments: {
+        Row: {
+          assigned_at: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          leader_id: string
+          status: string
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          leader_id: string
+          status?: string
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          leader_id?: string
+          status?: string
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roulette_assignments_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roulette_assignments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "roulette_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roulette_tasks: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roulette_tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_activities: {
         Row: {
           created_at: string | null
@@ -1623,12 +1715,14 @@ export type Database = {
           ai_description: string | null
           ai_status: string | null
           ai_tags: string[] | null
+          bag_label: string | null
           color: string | null
           created_at: string | null
           garment_type: string | null
           id: string | null
           image_url: string | null
           notes: string | null
+          owner_name: string | null
           period_id: string | null
           status: string | null
         }

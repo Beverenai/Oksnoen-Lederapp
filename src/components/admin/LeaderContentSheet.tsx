@@ -278,7 +278,10 @@ export function LeaderContentSheet({
     };
   }, [leader?.id]);
 
-  // Reset form when leader changes
+  // Reset form when a DIFFERENT leader is opened.
+  // Important: depend on leader?.id (not the whole leader object),
+  // otherwise realtime refetches recreate the leader reference and
+  // wipe out the user's in-progress edits mid-typing.
   useEffect(() => {
     if (leader) {
       hasInitializedRef.current = false;
@@ -319,7 +322,8 @@ export function LeaderContentSheet({
     // Reset editing state when leader changes
     setEditingField(null);
     setCabinSearch('');
-  }, [leader]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leader?.id]);
 
   const toggleCabin = (cabinId: string) => {
     setSelectedCabinIds(prev =>

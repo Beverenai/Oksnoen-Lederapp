@@ -81,8 +81,13 @@ const getFirstName = (fullName: string) => {
   return fullName.split(' ')[0];
 };
 
+const FRI_ACTIVITY_REGEX = /(^|[\s/\\,.;:!?()[\]{}-])fri($|[\s/\\,.;:!?()[\]{}-])/i;
+
+const isFriActivity = (activity?: string | null) =>
+  FRI_ACTIVITY_REGEX.test(activity?.trim() ?? '');
+
 const getAvatarBorderClass = (leader: LeaderWithContent) => {
-  const isFri = leader.content?.current_activity?.toLowerCase().includes('fri');
+  const isFri = isFriActivity(leader.content?.current_activity);
   const isKitchen = leader.team?.toLowerCase() === 'kjøkken';
   
   if (isKitchen) return 'ring-4 ring-purple-500';

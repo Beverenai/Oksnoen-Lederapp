@@ -22,6 +22,7 @@ export interface GjenglemtItem {
   garment_type: string | null;
   color: string | null;
   owner_name: string | null;
+  bag_label: string | null;
   comment: string | null;
   notes: string | null;
   status: 'uavhentet' | 'hentet';
@@ -41,6 +42,8 @@ export interface GjenglemtPublicItem {
   color: string | null;
   status: string;
   notes: string | null;
+  owner_name: string | null;
+  bag_label: string | null;
   ai_status: string;
   ai_description: string | null;
   ai_tags: string[];
@@ -62,6 +65,26 @@ export function useGjenglemtPeriods() {
       return (data ?? []) as GjenglemtPeriod[];
     },
     staleTime: 60_000,
+  });
+}
+
+// Returns the single active period — used by leader-facing Gjenglemt page.
+// Queries `periods` directly with is_active=true so we don't depend on the
+// whole list arriving first (avoids stale-cache empty-state on mobile).
+export function useActivePeriod() {
+  return useQuery({
+    queryKey: ['active-period', 'gjenglemt'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('periods')
+        .select('id,name,slug,is_public,is_active,start_date,end_date,created_at,updated_at')
+        .eq('is_active', true)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as GjenglemtPeriod | null) ?? null;
+    },
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -138,6 +161,8 @@ export function useCreateItem() {
       period_id: string;
       image_url: string;
       notes?: string | null;
+      owner_name?: string | null;
+      bag_label?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('gjenglemt_items')
@@ -145,6 +170,8 @@ export function useCreateItem() {
           period_id: input.period_id,
           image_url: input.image_url,
           notes: input.notes ?? null,
+          owner_name: input.owner_name ?? null,
+          bag_label: input.bag_label ?? null,
           created_by: effectiveLeader?.id ?? null,
         })
         .select()

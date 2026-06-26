@@ -9,6 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Users, Phone, Cross, ArrowUpDown, Check, Search, X, Home, Coffee } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/leaders/LeaderDetailDialog';
+import { LeaderContentSheet } from '@/components/admin/LeaderContentSheet';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +39,14 @@ interface LeaderWithContent extends Leader {
 }
 
 type SortOption = 'name' | 'activity' | 'team';
+
+const FRI_ACTIVITY_REGEX = /(^|[\s/\\,.;:!?()[\]{}-])fri($|[\s/\\,.;:!?()[\]{}-])/i;
+
+const isFriActivity = (activity?: string | null) =>
+  FRI_ACTIVITY_REGEX.test(activity?.trim() ?? '');
+
+const isLeaderFri = (leader: Pick<LeaderWithContent, 'content'>) =>
+  isFriActivity(leader.content?.current_activity);
 
 // Teams to show in filter chips (keys match database values)
 const FILTER_TEAMS = [
@@ -81,6 +91,8 @@ const formatTeamDisplay = (team: string | null): string => {
 };
 
 export default function Leaders() {
+  const { isAdmin, isSuperAdmin } = useAuth();
+  const canEdit = isAdmin || isSuperAdmin;
   const [selectedLeader, setSelectedLeader] = useState<LeaderWithContent | null>(null);
   
   // Filter, sort and search state
@@ -162,6 +174,45 @@ export default function Leaders() {
   const leaders = leadersData?.leaders || [];
   const extraFieldsConfig = leadersData?.extraFieldsConfig || [];
 
+  // Admin-only: fetch full leader_content (public view hides personal_notes/obs/extras)
+  // and home_screen_config so the editable sheet can render every field.
+  const { data: fullContentData, refetch: refetchFullContent } = useQuery({
+    queryKey: ['leader-content-full'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('leader_content').select('*');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: canEdit,
+    staleTime: 30_000,
+  });
+
+  const { data: homeConfig } = useQuery({
+    queryKey: ['home-screen-config'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('home_screen_config')
+        .select('id, element_key, label, title, icon, is_visible, sort_order');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: canEdit,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const fullContentMap = useMemo(() => {
+    const m = new Map<string, LeaderContent>();
+    (fullContentData || []).forEach((c) => m.set(c.leader_id, c as LeaderContent));
+    return m;
+  }, [fullContentData]);
+
+  // Merge full content into the selected leader for the edit sheet.
+  const editableSelectedLeader = useMemo(() => {
+    if (!canEdit || !selectedLeader) return null;
+    const full = fullContentMap.get(selectedLeader.id);
+    return full ? { ...selectedLeader, content: full } : selectedLeader;
+  }, [canEdit, selectedLeader, fullContentMap]);
+
   // Pull-to-refresh
   const { pullRef, isPulling, pullProgress, isRefreshing } = usePullToRefresh({
     onRefresh: async () => { await refetch(); },
@@ -241,9 +292,9 @@ export default function Leaders() {
       // Priority leaders always at top
       if (aPriority !== bPriority) return aPriority - bPriority;
       
-      // Check if leader has "Fri" as activity
-      const aIsFri = a.content?.current_activity?.toLowerCase().includes('fri');
-      const bIsFri = b.content?.current_activity?.toLowerCase().includes('fri');
+      // Check if leader has "Fri" as the actual current activity, not words like Frisbee/Friluft
+      const aIsFri = isLeaderFri(a);
+      const bIsFri = isLeaderFri(b);
       
       const aIsKitchen = a.team?.toLowerCase() === 'kjøkken';
       const bIsKitchen = b.team?.toLowerCase() === 'kjøkken';
@@ -277,19 +328,21 @@ export default function Leaders() {
       }
     });
 
-    return result;
+    // Hard group all non-Fri leaders before Fri leaders so the separator never captures everyone below it.
+    const nonFriLeaders = result.filter((leader) => !isLeaderFri(leader));
+    const friLeaders = result.filter(isLeaderFri);
+
+    return [...nonFriLeaders, ...friLeaders];
   }, [leaders, activeTeamFilter, activeCabinFilter, sortBy, searchQuery]);
 
   // Find index of first "Fri" leader for separator (now at the very bottom, after Kjøkken)
   const firstFriIndex = useMemo(() => {
-    return filteredAndSortedLeaders.findIndex(leader => 
-      leader.content?.current_activity?.toLowerCase().includes('fri')
-    );
+    return filteredAndSortedLeaders.findIndex(isLeaderFri);
   }, [filteredAndSortedLeaders]);
   
   // Get avatar border color class based on leader status
   const getAvatarBorderClass = (leader: LeaderWithContent) => {
-    const isFri = leader.content?.current_activity?.toLowerCase().includes('fri');
+    const isFri = isLeaderFri(leader);
     const isKitchen = leader.team?.toLowerCase() === 'kjøkken';
     const isSjef = leader.team?.toLowerCase() === 'sjef';
     
@@ -628,11 +681,24 @@ export default function Leaders() {
       )}
 
       {/* Leader detail dialog */}
-      <LeaderDetailDialog
-        leader={selectedLeader}
-        open={!!selectedLeader}
-        onOpenChange={(open) => !open && setSelectedLeader(null)}
-      />
+      {canEdit ? (
+        <LeaderContentSheet
+          leader={editableSelectedLeader as any}
+          open={!!selectedLeader}
+          onOpenChange={(open) => !open && setSelectedLeader(null)}
+          homeConfig={(homeConfig || []) as any}
+          onSaved={() => {
+            refetch();
+            refetchFullContent();
+          }}
+        />
+      ) : (
+        <LeaderDetailDialog
+          leader={selectedLeader}
+          open={!!selectedLeader}
+          onOpenChange={(open) => !open && setSelectedLeader(null)}
+        />
+      )}
     </div>
   );
 }
