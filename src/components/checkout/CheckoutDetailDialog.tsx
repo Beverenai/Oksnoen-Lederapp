@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   User, 
@@ -82,6 +83,7 @@ export function CheckoutDetailDialog({
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [writeMode, setWriteMode] = useState(false);
   const [isHorizontal, setIsHorizontal] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     if (participantId && open) {
@@ -317,12 +319,44 @@ export function CheckoutDetailDialog({
           <div className="space-y-4 md:space-y-6 p-4 md:p-0">
             {/* Participant Info */}
             <div className="flex items-start gap-3 md:gap-4 p-3 md:p-4 bg-muted/50 rounded-lg">
-              <Avatar className="w-12 h-12 md:w-16 md:h-16">
-                <AvatarImage src={participant.image_url || undefined} />
-                <AvatarFallback className="bg-primary/10">
-                  <User className="w-6 h-6 md:w-8 md:h-8 text-primary" />
-                </AvatarFallback>
-              </Avatar>
+              <button
+                type="button"
+                onClick={() => participant.image_url && setLightboxOpen(true)}
+                disabled={!participant.image_url}
+                className="rounded-full focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:cursor-default"
+                aria-label={participant.image_url ? 'Vis bilde' : 'Ingen bilde'}
+              >
+                <Avatar className="w-12 h-12 md:w-16 md:h-16">
+                  <AvatarImage src={participant.image_url || undefined} />
+                  <AvatarFallback className="bg-primary/10">
+                    <User className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+              <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+                <DialogContent className="max-w-[95vw] sm:max-w-2xl p-0 bg-black/95 border-none">
+                  {participant.image_url && (
+                    <img
+                      src={participant.image_url}
+                      alt={participant.name}
+                      className="w-full max-h-[75vh] object-contain"
+                    />
+                  )}
+                  <div
+                    className="flex justify-center"
+                    style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+                  >
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      onClick={() => setLightboxOpen(false)}
+                      className="rounded-full px-8"
+                    >
+                      Lukk
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <div className="flex-1 min-w-0 space-y-1.5 md:space-y-2">
                 <h3 className="text-lg md:text-xl font-semibold truncate">{participant.name}</h3>
                 <div className="flex flex-wrap gap-1.5 md:gap-2">

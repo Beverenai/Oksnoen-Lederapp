@@ -79,12 +79,22 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
 
   const loadData = async () => {
     try {
-      // Get or create report
-      const { data: reports, error } = await supabase
+      // Get active period — report is scoped per period
+      const { data: periodRow } = await supabase
+        .from('periods')
+        .select('id')
+        .eq('is_active', true)
+        .maybeSingle();
+      const activePeriodId = periodRow?.id ?? null;
+
+      // Get or create report for the active period
+      let query = supabase
         .from('nurse_reports')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1);
+      if (activePeriodId) query = query.eq('period_id', activePeriodId);
+      const { data: reports, error } = await query;
       if (error) throw error;
 
       let rid: string;
@@ -93,7 +103,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
       } else {
         const { data, error: createErr } = await supabase
           .from('nurse_reports')
-          .insert({ content: '', created_by: leader?.id })
+          .insert({ content: '', created_by: leader?.id, period_id: activePeriodId })
           .select()
           .single();
         if (createErr) throw createErr;

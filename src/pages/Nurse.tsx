@@ -50,7 +50,9 @@ import {
   Eye,
   Trophy,
   Download,
-  Trash2
+  Trash2,
+  Pencil,
+  X
 } from 'lucide-react';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -129,10 +131,38 @@ export default function Nurse() {
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'note' | 'event'; id: string; label: string } | null>(null);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editEventDescription, setEditEventDescription] = useState('');
+  const [editEventType, setEditEventType] = useState('observation');
+  const [editEventSeverity, setEditEventSeverity] = useState('low');
+  const [periods, setPeriods] = useState<Array<{ id: string; name: string; start_date: string; end_date: string; is_active: boolean }>>([]);
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string>('all');
 
   useEffect(() => {
     loadParticipants();
+    loadPeriods();
   }, []);
+
+  const loadPeriods = async () => {
+    const { data } = await supabase
+      .from('periods')
+      .select('*')
+      .order('start_date', { ascending: false });
+    const list = (data || []) as Array<{ id: string; name: string; start_date: string; end_date: string; is_active: boolean }>;
+    setPeriods(list);
+    const active = list.find((p) => p.is_active);
+    if (active) setSelectedPeriodId(active.id);
+  };
+
+  const activePeriod = periods.find((p) => p.id === selectedPeriodId);
+  const periodRange = activePeriod
+    ? { start: new Date(activePeriod.start_date + 'T00:00:00'), end: new Date(activePeriod.end_date + 'T23:59:59') }
+    : null;
+  const inPeriod = (iso: string) => {
+    if (!periodRange) return true;
+    const d = new Date(iso);
+    return d >= periodRange.start && d <= periodRange.end;
+  };
 
   const loadParticipants = async () => {
     try {
@@ -329,6 +359,46 @@ export default function Nurse() {
     }
   };
 
+  const startEditEvent = (event: HealthEvent) => {
+    setEditingEventId(event.id);
+    setEditEventDescription(event.description);
+    setEditEventType(event.event_type);
+    setEditEventSeverity(event.severity || 'low');
+  };
+
+  const cancelEditEvent = () => {
+    setEditingEventId(null);
+    setEditEventDescription('');
+  };
+
+  const saveEditedEvent = async () => {
+    if (!selectedParticipant || !editingEventId || !editEventDescription.trim()) {
+      showError('Skriv inn en beskrivelse');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('participant_health_events')
+        .update({
+          description: editEventDescription,
+          event_type: editEventType,
+          severity: editEventSeverity,
+        })
+        .eq('id', editingEventId);
+      if (error) throw error;
+      showSuccess('Hendelse oppdatert');
+      cancelEditEvent();
+      await loadParticipantDetails(selectedParticipant);
+      loadParticipants();
+    } catch (error) {
+      console.error('Error updating health event:', error);
+      showError('Kunne ikke oppdatere hendelse');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const deleteHealthNote = async (noteId: string) => {
     if (!selectedParticipant) return;
 
@@ -397,10 +467,16 @@ export default function Nurse() {
   const generateNurseReport = () => {
     const now = new Date();
     const dateStr = format(now, "d. MMMM yyyy", { locale: nb });
-    
-    const participantsToExport = participants.filter(p => 
+
+    const filteredParticipantsForExport = participants.map((p) => ({
+      ...p,
+      healthNotes: p.healthNotes.filter((n) => inPeriod(n.created_at)),
+      healthEvents: p.healthEvents.filter((e) => inPeriod(e.created_at)),
+    }));
+    const participantsToExport = filteredParticipantsForExport.filter(p =>
       p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info
     );
+    const periodLabel = activePeriod ? ` | ${activePeriod.name}` : '';
     
     let html = `
 <!DOCTYPE html>
@@ -448,7 +524,7 @@ export default function Nurse() {
 </head>
 <body>
   <h1>Nurse Rapport - Oksnøen</h1>
-  <p class="meta">Eksportert: ${dateStr} | Antall deltakere med helsedata: ${participantsToExport.length}</p>
+  <p class="meta">Eksportert: ${dateStr}${periodLabel} | Antall deltakere med helsedata: ${participantsToExport.length}</p>
 `;
 
     participantsToExport.forEach(participant => {
@@ -517,7 +593,12 @@ export default function Nurse() {
   };
 
   const generateNurseCsv = () => {
-    const participantsToExport = participants.filter(p => 
+    const filtered = participants.map((p) => ({
+      ...p,
+      healthNotes: p.healthNotes.filter((n) => inPeriod(n.created_at)),
+      healthEvents: p.healthEvents.filter((e) => inPeriod(e.created_at)),
+    }));
+    const participantsToExport = filtered.filter(p =>
       p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info
     );
     
@@ -572,6 +653,57 @@ export default function Nurse() {
     } catch (error) {
       console.error('Error exporting nurse data:', error);
       showError('Kunne ikke eksportere data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportPdf = () => {
+    setIsExporting(true);
+    try {
+      const html = generateNurseReport();
+      // Use hidden iframe to trigger print dialog without popup blocker
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!doc) {
+        showError('Kunne ikke åpne utskrift');
+        return;
+      }
+      doc.open();
+      doc.write(html);
+      doc.close();
+
+      const triggerPrint = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (e) {
+          console.error('Print error:', e);
+        }
+        // Clean up after a delay (print is async)
+        setTimeout(() => {
+          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        }, 60000);
+      };
+
+      if (iframe.contentWindow?.document.readyState === 'complete') {
+        setTimeout(triggerPrint, 500);
+      } else {
+        iframe.onload = () => setTimeout(triggerPrint, 500);
+      }
+
+      showSuccess('Velg "Lagre som PDF" i utskriftsdialogen');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      showError('Kunne ikke lage PDF');
     } finally {
       setIsExporting(false);
     }
@@ -717,11 +849,27 @@ export default function Nurse() {
         </TabsList>
 
         <TabsContent value="participants" className="space-y-6 mt-4">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground">
               Helsenotater og hendelseslogg for deltakere
             </p>
-            <DropdownMenu>
+            <div className="flex items-center gap-2">
+              {periods.length > 0 && (
+                <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Velg periode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle perioder</SelectItem>
+                    {periods.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}{p.is_active ? ' (aktiv)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
@@ -736,16 +884,21 @@ export default function Nurse() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportPdf}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Last ned PDF
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportHtml}>
                   <FileText className="w-4 h-4 mr-2" />
-                  Eksporter som HTML
+                  Åpne som HTML
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportCsv}>
                   <Download className="w-4 h-4 mr-2" />
                   Eksporter som CSV
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+              </DropdownMenu>
+            </div>
           </div>
 
           {/* Search and Filter */}
@@ -1027,7 +1180,7 @@ export default function Nurse() {
                       {selectedParticipant?.healthEvents.map((event) => {
                         const severity = severityLevels.find(s => s.value === event.severity);
                         const eventType = eventTypes.find(t => t.value === event.event_type);
-                        
+                        const isEditing = editingEventId === event.id;
                         return (
                           <div 
                             key={event.id} 
@@ -1044,6 +1197,16 @@ export default function Nurse() {
                                 <span className="text-xs text-muted-foreground">
                                   {format(new Date(event.created_at), 'dd. MMM yyyy HH:mm', { locale: nb })}
                                 </span>
+                                {!isEditing && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                    onClick={() => startEditEvent(event)}
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1060,7 +1223,45 @@ export default function Nurse() {
                                 </Button>
                               </div>
                             </div>
-                            <p className="text-sm text-foreground">{event.description}</p>
+                            {isEditing ? (
+                              <div className="space-y-2">
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  <Select value={editEventType} onValueChange={setEditEventType}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      {eventTypes.map((t) => (
+                                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Select value={editEventSeverity} onValueChange={setEditEventSeverity}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      {severityLevels.map((l) => (
+                                        <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <Textarea
+                                  value={editEventDescription}
+                                  onChange={(e) => setEditEventDescription(e.target.value)}
+                                  className="min-h-[80px]"
+                                />
+                                <div className="flex gap-2">
+                                  <Button size="sm" onClick={saveEditedEvent} disabled={isSaving}>
+                                    {isSaving ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1" />}
+                                    Lagre
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={cancelEditEvent} disabled={isSaving}>
+                                    <X className="w-3.5 h-3.5 mr-1" />
+                                    Avbryt
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-foreground whitespace-pre-wrap">{event.description}</p>
+                            )}
                           </div>
                         );
                       })}

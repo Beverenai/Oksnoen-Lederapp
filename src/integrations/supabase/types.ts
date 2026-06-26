@@ -424,43 +424,10 @@ export type Database = {
             foreignKeyName: "gjenglemt_items_period_id_fkey"
             columns: ["period_id"]
             isOneToOne: false
-            referencedRelation: "gjenglemt_periods"
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
         ]
-      }
-      gjenglemt_periods: {
-        Row: {
-          created_at: string
-          end_date: string | null
-          id: string
-          is_public: boolean
-          name: string
-          slug: string
-          start_date: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          end_date?: string | null
-          id?: string
-          is_public?: boolean
-          name: string
-          slug: string
-          start_date?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          end_date?: string | null
-          id?: string
-          is_public?: boolean
-          name?: string
-          slug?: string
-          start_date?: string | null
-          updated_at?: string
-        }
-        Relationships: []
       }
       home_screen_config: {
         Row: {
@@ -762,6 +729,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           id: string
+          period_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -769,6 +737,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          period_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -776,9 +745,18 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          period_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "nurse_reports_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       overnatting_responses: {
         Row: {
@@ -856,6 +834,7 @@ export type Database = {
           event_type: string
           id: string
           participant_id: string
+          period_id: string | null
           severity: string | null
         }
         Insert: {
@@ -865,6 +844,7 @@ export type Database = {
           event_type: string
           id?: string
           participant_id: string
+          period_id?: string | null
           severity?: string | null
         }
         Update: {
@@ -874,6 +854,7 @@ export type Database = {
           event_type?: string
           id?: string
           participant_id?: string
+          period_id?: string | null
           severity?: string | null
         }
         Relationships: [
@@ -891,6 +872,13 @@ export type Database = {
             referencedRelation: "participants"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "participant_health_events_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
         ]
       }
       participant_health_info: {
@@ -899,6 +887,7 @@ export type Database = {
           id: string
           info: string
           participant_id: string
+          period_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -906,6 +895,7 @@ export type Database = {
           id?: string
           info: string
           participant_id: string
+          period_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -913,6 +903,7 @@ export type Database = {
           id?: string
           info?: string
           participant_id?: string
+          period_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -921,6 +912,13 @@ export type Database = {
             columns: ["participant_id"]
             isOneToOne: true
             referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_health_info_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
         ]
@@ -932,6 +930,7 @@ export type Database = {
           created_by: string | null
           id: string
           participant_id: string
+          period_id: string | null
           updated_at: string
         }
         Insert: {
@@ -940,6 +939,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           participant_id: string
+          period_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -948,6 +948,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           participant_id?: string
+          period_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -963,6 +964,13 @@ export type Database = {
             columns: ["participant_id"]
             isOneToOne: false
             referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_health_notes_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
         ]
@@ -985,6 +993,7 @@ export type Database = {
           pass_written: boolean | null
           pass_written_at: string | null
           pass_written_by: string | null
+          period_id: string | null
           room: string | null
           times_attended: number | null
           updated_at: string | null
@@ -1006,6 +1015,7 @@ export type Database = {
           pass_written?: boolean | null
           pass_written_at?: string | null
           pass_written_by?: string | null
+          period_id?: string | null
           room?: string | null
           times_attended?: number | null
           updated_at?: string | null
@@ -1027,6 +1037,7 @@ export type Database = {
           pass_written?: boolean | null
           pass_written_at?: string | null
           pass_written_by?: string | null
+          period_id?: string | null
           room?: string | null
           times_attended?: number | null
           updated_at?: string | null
@@ -1046,7 +1057,50 @@ export type Database = {
             referencedRelation: "leaders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "participants_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      periods: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          is_public: boolean
+          name: string
+          slug: string
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          is_public?: boolean
+          name: string
+          slug: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          is_public?: boolean
+          name?: string
+          slug?: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       push_subscriptions: {
         Row: {
@@ -1583,7 +1637,7 @@ export type Database = {
             foreignKeyName: "gjenglemt_items_period_id_fkey"
             columns: ["period_id"]
             isOneToOne: false
-            referencedRelation: "gjenglemt_periods"
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
         ]
@@ -1620,6 +1674,7 @@ export type Database = {
     }
     Functions: {
       current_leader_id: { Args: never; Returns: string }
+      get_active_period_id: { Args: never; Returns: string }
       get_all_leader_roles: {
         Args: never
         Returns: {

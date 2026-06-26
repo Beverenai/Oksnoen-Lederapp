@@ -6,10 +6,11 @@ import { CabinReportsTab } from "@/components/stats/CabinReportsTab";
 import { CheckoutTab } from "@/components/stats/CheckoutTab";
 import { LeaderActivityStatsTab } from "@/components/stats/LeaderActivityStatsTab";
 import { ActivityStatsTab } from "@/components/stats/ActivityStatsTab";
+import { StyrkeproveTab } from "@/components/stats/StyrkeproveTab";
 import { ExportDataSheet } from "@/components/stats/ExportDataSheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity, ArrowLeft, LayoutDashboard } from "lucide-react";
+import { ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity, ArrowLeft, LayoutDashboard, Trophy } from "lucide-react";
 
 
 const dyngaNavItem = {
@@ -27,6 +28,7 @@ const navItems = [
   { key: "checkout", label: "Utsjekk", desc: "Håndter utsjekk av deltakere", icon: Sparkles, color: "bg-purple-500/15 text-purple-600 dark:text-purple-400" },
   { key: "leader-activity", label: "Lederaktivitet", desc: "Se ledernes aktivitetsregistrering", icon: UserCheck, color: "bg-orange-500/15 text-orange-600 dark:text-orange-400" },
   { key: "activity-stats", label: "Aktiviteter", desc: "Statistikk over alle aktiviteter", icon: Activity, color: "bg-pink-500/15 text-pink-600 dark:text-pink-400" },
+  { key: "styrkeprove", label: "Styrkeprøven", desc: "Fullført og mangler 1-2 aktiviteter", icon: Trophy, color: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400" },
 ];
 
 const tabComponents: Record<string, React.FC> = {
@@ -35,6 +37,7 @@ const tabComponents: Record<string, React.FC> = {
   "checkout": CheckoutTab,
   "leader-activity": LeaderActivityStatsTab,
   "activity-stats": ActivityStatsTab,
+  "styrkeprove": StyrkeproveTab,
 };
 
 const tabLabels: Record<string, string> = {
@@ -43,6 +46,7 @@ const tabLabels: Record<string, string> = {
   "checkout": "Utsjekk",
   "leader-activity": "Lederaktivitet",
   "activity-stats": "Aktiviteter",
+  "styrkeprove": "Styrkeprøven",
 };
 
 const ParticipantStats = () => {
