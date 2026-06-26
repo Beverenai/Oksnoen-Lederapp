@@ -167,7 +167,9 @@ export function LeaderImportDialog({ open, onOpenChange, existingPhones, onImpor
         <DialogHeader>
           <DialogTitle>Importer ledere</DialogTitle>
           <DialogDescription>
-            Lim inn én leder per linje. Format: <strong>Navn, telefon</strong>. Komma, semikolon eller tab fungerer. Header-rad støttes. Duplikater (samme telefon) hoppes over.
+            Lim inn én leder per linje — f.eks. <strong>Ola Nordmann, +47 412 34 567</strong>.
+            +47 / 0047 fjernes automatisk og lagres som 8 sifre. Komma, semikolon, tab eller
+            mellomrom fungerer. Duplikater (samme telefonnummer) hoppes over.
           </DialogDescription>
         </DialogHeader>
 
