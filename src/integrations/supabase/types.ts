@@ -724,6 +724,59 @@ export type Database = {
         }
         Relationships: []
       }
+      nurse_period_archives: {
+        Row: {
+          archived_at: string
+          created_at: string
+          events: Json
+          health_info: string | null
+          id: string
+          notes: Json
+          participant_age: number | null
+          participant_cabin: string | null
+          participant_id: string | null
+          participant_name: string
+          participant_snapshot: Json
+          period_id: string
+        }
+        Insert: {
+          archived_at?: string
+          created_at?: string
+          events?: Json
+          health_info?: string | null
+          id?: string
+          notes?: Json
+          participant_age?: number | null
+          participant_cabin?: string | null
+          participant_id?: string | null
+          participant_name: string
+          participant_snapshot?: Json
+          period_id: string
+        }
+        Update: {
+          archived_at?: string
+          created_at?: string
+          events?: Json
+          health_info?: string | null
+          id?: string
+          notes?: Json
+          participant_age?: number | null
+          participant_cabin?: string | null
+          participant_id?: string | null
+          participant_name?: string
+          participant_snapshot?: Json
+          period_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nurse_period_archives_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "nurse_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nurse_periods: {
         Row: {
           created_at: string
@@ -1673,6 +1726,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      start_new_period: { Args: { _nurse_period_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "leader" | "nurse" | "superadmin"
