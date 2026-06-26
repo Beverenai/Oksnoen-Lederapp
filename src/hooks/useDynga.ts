@@ -55,20 +55,23 @@ export function useDyngaColumns() {
   });
 }
 
-export function useDyngaCards() {
+export function useDyngaCards(periodId?: string | null) {
   return useQuery<DyngaCardWithParticipant[]>({
-    queryKey: ['dynga-cards'],
+    queryKey: ['dynga-cards', periodId ?? null],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('dynga_cards')
         .select('*, participant:participants(id, name, first_name, last_name, image_url, cabin_id, cabins(id, name)), dynga_comments(count)')
         .order('sort_order', { ascending: true });
+      if (periodId) q = q.eq('period_id', periodId);
+      const { data, error } = await q;
       if (error) throw error;
       return (data || []).map((row: any) => ({
         ...row,
         comment_count: row.dynga_comments?.[0]?.count ?? 0,
       })) as DyngaCardWithParticipant[];
     },
+    enabled: periodId !== undefined,
     staleTime: 10_000,
   });
 }
@@ -126,7 +129,7 @@ export function useMoveColumn() {
 export function useAddCards() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ participantIds, columnId, initialComment, leaderId }: { participantIds: string[]; columnId: string; initialComment?: string; leaderId?: string | null }) => {
+    mutationFn: async ({ participantIds, columnId, initialComment, leaderId, periodId }: { participantIds: string[]; columnId: string; initialComment?: string; leaderId?: string | null; periodId?: string | null }) => {
       const { data: existing } = await supabase
         .from('dynga_cards')
         .select('sort_order')
@@ -138,6 +141,7 @@ export function useAddCards() {
         participant_id: pid,
         column_id: columnId,
         sort_order: nextOrder++,
+        ...(periodId ? { period_id: periodId } : {}),
       }));
       const { data: inserted, error } = await supabase.from('dynga_cards').insert(rows).select('id');
       if (error) throw error;

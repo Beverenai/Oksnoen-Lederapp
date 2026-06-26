@@ -7,9 +7,14 @@ import { DyngaCard } from './DyngaCard';
 import { DyngaCardSheet } from './DyngaCardSheet';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export function DyngaBoard() {
+interface DyngaBoardProps {
+  periodId?: string | null;
+  readOnly?: boolean;
+}
+
+export function DyngaBoard({ periodId, readOnly }: DyngaBoardProps = {}) {
   const { data: columns = [], isLoading: cLoading } = useDyngaColumns();
-  const { data: cards = [], isLoading: kLoading } = useDyngaCards();
+  const { data: cards = [], isLoading: kLoading } = useDyngaCards(periodId);
   const moveCard = useMoveCard();
   const moveColumn = useMoveColumn();
   const [activeCard, setActiveCard] = useState<DyngaCardWithParticipant | null>(null);
@@ -40,6 +45,7 @@ export function DyngaBoard() {
 
   const handleDragEnd = (e: DragEndEvent) => {
     setActiveCard(null);
+    if (readOnly) return;
     const { active, over } = e;
     if (!over) return;
 
