@@ -38,6 +38,14 @@ interface LeaderWithContent extends Leader {
 
 type SortOption = 'name' | 'activity' | 'team';
 
+const FRI_ACTIVITY_REGEX = /(^|[\s/\\,.;:!?()[\]{}-])fri($|[\s/\\,.;:!?()[\]{}-])/i;
+
+const isFriActivity = (activity?: string | null) =>
+  FRI_ACTIVITY_REGEX.test(activity?.trim() ?? '');
+
+const isLeaderFri = (leader: Pick<LeaderWithContent, 'content'>) =>
+  isFriActivity(leader.content?.current_activity);
+
 // Teams to show in filter chips (keys match database values)
 const FILTER_TEAMS = [
   { key: '1', label: '1', bg: 'bg-red-500', text: 'text-white', border: 'border-red-500' },
@@ -241,10 +249,9 @@ export default function Leaders() {
       // Priority leaders always at top
       if (aPriority !== bPriority) return aPriority - bPriority;
       
-      // Check if leader has "Fri" as activity (whole word match)
-      const friRegex = /(^|\s)fri(\s|$|[.,!?-])/i;
-      const aIsFri = friRegex.test(a.content?.current_activity?.trim() ?? '');
-      const bIsFri = friRegex.test(b.content?.current_activity?.trim() ?? '');
+      // Check if leader has "Fri" as the actual current activity, not words like Frisbee/Friluft
+      const aIsFri = isLeaderFri(a);
+      const bIsFri = isLeaderFri(b);
       
       const aIsKitchen = a.team?.toLowerCase() === 'kjøkken';
       const bIsKitchen = b.team?.toLowerCase() === 'kjøkken';
@@ -274,19 +281,21 @@ export default function Leaders() {
       }
     });
 
-    return result;
+    // Hard group all non-Fri leaders before Fri leaders so the separator never captures everyone below it.
+    const nonFriLeaders = result.filter((leader) => !isLeaderFri(leader));
+    const friLeaders = result.filter(isLeaderFri);
+
+    return [...nonFriLeaders, ...friLeaders];
   }, [leaders, activeTeamFilter, activeCabinFilter, sortBy, searchQuery]);
 
   // Find index of first "Fri" leader for separator (now at the very bottom, after Kjøkken)
   const firstFriIndex = useMemo(() => {
-    return filteredAndSortedLeaders.findIndex(leader =>
-      /(^|\s)fri(\s|$|[.,!?-])/i.test(leader.content?.current_activity?.trim() ?? '')
-    );
+    return filteredAndSortedLeaders.findIndex(isLeaderFri);
   }, [filteredAndSortedLeaders]);
   
   // Get avatar border color class based on leader status
   const getAvatarBorderClass = (leader: LeaderWithContent) => {
-    const isFri = /(^|\s)fri(\s|$|[.,!?-])/i.test(leader.content?.current_activity?.trim() ?? '');
+    const isFri = isLeaderFri(leader);
     const isKitchen = leader.team?.toLowerCase() === 'kjøkken';
     const isSjef = leader.team?.toLowerCase() === 'sjef';
     
