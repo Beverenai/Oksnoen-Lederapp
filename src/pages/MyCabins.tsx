@@ -536,6 +536,7 @@ export default function MyCabins() {
         cabins={selectedCabinForReport}
         open={cabinReportOpen}
         onOpenChange={setCabinReportOpen}
+        leaderId={effectiveLeader?.id}
       />
     </div>
   );

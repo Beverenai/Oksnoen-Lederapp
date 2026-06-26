@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { Home, Save, Loader2 } from "lucide-react";
 import { hapticSuccess, hapticError } from "@/lib/capacitorHaptics";
+import { useActivePeriod } from "@/hooks/useGjenglemt";
 
 interface CabinInfo {
   id: string;
@@ -33,15 +34,16 @@ export const CabinReportSheet = ({
   leaderId,
 }: CabinReportSheetProps) => {
   const { showSuccess, showError, showInfo } = useStatusPopup();
+  const { data: activePeriod } = useActivePeriod();
   const [reports, setReports] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open && cabins.length > 0) {
+    if (open && cabins.length > 0 && activePeriod?.id) {
       loadReports();
     }
-  }, [open, cabins]);
+  }, [open, cabins, activePeriod?.id]);
 
   const loadReports = async () => {
     setLoading(true);
@@ -50,7 +52,8 @@ export const CabinReportSheet = ({
       const { data, error } = await supabase
         .from("cabin_reports")
         .select("cabin_id, content, updated_at")
-        .in("cabin_id", cabinIds);
+        .in("cabin_id", cabinIds)
+        .eq("period_id", activePeriod!.id);
 
       if (error) throw error;
 
@@ -72,19 +75,40 @@ export const CabinReportSheet = ({
     setSaving(cabinId);
     try {
       const content = reports[cabinId] || "";
-      
-      const { error } = await supabase
-        .from("cabin_reports")
-        .upsert({
-          cabin_id: cabinId,
-          content,
-          updated_at: new Date().toISOString(),
-          updated_by: leaderId || null,
-        }, {
-          onConflict: "cabin_id"
-        });
+      if (!activePeriod?.id) throw new Error("Ingen aktiv periode");
 
-      if (error) throw error;
+      // Manual upsert (avoids dependency on a specific unique constraint name
+      // — older cached clients sent on_conflict=cabin_id which no longer exists).
+      const { data: existing, error: selErr } = await supabase
+        .from("cabin_reports")
+        .select("id")
+        .eq("cabin_id", cabinId)
+        .eq("period_id", activePeriod.id)
+        .maybeSingle();
+      if (selErr) throw selErr;
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from("cabin_reports")
+          .update({
+            content,
+            updated_at: new Date().toISOString(),
+            updated_by: leaderId || null,
+          })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("cabin_reports")
+          .insert({
+            cabin_id: cabinId,
+            period_id: activePeriod.id,
+            content,
+            updated_at: new Date().toISOString(),
+            updated_by: leaderId || null,
+          });
+        if (error) throw error;
+      }
       showSuccess("Hytterapport lagret");
     } catch (error) {
       console.error("Error saving cabin report:", error);

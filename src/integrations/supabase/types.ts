@@ -91,6 +91,7 @@ export type Database = {
           cabin_id: string
           content: string | null
           id: string
+          period_id: string | null
           updated_at: string | null
           updated_by: string | null
         }
@@ -98,6 +99,7 @@ export type Database = {
           cabin_id: string
           content?: string | null
           id?: string
+          period_id?: string | null
           updated_at?: string | null
           updated_by?: string | null
         }
@@ -105,6 +107,7 @@ export type Database = {
           cabin_id?: string
           content?: string | null
           id?: string
+          period_id?: string | null
           updated_at?: string | null
           updated_by?: string | null
         }
@@ -112,8 +115,15 @@ export type Database = {
           {
             foreignKeyName: "cabin_reports_cabin_id_fkey"
             columns: ["cabin_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "cabins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cabin_reports_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
           {
@@ -630,6 +640,7 @@ export type Database = {
           has_drivers_license: boolean | null
           has_seen_push_prompt: boolean
           id: string
+          in_roulette: boolean
           is_active: boolean | null
           last_app_edit_at: string
           last_synced_at: string | null
@@ -656,6 +667,7 @@ export type Database = {
           has_drivers_license?: boolean | null
           has_seen_push_prompt?: boolean
           id?: string
+          in_roulette?: boolean
           is_active?: boolean | null
           last_app_edit_at?: string
           last_synced_at?: string | null
@@ -682,6 +694,7 @@ export type Database = {
           has_drivers_license?: boolean | null
           has_seen_push_prompt?: boolean
           id?: string
+          in_roulette?: boolean
           is_active?: boolean | null
           last_app_edit_at?: string
           last_synced_at?: string | null
