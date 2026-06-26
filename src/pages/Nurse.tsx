@@ -139,7 +139,7 @@ export default function Nurse() {
 
   const loadPeriods = async () => {
     const { data } = await supabase
-      .from('nurse_periods')
+      .from('periods')
       .select('*')
       .order('start_date', { ascending: false });
     const list = (data || []) as Array<{ id: string; name: string; start_date: string; end_date: string; is_active: boolean }>;
