@@ -729,6 +729,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           id: string
+          period_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -736,6 +737,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          period_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -743,9 +745,18 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          period_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "nurse_reports_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       overnatting_responses: {
         Row: {

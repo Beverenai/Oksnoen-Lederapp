@@ -2,143 +2,90 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Trash2, Plus, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
-import { nb } from 'date-fns/locale';
+import { Calendar, Loader2 } from 'lucide-react';
 
-interface NursePeriod {
+interface Period {
   id: string;
   name: string;
-  start_date: string;
-  end_date: string;
+  slug: string;
   is_active: boolean;
 }
 
 export function NursePeriodsTab() {
   const { showSuccess, showError } = useStatusPopup();
-  const [periods, setPeriods] = useState<NursePeriod[]>([]);
+  const [periods, setPeriods] = useState<Period[]>([]);
   const [loading, setLoading] = useState(true);
-  const [name, setName] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [switching, setSwitching] = useState<string | null>(null);
 
   const load = async () => {
-    setLoading(true);
     const { data, error } = await supabase
       .from('periods')
-      .select('*')
-      .order('start_date', { ascending: false });
+      .select('id,name,slug,is_active')
+      .order('start_date', { ascending: true });
     if (error) showError('Kunne ikke laste perioder');
-    else setPeriods((data || []) as NursePeriod[]);
+    else setPeriods((data || []) as Period[]);
     setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
 
-  const addPeriod = async () => {
-    if (!name || !startDate || !endDate) {
-      showError('Fyll inn navn, start- og slutt-dato');
-      return;
+  const setActive = async (p: Period) => {
+    if (p.is_active) return;
+    setSwitching(p.id);
+    const { error: e1 } = await supabase.from('periods').update({ is_active: false }).neq('id', p.id);
+    const { error: e2 } = await supabase.from('periods').update({ is_active: true }).eq('id', p.id);
+    if (e1 || e2) {
+      showError('Kunne ikke bytte periode');
+    } else {
+      showSuccess(`Aktiv periode: ${p.name}`);
+      setPeriods((prev) => prev.map((x) => ({ ...x, is_active: x.id === p.id })));
     }
-    const { error } = await supabase
-      .from('periods')
-      .insert({
-        name,
-        slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `periode-${Date.now()}`,
-        start_date: startDate,
-        end_date: endDate,
-      });
-    if (error) { showError('Kunne ikke opprette periode'); return; }
-    setName(''); setStartDate(''); setEndDate('');
-    showSuccess('Periode opprettet');
-    load();
+    setSwitching(null);
   };
 
-  const toggleActive = async (p: NursePeriod) => {
-    if (!p.is_active) {
-      await supabase.from('periods').update({ is_active: false }).neq('id', p.id);
-    }
-    const { error } = await supabase
-      .from('periods')
-      .update({ is_active: !p.is_active })
-      .eq('id', p.id);
-    if (error) showError('Kunne ikke oppdatere');
-    else load();
-  };
-
-  const deletePeriod = async (id: string) => {
-    if (!confirm('Slett denne perioden?')) return;
-    const { error } = await supabase.from('periods').delete().eq('id', id);
-    if (error) showError('Kunne ikke slette');
-    else { showSuccess('Slettet'); load(); }
-  };
+  const active = periods.find((p) => p.is_active);
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Plus className="w-5 h-5" /> Ny periode</CardTitle>
-          <CardDescription>Opprett en nurse-periode (f.eks. "Periode 1") som rapporter knyttes til.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="space-y-2">
-            <Label>Navn</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Periode 1" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Fra</Label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Til</Label>
-              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            </div>
-          </div>
-          <Button onClick={addPeriod}><Plus className="w-4 h-4 mr-2" /> Opprett</Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Calendar className="w-5 h-5" /> Perioder</CardTitle>
-          <CardDescription>Slå på "Aktiv" for perioden som rapporter skal lagres i. Kun én kan være aktiv om gangen.</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5" /> Aktiv periode
+          </CardTitle>
+          <CardDescription>
+            All data (deltakere, nurse-rapport, gjenglemt, helse-notater) lagres på den aktive perioden.
+            Når du bytter periode ser lederne kun data fra den nye perioden — gammelt er trygt lagret.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-muted-foreground text-sm">Laster...</p>
-          ) : periods.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Ingen perioder enda</p>
-          ) : (
-            <div className="space-y-2">
-              {periods.map((p) => (
-                <div key={p.id} className="flex items-center justify-between border rounded-lg p-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{p.name}</span>
-                      {p.is_active && <Badge>Aktiv</Badge>}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(p.start_date), 'd. MMM', { locale: nb })} – {format(new Date(p.end_date), 'd. MMM yyyy', { locale: nb })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs">Aktiv</Label>
-                      <Switch checked={p.is_active} onCheckedChange={() => toggleActive(p)} />
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={() => deletePeriod(p.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" /> Laster...
             </div>
+          ) : (
+            <>
+              <div className="mb-3 text-sm">
+                Aktiv: <Badge className="ml-1">{active?.name || 'Ingen'}</Badge>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {periods.map((p) => {
+                  const label = p.name.replace(/^Periode\s*/i, '');
+                  return (
+                    <Button
+                      key={p.id}
+                      variant={p.is_active ? 'default' : 'outline'}
+                      onClick={() => setActive(p)}
+                      disabled={switching !== null}
+                      className="h-16 text-lg font-semibold"
+                    >
+                      {switching === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
