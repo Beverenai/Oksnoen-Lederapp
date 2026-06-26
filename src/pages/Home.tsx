@@ -24,6 +24,7 @@ import {
   Anchor,
   Wrench,
   Bed,
+  Dices,
   type LucideIcon
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -489,6 +490,28 @@ export default function Home() {
 
       {/* Content Cards - consistent spacing */}
       <div className="px-4 mt-4 sm:mt-6 space-y-3 sm:space-y-4">
+        {/* Oppgave-roulette */}
+        <Card
+          className="border border-violet-500/30 bg-violet-50/50 dark:bg-violet-950/20 cursor-pointer hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors shadow-sm"
+          onClick={() => navigate('/roulette')}
+        >
+          <CardContent className="py-3 sm:py-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-violet-500/15 shrink-0">
+                <Dices className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] uppercase tracking-wide text-violet-600/80 dark:text-violet-400/80 font-medium mb-0.5">
+                  Oppgave-roulette
+                </p>
+                <p className="text-sm sm:text-base font-medium text-foreground">
+                  Trekk en oppgave og marker den som gjort
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Fix Task Alert - consistent with secondary cards */}
         {assignedFixTasks.length > 0 && (
           <Card 
