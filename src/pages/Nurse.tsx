@@ -547,7 +547,12 @@ export default function Nurse() {
   };
 
   const generateNurseCsv = () => {
-    const participantsToExport = participants.filter(p => 
+    const filtered = participants.map((p) => ({
+      ...p,
+      healthNotes: p.healthNotes.filter((n) => inPeriod(n.created_at)),
+      healthEvents: p.healthEvents.filter((e) => inPeriod(e.created_at)),
+    }));
+    const participantsToExport = filtered.filter(p =>
       p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info
     );
     
