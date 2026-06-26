@@ -32,7 +32,11 @@ export default function PublicGjenglemt() {
     if (pwInput.trim() === PUBLIC_PASSWORD) {
       setUnlocked(true);
       setPwError(false);
-      try { sessionStorage.setItem(SS_KEY, '1'); } catch {}
+      try {
+        sessionStorage.setItem(SS_KEY, '1');
+      } catch {
+        // Session storage can be unavailable in private browsing.
+      }
     } else {
       setPwError(true);
     }
