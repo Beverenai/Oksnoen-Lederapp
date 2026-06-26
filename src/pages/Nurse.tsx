@@ -612,6 +612,31 @@ export default function Nurse() {
     }
   };
 
+  const handleExportPdf = () => {
+    setIsExporting(true);
+    try {
+      const html = generateNurseReport();
+      // Inject auto-print so the browser opens the save-as-PDF dialog
+      const htmlWithPrint = html.replace(
+        '</body>',
+        `<script>window.addEventListener('load', function(){ setTimeout(function(){ window.focus(); window.print(); }, 400); });<\/script></body>`
+      );
+      const newWindow = window.open('', '_blank');
+      if (!newWindow) {
+        showError('Tillat popup for å laste ned PDF');
+        return;
+      }
+      newWindow.document.write(htmlWithPrint);
+      newWindow.document.close();
+      showSuccess('Velg "Lagre som PDF" i utskriftsdialogen');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      showError('Kunne ikke lage PDF');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleExportCsv = () => {
     setIsExporting(true);
     try {
@@ -787,9 +812,13 @@ export default function Nurse() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportPdf}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Last ned PDF
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportHtml}>
                   <FileText className="w-4 h-4 mr-2" />
-                  Eksporter som HTML
+                  Åpne som HTML
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportCsv}>
                   <Download className="w-4 h-4 mr-2" />
