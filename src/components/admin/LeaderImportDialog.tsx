@@ -18,15 +18,37 @@ interface ParsedRow {
   phone: string;
 }
 
-const HEADER_HINT = /(navn|name|telefon|phone)/i;
+const HEADER_HINT = /(navn|name|telefon|phone|mobil)/i;
 
+// Always returns 8 digits (Norwegian local format) — strips +47/0047/47 prefix
+// and all spaces/dashes/parentheses. Returns '' if not a valid 8-digit number.
 function normalizePhone(raw: string): string {
-  const trimmed = raw.trim();
-  let digits = trimmed.replace(/[^\d]/g, '');
-  // Strip Norwegian country code (+47 / 0047) so duplicates match across formats
+  let digits = (raw || '').replace(/\D/g, '');
   if (digits.startsWith('0047')) digits = digits.slice(4);
+  else if (digits.length === 10 && digits.startsWith('47')) digits = digits.slice(2);
   else if (digits.length > 8 && digits.startsWith('47')) digits = digits.slice(2);
-  return digits;
+  return digits.length === 8 ? digits : '';
+}
+
+// Pulls a Norwegian phone number out of a line of free text.
+// Matches +47 / 0047 / 47 prefixes plus 8 digits (with optional spaces/dashes).
+function extractPhone(line: string): { phone: string; rest: string } | null {
+  const re = /(?:\+?\s*47[\s-]?|0047[\s-]?)?(?:\d[\s-]?){8,}/g;
+  let match: RegExpExecArray | null;
+  let best: { match: string; index: number; phone: string } | null = null;
+  while ((match = re.exec(line)) !== null) {
+    const phone = normalizePhone(match[0]);
+    if (phone) {
+      // Prefer the LAST valid phone (name usually comes first).
+      best = { match: match[0], index: match.index, phone };
+    }
+  }
+  if (!best) return null;
+  const rest = (line.slice(0, best.index) + line.slice(best.index + best.match.length))
+    .replace(/[,;\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return { phone: best.phone, rest };
 }
 
 function parseInput(text: string): { valid: ParsedRow[]; invalid: string[] } {
@@ -36,31 +58,27 @@ function parseInput(text: string): { valid: ParsedRow[]; invalid: string[] } {
 
   lines.forEach((line, idx) => {
     // Skip header row
-    if (idx === 0 && HEADER_HINT.test(line) && /[,;\t]/.test(line)) {
-      const parts = line.split(/[,;\t]/);
-      if (parts.length >= 2 && HEADER_HINT.test(parts[0]) && HEADER_HINT.test(parts[1])) return;
-    }
+    if (idx === 0 && HEADER_HINT.test(line) && !/\d{6,}/.test(line)) return;
 
-    const parts = line.split(/[,;\t]/).map(p => p.trim()).filter(Boolean);
-    if (parts.length < 2) {
+    const extracted = extractPhone(line);
+    if (!extracted) {
       invalid.push(line);
       return;
     }
-    const name = parts[0];
-    const phone = normalizePhone(parts[1]);
-    const phoneDigits = phone.replace(/^\+/, '');
-    if (name.length < 2 || phoneDigits.length < 8) {
+    const name = extracted.rest;
+    if (name.length < 2) {
       invalid.push(line);
       return;
     }
-    valid.push({ name, phone });
+    valid.push({ name, phone: extracted.phone });
   });
 
   return { valid, invalid };
 }
 
+// Dedupe key — last 8 digits, so +47 / 0047 / bare 8 all match.
 function phoneKey(p: string): string {
-  return p.replace(/\D/g, '').slice(-8);
+  return (p || '').replace(/\D/g, '').slice(-8);
 }
 
 export function LeaderImportDialog({ open, onOpenChange, existingPhones, onImported }: LeaderImportDialogProps) {
