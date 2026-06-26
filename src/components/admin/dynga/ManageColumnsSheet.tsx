@@ -7,7 +7,7 @@ import { useDeleteColumn, useDyngaColumns, useUpsertColumn } from '@/hooks/useDy
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { cn } from '@/lib/utils';
 
-interface Props { open: boolean; onOpenChange: (o: boolean) => void; }
+interface Props { open: boolean; onOpenChange: (o: boolean) => void; periodId?: string | null; }
 
 const COLORS = [
   { key: 'muted', cls: 'bg-muted-foreground' },
@@ -18,9 +18,9 @@ const COLORS = [
   { key: 'purple', cls: 'bg-purple-500' },
 ];
 
-export function ManageColumnsSheet({ open, onOpenChange }: Props) {
+export function ManageColumnsSheet({ open, onOpenChange, periodId }: Props) {
   const { showSuccess, showError } = useStatusPopup();
-  const { data: columns = [] } = useDyngaColumns();
+  const { data: columns = [] } = useDyngaColumns(periodId);
   const upsert = useUpsertColumn();
   const del = useDeleteColumn();
   const [newTitle, setNewTitle] = useState('');
@@ -33,6 +33,7 @@ export function ManageColumnsSheet({ open, onOpenChange }: Props) {
         title: newTitle.trim(),
         color: newColor,
         sort_order: (columns[columns.length - 1]?.sort_order ?? -1) + 1,
+        periodId: periodId ?? null,
       });
       setNewTitle('');
       setNewColor('muted');

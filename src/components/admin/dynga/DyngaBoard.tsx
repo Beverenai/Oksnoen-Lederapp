@@ -13,7 +13,7 @@ interface DyngaBoardProps {
 }
 
 export function DyngaBoard({ periodId, readOnly }: DyngaBoardProps = {}) {
-  const { data: columns = [], isLoading: cLoading } = useDyngaColumns();
+  const { data: columns = [], isLoading: cLoading } = useDyngaColumns(periodId);
   const { data: cards = [], isLoading: kLoading } = useDyngaCards(periodId);
   const moveCard = useMoveCard();
   const moveColumn = useMoveColumn();

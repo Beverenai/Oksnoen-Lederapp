@@ -213,6 +213,7 @@ export type Database = {
           color: string
           created_at: string
           id: string
+          period_id: string | null
           sort_order: number
           title: string
         }
@@ -220,6 +221,7 @@ export type Database = {
           color?: string
           created_at?: string
           id?: string
+          period_id?: string | null
           sort_order?: number
           title: string
         }
@@ -227,10 +229,19 @@ export type Database = {
           color?: string
           created_at?: string
           id?: string
+          period_id?: string | null
           sort_order?: number
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "dynga_columns_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dynga_comments: {
         Row: {

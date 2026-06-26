@@ -104,7 +104,7 @@ export default function Dynga() {
       </div>
 
       <AddParticipantsSheet open={addOpen} onOpenChange={setAddOpen} periodId={selectedPeriodId} />
-      <ManageColumnsSheet open={manageOpen} onOpenChange={setManageOpen} />
+      <ManageColumnsSheet open={manageOpen} onOpenChange={setManageOpen} periodId={selectedPeriodId} />
     </div>
   );
 }
