@@ -13,6 +13,7 @@ interface ParticipantData {
   cabin?: string;
   activities: string[];
   activityNotes?: string;
+  leaderNotes?: string;
   littleStyrkeprove: boolean;
   bigStyrkeprove: boolean;
 }
@@ -97,6 +98,7 @@ Alder: ${participant.age ? `${participant.age} år` : 'Ukjent'}
 Hytte: ${participant.cabin || 'Ukjent'}
 Aktiviteter gjort: ${friendlyActivities.length > 0 ? friendlyActivities.join(', ') : 'Ingen registrert'}
 ${participant.activityNotes ? `Aktivitetsnotater fra ledere: ${participant.activityNotes}` : ''}
+${participant.leaderNotes ? `Lederkommentarer om deltakeren: ${participant.leaderNotes}` : ''}
 Styrkeprøve: ${participant.bigStyrkeprove ? 'Store Styrkeprøven ✅' : participant.littleStyrkeprove ? 'Lille Styrkeprøven ✅' : 'Ingen styrkeprøve'}
 
 VIKTIG ORDLISTE: "Rappis" = rappellering ned fjellveggen (skriv "rappellert ned fjellveggen" eller lignende, aldri "rappis").
