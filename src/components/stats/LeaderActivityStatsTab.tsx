@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -50,9 +51,11 @@ interface LeaderStats {
 export function LeaderActivityStatsTab() {
   const [expandedLeader, setExpandedLeader] = useState<string | null>(null);
   const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
+  const { data: activePeriodId } = useActivePeriodId();
 
   const { data: activities, isLoading } = useQuery({
-    queryKey: ['leader-activity-stats'],
+    queryKey: ['leader-activity-stats', activePeriodId],
+    enabled: !!activePeriodId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('participant_activities')
@@ -65,6 +68,7 @@ export function LeaderActivityStatsTab() {
           leaders:registered_by (id, name, profile_image_url),
           participants:participant_id (id, name, first_name, cabin_id, cabins:cabin_id (name))
         `)
+        .eq('period_id', activePeriodId!)
         .not('registered_by', 'is', null);
 
       if (error) throw error;
