@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
+import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import { BarChart3, AlertCircle, Cake, ChevronDown, ChevronUp, Users, RefreshCw, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format, differenceInYears } from 'date-fns';
@@ -53,6 +54,7 @@ export function ParticipantStatsCard() {
   const [isNotArrivedOpen, setIsNotArrivedOpen] = useState(true);
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { data: activePeriodId } = useActivePeriodId();
 
   const handleParticipantClick = (participantId: string) => {
     setSelectedParticipantId(participantId);
@@ -60,18 +62,19 @@ export function ParticipantStatsCard() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (activePeriodId) loadData();
+  }, [activePeriodId]);
 
   const loadData = async (showLoading = true) => {
+    if (!activePeriodId) return;
     if (showLoading) setIsLoading(true);
     setError(null);
     try {
       const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000));
       const fetches = Promise.all([
-        supabase.from('participants').select('id, name, first_name, birth_date, has_arrived, cabin_id'),
+        supabase.from('participants').select('id, name, first_name, birth_date, has_arrived, cabin_id').eq('period_id', activePeriodId),
         supabase.from('cabins').select('id, name'),
-        supabase.from('participant_activities').select('participant_id'),
+        supabase.from('participant_activities').select('participant_id').eq('period_id', activePeriodId),
       ]);
 
       const [participantsRes, cabinsRes, activitiesRes] = await Promise.race([fetches, timeout]) as any;

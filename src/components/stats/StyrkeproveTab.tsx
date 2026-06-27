@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useActivePeriodId } from "@/hooks/useActivePeriodId";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -58,13 +59,15 @@ export function StyrkeproveTab() {
     setSelectedParticipantId(id);
     setDialogOpen(true);
   };
+  const { data: activePeriodId } = useActivePeriodId();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["styrkeprove-stats"],
+    queryKey: ["styrkeprove-stats", activePeriodId],
+    enabled: !!activePeriodId,
     queryFn: async () => {
       const [participantsRes, activitiesRes, cabinsRes] = await Promise.all([
-        supabase.from("participants").select("id, name, first_name, last_name, cabin_id, image_url"),
-        supabase.from("participant_activities").select("participant_id, activity"),
+        supabase.from("participants").select("id, name, first_name, last_name, cabin_id, image_url").eq("period_id", activePeriodId!),
+        supabase.from("participant_activities").select("participant_id, activity").eq("period_id", activePeriodId!),
         supabase.from("cabins").select("id, name"),
       ]);
       if (participantsRes.error) throw participantsRes.error;

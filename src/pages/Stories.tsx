@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,14 +21,17 @@ export default function Stories() {
   const [stories, setStories] = useState<Story[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedStory, setExpandedStory] = useState<string | null>(null);
+  const { data: activePeriodId } = useActivePeriodId();
 
   const loadStories = useCallback(async () => {
+    if (!activePeriodId) return;
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('stories')
         .select('*')
         .eq('is_active', true)
+        .eq('period_id', activePeriodId)
         .order('sort_order', { ascending: true });
       
       if (error) throw error;
@@ -37,7 +41,7 @@ export default function Stories() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [activePeriodId]);
 
   useEffect(() => {
     loadStories();

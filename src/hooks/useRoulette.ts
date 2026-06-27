@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import type { Tables } from '@/integrations/supabase/types';
 
 export type RouletteTask = Tables<'roulette_tasks'>;
@@ -41,6 +42,7 @@ export function useRouletteTasks() {
 
 export function useCurrentAssignment(leaderId: string | undefined | null) {
   const qc = useQueryClient();
+  const { data: activePeriodId } = useActivePeriodId();
 
   useEffect(() => {
     if (!leaderId) return;
@@ -58,13 +60,14 @@ export function useCurrentAssignment(leaderId: string | undefined | null) {
   }, [leaderId, qc]);
 
   return useQuery({
-    queryKey: ['current-roulette-assignment', leaderId],
-    enabled: !!leaderId,
+    queryKey: ['current-roulette-assignment', leaderId, activePeriodId],
+    enabled: !!leaderId && !!activePeriodId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('roulette_assignments')
         .select('*, task:roulette_tasks(*)')
         .eq('leader_id', leaderId!)
+        .eq('period_id', activePeriodId!)
         .eq('status', 'active')
         .maybeSingle();
       if (error) throw error;
@@ -81,10 +84,12 @@ function pickRandom<T>(arr: T[]): T | null {
 export function useDrawRouletteTask() {
   const qc = useQueryClient();
   const { effectiveLeader } = useAuth();
+  const { data: activePeriodId } = useActivePeriodId();
 
   return useMutation({
     mutationFn: async ({ isU18 }: { isU18: boolean }) => {
       if (!effectiveLeader) throw new Error('Ingen leder');
+      if (!activePeriodId) throw new Error('Ingen aktiv periode');
       const category: 'senior' | 'u18' = isU18 ? 'u18' : 'senior';
 
       // All active tasks matching category or 'both'
@@ -104,6 +109,7 @@ export function useDrawRouletteTask() {
         .from('roulette_assignments')
         .select('task_id')
         .eq('leader_id', effectiveLeader.id)
+        .eq('period_id', activePeriodId)
         .in('status', ['completed', 'skipped']);
       const seen = new Set((prev ?? []).map(r => r.task_id));
       const fresh = tasks.filter(t => !seen.has(t.id));
@@ -112,7 +118,7 @@ export function useDrawRouletteTask() {
 
       const { data: inserted, error: iErr } = await supabase
         .from('roulette_assignments')
-        .insert({ leader_id: effectiveLeader.id, task_id: chosen.id, status: 'active' })
+        .insert({ leader_id: effectiveLeader.id, task_id: chosen.id, status: 'active', period_id: activePeriodId })
         .select('*, task:roulette_tasks(*)')
         .single();
       if (iErr) throw iErr;
@@ -196,12 +202,15 @@ export function useDeleteTask() {
 }
 
 export function useRouletteStats() {
+  const { data: activePeriodId } = useActivePeriodId();
   return useQuery({
-    queryKey: ['roulette-stats'],
+    queryKey: ['roulette-stats', activePeriodId],
+    enabled: !!activePeriodId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('roulette_assignments')
         .select('id, status, completed_at, leader:leaders(name, profile_image_url), task:roulette_tasks(title)')
+        .eq('period_id', activePeriodId!)
         .order('completed_at', { ascending: false, nullsFirst: false })
         .limit(100);
       if (error) throw error;
