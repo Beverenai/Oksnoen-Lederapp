@@ -206,6 +206,7 @@ export default function Home() {
         supabase
           .from('rope_controls')
           .select('id, activity, assigned_to, fixed_at')
+          .eq('period_id', activePeriodId)
           .eq('assigned_to', effectiveLeader.id)
           .is('fixed_at', null),
       ]);
