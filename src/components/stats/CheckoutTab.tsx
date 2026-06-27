@@ -10,7 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Loader2, Sparkles, CheckCircle2, AlertCircle, RefreshCw, Search, ChevronDown, User } from 'lucide-react';
-import { RotateCcw, Lock } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { CheckoutDetailDialog } from '@/components/checkout/CheckoutDetailDialog';
@@ -239,18 +241,6 @@ export function CheckoutTab() {
 
   const isGenerating = progress.status === 'starting' || progress.status === 'running';
   const progressPercent = progress.total > 0 ? (progress.processed / progress.total) * 100 : 0;
-
-  // 7-day gate: pass generation cannot start until 7 days after period start
-  const unlockDate = useMemo(() => {
-    if (!activePeriod?.start_date) return null;
-    const d = new Date(activePeriod.start_date);
-    d.setDate(d.getDate() + 7);
-    return d;
-  }, [activePeriod]);
-  const canGenerate = !unlockDate || new Date() >= unlockDate;
-  const daysUntilUnlock = unlockDate
-    ? Math.max(0, Math.ceil((unlockDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : 0;
 
   const filteredPassWrittenList = useMemo(() => {
     if (!searchQuery.trim()) return passWrittenList;
