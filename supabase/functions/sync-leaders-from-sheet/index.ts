@@ -44,32 +44,52 @@ const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function matchCabinIds(text: string | null | undefined, cabins: { id: string; name: string }[]): string[] {
   if (!text) return [];
   let working = String(text);
+
+  // Normalize common sheet shorthand → actual cabin names
+  working = working
+    .replace(/\bskyss\s*2\s*\+?\s*3\b/gi, 'Skyss II + III')
+    .replace(/\bfiskebu\b(?!a)/gi, 'Fiskebua');
+
+  // Protect multi-word / multi-cabin names (longest first) with placeholders
   const placeholders = new Map<string, string>();
-  cabins.forEach((c, i) => {
-    if (!/[+&]/.test(c.name)) return;
+  const multi = cabins
+    .filter((c) => /\s|[+&]/.test(c.name))
+    .sort((a, b) => b.name.length - a.name.length);
+  multi.forEach((c, i) => {
     const ph = `\u0000CAB${i}\u0000`;
     const re = new RegExp(escapeRegex(c.name).replace(/\s+/g, '\\s*'), 'gi');
     if (re.test(working)) {
-      working = working.replace(re, ph);
+      working = working.replace(re, ` ${ph} `);
       placeholders.set(ph, c.id);
     }
   });
-  const parts = working.split(/\s*[+&,]\s*|\s+og\s+/gi).map((s) => s.trim()).filter(Boolean);
+
+  // Split on whitespace, +, &, comma, slash, and the word "og"
+  const parts = working
+    .split(/[\s+&,/]+|\bog\b/gi)
+    .map((s) => s.trim())
+    .filter(Boolean);
   const ids: string[] = [];
   for (const part of parts) {
     if (placeholders.has(part)) { ids.push(placeholders.get(part)!); continue; }
     const lower = norm(part);
-    if (!lower) continue;
+    if (!lower || lower.length < 3) continue;
+
+    // Exact match
     const exact = cabins.filter((c) => norm(c.name) === lower);
     if (exact.length > 0) { exact.forEach((c) => ids.push(c.id)); continue; }
-    const starts = cabins.filter((c) => {
+
+    // First-word match: "Balder" → Balder bak + Balder front, "Beritbu" → bak + front
+    const firstWord = cabins.filter((c) => {
       const n = norm(c.name);
       return n === lower || n.startsWith(lower + ' ');
     });
-    if (starts.length > 0) { starts.forEach((c) => ids.push(c.id)); continue; }
+    if (firstWord.length > 0) { firstWord.forEach((c) => ids.push(c.id)); continue; }
+
+    // Fallback: token is contained in cabin name (e.g. "bestefars" → "Bestefars kro")
     const sub = cabins.filter((c) => {
       const n = norm(c.name);
-      return n.includes(lower) || lower.includes(n);
+      return n.includes(lower);
     });
     if (sub.length > 0) sub.forEach((c) => ids.push(c.id));
   }
