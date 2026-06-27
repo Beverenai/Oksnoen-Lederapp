@@ -44,6 +44,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          period_id: string | null
           target_group: string | null
           title: string
         }
@@ -52,6 +53,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          period_id?: string | null
           target_group?: string | null
           title: string
         }
@@ -60,10 +62,19 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          period_id?: string | null
           target_group?: string | null
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "announcements_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       app_config: {
         Row: {
@@ -840,6 +851,7 @@ export type Database = {
           completed_at: string | null
           id: string
           participant_id: string
+          period_id: string | null
           registered_by: string | null
         }
         Insert: {
@@ -847,6 +859,7 @@ export type Database = {
           completed_at?: string | null
           id?: string
           participant_id: string
+          period_id?: string | null
           registered_by?: string | null
         }
         Update: {
@@ -854,6 +867,7 @@ export type Database = {
           completed_at?: string | null
           id?: string
           participant_id?: string
+          period_id?: string | null
           registered_by?: string | null
         }
         Relationships: [
@@ -862,6 +876,13 @@ export type Database = {
             columns: ["participant_id"]
             isOneToOne: false
             referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_activities_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
           {
@@ -1317,6 +1338,7 @@ export type Database = {
           helmet_status: string | null
           id: string
           leader_id: string
+          period_id: string | null
           rope_comment: string | null
           rope_status: string | null
           updated_at: string | null
@@ -1336,6 +1358,7 @@ export type Database = {
           helmet_status?: string | null
           id?: string
           leader_id: string
+          period_id?: string | null
           rope_comment?: string | null
           rope_status?: string | null
           updated_at?: string | null
@@ -1355,6 +1378,7 @@ export type Database = {
           helmet_status?: string | null
           id?: string
           leader_id?: string
+          period_id?: string | null
           rope_comment?: string | null
           rope_status?: string | null
           updated_at?: string | null
@@ -1381,6 +1405,13 @@ export type Database = {
             referencedRelation: "leaders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "rope_controls_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
         ]
       }
       roulette_assignments: {
@@ -1390,6 +1421,7 @@ export type Database = {
           created_at: string
           id: string
           leader_id: string
+          period_id: string | null
           status: string
           task_id: string
           updated_at: string
@@ -1400,6 +1432,7 @@ export type Database = {
           created_at?: string
           id?: string
           leader_id: string
+          period_id?: string | null
           status?: string
           task_id: string
           updated_at?: string
@@ -1410,6 +1443,7 @@ export type Database = {
           created_at?: string
           id?: string
           leader_id?: string
+          period_id?: string | null
           status?: string
           task_id?: string
           updated_at?: string
@@ -1420,6 +1454,13 @@ export type Database = {
             columns: ["leader_id"]
             isOneToOne: false
             referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roulette_assignments_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
           {
@@ -1712,6 +1753,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          period_id: string | null
           sort_order: number | null
           title: string
           updated_at: string | null
@@ -1721,6 +1763,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          period_id?: string | null
           sort_order?: number | null
           title: string
           updated_at?: string | null
@@ -1730,11 +1773,20 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          period_id?: string | null
           sort_order?: number | null
           title?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stories_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
