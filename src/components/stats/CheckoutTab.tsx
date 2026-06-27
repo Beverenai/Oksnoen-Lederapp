@@ -10,7 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Loader2, Sparkles, CheckCircle2, AlertCircle, RefreshCw, Search, ChevronDown, User } from 'lucide-react';
-import { RotateCcw, Lock } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { CheckoutDetailDialog } from '@/components/checkout/CheckoutDetailDialog';
@@ -155,10 +157,6 @@ export function CheckoutTab() {
   }, [progress.status, loadData]);
 
   const handleStartCheckout = async () => {
-    if (!canGenerate) {
-      showError(`Pass-generering kan tidligst startes ${format(unlockDate!, 'dd.MM.yyyy', { locale: nb })}`);
-      return;
-    }
     hapticImpact('medium');
     try {
       setProgress({ status: 'starting', processed: 0, total: 0 });
@@ -240,18 +238,6 @@ export function CheckoutTab() {
   const isGenerating = progress.status === 'starting' || progress.status === 'running';
   const progressPercent = progress.total > 0 ? (progress.processed / progress.total) * 100 : 0;
 
-  // 7-day gate: pass generation cannot start until 7 days after period start
-  const unlockDate = useMemo(() => {
-    if (!activePeriod?.start_date) return null;
-    const d = new Date(activePeriod.start_date);
-    d.setDate(d.getDate() + 7);
-    return d;
-  }, [activePeriod]);
-  const canGenerate = !unlockDate || new Date() >= unlockDate;
-  const daysUntilUnlock = unlockDate
-    ? Math.max(0, Math.ceil((unlockDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : 0;
-
   const filteredPassWrittenList = useMemo(() => {
     if (!searchQuery.trim()) return passWrittenList;
     const query = searchQuery.toLowerCase();
@@ -284,18 +270,6 @@ export function CheckoutTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!canGenerate && activePeriod && (
-            <div className="flex items-start gap-2 p-3 bg-muted/50 border rounded-md text-sm">
-              <Lock className="w-4 h-4 mt-0.5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Låst i {daysUntilUnlock} dag{daysUntilUnlock === 1 ? '' : 'er'} til</p>
-                <p className="text-muted-foreground text-xs">
-                  Pass-generering åpnes {format(unlockDate!, 'dd.MM.yyyy', { locale: nb })} (7 dager etter periodestart).
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* Status */}
           <div className="flex items-center gap-3">
             <Badge 
@@ -353,54 +327,25 @@ export function CheckoutTab() {
           )}
 
           {/* Actions */}
-          <div className="flex gap-3">
-            {!checkoutEnabled ? (
-              <Button 
-                onClick={handleStartCheckout} 
-                disabled={isGenerating || !canGenerate || !activePeriod}
-                className="gap-2"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Genererer...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    Start Utsjekk
-                  </>
-                )}
-              </Button>
-            ) : (
-              <>
-                <Button 
-                  onClick={handleStartCheckout} 
-                  disabled={isGenerating || !canGenerate}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Genererer...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Generer på nytt
-                    </>
-                  )}
-                </Button>
-                <Button 
-                  onClick={handleDisableCheckout} 
-                  variant="destructive"
-                  disabled={isGenerating}
-                >
-                  Deaktiver Utsjekk
-                </Button>
-              </>
-            )}
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-3 p-3 border rounded-md bg-muted/30">
+              <Switch
+                id="checkout-toggle"
+                checked={checkoutEnabled}
+                disabled={isGenerating || !activePeriod}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    handleStartCheckout();
+                  } else {
+                    handleDisableCheckout();
+                  }
+                }}
+              />
+              <Label htmlFor="checkout-toggle" className="cursor-pointer">
+                {checkoutEnabled ? 'Utsjekk er på' : 'Skru på utsjekk'}
+              </Label>
+              {isGenerating && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+            </div>
             <Button
               onClick={handleResetPasses}
               variant="outline"
