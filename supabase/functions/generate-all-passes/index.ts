@@ -19,6 +19,7 @@ interface ParticipantData {
   cabin?: string;
   activities: string[];
   activityNotes?: string;
+  leaderNotes?: string;
   littleStyrkeprove: boolean;
   bigStyrkeprove: boolean;
 }
@@ -175,6 +176,7 @@ Alder: ${participant.age ? `${participant.age} år` : 'Ukjent'}
 Hytte: ${participant.cabin || 'Ukjent'}
 Aktiviteter gjort: ${friendlyActivities.length > 0 ? friendlyActivities.join(', ') : 'Ingen registrert'}
 ${participant.activityNotes ? `Aktivitetsnotater fra ledere: ${participant.activityNotes}` : ''}
+${participant.leaderNotes ? `Lederkommentarer om deltakeren: ${participant.leaderNotes}` : ''}
 Styrkeprøve: ${participant.bigStyrkeprove ? 'Store Styrkeprøven ✅' : participant.littleStyrkeprove ? 'Lille Styrkeprøven ✅' : 'Ingen styrkeprøve'}
 
 VIKTIG ORDLISTE: "Rappis" = rappellering ned fjellveggen (skriv "rappellert ned fjellveggen" eller lignende, aldri "rappis").
@@ -224,7 +226,7 @@ async function processAllParticipants(supabase: any, LOVABLE_API_KEY: string) {
     const [participantsRes, cabinsRes, activitiesRes] = await Promise.all([
       supabase
         .from('participants')
-        .select('id, name, birth_date, cabin_id, activity_notes, pass_suggestion')
+        .select('id, name, birth_date, cabin_id, activity_notes, notes, pass_suggestion')
         .eq('period_id', activePeriodId),
       supabase.from('cabins').select('id, name'),
       supabase.from('participant_activities').select('participant_id, activity'),
@@ -289,6 +291,7 @@ async function processAllParticipants(supabase: any, LOVABLE_API_KEY: string) {
           cabin: getCabinName(p.cabin_id),
           activities: uniqueActivities,
           activityNotes: p.activity_notes,
+          leaderNotes: p.notes,
           littleStyrkeprove: hasLilleStyrkprove(completedActivities),
           bigStyrkeprove: hasStoreStyrkprove(completedActivities),
         };
