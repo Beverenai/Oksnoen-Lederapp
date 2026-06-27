@@ -125,6 +125,8 @@ export default function Nurse() {
   // Form states
   const [newNote, setNewNote] = useState('');
   const [publicNote, setPublicNote] = useState('');
+  const [leaderNotes, setLeaderNotes] = useState('');
+  const [isSavingLeaderNotes, setIsSavingLeaderNotes] = useState(false);
   const [newEventType, setNewEventType] = useState('observation');
   const [newEventDescription, setNewEventDescription] = useState('');
   const [newEventSeverity, setNewEventSeverity] = useState('low');
@@ -225,6 +227,7 @@ export default function Nurse() {
     setSelectedParticipant(updatedParticipant);
     setNewNote(notesRes.data?.[0]?.content || '');
     setPublicNote(healthInfoRes.data?.info || '');
+    setLeaderNotes((updatedParticipant as any).notes || '');
   };
 
   const openParticipantDetail = async (participant: ParticipantWithHealth) => {
@@ -244,23 +247,35 @@ export default function Nurse() {
       const existingNote = selectedParticipant.healthNotes[0];
       
       if (existingNote) {
-        await supabase
+        const { error } = await supabase
           .from('participant_health_notes')
           .update({ content: newNote, created_by: leader?.id })
           .eq('id', existingNote.id);
+        if (error) throw error;
+        setSelectedParticipant((prev) => prev ? ({
+          ...prev,
+          healthNotes: prev.healthNotes.map((n) => n.id === existingNote.id ? { ...n, content: newNote } : n),
+        }) : prev);
       } else {
-        await supabase
+        const { data, error } = await supabase
           .from('participant_health_notes')
           .insert({
             participant_id: selectedParticipant.id,
             content: newNote,
             created_by: leader?.id,
-          });
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        if (data) {
+          setSelectedParticipant((prev) => prev ? ({
+            ...prev,
+            healthNotes: [data as HealthNote, ...prev.healthNotes],
+          }) : prev);
+        }
       }
 
       showSuccess('Helsenotat lagret');
-      await loadParticipantDetails(selectedParticipant);
-      loadParticipants();
     } catch (error) {
       console.error('Error saving health note:', error);
       showError('Kunne ikke lagre notat');
@@ -282,27 +297,51 @@ export default function Nurse() {
         .maybeSingle();
       
       if (existingInfo) {
-        await supabase
+        const { error } = await supabase
           .from('participant_health_info')
           .update({ info: publicNote })
           .eq('id', existingInfo.id);
+        if (error) throw error;
       } else if (publicNote.trim()) {
-        await supabase
+        const { error } = await supabase
           .from('participant_health_info')
           .insert({
             participant_id: selectedParticipant.id,
             info: publicNote,
           });
+        if (error) throw error;
       }
 
       showSuccess('Info for ledere lagret');
-      await loadParticipantDetails(selectedParticipant);
-      loadParticipants();
+      setSelectedParticipant((prev) => prev ? ({
+        ...prev,
+        healthInfo: { info: publicNote },
+        publicHealthNote: publicNote,
+      }) : prev);
     } catch (error) {
       console.error('Error saving public health note:', error);
       showError('Kunne ikke lagre info');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const saveLeaderNotes = async () => {
+    if (!selectedParticipant) return;
+    setIsSavingLeaderNotes(true);
+    try {
+      const { error } = await supabase
+        .from('participants')
+        .update({ notes: leaderNotes })
+        .eq('id', selectedParticipant.id);
+      if (error) throw error;
+      setSelectedParticipant((prev) => prev ? ({ ...prev, notes: leaderNotes } as any) : prev);
+      showSuccess('Leder-notater lagret');
+    } catch (e) {
+      console.error('Error saving leader notes:', e);
+      showError('Kunne ikke lagre leder-notater');
+    } finally {
+      setIsSavingLeaderNotes(false);
     }
   };
 
@@ -314,20 +353,25 @@ export default function Nurse() {
 
     setIsSaving(true);
     try {
-      await supabase.from('participant_health_events').insert({
+      const { data, error } = await supabase.from('participant_health_events').insert({
         participant_id: selectedParticipant.id,
         event_type: newEventType,
         description: newEventDescription,
         severity: newEventSeverity,
         created_by: leader?.id,
-      });
+      }).select().single();
+      if (error) throw error;
 
       showSuccess('Hendelse registrert');
       setNewEventDescription('');
       setNewEventType('observation');
       setNewEventSeverity('low');
-      await loadParticipantDetails(selectedParticipant);
-      loadParticipants();
+      if (data) {
+        setSelectedParticipant((prev) => prev ? ({
+          ...prev,
+          healthEvents: [data as HealthEvent, ...prev.healthEvents],
+        }) : prev);
+      }
     } catch (error) {
       console.error('Error adding health event:', error);
       showError('Kunne ikke registrere hendelse');
@@ -349,8 +393,10 @@ export default function Nurse() {
       if (error) throw error;
 
       showSuccess('Hendelse slettet');
-      await loadParticipantDetails(selectedParticipant);
-      loadParticipants();
+      setSelectedParticipant((prev) => prev ? ({
+        ...prev,
+        healthEvents: prev.healthEvents.filter((e) => e.id !== eventId),
+      }) : prev);
     } catch (error) {
       console.error('Error deleting health event:', error);
       showError('Kunne ikke slette hendelse');
@@ -388,9 +434,13 @@ export default function Nurse() {
         .eq('id', editingEventId);
       if (error) throw error;
       showSuccess('Hendelse oppdatert');
+      const updatedId = editingEventId;
+      const upd = { description: editEventDescription, event_type: editEventType, severity: editEventSeverity };
       cancelEditEvent();
-      await loadParticipantDetails(selectedParticipant);
-      loadParticipants();
+      setSelectedParticipant((prev) => prev ? ({
+        ...prev,
+        healthEvents: prev.healthEvents.map((e) => e.id === updatedId ? { ...e, ...upd } : e),
+      }) : prev);
     } catch (error) {
       console.error('Error updating health event:', error);
       showError('Kunne ikke oppdatere hendelse');
@@ -413,8 +463,10 @@ export default function Nurse() {
 
       showSuccess('Notat slettet');
       setNewNote('');
-      await loadParticipantDetails(selectedParticipant);
-      loadParticipants();
+      setSelectedParticipant((prev) => prev ? ({
+        ...prev,
+        healthNotes: prev.healthNotes.filter((n) => n.id !== noteId),
+      }) : prev);
     } catch (error) {
       console.error('Error deleting health note:', error);
       showError('Kunne ikke slette notat');
@@ -1343,21 +1395,24 @@ export default function Nurse() {
                     Leder-notater
                   </CardTitle>
                   <CardDescription>
-                    Kommentarer fra ledere
+                    Kommentarer fra ledere — du kan redigere og lagre
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  {selectedParticipant?.notes ? (
-                    <div className="p-3 rounded-lg bg-muted/50 border border-border">
-                      <p className="text-sm text-foreground whitespace-pre-wrap">
-                        {selectedParticipant.notes}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-center text-muted-foreground py-4">
-                      Ingen notater fra ledere
-                    </p>
-                  )}
+                <CardContent className="space-y-3">
+                  <Textarea
+                    placeholder="Skriv leder-notater her..."
+                    value={leaderNotes}
+                    onChange={(e) => setLeaderNotes(e.target.value)}
+                    className="min-h-[150px]"
+                  />
+                  <Button onClick={saveLeaderNotes} disabled={isSavingLeaderNotes}>
+                    {isSavingLeaderNotes ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Lagre leder-notater
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>

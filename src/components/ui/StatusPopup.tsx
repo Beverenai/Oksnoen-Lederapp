@@ -57,6 +57,7 @@ export function StatusPopup({ type, title, message, autoClose, onClose, action }
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px] animate-fade-in"
       onClick={handleBackdropClick}
+      onPointerDown={(e) => e.stopPropagation()}
       style={{ animationDuration: '150ms' }}
     >
       <div
@@ -64,10 +65,13 @@ export function StatusPopup({ type, title, message, autoClose, onClose, action }
         style={{
           animation: 'status-popup-in 200ms ease-out forwards',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
         <button
-          onClick={onClose}
+          type="button"
+          onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onClose(); }}
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
           className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors"
         >
           <X className="h-4 w-4" />
