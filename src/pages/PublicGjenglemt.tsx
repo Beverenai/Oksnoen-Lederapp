@@ -139,8 +139,8 @@ export default function PublicGjenglemt() {
             </div>
           )}
           <p className="text-sm text-muted-foreground mt-4 max-w-2xl">
-            Kjenner du igjen noe? Ta kontakt med leiren på{' '}
-            <a className="text-primary underline" href="mailto:post@oksnoen.com">post@oksnoen.com</a> og oppgi bilde-ID eller beskrivelse.
+            Hvis noe er ditt, ta kontakt med{' '}
+            <a className="text-primary underline" href="mailto:leir@oksnoen.no">leir@oksnoen.no</a>.
           </p>
         </div>
       </header>
