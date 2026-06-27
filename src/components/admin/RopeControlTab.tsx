@@ -1,6 +1,7 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,8 +65,10 @@ export function RopeControlTab() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activityFilter, setActivityFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const { data: activePeriodId } = useActivePeriodId();
 
   const loadData = async () => {
+    if (!activePeriodId) return;
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -75,6 +78,7 @@ export function RopeControlTab() {
           leader:leaders!rope_controls_leader_id_fkey(name),
           fixed_by_leader:leaders!rope_controls_fixed_by_fkey(name)
         `)
+        .eq('period_id', activePeriodId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -88,6 +92,7 @@ export function RopeControlTab() {
   };
 
   useEffect(() => {
+    if (!activePeriodId) return;
     loadData();
 
     const channel = supabase
@@ -102,7 +107,7 @@ export function RopeControlTab() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [activePeriodId]);
 
   const getOverallStatus = (control: RopeControl) => {
     if (control.fixed_at) return 'fixed';
