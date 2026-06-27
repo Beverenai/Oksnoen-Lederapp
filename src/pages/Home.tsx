@@ -174,6 +174,14 @@ export default function Home() {
     setIsLoading(true);
     setLoadFailed(false);
     try {
+      const periodRes = await supabase.from('periods').select('id').eq('is_active', true).maybeSingle();
+      const activePeriodId = periodRes.data?.id ?? null;
+      const fixTasksQuery = supabase
+        .from('fix_tasks')
+        .select('id, title, assigned_to, status')
+        .eq('assigned_to', effectiveLeader.id)
+        .neq('status', 'fixed');
+      if (activePeriodId) fixTasksQuery.eq('period_id', activePeriodId);
       const [contentRes, activitiesTextRes, configRes, cabinsRes, fixTasksRes, ropeControlsRes] = await Promise.all([
         supabase
           .from('leader_content')
@@ -194,11 +202,7 @@ export default function Home() {
           .from('leader_cabins')
           .select('cabin_id, cabins(id, name)')
           .eq('leader_id', effectiveLeader.id),
-        supabase
-          .from('fix_tasks')
-          .select('id, title, assigned_to, status')
-          .eq('assigned_to', effectiveLeader.id)
-          .neq('status', 'fixed'),
+        fixTasksQuery,
         supabase
           .from('rope_controls')
           .select('id, activity, assigned_to, fixed_at')
