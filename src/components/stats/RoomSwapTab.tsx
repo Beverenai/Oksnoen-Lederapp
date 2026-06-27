@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Check, X, ArrowRight, ArrowLeftRight, Loader2, Users } from 'lucide-react';
+import { Search, Plus, Check, X, ArrowRight, ArrowLeftRight, Loader2, Users, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 
@@ -57,6 +57,7 @@ export function RoomSwapTab() {
   const [swaps, setSwaps] = useState<RoomSwap[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [activePeriodId, setActivePeriodId] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedParticipants, setSelectedParticipants] = useState<Participant[]>([]);
@@ -70,11 +71,16 @@ export function RoomSwapTab() {
   async function loadData() {
     setLoading(true);
     try {
+      const periodRes = await supabase.from('periods').select('id').eq('is_active', true).maybeSingle();
+      const periodId = periodRes.data?.id ?? null;
+      setActivePeriodId(periodId);
+      const swapsQuery = supabase.from('room_swaps').select('*').order('created_at', { ascending: false });
+      if (periodId) swapsQuery.eq('period_id', periodId);
       const [participantsRes, cabinsRes, capacityRes, swapsRes] = await Promise.all([
         supabase.from('participants').select('id, name, cabin_id, room'),
         supabase.from('cabins').select('id, name').order('sort_order'),
         supabase.from('room_capacity').select('cabin_id, room, bed_count'),
-        supabase.from('room_swaps').select('*').order('created_at', { ascending: false }),
+        swapsQuery,
       ]);
       if (participantsRes.data) setParticipants(participantsRes.data);
       if (cabinsRes.data) setCabins(cabinsRes.data);
@@ -245,6 +251,27 @@ export function RoomSwapTab() {
       loadData();
     } catch (error) {
       showError('Kunne ikke avbryte rombytter');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResetAll() {
+    if (!activePeriodId) {
+      showError('Ingen aktiv periode');
+      return;
+    }
+    if (!confirm('Slette ALLE rombytter i den aktive perioden? Dette kan ikke angres.')) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('room_swaps').delete().eq('period_id', activePeriodId);
+      if (error) throw error;
+      showSuccess('Alle rombytter for perioden er slettet');
+      setSelectedSwapIds([]);
+      loadData();
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke tilbakestille rombytter');
     } finally {
       setSubmitting(false);
     }
