@@ -1,6 +1,7 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,17 +38,20 @@ export function StoriesTab() {
   const [editingStory, setEditingStory] = useState<Story | null>(null);
   const [newStory, setNewStory] = useState({ title: '', content: '' });
   const [showNewForm, setShowNewForm] = useState(false);
+  const { data: activePeriodId } = useActivePeriodId();
 
   useEffect(() => {
     loadStories();
-  }, []);
+  }, [activePeriodId]);
 
   const loadStories = async () => {
+    if (!activePeriodId) return;
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('stories')
         .select('*')
+        .eq('period_id', activePeriodId)
         .order('sort_order', { ascending: true });
       
       if (error) throw error;
