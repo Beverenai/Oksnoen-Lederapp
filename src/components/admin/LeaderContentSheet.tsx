@@ -733,7 +733,11 @@ export function LeaderContentSheet({
                       className="h-8 border-0 p-0 shadow-none focus-visible:ring-0"
                     />
                   </div>
-                  <div className="max-h-60 overflow-y-auto p-1 overscroll-contain">
+                  <div
+                    className="max-h-[280px] overflow-y-auto p-1 overscroll-contain touch-pan-y"
+                    onWheel={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
+                  >
                     {isLoadingCabins ? (
                       <div className="py-6 text-center text-sm text-muted-foreground">Laster hytter...</div>
                     ) : cabinsLoadError ? (
