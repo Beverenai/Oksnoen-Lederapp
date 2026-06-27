@@ -216,14 +216,19 @@ export function ParticipantEditDialog({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="room">Rom</Label>
-                <Select value={room} onValueChange={setRoom}>
+                <Select
+                  value={room}
+                  onValueChange={setRoom}
+                  disabled={availableRooms.length === 0}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Velg rom" />
+                    <SelectValue placeholder={availableRooms.length === 0 ? 'Enkeltrom' : 'Velg rom'} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Ikke spesifisert</SelectItem>
-                    <SelectItem value="venstre">Venstre</SelectItem>
-                    <SelectItem value="høyre">Høyre</SelectItem>
+                    {availableRooms.map((r) => (
+                      <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
