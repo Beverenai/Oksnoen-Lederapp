@@ -66,9 +66,25 @@ export function RopeControlTab() {
   const [activityFilter, setActivityFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const { data: activePeriodId } = useActivePeriodId();
+  const [periods, setPeriods] = useState<{ id: string; name: string; is_active: boolean }[]>([]);
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('periods')
+        .select('id, name, is_active')
+        .order('name');
+      if (data) setPeriods(data);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPeriodId && activePeriodId) setSelectedPeriodId(activePeriodId);
+  }, [activePeriodId, selectedPeriodId]);
 
   const loadData = async () => {
-    if (!activePeriodId) return;
+    if (!selectedPeriodId) return;
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -78,7 +94,7 @@ export function RopeControlTab() {
           leader:leaders!rope_controls_leader_id_fkey(name),
           fixed_by_leader:leaders!rope_controls_fixed_by_fkey(name)
         `)
-        .eq('period_id', activePeriodId)
+        .eq('period_id', selectedPeriodId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -92,7 +108,7 @@ export function RopeControlTab() {
   };
 
   useEffect(() => {
-    if (!activePeriodId) return;
+    if (!selectedPeriodId) return;
     loadData();
 
     const channel = supabase
@@ -107,7 +123,7 @@ export function RopeControlTab() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [activePeriodId]);
+  }, [selectedPeriodId]);
 
   const getOverallStatus = (control: RopeControl) => {
     if (control.fixed_at) return 'fixed';
@@ -262,6 +278,23 @@ export function RopeControlTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Period selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Periode:</span>
+            <Select value={selectedPeriodId ?? ''} onValueChange={setSelectedPeriodId}>
+              <SelectTrigger className="w-full sm:w-56">
+                <SelectValue placeholder="Velg periode" />
+              </SelectTrigger>
+              <SelectContent>
+                {periods.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}{p.is_active ? ' (aktiv)' : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
