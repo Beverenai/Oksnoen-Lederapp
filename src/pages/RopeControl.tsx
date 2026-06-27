@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -130,9 +131,10 @@ export default function RopeControl() {
   const [selectedFix, setSelectedFix] = useState<RopeControl | null>(null);
   const [fixComment, setFixComment] = useState('');
   const [isFixing, setIsFixing] = useState(false);
+  const { data: activePeriodId } = useActivePeriodId();
 
   const loadData = async () => {
-    if (!leader) return;
+    if (!leader || !activePeriodId) return;
     
     setIsLoading(true);
     try {
@@ -140,11 +142,13 @@ export default function RopeControl() {
         supabase
           .from('rope_controls')
           .select('*, leaders!rope_controls_leader_id_fkey(name)')
+          .eq('period_id', activePeriodId)
           .order('created_at', { ascending: false })
           .limit(50),
         supabase
           .from('rope_controls')
           .select('*, leaders!rope_controls_leader_id_fkey(name)')
+          .eq('period_id', activePeriodId)
           .eq('assigned_to', leader.id)
           .is('fixed_at', null),
       ]);
@@ -160,7 +164,7 @@ export default function RopeControl() {
 
   useEffect(() => {
     loadData();
-  }, [leader]);
+  }, [leader, activePeriodId]);
 
   // Real-time updates
   useEffect(() => {
