@@ -150,6 +150,7 @@ export function CheckoutDetailDialog({
             cabin: participant.cabins?.name || 'Ukjent',
             activities: uniqueActivities,
             activityNotes: participant.activity_notes || '',
+            leaderNotes: (participant as any).notes || '',
             littleStyrkeprove: hasLilleStyrkprove(completedActivities),
             bigStyrkeprove: hasStoreStyrkprove(completedActivities),
           },
