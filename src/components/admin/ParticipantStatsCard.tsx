@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
+import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import { BarChart3, AlertCircle, Cake, ChevronDown, ChevronUp, Users, RefreshCw, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format, differenceInYears } from 'date-fns';
