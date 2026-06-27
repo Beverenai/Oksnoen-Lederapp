@@ -393,8 +393,10 @@ export default function Nurse() {
       if (error) throw error;
 
       showSuccess('Hendelse slettet');
-      await loadParticipantDetails(selectedParticipant);
-      loadParticipants();
+      setSelectedParticipant((prev) => prev ? ({
+        ...prev,
+        healthEvents: prev.healthEvents.filter((e) => e.id !== eventId),
+      }) : prev);
     } catch (error) {
       console.error('Error deleting health event:', error);
       showError('Kunne ikke slette hendelse');
@@ -432,9 +434,13 @@ export default function Nurse() {
         .eq('id', editingEventId);
       if (error) throw error;
       showSuccess('Hendelse oppdatert');
+      const updatedId = editingEventId;
+      const upd = { description: editEventDescription, event_type: editEventType, severity: editEventSeverity };
       cancelEditEvent();
-      await loadParticipantDetails(selectedParticipant);
-      loadParticipants();
+      setSelectedParticipant((prev) => prev ? ({
+        ...prev,
+        healthEvents: prev.healthEvents.map((e) => e.id === updatedId ? { ...e, ...upd } : e),
+      }) : prev);
     } catch (error) {
       console.error('Error updating health event:', error);
       showError('Kunne ikke oppdatere hendelse');
@@ -457,8 +463,10 @@ export default function Nurse() {
 
       showSuccess('Notat slettet');
       setNewNote('');
-      await loadParticipantDetails(selectedParticipant);
-      loadParticipants();
+      setSelectedParticipant((prev) => prev ? ({
+        ...prev,
+        healthNotes: prev.healthNotes.filter((n) => n.id !== noteId),
+      }) : prev);
     } catch (error) {
       console.error('Error deleting health note:', error);
       showError('Kunne ikke slette notat');
