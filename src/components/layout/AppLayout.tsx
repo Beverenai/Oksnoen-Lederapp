@@ -36,6 +36,7 @@ import { hapticSuccess, hapticImpact } from '@/lib/capacitorHaptics';
 import { PassIcon } from '@/components/icons/PassIcon';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
 import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
+import { useCheckoutEnabled } from '@/hooks/useCheckoutEnabled';
 import {
   Collapsible,
   CollapsibleContent,
@@ -93,8 +94,14 @@ type BottomNavItem = {
   isHajolo?: boolean;
 };
 
-// Base bottom nav items - will be adjusted based on role
-const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] => {
+// Base bottom nav items - will be adjusted based on role.
+// `checkoutEnabled` controls whether pass-related UI (Passkontor) is shown to
+// non-admins. Admins always see it so they can prepare passes.
+const getBottomNavItems = (
+  isAdmin: boolean,
+  isNurse: boolean,
+  checkoutEnabled: boolean,
+): BottomNavItem[] => {
   if (isAdmin) {
     return [
       { to: '/', icon: Home, label: 'Hjem' },
@@ -104,21 +111,31 @@ const getBottomNavItems = (isAdmin: boolean, isNurse: boolean): BottomNavItem[] 
       { to: '/fix', icon: Wrench, label: 'Fix' },
     ];
   } else if (isNurse) {
-    return [
+    const items: BottomNavItem[] = [
       { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/passport', icon: PassIcon, label: 'Passkontor' },
+    ];
+    if (checkoutEnabled) {
+      items.push({ to: '/passport', icon: PassIcon, label: 'Passkontor' });
+    }
+    items.push(
       { to: '/nurse', icon: Heart, label: 'Nurse' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
       { to: '/fix', icon: Wrench, label: 'Fix' },
-    ];
+    );
+    return items;
   } else {
-    return [
+    const items: BottomNavItem[] = [
       { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/passport', icon: PassIcon, label: 'Passkontor' },
+    ];
+    if (checkoutEnabled) {
+      items.push({ to: '/passport', icon: PassIcon, label: 'Passkontor' });
+    }
+    items.push(
       { to: '#', icon: Check, label: 'Hajolo', isHajolo: true },
       { to: '/leaders', icon: Users, label: 'Ledere' },
       { to: '/fix', icon: Wrench, label: 'Fix' },
-    ];
+    );
+    return items;
   }
 };
 
@@ -180,6 +197,7 @@ const NavGroup = ({
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const { leader, isAdmin, isNurse, logout, viewAsLeader, setViewAsLeader } = useAuth();
+  const checkoutEnabled = useCheckoutEnabled();
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
@@ -206,8 +224,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const isRegularLeader = !isAdmin && !isNurse;
 
   // Determine if current route is a sub-page (not one of the main tab routes)
-  const mainTabRoutes = getBottomNavItems(isAdmin, isNurse).map(item => item.to).filter(to => to !== '#');
+  const mainTabRoutes = getBottomNavItems(isAdmin, isNurse, checkoutEnabled).map(item => item.to).filter(to => to !== '#');
   const isSubPage = !mainTabRoutes.includes(location.pathname);
+
+  // Hide pass-related entries from the side/hamburger menu for non-admins
+  // until checkout (pass-flow) is enabled.
+  const visibleLeaderNavItems = leaderNavItems.filter(item => {
+    if (item.to === '/passport' && !isAdmin && !checkoutEnabled) return false;
+    return true;
+  });
 
   // Build dynamic content items based on schedule image availability
   const contentNavItems = [
@@ -222,7 +247,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const specialAccessItems = isNurse && !isAdmin ? [nurseNavItem] : [];
 
   // Leader nav items for hamburger menu - filter items already in bottom nav
-  const mobileLeaderNavItems = leaderNavItems.filter(item => 
+  const mobileLeaderNavItems = visibleLeaderNavItems.filter(item =>
     !mainTabRoutes.includes(item.to)
   );
 
@@ -567,7 +592,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {/* Leader functions - collapsible */}
           <NavGroup
             label="Lederfunksjoner"
-            items={leaderNavItems}
+            items={visibleLeaderNavItems}
             isOpen={openGroups.leader}
             onOpenChange={(open) => setOpenGroups(prev => ({ ...prev, leader: open }))}
           />
@@ -754,7 +779,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           aria-label="Hovednavigasjon"
         >
           <div className="flex items-stretch justify-around px-1">
-            {getBottomNavItems(isAdmin, isNurse).map((item) => {
+            {getBottomNavItems(isAdmin, isNurse, checkoutEnabled).map((item) => {
               const isActive = item.isHajolo ? false : location.pathname === item.to;
 
               if (item.isHajolo) {
