@@ -427,16 +427,19 @@ export function RoomSwapTab() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base font-medium">Ventende rombytter ({pendingSwaps.length})</CardTitle>
-          {pendingSwaps.length > 0 && (
-            <div className="flex gap-2">
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={handleResetAll} disabled={submitting || swaps.length === 0} title="Slett alle rombytter for perioden">
+              <RotateCcw className="h-4 w-4 mr-1" />Nullstill
+            </Button>
+            {pendingSwaps.length > 0 && (<>
               <Button size="sm" variant="outline" onClick={handleCancelSwaps} disabled={selectedSwapIds.length === 0 || submitting}>
                 <X className="h-4 w-4 mr-1" />Avbryt
               </Button>
               <Button size="sm" onClick={handleApproveSwaps} disabled={selectedSwapIds.length === 0 || submitting}>
                 <Check className="h-4 w-4 mr-1" />Godkjenn
               </Button>
-            </div>
-          )}
+            </>)}
+          </div>
         </CardHeader>
         <CardContent>
           {pendingGroups.length === 0 ? (
