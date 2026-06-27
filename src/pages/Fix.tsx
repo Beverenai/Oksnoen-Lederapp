@@ -94,11 +94,15 @@ export default function Fix() {
 
   const loadData = async () => {
     try {
+      const periodRes = await supabase.from('periods').select('id').eq('is_active', true).maybeSingle();
+      const periodId = periodRes.data?.id ?? null;
+      const tasksQuery = supabase
+        .from('fix_tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (periodId) tasksQuery.eq('period_id', periodId);
       const [tasksRes, leadersRes] = await Promise.all([
-        supabase
-          .from('fix_tasks')
-          .select('*')
-          .order('created_at', { ascending: false }),
+        tasksQuery,
         supabase
           .from('leaders')
           .select('id, name')

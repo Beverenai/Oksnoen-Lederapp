@@ -328,6 +328,7 @@ export type Database = {
           id: string
           image_url: string | null
           location: string | null
+          period_id: string | null
           status: string
           title: string
           updated_at: string | null
@@ -345,6 +346,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           location?: string | null
+          period_id?: string | null
           status?: string
           title: string
           updated_at?: string | null
@@ -362,6 +364,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           location?: string | null
+          period_id?: string | null
           status?: string
           title?: string
           updated_at?: string | null
@@ -387,6 +390,13 @@ export type Database = {
             columns: ["fixed_by"]
             isOneToOne: false
             referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fix_tasks_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
         ]
@@ -1219,6 +1229,7 @@ export type Database = {
           from_room: string | null
           id: string
           participant_id: string
+          period_id: string | null
           reason: string | null
           status: string
           to_cabin_id: string
@@ -1232,6 +1243,7 @@ export type Database = {
           from_room?: string | null
           id?: string
           participant_id: string
+          period_id?: string | null
           reason?: string | null
           status?: string
           to_cabin_id: string
@@ -1245,6 +1257,7 @@ export type Database = {
           from_room?: string | null
           id?: string
           participant_id?: string
+          period_id?: string | null
           reason?: string | null
           status?: string
           to_cabin_id?: string
@@ -1270,6 +1283,13 @@ export type Database = {
             columns: ["participant_id"]
             isOneToOne: false
             referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_swaps_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
           {
