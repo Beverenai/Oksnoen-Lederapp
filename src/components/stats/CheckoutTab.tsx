@@ -157,10 +157,6 @@ export function CheckoutTab() {
   }, [progress.status, loadData]);
 
   const handleStartCheckout = async () => {
-    if (!canGenerate) {
-      showError(`Pass-generering kan tidligst startes ${format(unlockDate!, 'dd.MM.yyyy', { locale: nb })}`);
-      return;
-    }
     hapticImpact('medium');
     try {
       setProgress({ status: 'starting', processed: 0, total: 0 });
@@ -274,18 +270,6 @@ export function CheckoutTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!canGenerate && activePeriod && (
-            <div className="flex items-start gap-2 p-3 bg-muted/50 border rounded-md text-sm">
-              <Lock className="w-4 h-4 mt-0.5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Låst i {daysUntilUnlock} dag{daysUntilUnlock === 1 ? '' : 'er'} til</p>
-                <p className="text-muted-foreground text-xs">
-                  Pass-generering åpnes {format(unlockDate!, 'dd.MM.yyyy', { locale: nb })} (7 dager etter periodestart).
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* Status */}
           <div className="flex items-center gap-3">
             <Badge 
@@ -343,54 +327,25 @@ export function CheckoutTab() {
           )}
 
           {/* Actions */}
-          <div className="flex gap-3">
-            {!checkoutEnabled ? (
-              <Button 
-                onClick={handleStartCheckout} 
-                disabled={isGenerating || !canGenerate || !activePeriod}
-                className="gap-2"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Genererer...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    Start Utsjekk
-                  </>
-                )}
-              </Button>
-            ) : (
-              <>
-                <Button 
-                  onClick={handleStartCheckout} 
-                  disabled={isGenerating || !canGenerate}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Genererer...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Generer på nytt
-                    </>
-                  )}
-                </Button>
-                <Button 
-                  onClick={handleDisableCheckout} 
-                  variant="destructive"
-                  disabled={isGenerating}
-                >
-                  Deaktiver Utsjekk
-                </Button>
-              </>
-            )}
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-3 p-3 border rounded-md bg-muted/30">
+              <Switch
+                id="checkout-toggle"
+                checked={checkoutEnabled}
+                disabled={isGenerating || !activePeriod}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    handleStartCheckout();
+                  } else {
+                    handleDisableCheckout();
+                  }
+                }}
+              />
+              <Label htmlFor="checkout-toggle" className="cursor-pointer">
+                {checkoutEnabled ? 'Utsjekk er på' : 'Skru på utsjekk'}
+              </Label>
+              {isGenerating && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+            </div>
             <Button
               onClick={handleResetPasses}
               variant="outline"
