@@ -278,6 +278,23 @@ export function RopeControlTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Period selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Periode:</span>
+            <Select value={selectedPeriodId ?? ''} onValueChange={setSelectedPeriodId}>
+              <SelectTrigger className="w-full sm:w-56">
+                <SelectValue placeholder="Velg periode" />
+              </SelectTrigger>
+              <SelectContent>
+                {periods.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}{p.is_active ? ' (aktiv)' : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
