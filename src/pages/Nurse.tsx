@@ -1387,21 +1387,24 @@ export default function Nurse() {
                     Leder-notater
                   </CardTitle>
                   <CardDescription>
-                    Kommentarer fra ledere
+                    Kommentarer fra ledere — du kan redigere og lagre
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  {selectedParticipant?.notes ? (
-                    <div className="p-3 rounded-lg bg-muted/50 border border-border">
-                      <p className="text-sm text-foreground whitespace-pre-wrap">
-                        {selectedParticipant.notes}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-center text-muted-foreground py-4">
-                      Ingen notater fra ledere
-                    </p>
-                  )}
+                <CardContent className="space-y-3">
+                  <Textarea
+                    placeholder="Skriv leder-notater her..."
+                    value={leaderNotes}
+                    onChange={(e) => setLeaderNotes(e.target.value)}
+                    className="min-h-[150px]"
+                  />
+                  <Button onClick={saveLeaderNotes} disabled={isSavingLeaderNotes}>
+                    {isSavingLeaderNotes ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Lagre leder-notater
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
