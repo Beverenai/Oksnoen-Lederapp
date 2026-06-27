@@ -209,9 +209,23 @@ async function processAllParticipants(supabase: any, LOVABLE_API_KEY: string) {
   console.log('Starting background pass generation...');
   
   try {
-    // Fetch all data - include pass_suggestion to check if already generated
+    // Resolve active period — pass generation is scoped per period
+    const { data: activePeriod, error: periodError } = await supabase
+      .from('periods')
+      .select('id')
+      .eq('is_active', true)
+      .maybeSingle();
+    if (periodError) throw periodError;
+    if (!activePeriod?.id) throw new Error('Ingen aktiv periode satt');
+    const activePeriodId = activePeriod.id;
+    console.log('Active period:', activePeriodId);
+
+    // Fetch participants for the active period only
     const [participantsRes, cabinsRes, activitiesRes] = await Promise.all([
-      supabase.from('participants').select('id, name, birth_date, cabin_id, activity_notes, pass_suggestion'),
+      supabase
+        .from('participants')
+        .select('id, name, birth_date, cabin_id, activity_notes, pass_suggestion')
+        .eq('period_id', activePeriodId),
       supabase.from('cabins').select('id, name'),
       supabase.from('participant_activities').select('participant_id, activity'),
     ]);
