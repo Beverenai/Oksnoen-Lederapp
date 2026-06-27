@@ -124,6 +124,15 @@ export const ParticipantDetailDialog = ({
     gcTime: 5 * 60 * 1000,
   });
 
+  const { data: checkoutEnabled = false } = useQuery({
+    queryKey: ['checkout-enabled'],
+    queryFn: async () => {
+      const { data } = await supabase.from('app_config').select('value').eq('key', 'checkout_enabled').maybeSingle();
+      return data?.value === 'true';
+    },
+    staleTime: 60_000,
+  });
+
   const participant = data?.participant;
   const healthInfo = data?.healthInfo;
   const activities = data?.activities || [];
@@ -470,7 +479,8 @@ export const ParticipantDetailDialog = ({
                   {participant.has_arrived ? 'Marker som ikke ankommet' : 'Marker som ankommet'}
                 </Button>
 
-                {/* Pass written toggle */}
+                {/* Pass written toggle - only visible when checkout is enabled */}
+                {checkoutEnabled && (
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <Trophy className="h-4 w-4 text-emerald-600" />
@@ -509,6 +519,7 @@ export const ParticipantDetailDialog = ({
                     {participant.pass_written ? 'Fjern markering' : 'Marker pass som skrevet'}
                   </Button>
                 </div>
+                )}
               </div>
             </div>
             {/* Safe area spacer for iOS */}
