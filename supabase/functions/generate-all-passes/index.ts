@@ -264,6 +264,20 @@ async function processAllParticipants(supabase: any, LOVABLE_API_KEY: string) {
       const p = participants[i];
       
       try {
+        // Check for cancellation
+        const { data: cfg } = await supabase
+          .from('app_config')
+          .select('value')
+          .eq('key', 'checkout_progress')
+          .maybeSingle();
+        try {
+          const parsed = cfg?.value ? JSON.parse(cfg.value) : null;
+          if (parsed?.status === 'cancelled') {
+            console.log('Pass generation cancelled by user');
+            return;
+          }
+        } catch {}
+
         const completedActivities = getParticipantActivities(p.id);
         const uniqueActivities = getUniqueActivities(completedActivities);
         const age = p.birth_date ? differenceInYears(new Date(), new Date(p.birth_date)) : undefined;
