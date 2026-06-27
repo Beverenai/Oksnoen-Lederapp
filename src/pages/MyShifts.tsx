@@ -49,6 +49,19 @@ export default function MyShifts() {
   const leaderId = effectiveLeader?.id;
   const [zoomOpen, setZoomOpen] = useState(false);
 
+  const { data: scheduleImageUrl } = useQuery({
+    queryKey: ['schedule-image-url'],
+    staleTime: 60 * 1000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('app_config')
+        .select('value')
+        .eq('key', 'schedule_image_url')
+        .maybeSingle();
+      return (data?.value as string | undefined) ?? null;
+    },
+  });
+
   useEffect(() => {
     if (!zoomOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -150,26 +163,28 @@ export default function MyShifts() {
         </Button>
       </div>
 
-      <Card
-        className="overflow-hidden cursor-zoom-in"
-        onClick={() => setZoomOpen(true)}
-      >
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-heading flex items-center gap-2">
-            <ZoomIn className="w-4 h-4" />
-            Vaktplan oversikt
-          </CardTitle>
-          <CardDescription>Trykk på bildet for å zoome</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <img
-            src="/vaktplan-2026.png"
-            alt="Vaktplan 2026"
-            className="w-full h-auto rounded-md border"
-            loading="lazy"
-          />
-        </CardContent>
-      </Card>
+      {scheduleImageUrl && (
+        <Card
+          className="overflow-hidden cursor-zoom-in"
+          onClick={() => setZoomOpen(true)}
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-heading flex items-center gap-2">
+              <ZoomIn className="w-4 h-4" />
+              Vaktplan oversikt
+            </CardTitle>
+            <CardDescription>Trykk på bildet for å zoome</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <img
+              src={scheduleImageUrl}
+              alt="Vaktplan"
+              className="w-full h-auto rounded-md border"
+              loading="lazy"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {isLoading ? (
         <div className="space-y-3">
@@ -253,7 +268,7 @@ export default function MyShifts() {
         </>
       )}
 
-      {zoomOpen && (
+      {zoomOpen && scheduleImageUrl && (
         <div
           className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-fade-in"
           onClick={() => setZoomOpen(false)}
@@ -266,8 +281,8 @@ export default function MyShifts() {
             <X className="w-5 h-5" />
           </button>
           <img
-            src="/vaktplan-2026.png"
-            alt="Vaktplan 2026"
+            src={scheduleImageUrl}
+            alt="Vaktplan"
             className="max-w-full max-h-full object-contain"
           />
         </div>
