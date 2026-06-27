@@ -301,12 +301,47 @@ export function ParticipantImportTab() {
   };
 
   const parseCSV = (text: string): ParsedParticipant[] => {
-    const lines = text.split('\n').filter(line => line.trim());
-    if (lines.length < 2) return [];
+    // Detect separator from the first non-empty line (without breaking quoted newlines)
+    const firstLineEnd = text.search(/\r?\n/);
+    const firstLine = firstLineEnd === -1 ? text : text.slice(0, firstLineEnd);
+    const separator = firstLine.includes('\t') ? '\t' : firstLine.includes(';') ? ';' : ',';
 
-    // Parse header - handle both comma and semicolon as separators
-    const separator = lines[0].includes('\t') ? '\t' : lines[0].includes(';') ? ';' : ',';
-    const headers = lines[0].split(separator).map(h => h.trim().toLowerCase());
+    // Proper CSV tokenizer that respects double-quoted fields with embedded newlines and "" escapes
+    const records: string[][] = [];
+    let field = '';
+    let row: string[] = [];
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else inQuotes = false;
+        } else {
+          field += ch;
+        }
+      } else {
+        if (ch === '"') {
+          inQuotes = true;
+        } else if (ch === separator) {
+          row.push(field); field = '';
+        } else if (ch === '\n' || ch === '\r') {
+          if (ch === '\r' && text[i + 1] === '\n') i++;
+          row.push(field); field = '';
+          if (row.some(c => c.trim().length > 0)) records.push(row);
+          row = [];
+        } else {
+          field += ch;
+        }
+      }
+    }
+    if (field.length > 0 || row.length > 0) {
+      row.push(field);
+      if (row.some(c => c.trim().length > 0)) records.push(row);
+    }
+    if (records.length < 2) return [];
+
+    const headers = records[0].map(h => h.trim().toLowerCase());
     
     // Find column indices for basic fields
     const firstNameIdx = headers.findIndex(h => h.includes('fornavn'));
@@ -340,8 +375,8 @@ export function ParticipantImportTab() {
       }
     });
 
-    return lines.slice(1).map((line, idx) => {
-      const values = line.split(separator).map(v => v.trim().replace(/^"|"$/g, ''));
+    return records.slice(1).map((values) => {
+      values = values.map(v => v.trim());
       
       const firstName = firstNameIdx >= 0 ? values[firstNameIdx] || '' : '';
       const lastName = lastNameIdx >= 0 ? values[lastNameIdx] || '' : '';
