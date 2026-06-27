@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Loader2, Sparkles, CheckCircle2, AlertCircle, RefreshCw, Search, ChevronDown, User } from 'lucide-react';
+import { RotateCcw, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { CheckoutDetailDialog } from '@/components/checkout/CheckoutDetailDialog';
@@ -31,6 +32,12 @@ interface PassWrittenEntry {
   image_url: string | null;
 }
 
+interface ActivePeriod {
+  id: string;
+  name: string;
+  start_date: string | null;
+}
+
 export function CheckoutTab() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
@@ -43,16 +50,36 @@ export function CheckoutTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [activePeriod, setActivePeriod] = useState<ActivePeriod | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
+      // Resolve active period first — all pass data is scoped per period
+      const { data: periodRow } = await supabase
+        .from('periods')
+        .select('id, name, start_date')
+        .eq('is_active', true)
+        .maybeSingle();
+      const period = (periodRow as ActivePeriod | null) ?? null;
+      setActivePeriod(period);
+
+      if (!period) {
+        setTotalParticipants(0);
+        setPassWrittenCount(0);
+        setPassWrittenList([]);
+        setIsLoading(false);
+        return;
+      }
+
       const [configRes, progressRes, participantsRes, writtenRes, leadersRes] = await Promise.all([
         supabase.from('app_config').select('*').eq('key', 'checkout_enabled').single(),
         supabase.from('app_config').select('*').eq('key', 'checkout_progress').single(),
-        supabase.from('participants').select('id, pass_written'),
+        supabase.from('participants').select('id, pass_written').eq('period_id', period.id),
         supabase.from('participants')
           .select('id, name, first_name, last_name, image_url, pass_written_at, pass_written_by, cabin:cabins(name)')
           .eq('pass_written', true)
+          .eq('period_id', period.id)
           .order('pass_written_at', { ascending: false }),
         supabase.from('leaders').select('id, name'),
       ]);
@@ -128,6 +155,10 @@ export function CheckoutTab() {
   }, [progress.status, loadData]);
 
   const handleStartCheckout = async () => {
+    if (!canGenerate) {
+      showError(`Pass-generering kan tidligst startes ${format(unlockDate!, 'dd.MM.yyyy', { locale: nb })}`);
+      return;
+    }
     hapticImpact('medium');
     try {
       setProgress({ status: 'starting', processed: 0, total: 0 });
@@ -143,6 +174,46 @@ export function CheckoutTab() {
       console.error('Error starting checkout:', error);
       showError('Kunne ikke starte utsjekk');
       setProgress({ status: 'error', processed: 0, total: 0 });
+    }
+  };
+
+  const handleResetPasses = async () => {
+    if (!activePeriod) return;
+    if (!confirm(`Tilbakestille ALLE pass for ${activePeriod.name}? Dette sletter AI-forslag, skrevet tekst og markeringer.`)) return;
+    setIsResetting(true);
+    try {
+      const { error } = await supabase
+        .from('participants')
+        .update({
+          pass_suggestion: null,
+          pass_text: null,
+          pass_written: false,
+          pass_written_at: null,
+          pass_written_by: null,
+        })
+        .eq('period_id', activePeriod.id);
+      if (error) throw error;
+
+      await supabase.from('app_config').upsert(
+        { key: 'checkout_enabled', value: 'false' },
+        { onConflict: 'key' }
+      );
+      await supabase.from('app_config').upsert(
+        { key: 'checkout_progress', value: JSON.stringify({ status: 'idle', processed: 0, total: 0 }) },
+        { onConflict: 'key' }
+      );
+
+      setCheckoutEnabled(false);
+      setProgress({ status: 'idle', processed: 0, total: 0 });
+      hapticSuccess();
+      showSuccess(`Alle pass for ${activePeriod.name} er tilbakestilt`);
+      loadData();
+    } catch (e) {
+      console.error('Reset failed', e);
+      hapticError();
+      showError('Kunne ikke tilbakestille pass');
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -168,6 +239,18 @@ export function CheckoutTab() {
 
   const isGenerating = progress.status === 'starting' || progress.status === 'running';
   const progressPercent = progress.total > 0 ? (progress.processed / progress.total) * 100 : 0;
+
+  // 7-day gate: pass generation cannot start until 7 days after period start
+  const unlockDate = useMemo(() => {
+    if (!activePeriod?.start_date) return null;
+    const d = new Date(activePeriod.start_date);
+    d.setDate(d.getDate() + 7);
+    return d;
+  }, [activePeriod]);
+  const canGenerate = !unlockDate || new Date() >= unlockDate;
+  const daysUntilUnlock = unlockDate
+    ? Math.max(0, Math.ceil((unlockDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
 
   const filteredPassWrittenList = useMemo(() => {
     if (!searchQuery.trim()) return passWrittenList;
@@ -195,11 +278,24 @@ export function CheckoutTab() {
             Utsjekk - Pass-generering
           </CardTitle>
           <CardDescription>
-            Start utsjekk for å generere AI-baserte passforslag for alle deltakere.
-            Genereringen fortsetter i bakgrunnen selv om du navigerer bort.
+            {activePeriod
+              ? `Pass-generering for ${activePeriod.name}. Hver periode har sine egne pass.`
+              : 'Ingen aktiv periode er satt.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {!canGenerate && activePeriod && (
+            <div className="flex items-start gap-2 p-3 bg-muted/50 border rounded-md text-sm">
+              <Lock className="w-4 h-4 mt-0.5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">Låst i {daysUntilUnlock} dag{daysUntilUnlock === 1 ? '' : 'er'} til</p>
+                <p className="text-muted-foreground text-xs">
+                  Pass-generering åpnes {format(unlockDate!, 'dd.MM.yyyy', { locale: nb })} (7 dager etter periodestart).
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Status */}
           <div className="flex items-center gap-3">
             <Badge 
@@ -261,7 +357,7 @@ export function CheckoutTab() {
             {!checkoutEnabled ? (
               <Button 
                 onClick={handleStartCheckout} 
-                disabled={isGenerating}
+                disabled={isGenerating || !canGenerate || !activePeriod}
                 className="gap-2"
               >
                 {isGenerating ? (
@@ -280,7 +376,7 @@ export function CheckoutTab() {
               <>
                 <Button 
                   onClick={handleStartCheckout} 
-                  disabled={isGenerating}
+                  disabled={isGenerating || !canGenerate}
                   variant="outline"
                   className="gap-2"
                 >
@@ -305,6 +401,19 @@ export function CheckoutTab() {
                 </Button>
               </>
             )}
+            <Button
+              onClick={handleResetPasses}
+              variant="outline"
+              disabled={isGenerating || isResetting || !activePeriod}
+              className="gap-2"
+            >
+              {isResetting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RotateCcw className="w-4 h-4" />
+              )}
+              Tilbakestill pass
+            </Button>
           </div>
 
           {/* Stats when enabled */}
