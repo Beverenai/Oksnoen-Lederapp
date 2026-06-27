@@ -79,6 +79,30 @@ export function ParticipantEditDialog({
   const [notes, setNotes] = useState('');
   const [hasArrived, setHasArrived] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [availableRooms, setAvailableRooms] = useState<string[]>([]);
+
+  // Load available rooms for the selected cabin from room_capacity
+  useEffect(() => {
+    if (!cabinId || cabinId === 'none') {
+      setAvailableRooms([]);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from('room_capacity')
+        .select('room')
+        .eq('cabin_id', cabinId);
+      const rooms = (data || [])
+        .map((r: any) => r.room)
+        .filter((r: string | null): r is string => !!r);
+      setAvailableRooms(rooms);
+      // If the cabin has no sub-rooms, force room to "none"
+      if (rooms.length === 0) setRoom('none');
+      // If current room isn't valid for this cabin, reset it
+      else if (room !== 'none' && !rooms.includes(room)) setRoom('none');
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cabinId]);
 
   useEffect(() => {
     if (participant) {
