@@ -6,21 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Check, Plus, Minus, Loader2, ChevronDown } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
 } from '@/components/ui/drawer';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useActivities } from '@/hooks/useActivities';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { hapticSuccess, hapticImpact } from '@/lib/capacitorHaptics';
 
 interface ActivityManagerProps {
   participantId: string;
@@ -235,26 +228,27 @@ export const ActivityManager = ({
             <DrawerHeader className="flex-shrink-0">
               <DrawerTitle>Legg til aktivitet</DrawerTitle>
             </DrawerHeader>
-            <ScrollArea className="flex-1 px-4 pb-6 pb-safe">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-6 pb-safe">
               <div className="py-1">{activityListContent}</div>
-            </ScrollArea>
+            </div>
           </DrawerContent>
         </Drawer>
       ) : (
-        <Popover open={isOpen} onOpenChange={setIsOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full">
-              <Plus className="h-4 w-4 mr-2" />
-              Legg til aktivitet
-              <ChevronDown className="h-4 w-4 ml-auto" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 p-0 overflow-hidden" align="start">
-            <ScrollArea className="h-[50vh]">
-              <div className="p-2">{activityListContent}</div>
-            </ScrollArea>
-          </PopoverContent>
-        </Popover>
+        <div className="space-y-2">
+          <Button variant="outline" className="w-full" onClick={() => setIsOpen((v) => !v)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Legg til aktivitet
+            <ChevronDown className="h-4 w-4 ml-auto" />
+          </Button>
+          {isOpen && (
+            <div
+              className="max-h-[min(22rem,45vh)] overflow-y-auto overscroll-contain rounded-lg border bg-popover p-2 shadow-sm"
+              onWheel={(event) => event.stopPropagation()}
+            >
+              {activityListContent}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
