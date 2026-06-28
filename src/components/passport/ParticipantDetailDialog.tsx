@@ -40,6 +40,7 @@ interface ParticipantWithCabin {
   pass_written_by: string | null;
   pass_text: string | null;
   pass_suggestion: string | null;
+  gift_card_number: string | null;
   cabin?: { id: string; name: string } | null;
 }
 
