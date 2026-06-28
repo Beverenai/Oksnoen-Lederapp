@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { ParticipantEditDialog } from './ParticipantEditDialog';
 import { hapticSuccess, hapticWarning, hapticError } from '@/lib/capacitorHaptics';
+import { GiftCardImportCard } from './GiftCardImportCard';
 
 interface ImportProgress {
   status: 'idle' | 'running' | 'done' | 'error';
@@ -776,6 +777,8 @@ export function ParticipantImportTab() {
           </p>
         </CardContent>
       </Card>
+
+      <GiftCardImportCard onImported={loadData} />
 
       {/* CSV Upload */}
       <Card>

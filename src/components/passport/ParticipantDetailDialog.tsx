@@ -41,6 +41,7 @@ interface ParticipantWithCabin {
   pass_written_by: string | null;
   pass_text: string | null;
   pass_suggestion: string | null;
+  gift_card_number: string | null;
   cabin?: { id: string; name: string } | null;
 }
 
@@ -109,12 +110,14 @@ export const ParticipantDetailDialog = ({
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const queryClient = useQueryClient();
   const [activityNotes, setActivityNotes] = useState('');
-  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [notesStatus, setNotesStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isTogglingArrival, setIsTogglingArrival] = useState(false);
   const [isTogglingPass, setIsTogglingPass] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedSnapshotRef = useRef<string>('');
 
   // Fetch participant detail with caching
   const { data, isLoading, refetch: refetchParticipant } = useQuery({
@@ -141,32 +144,41 @@ export const ParticipantDetailDialog = ({
   // Update activity notes when participant changes
   useEffect(() => {
     if (participant?.activity_notes !== undefined) {
-      setActivityNotes(participant.activity_notes || '');
+      const v = participant.activity_notes || '';
+      setActivityNotes(v);
+      savedSnapshotRef.current = v;
     }
   }, [participant?.activity_notes]);
 
-  const handleSaveActivityNotes = async () => {
+  // Debounced auto-save for activity notes
+  useEffect(() => {
     if (!participant) return;
+    if (activityNotes === savedSnapshotRef.current) return;
 
-    setIsSavingNotes(true);
-    try {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    setNotesStatus('saving');
+    saveTimerRef.current = setTimeout(async () => {
+      const value = activityNotes;
       const { error } = await supabase
         .from('participants')
-        .update({ activity_notes: activityNotes })
+        .update({ activity_notes: value })
         .eq('id', participant.id);
-
-      if (error) throw error;
-
-      showSuccess('Lagret', 'Aktivitetsnotater er oppdatert');
-      refetchParticipant();
+      if (error) {
+        console.error('Error saving activity notes:', error);
+        setNotesStatus('idle');
+        showError('Feil', 'Kunne ikke lagre aktivitetsnotater');
+        return;
+      }
+      savedSnapshotRef.current = value;
+      setNotesStatus('saved');
       onParticipantUpdated?.();
-    } catch (error) {
-      console.error('Error saving activity notes:', error);
-      showError('Feil', 'Kunne ikke lagre aktivitetsnotater');
-    } finally {
-      setIsSavingNotes(false);
-    }
-  };
+      setTimeout(() => setNotesStatus((s) => (s === 'saved' ? 'idle' : s)), 1500);
+    }, 700);
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [activityNotes, participant?.id]);
 
   const uploadParticipantImage = async (file: File) => {
     if (!file || !participant) return;
@@ -362,6 +374,15 @@ export const ParticipantDetailDialog = ({
               </div>
             </div>
 
+            {/* Gift card / kiosk-ID under the avatar */}
+            {participant.gift_card_number && (
+              <div className="flex justify-center -mt-1 mb-1">
+                <Badge variant="secondary" className="font-mono text-xs">
+                  Kiosk-ID: {participant.gift_card_number}
+                </Badge>
+              </div>
+            )}
+
             {/* Lightbox: full image, no crop */}
             <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
               <DialogContent className="max-w-[95vw] sm:max-w-2xl p-0 bg-black/95 border-none">
@@ -457,6 +478,14 @@ export const ParticipantDetailDialog = ({
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <Trophy className="h-4 w-4 text-amber-600" />
                     <span>Aktivitetsnotater</span>
+                    {notesStatus === 'saving' && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Lagrer…
+                      </span>
+                    )}
+                    {notesStatus === 'saved' && (
+                      <span className="text-xs text-emerald-600">Lagret</span>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Skriv prestasjoner som kan brukes i pass
@@ -468,21 +497,6 @@ export const ParticipantDetailDialog = ({
                     rows={2}
                     className="text-sm"
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSaveActivityNotes}
-                    disabled={isSavingNotes}
-                  >
-                    {isSavingNotes ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Lagrer...
-                      </>
-                    ) : (
-                      'Lagre notater'
-                    )}
-                  </Button>
                 </div>
 
                 {/* Arrival toggle */}

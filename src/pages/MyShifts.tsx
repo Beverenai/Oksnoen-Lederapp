@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -279,21 +279,30 @@ export default function MyShifts() {
 
       {zoomOpen && scheduleImageUrl && (
         <div
-          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-[100] bg-black/95 flex flex-col animate-fade-in"
           onClick={() => setZoomOpen(false)}
         >
           <button
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20"
+            className="absolute top-4 right-4 z-20 p-2 rounded-full bg-white/10 text-white hover:bg-white/20"
             onClick={(e) => { e.stopPropagation(); setZoomOpen(false); }}
             aria-label="Lukk"
           >
             <X className="w-5 h-5" />
           </button>
-          <img
-            src={scheduleImageUrl}
-            alt="Vaktplan"
-            className="max-w-full max-h-full object-contain"
-          />
+          <div
+            className="flex-1 overflow-auto p-4 flex items-start justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={scheduleImageUrl}
+              alt="Vaktplan"
+              className="max-w-none w-[250%] min-w-[min(250%,2000px)] h-auto cursor-zoom-out"
+              onClick={() => setZoomOpen(false)}
+            />
+          </div>
+          <p className="text-center text-white/60 text-sm py-3">
+            Trykk hvor som helst for å lukke
+          </p>
         </div>
       )}
     </div>

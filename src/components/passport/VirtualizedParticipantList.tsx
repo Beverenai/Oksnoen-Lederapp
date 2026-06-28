@@ -208,7 +208,7 @@ const CabinHeader = memo(({
             variant="outline"
             className="h-7 justify-center text-xs shrink-0 whitespace-nowrap"
           >
-            {arrivedCount}/{totalCount} ank.
+            {arrivedCount}/{totalCount}
           </Badge>
         </div>
       </CardHeader>
