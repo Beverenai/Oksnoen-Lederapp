@@ -34,6 +34,8 @@ interface LeaderWithContent {
   content?: {
     current_activity: string | null;
     extra_activity: string | null;
+    personal_notes: string | null;
+    personal_message: string | null;
     obs_message: string | null;
     has_read: boolean | null;
     extra_1: string | null;
