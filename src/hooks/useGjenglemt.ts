@@ -30,6 +30,7 @@ export interface GjenglemtItem {
   ai_status: 'pending' | 'done' | 'failed';
   ai_description: string | null;
   ai_tags: string[];
+  item_number: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +45,7 @@ export interface GjenglemtPublicItem {
   notes: string | null;
   owner_name: string | null;
   bag_label: string | null;
+  item_number: number | null;
   ai_status: string;
   ai_description: string | null;
   ai_tags: string[];
