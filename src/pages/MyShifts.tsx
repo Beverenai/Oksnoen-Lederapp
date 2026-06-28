@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -48,10 +48,13 @@ export default function MyShifts() {
   const { effectiveLeader, isAdmin } = useAuth();
   const leaderId = effectiveLeader?.id;
   const [zoomOpen, setZoomOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: scheduleImageUrl } = useQuery({
     queryKey: ['schedule-image-url'],
-    staleTime: 60 * 1000,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
     queryFn: async () => {
       const { data } = await supabase
         .from('app_config')
@@ -61,6 +64,23 @@ export default function MyShifts() {
       return (data?.value as string | undefined) ?? null;
     },
   });
+
+  // Realtime: refresh vaktplan-bilde når admin endrer det
+  useEffect(() => {
+    const channel = supabase
+      .channel('schedule-image-url-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'app_config', filter: 'key=eq.schedule_image_url' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['schedule-image-url'] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   useEffect(() => {
     if (!zoomOpen) return;
