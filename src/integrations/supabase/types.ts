@@ -425,6 +425,7 @@ export type Database = {
           garment_type: string | null
           id: string
           image_url: string
+          item_number: number | null
           notes: string | null
           owner_name: string | null
           period_id: string
@@ -443,6 +444,7 @@ export type Database = {
           garment_type?: string | null
           id?: string
           image_url: string
+          item_number?: number | null
           notes?: string | null
           owner_name?: string | null
           period_id: string
@@ -461,6 +463,7 @@ export type Database = {
           garment_type?: string | null
           id?: string
           image_url?: string
+          item_number?: number | null
           notes?: string | null
           owner_name?: string | null
           period_id?: string
@@ -1827,6 +1830,7 @@ export type Database = {
           garment_type: string | null
           id: string | null
           image_url: string | null
+          item_number: number | null
           notes: string | null
           owner_name: string | null
           period_id: string | null
