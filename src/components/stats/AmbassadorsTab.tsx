@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Search, Award } from "lucide-react";
 
@@ -26,7 +25,7 @@ export function AmbassadorsTab() {
       const { data } = await supabase
         .from("participants")
         .select("id, name, image_url, times_attended, room, cabin:cabins(name)")
-        .gte("times_attended", 3)
+        .gte("times_attended", 4)
         .order("times_attended", { ascending: false })
         .order("name");
       setRows((data as any) || []);
@@ -34,11 +33,9 @@ export function AmbassadorsTab() {
     })();
   }, []);
 
-  const filter = (list: Row[]) =>
-    list.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()));
-
-  const becoming = filter(rows.filter((r) => (r.times_attended ?? 0) === 3));
-  const existing = filter(rows.filter((r) => (r.times_attended ?? 0) >= 4));
+  const filtered = rows.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()));
+  const newOnes = filtered.filter((r) => (r.times_attended ?? 0) === 4);
+  const veterans = filtered.filter((r) => (r.times_attended ?? 0) > 4);
 
   if (loading) {
     return (
@@ -71,7 +68,7 @@ export function AmbassadorsTab() {
               </div>
               <Badge variant="secondary" className="gap-1">
                 <Award className="w-3 h-3" />
-                {years + 1}. år
+                {years} år
               </Badge>
             </Card>
           );
@@ -92,24 +89,20 @@ export function AmbassadorsTab() {
         />
       </div>
 
-      <Tabs defaultValue="becoming">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="becoming">Blir i år ({becoming.length})</TabsTrigger>
-          <TabsTrigger value="existing">Eksisterende ({existing.length})</TabsTrigger>
-        </TabsList>
-        <TabsContent value="becoming" className="mt-4">
-          <p className="text-xs text-muted-foreground mb-3">
-            Deltakere som har vært her 3 ganger før – dette er deres 4. år og de blir ambassadører.
-          </p>
-          {renderList(becoming)}
-        </TabsContent>
-        <TabsContent value="existing" className="mt-4">
-          <p className="text-xs text-muted-foreground mb-3">
-            Deltakere som allerede er ambassadører (4+ tidligere besøk).
-          </p>
-          {renderList(existing)}
-        </TabsContent>
-      </Tabs>
+      <div>
+        <h3 className="text-sm font-semibold mb-2">Nye ambassadører i år ({newOnes.length})</h3>
+        <p className="text-xs text-muted-foreground mb-3">
+          Deltakere som har vært her 4 år – de blir ambassadører i år.
+        </p>
+        {renderList(newOnes)}
+      </div>
+
+      {veterans.length > 0 && (
+        <div className="pt-4 border-t">
+          <h3 className="text-sm font-semibold mb-2">Eksisterende ambassadører ({veterans.length})</h3>
+          {renderList(veterans)}
+        </div>
+      )}
     </div>
   );
 }
