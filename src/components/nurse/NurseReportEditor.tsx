@@ -649,11 +649,13 @@ ${sectionsHtml}
 
     // Auto-create entries for each mentioned participant
     const createEntries = async () => {
+      const rid = await resolveActiveReportId();
+      if (!rid) { showError('Ingen aktiv rapport'); return; }
       for (const { participant, text: noteText } of foundPairs) {
-        if (!noteText || !reportId) continue;
+        if (!noteText) continue;
         const { data, error } = await supabase
           .from('nurse_report_mentions')
-          .insert({ report_id: reportId, participant_id: participant.id, mention_text: noteText })
+          .insert({ report_id: rid, participant_id: participant.id, mention_text: noteText })
           .select()
           .single();
         if (!error && data) {
