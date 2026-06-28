@@ -205,28 +205,45 @@ export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailD
           </DialogHeader>
 
           {/* Activity Section */}
-          {(leader.content?.current_activity || leader.content?.extra_activity) && (
+          {(fullContent?.current_activity || fullContent?.extra_activity) && (
             <div className="bg-muted/50 rounded-xl p-4 mb-4 space-y-2">
-              {leader.content?.current_activity && (
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Aktivitet</h4>
+              {fullContent?.current_activity && (
                 <div className="flex items-center gap-3">
                   <Activity className="h-5 w-5 text-primary shrink-0" />
-                  <span className="font-medium">{leader.content.current_activity}</span>
+                  <span className="font-medium">{fullContent.current_activity}</span>
                 </div>
               )}
-              {leader.content?.extra_activity && (
+              {fullContent?.extra_activity && (
                 <div className="flex items-center gap-3 text-muted-foreground">
                   <div className="w-5" />
-                  <span className="text-sm">{leader.content.extra_activity}</span>
+                  <span className="text-sm">{fullContent.extra_activity}</span>
                 </div>
               )}
             </div>
           )}
 
+          {/* Notes Section */}
+          {fullContent?.personal_notes && (
+            <div className="bg-muted/50 rounded-xl p-4 mb-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Notater</h4>
+              <p className="text-sm whitespace-pre-wrap">{fullContent.personal_notes}</p>
+            </div>
+          )}
+
+          {/* Personal Message Section */}
+          {fullContent?.personal_message && (
+            <div className="bg-primary/10 rounded-xl p-4 mb-4 border border-primary/20">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-primary mb-2">Til deg</h4>
+              <p className="text-sm font-medium whitespace-pre-wrap">{fullContent.personal_message}</p>
+            </div>
+          )}
+
           {/* OBS Message */}
-          {leader.content?.obs_message && (
+          {fullContent?.obs_message && (
             <Alert variant="destructive" className="mb-4">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{leader.content.obs_message}</AlertDescription>
+              <AlertDescription>{fullContent.obs_message}</AlertDescription>
             </Alert>
           )}
 
