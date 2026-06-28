@@ -8,18 +8,20 @@ import { Loader2, Search, X, Lock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 const PUBLIC_PASSWORD = '2026';
 const SS_KEY = 'gjenglemt-public-auth';
 const CONTACT_EMAIL = 'bengt@oksnoen.no';
 
-function buildClaimMailto(item: { item_number: number | null; garment_type: string | null; color: string | null; owner_name: string | null; bag_label: string | null; ai_description: string | null }, periodName: string) {
+function buildClaimEmail(item: { item_number: number | null; garment_type: string | null; color: string | null; owner_name: string | null; bag_label: string | null; ai_description: string | null }, periodName: string) {
   const garment = item.garment_type ? garmentLabel(item.garment_type) : 'gjenglemt artikkel';
   const color = item.color ? colorMeta(item.color).label : null;
   const nr = item.item_number ? `#${item.item_number}` : '';
   const titleParts = [nr, [color, garment].filter(Boolean).join(' ')].filter(Boolean).join(' – ');
   const subject = `Gjenglemt ${nr ? nr + ' ' : ''}– ${periodName}`.trim();
-  const lines = [
+  const body = [
     'Hei,',
     '',
     `Jeg har en deltager som har glemt igjen "${titleParts || garment}" på Øksnøen (${periodName}).`,
@@ -37,7 +39,7 @@ function buildClaimMailto(item: { item_number: number | null; garment_type: stri
     '',
     'Vennlig hilsen,',
   ].filter(Boolean).join('\n');
-  return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines)}`;
+  return { subject, body };
 }
 
 export default function PublicGjenglemt() {
@@ -54,6 +56,7 @@ export default function PublicGjenglemt() {
   });
   const [pwInput, setPwInput] = useState('');
   const [pwError, setPwError] = useState(false);
+  const [mailOpen, setMailOpen] = useState(false);
 
   const tryUnlock = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -304,9 +307,9 @@ export default function PublicGjenglemt() {
               <div className="text-xs text-muted-foreground pt-1">Bilde-ID: {filtered[lightboxIdx].id.slice(0, 8)}</div>
             </div>
             <Button asChild className="w-full mt-4">
-              <a href={buildClaimMailto(filtered[lightboxIdx], period.name)}>
+              <button type="button" onClick={() => setMailOpen(true)}>
                 Send e-post om denne (#{filtered[lightboxIdx].item_number ?? '—'})
-              </a>
+              </button>
             </Button>
             <Button className="w-full mt-2" variant="secondary" onClick={() => setLightboxIdx(null)}>
               Lukk
@@ -315,7 +318,64 @@ export default function PublicGjenglemt() {
           </div>
         </div>
       )}
+
+      {lightboxIdx !== null && filtered[lightboxIdx] && period && (
+        <MailDialog
+          open={mailOpen}
+          onOpenChange={setMailOpen}
+          email={CONTACT_EMAIL}
+          {...buildClaimEmail(filtered[lightboxIdx], period.name)}
+        />
+      )}
     </div>
+  );
+}
+
+function MailDialog({ open, onOpenChange, email, subject, body }: { open: boolean; onOpenChange: (v: boolean) => void; email: string; subject: string; body: string }) {
+  const enc = (s: string) => encodeURIComponent(s);
+  const mailto = `mailto:${email}?subject=${enc(subject)}&body=${enc(body)}`;
+  const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${enc(email)}&su=${enc(subject)}&body=${enc(body)}`;
+  const outlook = `https://outlook.office.com/mail/deeplink/compose?to=${enc(email)}&subject=${enc(subject)}&body=${enc(body)}`;
+  const yahoo = `https://compose.mail.yahoo.com/?to=${enc(email)}&subject=${enc(subject)}&body=${enc(body)}`;
+
+  const copyAll = async () => {
+    try {
+      await navigator.clipboard.writeText(`Til: ${email}\nEmne: ${subject}\n\n${body}`);
+      toast.success('E-post kopiert til utklippstavlen');
+    } catch {
+      toast.error('Kunne ikke kopiere');
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Send e-post</DialogTitle>
+          <DialogDescription>Velg hvordan du vil sende e-posten til {email}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Button asChild className="w-full justify-start" onClick={() => onOpenChange(false)}>
+            <a href={mailto}>📧 Åpne i mail-appen min</a>
+          </Button>
+          <Button asChild variant="outline" className="w-full justify-start" onClick={() => onOpenChange(false)}>
+            <a href={gmail} target="_blank" rel="noopener noreferrer">Gmail (nettleser)</a>
+          </Button>
+          <Button asChild variant="outline" className="w-full justify-start" onClick={() => onOpenChange(false)}>
+            <a href={outlook} target="_blank" rel="noopener noreferrer">Outlook (nettleser)</a>
+          </Button>
+          <Button asChild variant="outline" className="w-full justify-start" onClick={() => onOpenChange(false)}>
+            <a href={yahoo} target="_blank" rel="noopener noreferrer">Yahoo Mail (nettleser)</a>
+          </Button>
+          <Button variant="secondary" className="w-full justify-start" onClick={copyAll}>
+            📋 Kopier e-posten
+          </Button>
+        </div>
+        <div className="text-xs text-muted-foreground border-t pt-2">
+          Eller send manuelt til: <a className="text-primary underline" href={`mailto:${email}`}>{email}</a>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
