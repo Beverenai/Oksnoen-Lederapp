@@ -105,7 +105,7 @@ const getBottomNavItems = (
   if (isAdmin) {
     return [
       { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/passport', icon: PassIcon, label: 'Passkontor' },
+      { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
       { to: '/admin', icon: Settings, label: 'Dashboard' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
       { to: '/fix', icon: Wrench, label: 'Fix' },
@@ -113,10 +113,8 @@ const getBottomNavItems = (
   } else if (isNurse) {
     const items: BottomNavItem[] = [
       { to: '/', icon: Home, label: 'Hjem' },
+      { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
     ];
-    if (checkoutEnabled) {
-      items.push({ to: '/passport', icon: PassIcon, label: 'Passkontor' });
-    }
     items.push(
       { to: '/nurse', icon: Heart, label: 'Nurse' },
       { to: '/leaders', icon: Users, label: 'Ledere' },
@@ -126,10 +124,8 @@ const getBottomNavItems = (
   } else {
     const items: BottomNavItem[] = [
       { to: '/', icon: Home, label: 'Hjem' },
+      { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
     ];
-    if (checkoutEnabled) {
-      items.push({ to: '/passport', icon: PassIcon, label: 'Passkontor' });
-    }
     items.push(
       { to: '#', icon: Check, label: 'Hajolo', isHajolo: true },
       { to: '/leaders', icon: Users, label: 'Ledere' },
@@ -227,12 +223,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const mainTabRoutes = getBottomNavItems(isAdmin, isNurse, checkoutEnabled).map(item => item.to).filter(to => to !== '#');
   const isSubPage = !mainTabRoutes.includes(location.pathname);
 
-  // Hide pass-related entries from the side/hamburger menu for non-admins
-  // until checkout (pass-flow) is enabled.
-  const visibleLeaderNavItems = leaderNavItems.filter(item => {
-    if (item.to === '/passport' && !isAdmin && !checkoutEnabled) return false;
-    return true;
-  });
+  // Passkontroll is always available so leaders can see participants.
+  // Pass-writing UI inside the page is still gated by checkoutEnabled.
+  const visibleLeaderNavItems = leaderNavItems;
 
   // Build dynamic content items based on schedule image availability
   const contentNavItems = [
