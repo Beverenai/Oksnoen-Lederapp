@@ -634,29 +634,41 @@ export default function Leaders() {
                         <Cross className="w-[22px] h-[22px]" fill="currentColor" />
                       </span>
                     )}
-                    <Button
-                      variant="default"
-                      size="icon"
-                      className="bg-green-600 hover:bg-green-700 text-white rounded-full h-11 w-11 shadow-md active:scale-90 transition-transform"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.location.href = `tel:${leader.phone}`;
-                      }}
-                    >
-                      <Phone className="w-5 h-5" />
-                    </Button>
-                    <Button
-                      variant="default"
-                      size="icon"
-                      className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-11 w-11 shadow-md active:scale-90 transition-transform"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.location.href = `sms:${leader.phone}`;
-                      }}
-                      aria-label="Send SMS"
-                    >
-                      <MessageSquare className="w-5 h-5" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="default"
+                          size="icon"
+                          className="bg-green-600 hover:bg-green-700 text-white rounded-full h-11 w-11 shadow-md active:scale-90 transition-transform"
+                          aria-label="Kontakt"
+                        >
+                          <Phone className="w-5 h-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.location.href = `tel:${leader.phone}`;
+                          }}
+                        >
+                          <Phone className="w-4 h-4 mr-2 text-green-600" />
+                          Ring
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.location.href = `sms:${leader.phone}`;
+                          }}
+                        >
+                          <MessageSquare className="w-4 h-4 mr-2 text-blue-600" />
+                          Send SMS
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardContent>
