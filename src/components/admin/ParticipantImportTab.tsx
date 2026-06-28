@@ -778,6 +778,8 @@ export function ParticipantImportTab() {
         </CardContent>
       </Card>
 
+      <GiftCardImportCard onImported={loadData} />
+
       {/* CSV Upload */}
       <Card>
         <CardHeader>
