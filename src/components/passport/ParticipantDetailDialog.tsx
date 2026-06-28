@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { formatFullRoom } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -116,7 +116,9 @@ export const ParticipantDetailDialog = ({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedIndicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedSnapshotRef = useRef<string>('');
+  const isEditingNotesRef = useRef(false);
 
   // Fetch participant detail with caching
   const { data, isLoading, refetch: refetchParticipant } = useQuery({
@@ -144,10 +146,51 @@ export const ParticipantDetailDialog = ({
   useEffect(() => {
     if (participant?.activity_notes !== undefined) {
       const v = participant.activity_notes || '';
-      setActivityNotes(v);
-      savedSnapshotRef.current = v;
+      if (!isEditingNotesRef.current && notesStatus !== 'saving') {
+        setActivityNotes(v);
+        savedSnapshotRef.current = v;
+      }
     }
-  }, [participant?.activity_notes]);
+  }, [participant?.activity_notes, notesStatus]);
+
+  useEffect(() => {
+    if (!participantId || !open) return;
+
+    isEditingNotesRef.current = false;
+    setNotesStatus('idle');
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    if (savedIndicatorTimerRef.current) clearTimeout(savedIndicatorTimerRef.current);
+  }, [participantId, open]);
+
+  const saveActivityNotes = useCallback(async (participantToSave: ParticipantWithCabin, value: string) => {
+    const { error } = await supabase
+      .from('participants')
+      .update({ activity_notes: value })
+      .eq('id', participantToSave.id);
+
+    if (error) {
+      console.error('Error saving activity notes:', error);
+      setNotesStatus('idle');
+      showError('Feil', 'Kunne ikke lagre aktivitetsnotater');
+      return;
+    }
+
+    savedSnapshotRef.current = value;
+    isEditingNotesRef.current = false;
+    setNotesStatus('saved');
+    queryClient.setQueryData(['participant-detail-v2', participantToSave.id], (old: any) => old ? {
+      ...old,
+      participant: {
+        ...old.participant,
+        activity_notes: value,
+      },
+    } : old);
+    onParticipantUpdated?.();
+    if (savedIndicatorTimerRef.current) clearTimeout(savedIndicatorTimerRef.current);
+    savedIndicatorTimerRef.current = setTimeout(() => {
+      setNotesStatus((s) => (s === 'saved' ? 'idle' : s));
+    }, 1500);
+  }, [onParticipantUpdated, queryClient, showError]);
 
   // Debounced auto-save for activity notes
   useEffect(() => {
@@ -157,27 +200,22 @@ export const ParticipantDetailDialog = ({
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     setNotesStatus('saving');
     saveTimerRef.current = setTimeout(async () => {
-      const value = activityNotes;
-      const { error } = await supabase
-        .from('participants')
-        .update({ activity_notes: value })
-        .eq('id', participant.id);
-      if (error) {
-        console.error('Error saving activity notes:', error);
-        setNotesStatus('idle');
-        showError('Feil', 'Kunne ikke lagre aktivitetsnotater');
-        return;
-      }
-      savedSnapshotRef.current = value;
-      setNotesStatus('saved');
-      onParticipantUpdated?.();
-      setTimeout(() => setNotesStatus((s) => (s === 'saved' ? 'idle' : s)), 1500);
+      await saveActivityNotes(participant, activityNotes);
     }, 700);
 
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [activityNotes, participant?.id]);
+  }, [activityNotes, participant, saveActivityNotes]);
+
+  useEffect(() => {
+    if (open) return;
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    if (savedIndicatorTimerRef.current) clearTimeout(savedIndicatorTimerRef.current);
+    setNotesStatus('idle');
+    isEditingNotesRef.current = false;
+  }, [open]);
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -469,7 +507,16 @@ export const ParticipantDetailDialog = ({
                   </p>
                   <Textarea
                     value={activityNotes}
-                    onChange={(e) => setActivityNotes(e.target.value)}
+                    onChange={(e) => {
+                      isEditingNotesRef.current = true;
+                      setActivityNotes(e.target.value);
+                    }}
+                    onBlur={() => {
+                      if (!participant || activityNotes === savedSnapshotRef.current) return;
+                      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+                      setNotesStatus('saving');
+                      void saveActivityNotes(participant, activityNotes);
+                    }}
                     placeholder="F.eks. '1. plass i svømming'..."
                     rows={2}
                     className="text-sm"
