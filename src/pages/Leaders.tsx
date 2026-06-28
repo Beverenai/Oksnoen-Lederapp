@@ -556,11 +556,11 @@ export default function Leaders() {
             )}
             
             <Card
-              className="cursor-pointer overflow-hidden rounded-[24px] shadow-sm [content-visibility:auto] [contain-intrinsic-size:96px]"
+              className="cursor-pointer overflow-hidden rounded-[24px] shadow-sm [content-visibility:auto] [contain-intrinsic-size:112px] h-[112px]"
               onClick={() => setSelectedLeader(leader)}
             >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
+              <CardContent className="p-4 h-full flex items-center">
+                <div className="flex items-center gap-4 w-full min-h-0">
                   {/* Profile image with status ring */}
                   <Avatar
                     className={cn(
@@ -577,8 +577,8 @@ export default function Leaders() {
                   </Avatar>
 
                   {/* Info */}
-                  <div className="flex-1 min-w-0 flex flex-col">
-                    <div className="flex flex-col mb-1.5">
+                  <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5 overflow-hidden">
+                    <div className="flex flex-col mb-1">
                       <h3 className="text-[17px] font-bold text-foreground leading-tight truncate">
                         {getFirstName(leader.name)}
                       </h3>
@@ -590,7 +590,7 @@ export default function Leaders() {
                     </div>
 
                     {(leader.team || (leader.linkedCabins && leader.linkedCabins.length > 0) || leader.cabin) && (
-                      <div className="flex flex-wrap gap-1 mb-2">
+                      <div className="flex flex-wrap gap-1 mb-1.5 line-clamp-1 overflow-hidden">
                         {leader.team && (
                           <span
                             className={cn(
