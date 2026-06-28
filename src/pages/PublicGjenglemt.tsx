@@ -211,7 +211,7 @@ export default function PublicGjenglemt() {
                     onClick={() => setLightboxIdx(idx)}
                     className="rounded-xl border overflow-hidden bg-card text-left hover:shadow-md transition-shadow"
                   >
-                    <div className="aspect-square bg-muted">
+                    <div className="aspect-square bg-muted relative">
                       <SignedImage imageUrl={item.image_url} alt={item.garment_type ? garmentLabel(item.garment_type) : 'Gjenglemt'} className="w-full h-full object-cover" />
                       {item.item_number != null && (
                         <div className="absolute top-1.5 left-1.5">
@@ -276,6 +276,11 @@ export default function PublicGjenglemt() {
             <SignedImage imageUrl={filtered[lightboxIdx].image_url} alt={filtered[lightboxIdx].garment_type ? garmentLabel(filtered[lightboxIdx].garment_type!) : 'Gjenglemt'} className="w-full max-h-[70dvh] object-contain rounded-xl" />
             <div className="mt-3 text-center space-y-1">
               <div className="font-medium">
+                {filtered[lightboxIdx].item_number != null && (
+                  <span className="mr-2 inline-flex items-center rounded-md bg-foreground text-background px-2 py-0.5 text-xs font-semibold tabular-nums align-middle">
+                    #{filtered[lightboxIdx].item_number}
+                  </span>
+                )}
                 {filtered[lightboxIdx].garment_type ? garmentLabel(filtered[lightboxIdx].garment_type!) : 'Ukjent'}
                 {filtered[lightboxIdx].color && ` – ${colorMeta(filtered[lightboxIdx].color!).label}`}
               </div>
@@ -298,7 +303,12 @@ export default function PublicGjenglemt() {
               )}
               <div className="text-xs text-muted-foreground pt-1">Bilde-ID: {filtered[lightboxIdx].id.slice(0, 8)}</div>
             </div>
-            <Button className="w-full mt-4" variant="secondary" onClick={() => setLightboxIdx(null)}>
+            <Button asChild className="w-full mt-4">
+              <a href={buildClaimMailto(filtered[lightboxIdx], period.name)}>
+                Send e-post om denne (#{filtered[lightboxIdx].item_number ?? '—'})
+              </a>
+            </Button>
+            <Button className="w-full mt-2" variant="secondary" onClick={() => setLightboxIdx(null)}>
               Lukk
             </Button>
           </div>
@@ -309,8 +319,9 @@ export default function PublicGjenglemt() {
   );
 }
 
-function matchesQuery(i: { garment_type: string | null; color: string | null; notes: string | null; ai_description: string | null; ai_tags: string[]; owner_name?: string | null; bag_label?: string | null }, q: string) {
+function matchesQuery(i: { garment_type: string | null; color: string | null; notes: string | null; ai_description: string | null; ai_tags: string[]; owner_name?: string | null; bag_label?: string | null; item_number?: number | null }, q: string) {
   const fields: string[] = [];
+  if (i.item_number != null) fields.push(String(i.item_number), `#${i.item_number}`, `nr ${i.item_number}`);
   if (i.garment_type) fields.push(i.garment_type, garmentLabel(i.garment_type).toLowerCase());
   if (i.color) fields.push(i.color, colorMeta(i.color).label.toLowerCase());
   if (i.notes) fields.push(i.notes.toLowerCase());
