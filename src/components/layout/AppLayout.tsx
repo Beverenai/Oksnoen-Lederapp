@@ -223,12 +223,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const mainTabRoutes = getBottomNavItems(isAdmin, isNurse, checkoutEnabled).map(item => item.to).filter(to => to !== '#');
   const isSubPage = !mainTabRoutes.includes(location.pathname);
 
-  // Hide pass-related entries from the side/hamburger menu for non-admins
-  // until checkout (pass-flow) is enabled.
-  const visibleLeaderNavItems = leaderNavItems.filter(item => {
-    if (item.to === '/passport' && !isAdmin && !checkoutEnabled) return false;
-    return true;
-  });
+  // Passkontroll is always available so leaders can see participants.
+  // Pass-writing UI inside the page is still gated by checkoutEnabled.
+  const visibleLeaderNavItems = leaderNavItems;
 
   // Build dynamic content items based on schedule image availability
   const contentNavItems = [
