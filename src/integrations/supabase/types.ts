@@ -1053,6 +1053,7 @@ export type Database = {
           cabin_id: string | null
           created_at: string | null
           first_name: string | null
+          gift_card_number: string | null
           has_arrived: boolean | null
           id: string
           image_url: string | null
@@ -1075,6 +1076,7 @@ export type Database = {
           cabin_id?: string | null
           created_at?: string | null
           first_name?: string | null
+          gift_card_number?: string | null
           has_arrived?: boolean | null
           id?: string
           image_url?: string | null
@@ -1097,6 +1099,7 @@ export type Database = {
           cabin_id?: string | null
           created_at?: string | null
           first_name?: string | null
+          gift_card_number?: string | null
           has_arrived?: boolean | null
           id?: string
           image_url?: string | null
