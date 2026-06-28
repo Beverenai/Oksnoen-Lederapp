@@ -700,25 +700,13 @@ export default function Leaders() {
         </Card>
       )}
 
-      {/* Leader detail dialog */}
-      {canEdit ? (
-        <LeaderContentSheet
-          leader={editableSelectedLeader as any}
-          open={!!selectedLeader}
-          onOpenChange={(open) => !open && setSelectedLeader(null)}
-          homeConfig={(homeConfig || []) as any}
-          onSaved={() => {
-            refetch();
-            refetchFullContent();
-          }}
-        />
-      ) : (
-        <LeaderDetailDialog
-          leader={selectedLeader}
-          open={!!selectedLeader}
-          onOpenChange={(open) => !open && setSelectedLeader(null)}
-        />
-      )}
+      {/* Leader detail dialog - always read-only view on Ledere page.
+          Admin editing lives in the Admin dashboard. */}
+      <LeaderDetailDialog
+        leader={selectedLeader}
+        open={!!selectedLeader}
+        onOpenChange={(open) => !open && setSelectedLeader(null)}
+      />
     </div>
   );
 }
