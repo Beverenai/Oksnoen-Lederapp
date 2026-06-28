@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useActivePeriodId } from "@/hooks/useActivePeriodId";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
@@ -22,14 +23,17 @@ export function ActivityStatsTab() {
     id: string;
     name: string;
   } | null>(null);
+  const { data: activePeriodId } = useActivePeriodId();
 
   // Fetch all activity registrations
   const { data: activityData, isLoading: loadingActivities } = useQuery({
-    queryKey: ["activity-stats"],
+    queryKey: ["activity-stats", activePeriodId],
+    enabled: !!activePeriodId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("participant_activities")
-        .select("activity, participant_id");
+        .select("activity, participant_id")
+        .eq("period_id", activePeriodId!);
       if (error) throw error;
       return data;
     },
@@ -37,11 +41,13 @@ export function ActivityStatsTab() {
 
   // Fetch participants with cabin info and name
   const { data: participants, isLoading: loadingParticipants } = useQuery({
-    queryKey: ["participants-for-stats"],
+    queryKey: ["participants-for-stats", activePeriodId],
+    enabled: !!activePeriodId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("participants")
-        .select("id, cabin_id, name, first_name, last_name");
+        .select("id, cabin_id, name, first_name, last_name")
+        .eq("period_id", activePeriodId!);
       if (error) throw error;
       return data;
     },

@@ -40,35 +40,41 @@ export function useDyngaRealtime() {
   }, [qc]);
 }
 
-export function useDyngaColumns() {
+export function useDyngaColumns(periodId?: string | null) {
   return useQuery<DyngaColumn[]>({
-    queryKey: ['dynga-columns'],
+    queryKey: ['dynga-columns', periodId ?? null],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('dynga_columns')
         .select('*')
         .order('sort_order', { ascending: true });
+      if (periodId) q = q.eq('period_id', periodId);
+      const { data, error } = await q;
       if (error) throw error;
       return data || [];
     },
+    enabled: periodId !== undefined,
     staleTime: 30_000,
   });
 }
 
-export function useDyngaCards() {
+export function useDyngaCards(periodId?: string | null) {
   return useQuery<DyngaCardWithParticipant[]>({
-    queryKey: ['dynga-cards'],
+    queryKey: ['dynga-cards', periodId ?? null],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('dynga_cards')
         .select('*, participant:participants(id, name, first_name, last_name, image_url, cabin_id, cabins(id, name)), dynga_comments(count)')
         .order('sort_order', { ascending: true });
+      if (periodId) q = q.eq('period_id', periodId);
+      const { data, error } = await q;
       if (error) throw error;
       return (data || []).map((row: any) => ({
         ...row,
         comment_count: row.dynga_comments?.[0]?.count ?? 0,
       })) as DyngaCardWithParticipant[];
     },
+    enabled: periodId !== undefined,
     staleTime: 10_000,
   });
 }
@@ -126,7 +132,7 @@ export function useMoveColumn() {
 export function useAddCards() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ participantIds, columnId, initialComment, leaderId }: { participantIds: string[]; columnId: string; initialComment?: string; leaderId?: string | null }) => {
+    mutationFn: async ({ participantIds, columnId, initialComment, leaderId, periodId }: { participantIds: string[]; columnId: string; initialComment?: string; leaderId?: string | null; periodId?: string | null }) => {
       const { data: existing } = await supabase
         .from('dynga_cards')
         .select('sort_order')
@@ -138,6 +144,7 @@ export function useAddCards() {
         participant_id: pid,
         column_id: columnId,
         sort_order: nextOrder++,
+        ...(periodId ? { period_id: periodId } : {}),
       }));
       const { data: inserted, error } = await supabase.from('dynga_cards').insert(rows).select('id');
       if (error) throw error;
@@ -202,7 +209,7 @@ export function useDeleteComment() {
 export function useUpsertColumn() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (col: { id?: string; title: string; color: string; sort_order: number }) => {
+    mutationFn: async (col: { id?: string; title: string; color: string; sort_order: number; periodId?: string | null }) => {
       if (col.id) {
         const { error } = await supabase.from('dynga_columns').update({
           title: col.title, color: col.color, sort_order: col.sort_order,
@@ -210,7 +217,10 @@ export function useUpsertColumn() {
         if (error) throw error;
       } else {
         const { error } = await supabase.from('dynga_columns').insert({
-          title: col.title, color: col.color, sort_order: col.sort_order,
+          title: col.title,
+          color: col.color,
+          sort_order: col.sort_order,
+          ...(col.periodId ? { period_id: col.periodId } : {}),
         });
         if (error) throw error;
       }

@@ -95,6 +95,13 @@ export function ItemGrid({ items, canManageAll }: Props) {
             <div key={item.id} className={cn('rounded-xl border overflow-hidden bg-card flex flex-col', isHentet && 'opacity-60')}>
               <button onClick={() => setLightbox(item)} className="relative aspect-square block bg-muted w-full">
                 <SignedImage imageUrl={item.image_url} alt={item.garment_type ? garmentLabel(item.garment_type) : 'Gjenglemt'} className="w-full h-full object-cover" />
+                {item.item_number != null && (
+                  <div className="absolute bottom-1.5 left-1.5">
+                    <span className="inline-flex items-center rounded-md bg-foreground/85 text-background px-1.5 py-0.5 text-[10px] font-semibold tabular-nums shadow-sm">
+                      #{item.item_number}
+                    </span>
+                  </div>
+                )}
                 {isHentet && (
                   <div className="absolute top-1.5 left-1.5"><Badge className="bg-green-600 text-white">Hentet</Badge></div>
                 )}

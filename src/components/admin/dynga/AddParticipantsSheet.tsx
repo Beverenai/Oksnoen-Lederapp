@@ -12,14 +12,14 @@ import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
-interface Props { open: boolean; onOpenChange: (o: boolean) => void; }
+interface Props { open: boolean; onOpenChange: (o: boolean) => void; periodId?: string | null; }
 
-export function AddParticipantsSheet({ open, onOpenChange }: Props) {
+export function AddParticipantsSheet({ open, onOpenChange, periodId }: Props) {
   const { showSuccess, showError } = useStatusPopup();
   const { effectiveLeader } = useAuth();
   const { data: participants = [] } = useParticipants();
-  const { data: cards = [] } = useDyngaCards();
-  const { data: columns = [] } = useDyngaColumns();
+  const { data: cards = [] } = useDyngaCards(periodId);
+  const { data: columns = [] } = useDyngaColumns(periodId);
   const addCards = useAddCards();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -75,6 +75,7 @@ export function AddParticipantsSheet({ open, onOpenChange }: Props) {
           columnId,
           initialComment: comment,
           leaderId: effectiveLeader?.id ?? null,
+          periodId: periodId ?? null,
         });
       }
       showSuccess('Lagt til', `${selected.size} deltager(e) lagt til ${targetCols.length} kolonne(r)`);

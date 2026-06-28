@@ -79,6 +79,30 @@ export function ParticipantEditDialog({
   const [notes, setNotes] = useState('');
   const [hasArrived, setHasArrived] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [availableRooms, setAvailableRooms] = useState<string[]>([]);
+
+  // Load available rooms for the selected cabin from room_capacity
+  useEffect(() => {
+    if (!cabinId || cabinId === 'none') {
+      setAvailableRooms([]);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from('room_capacity')
+        .select('room')
+        .eq('cabin_id', cabinId);
+      const rooms = (data || [])
+        .map((r: any) => r.room)
+        .filter((r: string | null): r is string => !!r);
+      setAvailableRooms(rooms);
+      // If the cabin has no sub-rooms, force room to "none"
+      if (rooms.length === 0) setRoom('none');
+      // If current room isn't valid for this cabin, reset it
+      else if (room !== 'none' && !rooms.includes(room)) setRoom('none');
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cabinId]);
 
   useEffect(() => {
     if (participant) {
@@ -192,14 +216,19 @@ export function ParticipantEditDialog({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="room">Rom</Label>
-                <Select value={room} onValueChange={setRoom}>
+                <Select
+                  value={room}
+                  onValueChange={setRoom}
+                  disabled={availableRooms.length === 0}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Velg rom" />
+                    <SelectValue placeholder={availableRooms.length === 0 ? 'Enkeltrom' : 'Velg rom'} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Ikke spesifisert</SelectItem>
-                    <SelectItem value="venstre">Venstre</SelectItem>
-                    <SelectItem value="høyre">Høyre</SelectItem>
+                    {availableRooms.map((r) => (
+                      <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

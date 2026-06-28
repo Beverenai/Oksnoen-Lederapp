@@ -19,6 +19,7 @@ interface ParticipantData {
   cabin?: string;
   activities: string[];
   activityNotes?: string;
+  leaderNotes?: string;
   littleStyrkeprove: boolean;
   bigStyrkeprove: boolean;
 }
@@ -175,6 +176,7 @@ Alder: ${participant.age ? `${participant.age} år` : 'Ukjent'}
 Hytte: ${participant.cabin || 'Ukjent'}
 Aktiviteter gjort: ${friendlyActivities.length > 0 ? friendlyActivities.join(', ') : 'Ingen registrert'}
 ${participant.activityNotes ? `Aktivitetsnotater fra ledere: ${participant.activityNotes}` : ''}
+${participant.leaderNotes ? `Lederkommentarer om deltakeren: ${participant.leaderNotes}` : ''}
 Styrkeprøve: ${participant.bigStyrkeprove ? 'Store Styrkeprøven ✅' : participant.littleStyrkeprove ? 'Lille Styrkeprøven ✅' : 'Ingen styrkeprøve'}
 
 VIKTIG ORDLISTE: "Rappis" = rappellering ned fjellveggen (skriv "rappellert ned fjellveggen" eller lignende, aldri "rappis").
@@ -209,9 +211,23 @@ async function processAllParticipants(supabase: any, LOVABLE_API_KEY: string) {
   console.log('Starting background pass generation...');
   
   try {
-    // Fetch all data - include pass_suggestion to check if already generated
+    // Resolve active period — pass generation is scoped per period
+    const { data: activePeriod, error: periodError } = await supabase
+      .from('periods')
+      .select('id')
+      .eq('is_active', true)
+      .maybeSingle();
+    if (periodError) throw periodError;
+    if (!activePeriod?.id) throw new Error('Ingen aktiv periode satt');
+    const activePeriodId = activePeriod.id;
+    console.log('Active period:', activePeriodId);
+
+    // Fetch participants for the active period only
     const [participantsRes, cabinsRes, activitiesRes] = await Promise.all([
-      supabase.from('participants').select('id, name, birth_date, cabin_id, activity_notes, pass_suggestion'),
+      supabase
+        .from('participants')
+        .select('id, name, birth_date, cabin_id, activity_notes, notes, pass_suggestion')
+        .eq('period_id', activePeriodId),
       supabase.from('cabins').select('id, name'),
       supabase.from('participant_activities').select('participant_id, activity'),
     ]);
@@ -250,6 +266,20 @@ async function processAllParticipants(supabase: any, LOVABLE_API_KEY: string) {
       const p = participants[i];
       
       try {
+        // Check for cancellation
+        const { data: cfg } = await supabase
+          .from('app_config')
+          .select('value')
+          .eq('key', 'checkout_progress')
+          .maybeSingle();
+        try {
+          const parsed = cfg?.value ? JSON.parse(cfg.value) : null;
+          if (parsed?.status === 'cancelled') {
+            console.log('Pass generation cancelled by user');
+            return;
+          }
+        } catch {}
+
         const completedActivities = getParticipantActivities(p.id);
         const uniqueActivities = getUniqueActivities(completedActivities);
         const age = p.birth_date ? differenceInYears(new Date(), new Date(p.birth_date)) : undefined;
@@ -261,6 +291,7 @@ async function processAllParticipants(supabase: any, LOVABLE_API_KEY: string) {
           cabin: getCabinName(p.cabin_id),
           activities: uniqueActivities,
           activityNotes: p.activity_notes,
+          leaderNotes: p.notes,
           littleStyrkeprove: hasLilleStyrkprove(completedActivities),
           bigStyrkeprove: hasStoreStyrkprove(completedActivities),
         };

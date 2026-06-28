@@ -301,12 +301,47 @@ export function ParticipantImportTab() {
   };
 
   const parseCSV = (text: string): ParsedParticipant[] => {
-    const lines = text.split('\n').filter(line => line.trim());
-    if (lines.length < 2) return [];
+    // Detect separator from the first non-empty line (without breaking quoted newlines)
+    const firstLineEnd = text.search(/\r?\n/);
+    const firstLine = firstLineEnd === -1 ? text : text.slice(0, firstLineEnd);
+    const separator = firstLine.includes('\t') ? '\t' : firstLine.includes(';') ? ';' : ',';
 
-    // Parse header - handle both comma and semicolon as separators
-    const separator = lines[0].includes('\t') ? '\t' : lines[0].includes(';') ? ';' : ',';
-    const headers = lines[0].split(separator).map(h => h.trim().toLowerCase());
+    // Proper CSV tokenizer that respects double-quoted fields with embedded newlines and "" escapes
+    const records: string[][] = [];
+    let field = '';
+    let row: string[] = [];
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else inQuotes = false;
+        } else {
+          field += ch;
+        }
+      } else {
+        if (ch === '"') {
+          inQuotes = true;
+        } else if (ch === separator) {
+          row.push(field); field = '';
+        } else if (ch === '\n' || ch === '\r') {
+          if (ch === '\r' && text[i + 1] === '\n') i++;
+          row.push(field); field = '';
+          if (row.some(c => c.trim().length > 0)) records.push(row);
+          row = [];
+        } else {
+          field += ch;
+        }
+      }
+    }
+    if (field.length > 0 || row.length > 0) {
+      row.push(field);
+      if (row.some(c => c.trim().length > 0)) records.push(row);
+    }
+    if (records.length < 2) return [];
+
+    const headers = records[0].map(h => h.trim().toLowerCase());
     
     // Find column indices for basic fields
     const firstNameIdx = headers.findIndex(h => h.includes('fornavn'));
@@ -340,8 +375,8 @@ export function ParticipantImportTab() {
       }
     });
 
-    return lines.slice(1).map((line, idx) => {
-      const values = line.split(separator).map(v => v.trim().replace(/^"|"$/g, ''));
+    return records.slice(1).map((values) => {
+      values = values.map(v => v.trim());
       
       const firstName = firstNameIdx >= 0 ? values[firstNameIdx] || '' : '';
       const lastName = lastNameIdx >= 0 ? values[lastNameIdx] || '' : '';
@@ -495,14 +530,112 @@ export function ParticipantImportTab() {
       showError('Lim inn data først');
       return;
     }
+    // First try blob parser (handles text copied from rendered tables / PDFs
+    // where all newlines/tabs are lost and rows are concatenated).
+    const blobRows = parseConcatenatedBlob(pastedText);
+    if (blobRows.length >= 3) {
+      setParsedData(blobRows);
+      setImportResult(null);
+      showInfo(`Tolket ${blobRows.length} rader fra sammensmeltet tekst`);
+      return;
+    }
     const normalized = normalizePastedText(pastedText);
     const parsed = parseCSV(normalized);
     if (parsed.length === 0) {
+      // Fall back to blob even if it gave <3 rows
+      if (blobRows.length > 0) {
+        setParsedData(blobRows);
+        setImportResult(null);
+        return;
+      }
       showError('Kunne ikke tolke innholdet. Sjekk at det er overskrifter og data.');
       return;
     }
     setParsedData(parsed);
     setImportResult(null);
+  };
+
+  // Parse a single concatenated blob (no tabs / newlines between cells) where each
+  // row is shaped: <Name><YYYY-MM-DD><digit(timesAttended)><CabinName><optional notes>
+  // Uses the cabin list from the DB to anchor row boundaries.
+  const parseConcatenatedBlob = (raw: string): ParsedParticipant[] => {
+    if (!raw) return [];
+    // Strip leading header tokens like "FornavnEtternavnFødtDeltatt tidligereHytteNotater"
+    let text = raw.replace(/\r?\n/g, ' ').replace(/\t/g, ' ');
+    text = text.replace(
+      /^\s*(?:Fornavn|Etternavn|F(?:ø|o)dt|Deltatt\s+tidligere|Tidligere|Deltatt|Hytte|Notater|Notat|Kommentar(?:er)?|Info|Bilde|Har\s+ankommet|Ankommet|\s)+/i,
+      ''
+    );
+
+    if (cabins.length === 0) return [];
+    const cabinPatterns = cabins
+      .map(c => c.name)
+      .flatMap(n => {
+        const esc = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return [`${esc}\\s+venstre`, `${esc}\\s+h(?:ø|o)yre`, esc];
+      })
+      .sort((a, b) => b.length - a.length);
+    if (cabinPatterns.length === 0) return [];
+
+    const cabinAlt = cabinPatterns.join('|');
+    const re = new RegExp(
+      `([\\p{Lu}][\\p{L} .'\\-]*?)(\\d{4}-\\d{2}-\\d{2})\\s*(\\d+)\\s*(${cabinAlt})`,
+      'gu'
+    );
+
+    type Hit = { idx: number; end: number; name: string; date: string; times: string; cabin: string };
+    const hits: Hit[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      hits.push({
+        idx: m.index,
+        end: m.index + m[0].length,
+        name: m[1].trim(),
+        date: m[2],
+        times: m[3],
+        cabin: m[4].replace(/\s+/g, ' '),
+      });
+    }
+    if (hits.length === 0) return [];
+
+    return hits.map((h, i) => {
+      const nextIdx = i + 1 < hits.length ? hits[i + 1].idx : text.length;
+      const notes = text.slice(h.end, nextIdx).trim();
+
+      // Split full name into first / last. Prefer existing space; else camel-case split.
+      const fullName = h.name.replace(/\s+/g, ' ').trim();
+      let firstName = fullName;
+      let lastName = '';
+      if (fullName.includes(' ')) {
+        const parts = fullName.split(' ');
+        firstName = parts[0];
+        lastName = parts.slice(1).join(' ');
+      } else {
+        const camel = fullName.match(/^(.*[\p{Ll}])([\p{Lu}].*)$/u);
+        if (camel) {
+          firstName = camel[1];
+          lastName = camel[2];
+        }
+      }
+
+      const { cabinName, room } = parseCabinField(h.cabin);
+      const timesAttended = parseInt(h.times, 10) || 0;
+      const valid = firstName.length > 0 && cabinName.length > 0;
+      return {
+        firstName,
+        lastName,
+        birthDate: h.date,
+        cabinName,
+        room,
+        timesAttended,
+        info: notes,
+        imageUrl: null,
+        hasArrived: false,
+        activities: [],
+        valid,
+        error: valid ? undefined : 'Mangler navn eller hytte',
+      };
+    });
   };
 
   const importParticipants = async () => {

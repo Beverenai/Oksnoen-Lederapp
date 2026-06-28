@@ -8,9 +8,39 @@ import { Loader2, Search, X, Lock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 const PUBLIC_PASSWORD = '2026';
 const SS_KEY = 'gjenglemt-public-auth';
+const CONTACT_EMAIL = 'bengt@oksnoen.no';
+
+function buildClaimEmail(item: { item_number: number | null; garment_type: string | null; color: string | null; owner_name: string | null; bag_label: string | null; ai_description: string | null }, periodName: string) {
+  const garment = item.garment_type ? garmentLabel(item.garment_type) : 'gjenglemt artikkel';
+  const color = item.color ? colorMeta(item.color).label : null;
+  const nr = item.item_number ? `#${item.item_number}` : '';
+  const titleParts = [nr, [color, garment].filter(Boolean).join(' ')].filter(Boolean).join(' – ');
+  const subject = `Gjenglemt ${nr ? nr + ' ' : ''}– ${periodName}`.trim();
+  const body = [
+    'Hei,',
+    '',
+    `Jeg har en deltager som har glemt igjen "${titleParts || garment}" på Øksnøen (${periodName}).`,
+    nr ? `Artikkelnummer: ${nr}` : null,
+    item.owner_name ? `Navn på lapp/pose: ${item.owner_name}` : null,
+    item.bag_label ? `Pose: ${item.bag_label}` : null,
+    item.ai_description ? `Beskrivelse: ${item.ai_description}` : null,
+    '',
+    'Deltagers navn: ',
+    'Min kontaktinfo (telefon): ',
+    '',
+    'Jeg ønsker å:',
+    '  ☐ Hente på Øksnøen',
+    '  ☐ Få det tilsendt (jeg dekker porto)',
+    '',
+    'Vennlig hilsen,',
+  ].filter(Boolean).join('\n');
+  return { subject, body };
+}
 
 export default function PublicGjenglemt() {
   const { slug } = useParams<{ slug: string }>();
@@ -26,6 +56,7 @@ export default function PublicGjenglemt() {
   });
   const [pwInput, setPwInput] = useState('');
   const [pwError, setPwError] = useState(false);
+  const [mailOpen, setMailOpen] = useState(false);
 
   const tryUnlock = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -143,8 +174,12 @@ export default function PublicGjenglemt() {
             </div>
           )}
           <p className="text-sm text-muted-foreground mt-4 max-w-2xl">
-            Kjenner du igjen noe? Ta kontakt med leiren på{' '}
-            <a className="text-primary underline" href="mailto:post@oksnoen.com">post@oksnoen.com</a> og oppgi bilde-ID eller beskrivelse.
+            Ser du noe som er ditt? Du kan komme hit til Øksnøen og hente det.
+            Hvis du ønsker å få det tilsendt, går det på egen regning.
+            <br />
+            Send oss en e-post på{' '}
+            <a className="text-primary underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+            {' '}— oppgi <strong>artikkelnummer</strong> og <strong>deltagers navn</strong>.
           </p>
         </div>
       </header>
@@ -183,8 +218,15 @@ export default function PublicGjenglemt() {
                     onClick={() => setLightboxIdx(idx)}
                     className="rounded-xl border overflow-hidden bg-card text-left hover:shadow-md transition-shadow"
                   >
-                    <div className="aspect-square bg-muted">
+                    <div className="aspect-square bg-muted relative">
                       <SignedImage imageUrl={item.image_url} alt={item.garment_type ? garmentLabel(item.garment_type) : 'Gjenglemt'} className="w-full h-full object-cover" />
+                      {item.item_number != null && (
+                        <div className="absolute top-1.5 left-1.5">
+                          <span className="inline-flex items-center rounded-md bg-foreground/85 text-background px-1.5 py-0.5 text-[10px] font-semibold tabular-nums shadow-sm">
+                            #{item.item_number}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="p-2.5 space-y-1">
                       <div className="flex items-center gap-1.5 min-w-0">
@@ -241,6 +283,11 @@ export default function PublicGjenglemt() {
             <SignedImage imageUrl={filtered[lightboxIdx].image_url} alt={filtered[lightboxIdx].garment_type ? garmentLabel(filtered[lightboxIdx].garment_type!) : 'Gjenglemt'} className="w-full max-h-[70dvh] object-contain rounded-xl" />
             <div className="mt-3 text-center space-y-1">
               <div className="font-medium">
+                {filtered[lightboxIdx].item_number != null && (
+                  <span className="mr-2 inline-flex items-center rounded-md bg-foreground text-background px-2 py-0.5 text-xs font-semibold tabular-nums align-middle">
+                    #{filtered[lightboxIdx].item_number}
+                  </span>
+                )}
                 {filtered[lightboxIdx].garment_type ? garmentLabel(filtered[lightboxIdx].garment_type!) : 'Ukjent'}
                 {filtered[lightboxIdx].color && ` – ${colorMeta(filtered[lightboxIdx].color!).label}`}
               </div>
@@ -263,19 +310,82 @@ export default function PublicGjenglemt() {
               )}
               <div className="text-xs text-muted-foreground pt-1">Bilde-ID: {filtered[lightboxIdx].id.slice(0, 8)}</div>
             </div>
-            <Button className="w-full mt-4" variant="secondary" onClick={() => setLightboxIdx(null)}>
+            <Button asChild className="w-full mt-4">
+              <button type="button" onClick={() => setMailOpen(true)}>
+                Send e-post om denne (#{filtered[lightboxIdx].item_number ?? '—'})
+              </button>
+            </Button>
+            <Button className="w-full mt-2" variant="secondary" onClick={() => setLightboxIdx(null)}>
               Lukk
             </Button>
           </div>
           </div>
         </div>
       )}
+
+      {lightboxIdx !== null && filtered[lightboxIdx] && period && (
+        <MailDialog
+          open={mailOpen}
+          onOpenChange={setMailOpen}
+          email={CONTACT_EMAIL}
+          {...buildClaimEmail(filtered[lightboxIdx], period.name)}
+        />
+      )}
     </div>
   );
 }
 
-function matchesQuery(i: { garment_type: string | null; color: string | null; notes: string | null; ai_description: string | null; ai_tags: string[]; owner_name?: string | null; bag_label?: string | null }, q: string) {
+function MailDialog({ open, onOpenChange, email, subject, body }: { open: boolean; onOpenChange: (v: boolean) => void; email: string; subject: string; body: string }) {
+  const enc = (s: string) => encodeURIComponent(s);
+  const mailto = `mailto:${email}?subject=${enc(subject)}&body=${enc(body)}`;
+  const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${enc(email)}&su=${enc(subject)}&body=${enc(body)}`;
+  const outlook = `https://outlook.office.com/mail/deeplink/compose?to=${enc(email)}&subject=${enc(subject)}&body=${enc(body)}`;
+  const yahoo = `https://compose.mail.yahoo.com/?to=${enc(email)}&subject=${enc(subject)}&body=${enc(body)}`;
+
+  const copyAll = async () => {
+    try {
+      await navigator.clipboard.writeText(`Til: ${email}\nEmne: ${subject}\n\n${body}`);
+      toast.success('E-post kopiert til utklippstavlen');
+    } catch {
+      toast.error('Kunne ikke kopiere');
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Send e-post</DialogTitle>
+          <DialogDescription>Velg hvordan du vil sende e-posten til {email}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Button asChild className="w-full justify-start" onClick={() => onOpenChange(false)}>
+            <a href={mailto}>📧 Åpne i mail-appen min</a>
+          </Button>
+          <Button asChild variant="outline" className="w-full justify-start" onClick={() => onOpenChange(false)}>
+            <a href={gmail} target="_blank" rel="noopener noreferrer">Gmail (nettleser)</a>
+          </Button>
+          <Button asChild variant="outline" className="w-full justify-start" onClick={() => onOpenChange(false)}>
+            <a href={outlook} target="_blank" rel="noopener noreferrer">Outlook (nettleser)</a>
+          </Button>
+          <Button asChild variant="outline" className="w-full justify-start" onClick={() => onOpenChange(false)}>
+            <a href={yahoo} target="_blank" rel="noopener noreferrer">Yahoo Mail (nettleser)</a>
+          </Button>
+          <Button variant="secondary" className="w-full justify-start" onClick={copyAll}>
+            📋 Kopier e-posten
+          </Button>
+        </div>
+        <div className="text-xs text-muted-foreground border-t pt-2">
+          Eller send manuelt til: <a className="text-primary underline" href={`mailto:${email}`}>{email}</a>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function matchesQuery(i: { garment_type: string | null; color: string | null; notes: string | null; ai_description: string | null; ai_tags: string[]; owner_name?: string | null; bag_label?: string | null; item_number?: number | null }, q: string) {
   const fields: string[] = [];
+  if (i.item_number != null) fields.push(String(i.item_number), `#${i.item_number}`, `nr ${i.item_number}`);
   if (i.garment_type) fields.push(i.garment_type, garmentLabel(i.garment_type).toLowerCase());
   if (i.color) fields.push(i.color, colorMeta(i.color).label.toLowerCase());
   if (i.notes) fields.push(i.notes.toLowerCase());

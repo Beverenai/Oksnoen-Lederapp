@@ -10,6 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Loader2, Sparkles, CheckCircle2, AlertCircle, RefreshCw, Search, ChevronDown, User } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { CheckoutDetailDialog } from '@/components/checkout/CheckoutDetailDialog';
@@ -31,6 +34,12 @@ interface PassWrittenEntry {
   image_url: string | null;
 }
 
+interface ActivePeriod {
+  id: string;
+  name: string;
+  start_date: string | null;
+}
+
 export function CheckoutTab() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
@@ -43,16 +52,36 @@ export function CheckoutTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [activePeriod, setActivePeriod] = useState<ActivePeriod | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
+      // Resolve active period first — all pass data is scoped per period
+      const { data: periodRow } = await supabase
+        .from('periods')
+        .select('id, name, start_date')
+        .eq('is_active', true)
+        .maybeSingle();
+      const period = (periodRow as ActivePeriod | null) ?? null;
+      setActivePeriod(period);
+
+      if (!period) {
+        setTotalParticipants(0);
+        setPassWrittenCount(0);
+        setPassWrittenList([]);
+        setIsLoading(false);
+        return;
+      }
+
       const [configRes, progressRes, participantsRes, writtenRes, leadersRes] = await Promise.all([
         supabase.from('app_config').select('*').eq('key', 'checkout_enabled').single(),
         supabase.from('app_config').select('*').eq('key', 'checkout_progress').single(),
-        supabase.from('participants').select('id, pass_written'),
+        supabase.from('participants').select('id, pass_written').eq('period_id', period.id),
         supabase.from('participants')
           .select('id, name, first_name, last_name, image_url, pass_written_at, pass_written_by, cabin:cabins(name)')
           .eq('pass_written', true)
+          .eq('period_id', period.id)
           .order('pass_written_at', { ascending: false }),
         supabase.from('leaders').select('id, name'),
       ]);
@@ -146,6 +175,46 @@ export function CheckoutTab() {
     }
   };
 
+  const handleResetPasses = async () => {
+    if (!activePeriod) return;
+    if (!confirm(`Tilbakestille ALLE pass for ${activePeriod.name}? Dette sletter AI-forslag, skrevet tekst og markeringer.`)) return;
+    setIsResetting(true);
+    try {
+      const { error } = await supabase
+        .from('participants')
+        .update({
+          pass_suggestion: null,
+          pass_text: null,
+          pass_written: false,
+          pass_written_at: null,
+          pass_written_by: null,
+        })
+        .eq('period_id', activePeriod.id);
+      if (error) throw error;
+
+      await supabase.from('app_config').upsert(
+        { key: 'checkout_enabled', value: 'false' },
+        { onConflict: 'key' }
+      );
+      await supabase.from('app_config').upsert(
+        { key: 'checkout_progress', value: JSON.stringify({ status: 'idle', processed: 0, total: 0 }) },
+        { onConflict: 'key' }
+      );
+
+      setCheckoutEnabled(false);
+      setProgress({ status: 'idle', processed: 0, total: 0 });
+      hapticSuccess();
+      showSuccess(`Alle pass for ${activePeriod.name} er tilbakestilt`);
+      loadData();
+    } catch (e) {
+      console.error('Reset failed', e);
+      hapticError();
+      showError('Kunne ikke tilbakestille pass');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const handleDisableCheckout = async () => {
     try {
       await supabase
@@ -195,8 +264,9 @@ export function CheckoutTab() {
             Utsjekk - Pass-generering
           </CardTitle>
           <CardDescription>
-            Start utsjekk for å generere AI-baserte passforslag for alle deltakere.
-            Genereringen fortsetter i bakgrunnen selv om du navigerer bort.
+            {activePeriod
+              ? `Pass-generering for ${activePeriod.name}. Hver periode har sine egne pass.`
+              : 'Ingen aktiv periode er satt.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -257,54 +327,38 @@ export function CheckoutTab() {
           )}
 
           {/* Actions */}
-          <div className="flex gap-3">
-            {!checkoutEnabled ? (
-              <Button 
-                onClick={handleStartCheckout} 
-                disabled={isGenerating}
-                className="gap-2"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Genererer...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    Start Utsjekk
-                  </>
-                )}
-              </Button>
-            ) : (
-              <>
-                <Button 
-                  onClick={handleStartCheckout} 
-                  disabled={isGenerating}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Genererer...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Generer på nytt
-                    </>
-                  )}
-                </Button>
-                <Button 
-                  onClick={handleDisableCheckout} 
-                  variant="destructive"
-                  disabled={isGenerating}
-                >
-                  Deaktiver Utsjekk
-                </Button>
-              </>
-            )}
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-3 p-3 border rounded-md bg-muted/30">
+              <Switch
+                id="checkout-toggle"
+                checked={checkoutEnabled}
+                disabled={isGenerating || !activePeriod}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    handleStartCheckout();
+                  } else {
+                    handleDisableCheckout();
+                  }
+                }}
+              />
+              <Label htmlFor="checkout-toggle" className="cursor-pointer">
+                {checkoutEnabled ? 'Utsjekk er på' : 'Skru på utsjekk'}
+              </Label>
+              {isGenerating && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+            </div>
+            <Button
+              onClick={handleResetPasses}
+              variant="outline"
+              disabled={isGenerating || isResetting || !activePeriod}
+              className="gap-2"
+            >
+              {isResetting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RotateCcw className="w-4 h-4" />
+              )}
+              Tilbakestill pass
+            </Button>
           </div>
 
           {/* Stats when enabled */}

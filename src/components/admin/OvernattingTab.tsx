@@ -94,7 +94,21 @@ export function OvernattingTab() {
               <Label className="text-base">Aktiver på hjemskjermen</Label>
               <p className="text-xs text-muted-foreground">Når på, ser alle ledere kortet og kan svare.</p>
             </div>
-            <Switch checked={enabled} onCheckedChange={(v) => { setEnabled(v); saveConfig({ enabled: v }); }} />
+            <Switch checked={enabled} onCheckedChange={async (v) => {
+              setEnabled(v);
+              if (v) {
+                // Reset all previous responses when re-enabling so new ledere starts fresh
+                const { error } = await supabase.from('overnatting_responses').delete().neq('leader_id', '00000000-0000-0000-0000-000000000000');
+                if (error) {
+                  console.error(error);
+                  showError('Kunne ikke nullstille svar');
+                } else {
+                  setRows([]);
+                  showSuccess('Svar nullstilt');
+                }
+              }
+              saveConfig({ enabled: v });
+            }} />
           </div>
           <div className="space-y-2">
             <Label>Tittel</Label>

@@ -47,6 +47,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader } = useAuth();
   const [reportId, setReportId] = useState<string | null>(null);
+  const [activePeriodId, setActivePeriodId] = useState<string | null>(null);
   const [entries, setEntries] = useState<NoteEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -72,10 +73,57 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
 
   const getParticipant = useCallback((id: string) => participants.find((p) => p.id === id), [participants]);
 
-  // Load data on mount
+  // Load data on mount and whenever the active period changes
   useEffect(() => {
     loadData();
+    // Subscribe to active-period changes so a switch mid-session reloads correctly
+    const channel = supabase
+      .channel('nurse-report-period-watch')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'periods' }, () => {
+        loadData();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Always resolve the report for the currently active period at write-time.
+  // Prevents stale reportId (e.g. if active period switched while page was open).
+  const resolveActiveReportId = async (): Promise<string | null> => {
+    try {
+      const { data: periodRow } = await supabase
+        .from('periods')
+        .select('id')
+        .eq('is_active', true)
+        .maybeSingle();
+      const pid = periodRow?.id ?? null;
+
+      let q = supabase
+        .from('nurse_reports')
+        .select('id')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (pid) q = q.eq('period_id', pid);
+      const { data: existing } = await q;
+      if (existing && existing.length > 0) {
+        if (existing[0].id !== reportId) setReportId(existing[0].id);
+        if (pid !== activePeriodId) setActivePeriodId(pid);
+        return existing[0].id;
+      }
+      const { data: created, error: createErr } = await supabase
+        .from('nurse_reports')
+        .insert({ content: '', created_by: leader?.id, period_id: pid })
+        .select('id')
+        .single();
+      if (createErr) throw createErr;
+      setReportId(created.id);
+      setActivePeriodId(pid);
+      return created.id;
+    } catch (e) {
+      console.error('resolveActiveReportId failed:', e);
+      return null;
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -85,7 +133,8 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
         .select('id')
         .eq('is_active', true)
         .maybeSingle();
-      const activePeriodId = periodRow?.id ?? null;
+      const periodId = periodRow?.id ?? null;
+      setActivePeriodId(periodId);
 
       // Get or create report for the active period
       let query = supabase
@@ -93,7 +142,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1);
-      if (activePeriodId) query = query.eq('period_id', activePeriodId);
+      if (periodId) query = query.eq('period_id', periodId);
       const { data: reports, error } = await query;
       if (error) throw error;
 
@@ -103,7 +152,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
       } else {
         const { data, error: createErr } = await supabase
           .from('nurse_reports')
-          .insert({ content: '', created_by: leader?.id, period_id: activePeriodId })
+          .insert({ content: '', created_by: leader?.id, period_id: periodId })
           .select()
           .single();
         if (createErr) throw createErr;
@@ -202,14 +251,16 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
 
   // Submit the current input as an entry for the active participant
   const submitEntry = async () => {
-    if (!activeParticipant || !inputValue.trim() || !reportId) return;
+    if (!activeParticipant || !inputValue.trim()) return;
 
     setIsSaving(true);
     try {
+      const rid = await resolveActiveReportId();
+      if (!rid) throw new Error('Ingen aktiv rapport for gjeldende periode');
       const { data, error } = await supabase
         .from('nurse_report_mentions')
         .insert({
-          report_id: reportId,
+          report_id: rid,
           participant_id: activeParticipant.id,
           mention_text: inputValue.trim(),
         })
@@ -220,11 +271,12 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
 
       setEntries((prev) => [...prev, data]);
       setInputValue('');
+      const justSavedFor = activeParticipant;
       setActiveParticipant(null);
       setLastSaved(new Date());
 
       // Sync health info
-      await syncParticipantHealth(activeParticipant.id);
+      await syncParticipantHealth(justSavedFor.id, rid);
       hapticSuccess();
       onDataChange?.();
     } catch (e) {
@@ -268,8 +320,9 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
   };
 
   // Sync health data for a participant
-  const syncParticipantHealth = async (participantId: string) => {
-    if (!reportId) return;
+  const syncParticipantHealth = async (participantId: string, overrideReportId?: string) => {
+    const rid = overrideReportId || reportId;
+    if (!rid) return;
 
     try {
       const participantEntries = entries
@@ -280,7 +333,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
       const { data: freshEntries } = await supabase
         .from('nurse_report_mentions')
         .select('*')
-        .eq('report_id', reportId)
+        .eq('report_id', rid)
         .eq('participant_id', participantId)
         .order('created_at', { ascending: true });
 
@@ -597,11 +650,13 @@ ${sectionsHtml}
 
     // Auto-create entries for each mentioned participant
     const createEntries = async () => {
+      const rid = await resolveActiveReportId();
+      if (!rid) { showError('Ingen aktiv rapport'); return; }
       for (const { participant, text: noteText } of foundPairs) {
-        if (!noteText || !reportId) continue;
+        if (!noteText) continue;
         const { data, error } = await supabase
           .from('nurse_report_mentions')
-          .insert({ report_id: reportId, participant_id: participant.id, mention_text: noteText })
+          .insert({ report_id: rid, participant_id: participant.id, mention_text: noteText })
           .select()
           .single();
         if (!error && data) {

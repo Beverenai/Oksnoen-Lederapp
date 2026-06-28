@@ -44,6 +44,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          period_id: string | null
           target_group: string | null
           title: string
         }
@@ -52,6 +53,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          period_id?: string | null
           target_group?: string | null
           title: string
         }
@@ -60,10 +62,19 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          period_id?: string | null
           target_group?: string | null
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "announcements_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       app_config: {
         Row: {
@@ -162,6 +173,7 @@ export type Database = {
           created_at: string
           id: string
           participant_id: string
+          period_id: string | null
           sort_order: number
           updated_at: string
         }
@@ -170,6 +182,7 @@ export type Database = {
           created_at?: string
           id?: string
           participant_id: string
+          period_id?: string | null
           sort_order?: number
           updated_at?: string
         }
@@ -178,6 +191,7 @@ export type Database = {
           created_at?: string
           id?: string
           participant_id?: string
+          period_id?: string | null
           sort_order?: number
           updated_at?: string
         }
@@ -196,6 +210,13 @@ export type Database = {
             referencedRelation: "participants"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "dynga_cards_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
         ]
       }
       dynga_columns: {
@@ -203,6 +224,7 @@ export type Database = {
           color: string
           created_at: string
           id: string
+          period_id: string | null
           sort_order: number
           title: string
         }
@@ -210,6 +232,7 @@ export type Database = {
           color?: string
           created_at?: string
           id?: string
+          period_id?: string | null
           sort_order?: number
           title: string
         }
@@ -217,10 +240,19 @@ export type Database = {
           color?: string
           created_at?: string
           id?: string
+          period_id?: string | null
           sort_order?: number
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "dynga_columns_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dynga_comments: {
         Row: {
@@ -307,6 +339,7 @@ export type Database = {
           id: string
           image_url: string | null
           location: string | null
+          period_id: string | null
           status: string
           title: string
           updated_at: string | null
@@ -324,6 +357,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           location?: string | null
+          period_id?: string | null
           status?: string
           title: string
           updated_at?: string | null
@@ -341,6 +375,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           location?: string | null
+          period_id?: string | null
           status?: string
           title?: string
           updated_at?: string | null
@@ -368,6 +403,13 @@ export type Database = {
             referencedRelation: "leaders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fix_tasks_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
         ]
       }
       gjenglemt_items: {
@@ -383,6 +425,7 @@ export type Database = {
           garment_type: string | null
           id: string
           image_url: string
+          item_number: number | null
           notes: string | null
           owner_name: string | null
           period_id: string
@@ -401,6 +444,7 @@ export type Database = {
           garment_type?: string | null
           id?: string
           image_url: string
+          item_number?: number | null
           notes?: string | null
           owner_name?: string | null
           period_id: string
@@ -419,6 +463,7 @@ export type Database = {
           garment_type?: string | null
           id?: string
           image_url?: string
+          item_number?: number | null
           notes?: string | null
           owner_name?: string | null
           period_id?: string
@@ -809,6 +854,7 @@ export type Database = {
           completed_at: string | null
           id: string
           participant_id: string
+          period_id: string | null
           registered_by: string | null
         }
         Insert: {
@@ -816,6 +862,7 @@ export type Database = {
           completed_at?: string | null
           id?: string
           participant_id: string
+          period_id?: string | null
           registered_by?: string | null
         }
         Update: {
@@ -823,6 +870,7 @@ export type Database = {
           completed_at?: string | null
           id?: string
           participant_id?: string
+          period_id?: string | null
           registered_by?: string | null
         }
         Relationships: [
@@ -831,6 +879,13 @@ export type Database = {
             columns: ["participant_id"]
             isOneToOne: false
             referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_activities_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
           {
@@ -1198,6 +1253,7 @@ export type Database = {
           from_room: string | null
           id: string
           participant_id: string
+          period_id: string | null
           reason: string | null
           status: string
           to_cabin_id: string
@@ -1211,6 +1267,7 @@ export type Database = {
           from_room?: string | null
           id?: string
           participant_id: string
+          period_id?: string | null
           reason?: string | null
           status?: string
           to_cabin_id: string
@@ -1224,6 +1281,7 @@ export type Database = {
           from_room?: string | null
           id?: string
           participant_id?: string
+          period_id?: string | null
           reason?: string | null
           status?: string
           to_cabin_id?: string
@@ -1252,6 +1310,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "room_swaps_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "room_swaps_to_cabin_id_fkey"
             columns: ["to_cabin_id"]
             isOneToOne: false
@@ -1276,6 +1341,7 @@ export type Database = {
           helmet_status: string | null
           id: string
           leader_id: string
+          period_id: string | null
           rope_comment: string | null
           rope_status: string | null
           updated_at: string | null
@@ -1295,6 +1361,7 @@ export type Database = {
           helmet_status?: string | null
           id?: string
           leader_id: string
+          period_id?: string | null
           rope_comment?: string | null
           rope_status?: string | null
           updated_at?: string | null
@@ -1314,6 +1381,7 @@ export type Database = {
           helmet_status?: string | null
           id?: string
           leader_id?: string
+          period_id?: string | null
           rope_comment?: string | null
           rope_status?: string | null
           updated_at?: string | null
@@ -1340,6 +1408,13 @@ export type Database = {
             referencedRelation: "leaders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "rope_controls_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
         ]
       }
       roulette_assignments: {
@@ -1349,6 +1424,7 @@ export type Database = {
           created_at: string
           id: string
           leader_id: string
+          period_id: string | null
           status: string
           task_id: string
           updated_at: string
@@ -1359,6 +1435,7 @@ export type Database = {
           created_at?: string
           id?: string
           leader_id: string
+          period_id?: string | null
           status?: string
           task_id: string
           updated_at?: string
@@ -1369,6 +1446,7 @@ export type Database = {
           created_at?: string
           id?: string
           leader_id?: string
+          period_id?: string | null
           status?: string
           task_id?: string
           updated_at?: string
@@ -1379,6 +1457,13 @@ export type Database = {
             columns: ["leader_id"]
             isOneToOne: false
             referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roulette_assignments_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
           {
@@ -1671,6 +1756,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          period_id: string | null
           sort_order: number | null
           title: string
           updated_at: string | null
@@ -1680,6 +1766,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          period_id?: string | null
           sort_order?: number | null
           title: string
           updated_at?: string | null
@@ -1689,11 +1776,20 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          period_id?: string | null
           sort_order?: number | null
           title?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stories_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -1734,6 +1830,7 @@ export type Database = {
           garment_type: string | null
           id: string | null
           image_url: string | null
+          item_number: number | null
           notes: string | null
           owner_name: string | null
           period_id: string | null

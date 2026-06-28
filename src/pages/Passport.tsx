@@ -388,9 +388,11 @@ export default function Passport() {
           <p className="text-muted-foreground mt-1">
             {arrivedCount} av {participants.length} deltakere har ankommet
           </p>
-          <p className="text-muted-foreground text-sm">
-            {passWrittenCount} av {participants.length} pass skrevet
-          </p>
+          {checkoutEnabled && (
+            <p className="text-muted-foreground text-sm">
+              {passWrittenCount} av {participants.length} pass skrevet
+            </p>
+          )}
         </div>
 
         {/* Action buttons in a row */}
@@ -462,19 +464,21 @@ export default function Passport() {
         )}
       </form>
 
-      {/* Pass / Utsjekk overview button */}
-      <Button
-        variant={checkoutEnabled ? 'default' : 'outline'}
-        size="lg"
-        onClick={() => {
-          hapticImpact('medium');
-          navigate('/checkout');
-        }}
-        className="w-full gap-2 text-lg py-6"
-      >
-        <Sparkles className="w-5 h-5" />
-        Pass-oversikt ({passWrittenCount}/{participants.length})
-      </Button>
+      {/* Pass / Utsjekk overview button - only when checkout is enabled */}
+      {checkoutEnabled && (
+        <Button
+          variant="default"
+          size="lg"
+          onClick={() => {
+            hapticImpact('medium');
+            navigate('/checkout');
+          }}
+          className="w-full gap-2 text-lg py-6"
+        >
+          <Sparkles className="w-5 h-5" />
+          Pass-oversikt ({passWrittenCount}/{participants.length})
+        </Button>
+      )}
 
       {/* Virtualized Participant List */}
       <VirtualizedParticipantList
