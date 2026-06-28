@@ -556,15 +556,15 @@ export default function Leaders() {
             )}
             
             <Card
-              className="cursor-pointer overflow-hidden rounded-[24px] shadow-sm [content-visibility:auto] [contain-intrinsic-size:112px] h-[112px]"
+              className="cursor-pointer overflow-hidden rounded-[24px] shadow-sm [content-visibility:auto] [contain-intrinsic-size:128px] h-[128px]"
               onClick={() => setSelectedLeader(leader)}
             >
               <CardContent className="p-4 h-full flex items-center">
-                <div className="flex items-center gap-4 w-full min-h-0">
+                <div className="flex items-center gap-3 w-full min-h-0">
                   {/* Profile image with status ring */}
                   <Avatar
                     className={cn(
-                      "w-16 h-16 shrink-0 ring-offset-2 ring-offset-background",
+                      "w-[72px] h-[72px] shrink-0 ring-offset-2 ring-offset-background",
                       getAvatarBorderClass(leader)
                     )}
                   >
@@ -578,19 +578,24 @@ export default function Leaders() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5 overflow-hidden">
-                    <div className="flex flex-col mb-1">
+                    <div className="flex items-center gap-1.5 mb-0.5">
                       <h3 className="text-[17px] font-bold text-foreground leading-tight truncate">
                         {getFirstName(leader.name)}
                       </h3>
-                      {leader.ministerpost && (
-                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mt-0.5 truncate">
-                          {leader.ministerpost}
-                        </p>
+                      {leader.isNurse && (
+                        <span className="text-red-600 flex items-center shrink-0" title="Sykepleier">
+                          <Cross className="w-4 h-4" fill="currentColor" />
+                        </span>
                       )}
                     </div>
+                    {leader.ministerpost && (
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider truncate mb-1">
+                        {leader.ministerpost}
+                      </p>
+                    )}
 
                     {(leader.team || (leader.linkedCabins && leader.linkedCabins.length > 0) || leader.cabin) && (
-                      <div className="flex flex-wrap gap-1 mb-1.5 line-clamp-1 overflow-hidden">
+                      <div className="flex flex-wrap gap-1 mb-1 line-clamp-1 overflow-hidden">
                         {leader.team && (
                           <span
                             className={cn(
@@ -628,12 +633,7 @@ export default function Leaders() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-3 shrink-0">
-                    {leader.isNurse && (
-                      <span className="text-red-600 flex items-center" title="Sykepleier">
-                        <Cross className="w-[22px] h-[22px]" fill="currentColor" />
-                      </span>
-                    )}
+                  <div className="flex items-center shrink-0">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button
