@@ -100,10 +100,13 @@ const getAvatarBorderClass = (leader: LeaderWithContent) => {
 
 export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailDialogProps) {
   const [linkedCabins, setLinkedCabins] = useState<CabinInfo[]>([]);
+  const [fullContent, setFullContent] = useState<LeaderWithContent['content']>(null);
+  const [loadingContent, setLoadingContent] = useState(false);
 
   useEffect(() => {
     if (leader && open) {
       loadLinkedCabins();
+      loadFullContent();
     }
   }, [leader, open]);
 
@@ -120,6 +123,22 @@ export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailD
         .map(lc => lc.cabins)
         .filter((c): c is CabinInfo => c !== null);
       setLinkedCabins(cabins);
+    }
+  };
+
+  const loadFullContent = async () => {
+    if (!leader) return;
+    setLoadingContent(true);
+    const { data, error } = await supabase
+      .from('leader_content')
+      .select('current_activity, extra_activity, personal_notes, personal_message, obs_message, has_read, extra_1, extra_2, extra_3, extra_4, extra_5')
+      .eq('leader_id', leader.id)
+      .single();
+    setLoadingContent(false);
+    if (!error && data) {
+      setFullContent(data as LeaderWithContent['content']);
+    } else {
+      setFullContent(leader.content || null);
     }
   };
 
