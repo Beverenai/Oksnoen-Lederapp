@@ -235,9 +235,9 @@ export const ActivityManager = ({
             <DrawerHeader className="flex-shrink-0">
               <DrawerTitle>Legg til aktivitet</DrawerTitle>
             </DrawerHeader>
-            <ScrollArea className="flex-1 px-4 pb-6 pb-safe">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-6 pb-safe">
               <div className="py-1">{activityListContent}</div>
-            </ScrollArea>
+            </div>
           </DrawerContent>
         </Drawer>
       ) : (
@@ -249,10 +249,10 @@ export const ActivityManager = ({
               <ChevronDown className="h-4 w-4 ml-auto" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-64 p-0 overflow-hidden" align="start">
-            <ScrollArea className="h-[50vh]">
-              <div className="p-2">{activityListContent}</div>
-            </ScrollArea>
+          <PopoverContent className="w-64 p-0" align="start">
+            <div className="max-h-[50vh] overflow-y-auto overscroll-contain p-2">
+              {activityListContent}
+            </div>
           </PopoverContent>
         </Popover>
       )}
