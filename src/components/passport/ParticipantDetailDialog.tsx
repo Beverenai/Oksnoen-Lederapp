@@ -351,6 +351,15 @@ export const ParticipantDetailDialog = ({
               </div>
             </div>
 
+            {/* Gift card / kiosk-ID under the avatar */}
+            {participant.gift_card_number && (
+              <div className="flex justify-center -mt-1 mb-1">
+                <Badge variant="secondary" className="font-mono text-xs">
+                  Kiosk-ID: {participant.gift_card_number}
+                </Badge>
+              </div>
+            )}
+
             {/* Lightbox: full image, no crop */}
             <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
               <DialogContent className="max-w-[95vw] sm:max-w-2xl p-0 bg-black/95 border-none">
