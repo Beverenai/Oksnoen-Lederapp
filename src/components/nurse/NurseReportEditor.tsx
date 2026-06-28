@@ -271,11 +271,12 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
 
       setEntries((prev) => [...prev, data]);
       setInputValue('');
+      const justSavedFor = activeParticipant;
       setActiveParticipant(null);
       setLastSaved(new Date());
 
       // Sync health info
-      await syncParticipantHealth(activeParticipant.id);
+      await syncParticipantHealth(justSavedFor.id, rid);
       hapticSuccess();
       onDataChange?.();
     } catch (e) {
@@ -319,8 +320,9 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
   };
 
   // Sync health data for a participant
-  const syncParticipantHealth = async (participantId: string) => {
-    if (!reportId) return;
+  const syncParticipantHealth = async (participantId: string, overrideReportId?: string) => {
+    const rid = overrideReportId || reportId;
+    if (!rid) return;
 
     try {
       const participantEntries = entries
@@ -331,7 +333,7 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
       const { data: freshEntries } = await supabase
         .from('nurse_report_mentions')
         .select('*')
-        .eq('report_id', reportId)
+        .eq('report_id', rid)
         .eq('participant_id', participantId)
         .order('created_at', { ascending: true });
 
