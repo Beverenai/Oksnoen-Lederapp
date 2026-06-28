@@ -40,6 +40,7 @@ interface ParticipantWithCabin {
   pass_written_by: string | null;
   pass_text: string | null;
   pass_suggestion: string | null;
+  gift_card_number: string | null;
   cabin?: { id: string; name: string } | null;
 }
 
@@ -349,6 +350,15 @@ export const ParticipantDetailDialog = ({
                 />
               </div>
             </div>
+
+            {/* Gift card / kiosk-ID under the avatar */}
+            {participant.gift_card_number && (
+              <div className="flex justify-center -mt-1 mb-1">
+                <Badge variant="secondary" className="font-mono text-xs">
+                  Kiosk-ID: {participant.gift_card_number}
+                </Badge>
+              </div>
+            )}
 
             {/* Lightbox: full image, no crop */}
             <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
