@@ -278,7 +278,9 @@ async function processAllParticipants(supabase: any, LOVABLE_API_KEY: string) {
             console.log('Pass generation cancelled by user');
             return;
           }
-        } catch {}
+        } catch {
+          // Ignore invalid progress JSON and continue generation.
+        }
 
         const completedActivities = getParticipantActivities(p.id);
         const uniqueActivities = getUniqueActivities(completedActivities);
