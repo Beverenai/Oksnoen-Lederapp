@@ -210,18 +210,7 @@ export default function MyShifts() {
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32" />)}
         </div>
-      ) : !data?.schedule ? (
-        <Card>
-          <CardContent className="pt-6 text-center space-y-3">
-            <CalendarX className="w-12 h-12 text-muted-foreground mx-auto" />
-            <h2 className="font-heading font-semibold">Ingen vaktplan publisert ennå</h2>
-            <p className="text-sm text-muted-foreground">Vaktplanen vises her så snart admin publiserer perioden.</p>
-            <Button variant="outline" onClick={() => refetch()}>
-              <RefreshCw className="w-4 h-4 mr-2" /> Sjekk på nytt
-            </Button>
-          </CardContent>
-        </Card>
-      ) : grouped.every((d) => d.rows.length === 0) ? (
+      ) : !data?.schedule ? null : grouped.every((d) => d.rows.length === 0) ? (
         <Card>
           <CardContent className="pt-6 text-center space-y-2">
             <CalendarX className="w-12 h-12 text-muted-foreground mx-auto" />
