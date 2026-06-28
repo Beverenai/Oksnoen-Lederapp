@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Users, Phone, Cross, ArrowUpDown, Check, Search, X, Home, Coffee } from 'lucide-react';
+import { Users, Phone, Cross, ArrowUpDown, Check, Search, X, Home, Coffee, MessageSquare } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/leaders/LeaderDetailDialog';
 import { LeaderContentSheet } from '@/components/admin/LeaderContentSheet';
 import { useAuth } from '@/contexts/AuthContext';
@@ -644,6 +644,18 @@ export default function Leaders() {
                       }}
                     >
                       <Phone className="w-5 h-5" />
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="icon"
+                      className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-11 w-11 shadow-md active:scale-90 transition-transform"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = `sms:${leader.phone}`;
+                      }}
+                      aria-label="Send SMS"
+                    >
+                      <MessageSquare className="w-5 h-5" />
                     </Button>
                   </div>
                 </div>
