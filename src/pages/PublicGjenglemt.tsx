@@ -11,6 +11,34 @@ import { Button } from '@/components/ui/button';
 
 const PUBLIC_PASSWORD = '2026';
 const SS_KEY = 'gjenglemt-public-auth';
+const CONTACT_EMAIL = 'bengt@oksnoen.no';
+
+function buildClaimMailto(item: { item_number: number | null; garment_type: string | null; color: string | null; owner_name: string | null; bag_label: string | null; ai_description: string | null }, periodName: string) {
+  const garment = item.garment_type ? garmentLabel(item.garment_type) : 'gjenglemt artikkel';
+  const color = item.color ? colorMeta(item.color).label : null;
+  const nr = item.item_number ? `#${item.item_number}` : '';
+  const titleParts = [nr, [color, garment].filter(Boolean).join(' ')].filter(Boolean).join(' – ');
+  const subject = `Gjenglemt ${nr ? nr + ' ' : ''}– ${periodName}`.trim();
+  const lines = [
+    'Hei,',
+    '',
+    `Jeg har en deltager som har glemt igjen "${titleParts || garment}" på Øksnøen (${periodName}).`,
+    nr ? `Artikkelnummer: ${nr}` : null,
+    item.owner_name ? `Navn på lapp/pose: ${item.owner_name}` : null,
+    item.bag_label ? `Pose: ${item.bag_label}` : null,
+    item.ai_description ? `Beskrivelse: ${item.ai_description}` : null,
+    '',
+    'Deltagers navn: ',
+    'Min kontaktinfo (telefon): ',
+    '',
+    'Jeg ønsker å:',
+    '  ☐ Hente på Øksnøen',
+    '  ☐ Få det tilsendt (jeg dekker porto)',
+    '',
+    'Vennlig hilsen,',
+  ].filter(Boolean).join('\n');
+  return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines)}`;
+}
 
 export default function PublicGjenglemt() {
   const { slug } = useParams<{ slug: string }>();
@@ -139,8 +167,12 @@ export default function PublicGjenglemt() {
             </div>
           )}
           <p className="text-sm text-muted-foreground mt-4 max-w-2xl">
-            Hvis noe er ditt, ta kontakt med{' '}
-            <a className="text-primary underline" href="mailto:leir@oksnoen.no">leir@oksnoen.no</a>.
+            Ser du noe som er ditt? Du kan komme hit til Øksnøen og hente det.
+            Hvis du ønsker å få det tilsendt, går det på egen regning.
+            <br />
+            Send oss en e-post på{' '}
+            <a className="text-primary underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+            {' '}— oppgi <strong>artikkelnummer</strong> og <strong>deltagers navn</strong>.
           </p>
         </div>
       </header>
@@ -181,6 +213,13 @@ export default function PublicGjenglemt() {
                   >
                     <div className="aspect-square bg-muted">
                       <SignedImage imageUrl={item.image_url} alt={item.garment_type ? garmentLabel(item.garment_type) : 'Gjenglemt'} className="w-full h-full object-cover" />
+                      {item.item_number != null && (
+                        <div className="absolute top-1.5 left-1.5">
+                          <span className="inline-flex items-center rounded-md bg-foreground/85 text-background px-1.5 py-0.5 text-[10px] font-semibold tabular-nums shadow-sm">
+                            #{item.item_number}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="p-2.5 space-y-1">
                       <div className="flex items-center gap-1.5 min-w-0">
