@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, Copy, ExternalLink, ChevronDown, Search, Loader2 } from 'lucide-react';
-import { useActivePeriod, useGjenglemtItems, useGjenglemtRealtime } from '@/hooks/useGjenglemt';
+import { useActivePeriod, useGjenglemtItems, useGjenglemtRealtime, useGjenglemtPeriods } from '@/hooks/useGjenglemt';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GjenglemtFilters } from '@/components/admin/gjenglemt/GjenglemtFilters';
 import { ItemGrid } from '@/components/admin/gjenglemt/ItemGrid';
 import { AddItemSheet } from '@/components/admin/gjenglemt/AddItemSheet';
@@ -26,6 +27,8 @@ export default function Gjenglemt() {
   const { isAdmin, leader } = useAuth();
   const { showInfo } = useStatusPopup();
   const { data: currentPeriod = null, isLoading: pLoading } = useActivePeriod();
+  const { data: allPeriods = [] } = useGjenglemtPeriods();
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
 
   const [colorFilter, setColorFilter] = useState<string | null>(null);
   const [garmentFilter, setGarmentFilter] = useState<string | null>(null);
@@ -33,7 +36,11 @@ export default function Gjenglemt() {
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
 
-  const periodId = currentPeriod?.id ?? null;
+  const activePeriodId = currentPeriod?.id ?? null;
+  const periodId = (isAdmin && selectedPeriodId) ? selectedPeriodId : activePeriodId;
+  const viewingPeriod = isAdmin
+    ? (allPeriods.find(p => p.id === periodId) ?? currentPeriod)
+    : currentPeriod;
   useGjenglemtRealtime(periodId);
   const { data: items = [], isLoading: iLoading } = useGjenglemtItems(periodId);
 
@@ -52,8 +59,8 @@ export default function Gjenglemt() {
   }
 
   const copyPublicLink = () => {
-    if (!currentPeriod) return;
-    const url = `${getPublicBase()}/gjenglemt/${currentPeriod.slug}`;
+    if (!viewingPeriod) return;
+    const url = `${getPublicBase()}/gjenglemt/${viewingPeriod.slug}`;
     navigator.clipboard.writeText(url).then(() => showInfo('Lenke kopiert'));
   };
 
@@ -70,7 +77,7 @@ export default function Gjenglemt() {
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <Button variant="default" size="sm" onClick={() => setAddOpen(true)} disabled={!currentPeriod}>
+          <Button variant="default" size="sm" onClick={() => setAddOpen(true)} disabled={!viewingPeriod}>
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline sm:ml-2">Nytt funn</span>
           </Button>
@@ -79,23 +86,38 @@ export default function Gjenglemt() {
 
       {/* Active period badge + public link */}
       <div className="flex flex-wrap items-center gap-2 shrink-0">
-        <div className="px-3 py-1.5 rounded-md border bg-muted/40 text-sm font-medium">
-          {pLoading ? (
-            <span className="inline-flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Laster…</span>
-          ) : currentPeriod ? (
-            `Aktiv: ${currentPeriod.name}`
-          ) : (
-            'Ingen aktiv periode'
-          )}
-        </div>
-        {currentPeriod?.is_public && (
+        {isAdmin && allPeriods.length > 0 ? (
+          <Select value={periodId ?? ''} onValueChange={(v) => setSelectedPeriodId(v)}>
+            <SelectTrigger className="w-auto min-w-[180px] h-9 text-sm">
+              <SelectValue placeholder="Velg periode" />
+            </SelectTrigger>
+            <SelectContent>
+              {allPeriods.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}{p.is_active ? ' (aktiv)' : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="px-3 py-1.5 rounded-md border bg-muted/40 text-sm font-medium">
+            {pLoading ? (
+              <span className="inline-flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Laster…</span>
+            ) : currentPeriod ? (
+              `Aktiv: ${currentPeriod.name}`
+            ) : (
+              'Ingen aktiv periode'
+            )}
+          </div>
+        )}
+        {viewingPeriod?.is_public && (
           <>
             <Button variant="outline" size="sm" onClick={copyPublicLink}>
               <Copy className="h-3.5 w-3.5 sm:mr-1.5" />
               <span className="hidden sm:inline">Kopier lenke</span>
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <a href={`${getPublicBase()}/gjenglemt/${currentPeriod.slug}`} target="_blank" rel="noreferrer">
+              <a href={`${getPublicBase()}/gjenglemt/${viewingPeriod.slug}`} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-3.5 w-3.5 sm:mr-1.5" />
                 <span className="hidden sm:inline">Åpne offentlig side</span>
               </a>
@@ -151,9 +173,9 @@ export default function Gjenglemt() {
       </details>
 
       <div className="flex-1 min-h-0">
-        {pLoading || (currentPeriod && iLoading) ? (
+        {pLoading || (periodId && iLoading) ? (
           <div className="text-center text-muted-foreground py-10 text-sm">Laster...</div>
-        ) : currentPeriod ? (
+        ) : periodId ? (
           <ItemGrid items={filtered} canManageAll={isAdmin} />
         ) : (
           <div className="text-center text-muted-foreground py-10 text-sm">
@@ -164,7 +186,7 @@ export default function Gjenglemt() {
         )}
       </div>
 
-      <AddItemSheet open={addOpen} onOpenChange={setAddOpen} period={currentPeriod} />
+      <AddItemSheet open={addOpen} onOpenChange={setAddOpen} period={viewingPeriod} />
     </div>
   );
 }
