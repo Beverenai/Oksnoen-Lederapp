@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
