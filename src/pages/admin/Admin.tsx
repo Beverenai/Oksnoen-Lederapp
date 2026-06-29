@@ -19,6 +19,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
 import { LeaderListView } from '@/components/admin/LeaderListView';
+import { SessionActivitiesSheet } from '@/components/admin/SessionActivitiesSheet';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
@@ -54,10 +55,6 @@ export default function Admin() {
   const [localHomeConfig, setLocalHomeConfig] = useState<HomeScreenConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Session activities
-  const [sessionActivitiesText, setSessionActivitiesText] = useState('');
-  const [isSavingActivities, setIsSavingActivities] = useState(false);
-
   // UI state
   const [leaderViewMode, setLeaderViewMode] = useState<'grid' | 'list'>('grid');
   const [isActivitiesSheetOpen, setIsActivitiesSheetOpen] = useState(false);
@@ -66,7 +63,6 @@ export default function Admin() {
   useEffect(() => {
     if (!isAdmin) return;
     loadData();
-    loadSessionActivitiesText();
   }, [isAdmin]);
 
   // Realtime: refresh leader list when n8n sync (or any other source) writes to leaders / leader_cabins.
@@ -90,25 +86,6 @@ export default function Admin() {
   }, [isAdmin]);
 
 
-  const loadSessionActivitiesText = async () => {
-    const { data } = await supabase.from('app_config').select('value').eq('key', 'session_activities_text').maybeSingle();
-    if (data?.value) setSessionActivitiesText(data.value);
-  };
-
-  const saveSessionActivitiesText = async () => {
-    setIsSavingActivities(true);
-    try {
-      const { error } = await supabase.from('app_config').upsert({
-        key: 'session_activities_text', value: sessionActivitiesText, updated_at: new Date().toISOString()
-      }, { onConflict: 'key' });
-      if (error) throw error;
-      showSuccess('Aktiviteter lagret!');
-    } catch {
-      showError('Kunne ikke lagre aktiviteter');
-    } finally {
-      setIsSavingActivities(false);
-    }
-  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -269,26 +246,7 @@ export default function Admin() {
       )}
 
       {/* Activities Sheet */}
-      <Sheet open={isActivitiesSheetOpen} onOpenChange={setIsActivitiesSheetOpen}>
-        <SheetContent className="sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2"><Calendar className="w-5 h-5" />Aktiviteter</SheetTitle>
-            <SheetDescription>Skriv tekst som vises på hjemskjermen under "Aktiviteter denne økten"</SheetDescription>
-          </SheetHeader>
-          <div className="space-y-4 mt-4">
-            <Textarea
-              placeholder={"Skriv aktiviteter for denne økten her...\n\nEksempel:\n• 09:00 - Frokost\n• 10:00 - Morgensamling\n• 11:00 - Aktiviteter"}
-              value={sessionActivitiesText}
-              onChange={(e) => setSessionActivitiesText(e.target.value)}
-              className="min-h-[250px]"
-            />
-            <Button onClick={() => { saveSessionActivitiesText(); setIsActivitiesSheetOpen(false); }} disabled={isSavingActivities} className="w-full">
-              {isSavingActivities ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-              Lagre aktiviteter
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <SessionActivitiesSheet open={isActivitiesSheetOpen} onOpenChange={setIsActivitiesSheetOpen} />
     </div>
   );
 }

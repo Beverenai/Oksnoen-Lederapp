@@ -1,12 +1,12 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Save, Loader2, Download, User, FileText, Search, Trash2, Clock } from 'lucide-react';
+import { Loader2, Download, User, FileText, Search, Trash2, Clock, Plus } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +17,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from '@/components/ui/responsive-dialog';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { hapticSuccess } from '@/lib/capacitorHaptics';
@@ -31,11 +37,15 @@ interface Participant {
   image_url?: string | null;
 }
 
-interface NoteEntry {
+type EntrySource = 'mention' | 'health_note' | 'health_event';
+
+interface ReportEntry {
   id: string;
   participant_id: string;
-  mention_text: string;
+  text: string;
   created_at: string;
+  source: EntrySource;
+  source_label: string;
 }
 
 interface NurseReportEditorProps {
@@ -43,52 +53,46 @@ interface NurseReportEditorProps {
   onDataChange?: () => void;
 }
 
+const sourceLabels: Record<EntrySource, string> = {
+  mention: 'Nurse',
+  health_note: 'Nurse-notat',
+  health_event: 'Hendelse',
+};
+
 export function NurseReportEditor({ participants, onDataChange }: NurseReportEditorProps) {
-  const { showSuccess, showError, showInfo } = useStatusPopup();
+  const { showSuccess, showError } = useStatusPopup();
   const { leader } = useAuth();
   const [reportId, setReportId] = useState<string | null>(null);
   const [activePeriodId, setActivePeriodId] = useState<string | null>(null);
-  const [entries, setEntries] = useState<NoteEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
-  // Free-writing input state
-  const [inputValue, setInputValue] = useState('');
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
-  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
-  const [activeParticipant, setActiveParticipant] = useState<Participant | null>(null);
+  // Aggregated data
+  const [mentions, setMentions] = useState<{ id: string; participant_id: string; mention_text: string; created_at: string }[]>([]);
+  const [healthNotes, setHealthNotes] = useState<{ id: string; participant_id: string; content: string; created_at: string }[]>([]);
+  const [healthEvents, setHealthEvents] = useState<{ id: string; participant_id: string; event_type: string; description: string; created_at: string }[]>([]);
 
-  // Edit state
-  const [editingEntry, setEditingEntry] = useState<string | null>(null);
-  const [editText, setEditText] = useState('');
+  // Add-note dialog
+  const [addNoteFor, setAddNoteFor] = useState<Participant | null>(null);
+  const [newNoteText, setNewNoteText] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
 
-  // Delete confirmation
-  const [deleteTarget, setDeleteTarget] = useState<{ type: 'entry' | 'section'; id: string; participantId: string; name: string } | null>(null);
-
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const mentionDropdownRef = useRef<HTMLDivElement>(null);
+  // Delete confirmation (mention notes only — others are managed elsewhere)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; participantName: string } | null>(null);
 
   const getParticipant = useCallback((id: string) => participants.find((p) => p.id === id), [participants]);
 
-  // Load data on mount and whenever the active period changes
   useEffect(() => {
-    loadData();
-    // Subscribe to active-period changes so a switch mid-session reloads correctly
+    loadAll();
     const channel = supabase
       .channel('nurse-report-period-watch')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'periods' }, () => {
-        loadData();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'periods' }, () => loadAll())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Always resolve the report for the currently active period at write-time.
-  // Prevents stale reportId (e.g. if active period switched while page was open).
   const resolveActiveReportId = async (): Promise<string | null> => {
     try {
       const { data: periodRow } = await supabase
@@ -125,460 +129,186 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
     }
   };
 
-  const loadData = async () => {
+  const loadAll = async () => {
+    setIsLoading(true);
     try {
-      // Get active period — report is scoped per period
-      const { data: periodRow } = await supabase
-        .from('periods')
-        .select('id')
-        .eq('is_active', true)
-        .maybeSingle();
-      const periodId = periodRow?.id ?? null;
-      setActivePeriodId(periodId);
+      const rid = await resolveActiveReportId();
 
-      // Get or create report for the active period
-      let query = supabase
-        .from('nurse_reports')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1);
-      if (periodId) query = query.eq('period_id', periodId);
-      const { data: reports, error } = await query;
-      if (error) throw error;
+      const [m, hn, he] = await Promise.all([
+        rid
+          ? supabase
+              .from('nurse_report_mentions')
+              .select('id, participant_id, mention_text, created_at')
+              .eq('report_id', rid)
+              .order('created_at', { ascending: true })
+          : Promise.resolve({ data: [], error: null } as any),
+        supabase
+          .from('participant_health_notes')
+          .select('id, participant_id, content, created_at')
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('participant_health_events')
+          .select('id, participant_id, event_type, description, created_at')
+          .order('created_at', { ascending: true }),
+      ]);
 
-      let rid: string;
-      if (reports && reports.length > 0) {
-        rid = reports[0].id;
-      } else {
-        const { data, error: createErr } = await supabase
-          .from('nurse_reports')
-          .insert({ content: '', created_by: leader?.id, period_id: periodId })
-          .select()
-          .single();
-        if (createErr) throw createErr;
-        rid = data.id;
-      }
-      setReportId(rid);
-
-      // Load entries from nurse_report_mentions
-      const { data: mentions } = await supabase
-        .from('nurse_report_mentions')
-        .select('*')
-        .eq('report_id', rid)
-        .order('created_at', { ascending: true });
-
-      setEntries(mentions || []);
+      setMentions((m as any).data || []);
+      setHealthNotes((hn as any).data || []);
+      setHealthEvents((he as any).data || []);
+      setLastRefreshed(new Date());
     } catch (e) {
-      console.error('Error loading report:', e);
+      console.error('Error loading nurse data:', e);
       showError('Kunne ikke laste rapport');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Group entries by participant, maintaining order of first appearance
+  // Combine all sources into one entry list
+  const allEntries: ReportEntry[] = useMemo(() => {
+    const out: ReportEntry[] = [];
+    mentions.forEach((m) => {
+      // Skip auto-generated "[Nurse Rapport]" duplicates that already exist as mentions
+      out.push({
+        id: m.id,
+        participant_id: m.participant_id,
+        text: m.mention_text,
+        created_at: m.created_at,
+        source: 'mention',
+        source_label: sourceLabels.mention,
+      });
+    });
+    healthNotes.forEach((n) => {
+      // Skip the auto-synced "[Nurse Rapport] ..." note to avoid double-listing mentions
+      if (n.content?.startsWith('[Nurse Rapport]')) return;
+      out.push({
+        id: n.id,
+        participant_id: n.participant_id,
+        text: n.content,
+        created_at: n.created_at,
+        source: 'health_note',
+        source_label: sourceLabels.health_note,
+      });
+    });
+    healthEvents.forEach((e) => {
+      out.push({
+        id: e.id,
+        participant_id: e.participant_id,
+        text: `${e.event_type}: ${e.description}`,
+        created_at: e.created_at,
+        source: 'health_event',
+        source_label: sourceLabels.health_event,
+      });
+    });
+    return out;
+  }, [mentions, healthNotes, healthEvents]);
+
+  // Group by participant, sorted by participant name (alphabetical)
   const groupedEntries = useMemo(() => {
-    const map = new Map<string, NoteEntry[]>();
-    const order: string[] = [];
-    entries.forEach((e) => {
-      if (!map.has(e.participant_id)) {
-        map.set(e.participant_id, []);
-        order.push(e.participant_id);
-      }
+    const map = new Map<string, ReportEntry[]>();
+    allEntries.forEach((e) => {
+      if (!map.has(e.participant_id)) map.set(e.participant_id, []);
       map.get(e.participant_id)!.push(e);
     });
+    const order = Array.from(map.keys()).sort((a, b) => {
+      const pa = getParticipant(a)?.name || '';
+      const pb = getParticipant(b)?.name || '';
+      return pa.localeCompare(pb, 'nb');
+    });
+    order.forEach((pid) => {
+      map.get(pid)!.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+    });
     return { map, order };
-  }, [entries]);
+  }, [allEntries, getParticipant]);
 
-  // Filtered participants for mention dropdown
-  const filteredMentionParticipants = useMemo(() => {
-    if (mentionQuery === null) return [];
-    return participants
-      .filter((p) => p.name.toLowerCase().includes(mentionQuery.toLowerCase()))
-      .slice(0, 8);
-  }, [mentionQuery, participants]);
+  // Search across participants who have any entry
+  const filteredOrder = useMemo(() => {
+    if (!searchQuery.trim()) return groupedEntries.order;
+    const q = searchQuery.toLowerCase();
+    return groupedEntries.order.filter((pid) => {
+      const p = getParticipant(pid);
+      return p?.name.toLowerCase().includes(q);
+    });
+  }, [groupedEntries, searchQuery, getParticipant]);
 
-  // Handle input changes and detect @mentions
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setInputValue(value);
+  // Participants available for "add note" dropdown (all)
+  const sortedParticipants = useMemo(
+    () => [...participants].sort((a, b) => a.name.localeCompare(b.name, 'nb')),
+    [participants]
+  );
+  const [addPickerQuery, setAddPickerQuery] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerResults = useMemo(() => {
+    if (!addPickerQuery.trim()) return sortedParticipants.slice(0, 20);
+    const q = addPickerQuery.toLowerCase();
+    return sortedParticipants.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 20);
+  }, [sortedParticipants, addPickerQuery]);
 
-    const cursorPos = e.target.selectionStart || 0;
-    const textBeforeCursor = value.slice(0, cursorPos);
-    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-
-    if (lastAtIndex >= 0) {
-      const charBefore = lastAtIndex > 0 ? textBeforeCursor[lastAtIndex - 1] : ' ';
-      if (charBefore === ' ' || charBefore === '\n' || lastAtIndex === 0) {
-        const query = textBeforeCursor.slice(lastAtIndex + 1);
-        if (!query.includes('\n') && query.length < 40) {
-          setMentionQuery(query);
-          setSelectedMentionIndex(0);
-
-          // Position dropdown near the textarea
-          if (inputRef.current) {
-            const rect = inputRef.current.getBoundingClientRect();
-            setMentionPosition({ top: rect.top, left: rect.left });
-          }
-          return;
-        }
-      }
-    }
-
-    setMentionQuery(null);
-  };
-
-  // Select a participant from the mention dropdown
-  const selectMentionParticipant = (participant: Participant) => {
-    // Remove the @query from input, keep text before @
-    const cursorPos = inputRef.current?.selectionStart || inputValue.length;
-    const textBeforeCursor = inputValue.slice(0, cursorPos);
-    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-
-    const textBefore = lastAtIndex > 0 ? inputValue.slice(0, lastAtIndex).trimEnd() : '';
-    const textAfter = inputValue.slice(cursorPos).trimStart();
-
-    // Combine remaining text as the note
-    const noteText = [textBefore, textAfter].filter(Boolean).join(' ').trim();
-
-    setActiveParticipant(participant);
-    setInputValue(noteText);
-    setMentionQuery(null);
-
-    // Focus back on input
-    setTimeout(() => inputRef.current?.focus(), 50);
-  };
-
-  // Submit the current input as an entry for the active participant
-  const submitEntry = async () => {
-    if (!activeParticipant || !inputValue.trim()) return;
-
-    setIsSaving(true);
+  const submitNewNote = async () => {
+    if (!addNoteFor || !newNoteText.trim()) return;
+    setSavingNote(true);
     try {
       const rid = await resolveActiveReportId();
-      if (!rid) throw new Error('Ingen aktiv rapport for gjeldende periode');
+      if (!rid) throw new Error('Ingen aktiv rapport');
       const { data, error } = await supabase
         .from('nurse_report_mentions')
-        .insert({
-          report_id: rid,
-          participant_id: activeParticipant.id,
-          mention_text: inputValue.trim(),
-        })
-        .select()
+        .insert({ report_id: rid, participant_id: addNoteFor.id, mention_text: newNoteText.trim() })
+        .select('id, participant_id, mention_text, created_at')
         .single();
-
       if (error) throw error;
-
-      setEntries((prev) => [...prev, data]);
-      setInputValue('');
-      const justSavedFor = activeParticipant;
-      setActiveParticipant(null);
-      setLastSaved(new Date());
-
-      // Sync health info
-      await syncParticipantHealth(justSavedFor.id, rid);
+      setMentions((prev) => [...prev, data]);
+      setNewNoteText('');
+      setAddNoteFor(null);
       hapticSuccess();
+      showSuccess('Notat lagt til');
       onDataChange?.();
     } catch (e) {
-      console.error('Error saving entry:', e);
+      console.error('Error saving note:', e);
       showError('Kunne ikke lagre notat');
     } finally {
-      setIsSaving(false);
+      setSavingNote(false);
     }
   };
 
-  // Handle keyboard in input
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Mention dropdown navigation
-    if (mentionQuery !== null && filteredMentionParticipants.length > 0) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedMentionIndex((prev) => Math.min(prev + 1, filteredMentionParticipants.length - 1));
-        return;
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedMentionIndex((prev) => Math.max(prev - 1, 0));
-        return;
-      }
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        selectMentionParticipant(filteredMentionParticipants[selectedMentionIndex]);
-        return;
-      }
-      if (e.key === 'Escape') {
-        setMentionQuery(null);
-        return;
-      }
-    }
-
-    // Submit on Enter (without shift) when there's an active participant
-    if (e.key === 'Enter' && !e.shiftKey && activeParticipant) {
-      e.preventDefault();
-      submitEntry();
-    }
-  };
-
-  // Sync health data for a participant
-  const syncParticipantHealth = async (participantId: string, overrideReportId?: string) => {
-    const rid = overrideReportId || reportId;
-    if (!rid) return;
-
+  const deleteMention = async (id: string) => {
     try {
-      const participantEntries = entries
-        .filter((e) => e.participant_id === participantId)
-        .concat([]); // current state might not include the just-inserted one, but we reload below
-
-      // Reload fresh entries for this participant
-      const { data: freshEntries } = await supabase
-        .from('nurse_report_mentions')
-        .select('*')
-        .eq('report_id', rid)
-        .eq('participant_id', participantId)
-        .order('created_at', { ascending: true });
-
-      const allText = (freshEntries || []).map((e) => e.mention_text).join('\n');
-      if (!allText.trim()) return;
-
-      // Update health notes
-      const { data: existingNotes } = await supabase
-        .from('participant_health_notes')
-        .select('id')
-        .eq('participant_id', participantId)
-        .eq('created_by', leader?.id || '')
-        .like('content', '[Nurse Rapport]%')
-        .limit(1);
-
-      const noteContent = `[Nurse Rapport] ${allText}`;
-      if (existingNotes && existingNotes.length > 0) {
-        await supabase
-          .from('participant_health_notes')
-          .update({ content: noteContent, updated_at: new Date().toISOString() })
-          .eq('id', existingNotes[0].id);
-      } else {
-        await supabase
-          .from('participant_health_notes')
-          .insert({ participant_id: participantId, content: noteContent, created_by: leader?.id });
-      }
-
-      // Update health info (flag as having health info)
-      const { data: existingInfo } = await supabase
-        .from('participant_health_info')
-        .select('id, info')
-        .eq('participant_id', participantId)
-        .limit(1);
-
-      if (!existingInfo || existingInfo.length === 0) {
-        await supabase.from('participant_health_info').insert({ participant_id: participantId, info: allText });
-      } else {
-        // Replace existing content entirely with latest nurse text
-        const newInfo = allText;
-        await supabase
-          .from('participant_health_info')
-          .update({ info: newInfo, updated_at: new Date().toISOString() })
-          .eq('id', existingInfo[0].id);
-      }
-    } catch (e) {
-      console.error('Error syncing health data:', e);
-    }
-  };
-
-  // Update an existing entry
-  const updateEntry = async (entryId: string) => {
-    if (!editText.trim()) return;
-
-    try {
-      const { error } = await supabase
-        .from('nurse_report_mentions')
-        .update({ mention_text: editText.trim() })
-        .eq('id', entryId);
-
+      const { error } = await supabase.from('nurse_report_mentions').delete().eq('id', id);
       if (error) throw error;
-
-      setEntries((prev) =>
-        prev.map((e) => (e.id === entryId ? { ...e, mention_text: editText.trim() } : e))
-      );
-      setEditingEntry(null);
-      setEditText('');
-      setLastSaved(new Date());
-
-      const entry = entries.find((e) => e.id === entryId);
-      if (entry) await syncParticipantHealth(entry.participant_id);
-    } catch (e) {
-      console.error('Error updating entry:', e);
-      showError('Kunne ikke oppdatere');
-    }
-  };
-
-  // Delete an entry
-  const deleteEntry = async (entryId: string, participantId: string) => {
-    try {
-      const { error } = await supabase.from('nurse_report_mentions').delete().eq('id', entryId);
-      if (error) throw error;
-
-      setEntries((prev) => prev.filter((e) => e.id !== entryId));
-      setLastSaved(new Date());
-
-      // Check if this was the last entry for this participant
-      const remaining = entries.filter((e) => e.participant_id === participantId && e.id !== entryId);
-      if (remaining.length === 0) {
-        // Clean up health info
-        await supabase
-          .from('participant_health_notes')
-          .delete()
-          .eq('participant_id', participantId)
-          .eq('created_by', leader?.id || '')
-          .like('content', '[Nurse Rapport]%');
-
-        // Remove nurse portion from health info
-        const { data: healthInfo } = await supabase
-          .from('participant_health_info')
-          .select('id, info')
-          .eq('participant_id', participantId)
-          .limit(1);
-
-        if (healthInfo && healthInfo.length > 0) {
-          const current = healthInfo[0].info || '';
-          const cleaned = current.replace(/\[Nurse\][^[]*/s, '').trim();
-          if (cleaned) {
-            await supabase.from('participant_health_info').update({ info: cleaned, updated_at: new Date().toISOString() }).eq('id', healthInfo[0].id);
-          } else {
-            await supabase.from('participant_health_info').delete().eq('id', healthInfo[0].id);
-          }
-        }
-      } else {
-        await syncParticipantHealth(participantId);
-      }
-
+      setMentions((prev) => prev.filter((m) => m.id !== id));
       showSuccess('Notat slettet');
       onDataChange?.();
     } catch (e) {
-      console.error('Error deleting entry:', e);
+      console.error(e);
       showError('Kunne ikke slette');
     }
   };
 
-  // Delete all entries for a participant (section delete)
-  const deleteSection = async (participantId: string) => {
-    try {
-      const ids = entries.filter((e) => e.participant_id === participantId).map((e) => e.id);
-      if (ids.length === 0) return;
-
-      const { error } = await supabase.from('nurse_report_mentions').delete().in('id', ids);
-      if (error) throw error;
-
-      setEntries((prev) => prev.filter((e) => e.participant_id !== participantId));
-      setLastSaved(new Date());
-
-      // Clean up health data
-      await supabase
-        .from('participant_health_notes')
-        .delete()
-        .eq('participant_id', participantId)
-        .eq('created_by', leader?.id || '')
-        .like('content', '[Nurse Rapport]%');
-
-      // Remove nurse portion from health info
-      const { data: healthInfo } = await supabase
-        .from('participant_health_info')
-        .select('id, info')
-        .eq('participant_id', participantId)
-        .limit(1);
-
-      if (healthInfo && healthInfo.length > 0) {
-        const current = healthInfo[0].info || '';
-        const cleaned = current.replace(/\[Nurse\][^[]*/s, '').trim();
-        if (cleaned) {
-          await supabase.from('participant_health_info').update({ info: cleaned, updated_at: new Date().toISOString() }).eq('id', healthInfo[0].id);
-        } else {
-          await supabase.from('participant_health_info').delete().eq('id', healthInfo[0].id);
-        }
-      }
-
-      showSuccess('Deltaker-seksjon slettet');
-      onDataChange?.();
-    } catch (e) {
-      console.error('Error deleting section:', e);
-      showError('Kunne ikke slette seksjon');
-    }
-  };
-
-  // Handle confirm delete
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    if (deleteTarget.type === 'section') {
-      await deleteSection(deleteTarget.participantId);
-    } else {
-      await deleteEntry(deleteTarget.id, deleteTarget.participantId);
-    }
-    setDeleteTarget(null);
-  };
-
-  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
-
-  // Participants that have notes and match search
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    return groupedEntries.order
-      .map((pid) => {
-        const p = getParticipant(pid);
-        if (!p) return null;
-        if (!p.name.toLowerCase().includes(searchQuery.toLowerCase())) return null;
-        const count = groupedEntries.map.get(pid)?.length || 0;
-        return { participant: p, noteCount: count };
-      })
-      .filter(Boolean) as { participant: Participant; noteCount: number }[];
-  }, [searchQuery, groupedEntries, getParticipant]);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setSearchDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const scrollToParticipant = (pid: string) => {
-    setSearchDropdownOpen(false);
-    setSearchQuery('');
-    const el = document.getElementById(`nurse-section-${pid}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.style.boxShadow = '0 0 0 3px hsl(var(--primary))';
-      setTimeout(() => { el.style.boxShadow = ''; }, 2000);
-    }
-  };
-
-  // PDF export
   const exportPdf = () => {
     const dateStr = format(new Date(), 'd. MMMM yyyy', { locale: nb });
-
     let sectionsHtml = '';
     for (const pid of groupedEntries.order) {
-      const participant = getParticipant(pid);
-      if (!participant) continue;
+      const p = getParticipant(pid);
+      if (!p) continue;
       const pEntries = groupedEntries.map.get(pid) || [];
-      const age = participant.birth_date ? differenceInYears(new Date(), new Date(participant.birth_date)) : null;
+      const age = p.birth_date ? differenceInYears(new Date(), new Date(p.birth_date)) : null;
 
       sectionsHtml += `
         <div class="participant-section">
           <div class="header">
-            ${participant.image_url ? `<img src="${participant.image_url}" />` : '<span class="avatar">👤</span>'}
+            ${p.image_url ? `<img src="${p.image_url}" />` : '<span class="avatar">👤</span>'}
             <div>
-              <strong>${participant.name}</strong>
-              <div class="meta">${participant.cabin?.name || 'Ingen hytte'}${age ? ` · ${age} år` : ''}</div>
+              <strong>${p.name}</strong>
+              <div class="meta">${p.cabin?.name || 'Ingen hytte'}${age ? ` · ${age} år` : ''}</div>
             </div>
           </div>
           <div class="content">
             ${pEntries
-              .map(
-                (e) =>
-                  `<p><span class="ts">${format(new Date(e.created_at), 'd. MMM HH:mm', { locale: nb })}</span> ${e.mention_text}</p>`
-              )
+              .map((e) => {
+                const ts = e.created_at
+                  ? format(new Date(e.created_at), 'd. MMM HH:mm', { locale: nb })
+                  : '—';
+                return `<p><span class="ts">${ts}</span> <span class="tag">${e.source_label}</span> ${escapeHtml(e.text)}</p>`;
+              })
               .join('')}
           </div>
         </div>`;
@@ -597,80 +327,27 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
   .header strong { font-size: 15px; }
   .header .meta { font-size: 12px; color: #64748b; }
   .content { padding: 10px 14px; font-size: 14px; line-height: 1.6; }
-  .content p { margin: 4px 0; }
-  .ts { color: #94a3b8; font-size: 12px; }
+  .content p { margin: 6px 0; }
+  .ts { color: #94a3b8; font-size: 12px; margin-right: 4px; }
+  .tag { background: #e2e8f0; color: #475569; font-size: 11px; padding: 1px 6px; border-radius: 4px; margin-right: 6px; }
   @media print { body { padding: 12px; } .participant-section { break-inside: avoid; } }
 </style></head><body>
 <h1>Nurse Rapport</h1>
 <p class="date">Eksportert: ${dateStr}</p>
-${sectionsHtml}
+${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
 </body></html>`;
 
     const w = window.open('', '_blank');
     if (w) { w.document.write(html); w.document.close(); }
   };
 
-  // Handle paste with @mentions
-  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const text = e.clipboardData.getData('text/plain');
-    if (!text.includes('@')) return; // Let default paste handle it
-
-    e.preventDefault();
-    const mentionPattern = /@([^\n@]+)/g;
-    let match;
-    const foundPairs: { participant: Participant; text: string }[] = [];
-
-    while ((match = mentionPattern.exec(text)) !== null) {
-      const mentionName = match[1].trim();
-      const found = participants.find(
-        (p) =>
-          p.name.toLowerCase() === mentionName.toLowerCase() ||
-          p.name.toLowerCase().startsWith(mentionName.toLowerCase())
-      );
-      if (found) {
-        // Text after the mention until next @ or end
-        const afterMatch = text.slice(match.index + match[0].length);
-        const nextAt = afterMatch.search(/@[A-ZÆØÅa-zæøå]/);
-        const noteText = nextAt >= 0 ? afterMatch.slice(0, nextAt).trim() : afterMatch.trim();
-        foundPairs.push({ participant: found, text: noteText });
-      }
-    }
-
-    if (foundPairs.length === 0) {
-      // No valid mentions found, just paste normally
-      const textarea = inputRef.current;
-      if (textarea) {
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const newValue = inputValue.slice(0, start) + text + inputValue.slice(end);
-        setInputValue(newValue);
-      }
-      return;
-    }
-
-    // Auto-create entries for each mentioned participant
-    const createEntries = async () => {
-      const rid = await resolveActiveReportId();
-      if (!rid) { showError('Ingen aktiv rapport'); return; }
-      for (const { participant, text: noteText } of foundPairs) {
-        if (!noteText) continue;
-        const { data, error } = await supabase
-          .from('nurse_report_mentions')
-          .insert({ report_id: rid, participant_id: participant.id, mention_text: noteText })
-          .select()
-          .single();
-        if (!error && data) {
-          setEntries((prev) => [...prev, data]);
-          await syncParticipantHealth(participant.id);
-        }
-      }
-      setLastSaved(new Date());
-      showSuccess(`${foundPairs.length} notat(er) lagt til`);
-      onDataChange?.();
-    };
-
-    createEntries();
-  };
+  function escapeHtml(s: string) {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
 
   if (isLoading) {
     return (
@@ -682,16 +359,16 @@ ${sectionsHtml}
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header with actions */}
+      {/* Header */}
       <div className="flex items-center justify-between gap-3 pb-3 border-b border-border">
         <h2 className="text-lg font-heading font-semibold flex items-center gap-2">
           <FileText className="w-5 h-5" />
           Nurse Rapport
         </h2>
         <div className="flex items-center gap-2">
-          {lastSaved && (
+          {lastRefreshed && (
             <span className="text-xs text-muted-foreground">
-              Lagret {format(lastSaved, 'HH:mm')}
+              Oppdatert {format(lastRefreshed, 'HH:mm')}
             </span>
           )}
           <Button variant="outline" size="sm" onClick={exportPdf}>
@@ -701,284 +378,95 @@ ${sectionsHtml}
         </div>
       </div>
 
-      {/* Search with dropdown */}
-      <div className="relative py-3" ref={searchRef}>
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
-        <Input
-          placeholder="Søk etter deltaker i rapporten..."
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            setSearchDropdownOpen(!!e.target.value.trim());
-          }}
-          onFocus={() => { if (searchQuery.trim()) setSearchDropdownOpen(true); }}
-          className="pl-9 h-9 text-sm"
-        />
-        {searchDropdownOpen && searchResults.length > 0 && (
-          <div className="absolute left-0 right-0 top-full bg-popover border border-border rounded-lg shadow-lg p-1 max-h-64 overflow-y-auto z-50">
-            {searchResults.map(({ participant, noteCount }) => {
-              const age = participant.birth_date
-                ? differenceInYears(new Date(), new Date(participant.birth_date))
-                : null;
-              const birthDateFormatted = participant.birth_date
-                ? format(new Date(participant.birth_date), 'dd.MM.yyyy')
-                : null;
-              return (
-                <button
-                  key={participant.id}
-                  className="w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-3 hover:bg-muted transition-colors"
-                  onClick={() => scrollToParticipant(participant.id)}
-                >
-                  <Avatar className="w-7 h-7">
-                    <AvatarImage src={participant.image_url || undefined} alt={participant.name} />
-                    <AvatarFallback className="text-xs"><User className="w-3 h-3" /></AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium">{participant.name}</span>
-                    <span className="text-xs text-muted-foreground ml-2">
-                      {participant.cabin?.name || ''}
-                      {age && birthDateFormatted ? ` · ${birthDateFormatted} · ${age} år` : age ? ` · ${age} år` : ''}
-                    </span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{noteCount} notat{noteCount !== 1 ? 'er' : ''}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {searchDropdownOpen && searchQuery.trim() && searchResults.length === 0 && (
-          <div className="absolute left-0 right-0 top-full bg-popover border border-border rounded-lg shadow-lg p-3 text-sm text-muted-foreground text-center z-50">
-            Ingen deltakere med notater matcher søket
-          </div>
-        )}
+      {/* Search + add note */}
+      <div className="flex items-center gap-2 py-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Søk deltaker..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-9 text-sm"
+          />
+        </div>
+        <Button size="sm" variant="default" onClick={() => { setPickerOpen(true); setAddPickerQuery(''); }}>
+          <Plus className="w-4 h-4 mr-1" />
+          Notat
+        </Button>
       </div>
 
-      {/* Scrollable content area */}
+      {/* Scrollable list */}
       <div className="flex-1 min-h-0 overflow-y-auto space-y-4 p-1 pb-4">
-        {/* Free-writing input area */}
-        <div className="relative">
-          {activeParticipant && (
-            <div className="flex items-center gap-2 mb-2 px-1">
-              <span className="text-xs text-muted-foreground">Skriver for:</span>
-              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                <User className="w-3 h-3" />
-                {activeParticipant.name}
-                <button
-                  onClick={() => setActiveParticipant(null)}
-                  className="ml-1 hover:text-destructive transition-colors"
-                  aria-label="Fjern valgt deltaker"
-                >
-                  ×
-                </button>
-              </span>
-            </div>
-          )}
-
-          <Textarea
-            ref={inputRef}
-            value={inputValue}
-            onChange={handleInputChange}
-            onKeyDown={handleInputKeyDown}
-            onPaste={handlePaste}
-            placeholder={activeParticipant ? `Skriv notat for ${activeParticipant.name}... (Enter for å lagre)` : 'Skriv her — legg til deltaker med @navn'}
-            className="min-h-[80px] text-sm resize-none"
-            rows={3}
-          />
-
-          {/* Mention dropdown — fixed-positioned to escape scroll containers */}
-          {mentionQuery !== null && (
-            <div
-              ref={mentionDropdownRef}
-              style={{
-                position: 'fixed',
-                left: mentionPosition.left,
-                top: mentionPosition.top,
-                width: inputRef.current?.getBoundingClientRect().width ?? 320,
-                transform: 'translateY(-100%)',
-                marginTop: -8,
-              }}
-              className="bg-popover border border-border rounded-lg shadow-xl p-1 max-h-72 overflow-y-auto z-[60]"
-            >
-              {filteredMentionParticipants.length === 0 ? (
-                <div className="px-3 py-3 text-sm text-muted-foreground text-center">
-                  Ingen deltakere matcher «{mentionQuery}»
-                </div>
-              ) : filteredMentionParticipants.map((p, i) => {
-                const age = p.birth_date
-                  ? differenceInYears(new Date(), new Date(p.birth_date))
-                  : null;
-                const birthDateFormatted = p.birth_date
-                  ? format(new Date(p.birth_date), 'dd.MM.yyyy')
-                  : null;
-                return (
-                  <button
-                    key={p.id}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-3 transition-colors ${
-                      i === selectedMentionIndex ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
-                    }`}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      selectMentionParticipant(p);
-                    }}
-                    onMouseEnter={() => setSelectedMentionIndex(i)}
-                  >
-                    <Avatar className="w-10 h-10 flex-shrink-0">
-                      <AvatarImage src={p.image_url || undefined} alt={p.name} />
-                      <AvatarFallback className="text-xs bg-muted">
-                        <User className="w-4 h-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col min-w-0">
-                      <span className="font-medium truncate">{p.name}</span>
-                      <span className="text-xs text-muted-foreground truncate">
-                        {p.cabin?.name || 'Ingen hytte'}
-                        {age && birthDateFormatted ? ` · ${birthDateFormatted} · ${age} år` : age ? ` · ${age} år` : ''}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {activeParticipant && inputValue.trim() && (
-            <div className="flex justify-end mt-2">
-              <Button size="sm" onClick={submitEntry} disabled={isSaving}>
-                {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
-                Legg til notat
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* Participant cards */}
-        {groupedEntries.order.length === 0 && (
+        {filteredOrder.length === 0 && (
           <div className="text-center py-8 text-muted-foreground text-sm">
             <User className="w-8 h-8 mx-auto mb-2 opacity-40" />
-            <p>Ingen deltakere lagt til ennå.</p>
-            <p className="text-xs mt-1">Bruk <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">@</kbd> for å legge til en deltaker.</p>
+            <p>Ingen data registrert ennå.</p>
           </div>
         )}
 
-        {groupedEntries.order.map((pid) => {
-          const participant = getParticipant(pid);
-          if (!participant) return null;
+        {filteredOrder.map((pid) => {
+          const p = getParticipant(pid);
+          if (!p) return null;
           const pEntries = groupedEntries.map.get(pid) || [];
-          const age = participant.birth_date
-            ? differenceInYears(new Date(), new Date(participant.birth_date))
-            : null;
+          const age = p.birth_date ? differenceInYears(new Date(), new Date(p.birth_date)) : null;
 
           return (
             <div
               key={pid}
               id={`nurse-section-${pid}`}
-              className="rounded-xl border-2 border-primary/20 bg-primary/[0.03] overflow-hidden transition-shadow"
+              className="rounded-xl border-2 border-primary/20 bg-primary/[0.03] overflow-hidden"
             >
-              {/* Card header */}
               <div className="flex items-center gap-3 px-4 py-3 bg-primary/[0.06] border-b border-primary/10">
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src={participant.image_url || undefined} alt={participant.name} />
-                  <AvatarFallback className="text-xs">
-                    <User className="w-3 h-3" />
-                  </AvatarFallback>
+                  <AvatarImage src={p.image_url || undefined} alt={p.name} />
+                  <AvatarFallback className="text-xs"><User className="w-3 h-3" /></AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm">{participant.name}</div>
+                  <div className="font-semibold text-sm">{p.name}</div>
                   <div className="text-xs text-muted-foreground">
-                    {participant.cabin?.name || 'Ingen hytte'}
+                    {p.cabin?.name || 'Ingen hytte'}
                     {age ? ` · ${age} år` : ''}
                     {' · '}
-                    {pEntries.length} notat{pEntries.length !== 1 ? 'er' : ''}
+                    {pEntries.length} oppføring{pEntries.length !== 1 ? 'er' : ''}
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => {
-                      setActiveParticipant(participant);
-                      inputRef.current?.focus();
-                    }}
-                  >
-                    + Notat
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    onClick={() =>
-                      setDeleteTarget({ type: 'section', id: pid, participantId: pid, name: participant.name })
-                    }
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => { setAddNoteFor(p); setNewNoteText(''); }}
+                >
+                  + Notat
+                </Button>
               </div>
 
-              {/* Entries */}
               <div className="divide-y divide-border/50">
                 {pEntries.map((entry) => (
                   <div key={entry.id} className="px-4 py-2.5 group">
                     <div className="flex items-start gap-2">
                       <Clock className="w-3 h-3 text-muted-foreground mt-1 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <span className="text-[11px] text-muted-foreground">
-                          {format(new Date(entry.created_at), 'd. MMM HH:mm', { locale: nb })}
-                        </span>
-                        {editingEntry === entry.id ? (
-                          <div className="mt-1">
-                            <Textarea
-                              value={editText}
-                              onChange={(e) => setEditText(e.target.value)}
-                              className="text-sm min-h-[60px]"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                  e.preventDefault();
-                                  updateEntry(entry.id);
-                                }
-                                if (e.key === 'Escape') {
-                                  setEditingEntry(null);
-                                  setEditText('');
-                                }
-                              }}
-                            />
-                            <div className="flex gap-1 mt-1">
-                              <Button size="sm" variant="default" className="h-6 text-xs px-2" onClick={() => updateEntry(entry.id)}>
-                                Lagre
-                              </Button>
-                              <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => { setEditingEntry(null); setEditText(''); }}>
-                                Avbryt
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <p
-                            className="text-sm leading-relaxed cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 transition-colors"
-                            onClick={() => {
-                              setEditingEntry(entry.id);
-                              setEditText(entry.mention_text);
-                            }}
-                          >
-                            {entry.mention_text}
-                          </p>
-                        )}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[11px] text-muted-foreground">
+                            {entry.created_at ? format(new Date(entry.created_at), 'd. MMM HH:mm', { locale: nb }) : '—'}
+                          </span>
+                          <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                            {entry.source_label}
+                          </span>
+                        </div>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap mt-0.5">
+                          {entry.text}
+                        </p>
                       </div>
-                      <button
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-1"
-                        onClick={() =>
-                          setDeleteTarget({
-                            type: 'entry',
-                            id: entry.id,
-                            participantId: pid,
-                            name: participant.name,
-                          })
-                        }
-                        aria-label="Slett notat"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                      {entry.source === 'mention' && (
+                        <button
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-1"
+                          onClick={() => setDeleteTarget({ id: entry.id, participantName: p.name })}
+                          aria-label="Slett notat"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -988,22 +476,95 @@ ${sectionsHtml}
         })}
       </div>
 
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      {/* Add note dialog */}
+      <ResponsiveDialog open={!!addNoteFor} onOpenChange={(o) => { if (!o) { setAddNoteFor(null); setNewNoteText(''); } }}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>
+              Nytt notat{addNoteFor ? ` — ${addNoteFor.name}` : ''}
+            </ResponsiveDialogTitle>
+          </ResponsiveDialogHeader>
+          <div className="space-y-3 p-4">
+            <Textarea
+              autoFocus
+              value={newNoteText}
+              onChange={(e) => setNewNoteText(e.target.value)}
+              placeholder="Skriv notat..."
+              className="min-h-[120px] text-sm"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => { setAddNoteFor(null); setNewNoteText(''); }}>
+                Avbryt
+              </Button>
+              <Button onClick={submitNewNote} disabled={savingNote || !newNoteText.trim()}>
+                {savingNote ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+                Lagre notat
+              </Button>
+            </div>
+          </div>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+
+      {/* Participant picker dialog */}
+      <ResponsiveDialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>Velg deltaker</ResponsiveDialogTitle>
+          </ResponsiveDialogHeader>
+          <div className="space-y-3 p-4">
+            <Input
+              autoFocus
+              placeholder="Søk navn..."
+              value={addPickerQuery}
+              onChange={(e) => setAddPickerQuery(e.target.value)}
+            />
+            <div className="max-h-80 overflow-y-auto rounded-md border border-border divide-y divide-border">
+              {pickerResults.map((p) => (
+                <button
+                  key={p.id}
+                  className="w-full text-left px-3 py-2 flex items-center gap-3 hover:bg-muted"
+                  onClick={() => {
+                    setPickerOpen(false);
+                    setAddNoteFor(p);
+                    setNewNoteText('');
+                  }}
+                >
+                  <Avatar className="w-7 h-7">
+                    <AvatarImage src={p.image_url || undefined} alt={p.name} />
+                    <AvatarFallback className="text-xs"><User className="w-3 h-3" /></AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{p.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {p.cabin?.name || 'Ingen hytte'}
+                    </div>
+                  </div>
+                </button>
+              ))}
+              {pickerResults.length === 0 && (
+                <div className="px-3 py-4 text-sm text-muted-foreground text-center">
+                  Ingen treff
+                </div>
+              )}
+            </div>
+          </div>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {deleteTarget?.type === 'section' ? 'Slett alle notater?' : 'Slett notat?'}
-            </AlertDialogTitle>
+            <AlertDialogTitle>Slett notat?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteTarget?.type === 'section'
-                ? `Er du sikker på at du vil slette alle notater for ${deleteTarget.name}?`
-                : 'Er du sikker på at du vil slette dette notatet?'}
+              Notatet for {deleteTarget?.participantName} blir slettet permanent.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Avbryt</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Slett</AlertDialogAction>
+            <AlertDialogAction onClick={() => { if (deleteTarget) { deleteMention(deleteTarget.id); setDeleteTarget(null); } }}>
+              Slett
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

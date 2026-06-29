@@ -206,6 +206,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   // Collapsible header state (Facebook/Instagram-style)
   const [headerVisible, setHeaderVisible] = useState(true);
+  const headerVisibleRef = useRef(true);
   const lastScrollY = useRef(0);
   const scrollContainerRef = useRef<HTMLElement>(null);
 
@@ -330,27 +331,45 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Listen on window so the body can scroll natively — fixes iOS PWA bottom strip.
   useEffect(() => {
     const SCROLL_THRESHOLD = 50;
+    let rafId = 0;
+    let latestScrollY = window.scrollY;
 
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+    const setHeaderVisibility = (visible: boolean) => {
+      if (headerVisibleRef.current === visible) return;
+      headerVisibleRef.current = visible;
+      setHeaderVisible(visible);
+    };
+
+    const updateHeaderFromScroll = () => {
+      rafId = 0;
+      const currentScrollY = latestScrollY;
       const delta = currentScrollY - lastScrollY.current;
 
       if (currentScrollY < SCROLL_THRESHOLD) {
         // Always show header when near top
-        setHeaderVisible(true);
+        setHeaderVisibility(true);
       } else if (delta > 5) {
         // Scrolling down - hide header
-        setHeaderVisible(false);
+        setHeaderVisibility(false);
       } else if (delta < -5) {
         // Scrolling up - show header
-        setHeaderVisible(true);
+        setHeaderVisibility(true);
       }
 
       lastScrollY.current = currentScrollY;
     };
 
+    const handleScroll = () => {
+      latestScrollY = window.scrollY;
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(updateHeaderFromScroll);
+    };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
   }, []);
 
 
