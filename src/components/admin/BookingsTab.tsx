@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Phone, Mail, Loader2, Trash2 } from 'lucide-react';
 import { BookingImportCard } from '@/components/admin/bookings/BookingImportCard';
 import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailSheet';
@@ -18,12 +19,27 @@ type Booking = Tables<'participant_bookings'>;
 type Participant = Pick<Tables<'participants'>, 'id' | 'first_name' | 'last_name' | 'birth_date' | 'image_url'>;
 
 export function BookingsTab() {
-  const { data: periodId } = useActivePeriodId();
+  const { data: activePeriodId } = useActivePeriodId();
   const qc = useQueryClient();
   const { showSuccess, showError } = useStatusPopup();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Booking | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
+
+  const periodId = selectedPeriodId ?? activePeriodId ?? null;
+
+  const { data: periods = [] } = useQuery({
+    queryKey: ['periods-for-bookings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('periods')
+        .select('id, name, is_active')
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['participant-bookings', periodId],
@@ -81,7 +97,7 @@ export function BookingsTab() {
 
   const handleDeleteAll = async () => {
     if (!periodId) return;
-    if (!confirm('Slett ALLE booking-rader for aktiv periode?')) return;
+    if (!confirm('Slett ALLE booking-rader for valgt periode?')) return;
     setIsDeleting(true);
     const { error } = await supabase.from('participant_bookings').delete().eq('period_id', periodId);
     setIsDeleting(false);
@@ -92,6 +108,22 @@ export function BookingsTab() {
 
   return (
     <div className="space-y-4">
+      <Card>
+        <CardContent className="py-3 flex items-center gap-3">
+          <span className="text-sm font-medium shrink-0">Periode</span>
+          <Select value={periodId ?? ''} onValueChange={v => setSelectedPeriodId(v)}>
+            <SelectTrigger className="w-full"><SelectValue placeholder="Velg periode" /></SelectTrigger>
+            <SelectContent>
+              {periods.map(p => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}{p.is_active ? ' (aktiv)' : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
       <BookingImportCard periodId={periodId || null} onImported={() => qc.invalidateQueries({ queryKey: ['participant-bookings', periodId] })} />
 
       <Card>
@@ -104,7 +136,7 @@ export function BookingsTab() {
               </Button>
             )}
           </CardTitle>
-          <CardDescription>Knyttet til aktiv periode. Foresatte-kontakt er kun synlig her.</CardDescription>
+          <CardDescription>Knyttet til valgt periode. Foresatte-kontakt er kun synlig her.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative">
