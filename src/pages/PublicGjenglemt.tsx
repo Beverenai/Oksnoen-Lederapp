@@ -159,31 +159,33 @@ export default function PublicGjenglemt() {
   const formatDate = (s: string | null) => s ? new Date(s).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' }) : '';
 
   return (
-    <div className="min-h-[100dvh] bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
-          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Øksnøen · Gjenglemt</div>
-          <h1 className="text-2xl sm:text-4xl font-heading font-bold">{period.name}</h1>
-          {(period.start_date || period.end_date) && (
-            <div className="text-sm text-muted-foreground mt-1">
-              {formatDate(period.start_date)}
-              {period.start_date && period.end_date && ' – '}
-              {formatDate(period.end_date)}
-            </div>
-          )}
-          <p className="text-sm text-muted-foreground mt-4 max-w-2xl">
-            Ser du noe som er ditt? Du kan komme hit til Øksnøen og hente det.
-            Hvis du ønsker å få det tilsendt, går det på egen regning.
-            <br />
-            Send oss en e-post på{' '}
-            <a className="text-primary underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-            {' '}— oppgi <strong>artikkelnummer</strong> og <strong>deltagers navn</strong>.
-          </p>
-        </div>
-      </header>
+    <div className="min-h-[100dvh] relative bg-cover bg-center bg-no-repeat bg-fixed" style={{ backgroundImage: `url(${backgroundAsset.url})` }}>
+      <div className="absolute inset-0 bg-background/85 dark:bg-background/80 backdrop-blur-[2px]" />
+      <div className="relative z-10 min-h-[100dvh] bg-background/0">
+        {/* Header */}
+        <header className="border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+          <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
+            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Øksnøen · Gjenglemt</div>
+            <h1 className="text-2xl sm:text-4xl font-heading font-bold">{period.name}</h1>
+            {(period.start_date || period.end_date) && (
+              <div className="text-sm text-muted-foreground mt-1">
+                {formatDate(period.start_date)}
+                {period.start_date && period.end_date && ' – '}
+                {formatDate(period.end_date)}
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground mt-4 max-w-2xl">
+              Ser du noe som er ditt? Du kan komme hit til Øksnøen og hente det.
+              Hvis du ønsker å få det tilsendt, går det på egen regning.
+              <br />
+              Send oss en e-post på{' '}
+              <a className="text-primary underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+              {' '}— oppgi <strong>artikkelnummer</strong> og <strong>deltagers navn</strong>.
+            </p>
+          </div>
+        </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-5">
+        <main className="max-w-6xl mx-auto px-4 py-6 space-y-5">
         {/* Filters */}
         <section className="rounded-2xl border bg-card p-4">
           <div className="relative mb-3">
