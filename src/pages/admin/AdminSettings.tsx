@@ -25,6 +25,7 @@ import {
   Shirt,
   Heart,
   Dices,
+  ClipboardList,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
@@ -58,6 +59,7 @@ const navItems = [
   { key: 'gjenglemt', label: 'Gjenglemt', desc: 'Perioder og offentlige lenker', icon: Shirt, color: 'bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400' },
   { key: 'nurse-periods', label: 'Periode', desc: 'Velg aktiv periode (1–7)', icon: Heart, color: 'bg-rose-500/15 text-rose-600 dark:text-rose-400' },
   { key: 'roulette', label: 'Oppgave-roulette', desc: 'Legg inn senior/U18-oppgaver', icon: Dices, color: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
+  { key: 'bookings', label: 'Booking-info', desc: 'Importer booking-data per periode', icon: ClipboardList, color: 'bg-sky-500/15 text-sky-600 dark:text-sky-400' },
 ];
 
 const sectionLabels: Record<string, string> = {
@@ -69,6 +71,7 @@ const sectionLabels: Record<string, string> = {
   overnatting: 'Overnatting',
   'nurse-periods': 'Periode',
   roulette: 'Oppgave-roulette',
+  bookings: 'Booking-info',
 };
 
 export default function AdminSettings() {

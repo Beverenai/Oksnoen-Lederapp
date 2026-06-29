@@ -31,6 +31,7 @@ import { OvernattingTab } from '@/components/admin/OvernattingTab';
 import { GjenglemtSettingsTab } from '@/components/admin/settings/GjenglemtSettingsTab';
 import { NursePeriodsTab } from '@/components/admin/NursePeriodsTab';
 import { RouletteTasksTab } from '@/components/admin/RouletteTasksTab';
+import { BookingsTab } from '@/components/admin/BookingsTab';
 const HomeConfigTab = lazy(() => import('@/components/admin/HomeConfigTab'));
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -324,6 +325,9 @@ export function AdminSettingsContent({
 
     case 'roulette':
       return <RouletteTasksTab />;
+
+    case 'bookings':
+      return <BookingsTab />;
 
     case 'home-config':
       return (

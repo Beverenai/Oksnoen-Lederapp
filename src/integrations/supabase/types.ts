@@ -897,6 +897,135 @@ export type Database = {
           },
         ]
       }
+      participant_bookings: {
+        Row: {
+          address: string | null
+          birth_date: string | null
+          booking_time: string | null
+          cancelled_date: string | null
+          created_at: string
+          discount: number | null
+          first_name: string | null
+          friends: string | null
+          gender: string | null
+          guardian_email: string | null
+          guardian_first_name: string | null
+          guardian_last_name: string | null
+          guardian_phone: string | null
+          id: string
+          invoiced_date: string | null
+          kiosk_money: number | null
+          last_name: string | null
+          notes_info: string | null
+          paid_date: string | null
+          participant_id: string | null
+          payment_reference: string | null
+          payment_status: string | null
+          period_id: string | null
+          period_label: string | null
+          postal_city: string | null
+          postal_code: string | null
+          prepayment: number | null
+          price: number | null
+          reservation_code: string | null
+          reservation_number: string | null
+          seat_confirmed: string | null
+          status: string | null
+          sweater_size: string | null
+          times_attended: number | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          birth_date?: string | null
+          booking_time?: string | null
+          cancelled_date?: string | null
+          created_at?: string
+          discount?: number | null
+          first_name?: string | null
+          friends?: string | null
+          gender?: string | null
+          guardian_email?: string | null
+          guardian_first_name?: string | null
+          guardian_last_name?: string | null
+          guardian_phone?: string | null
+          id?: string
+          invoiced_date?: string | null
+          kiosk_money?: number | null
+          last_name?: string | null
+          notes_info?: string | null
+          paid_date?: string | null
+          participant_id?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
+          period_id?: string | null
+          period_label?: string | null
+          postal_city?: string | null
+          postal_code?: string | null
+          prepayment?: number | null
+          price?: number | null
+          reservation_code?: string | null
+          reservation_number?: string | null
+          seat_confirmed?: string | null
+          status?: string | null
+          sweater_size?: string | null
+          times_attended?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          birth_date?: string | null
+          booking_time?: string | null
+          cancelled_date?: string | null
+          created_at?: string
+          discount?: number | null
+          first_name?: string | null
+          friends?: string | null
+          gender?: string | null
+          guardian_email?: string | null
+          guardian_first_name?: string | null
+          guardian_last_name?: string | null
+          guardian_phone?: string | null
+          id?: string
+          invoiced_date?: string | null
+          kiosk_money?: number | null
+          last_name?: string | null
+          notes_info?: string | null
+          paid_date?: string | null
+          participant_id?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
+          period_id?: string | null
+          period_label?: string | null
+          postal_city?: string | null
+          postal_code?: string | null
+          prepayment?: number | null
+          price?: number | null
+          reservation_code?: string | null
+          reservation_number?: string | null
+          seat_confirmed?: string | null
+          status?: string | null
+          sweater_size?: string | null
+          times_attended?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_bookings_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_bookings_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participant_health_events: {
         Row: {
           created_at: string
