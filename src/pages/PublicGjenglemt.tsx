@@ -112,10 +112,13 @@ export default function PublicGjenglemt() {
 
   if (!period) {
     return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background p-6 text-center gap-2">
-        <h1 className="text-2xl font-bold">Fant ikke perioden</h1>
-        <p className="text-muted-foreground">Lenken er feil, eller perioden er ikke offentlig tilgjengelig.</p>
-        <a href="https://oksnoen.com" className="mt-4 text-primary underline">Tilbake til oksnoen.com</a>
+      <div className="min-h-[100dvh] relative bg-cover bg-center bg-no-repeat bg-fixed" style={{ backgroundImage: `url(${backgroundAsset.url})` }}>
+        <div className="absolute inset-0 bg-background/85 dark:bg-background/80 backdrop-blur-[2px]" />
+        <div className="relative z-10 min-h-[100dvh] flex flex-col items-center justify-center p-6 text-center gap-2">
+          <h1 className="text-2xl font-bold">Fant ikke perioden</h1>
+          <p className="text-muted-foreground">Lenken er feil, eller perioden er ikke offentlig tilgjengelig.</p>
+          <a href="https://oksnoen.com" className="mt-4 text-primary underline">Tilbake til oksnoen.com</a>
+        </div>
       </div>
     );
   }
