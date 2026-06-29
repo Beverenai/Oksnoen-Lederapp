@@ -66,12 +66,20 @@ function toCol(value: unknown, field: string): unknown {
     return Number.isFinite(n) ? n : null;
   }
   if (DATE_FIELDS.has(field)) {
+    // Accept dd.mm.yyyy / dd/mm/yyyy / yyyy-mm-dd; otherwise null (avoid type errors on values like "Kreditert")
+    const m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/);
+    if (m) {
+      const [, dd, mm, yy] = m;
+      const year = yy.length === 2 ? `20${yy}` : yy;
+      return `${year}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+    }
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
     const d = new Date(s);
-    return Number.isFinite(d.getTime()) ? d.toISOString().slice(0, 10) : s;
+    return Number.isFinite(d.getTime()) ? d.toISOString().slice(0, 10) : null;
   }
   if (TIMESTAMP_FIELDS.has(field)) {
     const d = new Date(s);
-    return Number.isFinite(d.getTime()) ? d.toISOString() : s;
+    return Number.isFinite(d.getTime()) ? d.toISOString() : null;
   }
   return s;
 }
