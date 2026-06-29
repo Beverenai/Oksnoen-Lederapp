@@ -35,10 +35,9 @@ interface Participant {
   cabin?: { name: string } | null;
   birth_date?: string | null;
   image_url?: string | null;
-  notes?: string | null;
 }
 
-type EntrySource = 'mention' | 'health_note' | 'health_event' | 'participant_note';
+type EntrySource = 'mention' | 'health_note' | 'health_event';
 
 interface ReportEntry {
   id: string;
@@ -58,7 +57,6 @@ const sourceLabels: Record<EntrySource, string> = {
   mention: 'Nurse',
   health_note: 'Nurse-notat',
   health_event: 'Hendelse',
-  participant_note: 'Leder-kommentar',
 };
 
 export function NurseReportEditor({ participants, onDataChange }: NurseReportEditorProps) {
@@ -202,20 +200,8 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
         source_label: sourceLabels.health_event,
       });
     });
-    participants.forEach((p) => {
-      if (p.notes && p.notes.trim()) {
-        out.push({
-          id: `note-${p.id}`,
-          participant_id: p.id,
-          text: p.notes,
-          created_at: '',
-          source: 'participant_note',
-          source_label: sourceLabels.participant_note,
-        });
-      }
-    });
     return out;
-  }, [mentions, healthNotes, healthEvents, participants]);
+  }, [mentions, healthNotes, healthEvents]);
 
   // Group by participant, sorted by participant name (alphabetical)
   const groupedEntries = useMemo(() => {

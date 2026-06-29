@@ -881,7 +881,6 @@ export default function Nurse() {
     cabin: p.cabin,
     birth_date: p.birth_date,
     image_url: p.image_url,
-    notes: p.notes,
   }));
 
   const handleReportChange = () => {
