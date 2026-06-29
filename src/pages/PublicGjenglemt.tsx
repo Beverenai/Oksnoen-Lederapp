@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import backgroundAsset from '@/assets/oksnoen-header.png.asset.json';
 
 const PUBLIC_PASSWORD = '2026';
 const SS_KEY = 'gjenglemt-public-auth';
