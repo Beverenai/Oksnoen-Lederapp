@@ -125,30 +125,33 @@ export default function PublicGjenglemt() {
 
   if (!unlocked) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-background p-6">
-        <form onSubmit={tryUnlock} className="w-full max-w-sm rounded-2xl border bg-card p-6 space-y-4 shadow-sm">
-          <div className="flex flex-col items-center text-center gap-2">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Lock className="h-6 w-6 text-primary" />
+      <div className="min-h-[100dvh] relative bg-cover bg-center bg-no-repeat bg-fixed" style={{ backgroundImage: `url(${backgroundAsset.url})` }}>
+        <div className="absolute inset-0 bg-background/85 dark:bg-background/80 backdrop-blur-[2px]" />
+        <div className="relative z-10 min-h-[100dvh] flex items-center justify-center p-6">
+          <form onSubmit={tryUnlock} className="w-full max-w-sm rounded-2xl border bg-card/95 p-6 space-y-4 shadow-sm">
+            <div className="flex flex-col items-center text-center gap-2">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Lock className="h-6 w-6 text-primary" />
+              </div>
+              <h1 className="text-xl font-bold">Gjenglemt – {period.name}</h1>
+              <p className="text-sm text-muted-foreground">Skriv inn passordet for å se gjenglemte ting.</p>
             </div>
-            <h1 className="text-xl font-bold">Gjenglemt – {period.name}</h1>
-            <p className="text-sm text-muted-foreground">Skriv inn passordet for å se gjenglemte ting.</p>
-          </div>
-          <div className="space-y-2">
-            <Input
-              type="password"
-              autoFocus
-              inputMode="numeric"
-              value={pwInput}
-              onChange={e => { setPwInput(e.target.value); setPwError(false); }}
-              placeholder="Passord"
-              className={pwError ? 'border-destructive' : ''}
-            />
-            {pwError && <p className="text-xs text-destructive">Feil passord. Prøv igjen.</p>}
-          </div>
-          <Button type="submit" className="w-full">Lås opp</Button>
-          <p className="text-[11px] text-muted-foreground text-center">Får du ikke tilgang? Kontakt leiren på post@oksnoen.com</p>
-        </form>
+            <div className="space-y-2">
+              <Input
+                type="password"
+                autoFocus
+                inputMode="numeric"
+                value={pwInput}
+                onChange={e => { setPwInput(e.target.value); setPwError(false); }}
+                placeholder="Passord"
+                className={pwError ? 'border-destructive' : ''}
+              />
+              {pwError && <p className="text-xs text-destructive">Feil passord. Prøv igjen.</p>}
+            </div>
+            <Button type="submit" className="w-full">Lås opp</Button>
+            <p className="text-[11px] text-muted-foreground text-center">Får du ikke tilgang? Kontakt leiren på <a className="text-primary underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></p>
+          </form>
+        </div>
       </div>
     );
   }
