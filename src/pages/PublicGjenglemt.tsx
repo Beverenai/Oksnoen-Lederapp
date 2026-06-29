@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import backgroundAsset from '@/assets/oksnoen-header.png.asset.json';
 
 const PUBLIC_PASSWORD = '2026';
 const SS_KEY = 'gjenglemt-public-auth';
@@ -100,48 +101,57 @@ export default function PublicGjenglemt() {
 
   if (pLoading) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="min-h-[100dvh] relative bg-cover bg-center bg-no-repeat bg-fixed" style={{ backgroundImage: `url(${backgroundAsset.url})` }}>
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="relative z-10 min-h-[100dvh] flex items-center justify-center p-6">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
       </div>
     );
   }
 
   if (!period) {
     return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background p-6 text-center gap-2">
-        <h1 className="text-2xl font-bold">Fant ikke perioden</h1>
-        <p className="text-muted-foreground">Lenken er feil, eller perioden er ikke offentlig tilgjengelig.</p>
-        <a href="https://oksnoen.com" className="mt-4 text-primary underline">Tilbake til oksnoen.com</a>
+      <div className="min-h-[100dvh] relative bg-cover bg-center bg-no-repeat bg-fixed" style={{ backgroundImage: `url(${backgroundAsset.url})` }}>
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="relative z-10 min-h-[100dvh] flex flex-col items-center justify-center p-6 text-center gap-2">
+          <h1 className="text-2xl font-bold">Fant ikke perioden</h1>
+          <p className="text-muted-foreground">Lenken er feil, eller perioden er ikke offentlig tilgjengelig.</p>
+          <a href="https://oksnoen.com" className="mt-4 text-primary underline">Tilbake til oksnoen.com</a>
+        </div>
       </div>
     );
   }
 
   if (!unlocked) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-background p-6">
-        <form onSubmit={tryUnlock} className="w-full max-w-sm rounded-2xl border bg-card p-6 space-y-4 shadow-sm">
-          <div className="flex flex-col items-center text-center gap-2">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Lock className="h-6 w-6 text-primary" />
+      <div className="min-h-[100dvh] relative bg-cover bg-center bg-no-repeat bg-fixed" style={{ backgroundImage: `url(${backgroundAsset.url})` }}>
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="relative z-10 min-h-[100dvh] flex items-center justify-center p-6">
+          <form onSubmit={tryUnlock} className="w-full max-w-sm rounded-2xl border bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/70 p-6 space-y-4 shadow-sm">
+            <div className="flex flex-col items-center text-center gap-2">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Lock className="h-6 w-6 text-primary" />
+              </div>
+              <h1 className="text-xl font-bold">Gjenglemt – {period.name}</h1>
+              <p className="text-sm text-muted-foreground">Skriv inn passordet for å se gjenglemte ting.</p>
             </div>
-            <h1 className="text-xl font-bold">Gjenglemt – {period.name}</h1>
-            <p className="text-sm text-muted-foreground">Skriv inn passordet for å se gjenglemte ting.</p>
-          </div>
-          <div className="space-y-2">
-            <Input
-              type="password"
-              autoFocus
-              inputMode="numeric"
-              value={pwInput}
-              onChange={e => { setPwInput(e.target.value); setPwError(false); }}
-              placeholder="Passord"
-              className={pwError ? 'border-destructive' : ''}
-            />
-            {pwError && <p className="text-xs text-destructive">Feil passord. Prøv igjen.</p>}
-          </div>
-          <Button type="submit" className="w-full">Lås opp</Button>
-          <p className="text-[11px] text-muted-foreground text-center">Får du ikke tilgang? Kontakt leiren på post@oksnoen.com</p>
-        </form>
+            <div className="space-y-2">
+              <Input
+                type="password"
+                autoFocus
+                inputMode="numeric"
+                value={pwInput}
+                onChange={e => { setPwInput(e.target.value); setPwError(false); }}
+                placeholder="Passord"
+                className={pwError ? 'border-destructive' : ''}
+              />
+              {pwError && <p className="text-xs text-destructive">Feil passord. Prøv igjen.</p>}
+            </div>
+            <Button type="submit" className="w-full">Lås opp</Button>
+            <p className="text-[11px] text-muted-foreground text-center">Får du ikke tilgang? Kontakt leiren på <a className="text-primary underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></p>
+          </form>
+        </div>
       </div>
     );
   }
@@ -149,33 +159,35 @@ export default function PublicGjenglemt() {
   const formatDate = (s: string | null) => s ? new Date(s).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' }) : '';
 
   return (
-    <div className="min-h-[100dvh] bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
-          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Øksnøen · Gjenglemt</div>
-          <h1 className="text-2xl sm:text-4xl font-heading font-bold">{period.name}</h1>
-          {(period.start_date || period.end_date) && (
-            <div className="text-sm text-muted-foreground mt-1">
-              {formatDate(period.start_date)}
-              {period.start_date && period.end_date && ' – '}
-              {formatDate(period.end_date)}
-            </div>
-          )}
-          <p className="text-sm text-muted-foreground mt-4 max-w-2xl">
-            Ser du noe som er ditt? Du kan komme hit til Øksnøen og hente det.
-            Hvis du ønsker å få det tilsendt, går det på egen regning.
-            <br />
-            Send oss en e-post på{' '}
-            <a className="text-primary underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-            {' '}— oppgi <strong>artikkelnummer</strong> og <strong>deltagers navn</strong>.
-          </p>
-        </div>
-      </header>
+    <div className="min-h-[100dvh] relative bg-cover bg-center bg-no-repeat bg-fixed" style={{ backgroundImage: `url(${backgroundAsset.url})` }}>
+      <div className="absolute inset-0 bg-black/20" />
+      <div className="relative z-10 min-h-[100dvh]">
+        {/* Header */}
+        <header className="border-b bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+          <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
+            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Øksnøen · Gjenglemt</div>
+            <h1 className="text-2xl sm:text-4xl font-heading font-bold">{period.name}</h1>
+            {(period.start_date || period.end_date) && (
+              <div className="text-sm text-muted-foreground mt-1">
+                {formatDate(period.start_date)}
+                {period.start_date && period.end_date && ' – '}
+                {formatDate(period.end_date)}
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground mt-4 max-w-2xl">
+              Ser du noe som er ditt? Du kan komme hit til Øksnøen og hente det.
+              Hvis du ønsker å få det tilsendt, går det på egen regning.
+              <br />
+              Send oss en e-post på{' '}
+              <a className="text-primary underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+              {' '}— oppgi <strong>artikkelnummer</strong> og <strong>deltagers navn</strong>.
+            </p>
+          </div>
+        </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-5">
+        <main className="max-w-6xl mx-auto px-4 py-6 space-y-5">
         {/* Filters */}
-        <section className="rounded-2xl border bg-card p-4">
+        <section className="rounded-2xl border bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60 p-4">
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -205,7 +217,7 @@ export default function PublicGjenglemt() {
                   <button
                     key={item.id}
                     onClick={() => setLightboxIdx(idx)}
-                    className="rounded-xl border overflow-hidden bg-card text-left hover:shadow-md transition-shadow"
+                    className="rounded-xl border overflow-hidden bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/70 text-left hover:shadow-md transition-shadow"
                   >
                     <div className="aspect-square bg-muted relative">
                       <SignedImage imageUrl={item.image_url} alt={item.garment_type ? garmentLabel(item.garment_type) : 'Gjenglemt'} className="w-full h-full object-cover" />
@@ -324,6 +336,7 @@ export default function PublicGjenglemt() {
           )}
         />
       )}
+    </div>
     </div>
   );
 }
