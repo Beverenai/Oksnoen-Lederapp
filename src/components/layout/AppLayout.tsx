@@ -206,6 +206,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   // Collapsible header state (Facebook/Instagram-style)
   const [headerVisible, setHeaderVisible] = useState(true);
+  const headerVisibleRef = useRef(true);
   const lastScrollY = useRef(0);
   const scrollContainerRef = useRef<HTMLElement>(null);
 
@@ -331,19 +332,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
   useEffect(() => {
     const SCROLL_THRESHOLD = 50;
 
+    const setHeaderVisibility = (visible: boolean) => {
+      if (headerVisibleRef.current === visible) return;
+      headerVisibleRef.current = visible;
+      setHeaderVisible(visible);
+    };
+
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       const delta = currentScrollY - lastScrollY.current;
 
       if (currentScrollY < SCROLL_THRESHOLD) {
         // Always show header when near top
-        setHeaderVisible(true);
+        setHeaderVisibility(true);
       } else if (delta > 5) {
         // Scrolling down - hide header
-        setHeaderVisible(false);
+        setHeaderVisibility(false);
       } else if (delta < -5) {
         // Scrolling up - show header
-        setHeaderVisible(true);
+        setHeaderVisibility(true);
       }
 
       lastScrollY.current = currentScrollY;

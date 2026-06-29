@@ -19,8 +19,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
-import { usePullToRefresh } from '@/hooks/usePullToRefresh';
-import { PullIndicator } from '@/components/ui/pull-indicator';
 
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
@@ -213,11 +211,6 @@ export default function Leaders() {
     return full ? { ...selectedLeader, content: full } : selectedLeader;
   }, [canEdit, selectedLeader, fullContentMap]);
 
-  // Pull-to-refresh
-  const { pullRef, isPulling, pullProgress, isRefreshing } = usePullToRefresh({
-    onRefresh: async () => { await refetch(); },
-  });
-
   // Format linked cabins display with "+" between them
   const formatCabinsDisplay = (cabins: CabinInfo[] | undefined): string => {
     if (!cabins || cabins.length === 0) return '';
@@ -403,8 +396,7 @@ export default function Leaders() {
   }
 
   return (
-    <div ref={pullRef} className="space-y-4 animate-fade-in overflow-x-hidden w-full min-w-0 px-4">
-      <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
+    <div className="space-y-4 animate-fade-in overflow-x-hidden w-full min-w-0 px-4">
       {/* Header with search and sort */}
       <div className="flex items-center justify-between gap-2">
         {isSearchOpen ? (
@@ -556,7 +548,7 @@ export default function Leaders() {
             )}
             
             <Card
-              className="cursor-pointer overflow-hidden rounded-[24px] shadow-sm [content-visibility:auto] [contain-intrinsic-size:128px] h-[128px]"
+              className="cursor-pointer overflow-hidden rounded-[24px] shadow-sm h-[128px]"
               onClick={() => setSelectedLeader(leader)}
             >
               <CardContent className="p-4 h-full flex items-center">
