@@ -481,11 +481,6 @@ export const ParticipantDetailDialog = ({
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <Trophy className="h-4 w-4 text-amber-600" />
                     <span>Aktivitetsnotater</span>
-                    {notesStatus === 'saving' && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Loader2 className="h-3 w-3 animate-spin" /> Lagrer…
-                      </span>
-                    )}
                     {notesStatus === 'saved' && (
                       <span className="text-xs text-emerald-600">Lagret</span>
                     )}
@@ -502,7 +497,6 @@ export const ParticipantDetailDialog = ({
                     onBlur={() => {
                       if (!participant || activityNotes === savedSnapshotRef.current) return;
                       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-                      setNotesStatus('saving');
                       void saveActivityNotes(participant, activityNotes);
                     }}
                     placeholder="F.eks. '1. plass i svømming'..."
