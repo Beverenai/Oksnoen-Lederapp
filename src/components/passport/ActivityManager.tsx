@@ -214,7 +214,14 @@ export const ActivityManager = ({
       </Button>
 
       {isOpen && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-labelledby="activity-picker-title">
+        <div
+          className="fixed inset-0 z-[120]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="activity-picker-title"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
           <button
             type="button"
             className="absolute inset-0 bg-foreground/60"
