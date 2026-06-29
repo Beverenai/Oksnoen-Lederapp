@@ -37,6 +37,9 @@ import { updateWidgetData } from '@/lib/capacitorWidget';
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
 
+type SessionData = { reminder: string; items: string[] };
+type SessionsPayload = { active: 1 | 2 | 3; sessions: Record<'1' | '2' | '3', SessionData> };
+
 interface FixTask {
   id: string;
   title: string;
@@ -136,7 +139,7 @@ export default function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const [content, setContent] = useState<LeaderContent | null>(null);
-  const [sessionActivitiesText, setSessionActivitiesText] = useState<string>('');
+  const [sessionsPayload, setSessionsPayload] = useState<SessionsPayload | null>(null);
   const [config, setConfig] = useState<HomeScreenConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -191,7 +194,7 @@ export default function Home() {
         supabase
           .from('app_config')
           .select('value')
-          .eq('key', 'session_activities_text')
+          .eq('key', 'session_activities_data')
           .maybeSingle(),
         supabase
           .from('home_screen_config')
@@ -228,7 +231,16 @@ export default function Home() {
         extraActivity: contentRes.data?.extra_activity ?? null,
         obsMessage: contentRes.data?.obs_message ?? null,
       });
-      setSessionActivitiesText(activitiesTextRes.data?.value || '');
+      if (activitiesTextRes.data?.value) {
+        try {
+          const parsed = JSON.parse(activitiesTextRes.data.value);
+          setSessionsPayload(parsed);
+        } catch {
+          setSessionsPayload(null);
+        }
+      } else {
+        setSessionsPayload(null);
+      }
       setConfig((configRes.data || []) as HomeScreenConfig[]);
       
       // Extract cabins from leader_cabins join
@@ -405,7 +417,7 @@ export default function Home() {
     content?.extra_activity || 
     content?.personal_notes || 
     content?.obs_message || 
-    sessionActivitiesText ||
+    (sessionsPayload && (sessionsPayload.sessions[String(sessionsPayload.active) as '1'|'2'|'3']?.items?.length || sessionsPayload.sessions[String(sessionsPayload.active) as '1'|'2'|'3']?.reminder)) ||
     hasExtraContent;
 
   const ActivityIcon = getElementIcon('current_activity', Activity);
@@ -734,22 +746,15 @@ export default function Home() {
           );
         })}
 
-        {/* Session Activities Text - Secondary styling */}
-        {isElementVisible('session_activities') && sessionActivitiesText && (() => {
+        {/* Session Activities - structured */}
+        {isElementVisible('session_activities') && sessionsPayload && (() => {
           const sessionConfig = getConfigForElement('session_activities');
-          const lines = sessionActivitiesText.split('\n').map(l => l.trim()).filter(Boolean);
-          const reminders: string[] = [];
-          let sessionLabel: string | null = null;
-          const activities: string[] = [];
-          for (const line of lines) {
-            if (/^husk\b/i.test(line)) {
-              reminders.push(line);
-            } else if (/^\d+\.\s*økt/i.test(line) && !sessionLabel) {
-              sessionLabel = line;
-            } else {
-              activities.push(line);
-            }
-          }
+          const activeKey = String(sessionsPayload.active) as '1' | '2' | '3';
+          const current = sessionsPayload.sessions[activeKey];
+          if (!current || (!current.reminder && !current.items?.length)) return null;
+          const reminder = current.reminder?.trim() || '';
+          const activities = current.items || [];
+          const sessionLabel = `${sessionsPayload.active}. økt`;
           return (
             <Card className={cn(
               "border border-border/50",
@@ -765,25 +770,19 @@ export default function Home() {
                       {getElementTitle('session_activities', 'Aktiviteter denne økten')}
                     </p>
                   </div>
-                  {sessionLabel && (
-                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                      {sessionLabel}
-                    </span>
-                  )}
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                    {sessionLabel}
+                  </span>
                 </div>
 
-                {reminders.length > 0 && (
+                {reminder && (
                   <div className="rounded-lg border border-amber-200/60 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30 p-2.5 flex gap-2">
                     <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                    <div className="space-y-1 min-w-0">
-                      {reminders.map((r, i) => (
-                        <p key={i} className="text-sm text-amber-900 dark:text-amber-100 leading-snug">{r}</p>
-                      ))}
-                    </div>
+                    <p className="text-sm text-amber-900 dark:text-amber-100 leading-snug min-w-0">{reminder}</p>
                   </div>
                 )}
 
-                {activities.length > 0 ? (
+                {activities.length > 0 && (
                   <ul className="space-y-1.5">
                     {activities.map((a, i) => (
                       <li key={i} className="flex items-start gap-2.5">
@@ -792,10 +791,6 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
-                ) : (
-                  !reminders.length && !sessionLabel && (
-                    <p className={cn("text-foreground whitespace-pre-wrap", getTextStyle(sessionConfig))}>{sessionActivitiesText}</p>
-                  )
                 )}
               </CardContent>
             </Card>
