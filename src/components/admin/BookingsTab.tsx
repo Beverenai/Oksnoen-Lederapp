@@ -10,9 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Phone, Mail, Loader2, Trash2, Send, Copy } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { Search, Phone, Mail, Loader2, Trash2 } from 'lucide-react';
 import { BookingImportCard } from '@/components/admin/bookings/BookingImportCard';
 import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailSheet';
 import type { Tables } from '@/integrations/supabase/types';
@@ -28,7 +26,6 @@ export function BookingsTab() {
   const [selected, setSelected] = useState<Booking | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
-  const [mailOpen, setMailOpen] = useState(false);
 
   const periodId = selectedPeriodId ?? activePeriodId ?? null;
 
@@ -99,33 +96,6 @@ export function BookingsTab() {
   const unmatched = useMemo(() => filtered.filter(e => !e.participant), [filtered]);
 
   const currentPeriod = periods.find(p => p.id === periodId) || null;
-  const parentEmails = useMemo(() => {
-    const set = new Set<string>();
-    for (const b of bookings) {
-      const e = (b.guardian_email || '').trim();
-      if (e && /.+@.+\..+/.test(e)) set.add(e);
-    }
-    return Array.from(set).sort();
-  }, [bookings]);
-  const mailSubject = currentPeriod ? `Gjenglemt på Øksnøen – ${currentPeriod.name}` : 'Gjenglemt på Øksnøen';
-  const publicUrl = currentPeriod ? `https://app.oksnoen.com/gjenglemt/${currentPeriod.slug}` : '';
-  const mailBody = [
-    'Hei,',
-    '',
-    `Hvis deltakeren din har glemt igjen noe på Øksnøen (${currentPeriod?.name || ''}), kan dere se alle gjenglemte ting her:`,
-    publicUrl,
-    '',
-    'Passord for å åpne siden: 2026',
-    '',
-    'Finner dere noe dere kjenner igjen, send en epost til bengt@oksnoen.no med artikkelnummeret og navn på deltaker. Dere kan enten hente det på Øksnøen, eller få det tilsendt på egen regning.',
-    '',
-    'Vennlig hilsen,',
-    'Øksnøen',
-  ].join('\n');
-  const copy = async (text: string, label: string) => {
-    try { await navigator.clipboard.writeText(text); showSuccess(`${label} kopiert`); }
-    catch { showError('Kunne ikke kopiere'); }
-  };
 
   const handleDeleteAll = async () => {
     if (!periodId) return;
@@ -163,11 +133,6 @@ export function BookingsTab() {
           <CardTitle className="flex items-center justify-between gap-2">
             <span>Bookinger ({bookings.length})</span>
             <div className="flex items-center gap-1">
-              {parentEmails.length > 0 && (
-                <Button variant="outline" size="sm" onClick={() => setMailOpen(true)} className="gap-1">
-                  <Send className="w-3.5 h-3.5" /> Epost til foreldre ({parentEmails.length})
-                </Button>
-              )}
               {bookings.length > 0 && (
                 <Button variant="ghost" size="sm" onClick={handleDeleteAll} disabled={isDeleting}>
                   {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -212,48 +177,6 @@ export function BookingsTab() {
         participant={selected ? participantByKey.get(`${(selected.first_name || '').toLowerCase().trim()}|${(selected.last_name || '').toLowerCase().trim()}|${selected.birth_date || ''}`) || null : null}
         onClose={() => setSelected(null)}
       />
-
-      <Dialog open={mailOpen} onOpenChange={setMailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Send epost til alle foreldre</DialogTitle>
-            <DialogDescription>
-              {parentEmails.length} unike foreldre-eposter i {currentPeriod?.name || 'valgt periode'}. Lim inn i BCC i din egen epostklient.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-sm font-medium">BCC (alle foreldre)</label>
-                <Button size="sm" variant="ghost" className="gap-1" onClick={() => copy(parentEmails.join(', '), 'BCC')}><Copy className="w-3.5 h-3.5" />Kopier</Button>
-              </div>
-              <Textarea readOnly value={parentEmails.join(', ')} className="font-mono text-xs h-24" />
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-sm font-medium">Emne</label>
-                <Button size="sm" variant="ghost" className="gap-1" onClick={() => copy(mailSubject, 'Emne')}><Copy className="w-3.5 h-3.5" />Kopier</Button>
-              </div>
-              <Input readOnly value={mailSubject} />
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-sm font-medium">Melding</label>
-                <Button size="sm" variant="ghost" className="gap-1" onClick={() => copy(mailBody, 'Melding')}><Copy className="w-3.5 h-3.5" />Kopier</Button>
-              </div>
-              <Textarea readOnly value={mailBody} className="h-56 text-sm" />
-            </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setMailOpen(false)}>Lukk</Button>
-            <Button asChild>
-              <a href={`mailto:?bcc=${encodeURIComponent(parentEmails.join(','))}&subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`}>
-                Åpne i epostklient
-              </a>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
