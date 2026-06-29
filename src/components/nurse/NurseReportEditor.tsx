@@ -35,10 +35,9 @@ interface Participant {
   cabin?: { name: string } | null;
   birth_date?: string | null;
   image_url?: string | null;
-  notes?: string | null;
 }
 
-type EntrySource = 'mention' | 'health_note' | 'health_event' | 'participant_note';
+type EntrySource = 'mention' | 'health_note' | 'health_event';
 
 interface ReportEntry {
   id: string;
@@ -58,7 +57,6 @@ const sourceLabels: Record<EntrySource, string> = {
   mention: 'Nurse',
   health_note: 'Nurse-notat',
   health_event: 'Hendelse',
-  participant_note: 'Leder-kommentar',
 };
 
 export function NurseReportEditor({ participants, onDataChange }: NurseReportEditorProps) {
