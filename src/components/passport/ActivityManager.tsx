@@ -220,7 +220,7 @@ export const ActivityManager = ({
           <DialogPrimitive.Overlay className="fixed inset-0 z-[120] bg-foreground/60" />
           <DialogPrimitive.Content
             data-vaul-no-drag
-            className="fixed inset-x-0 bottom-0 z-[121] mx-auto flex max-h-[82dvh] w-full max-w-xl flex-col rounded-t-3xl border bg-background shadow-xl sm:bottom-6 sm:rounded-3xl"
+            className="fixed inset-x-0 bottom-0 z-[121] mx-auto flex h-[82dvh] max-h-[42rem] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border bg-background shadow-xl sm:bottom-6 sm:rounded-3xl"
             onOpenAutoFocus={(event) => event.preventDefault()}
           >
             <div className="mx-auto mt-3 h-1.5 w-24 rounded-full bg-muted" />
