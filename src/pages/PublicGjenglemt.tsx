@@ -101,8 +101,11 @@ export default function PublicGjenglemt() {
 
   if (pLoading) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="min-h-[100dvh] relative bg-cover bg-center bg-no-repeat bg-fixed" style={{ backgroundImage: `url(${backgroundAsset.url})` }}>
+        <div className="absolute inset-0 bg-background/85 dark:bg-background/80 backdrop-blur-[2px]" />
+        <div className="relative z-10 min-h-[100dvh] flex items-center justify-center p-6">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
       </div>
     );
   }
