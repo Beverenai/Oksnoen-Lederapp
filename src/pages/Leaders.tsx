@@ -102,7 +102,7 @@ export default function Leaders() {
   const [showTeamFilters, setShowTeamFilters] = useState(false);
 
   // Fetch leaders with React Query for caching
-  const { data: leadersData, isLoading, refetch } = useQuery({
+  const { data: leadersData, isLoading } = useQuery({
     queryKey: ['leaders-with-content'],
     queryFn: async () => {
       // Fetch leaders, public activities, roles, extra fields config, and leader_cabins in parallel
