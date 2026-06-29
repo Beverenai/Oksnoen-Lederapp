@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, Loader2, FileSpreadsheet } from 'lucide-react';
 
 interface Props {
@@ -118,31 +119,45 @@ export function BookingImportCard({ periodId, onImported }: Props) {
   const { showSuccess, showError } = useStatusPopup();
   const [pasteText, setPasteText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [replaceExisting, setReplaceExisting] = useState(true);
 
   const upsert = async (mapped: Record<string, unknown>[]) => {
     if (!periodId) {
       showError('Ingen aktiv periode');
       return;
     }
-    const withCode = mapped.filter(r => r.reservation_code);
-    const withoutCode = mapped.filter(r => !r.reservation_code);
+    // Force the chosen period on every row
+    const rows = mapped.map(r => ({ ...r, period_id: periodId }));
+
+    if (replaceExisting) {
+      const { error: delErr } = await supabase
+        .from('participant_bookings')
+        .delete()
+        .eq('period_id', periodId);
+      if (delErr) {
+        console.error('Delete failed:', delErr);
+        showError(`Kunne ikke slette eksisterende: ${delErr.message}`);
+        return;
+      }
+    }
+
+    // Insert in chunks for safety
+    const CHUNK = 100;
     let saved = 0;
-    let failed = 0;
-    if (withCode.length) {
+    let firstError: string | null = null;
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const slice = rows.slice(i, i + CHUNK);
       const { error, count } = await supabase
         .from('participant_bookings')
-        .upsert(withCode as never, { onConflict: 'period_id,reservation_code', count: 'exact' });
-      if (error) { console.error(error); failed += withCode.length; }
-      else saved += count ?? withCode.length;
+        .insert(slice as never, { count: 'exact' });
+      if (error) {
+        console.error('Insert chunk failed:', error, slice[0]);
+        if (!firstError) firstError = error.message;
+      } else {
+        saved += count ?? slice.length;
+      }
     }
-    if (withoutCode.length) {
-      const { error, count } = await supabase
-        .from('participant_bookings')
-        .insert(withoutCode as never, { count: 'exact' });
-      if (error) { console.error(error); failed += withoutCode.length; }
-      else saved += count ?? withoutCode.length;
-    }
-    if (failed > 0) showError(`${saved} lagret, ${failed} feilet`);
+    if (firstError) showError(`${saved} lagret. Feil: ${firstError}`);
     else showSuccess(`${saved} rader importert`);
     onImported();
   };
@@ -185,6 +200,16 @@ export function BookingImportCard({ periodId, onImported }: Props) {
         <CardDescription>Last opp Excel eller lim inn rader. Lagres til aktiv periode.</CardDescription>
       </CardHeader>
       <CardContent>
+        <div className="flex items-center gap-2 mb-4 text-sm">
+          <Checkbox
+            id="replace-existing"
+            checked={replaceExisting}
+            onCheckedChange={v => setReplaceExisting(v === true)}
+          />
+          <label htmlFor="replace-existing" className="cursor-pointer">
+            Erstatt eksisterende rader i valgt periode
+          </label>
+        </div>
         <Tabs defaultValue="file">
           <TabsList>
             <TabsTrigger value="file">Last opp fil</TabsTrigger>
