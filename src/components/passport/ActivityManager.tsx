@@ -1,19 +1,12 @@
 import { useState, useMemo } from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Plus, Minus, Loader2, ChevronDown } from 'lucide-react';
+import { Check, Plus, Minus, Loader2, ChevronDown, X } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from '@/components/ui/drawer';
 import { useActivities } from '@/hooks/useActivities';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ActivityManagerProps {
   participantId: string;
@@ -29,7 +22,6 @@ export const ActivityManager = ({
   const { leader } = useAuth();
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { activities } = useActivities(true);
-  const isMobile = useIsMobile();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -120,9 +112,10 @@ export const ActivityManager = ({
     return activityCounts.get(activityTitle.toLowerCase()) || 0;
   };
 
-  // Activity list content - shared between Drawer and Popover
+  // Native scroll content. Kept outside Vaul/Popover so wheel/touch scrolling
+  // is not captured by the parent participant dialog.
   const activityListContent = (
-    <div className="space-y-1">
+    <div className="space-y-1 pr-1">
       {activities.map((activity) => {
         const count = getCount(activity.title);
         const isCurrentlyLoading = isLoading === activity.title;
@@ -214,42 +207,47 @@ export const ActivityManager = ({
         <p className="text-sm text-muted-foreground">Ingen aktiviteter registrert ennå</p>
       )}
 
-      {/* Mobile: Drawer, Desktop: Popover */}
-      {isMobile ? (
-        <Drawer open={isOpen} onOpenChange={setIsOpen}>
-          <DrawerTrigger asChild>
-            <Button variant="outline" className="w-full">
-              <Plus className="h-4 w-4 mr-2" />
-              Legg til aktivitet
-              <ChevronDown className="h-4 w-4 ml-auto" />
-            </Button>
-          </DrawerTrigger>
-          <DrawerContent className="max-h-[70dvh] flex flex-col">
-            <DrawerHeader className="flex-shrink-0">
-              <DrawerTitle>Legg til aktivitet</DrawerTitle>
-            </DrawerHeader>
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-6 pb-safe">
-              <div className="py-1">{activityListContent}</div>
-            </div>
-          </DrawerContent>
-        </Drawer>
-      ) : (
-        <div className="space-y-2">
-          <Button variant="outline" className="w-full" onClick={() => setIsOpen((v) => !v)}>
+      <DialogPrimitive.Root open={isOpen} onOpenChange={setIsOpen}>
+        <DialogPrimitive.Trigger asChild>
+          <Button variant="outline" className="w-full">
             <Plus className="h-4 w-4 mr-2" />
             Legg til aktivitet
             <ChevronDown className="h-4 w-4 ml-auto" />
           </Button>
-          {isOpen && (
+        </DialogPrimitive.Trigger>
+
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-[120] bg-foreground/60" />
+          <DialogPrimitive.Content
+            data-vaul-no-drag
+            className="fixed inset-x-0 bottom-0 z-[121] mx-auto flex h-[82dvh] max-h-[42rem] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border bg-background shadow-xl sm:bottom-6 sm:rounded-3xl"
+            onOpenAutoFocus={(event) => event.preventDefault()}
+          >
+            <div className="mx-auto mt-3 h-1.5 w-24 rounded-full bg-muted" />
+            <div className="flex shrink-0 items-center justify-between px-4 pb-3 pt-5">
+              <div className="w-10" />
+              <DialogPrimitive.Title asChild>
+                <h3 className="text-lg font-semibold">Legg til aktivitet</h3>
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Close asChild>
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Lukk</span>
+                </Button>
+              </DialogPrimitive.Close>
+            </div>
             <div
-              className="max-h-[min(22rem,45vh)] overflow-y-auto overscroll-contain rounded-lg border bg-popover p-2 shadow-sm"
-              onWheel={(event) => event.stopPropagation()}
+              data-vaul-no-drag
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 pb-safe touch-pan-y"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+              onWheelCapture={(event) => event.stopPropagation()}
+              onTouchMoveCapture={(event) => event.stopPropagation()}
             >
               {activityListContent}
             </div>
-          )}
-        </div>
-      )}
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
     </div>
   );
 };
