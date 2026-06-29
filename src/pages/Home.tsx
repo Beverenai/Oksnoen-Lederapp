@@ -737,23 +737,66 @@ export default function Home() {
         {/* Session Activities Text - Secondary styling */}
         {isElementVisible('session_activities') && sessionActivitiesText && (() => {
           const sessionConfig = getConfigForElement('session_activities');
+          const lines = sessionActivitiesText.split('\n').map(l => l.trim()).filter(Boolean);
+          const reminders: string[] = [];
+          let sessionLabel: string | null = null;
+          const activities: string[] = [];
+          for (const line of lines) {
+            if (/^husk\b/i.test(line)) {
+              reminders.push(line);
+            } else if (/^\d+\.\s*økt/i.test(line) && !sessionLabel) {
+              sessionLabel = line;
+            } else {
+              activities.push(line);
+            }
+          }
           return (
             <Card className={cn(
               "border border-border/50",
               getCardStyle(sessionConfig)
             )}>
-              <CardContent className="py-3 sm:py-4">
-                <div className="flex flex-col items-center text-center gap-2">
-                  <div className="p-1.5 rounded-full bg-primary/10">
-                    <SessionIcon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              <CardContent className="py-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-full bg-primary/10">
+                      <SessionIcon className="w-4 h-4 text-primary" />
+                    </div>
+                    <p className="text-[10px] uppercase tracking-wide text-primary/80 font-semibold">
+                      {getElementTitle('session_activities', 'Aktiviteter denne økten')}
+                    </p>
                   </div>
-                  <p className="text-[10px] uppercase tracking-wide text-primary/80 font-medium">
-                    {getElementTitle('session_activities', 'Aktiviteter denne økten')}
-                  </p>
+                  {sessionLabel && (
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                      {sessionLabel}
+                    </span>
+                  )}
                 </div>
-                <div className="mt-3 text-center">
-                  <p className={cn("text-foreground whitespace-pre-wrap", getTextStyle(sessionConfig))}>{sessionActivitiesText}</p>
-                </div>
+
+                {reminders.length > 0 && (
+                  <div className="rounded-lg border border-amber-200/60 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30 p-2.5 flex gap-2">
+                    <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1 min-w-0">
+                      {reminders.map((r, i) => (
+                        <p key={i} className="text-sm text-amber-900 dark:text-amber-100 leading-snug">{r}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activities.length > 0 ? (
+                  <ul className="space-y-1.5">
+                    {activities.map((a, i) => (
+                      <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                        <span className={cn("text-foreground leading-snug", getTextStyle(sessionConfig))}>{a}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  !reminders.length && !sessionLabel && (
+                    <p className={cn("text-foreground whitespace-pre-wrap", getTextStyle(sessionConfig))}>{sessionActivitiesText}</p>
+                  )
+                )}
               </CardContent>
             </Card>
           );
