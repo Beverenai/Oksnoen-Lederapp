@@ -331,6 +331,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Listen on window so the body can scroll natively — fixes iOS PWA bottom strip.
   useEffect(() => {
     const SCROLL_THRESHOLD = 50;
+    let rafId = 0;
+    let latestScrollY = window.scrollY;
 
     const setHeaderVisibility = (visible: boolean) => {
       if (headerVisibleRef.current === visible) return;
@@ -338,8 +340,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
       setHeaderVisible(visible);
     };
 
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+    const updateHeaderFromScroll = () => {
+      rafId = 0;
+      const currentScrollY = latestScrollY;
       const delta = currentScrollY - lastScrollY.current;
 
       if (currentScrollY < SCROLL_THRESHOLD) {
@@ -356,8 +359,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
       lastScrollY.current = currentScrollY;
     };
 
+    const handleScroll = () => {
+      latestScrollY = window.scrollY;
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(updateHeaderFromScroll);
+    };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
   }, []);
 
 
