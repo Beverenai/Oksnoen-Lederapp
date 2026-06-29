@@ -163,7 +163,7 @@ export default function PublicGjenglemt() {
       <div className="absolute inset-0 bg-black/20" />
       <div className="relative z-10 min-h-[100dvh]">
         {/* Header */}
-        <header className="border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+        <header className="border-b bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60">
           <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
             <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Øksnøen · Gjenglemt</div>
             <h1 className="text-2xl sm:text-4xl font-heading font-bold">{period.name}</h1>
@@ -187,7 +187,7 @@ export default function PublicGjenglemt() {
 
         <main className="max-w-6xl mx-auto px-4 py-6 space-y-5">
         {/* Filters */}
-        <section className="rounded-2xl border bg-card p-4">
+        <section className="rounded-2xl border bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60 p-4">
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -217,7 +217,7 @@ export default function PublicGjenglemt() {
                   <button
                     key={item.id}
                     onClick={() => setLightboxIdx(idx)}
-                    className="rounded-xl border overflow-hidden bg-card text-left hover:shadow-md transition-shadow"
+                    className="rounded-xl border overflow-hidden bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/70 text-left hover:shadow-md transition-shadow"
                   >
                     <div className="aspect-square bg-muted relative">
                       <SignedImage imageUrl={item.image_url} alt={item.garment_type ? garmentLabel(item.garment_type) : 'Gjenglemt'} className="w-full h-full object-cover" />
