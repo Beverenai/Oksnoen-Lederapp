@@ -15,7 +15,7 @@ const PUBLIC_PASSWORD = '2026';
 const SS_KEY = 'gjenglemt-public-auth';
 const CONTACT_EMAIL = 'bengt@oksnoen.no';
 
-function buildClaimEmail(item: { item_number: number | null; garment_type: string | null; color: string | null; owner_name: string | null; bag_label: string | null; ai_description: string | null }, periodName: string) {
+function buildClaimEmail(item: { item_number: number | null; garment_type: string | null; color: string | null; owner_name: string | null; bag_label: string | null; ai_description: string | null }, periodName: string, publicUrl: string) {
   const garment = item.garment_type ? garmentLabel(item.garment_type) : 'gjenglemt artikkel';
   const color = item.color ? colorMeta(item.color).label : null;
   const nr = item.item_number ? `#${item.item_number}` : '';
@@ -25,17 +25,28 @@ function buildClaimEmail(item: { item_number: number | null; garment_type: strin
     'Hei,',
     '',
     `Jeg har en deltager som har glemt igjen "${titleParts || garment}" på Øksnøen (${periodName}).`,
+    '',
+    '— Detaljer om gjenstanden —',
     nr ? `Artikkelnummer: ${nr}` : null,
+    color ? `Farge: ${color}` : null,
+    `Type: ${garment}`,
     item.owner_name ? `Navn på lapp/pose: ${item.owner_name}` : null,
     item.bag_label ? `Pose: ${item.bag_label}` : null,
     item.ai_description ? `Beskrivelse: ${item.ai_description}` : null,
     '',
+    '— Deltager —',
     'Deltagers navn: ',
     'Min kontaktinfo (telefon): ',
     '',
-    'Jeg ønsker å:',
-    '  ☐ Hente på Øksnøen',
-    '  ☐ Få det tilsendt (jeg dekker porto)',
+    '— Henting / forsendelse —',
+    'Sett kryss på det som passer:',
+    '  [ ] Jeg kommer og henter på Øksnøen',
+    '  [ ] Jeg ønsker det tilsendt (forsendelse går på egen regning)',
+    '',
+    '— Se bildet selv —',
+    `Du finner full oversikt og bilder her: ${publicUrl}`,
+    `Passord for å åpne siden: ${PUBLIC_PASSWORD}`,
+    nr ? `Søk opp artikkelnummeret «${nr}» i søkefeltet for å se akkurat denne gjenstanden.` : null,
     '',
     'Vennlig hilsen,',
   ].filter(Boolean).join('\n');
@@ -324,7 +335,11 @@ export default function PublicGjenglemt() {
           open={mailOpen}
           onOpenChange={setMailOpen}
           email={CONTACT_EMAIL}
-          {...buildClaimEmail(filtered[lightboxIdx], period.name)}
+          {...buildClaimEmail(
+            filtered[lightboxIdx],
+            period.name,
+            typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''
+          )}
         />
       )}
     </div>
