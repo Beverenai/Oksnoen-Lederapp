@@ -37,6 +37,9 @@ import { updateWidgetData } from '@/lib/capacitorWidget';
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
 
+type SessionData = { reminder: string; items: string[] };
+type SessionsPayload = { active: 1 | 2 | 3; sessions: Record<'1' | '2' | '3', SessionData> };
+
 interface FixTask {
   id: string;
   title: string;
@@ -136,7 +139,7 @@ export default function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const [content, setContent] = useState<LeaderContent | null>(null);
-  const [sessionActivitiesText, setSessionActivitiesText] = useState<string>('');
+  const [sessionsPayload, setSessionsPayload] = useState<SessionsPayload | null>(null);
   const [config, setConfig] = useState<HomeScreenConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -191,7 +194,7 @@ export default function Home() {
         supabase
           .from('app_config')
           .select('value')
-          .eq('key', 'session_activities_text')
+          .eq('key', 'session_activities_data')
           .maybeSingle(),
         supabase
           .from('home_screen_config')
@@ -228,7 +231,16 @@ export default function Home() {
         extraActivity: contentRes.data?.extra_activity ?? null,
         obsMessage: contentRes.data?.obs_message ?? null,
       });
-      setSessionActivitiesText(activitiesTextRes.data?.value || '');
+      if (activitiesTextRes.data?.value) {
+        try {
+          const parsed = JSON.parse(activitiesTextRes.data.value);
+          setSessionsPayload(parsed);
+        } catch {
+          setSessionsPayload(null);
+        }
+      } else {
+        setSessionsPayload(null);
+      }
       setConfig((configRes.data || []) as HomeScreenConfig[]);
       
       // Extract cabins from leader_cabins join
