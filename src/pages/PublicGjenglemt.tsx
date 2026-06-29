@@ -153,6 +153,7 @@ export default function PublicGjenglemt() {
           </form>
         </div>
       </div>
+    </div>
     );
   }
 
