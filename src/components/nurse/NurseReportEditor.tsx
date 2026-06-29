@@ -29,6 +29,7 @@ interface Participant {
   cabin?: { name: string } | null;
   birth_date?: string | null;
   image_url?: string | null;
+  notes?: string | null;
 }
 
 interface NoteEntry {
@@ -36,6 +37,9 @@ interface NoteEntry {
   participant_id: string;
   mention_text: string;
   created_at: string;
+  source: 'mention' | 'health_note' | 'health_event' | 'participant_note';
+  source_label: string;
+  editable: boolean;
 }
 
 interface NurseReportEditorProps {
