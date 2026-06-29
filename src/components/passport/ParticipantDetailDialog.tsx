@@ -192,30 +192,18 @@ export const ParticipantDetailDialog = ({
     }, 1500);
   }, [onParticipantUpdated, queryClient, showError]);
 
-  // Debounced auto-save for activity notes
-  useEffect(() => {
-    if (!participant) return;
-    if (activityNotes === savedSnapshotRef.current) return;
-
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    setNotesStatus('saving');
-    saveTimerRef.current = setTimeout(async () => {
-      await saveActivityNotes(participant, activityNotes);
-    }, 700);
-
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, [activityNotes, participant, saveActivityNotes]);
-
+  // Save activity notes when dialog closes (if changed)
   useEffect(() => {
     if (open) return;
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     if (savedIndicatorTimerRef.current) clearTimeout(savedIndicatorTimerRef.current);
+    if (participant && activityNotes !== savedSnapshotRef.current) {
+      void saveActivityNotes(participant, activityNotes);
+    }
     setNotesStatus('idle');
     isEditingNotesRef.current = false;
-  }, [open]);
+  }, [open, participant, activityNotes, saveActivityNotes]);
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -493,11 +481,6 @@ export const ParticipantDetailDialog = ({
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <Trophy className="h-4 w-4 text-amber-600" />
                     <span>Aktivitetsnotater</span>
-                    {notesStatus === 'saving' && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Loader2 className="h-3 w-3 animate-spin" /> Lagrer…
-                      </span>
-                    )}
                     {notesStatus === 'saved' && (
                       <span className="text-xs text-emerald-600">Lagret</span>
                     )}
@@ -514,7 +497,6 @@ export const ParticipantDetailDialog = ({
                     onBlur={() => {
                       if (!participant || activityNotes === savedSnapshotRef.current) return;
                       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-                      setNotesStatus('saving');
                       void saveActivityNotes(participant, activityNotes);
                     }}
                     placeholder="F.eks. '1. plass i svømming'..."
