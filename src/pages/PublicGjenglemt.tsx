@@ -102,7 +102,7 @@ export default function PublicGjenglemt() {
   if (pLoading) {
     return (
       <div className="min-h-[100dvh] relative bg-cover bg-center bg-no-repeat bg-fixed" style={{ backgroundImage: `url(${backgroundAsset.url})` }}>
-        <div className="absolute inset-0 bg-background/85 dark:bg-background/80 backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-black/20" />
         <div className="relative z-10 min-h-[100dvh] flex items-center justify-center p-6">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -113,7 +113,7 @@ export default function PublicGjenglemt() {
   if (!period) {
     return (
       <div className="min-h-[100dvh] relative bg-cover bg-center bg-no-repeat bg-fixed" style={{ backgroundImage: `url(${backgroundAsset.url})` }}>
-        <div className="absolute inset-0 bg-background/85 dark:bg-background/80 backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-black/20" />
         <div className="relative z-10 min-h-[100dvh] flex flex-col items-center justify-center p-6 text-center gap-2">
           <h1 className="text-2xl font-bold">Fant ikke perioden</h1>
           <p className="text-muted-foreground">Lenken er feil, eller perioden er ikke offentlig tilgjengelig.</p>
@@ -126,7 +126,7 @@ export default function PublicGjenglemt() {
   if (!unlocked) {
     return (
       <div className="min-h-[100dvh] relative bg-cover bg-center bg-no-repeat bg-fixed" style={{ backgroundImage: `url(${backgroundAsset.url})` }}>
-        <div className="absolute inset-0 bg-background/85 dark:bg-background/80 backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-black/20" />
         <div className="relative z-10 min-h-[100dvh] flex items-center justify-center p-6">
           <form onSubmit={tryUnlock} className="w-full max-w-sm rounded-2xl border bg-card/95 p-6 space-y-4 shadow-sm">
             <div className="flex flex-col items-center text-center gap-2">
@@ -160,8 +160,8 @@ export default function PublicGjenglemt() {
 
   return (
     <div className="min-h-[100dvh] relative bg-cover bg-center bg-no-repeat bg-fixed" style={{ backgroundImage: `url(${backgroundAsset.url})` }}>
-      <div className="absolute inset-0 bg-background/85 dark:bg-background/80 backdrop-blur-[2px]" />
-      <div className="relative z-10 min-h-[100dvh] bg-background/0">
+      <div className="absolute inset-0 bg-black/20" />
+      <div className="relative z-10 min-h-[100dvh]">
         {/* Header */}
         <header className="border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
           <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
