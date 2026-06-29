@@ -128,7 +128,7 @@ export default function PublicGjenglemt() {
       <div className="min-h-[100dvh] relative bg-cover bg-center bg-no-repeat bg-fixed" style={{ backgroundImage: `url(${backgroundAsset.url})` }}>
         <div className="absolute inset-0 bg-black/20" />
         <div className="relative z-10 min-h-[100dvh] flex items-center justify-center p-6">
-          <form onSubmit={tryUnlock} className="w-full max-w-sm rounded-2xl border bg-card/95 p-6 space-y-4 shadow-sm">
+          <form onSubmit={tryUnlock} className="w-full max-w-sm rounded-2xl border bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/70 p-6 space-y-4 shadow-sm">
             <div className="flex flex-col items-center text-center gap-2">
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <Lock className="h-6 w-6 text-primary" />
