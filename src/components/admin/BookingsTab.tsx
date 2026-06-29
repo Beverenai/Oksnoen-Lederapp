@@ -44,8 +44,6 @@ export function BookingsTab() {
     },
   });
 
-  const currentPeriod = periods.find(p => p.id === periodId) || null;
-
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['participant-bookings', periodId],
     enabled: !!periodId,
