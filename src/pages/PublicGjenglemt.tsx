@@ -338,7 +338,6 @@ export default function PublicGjenglemt() {
       )}
     </div>
     </div>
-    </div>
   );
 }
 
