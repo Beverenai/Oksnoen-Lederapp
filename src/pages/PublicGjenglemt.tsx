@@ -154,7 +154,7 @@ export default function PublicGjenglemt() {
         </div>
       </div>
     </div>
-    );
+  );
   }
 
   const formatDate = (s: string | null) => s ? new Date(s).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' }) : '';
