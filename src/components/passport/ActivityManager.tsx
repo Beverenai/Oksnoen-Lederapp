@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { createPortal } from 'react-dom';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -207,40 +207,37 @@ export const ActivityManager = ({
         <p className="text-sm text-muted-foreground">Ingen aktiviteter registrert ennå</p>
       )}
 
-      <Button variant="outline" className="w-full" onClick={() => setIsOpen(true)}>
-        <Plus className="h-4 w-4 mr-2" />
-        Legg til aktivitet
-        <ChevronDown className="h-4 w-4 ml-auto" />
-      </Button>
+      <DialogPrimitive.Root open={isOpen} onOpenChange={setIsOpen}>
+        <DialogPrimitive.Trigger asChild>
+          <Button variant="outline" className="w-full">
+            <Plus className="h-4 w-4 mr-2" />
+            Legg til aktivitet
+            <ChevronDown className="h-4 w-4 ml-auto" />
+          </Button>
+        </DialogPrimitive.Trigger>
 
-      {isOpen && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed inset-0 z-[120]"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="activity-picker-title"
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            className="absolute inset-0 bg-foreground/60"
-            aria-label="Lukk aktivitetsvelger"
-            onClick={() => setIsOpen(false)}
-          />
-          <div className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[82dvh] w-full max-w-xl flex-col rounded-t-3xl border bg-background shadow-xl sm:bottom-6 sm:rounded-3xl">
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-[120] bg-foreground/60" />
+          <DialogPrimitive.Content
+            data-vaul-no-drag
+            className="fixed inset-x-0 bottom-0 z-[121] mx-auto flex max-h-[82dvh] w-full max-w-xl flex-col rounded-t-3xl border bg-background shadow-xl sm:bottom-6 sm:rounded-3xl"
+            onOpenAutoFocus={(event) => event.preventDefault()}
+          >
             <div className="mx-auto mt-3 h-1.5 w-24 rounded-full bg-muted" />
             <div className="flex shrink-0 items-center justify-between px-4 pb-3 pt-5">
               <div className="w-10" />
-              <h3 id="activity-picker-title" className="text-lg font-semibold">
-                Legg til aktivitet
-              </h3>
-              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={() => setIsOpen(false)}>
-                <X className="h-5 w-5" />
-                <span className="sr-only">Lukk</span>
-              </Button>
+              <DialogPrimitive.Title asChild>
+                <h3 className="text-lg font-semibold">Legg til aktivitet</h3>
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Close asChild>
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Lukk</span>
+                </Button>
+              </DialogPrimitive.Close>
             </div>
             <div
+              data-vaul-no-drag
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 pb-safe touch-pan-y"
               style={{ WebkitOverflowScrolling: 'touch' }}
               onWheelCapture={(event) => event.stopPropagation()}
@@ -248,10 +245,9 @@ export const ActivityManager = ({
             >
               {activityListContent}
             </div>
-          </div>
-        </div>,
-        document.body,
-      )}
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
     </div>
   );
 };
