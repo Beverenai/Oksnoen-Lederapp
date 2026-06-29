@@ -246,26 +246,7 @@ export default function Admin() {
       )}
 
       {/* Activities Sheet */}
-      <Sheet open={isActivitiesSheetOpen} onOpenChange={setIsActivitiesSheetOpen}>
-        <SheetContent className="sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2"><Calendar className="w-5 h-5" />Aktiviteter</SheetTitle>
-            <SheetDescription>Skriv tekst som vises på hjemskjermen under "Aktiviteter denne økten"</SheetDescription>
-          </SheetHeader>
-          <div className="space-y-4 mt-4">
-            <Textarea
-              placeholder={"Skriv aktiviteter for denne økten her...\n\nEksempel:\n• 09:00 - Frokost\n• 10:00 - Morgensamling\n• 11:00 - Aktiviteter"}
-              value={sessionActivitiesText}
-              onChange={(e) => setSessionActivitiesText(e.target.value)}
-              className="min-h-[250px]"
-            />
-            <Button onClick={() => { saveSessionActivitiesText(); setIsActivitiesSheetOpen(false); }} disabled={isSavingActivities} className="w-full">
-              {isSavingActivities ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-              Lagre aktiviteter
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <SessionActivitiesSheet open={isActivitiesSheetOpen} onOpenChange={setIsActivitiesSheetOpen} />
     </div>
   );
 }
