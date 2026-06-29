@@ -45,35 +45,6 @@ export function BookingsTab() {
   });
 
   const currentPeriod = periods.find(p => p.id === periodId) || null;
-  const parentEmails = useMemo(() => {
-    const set = new Set<string>();
-    for (const b of bookings) {
-      const e = (b.guardian_email || '').trim();
-      if (e && /.+@.+\..+/.test(e)) set.add(e);
-    }
-    return Array.from(set).sort();
-  }, [bookings]);
-
-  const mailSubject = currentPeriod ? `Gjenglemt på Øksnøen – ${currentPeriod.name}` : 'Gjenglemt på Øksnøen';
-  const publicUrl = currentPeriod ? `https://app.oksnoen.com/gjenglemt/${currentPeriod.slug}` : '';
-  const mailBody = [
-    'Hei,',
-    '',
-    `Hvis deltakeren din har glemt igjen noe på Øksnøen (${currentPeriod?.name || ''}), kan dere se alle gjenglemte ting her:`,
-    publicUrl,
-    '',
-    'Passord for å åpne siden: 2026',
-    '',
-    'Finner dere noe dere kjenner igjen, send en epost til bengt@oksnoen.no med artikkelnummeret og navn på deltaker. Dere kan enten hente det på Øksnøen, eller få det tilsendt på egen regning.',
-    '',
-    'Vennlig hilsen,',
-    'Øksnøen',
-  ].join('\n');
-
-  const copy = async (text: string, label: string) => {
-    try { await navigator.clipboard.writeText(text); showSuccess(`${label} kopiert`); }
-    catch { showError('Kunne ikke kopiere'); }
-  };
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['participant-bookings', periodId],
