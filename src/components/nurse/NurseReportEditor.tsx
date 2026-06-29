@@ -200,20 +200,8 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
         source_label: sourceLabels.health_event,
       });
     });
-    participants.forEach((p) => {
-      if (p.notes && p.notes.trim()) {
-        out.push({
-          id: `note-${p.id}`,
-          participant_id: p.id,
-          text: p.notes,
-          created_at: '',
-          source: 'participant_note',
-          source_label: sourceLabels.participant_note,
-        });
-      }
-    });
     return out;
-  }, [mentions, healthNotes, healthEvents, participants]);
+  }, [mentions, healthNotes, healthEvents]);
 
   // Group by participant, sorted by participant name (alphabetical)
   const groupedEntries = useMemo(() => {
