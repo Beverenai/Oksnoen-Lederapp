@@ -561,7 +561,12 @@ export default function Leaders() {
                     )}
                   >
                     {leader.profile_image_url && (
-                      <AvatarImage src={leader.profile_image_url} alt={leader.name} />
+                      <AvatarImage
+                        src={leader.profile_image_url}
+                        alt={leader.name}
+                        loading="lazy"
+                        decoding="async"
+                      />
                     )}
                     <AvatarFallback className="bg-primary/10 text-primary text-base font-semibold">
                       {getFirstName(leader.name).slice(0, 2).toUpperCase()}
