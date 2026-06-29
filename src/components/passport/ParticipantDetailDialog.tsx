@@ -192,30 +192,18 @@ export const ParticipantDetailDialog = ({
     }, 1500);
   }, [onParticipantUpdated, queryClient, showError]);
 
-  // Debounced auto-save for activity notes
-  useEffect(() => {
-    if (!participant) return;
-    if (activityNotes === savedSnapshotRef.current) return;
-
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    setNotesStatus('saving');
-    saveTimerRef.current = setTimeout(async () => {
-      await saveActivityNotes(participant, activityNotes);
-    }, 700);
-
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, [activityNotes, participant, saveActivityNotes]);
-
+  // Save activity notes when dialog closes (if changed)
   useEffect(() => {
     if (open) return;
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     if (savedIndicatorTimerRef.current) clearTimeout(savedIndicatorTimerRef.current);
+    if (participant && activityNotes !== savedSnapshotRef.current) {
+      void saveActivityNotes(participant, activityNotes);
+    }
     setNotesStatus('idle');
     isEditingNotesRef.current = false;
-  }, [open]);
+  }, [open, participant, activityNotes, saveActivityNotes]);
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
