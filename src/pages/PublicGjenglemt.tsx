@@ -14,7 +14,7 @@ import backgroundAsset from '@/assets/oksnoen-header.png.asset.json';
 
 const PUBLIC_PASSWORD = '2026';
 const SS_KEY = 'gjenglemt-public-auth';
-const CONTACT_EMAIL = 'bengt@oksnoen.no';
+const CONTACT_EMAIL = 'leir@oksnoen.no';
 
 function buildClaimEmail(item: { item_number: number | null; garment_type: string | null; color: string | null; owner_name: string | null; bag_label: string | null; ai_description: string | null }, periodName: string, publicUrl: string) {
   const garment = item.garment_type ? garmentLabel(item.garment_type) : 'gjenglemt artikkel';
