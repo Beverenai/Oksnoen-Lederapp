@@ -338,42 +338,19 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
 </body></html>`;
 
     try {
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      document.body.appendChild(iframe);
-      const doc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (!doc) {
-        showError('Kunne ikke åpne utskrift');
-        return;
-      }
-      doc.open();
-      doc.write(html);
-      doc.close();
-      const triggerPrint = () => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        } catch (e) {
-          console.error('Print error:', e);
-        }
-        setTimeout(() => {
-          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-        }, 60000);
-      };
-      if (iframe.contentWindow?.document.readyState === 'complete') {
-        setTimeout(triggerPrint, 500);
-      } else {
-        iframe.onload = () => setTimeout(triggerPrint, 500);
-      }
-      showSuccess('Velg "Lagre som PDF" i utskriftsdialogen');
+      const blob = new Blob(['\ufeff' + html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `nurse-rapport-${format(new Date(), 'yyyy-MM-dd')}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showSuccess('Rapport lastet ned – åpne filen og bruk "Skriv ut → Lagre som PDF"');
     } catch (e) {
-      console.error('Export PDF failed:', e);
-      showError('Kunne ikke lage PDF');
+      console.error('Export failed:', e);
+      showError('Kunne ikke laste ned rapport');
     }
   };
 
