@@ -337,8 +337,44 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
 ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
 </body></html>`;
 
-    const w = window.open('', '_blank');
-    if (w) { w.document.write(html); w.document.close(); }
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!doc) {
+        showError('Kunne ikke åpne utskrift');
+        return;
+      }
+      doc.open();
+      doc.write(html);
+      doc.close();
+      const triggerPrint = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (e) {
+          console.error('Print error:', e);
+        }
+        setTimeout(() => {
+          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        }, 60000);
+      };
+      if (iframe.contentWindow?.document.readyState === 'complete') {
+        setTimeout(triggerPrint, 500);
+      } else {
+        iframe.onload = () => setTimeout(triggerPrint, 500);
+      }
+      showSuccess('Velg "Lagre som PDF" i utskriftsdialogen');
+    } catch (e) {
+      console.error('Export PDF failed:', e);
+      showError('Kunne ikke lage PDF');
+    }
   };
 
   function escapeHtml(s: string) {
