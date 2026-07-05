@@ -283,12 +283,12 @@ export function BookingImportCard({ periodId, onImported }: Props) {
           </TabsList>
           <TabsContent value="file" className="mt-4">
             <label className="inline-flex">
-              <input type="file" accept=".xlsx,.xltx" onChange={handleFile} className="hidden" disabled={isImporting || !periodId} />
+              <input type="file" accept=".xlsx,.xltx,.csv,.txt,text/csv" onChange={handleFile} className="hidden" disabled={isImporting || !periodId} />
               <Button asChild disabled={isImporting || !periodId}>
-                <span>{isImporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}Velg .xlsx-fil</span>
+                <span>{isImporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}Velg .xlsx- eller .csv-fil</span>
               </Button>
             </label>
-            <p className="text-xs text-muted-foreground mt-2">Forventer kolonneoverskrifter som i booking-eksport (Navn, Foresatte navn, Telefon osv.).</p>
+            <p className="text-xs text-muted-foreground mt-2">Støtter .xlsx og .csv (komma, semikolon eller tab). Forventer kolonneoverskrifter som i booking-eksport (Navn, Foresatte navn, Telefon osv.).</p>
           </TabsContent>
           <TabsContent value="paste" className="mt-4 space-y-3">
             <Textarea
