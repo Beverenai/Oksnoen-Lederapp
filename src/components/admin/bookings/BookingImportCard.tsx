@@ -95,6 +95,10 @@ function mapRow(headers: string[], cells: unknown[], periodId: string | null) {
 }
 
 async function parseFile(file: File): Promise<{ headers: string[]; rows: unknown[][] }> {
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.csv') || name.endsWith('.txt') || file.type === 'text/csv') {
+    return parseCsvFile(file);
+  }
   const buf = await file.arrayBuffer();
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buf);
@@ -112,6 +116,60 @@ async function parseFile(file: File): Promise<{ headers: string[]; rows: unknown
     if (rowNumber === 1) headers = cells.map(c => String(c ?? ''));
     else rows.push(cells);
   });
+  return { headers, rows };
+}
+
+async function readFileSmart(file: File): Promise<string> {
+  const buf = await file.arrayBuffer();
+  // Try UTF-8 first; if replacement chars appear, fall back to Windows-1252
+  const utf8 = new TextDecoder('utf-8', { fatal: false }).decode(buf);
+  if (!utf8.includes('\uFFFD')) return utf8;
+  try {
+    return new TextDecoder('windows-1252').decode(buf);
+  } catch {
+    return utf8;
+  }
+}
+
+function detectDelimiter(headerLine: string): string {
+  const candidates = [';', '\t', ',', '|'];
+  let best = ',';
+  let max = 0;
+  for (const c of candidates) {
+    const n = headerLine.split(c).length;
+    if (n > max) { max = n; best = c; }
+  }
+  return best;
+}
+
+function parseCsvLine(line: string, delim: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = false;
+      } else cur += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === delim) { out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+  }
+  out.push(cur);
+  return out.map(s => s.trim());
+}
+
+async function parseCsvFile(file: File): Promise<{ headers: string[]; rows: unknown[][] }> {
+  const text = await readFileSmart(file);
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (!lines.length) return { headers: [], rows: [] };
+  const delim = detectDelimiter(lines[0]);
+  const headers = parseCsvLine(lines[0], delim);
+  const rows = lines.slice(1).map(l => parseCsvLine(l, delim));
   return { headers, rows };
 }
 
@@ -225,12 +283,12 @@ export function BookingImportCard({ periodId, onImported }: Props) {
           </TabsList>
           <TabsContent value="file" className="mt-4">
             <label className="inline-flex">
-              <input type="file" accept=".xlsx,.xltx" onChange={handleFile} className="hidden" disabled={isImporting || !periodId} />
+              <input type="file" accept=".xlsx,.xltx,.csv,.txt,text/csv" onChange={handleFile} className="hidden" disabled={isImporting || !periodId} />
               <Button asChild disabled={isImporting || !periodId}>
-                <span>{isImporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}Velg .xlsx-fil</span>
+                <span>{isImporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}Velg .xlsx- eller .csv-fil</span>
               </Button>
             </label>
-            <p className="text-xs text-muted-foreground mt-2">Forventer kolonneoverskrifter som i booking-eksport (Navn, Foresatte navn, Telefon osv.).</p>
+            <p className="text-xs text-muted-foreground mt-2">Støtter .xlsx og .csv (komma, semikolon eller tab). Forventer kolonneoverskrifter som i booking-eksport (Navn, Foresatte navn, Telefon osv.).</p>
           </TabsContent>
           <TabsContent value="paste" className="mt-4 space-y-3">
             <Textarea
