@@ -158,6 +158,20 @@ serve(async (req) => {
 
     // Handle single leader targeting
     if (single_leader_id) {
+      // Skip inactive leaders
+      const { data: leaderRow } = await supabaseAdmin
+        .from("leaders")
+        .select("id")
+        .eq("id", single_leader_id)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (!leaderRow) {
+        return new Response(
+          JSON.stringify({ success: true, sent: 0, message: "Leader is inactive" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const { data: subscriptions } = await supabaseAdmin
         .from("push_subscriptions")
         .select("*")
@@ -293,7 +307,19 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Sending push to ${subscriptions.length} subscriptions, personalize: ${personalize_activity}`);
+    // Filter out subscriptions for inactive leaders
+    const uniqueLeaderIds = Array.from(new Set(subscriptions.map(s => s.leader_id)));
+    const { data: activeLeaders } = await supabaseAdmin
+      .from("leaders")
+      .select("id")
+      .in("id", uniqueLeaderIds)
+      .eq("is_active", true);
+    const activeSet = new Set((activeLeaders ?? []).map(l => l.id));
+    const totalSubs = subscriptions.length;
+    const filteredSubscriptions = subscriptions.filter(s => activeSet.has(s.leader_id));
+    const inactiveSkipped = totalSubs - filteredSubscriptions.length;
+
+    console.log(`Sending push to ${filteredSubscriptions.length}/${totalSubs} subscriptions (skipped ${inactiveSkipped} inactive), personalize: ${personalize_activity}`);
 
     let sent = 0;
     let failed = 0;
@@ -301,7 +327,7 @@ serve(async (req) => {
     let nativeSkipped = 0;
     let webSkipped = 0;
 
-    for (const sub of subscriptions) {
+    for (const sub of filteredSubscriptions) {
       // Personalize message if requested
       let finalMessage = message;
       if (personalize_activity && leaderActivityMap[sub.leader_id]) {
@@ -378,7 +404,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, sent, failed, removed: deadSubscriptions.length, nativeSkipped, webSkipped }),
+      JSON.stringify({ success: true, sent, failed, removed: deadSubscriptions.length, nativeSkipped, webSkipped, inactiveSkipped }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
