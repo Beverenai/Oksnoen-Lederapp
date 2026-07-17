@@ -10,7 +10,7 @@ import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 async function fetchParticipants(periodId: string) {
   const { data, error } = await supabase
     .from('participants')
-    .select('*, cabins(*), participant_activities(activity, created_at)')
+    .select('*, cabins(*), participant_activities(activity, completed_at)')
     .eq('period_id', periodId)
     .order('name', { ascending: true });
   if (error) throw error;

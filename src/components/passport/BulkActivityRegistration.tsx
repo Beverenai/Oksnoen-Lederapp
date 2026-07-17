@@ -25,7 +25,7 @@ type Cabin = Tables<'cabins'>;
 
 interface ParticipantWithCabin extends Participant {
   cabins?: Cabin | null;
-  participant_activities?: { activity: string; created_at?: string }[];
+  participant_activities?: { activity: string; completed_at?: string }[];
 }
 
 interface BulkActivityRegistrationProps {
@@ -59,7 +59,7 @@ export function BulkActivityRegistration({
     const seen = new Map<string, number>(); // name -> latest time
     participants.forEach((p) => {
       (p.participant_activities || []).forEach((a) => {
-        const t = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const t = a.completed_at ? new Date(a.completed_at).getTime() : 0;
         const prev = seen.get(a.activity) ?? 0;
         if (t > prev) seen.set(a.activity, t);
       });
