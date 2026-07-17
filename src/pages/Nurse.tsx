@@ -132,6 +132,9 @@ export default function Nurse() {
   const [newEventSeverity, setNewEventSeverity] = useState('low');
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isAutoSavingNote, setIsAutoSavingNote] = useState(false);
+  const [isAutoSavingPublic, setIsAutoSavingPublic] = useState(false);
+  const [isAutoSavingLeader, setIsAutoSavingLeader] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'note' | 'event'; id: string; label: string } | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [editEventDescription, setEditEventDescription] = useState('');
@@ -229,6 +232,110 @@ export default function Nurse() {
     setPublicNote(healthInfoRes.data?.info || '');
     setLeaderNotes((updatedParticipant as any).notes || '');
   };
+
+  // ---- Auto-save (debounced) for notes fields ----
+  const autoSaveHealthNote = async (value: string) => {
+    if (!selectedParticipant) return;
+    const existingNote = selectedParticipant.healthNotes[0];
+    setIsAutoSavingNote(true);
+    try {
+      if (!value.trim()) {
+        if (existingNote) {
+          await supabase.from('participant_health_notes').delete().eq('id', existingNote.id);
+          setSelectedParticipant((prev) => prev ? ({
+            ...prev,
+            healthNotes: prev.healthNotes.filter((n) => n.id !== existingNote.id),
+          }) : prev);
+        }
+        return;
+      }
+      if (existingNote) {
+        if (existingNote.content === value) return;
+        await supabase.from('participant_health_notes')
+          .update({ content: value, created_by: leader?.id })
+          .eq('id', existingNote.id);
+        setSelectedParticipant((prev) => prev ? ({
+          ...prev,
+          healthNotes: prev.healthNotes.map((n) => n.id === existingNote.id ? { ...n, content: value } : n),
+        }) : prev);
+      } else {
+        const { data } = await supabase.from('participant_health_notes')
+          .insert({ participant_id: selectedParticipant.id, content: value, created_by: leader?.id })
+          .select().single();
+        if (data) {
+          setSelectedParticipant((prev) => prev ? ({
+            ...prev, healthNotes: [data as HealthNote, ...prev.healthNotes],
+          }) : prev);
+        }
+      }
+    } catch (e) {
+      console.error('auto-save health note error', e);
+    } finally {
+      setIsAutoSavingNote(false);
+    }
+  };
+
+  const autoSavePublicNote = async (value: string) => {
+    if (!selectedParticipant) return;
+    const current = selectedParticipant.publicHealthNote || '';
+    if (current === value) return;
+    setIsAutoSavingPublic(true);
+    try {
+      const { data: existingInfo } = await supabase
+        .from('participant_health_info').select('*')
+        .eq('participant_id', selectedParticipant.id).maybeSingle();
+      if (existingInfo) {
+        await supabase.from('participant_health_info').update({ info: value }).eq('id', existingInfo.id);
+      } else if (value.trim()) {
+        await supabase.from('participant_health_info').insert({
+          participant_id: selectedParticipant.id, info: value,
+        });
+      }
+      setSelectedParticipant((prev) => prev ? ({
+        ...prev, healthInfo: { info: value }, publicHealthNote: value,
+      }) : prev);
+    } catch (e) {
+      console.error('auto-save public note error', e);
+    } finally {
+      setIsAutoSavingPublic(false);
+    }
+  };
+
+  const autoSaveLeaderNotes = async (value: string) => {
+    if (!selectedParticipant) return;
+    if (((selectedParticipant as any).notes || '') === value) return;
+    setIsAutoSavingLeader(true);
+    try {
+      await supabase.from('participants').update({ notes: value }).eq('id', selectedParticipant.id);
+      setSelectedParticipant((prev) => prev ? ({ ...prev, notes: value } as any) : prev);
+    } catch (e) {
+      console.error('auto-save leader notes error', e);
+    } finally {
+      setIsAutoSavingLeader(false);
+    }
+  };
+
+  // Debounce effects
+  useEffect(() => {
+    if (!isDetailOpen || !selectedParticipant) return;
+    const t = setTimeout(() => { autoSaveHealthNote(newNote); }, 700);
+    return () => clearTimeout(t);
+     
+  }, [newNote, isDetailOpen, selectedParticipant?.id]);
+
+  useEffect(() => {
+    if (!isDetailOpen || !selectedParticipant) return;
+    const t = setTimeout(() => { autoSavePublicNote(publicNote); }, 700);
+    return () => clearTimeout(t);
+     
+  }, [publicNote, isDetailOpen, selectedParticipant?.id]);
+
+  useEffect(() => {
+    if (!isDetailOpen || !selectedParticipant) return;
+    const t = setTimeout(() => { autoSaveLeaderNotes(leaderNotes); }, 700);
+    return () => clearTimeout(t);
+     
+  }, [leaderNotes, isDetailOpen, selectedParticipant?.id]);
 
   const openParticipantDetail = async (participant: ParticipantWithHealth) => {
     await loadParticipantDetails(participant);
