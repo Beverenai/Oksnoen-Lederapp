@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { ArrowLeft, Loader2, Users, Shield, CalendarDays, Plus, X, Trash2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Loader2, Users, Shield, CalendarDays, Plus, X, Trash2, AlertTriangle, Wand2, Eraser } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
@@ -65,6 +65,7 @@ export default function ShiftPlannerMini() {
   const [newEnd, setNewEnd] = useState('12:00');
 
   const [openCell, setOpenCell] = useState<string | null>(null);
+  const [autoFilling, setAutoFilling] = useState(false);
 
   const leaderById = useMemo(() => {
     const m = new Map<string, Leader>();
@@ -233,6 +234,115 @@ export default function ShiftPlannerMini() {
     if (error) { setAssignments(before); showError(error.message); }
   };
 
+  function targetForShift(name: string): number {
+    const n = name.toLowerCase();
+    if (n.includes('nattevakt')) return 1;
+    if (n.includes('sanitas')) return 2;
+    if (n.includes('frokost') || n.includes('vekking')) return 1;
+    if (n.includes('middag')) return 2;
+    if (n.includes('kveldsmat')) return 2;
+    return 99;
+  }
+
+  const clearAll = async () => {
+    if (!confirm('Fjerne alle tildelinger?')) return;
+    const before = assignments;
+    setAssignments([]);
+    const { error } = await supabase.from('shift_planner_mini_assignments').delete().not('id', 'is', null);
+    if (error) { setAssignments(before); showError(error.message); return; }
+    showSuccess('Nullstilt');
+  };
+
+  const autoFill = async () => {
+    if (shifts.length === 0) { showError('Legg til økter først'); return; }
+    const pool = leaders.filter((l) => selected.has(l.id));
+    if (pool.length === 0) { showError('Ingen ledere valgt'); return; }
+    setAutoFilling(true);
+    try {
+      const existing = [...assignments];
+      const dayMinutes = new Map<string, number>();
+      const leaderIntervals = new Map<string, { s: number; e: number }[]>();
+      const shiftById = new Map(shifts.map((s) => [s.id, s]));
+      const totalMins = new Map<string, number>();
+      for (const a of existing) {
+        const sh = shiftById.get(a.shift_id);
+        if (!sh) continue;
+        const iv = absMinutes(a.day_index, sh.start_time, sh.end_time);
+        const mins = iv.e - iv.s;
+        dayMinutes.set(`${a.leader_id}|${a.day_index}`, (dayMinutes.get(`${a.leader_id}|${a.day_index}`) || 0) + mins);
+        const arr = leaderIntervals.get(a.leader_id) || [];
+        arr.push({ s: iv.s, e: iv.e });
+        leaderIntervals.set(a.leader_id, arr);
+        totalMins.set(a.leader_id, (totalMins.get(a.leader_id) || 0) + mins);
+      }
+
+      type Slot = { shift: MiniShift; day: number; s: number; e: number; target: number };
+      const slots: Slot[] = [];
+      for (let d = 0; d < days; d++) {
+        for (const sh of shifts) {
+          const iv = absMinutes(d, sh.start_time, sh.end_time);
+          slots.push({ shift: sh, day: d, s: iv.s, e: iv.e, target: targetForShift(sh.name) });
+        }
+      }
+      slots.sort((a, b) => a.s - b.s);
+
+      const canAssign = (lid: string, slot: Slot): boolean => {
+        if (existing.some((a) => a.shift_id === slot.shift.id && a.day_index === slot.day && a.leader_id === lid)) return false;
+        const slotMins = slot.e - slot.s;
+        if ((dayMinutes.get(`${lid}|${slot.day}`) || 0) + slotMins > 8 * 60) return false;
+        const ivs = [...(leaderIntervals.get(lid) || []), { s: slot.s, e: slot.e }].sort((a, b) => a.s - b.s);
+        const blocks: { s: number; e: number }[] = [];
+        for (const iv of ivs) {
+          const last = blocks[blocks.length - 1];
+          if (last && iv.s < last.e) return false;
+          if (last && iv.s === last.e) last.e = Math.max(last.e, iv.e);
+          else blocks.push({ s: iv.s, e: iv.e });
+        }
+        for (let i = 1; i < blocks.length; i++) {
+          const prev = blocks[i - 1];
+          const cur = blocks[i];
+          const gap = cur.s - prev.e;
+          if (gap >= 11 * 60) continue;
+          const prevDurH = (prev.e - prev.s) / 60;
+          const endHour = (prev.e % (24 * 60)) / 60;
+          const wasNight = endHour >= 0 && endHour < 7;
+          if (prevDurH >= 8 || wasNight) return false;
+        }
+        return true;
+      };
+
+      const additions: { shift_id: string; day_index: number; leader_id: string }[] = [];
+      for (const slot of slots) {
+        const cur = existing.filter((a) => a.shift_id === slot.shift.id && a.day_index === slot.day).length
+          + additions.filter((a) => a.shift_id === slot.shift.id && a.day_index === slot.day).length;
+        let need = Math.max(0, slot.target - cur);
+        if (need === 0) continue;
+        const candidates = pool
+          .filter((l) => canAssign(l.id, slot))
+          .sort((a, b) => (totalMins.get(a.id) || 0) - (totalMins.get(b.id) || 0));
+        for (const l of candidates) {
+          if (need === 0) break;
+          additions.push({ shift_id: slot.shift.id, day_index: slot.day, leader_id: l.id });
+          const slotMins = slot.e - slot.s;
+          dayMinutes.set(`${l.id}|${slot.day}`, (dayMinutes.get(`${l.id}|${slot.day}`) || 0) + slotMins);
+          const arr = leaderIntervals.get(l.id) || [];
+          arr.push({ s: slot.s, e: slot.e });
+          leaderIntervals.set(l.id, arr);
+          totalMins.set(l.id, (totalMins.get(l.id) || 0) + slotMins);
+          need--;
+        }
+      }
+
+      if (additions.length === 0) { showError('Fant ingen mulige tildelinger'); return; }
+      const { data, error } = await supabase.from('shift_planner_mini_assignments').insert(additions).select('*');
+      if (error) { showError(error.message); return; }
+      setAssignments((prev) => [...prev, ...((data || []) as MiniAssignment[])]);
+      showSuccess(`La til ${additions.length} tildelinger`);
+    } finally {
+      setAutoFilling(false);
+    }
+  };
+
   const moveAssignment = async (id: string, shift_id: string, day: number) => {
     const before = assignments;
     const a = before.find((x) => x.id === id);
@@ -300,6 +410,13 @@ export default function ShiftPlannerMini() {
           <Input type="number" min={1} max={14} value={days}
             onChange={(e) => setDays(Math.max(1, Math.min(14, Number(e.target.value) || 7)))}
             className="w-16 h-8" />
+          <Button size="sm" variant="outline" onClick={clearAll}>
+            <Eraser className="h-3.5 w-3.5 mr-1" />Nullstill
+          </Button>
+          <Button size="sm" onClick={autoFill} disabled={autoFilling}>
+            {autoFilling ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Wand2 className="h-3.5 w-3.5 mr-1" />}
+            Auto-fyll
+          </Button>
         </div>
       </div>
 
