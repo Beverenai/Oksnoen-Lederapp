@@ -1,25 +1,24 @@
-## Mål
-Kun ledere med `is_active = true` skal motta push-varsler. Inaktive ledere beholder sine push-abonnement i databasen, men hoppes over ved sending — så de får varsler automatisk igjen når de settes aktive.
+## Arkivér Periode 3 og bytt til Periode 4
 
-## Endringer
+Data er allerede trygt lagret per periode via `period_id` på alle tabeller (deltakere, aktiviteter, nurse-rapport, helsehendelser/-notater, gjenglemt, hytterapporter, rombytter, taukontroll, dynga, fix, roulette osv.). Bytte av aktiv periode sletter ingenting — Periode 3 forblir intakt og kan alltid åpnes igjen via periodevelgeren.
 
-### 1. `supabase/functions/push-send/index.ts`
-Legg til et filter-steg like før varslene sendes:
-- Etter at listen `subscriptions` er hentet, slå opp `leaders.is_active` for alle unike `leader_id`-er i batchen.
-- Filtrer bort abonnement der lederen er inaktiv (eller ikke finnes).
-- Logg hvor mange som ble hoppet over (`inactiveSkipped`) og returner tallet i responsen.
-- Gjelder både `single_leader_id`-grenen og hoved-grenen (broadcast / target_activity / target_unread_with_content / leader_ids).
+### Steg
 
-### 2. `supabase/functions/push-admin-alert/index.ts`
-Samme filter-logikk: hopp over abonnement til inaktive ledere før sending.
+1. **Backup først (anbefalt, gjør du selv i UI)**
+   - Nurse → Rapport → last ned HTML/PDF for Periode 3
+   - Admin → Deltakere → eksporter CSV for Periode 3
+   - Admin → Gjenglemt / `/gjenglemt-admin` er allerede tverr-periode og trenger ingen eksport
 
-### 3. Ingen database-endringer
-- Ingen ny tabell, ingen sletting av eksisterende abonnement.
-- `push_subscribe` beholdes som i dag — inaktive ledere kan fortsatt registrere/oppdatere abonnement, men får bare varsler når de er aktive.
+2. **Bytt aktiv periode til Periode 4**
+   - Migrering som setter `is_active = false` på alle perioder og `is_active = true` på Periode 4
+   - Realtime-abonnementer på `periods` sørger for at appen (nurse-rapport, gjenglemt, home, passkontroll) plukker opp den nye aktive perioden umiddelbart uten reload
 
-## Effekt for brukeren
-- Admin ser ingen forskjell i UI — mottakertellingen på "Send til alle" viser fortsatt totalt antall abonnement, men faktisk `sent`-antall vil ekskludere inaktive.
-- Så snart en leder settes `is_active = true` igjen, mottar de varsler uten å måtte aktivere på nytt.
+3. **Verifisering etter bytte**
+   - Bekreft antall rader per periode (deltakere, aktiviteter, gjenglemt, nurse) via read-query, slik at Periode 3 er urørt og Periode 4 starter tom
+   - Rapporter tallene tilbake i chatten
 
-## Teknisk notat
-Bruker én ekstra spørring per push-kall: `select id from leaders where id in (...) and is_active = true`, deretter in-memory filtrering. Ubetydelig ytelseskost.
+### Ingen kodeendringer
+Alt scoping-arbeid (triggere som stempler `period_id`, hooks som leser aktiv periode) er allerede på plass fra tidligere økter — dette er kun en dataoperasjon.
+
+### Bekreft før jeg kjører
+Vil du at jeg bytter til Periode 4 nå, eller vil du først laste ned nurse-PDF/CSV for Periode 3?
