@@ -21,6 +21,9 @@ import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetail
 import { useAuth } from '@/contexts/AuthContext';
 import { VirtualizedParticipantList } from '@/components/passport/VirtualizedParticipantList';
 import { hapticImpact } from '@/lib/capacitorHaptics';
+import { useParticipantTeams } from '@/hooks/useParticipantTeams';
+import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type Cabin = Tables<'cabins'>;
 
@@ -44,6 +47,7 @@ interface ParticipantWithCabin {
   pass_written_at: string | null;
   created_at: string | null;
   updated_at: string | null;
+  team_id: string | null;
   cabins: Cabin | null;
 }
 
@@ -116,6 +120,7 @@ export default function Passport() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [myCabinsFilter, setMyCabinsFilter] = useState(false);
+  const [teamFilter, setTeamFilter] = useState<string>('all');
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
@@ -161,6 +166,9 @@ export default function Passport() {
     staleTime: 30000,
     refetchInterval: 30000,
   });
+
+  const teamsEnabled = useTeamsEnabled();
+  const { data: teams = [] } = useParticipantTeams();
 
   // Realtime subscription for checkout_enabled
   useEffect(() => {
@@ -262,10 +270,17 @@ export default function Passport() {
       const matchesUrlCabin = cabinFilterFromUrl
         ? p.cabin_id === cabinFilterFromUrl
         : true;
-      
-      return matchesSearch && matchesCabin && matchesUrlCabin;
+
+      const matchesTeam =
+        teamFilter === 'all'
+          ? true
+          : teamFilter === 'none'
+          ? !p.team_id
+          : p.team_id === teamFilter;
+
+      return matchesSearch && matchesCabin && matchesUrlCabin && matchesTeam;
     });
-  }, [participants, searchQuery, myCabinsFilter, myCabinIds, cabinFilterFromUrl]);
+  }, [participants, searchQuery, myCabinsFilter, myCabinIds, cabinFilterFromUrl, teamFilter]);
 
   // Group participants by cabin
   const cabinGroups = useMemo((): CabinGroup[] => {
@@ -463,6 +478,37 @@ export default function Passport() {
           </button>
         )}
       </form>
+
+      {/* Team filter — only when teams are enabled */}
+      {teamsEnabled && teams.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Select value={teamFilter} onValueChange={setTeamFilter}>
+            <SelectTrigger className="w-full sm:w-64">
+              <SelectValue placeholder="Filtrer etter lag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle lag</SelectItem>
+              <SelectItem value="none">Uten lag</SelectItem>
+              {teams.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full inline-block"
+                      style={{ backgroundColor: t.color }}
+                    />
+                    {t.name}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {teamFilter !== 'all' && (
+            <Button variant="ghost" size="sm" onClick={() => setTeamFilter('all')}>
+              <X className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Pass / Utsjekk overview button - only when checkout is enabled */}
       {checkoutEnabled && (
