@@ -5,14 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft } from 'lucide-react';
 import { BulkActivityRegistration } from '@/components/passport/BulkActivityRegistration';
-import type { Tables } from '@/integrations/supabase/types';
+import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 
-type Cabin = Tables<'cabins'>;
-
-async function fetchParticipants() {
+async function fetchParticipants(periodId: string) {
   const { data, error } = await supabase
     .from('participants')
-    .select('*, cabins(*)')
+    .select('*, cabins(*), participant_activities(activity, created_at)')
+    .eq('period_id', periodId)
     .order('name', { ascending: true });
   if (error) throw error;
   return (data || []) as any[];
@@ -21,12 +20,13 @@ async function fetchParticipants() {
 export default function PassportActivity() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { data: periodId } = useActivePeriodId();
 
   const { data: participants = [], isLoading, refetch } = useQuery({
-    queryKey: ['participants-with-cabins'],
-    queryFn: fetchParticipants,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 24 * 60 * 60 * 1000,
+    queryKey: ['participants-bulk-activity', periodId ?? 'none'],
+    enabled: !!periodId,
+    queryFn: () => fetchParticipants(periodId!),
+    staleTime: 60_000,
   });
 
   const handleClose = () => navigate('/passport');
@@ -34,6 +34,7 @@ export default function PassportActivity() {
   const handleComplete = () => {
     refetch();
     queryClient.invalidateQueries({ queryKey: ['participant-activities-map'] });
+    queryClient.invalidateQueries({ queryKey: ['participants'] });
   };
 
   return (
