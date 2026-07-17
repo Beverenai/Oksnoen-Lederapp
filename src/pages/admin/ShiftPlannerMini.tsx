@@ -136,13 +136,30 @@ export default function ShiftPlannerMini() {
     const restViolLeaders = new Map<string, number>();
     for (const [lid, arr] of intervals) {
       arr.sort((a, b) => a.s - b.s);
-      for (let i = 1; i < arr.length; i++) {
-        const prev = arr[i - 1];
-        const cur = arr[i];
+      // Slå sammen økter som er rygg-mot-rygg (gap <= 0) til blokker
+      type Block = { s: number; e: number; members: typeof arr };
+      const blocks: Block[] = [];
+      for (const iv of arr) {
+        const last = blocks[blocks.length - 1];
+        if (last && iv.s <= last.e) {
+          last.e = Math.max(last.e, iv.e);
+          last.members.push(iv);
+        } else {
+          blocks.push({ s: iv.s, e: iv.e, members: [iv] });
+        }
+      }
+      // Sjekk hvile mellom blokker
+      for (let i = 1; i < blocks.length; i++) {
+        const prev = blocks[i - 1];
+        const cur = blocks[i];
         const gap = cur.s - prev.e;
-        if (gap < 11 * 60 && gap >= 0) {
-          restViolCells.add(`${lid}|${prev.shiftId}|${prev.day}`);
-          restViolCells.add(`${lid}|${cur.shiftId}|${cur.day}`);
+        if (gap >= 11 * 60) continue;
+        const prevDurH = (prev.e - prev.s) / 60;
+        const endHour = ((prev.e % (24 * 60)) + 24 * 60) % (24 * 60) / 60; // 0..24
+        const wasNight = endHour >= 0 && endHour < 7; // slutter natt/tidlig morgen
+        if (prevDurH >= 8 || wasNight) {
+          for (const m of prev.members) restViolCells.add(`${lid}|${m.shiftId}|${m.day}`);
+          for (const m of cur.members) restViolCells.add(`${lid}|${m.shiftId}|${m.day}`);
           restViolLeaders.set(lid, (restViolLeaders.get(lid) || 0) + 1);
         }
       }
