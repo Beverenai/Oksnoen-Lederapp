@@ -25,6 +25,14 @@ interface Warning {
   detail: string;
 }
 
+interface AssignmentRow {
+  day_index: number;
+  shift_type_id: string;
+  leader_id: string | null;
+  shift_types: { name: string; slug: string; day_type: string; sort_order: number; start_time: string; end_time: string } | null;
+  leaders: { name: string } | null;
+}
+
 export default function ShiftPlannerMini() {
   const { isAdmin } = useAuth();
   const { showSuccess, showError } = useStatusPopup();
@@ -48,6 +56,7 @@ export default function ShiftPlannerMini() {
     understaffed: Warning[];
     validation: { warnings: Warning[] };
   } | null>(null);
+  const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -114,6 +123,14 @@ export default function ShiftPlannerMini() {
       if (error) throw new Error(errMsg || (error as Error).message);
       if ((data as any)?.error) throw new Error((data as any).error);
       setResult(data as any);
+      // Fetch the matrix data
+      const scheduleId = (data as any).schedule_id;
+      const { data: aData, error: aErr } = await supabase
+        .from('shift_assignments')
+        .select('day_index, shift_type_id, leader_id, shift_types(name, slug, day_type, sort_order, start_time, end_time), leaders(name)')
+        .eq('schedule_id', scheduleId);
+      if (aErr) console.error(aErr);
+      setAssignments((aData || []) as any);
       showSuccess(`Generert: ${(data as any).assignments_count} tildelinger`);
     } catch (e) {
       console.error(e);
