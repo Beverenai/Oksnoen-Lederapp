@@ -25,6 +25,14 @@ interface Warning {
   detail: string;
 }
 
+interface AssignmentRow {
+  day_index: number;
+  shift_type_id: string;
+  leader_id: string | null;
+  shift_types: { name: string; slug: string; day_type: string; sort_order: number; start_time: string; end_time: string } | null;
+  leaders: { name: string } | null;
+}
+
 export default function ShiftPlannerMini() {
   const { isAdmin } = useAuth();
   const { showSuccess, showError } = useStatusPopup();
@@ -48,6 +56,7 @@ export default function ShiftPlannerMini() {
     understaffed: Warning[];
     validation: { warnings: Warning[] };
   } | null>(null);
+  const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -114,6 +123,14 @@ export default function ShiftPlannerMini() {
       if (error) throw new Error(errMsg || (error as Error).message);
       if ((data as any)?.error) throw new Error((data as any).error);
       setResult(data as any);
+      // Fetch the matrix data
+      const scheduleId = (data as any).schedule_id;
+      const { data: aData, error: aErr } = await supabase
+        .from('shift_assignments')
+        .select('day_index, shift_type_id, leader_id, shift_types(name, slug, day_type, sort_order, start_time, end_time), leaders(name)')
+        .eq('schedule_id', scheduleId);
+      if (aErr) console.error(aErr);
+      setAssignments((aData || []) as any);
       showSuccess(`Generert: ${(data as any).assignments_count} tildelinger`);
     } catch (e) {
       console.error(e);
@@ -136,6 +153,45 @@ export default function ShiftPlannerMini() {
 
   const validationWarnings = result?.validation?.warnings || [];
   const understaffed = result?.understaffed || [];
+
+  // Build matrix: rows = unique shift types (by name), cols = days
+  const matrix = useMemo(() => {
+    if (!result || assignments.length === 0) return null;
+    const days = result.days;
+    // Collect unique shift types ordered by first occurrence day + sort_order
+    const typeMap = new Map<string, { name: string; sort_order: number; day_type: string; time: string; firstDay: number }>();
+    for (const a of assignments) {
+      const st = a.shift_types;
+      if (!st) continue;
+      const key = st.name;
+      const existing = typeMap.get(key);
+      if (!existing) {
+        typeMap.set(key, {
+          name: st.name,
+          sort_order: st.sort_order,
+          day_type: st.day_type,
+          time: `${st.start_time.slice(0, 5)}–${st.end_time.slice(0, 5)}`,
+          firstDay: a.day_index,
+        });
+      } else if (a.day_index < existing.firstDay) {
+        existing.firstDay = a.day_index;
+      }
+    }
+    const rows = Array.from(typeMap.values()).sort((a, b) => {
+      if (a.firstDay !== b.firstDay) return a.firstDay - b.firstDay;
+      return a.sort_order - b.sort_order;
+    });
+    // Cell lookup: name|day -> names[]
+    const cells = new Map<string, string[]>();
+    for (const a of assignments) {
+      if (!a.shift_types || !a.leaders) continue;
+      const k = `${a.shift_types.name}|${a.day_index}`;
+      const arr = cells.get(k) || [];
+      arr.push(a.leaders.name);
+      cells.set(k, arr);
+    }
+    return { days, rows, cells };
+  }, [result, assignments]);
 
   return (
     <div className="space-y-4 animate-fade-in pb-24">
@@ -300,6 +356,57 @@ export default function ShiftPlannerMini() {
             {understaffed.length === 0 && validationWarnings.length === 0 && (
               <p className="text-sm text-emerald-600">Ingen regelbrudd eller underbemanning ✓</p>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {matrix && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Vaktoversikt</CardTitle>
+            <CardDescription>Rader = vakt, kolonner = dag. Navn viser hvem som er satt opp.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 bg-background z-10 text-left px-2 py-2 border-b border-border/60 min-w-[140px]">Vakt</th>
+                    {Array.from({ length: matrix.days }, (_, d) => (
+                      <th key={d} className="text-left px-2 py-2 border-b border-border/60 min-w-[120px]">
+                        Dag {d}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {matrix.rows.map((row) => (
+                    <tr key={row.name} className="align-top">
+                      <td className="sticky left-0 bg-background z-10 px-2 py-1.5 border-b border-border/40">
+                        <div className="font-medium">{row.name}</div>
+                        <div className="text-[10px] text-muted-foreground">{row.time}</div>
+                      </td>
+                      {Array.from({ length: matrix.days }, (_, d) => {
+                        const names = matrix.cells.get(`${row.name}|${d}`) || [];
+                        return (
+                          <td key={d} className="px-2 py-1.5 border-b border-border/40">
+                            {names.length === 0 ? (
+                              <span className="text-muted-foreground/50">—</span>
+                            ) : (
+                              <div className="flex flex-col gap-0.5">
+                                {names.map((n, i) => (
+                                  <span key={i} className="truncate">{n}</span>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       )}
