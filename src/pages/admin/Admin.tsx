@@ -195,6 +195,12 @@ export default function Admin() {
               <span className="hidden sm:inline sm:ml-2">Vaktplan</span>
             </Button>
           </Link>
+          <Link to="/admin/shifts-mini">
+            <Button variant="outline" size="sm">
+              <CalendarDays className="h-4 w-4" />
+              <span className="hidden sm:inline sm:ml-2">Vaktplan Mini</span>
+            </Button>
+          </Link>
           <Link to="/admin/settings">
             <Button variant="outline" size="sm">
               <Settings className="h-4 w-4" />
