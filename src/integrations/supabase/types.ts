@@ -1751,6 +1751,78 @@ export type Database = {
           },
         ]
       }
+      shift_planner_mini_assignments: {
+        Row: {
+          created_at: string
+          day_index: number
+          id: string
+          leader_id: string
+          shift_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_index: number
+          id?: string
+          leader_id: string
+          shift_id: string
+        }
+        Update: {
+          created_at?: string
+          day_index?: number
+          id?: string
+          leader_id?: string
+          shift_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_planner_mini_assignments_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_planner_mini_assignments_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shift_planner_mini_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_planner_mini_shifts: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          min_leaders: number
+          name: string
+          sort_order: number
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          min_leaders?: number
+          name: string
+          sort_order?: number
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          min_leaders?: number
+          name?: string
+          sort_order?: number
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       shift_schedules: {
         Row: {
           generated_at: string | null
