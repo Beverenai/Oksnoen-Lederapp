@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Search, Award } from "lucide-react";
+import { useActivePeriodId } from "@/hooks/useActivePeriodId";
 
 interface Row {
   id: string;
@@ -19,19 +20,23 @@ export function AmbassadorsTab() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const { data: activePeriodId } = useActivePeriodId();
 
   useEffect(() => {
+    if (!activePeriodId) return;
+    setLoading(true);
     (async () => {
       const { data } = await supabase
         .from("participants")
         .select("id, name, image_url, times_attended, room, cabin:cabins(name)")
+        .eq("period_id", activePeriodId)
         .gte("times_attended", 4)
         .order("times_attended", { ascending: false })
         .order("name");
       setRows((data as any) || []);
       setLoading(false);
     })();
-  }, []);
+  }, [activePeriodId]);
 
   const filtered = rows.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()));
   const newOnes = filtered.filter((r) => (r.times_attended ?? 0) === 4);

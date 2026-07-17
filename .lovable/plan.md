@@ -1,28 +1,51 @@
-## Problem
-På mobilen ser ledere ikke den aktive perioden på `/gjenglemt`. Periode 1 er aktiv i databasen og har innhold, så dette er en frontend-presentasjons-issue: perioden auto-velges via et React-effekt etter at hele perioder-listen er hentet, og hvis lista er forsinket eller cachen er gammel, ender man opp uten valgt periode (knappen "Nytt funn" disablet, ingen badge, tom grid).
+## Ny funksjon: Deltakerlag (10 grupper)
 
-## Hva vi gjør
+En ny seksjon på **Deltaker­statistikk** som fordeler alle deltakerne i aktiv periode i 10 lag. Admin kan endre navn og farge per lag, og når funksjonen er skrudd på vises lagnavn + farge­merke på hvert deltakerkort rundt om i appen.
 
-1. **Hent aktiv periode direkte (ikke avled fra lista).**
-   - Bruk RPC `get_active_period_id()` i en egen liten hook `useActivePeriod()` som returnerer `{ id, name, slug, is_public }` for kun den aktive perioden.
-   - Gjør `useGjenglemtPeriods()` overflødig for leder-siden — kun admin trenger hele lista (brukes ikke på `/gjenglemt`).
+### Brukerflyt
 
-2. **Forenkle `src/pages/Gjenglemt.tsx`.**
-   - Fjern `periodId`-state og auto-select-effekten.
-   - Sett `currentPeriod` rett fra `useActivePeriod()`.
-   - Vis tydelig "Ingen aktiv periode" hvis admin ikke har valgt en (i stedet for tom side).
-   - Behold badge "Aktiv: Periode X" + offentlig lenke-knapper.
+1. Admin går inn på `/participant-stats` → nytt kort **"Lag"**.
+2. Toggle øverst: **"Vis lag i appen"** (av som standard).
+3. Under: 10 lag-rader. Hver rad viser fargeplukker, navnefelt, antall deltakere, og en `Se deltakere`-knapp.
+4. Knapp **"Fordel deltakere"** som tilfeldig deler alle deltakere i aktiv periode i 10 tilnærmet like store lag. Kan kjøres på nytt (bekreftelse). Manuell flytting av enkelt­deltakere via dropdown i deltaker­listen.
+5. Når togglen er på, får deltaker­kort i Passkontroll, Deltaljvisning, Nurse-søk osv. en liten fargeprikk + lagnavn.
 
-3. **Bedre lastetilstander på mobil.**
-   - Skeleton/spinner mens aktiv periode hentes, så siden aldri ser tom ut.
-   - "Nytt funn"-knapp disabled kun under lasting, ikke når currentPeriod er null pga. race.
+### Datamodell
 
-4. **Cache-bust.**
-   - Bump query-key til `['active-period']` for å unngå at gammel PWA-cache holder på tom liste.
-   - Liten kommentar om at brukere må refreshe appen én gang etter ny deploy (PWA).
+Ny tabell `participant_teams`:
+- `period_id` (fk periods)
+- `slot` 1–10 (unikt per periode)
+- `name` (default "Lag 1" … "Lag 10")
+- `color` (hex, default fra en 10-fargers palett)
 
-## Filer som endres
-- `src/hooks/useGjenglemt.ts` — legg til `useActivePeriod()` hook (RPC kall).
-- `src/pages/Gjenglemt.tsx` — rip out periode-state, bruk `useActivePeriod()` direkte, bedre tom/lastetilstand.
+Ny kolonne på `participants`:
+- `team_id uuid` (fk participant_teams, nullable, ON DELETE SET NULL)
 
-Ingen database-endringer. Ingen ny RLS. Bare frontend.
+Ny flagg i `app_config`:
+- `teams_enabled` (boolean, styrer om lag vises i appen). Lest via en enkel hook `useTeamsEnabled()` med realtime, likt `useCheckoutEnabled`.
+
+RLS: Ledere kan lese; admin kan skrive.
+
+### Frontend
+
+- **Ny tab** i `src/pages/admin/ParticipantStats.tsx`: `teams` → komponent `src/components/stats/TeamsTab.tsx`.
+  - Toggle for `teams_enabled`.
+  - Liste med 10 lag: fargeplukker (enkel swatch-grid), inline navneredigering med debounced save, antall medlemmer, expander som lister deltakerne med mulighet til å flytte til annet lag.
+  - "Fordel automatisk"-knapp (shuffle + jevn fordeling over 10 lag i aktiv periode).
+- **Deltakervisning**: ny liten komponent `TeamBadge` (fargeprikk + navn) som brukes i:
+  - `ParticipantDetailDialog` (topp av dialog)
+  - `VirtualizedParticipantList` (ved navnet)
+  - `Nurse.tsx` deltakersøk-resultater
+  - Kun rendret når `teams_enabled = true`.
+- Ny hook `useParticipantTeams(periodId)` som henter de 10 lagene for aktiv periode og cacher via React Query.
+
+### Teknisk
+
+- Fordelings­algoritme: hent alle `participants.id` for aktiv periode, shuffle, del i 10 buckets (Math.floor(i / (n/10)) med overskudd fordelt fra start), oppdater `team_id` i én batch pr. lag.
+- Migrasjonen seeder 10 tomme lag for hver eksisterende periode så UI-et alltid har 10 rader å redigere.
+- Deltakerlister som allerede henter `participants` legger til `team:participant_teams(name, color)` i selecten kun der badgen skal vises, for å holde payload lav ellers.
+
+### Ute av scope
+
+- Ikke automatisk regenerering når nye deltakere importeres — de får `team_id = null` og admin trykker "Fordel" på nytt, eller tildeler manuelt.
+- Ikke egne poeng/scoreboard per lag i denne omgangen.

@@ -132,6 +132,9 @@ export default function Nurse() {
   const [newEventSeverity, setNewEventSeverity] = useState('low');
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isAutoSavingNote, setIsAutoSavingNote] = useState(false);
+  const [isAutoSavingPublic, setIsAutoSavingPublic] = useState(false);
+  const [isAutoSavingLeader, setIsAutoSavingLeader] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'note' | 'event'; id: string; label: string } | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [editEventDescription, setEditEventDescription] = useState('');
@@ -229,6 +232,110 @@ export default function Nurse() {
     setPublicNote(healthInfoRes.data?.info || '');
     setLeaderNotes((updatedParticipant as any).notes || '');
   };
+
+  // ---- Auto-save (debounced) for notes fields ----
+  const autoSaveHealthNote = async (value: string) => {
+    if (!selectedParticipant) return;
+    const existingNote = selectedParticipant.healthNotes[0];
+    setIsAutoSavingNote(true);
+    try {
+      if (!value.trim()) {
+        if (existingNote) {
+          await supabase.from('participant_health_notes').delete().eq('id', existingNote.id);
+          setSelectedParticipant((prev) => prev ? ({
+            ...prev,
+            healthNotes: prev.healthNotes.filter((n) => n.id !== existingNote.id),
+          }) : prev);
+        }
+        return;
+      }
+      if (existingNote) {
+        if (existingNote.content === value) return;
+        await supabase.from('participant_health_notes')
+          .update({ content: value, created_by: leader?.id })
+          .eq('id', existingNote.id);
+        setSelectedParticipant((prev) => prev ? ({
+          ...prev,
+          healthNotes: prev.healthNotes.map((n) => n.id === existingNote.id ? { ...n, content: value } : n),
+        }) : prev);
+      } else {
+        const { data } = await supabase.from('participant_health_notes')
+          .insert({ participant_id: selectedParticipant.id, content: value, created_by: leader?.id })
+          .select().single();
+        if (data) {
+          setSelectedParticipant((prev) => prev ? ({
+            ...prev, healthNotes: [data as HealthNote, ...prev.healthNotes],
+          }) : prev);
+        }
+      }
+    } catch (e) {
+      console.error('auto-save health note error', e);
+    } finally {
+      setIsAutoSavingNote(false);
+    }
+  };
+
+  const autoSavePublicNote = async (value: string) => {
+    if (!selectedParticipant) return;
+    const current = selectedParticipant.publicHealthNote || '';
+    if (current === value) return;
+    setIsAutoSavingPublic(true);
+    try {
+      const { data: existingInfo } = await supabase
+        .from('participant_health_info').select('*')
+        .eq('participant_id', selectedParticipant.id).maybeSingle();
+      if (existingInfo) {
+        await supabase.from('participant_health_info').update({ info: value }).eq('id', existingInfo.id);
+      } else if (value.trim()) {
+        await supabase.from('participant_health_info').insert({
+          participant_id: selectedParticipant.id, info: value,
+        });
+      }
+      setSelectedParticipant((prev) => prev ? ({
+        ...prev, healthInfo: { info: value }, publicHealthNote: value,
+      }) : prev);
+    } catch (e) {
+      console.error('auto-save public note error', e);
+    } finally {
+      setIsAutoSavingPublic(false);
+    }
+  };
+
+  const autoSaveLeaderNotes = async (value: string) => {
+    if (!selectedParticipant) return;
+    if (((selectedParticipant as any).notes || '') === value) return;
+    setIsAutoSavingLeader(true);
+    try {
+      await supabase.from('participants').update({ notes: value }).eq('id', selectedParticipant.id);
+      setSelectedParticipant((prev) => prev ? ({ ...prev, notes: value } as any) : prev);
+    } catch (e) {
+      console.error('auto-save leader notes error', e);
+    } finally {
+      setIsAutoSavingLeader(false);
+    }
+  };
+
+  // Debounce effects
+  useEffect(() => {
+    if (!isDetailOpen || !selectedParticipant) return;
+    const t = setTimeout(() => { autoSaveHealthNote(newNote); }, 700);
+    return () => clearTimeout(t);
+     
+  }, [newNote, isDetailOpen, selectedParticipant?.id]);
+
+  useEffect(() => {
+    if (!isDetailOpen || !selectedParticipant) return;
+    const t = setTimeout(() => { autoSavePublicNote(publicNote); }, 700);
+    return () => clearTimeout(t);
+     
+  }, [publicNote, isDetailOpen, selectedParticipant?.id]);
+
+  useEffect(() => {
+    if (!isDetailOpen || !selectedParticipant) return;
+    const t = setTimeout(() => { autoSaveLeaderNotes(leaderNotes); }, 700);
+    return () => clearTimeout(t);
+     
+  }, [leaderNotes, isDetailOpen, selectedParticipant?.id]);
 
   const openParticipantDetail = async (participant: ParticipantWithHealth) => {
     await loadParticipantDetails(participant);
@@ -1105,14 +1212,13 @@ export default function Nurse() {
                     onChange={(e) => setPublicNote(e.target.value)}
                     className="min-h-[100px]"
                   />
-                  <Button onClick={savePublicHealthNote} disabled={isSaving} variant="outline">
-                    {isSaving ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <p className="text-xs text-muted-foreground flex items-center gap-2">
+                    {isAutoSavingPublic ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Lagrer…</>
                     ) : (
-                      <Save className="w-4 h-4 mr-2" />
+                      <>Lagres automatisk</>
                     )}
-                    Lagre info for ledere
-                  </Button>
+                  </p>
                 </CardContent>
               </Card>
 
@@ -1130,33 +1236,13 @@ export default function Nurse() {
                     onChange={(e) => setNewNote(e.target.value)}
                     className="min-h-[150px]"
                   />
-                  <div className="flex flex-wrap gap-2">
-                    <Button onClick={saveHealthNote} disabled={isSaving}>
-                      {isSaving ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4 mr-2" />
-                      )}
-                      Lagre notat
-                    </Button>
-                    {selectedParticipant?.healthNotes[0]?.id && (
-                      <Button
-                        variant="outline"
-                        className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                        onClick={() =>
-                          setDeleteTarget({
-                            type: 'note',
-                            id: selectedParticipant.healthNotes[0].id,
-                            label: 'notatet',
-                          })
-                        }
-                        disabled={isSaving}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Slett notat
-                      </Button>
+                  <p className="text-xs text-muted-foreground flex items-center gap-2">
+                    {isAutoSavingNote ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Lagrer…</>
+                    ) : (
+                      <>Lagres automatisk – tøm feltet for å slette notatet</>
                     )}
-                  </div>
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1405,14 +1491,13 @@ export default function Nurse() {
                     onChange={(e) => setLeaderNotes(e.target.value)}
                     className="min-h-[150px]"
                   />
-                  <Button onClick={saveLeaderNotes} disabled={isSavingLeaderNotes}>
-                    {isSavingLeaderNotes ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <p className="text-xs text-muted-foreground flex items-center gap-2">
+                    {isAutoSavingLeader ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Lagrer…</>
                     ) : (
-                      <Save className="w-4 h-4 mr-2" />
+                      <>Lagres automatisk</>
                     )}
-                    Lagre leder-notater
-                  </Button>
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>

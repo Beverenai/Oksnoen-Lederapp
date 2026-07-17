@@ -20,6 +20,7 @@ import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
 import { compressImage } from '@/lib/imageUtils';
 import { CachedImage } from '@/components/ui/cached-image';
+import { TeamBadge } from '@/components/participants/TeamBadge';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { isNativeCameraAvailable, takePhoto } from '@/lib/capacitorCamera';
 
@@ -42,6 +43,7 @@ interface ParticipantWithCabin {
   pass_text: string | null;
   pass_suggestion: string | null;
   gift_card_number: string | null;
+  team_id?: string | null;
   cabin?: { id: string; name: string } | null;
 }
 
@@ -439,6 +441,10 @@ export const ParticipantDetailDialog = ({
             <div className="p-4 sm:p-6">
               <ResponsiveDialogHeader className="text-center mb-3">
                 <ResponsiveDialogTitle className="text-lg sm:text-xl">{participant.name}</ResponsiveDialogTitle>
+
+                <div className="flex justify-center mt-1">
+                  <TeamBadge teamId={(participant as any).team_id} size="md" />
+                </div>
 
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground flex-wrap">
                   {participant.birth_date && (

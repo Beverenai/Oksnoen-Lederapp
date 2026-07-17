@@ -136,11 +136,27 @@ serve(async (req) => {
       );
     }
 
-    // Get push subscriptions for all admins
+    // Restrict to active admin leaders only
+    const { data: activeAdmins } = await supabaseAdmin
+      .from("leaders")
+      .select("id")
+      .in("id", adminLeaderIds)
+      .eq("is_active", true);
+    const activeAdminIds = (activeAdmins ?? []).map(l => l.id);
+    console.log(`Active admins: ${activeAdminIds.length}/${adminLeaderIds.length}`);
+
+    if (activeAdminIds.length === 0) {
+      return new Response(
+        JSON.stringify({ success: true, sent: 0, message: "No active admins" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get push subscriptions for all active admins
     const { data: subscriptions, error: subError } = await supabaseAdmin
       .from("push_subscriptions")
       .select("*")
-      .in("leader_id", adminLeaderIds);
+      .in("leader_id", activeAdminIds);
 
     if (subError) {
       console.error("Error fetching subscriptions:", subError);

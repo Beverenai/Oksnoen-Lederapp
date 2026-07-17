@@ -189,12 +189,6 @@ export default function Admin() {
           </p>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <Link to="/admin/shifts">
-            <Button variant="outline" size="sm">
-              <CalendarDays className="h-4 w-4" />
-              <span className="hidden sm:inline sm:ml-2">Vaktplan</span>
-            </Button>
-          </Link>
           <Link to="/admin/settings">
             <Button variant="outline" size="sm">
               <Settings className="h-4 w-4" />

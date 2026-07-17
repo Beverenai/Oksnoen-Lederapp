@@ -337,8 +337,21 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
 ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
 </body></html>`;
 
-    const w = window.open('', '_blank');
-    if (w) { w.document.write(html); w.document.close(); }
+    try {
+      const blob = new Blob(['\ufeff' + html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `nurse-rapport-${format(new Date(), 'yyyy-MM-dd')}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showSuccess('Rapport lastet ned – åpne filen og bruk "Skriv ut → Lagre som PDF"');
+    } catch (e) {
+      console.error('Export failed:', e);
+      showError('Kunne ikke laste ned rapport');
+    }
   };
 
   function escapeHtml(s: string) {

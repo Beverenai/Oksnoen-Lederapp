@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calendar, Upload, Trash2, Loader2, Image, Link as LinkIcon } from 'lucide-react';
+import { Calendar, Upload, Trash2, Loader2, Image, Link as LinkIcon, CalendarDays, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
 export function ScheduleTab() {
@@ -165,6 +166,32 @@ export function ScheduleTab() {
 
   return (
     <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarDays className="w-5 h-5" />
+            Vaktplan-generatorer
+          </CardTitle>
+          <CardDescription>
+            Verktøy for å bygge vaktplaner. Ikke i aktiv bruk ennå.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Link to="/admin/shifts">
+            <Button variant="outline" className="gap-2">
+              <CalendarDays className="h-4 w-4" />
+              Vaktplan
+            </Button>
+          </Link>
+          <Link to="/admin/shifts-mini">
+            <Button variant="outline" className="gap-2">
+              <Sparkles className="h-4 w-4" />
+              Vaktplan Mini
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

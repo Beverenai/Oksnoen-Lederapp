@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { differenceInYears } from 'date-fns';
 import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
+import { TeamBadge } from '@/components/participants/TeamBadge';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { formatFullRoom } from '@/lib/utils';
@@ -39,6 +40,7 @@ interface ParticipantWithCabin {
   pass_written_at: string | null;
   created_at: string | null;
   updated_at: string | null;
+  team_id?: string | null;
   cabins: Cabin | null;
 }
 
@@ -125,6 +127,7 @@ const ParticipantCard = memo(({
               {formatFullRoom(participant.cabins?.name, participant.room)}
             </Badge>
           )}
+          <TeamBadge teamId={participant.team_id} />
           <StyrkeproveBadges 
             completedActivities={completedActivities} 
             showCount 

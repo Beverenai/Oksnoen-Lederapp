@@ -5,7 +5,7 @@ import {
   type PushSubscription,
   Urgency,
 } from "jsr:@negrel/webpush@0.5.0";
-import { isApnsConfigured, sendApplePush } from "../_shared/apns.ts";
+import { getApnsConfig, sendApnsAlert } from "../_shared/apns.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -118,28 +118,30 @@ serve(async (req) => {
       );
     }
 
-    let appServer: ApplicationServer | null = null;
-    const getAppServer = async (): Promise<ApplicationServer> => {
-      if (appServer) return appServer;
+    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
+    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
+    const vapidSubject = Deno.env.get("VAPID_SUBJECT") || "mailto:support@oksnoen.com";
+    const apnsCfg = getApnsConfig();
 
-      const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
-      const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-      const vapidSubject = Deno.env.get("VAPID_SUBJECT") || "mailto:support@oksnoen.com";
-
-      if (!vapidPublicKey || !vapidPrivateKey) {
-        throw new Error("VAPID keys not configured");
-      }
-
-      console.log("Importing VAPID keys...");
+    let appServer: Awaited<ReturnType<typeof ApplicationServer.new>> | null = null;
+    if (vapidPublicKey && vapidPrivateKey) {
       const vapidKeys = await importVapidKeysToCryptoKeyPair(vapidPublicKey, vapidPrivateKey);
-      console.log("VAPID keys imported successfully");
-
       appServer = await ApplicationServer.new({
         contactInformation: vapidSubject,
         vapidKeys: vapidKeys,
       });
-      return appServer;
-    };
+    } else {
+      console.warn("VAPID keys not configured — web push will be skipped");
+    }
+    if (!apnsCfg) {
+      console.warn("APNs secrets not configured — native push will be skipped");
+    }
+    if (!appServer && !apnsCfg) {
+      return new Response(
+        JSON.stringify({ error: "No push transport configured (VAPID and APNs both missing)" }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Build a map of leader_id -> current_activity for personalization
     const leaderActivityMap: Record<string, string> = {};
@@ -156,6 +158,20 @@ serve(async (req) => {
 
     // Handle single leader targeting
     if (single_leader_id) {
+      // Skip inactive leaders
+      const { data: leaderRow } = await supabaseAdmin
+        .from("leaders")
+        .select("id")
+        .eq("id", single_leader_id)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (!leaderRow) {
+        return new Response(
+          JSON.stringify({ success: true, sent: 0, message: "Leader is inactive" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const { data: subscriptions } = await supabaseAdmin
         .from("push_subscriptions")
         .select("*")
@@ -174,25 +190,24 @@ serve(async (req) => {
       let sent = 0;
       let failed = 0;
       let nativeSkipped = 0;
+      let webSkipped = 0;
       
       for (const sub of subscriptions) {
         try {
           if (sub.channel === "apns" || sub.endpoint?.startsWith("native://")) {
             const token = sub.native_token || sub.endpoint.replace("native://", "");
-            if (!isApnsConfigured()) {
-              nativeSkipped++;
-              continue;
-            }
-            await sendApplePush(token, title, message, url || "/");
-            sent++;
+            if (!apnsCfg) { nativeSkipped++; continue; }
+            const res = await sendApnsAlert(apnsCfg, token, { title, body: message, url: url || "/" });
+            if (res.ok) sent++; else { failed++; if (res.unregistered) await supabaseAdmin.from("push_subscriptions").delete().eq("id", sub.id); }
             continue;
           }
 
+          if (!appServer) { webSkipped++; continue; }
           const pushSubscription: PushSubscription = {
             endpoint: sub.endpoint,
             keys: { p256dh: sub.p256dh, auth: sub.auth },
           };
-          const subscriber = await (await getAppServer()).subscribe(pushSubscription);
+          const subscriber = await appServer.subscribe(pushSubscription);
           await subscriber.pushTextMessage(payloadData, { urgency: Urgency.Normal, ttl: 3600 });
           sent++;
         } catch (error: unknown) {
@@ -218,7 +233,7 @@ serve(async (req) => {
       }
       
       return new Response(
-        JSON.stringify({ success: true, sent, failed, nativeSkipped }),
+        JSON.stringify({ success: true, sent, failed, nativeSkipped, webSkipped }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -297,46 +312,57 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Sending push to ${subscriptions.length} subscriptions, personalize: ${personalize_activity}`);
+    // Filter out subscriptions for inactive leaders
+    const uniqueLeaderIds = Array.from(new Set(subscriptions.map(s => s.leader_id)));
+    const { data: activeLeaders } = await supabaseAdmin
+      .from("leaders")
+      .select("id")
+      .in("id", uniqueLeaderIds)
+      .eq("is_active", true);
+    const activeSet = new Set((activeLeaders ?? []).map(l => l.id));
+    const totalSubs = subscriptions.length;
+    const filteredSubscriptions = subscriptions.filter(s => activeSet.has(s.leader_id));
+    const inactiveSkipped = totalSubs - filteredSubscriptions.length;
+
+    console.log(`Sending push to ${filteredSubscriptions.length}/${totalSubs} subscriptions (skipped ${inactiveSkipped} inactive), personalize: ${personalize_activity}`);
 
     let sent = 0;
     let failed = 0;
-    let nativeSkipped = 0;
     const deadSubscriptions: string[] = [];
+    let nativeSkipped = 0;
+    let webSkipped = 0;
 
-    for (const sub of subscriptions) {
-      try {
-        // Personalize message if requested
-        let finalMessage = message;
-        if (personalize_activity && leaderActivityMap[sub.leader_id]) {
-          finalMessage = message.replace('{activity}', leaderActivityMap[sub.leader_id]);
-        }
-        
-        const payloadData = JSON.stringify({ title, body: finalMessage, url: url || "/" });
+    for (const sub of filteredSubscriptions) {
+      // Personalize message if requested
+      let finalMessage = message;
+      if (personalize_activity && leaderActivityMap[sub.leader_id]) {
+        finalMessage = message.replace('{activity}', leaderActivityMap[sub.leader_id]);
+      }
 
-        if (sub.channel === "apns" || sub.endpoint?.startsWith("native://")) {
-          const token = sub.native_token || sub.endpoint.replace("native://", "");
-          if (!isApnsConfigured()) {
-            nativeSkipped++;
-            console.error(`Skipping native subscription ${sub.id}: APNs is not configured`);
-            continue;
-          }
-          await sendApplePush(token, title, finalMessage, url || "/");
+      if (sub.channel === "apns" || sub.endpoint?.startsWith("native://")) {
+        const token = sub.native_token || sub.endpoint.replace("native://", "");
+        if (!apnsCfg) { nativeSkipped++; continue; }
+        const res = await sendApnsAlert(apnsCfg, token, { title, body: finalMessage, url: url || "/" });
+        if (res.ok) {
           sent++;
-          console.log(`Successfully sent APNs push to ${sub.id}`);
-          continue;
+        } else {
+          failed++;
+          console.error(`APNs send failed for ${sub.id}: ${res.status} ${res.reason ?? ""}`);
+          if (res.unregistered) deadSubscriptions.push(sub.id);
         }
-        
+        continue;
+      }
+
+      if (!appServer) { webSkipped++; continue; }
+      try {
+        const payloadData = JSON.stringify({ title, body: finalMessage, url: url || "/" });
         const pushSubscription: PushSubscription = {
           endpoint: sub.endpoint,
           keys: { p256dh: sub.p256dh, auth: sub.auth },
         };
-
-        const subscriber = await (await getAppServer()).subscribe(pushSubscription);
+        const subscriber = await appServer.subscribe(pushSubscription);
         await subscriber.pushTextMessage(payloadData, { urgency: Urgency.Normal, ttl: 3600 });
-
         sent++;
-        console.log(`Successfully sent to ${sub.id}`);
       } catch (error: unknown) {
         failed++;
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -385,7 +411,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, sent, failed, removed: deadSubscriptions.length, nativeSkipped }),
+      JSON.stringify({ success: true, sent, failed, removed: deadSubscriptions.length, nativeSkipped, webSkipped, inactiveSkipped }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {

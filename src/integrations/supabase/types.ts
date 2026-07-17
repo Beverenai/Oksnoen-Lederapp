@@ -897,6 +897,135 @@ export type Database = {
           },
         ]
       }
+      participant_bookings: {
+        Row: {
+          address: string | null
+          birth_date: string | null
+          booking_time: string | null
+          cancelled_date: string | null
+          created_at: string
+          discount: number | null
+          first_name: string | null
+          friends: string | null
+          gender: string | null
+          guardian_email: string | null
+          guardian_first_name: string | null
+          guardian_last_name: string | null
+          guardian_phone: string | null
+          id: string
+          invoiced_date: string | null
+          kiosk_money: number | null
+          last_name: string | null
+          notes_info: string | null
+          paid_date: string | null
+          participant_id: string | null
+          payment_reference: string | null
+          payment_status: string | null
+          period_id: string | null
+          period_label: string | null
+          postal_city: string | null
+          postal_code: string | null
+          prepayment: number | null
+          price: number | null
+          reservation_code: string | null
+          reservation_number: string | null
+          seat_confirmed: string | null
+          status: string | null
+          sweater_size: string | null
+          times_attended: number | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          birth_date?: string | null
+          booking_time?: string | null
+          cancelled_date?: string | null
+          created_at?: string
+          discount?: number | null
+          first_name?: string | null
+          friends?: string | null
+          gender?: string | null
+          guardian_email?: string | null
+          guardian_first_name?: string | null
+          guardian_last_name?: string | null
+          guardian_phone?: string | null
+          id?: string
+          invoiced_date?: string | null
+          kiosk_money?: number | null
+          last_name?: string | null
+          notes_info?: string | null
+          paid_date?: string | null
+          participant_id?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
+          period_id?: string | null
+          period_label?: string | null
+          postal_city?: string | null
+          postal_code?: string | null
+          prepayment?: number | null
+          price?: number | null
+          reservation_code?: string | null
+          reservation_number?: string | null
+          seat_confirmed?: string | null
+          status?: string | null
+          sweater_size?: string | null
+          times_attended?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          birth_date?: string | null
+          booking_time?: string | null
+          cancelled_date?: string | null
+          created_at?: string
+          discount?: number | null
+          first_name?: string | null
+          friends?: string | null
+          gender?: string | null
+          guardian_email?: string | null
+          guardian_first_name?: string | null
+          guardian_last_name?: string | null
+          guardian_phone?: string | null
+          id?: string
+          invoiced_date?: string | null
+          kiosk_money?: number | null
+          last_name?: string | null
+          notes_info?: string | null
+          paid_date?: string | null
+          participant_id?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
+          period_id?: string | null
+          period_label?: string | null
+          postal_city?: string | null
+          postal_code?: string | null
+          prepayment?: number | null
+          price?: number | null
+          reservation_code?: string | null
+          reservation_number?: string | null
+          seat_confirmed?: string | null
+          status?: string | null
+          sweater_size?: string | null
+          times_attended?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_bookings_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_bookings_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participant_health_events: {
         Row: {
           created_at: string
@@ -1046,6 +1175,44 @@ export type Database = {
           },
         ]
       }
+      participant_teams: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          period_id: string
+          slot: number
+          updated_at: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          id?: string
+          name: string
+          period_id: string
+          slot: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          period_id?: string
+          slot?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_teams_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participants: {
         Row: {
           activity_notes: string | null
@@ -1067,6 +1234,7 @@ export type Database = {
           pass_written_by: string | null
           period_id: string | null
           room: string | null
+          team_id: string | null
           times_attended: number | null
           updated_at: string | null
         }
@@ -1090,6 +1258,7 @@ export type Database = {
           pass_written_by?: string | null
           period_id?: string | null
           room?: string | null
+          team_id?: string | null
           times_attended?: number | null
           updated_at?: string | null
         }
@@ -1113,6 +1282,7 @@ export type Database = {
           pass_written_by?: string | null
           period_id?: string | null
           room?: string | null
+          team_id?: string | null
           times_attended?: number | null
           updated_at?: string | null
         }
@@ -1136,6 +1306,13 @@ export type Database = {
             columns: ["period_id"]
             isOneToOne: false
             referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participants_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "participant_teams"
             referencedColumns: ["id"]
           },
         ]
@@ -1621,6 +1798,78 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shift_planner_mini_assignments: {
+        Row: {
+          created_at: string
+          day_index: number
+          id: string
+          leader_id: string
+          shift_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_index: number
+          id?: string
+          leader_id: string
+          shift_id: string
+        }
+        Update: {
+          created_at?: string
+          day_index?: number
+          id?: string
+          leader_id?: string
+          shift_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_planner_mini_assignments_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_planner_mini_assignments_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shift_planner_mini_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_planner_mini_shifts: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          min_leaders: number
+          name: string
+          sort_order: number
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          min_leaders?: number
+          name: string
+          sort_order?: number
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          min_leaders?: number
+          name?: string
+          sort_order?: number
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       shift_schedules: {
         Row: {

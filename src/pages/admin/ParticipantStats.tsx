@@ -8,10 +8,11 @@ import { LeaderActivityStatsTab } from "@/components/stats/LeaderActivityStatsTa
 import { ActivityStatsTab } from "@/components/stats/ActivityStatsTab";
 import { StyrkeproveTab } from "@/components/stats/StyrkeproveTab";
 import { AmbassadorsTab } from "@/components/stats/AmbassadorsTab";
+import { TeamsTab } from "@/components/stats/TeamsTab";
 import { ExportDataSheet } from "@/components/stats/ExportDataSheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity, ArrowLeft, LayoutDashboard, Trophy, Award } from "lucide-react";
+import { ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity, ArrowLeft, LayoutDashboard, Trophy, Award, Users2 } from "lucide-react";
 
 
 const dyngaNavItem = {
@@ -31,6 +32,7 @@ const navItems = [
   { key: "activity-stats", label: "Aktiviteter", desc: "Statistikk over alle aktiviteter", icon: Activity, color: "bg-pink-500/15 text-pink-600 dark:text-pink-400" },
   { key: "styrkeprove", label: "Styrkeprøven", desc: "Fullført og mangler 1-2 aktiviteter", icon: Trophy, color: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400" },
   { key: "ambassadors", label: "Ambassadører", desc: "Deltakere på sitt 4. år", icon: Award, color: "bg-amber-500/15 text-amber-700 dark:text-amber-400" },
+  { key: "teams", label: "Lag", desc: "Del deltakere i 10 lag", icon: Users2, color: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400" },
 ];
 
 const tabComponents: Record<string, React.FC> = {
@@ -41,6 +43,7 @@ const tabComponents: Record<string, React.FC> = {
   "activity-stats": ActivityStatsTab,
   "styrkeprove": StyrkeproveTab,
   "ambassadors": AmbassadorsTab,
+  "teams": TeamsTab,
 };
 
 const tabLabels: Record<string, string> = {
@@ -51,6 +54,7 @@ const tabLabels: Record<string, string> = {
   "activity-stats": "Aktiviteter",
   "styrkeprove": "Styrkeprøven",
   "ambassadors": "Ambassadører",
+  "teams": "Lag",
 };
 
 const ParticipantStats = () => {
