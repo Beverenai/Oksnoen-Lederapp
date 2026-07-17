@@ -1,67 +1,51 @@
+## Ny funksjon: Deltakerlag (10 grupper)
 
-# Manuell Vaktplan Mini — dra og slipp ledere
+En ny seksjon på **Deltaker­statistikk** som fordeler alle deltakerne i aktiv periode i 10 lag. Admin kan endre navn og farge per lag, og når funksjonen er skrudd på vises lagnavn + farge­merke på hvert deltakerkort rundt om i appen.
 
-Ombygger `/admin/shifts-mini` fra AI-generator til en **manuell planlegger**: du definerer selv økter (navn, klokkeslett, varighet), og drar ledere inn i cellene. Appen regner løpende ut totaltimer pr. leder og markerer brudd på 11-timers hvile. Den vanlige `/admin/shifts` forblir uendret.
+### Brukerflyt
 
-## Hva du får
+1. Admin går inn på `/participant-stats` → nytt kort **"Lag"**.
+2. Toggle øverst: **"Vis lag i appen"** (av som standard).
+3. Under: 10 lag-rader. Hver rad viser fargeplukker, navnefelt, antall deltakere, og en `Se deltakere`-knapp.
+4. Knapp **"Fordel deltakere"** som tilfeldig deler alle deltakere i aktiv periode i 10 tilnærmet like store lag. Kan kjøres på nytt (bekreftelse). Manuell flytting av enkelt­deltakere via dropdown i deltaker­listen.
+5. Når togglen er på, får deltaker­kort i Passkontroll, Deltaljvisning, Nurse-søk osv. en liten fargeprikk + lagnavn.
 
-**1) Egendefinerte økter (skift-maler)**
-- Nytt kort «Økter» øverst: legg til, rediger, slett økter.
-- Felt per økt: `Navn`, `Starttid`, `Sluttid`, (auto-beregnet `varighet i timer`), `Min. antall ledere` (valgfritt, kun for visning).
-- Økter er dine — ingen kobling til de eksisterende `shift_types` (Vekking, Bings osv.). De lagres separat så «vanlig» Vaktplan ikke påvirkes.
+### Datamodell
 
-**2) Dager**
-- Velg antall dager (1–14). Ingen ankomst/avreise-logikk — bare dag 1..N.
+Ny tabell `participant_teams`:
+- `period_id` (fk periods)
+- `slot` 1–10 (unikt per periode)
+- `name` (default "Lag 1" … "Lag 10")
+- `color` (hex, default fra en 10-fargers palett)
 
-**3) Matrise med drag & drop**
-- Rader = dine økter, kolonner = dager.
-- Dra en leder fra sidepanelet «Ledere» inn i en celle.
-- Dra mellom celler for å flytte. `×` fjerner. Klikk `+` som fallback (mobil) for å velge fra liste.
-- Hver celle kan ha flere ledere.
+Ny kolonne på `participants`:
+- `team_id uuid` (fk participant_teams, nullable, ON DELETE SET NULL)
 
-**4) Live-beregning pr. leder**
-- Sidepanelet viser hver valgt leder med:
-  - `Sum timer pr. dag` (badge pr. dag hvis > 0) — rød hvis > 8 t (kveldsskift 8,6 t).
-  - `Total i perioden`.
-  - `Hvile-varsel` når to påfølgende vakter for samme person har < 11 t mellom slutt og neste start (håndterer også over midnatt).
-- Cellen vises rød når den forårsaker et brudd for en av lederne i den.
+Ny flagg i `app_config`:
+- `teams_enabled` (boolean, styrer om lag vises i appen). Lest via en enkel hook `useTeamsEnabled()` med realtime, likt `useCheckoutEnabled`.
 
-## Teknisk
+RLS: Ledere kan lese; admin kan skrive.
 
-**Ny tabell `shift_planner_mini_shifts`** (dine egne økt-maler, separat fra `shift_types`):
-```
-id uuid pk, created_by uuid, name text, start_time time, end_time time,
-duration_hours numeric generated (end-start, håndterer over midnatt), 
-min_leaders int default 0, sort_order int, created_at, updated_at
-```
-+ RLS: admin full tilgang, GRANT authenticated/service_role.
+### Frontend
 
-**Ny tabell `shift_planner_mini_assignments`** (celle-innhold):
-```
-id uuid pk, shift_id uuid fk -> shift_planner_mini_shifts,
-day_index int, leader_id uuid fk -> leaders, created_at
-unique (shift_id, day_index, leader_id)
-```
-+ RLS admin, GRANT.
+- **Ny tab** i `src/pages/admin/ParticipantStats.tsx`: `teams` → komponent `src/components/stats/TeamsTab.tsx`.
+  - Toggle for `teams_enabled`.
+  - Liste med 10 lag: fargeplukker (enkel swatch-grid), inline navneredigering med debounced save, antall medlemmer, expander som lister deltakerne med mulighet til å flytte til annet lag.
+  - "Fordel automatisk"-knapp (shuffle + jevn fordeling over 10 lag i aktiv periode).
+- **Deltakervisning**: ny liten komponent `TeamBadge` (fargeprikk + navn) som brukes i:
+  - `ParticipantDetailDialog` (topp av dialog)
+  - `VirtualizedParticipantList` (ved navnet)
+  - `Nurse.tsx` deltakersøk-resultater
+  - Kun rendret når `teams_enabled = true`.
+- Ny hook `useParticipantTeams(periodId)` som henter de 10 lagene for aktiv periode og cacher via React Query.
 
-Vi bruker ikke `shift_assignments`/`shift_schedules` her, så den vanlige planneren forblir helt uberørt.
+### Teknisk
 
-**Frontend — `src/pages/admin/ShiftPlannerMini.tsx` skrives om:**
-- Fjerner: AI-generator, periode-parametere, arrival/departure-brytere, kall til `generate-shift-schedule-mini` og `revalidate-shift-schedule`.
-- Beholder: Ledere-panel (søk, av/på) — men nå brukes valgte ledere som «kandidater» du kan dra fra.
-- Legger til:
-  - `ShiftEditorCard` — CRUD på egne økter.
-  - `PlannerMatrix` — HTML5 drag & drop (`draggable`, `onDragStart/Over/Drop`) mellom leder-panel og celler, og mellom celler.
-  - `useHoursAndRest(assignments, shifts)` — util som per leder+dag summerer timer og sjekker 11 t hvile mot forrige dags siste vakt og samme dag; returnerer `{ perLeaderPerDay, totals, violations: Set<'leaderId|day'> }`.
-  - Sidebar «Timer & hvile» med totals + varsler.
-- Alle mutasjoner (add/move/remove økt/assignment) skriver direkte til de nye tabellene med optimistic update via React Query-mønster brukt ellers i prosjektet.
+- Fordelings­algoritme: hent alle `participants.id` for aktiv periode, shuffle, del i 10 buckets (Math.floor(i / (n/10)) med overskudd fordelt fra start), oppdater `team_id` i én batch pr. lag.
+- Migrasjonen seeder 10 tomme lag for hver eksisterende periode så UI-et alltid har 10 rader å redigere.
+- Deltakerlister som allerede henter `participants` legger til `team:participant_teams(name, color)` i selecten kun der badgen skal vises, for å holde payload lav ellers.
 
-**Regler implementert i klient (samsvarer med eksisterende):**
-- Maks 8 t/dag. (Info-varsel, ikke blokkering.)
-- 11 t hvile mellom to påfølgende vakter for samme leder.
-- Ingen team-logikk (du har allerede fjernet T1/T2/F i Mini).
+### Ute av scope
 
-## Ute av scope
-- Ingen endring i `/admin/shifts` eller edge-funksjonene bak vanlig vaktplan.
-- Ingen AI-forslag i Mini (kan legges til senere hvis ønsket).
-- Ingen eksport/print i denne omgangen — kan tilføyes etter at layouten er godkjent.
+- Ikke automatisk regenerering når nye deltakere importeres — de får `team_id = null` og admin trykker "Fordel" på nytt, eller tildeler manuelt.
+- Ikke egne poeng/scoreboard per lag i denne omgangen.
