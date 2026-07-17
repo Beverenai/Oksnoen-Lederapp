@@ -66,7 +66,10 @@ export function TeamsTab() {
   const unassigned = (participants || []).filter((p) => !p.team_id);
 
   const toggleEnabled = async (val: boolean) => {
-    await supabase.from('app_config').upsert({ key: 'teams_enabled', value: val ? 'true' : 'false' });
+    const { error } = await supabase
+      .from('app_config')
+      .upsert({ key: 'teams_enabled', value: val ? 'true' : 'false' }, { onConflict: 'key' });
+    if (error) { showError('Kunne ikke lagre', error.message); return; }
     qc.invalidateQueries({ queryKey: ['teams-enabled'] });
   };
 
