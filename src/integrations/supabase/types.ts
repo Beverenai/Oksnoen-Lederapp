@@ -1175,6 +1175,44 @@ export type Database = {
           },
         ]
       }
+      participant_teams: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          period_id: string
+          slot: number
+          updated_at: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          id?: string
+          name: string
+          period_id: string
+          slot: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          period_id?: string
+          slot?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_teams_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participants: {
         Row: {
           activity_notes: string | null
@@ -1196,6 +1234,7 @@ export type Database = {
           pass_written_by: string | null
           period_id: string | null
           room: string | null
+          team_id: string | null
           times_attended: number | null
           updated_at: string | null
         }
@@ -1219,6 +1258,7 @@ export type Database = {
           pass_written_by?: string | null
           period_id?: string | null
           room?: string | null
+          team_id?: string | null
           times_attended?: number | null
           updated_at?: string | null
         }
@@ -1242,6 +1282,7 @@ export type Database = {
           pass_written_by?: string | null
           period_id?: string | null
           room?: string | null
+          team_id?: string | null
           times_attended?: number | null
           updated_at?: string | null
         }
@@ -1265,6 +1306,13 @@ export type Database = {
             columns: ["period_id"]
             isOneToOne: false
             referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participants_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "participant_teams"
             referencedColumns: ["id"]
           },
         ]
