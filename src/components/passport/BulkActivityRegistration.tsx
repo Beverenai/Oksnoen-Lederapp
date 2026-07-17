@@ -1,6 +1,6 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { useState, useMemo } from 'react';
-import { Search, Check, X, Users, Home, Sparkles } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Search, Check, X, Users, Home, Sparkles, ChevronDown, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,18 +9,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { supabase } from '@/integrations/supabase/client';
 import { useActivities } from '@/hooks/useActivities';
+import { useParticipantTeams } from '@/hooks/useParticipantTeams';
+import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 type Participant = Tables<'participants'>;
 type Cabin = Tables<'cabins'>;
 
 interface ParticipantWithCabin extends Participant {
   cabins?: Cabin | null;
-  participant_activities?: Tables<'participant_activities'>[];
+  participant_activities?: { activity: string; created_at?: string }[];
 }
 
 interface BulkActivityRegistrationProps {
@@ -37,13 +42,33 @@ export function BulkActivityRegistration({
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader } = useAuth();
   const { activities } = useActivities(true);
+  const teamsEnabled = useTeamsEnabled();
+  const { data: teams = [] } = useParticipantTeams();
   const [selectedActivity, setSelectedActivity] = useState<string>('');
   const [isCustom, setIsCustom] = useState(false);
   const [customName, setCustomName] = useState('');
   const [cabinFilter, setCabinFilter] = useState<string>('all');
+  const [teamFilter, setTeamFilter] = useState<string>('all');
   const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activityPickerOpen, setActivityPickerOpen] = useState(false);
+
+  // Recent activities: unique names most recently registered across all participants
+  const recentActivities = useMemo(() => {
+    const seen = new Map<string, number>(); // name -> latest time
+    participants.forEach((p) => {
+      (p.participant_activities || []).forEach((a) => {
+        const t = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const prev = seen.get(a.activity) ?? 0;
+        if (t > prev) seen.set(a.activity, t);
+      });
+    });
+    return Array.from(seen.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name]) => name);
+  }, [participants]);
 
   // Unique cabins from participants list, sorted (no)
   const availableCabins = useMemo(() => {
@@ -55,33 +80,49 @@ export function BulkActivityRegistration({
     return Array.from(names).sort((a, b) => a.localeCompare(b, 'nb'));
   }, [participants]);
 
-  // Filter participants based on search and who hasn't done the activity
+  // Totals for the currently selected activity (unfiltered)
+  const activityTotals = useMemo(() => {
+    if (!selectedActivity) return { done: 0, total: participants.length };
+    let done = 0;
+    participants.forEach((p) => {
+      if (p.participant_activities?.some((a) => a.activity.toLowerCase() === selectedActivity.toLowerCase())) done++;
+    });
+    return { done, total: participants.length };
+  }, [participants, selectedActivity]);
+
+  // Filter participants based on search + filters + hides who already did activity
   const filteredParticipants = useMemo(() => {
     if (!selectedActivity) return [];
-
+    const q = searchQuery.trim().toLowerCase();
     return participants.filter((p) => {
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = !q || p.name.toLowerCase().includes(q);
       const matchesCabin =
         cabinFilter === 'all' ||
         (cabinFilter === 'none' && !p.cabins?.name) ||
         p.cabins?.name === cabinFilter;
+      const matchesTeam =
+        teamFilter === 'all' ||
+        (teamFilter === 'none' && !(p as any).team_id) ||
+        (p as any).team_id === teamFilter;
       const hasActivity = p.participant_activities?.some(
         (a) => a.activity.toLowerCase() === selectedActivity.toLowerCase()
       );
-      return matchesSearch && matchesCabin && !hasActivity;
+      return matchesSearch && matchesCabin && matchesTeam && !hasActivity;
     });
-  }, [participants, selectedActivity, searchQuery, cabinFilter]);
+  }, [participants, selectedActivity, searchQuery, cabinFilter, teamFilter]);
 
-  const handleActivityChange = (value: string) => {
-    if (value === '__custom__') {
-      setIsCustom(true);
-      setSelectedActivity(customName.trim());
-    } else {
-      setIsCustom(false);
-      setCustomName('');
-      setSelectedActivity(value);
-    }
+  const pickActivity = (name: string) => {
+    setIsCustom(false);
+    setCustomName('');
+    setSelectedActivity(name);
     setSelectedParticipants(new Set());
+    setActivityPickerOpen(false);
+  };
+
+  const pickCustom = () => {
+    setIsCustom(true);
+    setSelectedActivity(customName.trim());
+    setActivityPickerOpen(false);
   };
 
   const handleCustomNameChange = (value: string) => {
@@ -99,13 +140,10 @@ export function BulkActivityRegistration({
     setSelectedParticipants(newSelected);
   };
 
-  const selectAll = () => {
-    setSelectedParticipants(new Set(filteredParticipants.map((p) => p.id)));
-  };
-
-  const deselectAll = () => {
-    setSelectedParticipants(new Set());
-  };
+  const selectAll = () => setSelectedParticipants(new Set(filteredParticipants.map((p) => p.id)));
+  const deselectAll = () => setSelectedParticipants(new Set());
+  const allSelected =
+    filteredParticipants.length > 0 && selectedParticipants.size === filteredParticipants.length;
 
   const handleSubmit = async () => {
     if (!selectedActivity || selectedParticipants.size === 0) return;
@@ -162,88 +200,143 @@ export function BulkActivityRegistration({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Activity Selection */}
+      <CardContent className="space-y-4 pb-24">
+        {/* Activity Selection – searchable */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Velg aktivitet</label>
-          <Select
-            value={isCustom ? '__custom__' : selectedActivity}
-            onValueChange={handleActivityChange}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Velg en aktivitet..." />
-            </SelectTrigger>
-            <SelectContent>
-              {activities.map((activity) => (
-                <SelectItem key={activity.id} value={activity.title}>
-                  {activity.title}
-                </SelectItem>
-              ))}
-              <SelectItem value="__custom__">
-                <span className="flex items-center gap-2">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Egendefinert aktivitet…
+          <label className="text-sm font-medium">1. Velg aktivitet</label>
+          <Popover open={activityPickerOpen} onOpenChange={setActivityPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="w-full justify-between h-11"
+              >
+                <span className={cn('truncate', !selectedActivity && 'text-muted-foreground')}>
+                  {isCustom
+                    ? (customName || 'Egendefinert aktivitet…')
+                    : (selectedActivity || 'Velg en aktivitet…')}
                 </span>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+                <ChevronDown className="w-4 h-4 opacity-60 shrink-0 ml-2" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-w-none" align="start">
+              <Command>
+                <CommandInput placeholder="Søk etter aktivitet…" />
+                <CommandList className="max-h-72">
+                  <CommandEmpty>Ingen treff</CommandEmpty>
+                  {recentActivities.length > 0 && (
+                    <CommandGroup heading="Nylig brukt">
+                      {recentActivities.map((name) => (
+                        <CommandItem key={`recent-${name}`} value={`recent ${name}`} onSelect={() => pickActivity(name)}>
+                          <Clock className="w-3.5 h-3.5 mr-2 opacity-60" />
+                          {name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                  <CommandGroup heading="Alle aktiviteter">
+                    {activities.map((activity) => (
+                      <CommandItem
+                        key={activity.id}
+                        value={activity.title}
+                        onSelect={() => pickActivity(activity.title)}
+                      >
+                        {activity.title}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                  <CommandGroup>
+                    <CommandItem value="__custom__ egendefinert" onSelect={pickCustom}>
+                      <Sparkles className="w-3.5 h-3.5 mr-2" />
+                      Egendefinert aktivitet…
+                    </CommandItem>
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           {isCustom && (
             <Input
               autoFocus
-              placeholder="Skriv aktivitetsnavn..."
+              placeholder="Skriv aktivitetsnavn…"
               maxLength={60}
               value={customName}
-              onChange={(e) => handleCustomNameChange(e.target.value)}
+              onChange={(e) => {
+                setCustomName(e.target.value);
+                setSelectedActivity(e.target.value.trim());
+              }}
             />
+          )}
+          {selectedActivity && !isCustom && (
+            <p className="text-xs text-muted-foreground">
+              {activityTotals.done} av {activityTotals.total} har allerede gjort denne •{' '}
+              <span className="font-medium text-foreground">{activityTotals.total - activityTotals.done} gjenstår</span>
+            </p>
           )}
         </div>
 
         {selectedActivity && (
           <>
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Søk etter deltaker..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">2. Huk av deltakere</label>
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Søk etter deltaker…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 h-11"
+                />
+              </div>
 
-            {/* Cabin filter */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <Home className="w-3 h-3" /> Filtrer på hytte
-              </label>
-              <Select value={cabinFilter} onValueChange={setCabinFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Alle hytter</SelectItem>
-                  {availableCabins.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="none">Uten hytte</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Filters row */}
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={cabinFilter} onValueChange={setCabinFilter}>
+                  <SelectTrigger className="h-10">
+                    <Home className="w-3.5 h-3.5 mr-1 opacity-60" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle hytter</SelectItem>
+                    {availableCabins.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                    <SelectItem value="none">Uten hytte</SelectItem>
+                  </SelectContent>
+                </Select>
+                {teamsEnabled && teams.length > 0 ? (
+                  <Select value={teamFilter} onValueChange={setTeamFilter}>
+                    <SelectTrigger className="h-10">
+                      <Users className="w-3.5 h-3.5 mr-1 opacity-60" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Alle lag</SelectItem>
+                      {teams.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                      <SelectItem value="none">Uten lag</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : <div />}
+              </div>
 
-            {/* Select all / Deselect all */}
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={selectAll}>
-                Velg alle ({filteredParticipants.length})
-              </Button>
-              <Button variant="outline" size="sm" onClick={deselectAll}>
-                Fjern valg
-              </Button>
+              {/* Master toggle */}
+              <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border bg-muted/40">
+                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={(v) => (v ? selectAll() : deselectAll())}
+                  />
+                  Velg alle ({filteredParticipants.length})
+                </label>
+                <Badge variant="secondary">{selectedParticipants.size} valgt</Badge>
+              </div>
             </div>
 
             {/* Participant List */}
-            <div className="max-h-64 overflow-y-auto space-y-2 border rounded-lg p-2">
+            <div className="max-h-[50vh] overflow-y-auto space-y-1 border rounded-lg p-2">
               {filteredParticipants.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   {searchQuery
@@ -254,7 +347,10 @@ export function BulkActivityRegistration({
                 filteredParticipants.map((participant) => (
                   <div
                     key={participant.id}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer"
+                    className={cn(
+                      'flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors',
+                      selectedParticipants.has(participant.id) ? 'bg-primary/10' : 'hover:bg-muted/50'
+                    )}
                     onClick={() => toggleParticipant(participant.id)}
                   >
                     <Checkbox
@@ -277,23 +373,27 @@ export function BulkActivityRegistration({
                 ))
               )}
             </div>
-
-            {/* Submit Button */}
-            <Button
-              onClick={handleSubmit}
-              disabled={selectedParticipants.size === 0 || isSubmitting}
-              className="w-full"
-            >
-              {isSubmitting ? (
-                <span className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              ) : (
-                <Check className="w-4 h-4 mr-2" />
-              )}
-              Registrer {selectedParticipants.size} deltakere
-            </Button>
           </>
         )}
       </CardContent>
+
+      {/* Sticky submit bar */}
+      {selectedActivity && (
+        <div className="sticky bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] rounded-b-lg">
+          <Button
+            onClick={handleSubmit}
+            disabled={selectedParticipants.size === 0 || isSubmitting}
+            className="w-full h-12 text-base"
+          >
+            {isSubmitting ? (
+              <span className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : (
+              <Check className="w-5 h-5 mr-2" />
+            )}
+            Registrer {selectedParticipants.size > 0 ? `${selectedParticipants.size} deltaker${selectedParticipants.size === 1 ? '' : 'e'}` : 'deltakere'}
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }
