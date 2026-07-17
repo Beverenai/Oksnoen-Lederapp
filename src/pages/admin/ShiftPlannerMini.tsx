@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import {
-  ArrowLeft, Sparkles, Loader2, Users, AlertTriangle, Shield, CalendarDays, Plus, X,
+  ArrowLeft, Sparkles, Loader2, Users, Shield, CalendarDays, Plus, X,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
