@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,43 +7,44 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import {
-  ArrowLeft, Sparkles, Loader2, Users, Shield, CalendarDays, Plus, X,
-} from 'lucide-react';
+import { ArrowLeft, Loader2, Users, Shield, CalendarDays, Plus, X, Trash2, AlertTriangle } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
-type DayType = 'arrival' | 'normal' | 'departure';
 
-interface ShiftType {
+interface MiniShift {
   id: string;
   name: string;
-  slug: string;
-  day_type: DayType;
-  sort_order: number;
   start_time: string;
   end_time: string;
   min_leaders: number;
+  sort_order: number;
 }
 
-interface AssignmentRow {
+interface MiniAssignment {
   id: string;
+  shift_id: string;
   day_index: number;
-  shift_type_id: string;
-  leader_id: string | null;
-  leaders: { name: string } | null;
+  leader_id: string;
 }
 
-interface Warning {
-  leader_id: string | null;
-  leader_name: string | null;
-  day_index: number | null;
-  rule: string;
-  detail: string;
+function durationHours(start: string, end: string): number {
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  let mins = (eh * 60 + em) - (sh * 60 + sm);
+  if (mins <= 0) mins += 24 * 60;
+  return Math.round((mins / 60) * 100) / 100;
+}
+
+function absMinutes(day: number, start: string, end: string): { s: number; e: number } {
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  const s = day * 24 * 60 + sh * 60 + sm;
+  let e = day * 24 * 60 + eh * 60 + em;
+  if (e <= s) e += 24 * 60;
+  return { s, e };
 }
 
 export default function ShiftPlannerMini() {
@@ -52,156 +53,202 @@ export default function ShiftPlannerMini() {
 
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [loading, setLoading] = useState(true);
+  const [leaderSearch, setLeaderSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState('');
 
-  const [periodNumber, setPeriodNumber] = useState(1);
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [periodLength, setPeriodLength] = useState(7);
-  const [includeArrival, setIncludeArrival] = useState(true);
-  const [includeDeparture, setIncludeDeparture] = useState(true);
+  const [days, setDays] = useState(7);
+  const [shifts, setShifts] = useState<MiniShift[]>([]);
+  const [assignments, setAssignments] = useState<MiniAssignment[]>([]);
 
-  const [generating, setGenerating] = useState(false);
-  const [scheduleId, setScheduleId] = useState<string | null>(null);
-  const [days, setDays] = useState(0);
-  const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
-  const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([]);
-  const [validationWarnings, setValidationWarnings] = useState<Warning[]>([]);
-  const [understaffed, setUnderstaffed] = useState<Warning[]>([]);
+  const [newName, setNewName] = useState('');
+  const [newStart, setNewStart] = useState('08:00');
+  const [newEnd, setNewEnd] = useState('12:00');
+
   const [openCell, setOpenCell] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isAdmin) return;
-    (async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('leaders')
-          .select('*')
-          .eq('is_active', true)
-          .order('name');
-        if (error) throw error;
-        const rows = (data || []).filter((l) => l.phone !== '12345678');
-        setLeaders(rows);
-        setSelected(new Set(rows.map((r) => r.id)));
-      } catch {
-        showError('Kunne ikke laste ledere');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [isAdmin, showError]);
+  const leaderById = useMemo(() => {
+    const m = new Map<string, Leader>();
+    for (const l of leaders) m.set(l.id, l);
+    return m;
+  }, [leaders]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [lRes, sRes, aRes] = await Promise.all([
+        supabase.from('leaders').select('*').eq('is_active', true).order('name'),
+        supabase.from('shift_planner_mini_shifts').select('*').order('sort_order').order('start_time'),
+        supabase.from('shift_planner_mini_assignments').select('*'),
+      ]);
+      if (lRes.error) throw lRes.error;
+      if (sRes.error) throw sRes.error;
+      if (aRes.error) throw aRes.error;
+      const ls = (lRes.data || []).filter((l) => l.phone !== '12345678');
+      setLeaders(ls);
+      setSelected((prev) => (prev.size === 0 ? new Set(ls.map((l) => l.id)) : prev));
+      setShifts((sRes.data || []) as MiniShift[]);
+      setAssignments((aRes.data || []) as MiniAssignment[]);
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke laste data');
+    } finally {
+      setLoading(false);
+    }
+  }, [showError]);
+
+  useEffect(() => { if (isAdmin) load(); }, [isAdmin, load]);
 
   const filteredLeaders = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return leaders;
-    return leaders.filter((l) => (l.name || '').toLowerCase().includes(q));
-  }, [leaders, search]);
+    const q = leaderSearch.trim().toLowerCase();
+    const base = leaders.filter((l) => selected.has(l.id));
+    if (!q) return base;
+    return base.filter((l) => (l.name || '').toLowerCase().includes(q));
+  }, [leaders, leaderSearch, selected]);
 
-  const toggle = (id: string) => {
+  const toggleSelected = (id: string) => {
     setSelected((prev) => {
       const n = new Set(prev);
       if (n.has(id)) n.delete(id); else n.add(id);
       return n;
     });
   };
-  const selectAll = () => setSelected(new Set(leaders.map((l) => l.id)));
-  const clearAll = () => setSelected(new Set());
 
-  const generate = async () => {
-    if (selected.size === 0) {
-      showError('Velg minst én leder');
+  const stats = useMemo(() => {
+    const shiftById = new Map(shifts.map((s) => [s.id, s]));
+    const perLeaderPerDay = new Map<string, number>();
+    const totals = new Map<string, number>();
+    const intervals = new Map<string, { s: number; e: number; day: number; shiftId: string }[]>();
+
+    for (const a of assignments) {
+      const sh = shiftById.get(a.shift_id);
+      if (!sh) continue;
+      const dur = durationHours(sh.start_time, sh.end_time);
+      const dk = `${a.leader_id}|${a.day_index}`;
+      perLeaderPerDay.set(dk, (perLeaderPerDay.get(dk) || 0) + dur);
+      totals.set(a.leader_id, (totals.get(a.leader_id) || 0) + dur);
+      const iv = absMinutes(a.day_index, sh.start_time, sh.end_time);
+      const arr = intervals.get(a.leader_id) || [];
+      arr.push({ s: iv.s, e: iv.e, day: a.day_index, shiftId: a.shift_id });
+      intervals.set(a.leader_id, arr);
+    }
+
+    const restViolCells = new Set<string>();
+    const restViolLeaders = new Map<string, number>();
+    for (const [lid, arr] of intervals) {
+      arr.sort((a, b) => a.s - b.s);
+      for (let i = 1; i < arr.length; i++) {
+        const prev = arr[i - 1];
+        const cur = arr[i];
+        const gap = cur.s - prev.e;
+        if (gap < 11 * 60 && gap >= 0) {
+          restViolCells.add(`${lid}|${prev.shiftId}|${prev.day}`);
+          restViolCells.add(`${lid}|${cur.shiftId}|${cur.day}`);
+          restViolLeaders.set(lid, (restViolLeaders.get(lid) || 0) + 1);
+        }
+      }
+    }
+
+    const overCells = new Set<string>();
+    for (const [k, h] of perLeaderPerDay) if (h > 8) overCells.add(k);
+
+    return { perLeaderPerDay, totals, restViolCells, restViolLeaders, overCells };
+  }, [assignments, shifts]);
+
+  const cellMap = useMemo(() => {
+    const m = new Map<string, MiniAssignment[]>();
+    for (const a of assignments) {
+      const k = `${a.shift_id}|${a.day_index}`;
+      const arr = m.get(k) || [];
+      arr.push(a);
+      m.set(k, arr);
+    }
+    return m;
+  }, [assignments]);
+
+  const addShift = async () => {
+    if (!newName.trim()) { showError('Skriv inn navn'); return; }
+    const { data, error } = await supabase
+      .from('shift_planner_mini_shifts')
+      .insert({
+        name: newName.trim(),
+        start_time: newStart,
+        end_time: newEnd,
+        sort_order: shifts.length,
+      })
+      .select('*')
+      .single();
+    if (error) { showError(error.message); return; }
+    setShifts((prev) => [...prev, data as MiniShift]);
+    setNewName('');
+    showSuccess('Økt lagt til');
+  };
+
+  const deleteShift = async (id: string) => {
+    const { error } = await supabase.from('shift_planner_mini_shifts').delete().eq('id', id);
+    if (error) { showError(error.message); return; }
+    setShifts((prev) => prev.filter((s) => s.id !== id));
+    setAssignments((prev) => prev.filter((a) => a.shift_id !== id));
+  };
+
+  const assignLeader = async (shift_id: string, day: number, leader_id: string) => {
+    setOpenCell(null);
+    const exists = assignments.some((a) => a.shift_id === shift_id && a.day_index === day && a.leader_id === leader_id);
+    if (exists) return;
+    const tmp: MiniAssignment = { id: `tmp-${Math.random()}`, shift_id, day_index: day, leader_id };
+    setAssignments((prev) => [...prev, tmp]);
+    const { data, error } = await supabase
+      .from('shift_planner_mini_assignments')
+      .insert({ shift_id, day_index: day, leader_id })
+      .select('*')
+      .single();
+    if (error) {
+      setAssignments((prev) => prev.filter((a) => a.id !== tmp.id));
+      showError(error.message);
       return;
     }
-    setGenerating(true);
-    setScheduleId(null);
-    setAssignments([]);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-shift-schedule-mini', {
-        body: {
-          period_number: periodNumber,
-          year,
-          period_length: periodLength,
-          leader_ids: Array.from(selected),
-          include_arrival: includeArrival,
-          include_departure: includeDeparture,
-          force_regenerate: true,
-        },
-      });
-      let errMsg = (error as any)?.message || (data as any)?.error || '';
-      const ctx = (error as any)?.context;
-      if (ctx && typeof ctx.json === 'function') {
-        try { const b = await ctx.clone().json(); errMsg = b?.error || errMsg; } catch {}
-      }
-      if (error) throw new Error(errMsg || (error as Error).message);
-      if ((data as any)?.error) throw new Error((data as any).error);
-      const sid = (data as any).schedule_id as string;
-      setScheduleId(sid);
-      setDays((data as any).days);
-      setUnderstaffed(((data as any).understaffed || []) as Warning[]);
-      setValidationWarnings((((data as any).validation?.warnings) || []) as Warning[]);
-      await loadMatrix(sid);
-      showSuccess(`Generert: ${(data as any).assignments_count} tildelinger`);
-    } catch (e) {
-      console.error(e);
-      showError((e as Error).message || 'Kunne ikke generere');
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const loadMatrix = async (sid: string) => {
-    const [aRes, stRes] = await Promise.all([
-      supabase
-        .from('shift_assignments')
-        .select('id, day_index, shift_type_id, leader_id, leaders(name)')
-        .eq('schedule_id', sid),
-      supabase
-        .from('shift_types')
-        .select('id, name, slug, day_type, sort_order, start_time, end_time, min_leaders')
-        .gt('min_leaders', 0)
-        .order('sort_order'),
-    ]);
-    if (aRes.error) console.error(aRes.error);
-    if (stRes.error) console.error(stRes.error);
-    setAssignments((aRes.data || []) as AssignmentRow[]);
-    setShiftTypes((stRes.data || []) as ShiftType[]);
-  };
-
-  const revalidate = async (sid: string) => {
-    try {
-      const { data } = await supabase.functions.invoke('revalidate-shift-schedule', {
-        body: { schedule_id: sid },
-      });
-      setValidationWarnings(((data as any)?.warnings || []) as Warning[]);
-    } catch (e) { console.error(e); }
-  };
-
-  const addLeader = async (day: number, shift_type_id: string, leader_id: string) => {
-    if (!scheduleId) return;
-    setOpenCell(null);
-    const st = shiftTypes.find((s) => s.id === shift_type_id);
-    const { error } = await supabase.from('shift_assignments').insert({
-      schedule_id: scheduleId,
-      day_index: day,
-      day_type: st?.day_type || 'normal',
-      shift_type_id,
-      assignment_type: 'leader',
-      leader_id,
-      role: 'standard',
-      excluded_leader_ids: [],
-    });
-    if (error) { showError(error.message); return; }
-    await loadMatrix(scheduleId);
-    revalidate(scheduleId);
+    setAssignments((prev) => prev.map((a) => (a.id === tmp.id ? (data as MiniAssignment) : a)));
   };
 
   const removeAssignment = async (id: string) => {
-    if (!scheduleId) return;
-    const { error } = await supabase.from('shift_assignments').delete().eq('id', id);
-    if (error) { showError(error.message); return; }
-    await loadMatrix(scheduleId);
-    revalidate(scheduleId);
+    const before = assignments;
+    setAssignments((prev) => prev.filter((a) => a.id !== id));
+    const { error } = await supabase.from('shift_planner_mini_assignments').delete().eq('id', id);
+    if (error) { setAssignments(before); showError(error.message); }
+  };
+
+  const moveAssignment = async (id: string, shift_id: string, day: number) => {
+    const before = assignments;
+    const a = before.find((x) => x.id === id);
+    if (!a) return;
+    if (a.shift_id === shift_id && a.day_index === day) return;
+    const dup = before.some((x) => x.shift_id === shift_id && x.day_index === day && x.leader_id === a.leader_id);
+    if (dup) { await removeAssignment(id); return; }
+    setAssignments((prev) => prev.map((x) => (x.id === id ? { ...x, shift_id, day_index: day } : x)));
+    const { error } = await supabase
+      .from('shift_planner_mini_assignments')
+      .update({ shift_id, day_index: day })
+      .eq('id', id);
+    if (error) { setAssignments(before); showError(error.message); }
+  };
+
+  const onDragStartLeader = (e: React.DragEvent, leader_id: string) => {
+    e.dataTransfer.setData('text/mini', JSON.stringify({ kind: 'leader', leader_id }));
+    e.dataTransfer.effectAllowed = 'copy';
+  };
+  const onDragStartAssignment = (e: React.DragEvent, a: MiniAssignment) => {
+    e.dataTransfer.setData('text/mini', JSON.stringify({ kind: 'assignment', id: a.id, leader_id: a.leader_id }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const onDragOverCell = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+  const onDropCell = async (e: React.DragEvent, shift_id: string, day: number) => {
+    e.preventDefault();
+    const raw = e.dataTransfer.getData('text/mini');
+    if (!raw) return;
+    try {
+      const p = JSON.parse(raw);
+      if (p.kind === 'leader') await assignLeader(shift_id, day, p.leader_id);
+      else if (p.kind === 'assignment') await moveAssignment(p.id, shift_id, day);
+    } catch {}
   };
 
   if (!isAdmin) {
@@ -215,65 +262,7 @@ export default function ShiftPlannerMini() {
     );
   }
 
-  // Day types per day index
-  const dayTypes: DayType[] = useMemo(() => {
-    const arr: DayType[] = [];
-    for (let d = 0; d < days; d++) {
-      if (d === 0 && includeArrival) arr.push('arrival');
-      else if (d === days - 1 && includeDeparture) arr.push('departure');
-      else arr.push('normal');
-    }
-    return arr;
-  }, [days, includeArrival, includeDeparture]);
-
-  // Rows to render: normal shifts always; arrival/departure only if that day exists
-  const rowTypes: ShiftType[] = useMemo(() => {
-    const hasArrival = dayTypes.includes('arrival');
-    const hasDeparture = dayTypes.includes('departure');
-    return shiftTypes
-      .filter((st) =>
-        st.day_type === 'normal' ||
-        (st.day_type === 'arrival' && hasArrival) ||
-        (st.day_type === 'departure' && hasDeparture),
-      )
-      .sort((a, b) => {
-        const rank = (t: DayType) => (t === 'arrival' ? 0 : t === 'normal' ? 1 : 2);
-        const r = rank(a.day_type) - rank(b.day_type);
-        return r !== 0 ? r : a.sort_order - b.sort_order;
-      });
-  }, [shiftTypes, dayTypes]);
-
-  // Cell lookup: `${shift_type_id}|${day}` -> AssignmentRow[]
-  const cellMap = useMemo(() => {
-    const m = new Map<string, AssignmentRow[]>();
-    for (const a of assignments) {
-      const k = `${a.shift_type_id}|${a.day_index}`;
-      const arr = m.get(k) || [];
-      arr.push(a);
-      m.set(k, arr);
-    }
-    return m;
-  }, [assignments]);
-
-  // Regelbrudd per leader+day
-  const violationSet = useMemo(() => {
-    const s = new Set<string>();
-    for (const w of validationWarnings) {
-      if (w.leader_id != null && w.day_index != null) s.add(`${w.leader_id}|${w.day_index}`);
-    }
-    return s;
-  }, [validationWarnings]);
-
-  // Understaffed lookup: `${shift_type_slug or name}|${day}` — server sends slug in detail
-  const understaffedSet = useMemo(() => {
-    const s = new Set<string>();
-    for (const w of understaffed) {
-      // detail: `${slug}: x/y ledere (dag N)`
-      const slug = (w.detail || '').split(':')[0]?.trim();
-      if (slug && w.day_index != null) s.add(`${slug}|${w.day_index}`);
-    }
-    return s;
-  }, [understaffed]);
+  const totalRestViol = stats.restViolCells.size / 2;
 
   return (
     <div className="space-y-4 animate-fade-in pb-24">
@@ -285,228 +274,225 @@ export default function ShiftPlannerMini() {
           <div className="min-w-0">
             <h1 className="text-lg sm:text-2xl font-heading font-bold">Vaktplan Mini</h1>
             <p className="hidden sm:block text-sm text-muted-foreground">
-              Enkel generator for få ledere. Samme regler: 8t/dag, F-team ikke etter 21, 11t hvile.
+              Manuell planlegger — dra ledere til vakter. Regner timer og 11 t hvile.
             </p>
           </div>
         </div>
-        <Link to="/admin/shifts">
-          <Button variant="outline" size="sm">
-            <CalendarDays className="h-4 w-4" />
-            <span className="hidden sm:inline sm:ml-2">Full planner</span>
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Label className="text-xs text-muted-foreground">Dager</Label>
+          <Input type="number" min={1} max={14} value={days}
+            onChange={(e) => setDays(Math.max(1, Math.min(14, Number(e.target.value) || 7)))}
+            className="w-16 h-8" />
+        </div>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <CalendarDays className="h-4 w-4" /> Parametere
+            <CalendarDays className="h-4 w-4" /> Økter ({shifts.length})
           </CardTitle>
+          <CardDescription>Definer navn, start og slutt. Varighet regnes automatisk.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <CardContent className="space-y-2">
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-end">
             <div>
-              <Label>Periode</Label>
-              <Input type="number" min={1} max={20} value={periodNumber}
-                onChange={(e) => setPeriodNumber(Number(e.target.value) || 1)} />
-            </div>
-            <div>
-              <Label>År</Label>
-              <Input type="number" value={year}
-                onChange={(e) => setYear(Number(e.target.value) || new Date().getFullYear())} />
+              <Label className="text-xs">Navn</Label>
+              <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="F.eks. Bings Økt 1" />
             </div>
             <div>
-              <Label>Antall dager</Label>
-              <Input type="number" min={1} max={14} value={periodLength}
-                onChange={(e) => setPeriodLength(Number(e.target.value) || 7)} />
+              <Label className="text-xs">Start</Label>
+              <Input type="time" value={newStart} onChange={(e) => setNewStart(e.target.value)} className="w-28" />
             </div>
+            <div>
+              <Label className="text-xs">Slutt</Label>
+              <Input type="time" value={newEnd} onChange={(e) => setNewEnd(e.target.value)} className="w-28" />
+            </div>
+            <Button onClick={addShift}><Plus className="h-4 w-4 mr-1" />Legg til</Button>
           </div>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <Switch checked={includeArrival} onCheckedChange={setIncludeArrival} id="arr" />
-              <Label htmlFor="arr" className="cursor-pointer">Ankomstdag (dag 0)</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={includeDeparture} onCheckedChange={setIncludeDeparture} id="dep" />
-              <Label htmlFor="dep" className="cursor-pointer">Avreisedag (siste dag)</Label>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-4 w-4" /> Ledere ({selected.size}/{leaders.length})
-            </CardTitle>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="sm" onClick={selectAll}>Alle</Button>
-              <Button variant="ghost" size="sm" onClick={clearAll}>Ingen</Button>
-            </div>
-          </div>
-          <CardDescription>Kun valgte ledere brukes i genereringen.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Input
-            placeholder="Søk ledere..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {loading ? (
-            <div className="py-6 flex justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {filteredLeaders.map((l) => (
-                <label key={l.id}
-                  className="flex items-center gap-2 rounded-md border border-border/60 px-2 py-1.5 cursor-pointer hover:bg-muted/50">
-                  <Checkbox checked={selected.has(l.id)} onCheckedChange={() => toggle(l.id)} />
-                  <span className="text-sm truncate">{l.name}</span>
-                </label>
+          {shifts.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-2">
+              {shifts.map((s) => (
+                <span key={s.id} className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-xs">
+                  <span className="font-medium">{s.name}</span>
+                  <span className="text-muted-foreground">
+                    {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)} · {durationHours(s.start_time, s.end_time)}t
+                  </span>
+                  <button onClick={() => deleteShift(s.id)} className="ml-1 opacity-60 hover:opacity-100" title="Slett">
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </span>
               ))}
-              {filteredLeaders.length === 0 && (
-                <div className="text-sm text-muted-foreground py-2">Ingen treff</div>
-              )}
             </div>
           )}
         </CardContent>
       </Card>
 
-      <div className="sticky bottom-20 z-10">
-        <Button
-          onClick={generate}
-          disabled={generating || selected.size === 0}
-          className="w-full h-12 text-base gap-2"
-          size="lg"
-        >
-          {generating ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-          Generer vaktplan
-        </Button>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" /> Ledere
+            </CardTitle>
+            <CardDescription>Dra inn i matrisen.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Input placeholder="Søk..." value={leaderSearch} onChange={(e) => setLeaderSearch(e.target.value)} className="h-8" />
+            {loading ? (
+              <div className="py-4 flex justify-center"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+            ) : (
+              <div className="space-y-1 max-h-[520px] overflow-y-auto pr-1">
+                {filteredLeaders.map((l) => {
+                  const total = stats.totals.get(l.id) || 0;
+                  const restCount = stats.restViolLeaders.get(l.id) || 0;
+                  return (
+                    <div key={l.id}
+                      draggable
+                      onDragStart={(e) => onDragStartLeader(e, l.id)}
+                      className="group flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background px-2 py-1.5 text-xs cursor-grab active:cursor-grabbing hover:border-primary/40">
+                      <div className="truncate flex-1">
+                        <div className="font-medium truncate">{l.name}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {total.toFixed(1)}t total
+                          {restCount > 0 && (
+                            <span className="ml-1 text-destructive inline-flex items-center gap-0.5">
+                              <AlertTriangle className="h-3 w-3" />{restCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button onClick={() => toggleSelected(l.id)} className="opacity-40 hover:opacity-100" title="Skjul">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+                {selected.size < leaders.length && (
+                  <button className="w-full text-xs text-muted-foreground hover:text-foreground py-2"
+                    onClick={() => setSelected(new Set(leaders.map((l) => l.id)))}>
+                    Vis alle ({leaders.length})
+                  </button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      {scheduleId && (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div>
                 <CardTitle className="text-base">Vaktoversikt</CardTitle>
-                <CardDescription>Klikk + for å legge til leder. × fjerner.</CardDescription>
+                <CardDescription>Dra leder inn i celle. × fjerner. Rødt = brudd på 11 t hvile. Gult = over 8 t/dag.</CardDescription>
               </div>
-              <div className="flex items-center gap-2 text-xs">
-                {validationWarnings.length > 0 && (
+              <div className="flex items-center gap-3 text-xs">
+                {totalRestViol > 0 && (
                   <span className="inline-flex items-center gap-1 text-destructive">
-                    <span className="h-2 w-2 rounded-full bg-destructive" /> {validationWarnings.length} regelbrudd
+                    <span className="h-2 w-2 rounded-full bg-destructive" /> {totalRestViol} hvilebrudd
                   </span>
                 )}
-                {understaffed.length > 0 && (
+                {stats.overCells.size > 0 && (
                   <span className="inline-flex items-center gap-1 text-amber-600">
-                    <span className="h-2 w-2 rounded-full bg-amber-500" /> {understaffed.length} underbemannet
+                    <span className="h-2 w-2 rounded-full bg-amber-500" /> {stats.overCells.size} over 8t
                   </span>
                 )}
-                <Link to="/admin/shifts">
-                  <Button variant="outline" size="sm" className="h-7">
-                    <CalendarDays className="h-3.5 w-3.5 mr-1" /> Full planner
-                  </Button>
-                </Link>
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="text-xs border-collapse">
-                <thead>
-                  <tr>
-                    <th className="sticky left-0 bg-background z-20 text-left px-2 py-2 border-b border-r border-border/60 min-w-[130px]">Vakt</th>
-                    {Array.from({ length: days }, (_, d) => (
-                      <th key={d} className="text-left px-2 py-2 border-b border-border/60 min-w-[150px]">
-                        <div className="font-medium">Dag {d}</div>
-                        <div className="text-[10px] text-muted-foreground capitalize">
-                          {dayTypes[d] === 'arrival' ? 'ankomst' : dayTypes[d] === 'departure' ? 'avreise' : 'normal'}
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rowTypes.map((row) => (
-                    <tr key={row.id} className="align-top">
-                      <td className="sticky left-0 bg-background z-10 px-2 py-1.5 border-b border-r border-border/40">
-                        <div className="font-medium">{row.name}</div>
-                        <div className="text-[10px] text-muted-foreground">
-                          {row.start_time.slice(0, 5)}–{row.end_time.slice(0, 5)}
-                        </div>
-                      </td>
-                      {Array.from({ length: days }, (_, d) => {
-                        const applicable = row.day_type === dayTypes[d];
-                        const key = `${row.id}|${d}`;
-                        const items = cellMap.get(key) || [];
-                        const usedIds = new Set(items.map((i) => i.leader_id).filter(Boolean) as string[]);
-                        const missing = applicable && items.length < row.min_leaders;
-                        return (
-                          <td key={d} className="px-1.5 py-1 border-b border-border/40">
-                            {!applicable ? (
-                              <span className="text-muted-foreground/30">—</span>
-                            ) : (
-                              <div className="flex flex-col gap-1">
-                                {items.map((it) => {
-                                  const bad = it.leader_id && violationSet.has(`${it.leader_id}|${d}`);
-                                  return (
-                                    <div key={it.id}
-                                      className={`group inline-flex items-center justify-between gap-1 rounded px-1.5 py-0.5 text-[11px] ${bad ? 'bg-destructive/10 text-destructive' : 'bg-muted'}`}>
-                                      <span className="truncate">{it.leaders?.name || '—'}</span>
-                                      <button onClick={() => removeAssignment(it.id)}
-                                        className="opacity-40 hover:opacity-100">
-                                        <X className="h-3 w-3" />
+            {shifts.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">Legg til minst én økt over for å begynne.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="text-xs border-collapse w-full">
+                  <thead>
+                    <tr>
+                      <th className="sticky left-0 bg-background z-20 text-left px-2 py-2 border-b border-r border-border/60 min-w-[140px]">Vakt</th>
+                      {Array.from({ length: days }, (_, d) => (
+                        <th key={d} className="text-left px-2 py-2 border-b border-border/60 min-w-[140px]">
+                          <div className="font-medium">Dag {d + 1}</div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shifts.map((row) => {
+                      const dur = durationHours(row.start_time, row.end_time);
+                      return (
+                        <tr key={row.id} className="align-top">
+                          <td className="sticky left-0 bg-background z-10 px-2 py-1.5 border-b border-r border-border/40">
+                            <div className="font-medium">{row.name}</div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {row.start_time.slice(0, 5)}–{row.end_time.slice(0, 5)} · {dur}t
+                            </div>
+                          </td>
+                          {Array.from({ length: days }, (_, d) => {
+                            const key = `${row.id}|${d}`;
+                            const items = cellMap.get(key) || [];
+                            const usedIds = new Set(items.map((i) => i.leader_id));
+                            return (
+                              <td key={d}
+                                onDragOver={onDragOverCell}
+                                onDrop={(e) => onDropCell(e, row.id, d)}
+                                className="px-1.5 py-1 border-b border-border/40 align-top">
+                                <div className="min-h-[40px] flex flex-wrap gap-1 items-start">
+                                  {items.map((a) => {
+                                    const l = leaderById.get(a.leader_id);
+                                    const rest = stats.restViolCells.has(`${a.leader_id}|${row.id}|${d}`);
+                                    const over = stats.overCells.has(`${a.leader_id}|${d}`);
+                                    return (
+                                      <span key={a.id}
+                                        draggable
+                                        onDragStart={(e) => onDragStartAssignment(e, a)}
+                                        className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 cursor-grab active:cursor-grabbing ${
+                                          rest ? 'border-destructive/60 bg-destructive/10 text-destructive'
+                                            : over ? 'border-amber-500/60 bg-amber-500/10 text-amber-700'
+                                            : 'border-border/60 bg-muted/40'
+                                        }`}>
+                                        {(rest || over) && <AlertTriangle className="h-3 w-3" />}
+                                        <span className="max-w-[100px] truncate">{l?.name || '?'}</span>
+                                        <button onClick={() => removeAssignment(a.id)} className="opacity-60 hover:opacity-100">
+                                          <X className="h-3 w-3" />
+                                        </button>
+                                      </span>
+                                    );
+                                  })}
+                                  <Popover open={openCell === key} onOpenChange={(o) => setOpenCell(o ? key : null)}>
+                                    <PopoverTrigger asChild>
+                                      <button className="inline-flex items-center gap-0.5 rounded-md border border-dashed border-border/60 px-1.5 py-0.5 text-muted-foreground hover:border-primary/60 hover:text-foreground">
+                                        <Plus className="h-3 w-3" />
                                       </button>
-                                    </div>
-                                  );
-                                })}
-                                <Popover
-                                  open={openCell === key}
-                                  onOpenChange={(o) => setOpenCell(o ? key : null)}
-                                >
-                                  <PopoverTrigger asChild>
-                                    <button
-                                      className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] border border-dashed ${missing ? 'border-amber-500 text-amber-600' : 'border-border/60 text-muted-foreground'} hover:bg-muted`}>
-                                      <Plus className="h-3 w-3" />
-                                      {missing ? `${items.length}/${row.min_leaders}` : 'Legg til'}
-                                    </button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="p-0 w-56" align="start">
-                                    <Command>
-                                      <CommandInput placeholder="Søk leder..." />
-                                      <CommandList>
-                                        <CommandEmpty>Ingen treff</CommandEmpty>
-                                        <CommandGroup>
-                                          {leaders
-                                            .filter((l) => !usedIds.has(l.id))
-                                            .map((l) => (
-                                              <CommandItem
-                                                key={l.id}
-                                                value={l.name || ''}
-                                                onSelect={() => addLeader(d, row.id, l.id)}
-                                              >
+                                    </PopoverTrigger>
+                                    <PopoverContent className="p-0 w-56" align="start">
+                                      <Command>
+                                        <CommandInput placeholder="Legg til leder..." />
+                                        <CommandList>
+                                          <CommandEmpty>Ingen treff</CommandEmpty>
+                                          <CommandGroup>
+                                            {leaders.filter((l) => !usedIds.has(l.id)).map((l) => (
+                                              <CommandItem key={l.id} value={l.name}
+                                                onSelect={() => assignLeader(row.id, d, l.id)}>
                                                 {l.name}
                                               </CommandItem>
                                             ))}
-                                        </CommandGroup>
-                                      </CommandList>
-                                    </Command>
-                                  </PopoverContent>
-                                </Popover>
-                              </div>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                                          </CommandGroup>
+                                        </CommandList>
+                                      </Command>
+                                    </PopoverContent>
+                                  </Popover>
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
+      </div>
     </div>
   );
 }
