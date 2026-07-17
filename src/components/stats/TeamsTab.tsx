@@ -30,7 +30,7 @@ interface ParticipantRow {
 
 export function TeamsTab() {
   const qc = useQueryClient();
-  const { showPopup } = useStatusPopup();
+  const { showSuccess, showError } = useStatusPopup();
   const enabled = useTeamsEnabled();
   const { data: periodId } = useActivePeriodId();
   const { data: teams } = useParticipantTeams();
@@ -74,10 +74,7 @@ export function TeamsTab() {
     setSaving(id);
     const { error } = await supabase.from('participant_teams').update(patch).eq('id', id);
     setSaving(null);
-    if (error) {
-      showPopup({ type: 'error', title: 'Kunne ikke lagre', message: error.message });
-      return;
-    }
+    if (error) { showError('Kunne ikke lagre', error.message); return; }
     qc.invalidateQueries({ queryKey: ['participant-teams'] });
   };
 
@@ -86,10 +83,7 @@ export function TeamsTab() {
       .from('participants')
       .update({ team_id: teamId })
       .eq('id', participantId);
-    if (error) {
-      showPopup({ type: 'error', title: 'Kunne ikke flytte', message: error.message });
-      return;
-    }
+    if (error) { showError('Kunne ikke flytte', error.message); return; }
     qc.invalidateQueries({ queryKey: ['teams-participants'] });
     qc.invalidateQueries({ queryKey: ['participants'] });
   };
@@ -116,9 +110,9 @@ export function TeamsTab() {
       }
       qc.invalidateQueries({ queryKey: ['teams-participants'] });
       qc.invalidateQueries({ queryKey: ['participants'] });
-      showPopup({ type: 'success', title: 'Fordelt', message: `${participants.length} deltakere fordelt på ${teams.length} lag.` });
+      showSuccess('Fordelt', `${participants.length} deltakere fordelt på ${teams.length} lag.`);
     } catch (e: any) {
-      showPopup({ type: 'error', title: 'Feil', message: e.message });
+      showError('Feil', e.message);
     } finally {
       setDistributing(false);
     }
@@ -130,10 +124,7 @@ export function TeamsTab() {
       .from('participants')
       .update({ team_id: null })
       .eq('period_id', periodId!);
-    if (error) {
-      showPopup({ type: 'error', title: 'Feil', message: error.message });
-      return;
-    }
+    if (error) { showError('Feil', error.message); return; }
     qc.invalidateQueries({ queryKey: ['teams-participants'] });
     qc.invalidateQueries({ queryKey: ['participants'] });
   };
