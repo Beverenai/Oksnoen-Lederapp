@@ -1212,14 +1212,13 @@ export default function Nurse() {
                     onChange={(e) => setPublicNote(e.target.value)}
                     className="min-h-[100px]"
                   />
-                  <Button onClick={savePublicHealthNote} disabled={isSaving} variant="outline">
-                    {isSaving ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <p className="text-xs text-muted-foreground flex items-center gap-2">
+                    {isAutoSavingPublic ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Lagrer…</>
                     ) : (
-                      <Save className="w-4 h-4 mr-2" />
+                      <>Lagres automatisk</>
                     )}
-                    Lagre info for ledere
-                  </Button>
+                  </p>
                 </CardContent>
               </Card>
 
@@ -1237,33 +1236,13 @@ export default function Nurse() {
                     onChange={(e) => setNewNote(e.target.value)}
                     className="min-h-[150px]"
                   />
-                  <div className="flex flex-wrap gap-2">
-                    <Button onClick={saveHealthNote} disabled={isSaving}>
-                      {isSaving ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4 mr-2" />
-                      )}
-                      Lagre notat
-                    </Button>
-                    {selectedParticipant?.healthNotes[0]?.id && (
-                      <Button
-                        variant="outline"
-                        className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                        onClick={() =>
-                          setDeleteTarget({
-                            type: 'note',
-                            id: selectedParticipant.healthNotes[0].id,
-                            label: 'notatet',
-                          })
-                        }
-                        disabled={isSaving}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Slett notat
-                      </Button>
+                  <p className="text-xs text-muted-foreground flex items-center gap-2">
+                    {isAutoSavingNote ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Lagrer…</>
+                    ) : (
+                      <>Lagres automatisk – tøm feltet for å slette notatet</>
                     )}
-                  </div>
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1512,14 +1491,13 @@ export default function Nurse() {
                     onChange={(e) => setLeaderNotes(e.target.value)}
                     className="min-h-[150px]"
                   />
-                  <Button onClick={saveLeaderNotes} disabled={isSavingLeaderNotes}>
-                    {isSavingLeaderNotes ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <p className="text-xs text-muted-foreground flex items-center gap-2">
+                    {isAutoSavingLeader ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Lagrer…</>
                     ) : (
-                      <Save className="w-4 h-4 mr-2" />
+                      <>Lagres automatisk</>
                     )}
-                    Lagre leder-notater
-                  </Button>
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>
