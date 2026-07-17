@@ -479,6 +479,37 @@ export default function Passport() {
         )}
       </form>
 
+      {/* Team filter — only when teams are enabled */}
+      {teamsEnabled && teams.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Select value={teamFilter} onValueChange={setTeamFilter}>
+            <SelectTrigger className="w-full sm:w-64">
+              <SelectValue placeholder="Filtrer etter lag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle lag</SelectItem>
+              <SelectItem value="none">Uten lag</SelectItem>
+              {teams.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full inline-block"
+                      style={{ backgroundColor: t.color }}
+                    />
+                    {t.name}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {teamFilter !== 'all' && (
+            <Button variant="ghost" size="sm" onClick={() => setTeamFilter('all')}>
+              <X className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* Pass / Utsjekk overview button - only when checkout is enabled */}
       {checkoutEnabled && (
         <Button
