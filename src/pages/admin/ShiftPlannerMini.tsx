@@ -16,19 +16,6 @@ import {
 import type { Tables } from '@/integrations/supabase/types';
 
 type Leader = Tables<'leaders'>;
-type Team = 'team1' | 'team2' | 'team1f' | 'team2f' | 'other';
-
-const TEAM_META: Record<Team, { label: string; className: string }> = {
-  team1:  { label: 'T1',  className: 'bg-red-500 text-white' },
-  team2:  { label: 'T2',  className: 'bg-orange-500 text-white' },
-  team1f: { label: 'T1F', className: 'bg-yellow-400 text-foreground' },
-  team2f: { label: 'T2F', className: 'bg-blue-500 text-white' },
-  other:  { label: '—',   className: 'bg-muted text-muted-foreground' },
-};
-const PROFILE_TO_TEAM: Record<string, Team> = {
-  '1': 'team1', '2': 'team2', '1f': 'team1f', '2f': 'team2f',
-};
-const teamKey = (l: Leader): Team => PROFILE_TO_TEAM[(l.team || '').trim().toLowerCase()] || 'other';
 
 interface Warning {
   leader_id: string | null;
@@ -45,6 +32,7 @@ export default function ShiftPlannerMini() {
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState('');
 
   const [periodNumber, setPeriodNumber] = useState(1);
   const [year, setYear] = useState(new Date().getFullYear());
@@ -83,13 +71,11 @@ export default function ShiftPlannerMini() {
     })();
   }, [isAdmin, showError]);
 
-  const groupedLeaders = useMemo(() => {
-    const g: Record<Team, Leader[]> = {
-      team1: [], team2: [], team1f: [], team2f: [], other: [],
-    };
-    for (const l of leaders) g[teamKey(l)].push(l);
-    return g;
-  }, [leaders]);
+  const filteredLeaders = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return leaders;
+    return leaders.filter((l) => (l.name || '').toLowerCase().includes(q));
+  }, [leaders, search]);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -224,30 +210,26 @@ export default function ShiftPlannerMini() {
           <CardDescription>Kun valgte ledere brukes i genereringen.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          <Input
+            placeholder="Søk ledere..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
           {loading ? (
             <div className="py-6 flex justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : (
-            (['team1','team2','team1f','team2f','other'] as Team[]).map((t) => {
-              const arr = groupedLeaders[t];
-              if (arr.length === 0) return null;
-              return (
-                <div key={t}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge className={TEAM_META[t].className}>{TEAM_META[t].label}</Badge>
-                    <span className="text-xs text-muted-foreground">{arr.length}</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    {arr.map((l) => (
-                      <label key={l.id}
-                        className="flex items-center gap-2 rounded-md border border-border/60 px-2 py-1.5 cursor-pointer hover:bg-muted/50">
-                        <Checkbox checked={selected.has(l.id)} onCheckedChange={() => toggle(l.id)} />
-                        <span className="text-sm truncate">{l.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              );
-            })
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              {filteredLeaders.map((l) => (
+                <label key={l.id}
+                  className="flex items-center gap-2 rounded-md border border-border/60 px-2 py-1.5 cursor-pointer hover:bg-muted/50">
+                  <Checkbox checked={selected.has(l.id)} onCheckedChange={() => toggle(l.id)} />
+                  <span className="text-sm truncate">{l.name}</span>
+                </label>
+              ))}
+              {filteredLeaders.length === 0 && (
+                <div className="text-sm text-muted-foreground py-2">Ingen treff</div>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
