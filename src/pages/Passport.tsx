@@ -518,22 +518,64 @@ export default function Passport() {
 
       {/* Team filter — only when teams are enabled */}
       {teamsEnabled && teams.length > 0 && (
-        <div className="flex items-center gap-2">
-          {multiTeamIds.length > 0 && (
+        <div className="space-y-2">
+          {kitchenDutyActive && multiTeamIds.length > 0 && (() => {
+            const selectedTeams = teams.filter((t) => multiTeamIds.includes(t.id));
+            return (
+              <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-3 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="flex -space-x-2">
+                    {selectedTeams.map((t) => (
+                      <span
+                        key={t.id}
+                        className="w-9 h-9 rounded-full border-2 border-background shadow-sm flex items-center justify-center text-xs font-bold text-white"
+                        style={{ backgroundColor: t.color }}
+                        title={t.name}
+                      >
+                        {t.slot}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                      Kjøkkentjeneste i dag
+                    </p>
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {selectedTeams.map((t) => t.name).join(' & ')}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Fjern filter"
+                    onClick={() => {
+                      const next = new URLSearchParams(searchParams);
+                      next.delete('teams');
+                      next.delete('kitchenDuty');
+                      setSearchParams(next);
+                    }}
+                    className="shrink-0 p-1.5 rounded-full hover:bg-muted transition-colors"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+          {!kitchenDutyActive && multiTeamIds.length > 0 && (
             <Badge
               variant="secondary"
               className="gap-1.5 cursor-pointer"
               onClick={() => {
                 const next = new URLSearchParams(searchParams);
                 next.delete('teams');
-                next.delete('kitchenDuty');
                 setSearchParams(next);
               }}
             >
-              {kitchenDutyActive ? 'Kjøkkentjeneste i dag' : `${multiTeamIds.length} lag valgt`}
+              {`${multiTeamIds.length} lag valgt`}
               <X className="w-3 h-3" />
             </Badge>
           )}
+          <div className="flex items-center gap-2">
           <Select value={teamFilter} onValueChange={setTeamFilter}>
             <SelectTrigger className="w-full sm:w-64">
               <SelectValue placeholder="Filtrer etter lag" />
@@ -559,6 +601,7 @@ export default function Passport() {
               <X className="w-4 h-4" />
             </Button>
           )}
+          </div>
         </div>
       )}
 
