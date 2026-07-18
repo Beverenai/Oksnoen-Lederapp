@@ -159,6 +159,8 @@ export default function Home() {
   const [rouletteEnabled, setRouletteEnabled] = useState(false);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
   const showRoulette = rouletteEnabled && inRoulette;
+  const teamsEnabled = useTeamsEnabled();
+  const { teamA: dutyTeamA, teamB: dutyTeamB } = useKitchenDutyToday();
 
   useEffect(() => {
     if (!effectiveLeader) return;
