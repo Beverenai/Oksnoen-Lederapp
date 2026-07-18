@@ -193,62 +193,48 @@ export function SecretWordsTab() {
     let html = `<!doctype html><html><head><meta charset="utf-8"><title>Hemmelige Ord</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@600;700;900&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rammetto+One&family=Bagel+Fat+One&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   @page { size: A4; margin: 10mm; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
-  body { font-family: 'Cinzel', 'IM Fell English SC', Georgia, serif; color: #2b2620; background: #f6f1e6; }
+  body { font-family: 'Fredoka', system-ui, sans-serif; color: #2b1d10; }
   .sheet { width: 190mm; height: 277mm; display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, 1fr); gap: 4mm; page-break-after: always; page-break-inside: avoid; }
   .sheet:last-child { page-break-after: auto; }
   .cell {
-    border: 1.2mm double #6b5a3e;
-    border-radius: 2mm;
+    border: 0.6mm dashed #b58a4a;
+    border-radius: 5mm;
     padding: 6mm;
     display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden;
-    background:
-      radial-gradient(ellipse at 50% 0%, rgba(107,90,62,0.10), transparent 60%),
-      radial-gradient(ellipse at 50% 100%, rgba(107,90,62,0.10), transparent 60%),
-      #f6f1e6;
   }
   .cell.empty { border-color: transparent; }
-  .cabin-tag { font-family: 'Cinzel', serif; font-size: 8pt; text-transform: uppercase; letter-spacing: 3px; color: #8a7959; margin: 0 0 3mm; }
+  .cabin-tag { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 8pt; text-transform: uppercase; letter-spacing: 2px; color: #a97a3b; margin: 0 0 3mm; }
   .name {
-    font-family: 'Cinzel Decorative', 'Cinzel', 'Georgia', serif;
-    font-weight: 900;
+    font-family: 'Bagel Fat One', 'Rammetto One', system-ui, sans-serif;
+    font-weight: 400;
     font-size: 22pt;
     margin: 0 0 3mm;
-    line-height: 1.1;
-    letter-spacing: 1.5px;
-    color: #3a2f22;
-    text-transform: uppercase;
-    text-shadow:
-      0 0.3mm 0 rgba(255,255,255,0.7),
-      0 -0.15mm 0 rgba(0,0,0,0.55),
-      0 0.6mm 0.4mm rgba(0,0,0,0.20);
+    line-height: 1.05;
+    letter-spacing: 0.5px;
+    color: #7a3b1a;
+    transform: rotate(-1.5deg);
   }
-  .welcome { font-family: 'IM Fell English SC', 'Cinzel', serif; font-size: 10pt; color: #6b5a3e; margin: 0 0 3mm; letter-spacing: 1px; }
-  .team { display: inline-flex; align-items: center; gap: 2mm; font-family: 'Cinzel', serif; font-size: 11pt; font-weight: 700; margin: 0 0 5mm; letter-spacing: 1px; color: #3a2f22; }
+  .welcome { font-family: 'Fredoka', sans-serif; font-weight: 500; font-size: 10pt; color: #6b4a2a; margin: 0 0 3mm; }
+  .team { display: inline-flex; align-items: center; gap: 2mm; font-family: 'Fredoka', sans-serif; font-size: 11pt; font-weight: 700; margin: 0 0 5mm; color: #2b1d10; }
   .dot { width: 3.5mm; height: 3.5mm; border-radius: 50%; display: inline-block; }
-  .word-label { font-family: 'Cinzel', serif; font-size: 8pt; text-transform: uppercase; letter-spacing: 3px; color: #8a7959; margin: 0 0 2mm; }
+  .word-label { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 8pt; text-transform: uppercase; letter-spacing: 2px; color: #a97a3b; margin: 0 0 2mm; }
   .word {
-    font-family: 'Cinzel Decorative', 'Cinzel', serif;
-    font-weight: 900;
-    font-size: 38pt;
-    letter-spacing: 3px;
+    font-family: 'Bagel Fat One', 'Rammetto One', system-ui, sans-serif;
+    font-weight: 400;
+    font-size: 40pt;
+    letter-spacing: 1px;
     margin: 0;
     line-height: 1;
     word-break: break-word;
-    text-transform: uppercase;
-    color: #2b2620;
-    /* Engraved / etched effect */
-    text-shadow:
-      0 0.4mm 0 rgba(255,255,255,0.85),
-      0 -0.2mm 0 rgba(0,0,0,0.65),
-      0 0.8mm 0.5mm rgba(0,0,0,0.25),
-      0 -0.4mm 0.3mm rgba(0,0,0,0.35);
+    color: #c2410c;
+    transform: rotate(-2.5deg);
   }
-  .ps { font-family: 'IM Fell English SC', serif; font-size: 9pt; color: #8a7959; margin: 4mm 0 0; letter-spacing: 0.5px; }
+  .ps { font-family: 'Fredoka', sans-serif; font-weight: 500; font-size: 9pt; color: #a97a3b; margin: 4mm 0 0; font-style: italic; }
 </style></head><body>`;
     sortedCabins.forEach((cabin) => {
       const rows = grouped.get(cabin)!.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
