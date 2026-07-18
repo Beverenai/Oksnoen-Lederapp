@@ -573,6 +573,8 @@ export default function Passport() {
         onOpenChange={setIsDetailDialogOpen}
         onParticipantUpdated={() => loadData()}
       />
+
+      <SecretWordsSheet open={secretWordsOpen} onOpenChange={setSecretWordsOpen} />
     </div>
   );
 }
