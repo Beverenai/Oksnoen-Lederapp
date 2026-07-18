@@ -53,12 +53,12 @@ export function TeamsTab() {
     },
   });
 
-  // Points per team = number of secret-word matches where at least one participant is on the team.
-  // Each match awards +1 to BOTH teams involved. Each completed activity awards +1 to the team.
+  // Points per team, split by source. Each match awards +1 to BOTH teams involved.
+  // Each completed activity awards +1 to the participant's team.
   const { data: teamPoints } = useQuery({
     queryKey: ['team-points', periodId ?? 'none'],
     enabled: !!periodId,
-    queryFn: async (): Promise<Record<string, number>> => {
+    queryFn: async (): Promise<Record<string, { matches: number; activities: number; total: number }>> => {
       const { data: matches, error } = await (supabase as any)
         .from('secret_word_matches')
         .select('participant_a_id, participant_b_id')
@@ -70,12 +70,17 @@ export function TeamsTab() {
         .eq('period_id', periodId!);
       const teamById = new Map<string, string | null>();
       (parts || []).forEach((p: any) => teamById.set(p.id, p.team_id));
-      const pts: Record<string, number> = {};
+      const pts: Record<string, { matches: number; activities: number; total: number }> = {};
+      const bump = (t: string, key: 'matches' | 'activities') => {
+        if (!pts[t]) pts[t] = { matches: 0, activities: 0, total: 0 };
+        pts[t][key] += 1;
+        pts[t].total += 1;
+      };
       (matches || []).forEach((m: any) => {
         const ta = teamById.get(m.participant_a_id);
         const tb = teamById.get(m.participant_b_id);
-        if (ta) pts[ta] = (pts[ta] || 0) + 1;
-        if (tb && tb !== ta) pts[tb] = (pts[tb] || 0) + 1;
+        if (ta) bump(ta, 'matches');
+        if (tb && tb !== ta) bump(tb, 'matches');
       });
       // Activities: +1 per completed activity to the participant's team
       const participantIds = (parts || []).map((p: any) => p.id);
@@ -86,7 +91,7 @@ export function TeamsTab() {
           .in('participant_id', participantIds);
         (acts || []).forEach((a: any) => {
           const t = teamById.get(a.participant_id);
-          if (t) pts[t] = (pts[t] || 0) + 1;
+          if (t) bump(t, 'activities');
         });
       }
       return pts;
@@ -105,6 +110,19 @@ export function TeamsTab() {
   }, [participants]);
 
   const unassigned = (participants || []).filter((p) => !p.team_id);
+
+  const leaderboard = useMemo(() => {
+    if (!teams) return [];
+    return [...teams]
+      .map((t) => {
+        const pts = teamPoints?.[t.id] ?? { matches: 0, activities: 0, total: 0 };
+        const members = membersByTeam.get(t.id)?.length ?? 0;
+        return { ...t, ...pts, members };
+      })
+      .sort((a, b) => b.total - a.total || a.slot - b.slot);
+  }, [teams, teamPoints, membersByTeam]);
+
+  const maxPoints = Math.max(1, ...leaderboard.map((t) => t.total));
 
   const toggleEnabled = async (val: boolean) => {
     const { error } = await supabase
@@ -206,6 +224,34 @@ export function TeamsTab() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base"><Trophy className="w-4 h-4" /> Poengoversikt</CardTitle>
+          <CardDescription>+1 poeng per fullført aktivitet og +1 per hemmelig-ord-match (til begge lag).</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {leaderboard.map((t, idx) => (
+            <div key={t.id} className="space-y-1">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="w-5 text-muted-foreground tabular-nums">{idx + 1}.</span>
+                <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
+                <span className="flex-1 truncate font-medium">{t.name}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {t.activities} akt · {t.matches} match
+                </span>
+                <Badge variant="default" className="tabular-nums min-w-[2.5rem] justify-center">{t.total}</Badge>
+              </div>
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${(t.total / maxPoints) * 100}%`, backgroundColor: t.color }}
+                />
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
       <div className="space-y-2">
         {teams.map((team) => {
           const members = membersByTeam.get(team.id) || [];
@@ -245,7 +291,7 @@ export function TeamsTab() {
                   <Badge variant="secondary" className="shrink-0">{members.length}</Badge>
                   <Badge variant="default" className="shrink-0 gap-1">
                     <Trophy className="w-3 h-3" />
-                    {teamPoints?.[team.id] ?? 0}
+                    {teamPoints?.[team.id]?.total ?? 0}
                   </Badge>
                   {saving === team.id && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
                   <CollapsibleTrigger asChild>
