@@ -1321,6 +1321,7 @@ export type Database = {
       }
       participant_teams: {
         Row: {
+          bonus_points: number
           color: string
           created_at: string
           id: string
@@ -1330,6 +1331,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          bonus_points?: number
           color: string
           created_at?: string
           id?: string
@@ -1339,6 +1341,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          bonus_points?: number
           color?: string
           created_at?: string
           id?: string

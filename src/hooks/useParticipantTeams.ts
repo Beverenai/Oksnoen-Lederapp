@@ -8,6 +8,7 @@ export interface ParticipantTeam {
   slot: number;
   name: string;
   color: string;
+  bonus_points?: number;
 }
 
 /**

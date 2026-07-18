@@ -1,0 +1,1 @@
+ALTER TABLE public.participant_teams ADD COLUMN IF NOT EXISTS bonus_points integer NOT NULL DEFAULT 0;
