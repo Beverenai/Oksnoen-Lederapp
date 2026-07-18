@@ -174,12 +174,13 @@ export function SecretWordsTab() {
     URL.revokeObjectURL(url);
   };
 
-  const printPerCabin = () => {
+  const printPerCabin = (filterIds?: Set<string> | null) => {
     if (!assignments || !participants) return;
     const teamById = new Map<string, Team>();
     (teams || []).forEach((t) => teamById.set(t.id, t));
     const grouped = new Map<string, { name: string; word: string; team: Team | null; room: string | null; cabinName: string | null }[]>();
     assignments.forEach((a) => {
+      if (filterIds && !filterIds.has(a.participant_id)) return;
       const p = byId.get(a.participant_id);
       if (!p) return;
       const key = p.cabins?.name || 'Uten hytte';
