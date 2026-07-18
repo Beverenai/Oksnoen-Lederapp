@@ -9,10 +9,11 @@ import { ActivityStatsTab } from "@/components/stats/ActivityStatsTab";
 import { StyrkeproveTab } from "@/components/stats/StyrkeproveTab";
 import { AmbassadorsTab } from "@/components/stats/AmbassadorsTab";
 import { TeamsTab } from "@/components/stats/TeamsTab";
+import { SecretWordsTab } from "@/components/stats/SecretWordsTab";
 import { ExportDataSheet } from "@/components/stats/ExportDataSheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity, ArrowLeft, LayoutDashboard, Trophy, Award, Users2 } from "lucide-react";
+import { ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity, ArrowLeft, LayoutDashboard, Trophy, Award, Users2, KeyRound } from "lucide-react";
 
 
 const dyngaNavItem = {
@@ -33,6 +34,7 @@ const navItems = [
   { key: "styrkeprove", label: "Styrkeprøven", desc: "Fullført og mangler 1-2 aktiviteter", icon: Trophy, color: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400" },
   { key: "ambassadors", label: "Ambassadører", desc: "Deltakere på sitt 4. år", icon: Award, color: "bg-amber-500/15 text-amber-700 dark:text-amber-400" },
   { key: "teams", label: "Lag", desc: "Del deltakere i 10 lag", icon: Users2, color: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400" },
+  { key: "secret-words", label: "Hemmelige Ord", desc: "Gi hver deltaker et hemmelig ord", icon: KeyRound, color: "bg-rose-500/15 text-rose-700 dark:text-rose-400" },
 ];
 
 const tabComponents: Record<string, React.FC> = {
@@ -44,6 +46,7 @@ const tabComponents: Record<string, React.FC> = {
   "styrkeprove": StyrkeproveTab,
   "ambassadors": AmbassadorsTab,
   "teams": TeamsTab,
+  "secret-words": SecretWordsTab,
 };
 
 const tabLabels: Record<string, string> = {
@@ -55,6 +58,7 @@ const tabLabels: Record<string, string> = {
   "styrkeprove": "Styrkeprøven",
   "ambassadors": "Ambassadører",
   "teams": "Lag",
+  "secret-words": "Hemmelige Ord",
 };
 
 const ParticipantStats = () => {

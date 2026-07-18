@@ -15,9 +15,11 @@ import {
   Sparkles,
   AlertTriangle,
   X,
+  KeyRound,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
+import { SecretWordsSheet } from '@/components/passport/SecretWordsSheet';
 import { useAuth } from '@/contexts/AuthContext';
 import { VirtualizedParticipantList } from '@/components/passport/VirtualizedParticipantList';
 import { hapticImpact } from '@/lib/capacitorHaptics';
@@ -138,6 +140,7 @@ export default function Passport() {
   const [teamFilter, setTeamFilter] = useState<string>('all');
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [secretWordsOpen, setSecretWordsOpen] = useState(false);
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
   // (bulk activity registration moved to dedicated route /passport/activity)
 
@@ -447,6 +450,15 @@ export default function Passport() {
             <AlertTriangle className="w-4 h-4 mr-1.5" />
             Viktig Info
           </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSecretWordsOpen(true)}
+          >
+            <KeyRound className="w-4 h-4 mr-1.5" />
+            Ord
+          </Button>
           
           {/* My cabin filter button - only show if leader has assigned cabins */}
           {myCabinIds.length > 0 && (
@@ -561,6 +573,8 @@ export default function Passport() {
         onOpenChange={setIsDetailDialogOpen}
         onParticipantUpdated={() => loadData()}
       />
+
+      <SecretWordsSheet open={secretWordsOpen} onOpenChange={setSecretWordsOpen} />
     </div>
   );
 }

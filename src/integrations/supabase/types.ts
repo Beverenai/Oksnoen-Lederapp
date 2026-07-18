@@ -1696,6 +1696,145 @@ export type Database = {
           },
         ]
       }
+      secret_word_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          pair_id: string
+          participant_id: string
+          period_id: string
+          slot: number
+          word: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pair_id: string
+          participant_id: string
+          period_id: string
+          slot: number
+          word: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pair_id?: string
+          participant_id?: string
+          period_id?: string
+          slot?: number
+          word?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secret_word_assignments_pair_id_fkey"
+            columns: ["pair_id"]
+            isOneToOne: false
+            referencedRelation: "secret_word_pairs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secret_word_assignments_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secret_word_assignments_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      secret_word_matches: {
+        Row: {
+          id: string
+          matched_at: string
+          matched_by: string | null
+          pair_id: string
+          participant_a_id: string
+          participant_b_id: string
+          period_id: string
+        }
+        Insert: {
+          id?: string
+          matched_at?: string
+          matched_by?: string | null
+          pair_id: string
+          participant_a_id: string
+          participant_b_id: string
+          period_id: string
+        }
+        Update: {
+          id?: string
+          matched_at?: string
+          matched_by?: string | null
+          pair_id?: string
+          participant_a_id?: string
+          participant_b_id?: string
+          period_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secret_word_matches_matched_by_fkey"
+            columns: ["matched_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secret_word_matches_pair_id_fkey"
+            columns: ["pair_id"]
+            isOneToOne: false
+            referencedRelation: "secret_word_pairs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secret_word_matches_participant_a_id_fkey"
+            columns: ["participant_a_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secret_word_matches_participant_b_id_fkey"
+            columns: ["participant_b_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secret_word_matches_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      secret_word_pairs: {
+        Row: {
+          created_at: string
+          id: string
+          word_1: string
+          word_2: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          word_1: string
+          word_2: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          word_1?: string
+          word_2?: string
+        }
+        Relationships: []
+      }
       session_activities: {
         Row: {
           created_at: string | null
