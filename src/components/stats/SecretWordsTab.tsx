@@ -358,7 +358,7 @@ export function SecretWordsTab() {
               {working ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Shuffle className="w-4 h-4 mr-2" />}
               Fordel ord tilfeldig
             </Button>
-            <Button variant="outline" onClick={printPerCabin} disabled={!assignedCount}>
+            <Button variant="outline" onClick={() => printPerCabin()} disabled={!assignedCount}>
               <Download className="w-4 h-4 mr-2" /> Skriv ut per hytte
             </Button>
             <Button variant="outline" onClick={exportCsv} disabled={!assignedCount}>
