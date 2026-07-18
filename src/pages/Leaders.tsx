@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { formatMainCabins } from '@/lib/cabinDisplay';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -211,10 +212,9 @@ export default function Leaders() {
     return full ? { ...selectedLeader, content: full } : selectedLeader;
   }, [canEdit, selectedLeader, fullContentMap]);
 
-  // Format linked cabins display with "+" between them
+  // Format linked cabins display grouped by main cabin name
   const formatCabinsDisplay = (cabins: CabinInfo[] | undefined): string => {
-    if (!cabins || cabins.length === 0) return '';
-    return cabins.map(c => c.name).join(' + ');
+    return formatMainCabins(cabins);
   };
 
   // Get teams for filter chips (only show FILTER_TEAMS that are in use)

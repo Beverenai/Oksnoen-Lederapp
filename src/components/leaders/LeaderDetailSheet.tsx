@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatMainCabins } from '@/lib/cabinDisplay';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -121,7 +122,7 @@ export function LeaderDetailSheet({
   // Format linked cabins display with "+" between them
   const formatCabinsDisplay = (): string => {
     if (linkedCabins.length === 0) return leader.cabin || '';
-    return linkedCabins.map(c => c.name).join(' + ');
+    return formatMainCabins(linkedCabins) || (leader.cabin || '');
   };
   
   

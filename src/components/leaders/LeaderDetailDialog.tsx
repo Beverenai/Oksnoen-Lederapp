@@ -1,4 +1,5 @@
 import { Phone, Activity, Car, Anchor, Mountain, Cable, AlertTriangle, Wrench } from "lucide-react";
+import { formatMainCabins } from "@/lib/cabinDisplay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -141,7 +142,7 @@ export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailD
 
   const formatCabinsDisplay = () => {
     if (linkedCabins.length === 0) return null;
-    return linkedCabins.map(c => c.name).join(', ');
+    return formatMainCabins(linkedCabins, ', ') || null;
   };
 
   const getIcon = (iconName: string) => {
