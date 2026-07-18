@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { Activity, Users, TrendingUp, Home, Trophy, Medal, ChevronRight } from "lucide-react";
+import { Activity, Users, TrendingUp, Home, Trophy, Medal, ChevronRight, Sparkles } from "lucide-react";
 import { normalizeActivityForStats } from "@/lib/activityUtils";
 const COLORS = [
   "hsl(var(--chart-1))",
@@ -46,7 +46,7 @@ export function ActivityStatsTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("participants")
-        .select("id, cabin_id, name, first_name, last_name")
+        .select("id, cabin_id, name, first_name, last_name, insj_points")
         .eq("period_id", activePeriodId!);
       if (error) throw error;
       return data;
@@ -176,6 +176,18 @@ export function ActivityStatsTab() {
 
   const maxAvg = Math.max(...cabinRankings.map((c) => c.avgPerParticipant), 1);
 
+  // Insjpoeng ranking
+  const insjRanking = (participants || [])
+    .map((p: any) => ({
+      id: p.id,
+      name: p.first_name && p.last_name ? `${p.first_name} ${p.last_name}` : p.name,
+      cabinId: p.cabin_id,
+      points: p.insj_points ?? 0,
+    }))
+    .filter((p) => p.points > 0)
+    .sort((a, b) => b.points - a.points);
+  const totalInsjPoints = insjRanking.reduce((s, p) => s + p.points, 0);
+
   // Get participants for selected cabin
   const selectedCabinParticipants = selectedCabin
     ? participants
@@ -242,6 +254,62 @@ export function ActivityStatsTab() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Top 10 Most Active Participants */}
+      <Card>
+        {/* placeholder to keep diff clean */}
+      </Card>
+
+      {/* Insjpoeng overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-purple-600" />
+            Insjpoeng
+          </CardTitle>
+          <CardDescription>
+            Totalt {totalInsjPoints} poeng utdelt
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {insjRanking.length > 0 ? (
+            <div className="space-y-2">
+              {insjRanking.map((p, index) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50"
+                >
+                  <div className="flex items-center gap-3">
+                    {index === 0 && <Medal className="h-5 w-5 text-yellow-500" />}
+                    {index === 1 && <Medal className="h-5 w-5 text-gray-400" />}
+                    {index === 2 && <Medal className="h-5 w-5 text-amber-600" />}
+                    {index > 2 && (
+                      <span className="w-5 h-5 flex items-center justify-center text-sm font-medium text-muted-foreground">
+                        {index + 1}
+                      </span>
+                    )}
+                    <div>
+                      <span className="font-medium">{p.name}</span>
+                      {p.cabinId && (
+                        <span className="text-sm text-muted-foreground ml-2">
+                          ({getCabinName(p.cabinId)})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300">
+                    {p.points} poeng
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">
+              Ingen insjpoeng registrert ennå
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Top 10 Most Active Participants */}
       <Card>
