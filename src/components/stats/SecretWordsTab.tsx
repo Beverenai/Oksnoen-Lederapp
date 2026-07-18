@@ -174,12 +174,13 @@ export function SecretWordsTab() {
     URL.revokeObjectURL(url);
   };
 
-  const printPerCabin = () => {
+  const printPerCabin = (filterIds?: Set<string> | null) => {
     if (!assignments || !participants) return;
     const teamById = new Map<string, Team>();
     (teams || []).forEach((t) => teamById.set(t.id, t));
     const grouped = new Map<string, { name: string; word: string; team: Team | null; room: string | null; cabinName: string | null }[]>();
     assignments.forEach((a) => {
+      if (filterIds && !filterIds.has(a.participant_id)) return;
       const p = byId.get(a.participant_id);
       if (!p) return;
       const key = p.cabins?.name || 'Uten hytte';
@@ -287,6 +288,29 @@ export function SecretWordsTab() {
   const assignedCount = assignments?.length ?? 0;
 
   const [pairFilter, setPairFilter] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState('');
+  const [pickedIds, setPickedIds] = useState<Set<string>>(new Set());
+
+  const togglePicked = (id: string) => {
+    setPickedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  const assignedParticipants = useMemo(() => {
+    if (!assignments || !participants) return [] as P[];
+    const ids = new Set(assignments.map((a) => a.participant_id));
+    return participants.filter((p) => ids.has(p.id));
+  }, [assignments, participants]);
+
+  const pickerResults = useMemo(() => {
+    const q = pickerQuery.trim().toLowerCase();
+    if (!q) return assignedParticipants.slice(0, 50);
+    return assignedParticipants.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 50);
+  }, [assignedParticipants, pickerQuery]);
 
   const pairOverview = useMemo(() => {
     if (!assignments) return [] as {
@@ -357,8 +381,11 @@ export function SecretWordsTab() {
               {working ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Shuffle className="w-4 h-4 mr-2" />}
               Fordel ord tilfeldig
             </Button>
-            <Button variant="outline" onClick={printPerCabin} disabled={!assignedCount}>
+            <Button variant="outline" onClick={() => printPerCabin()} disabled={!assignedCount}>
               <Download className="w-4 h-4 mr-2" /> Skriv ut per hytte
+            </Button>
+            <Button variant="outline" onClick={() => setPickerOpen((v) => !v)} disabled={!assignedCount}>
+              <Download className="w-4 h-4 mr-2" /> Skriv ut valgte
             </Button>
             <Button variant="outline" onClick={exportCsv} disabled={!assignedCount}>
               <Download className="w-4 h-4 mr-2" /> Eksporter CSV
@@ -373,6 +400,46 @@ export function SecretWordsTab() {
           <p className="text-xs text-muted-foreground">
             Utskriften er enkeltsidig med 6 kort per A4-ark. Alt (navn, lag og hemmelig ord) står på samme side.
           </p>
+          {pickerOpen && (
+            <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-sm font-medium">Velg deltakere ({pickedIds.size} valgt)</div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setPickedIds(new Set())} disabled={pickedIds.size === 0}>Nullstill</Button>
+                  <Button
+                    size="sm"
+                    onClick={() => { printPerCabin(pickedIds); }}
+                    disabled={pickedIds.size === 0}
+                  >
+                    Skriv ut {pickedIds.size > 0 ? `(${pickedIds.size})` : ''}
+                  </Button>
+                </div>
+              </div>
+              <Input
+                placeholder="Søk etter navn…"
+                value={pickerQuery}
+                onChange={(e) => setPickerQuery(e.target.value)}
+              />
+              <div className="max-h-64 overflow-y-auto space-y-1">
+                {pickerResults.map((p) => {
+                  const checked = pickedIds.has(p.id);
+                  const t = teams?.find((x) => x.id === p.team_id);
+                  return (
+                    <label key={p.id} className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted cursor-pointer text-sm">
+                      <input type="checkbox" checked={checked} onChange={() => togglePicked(p.id)} />
+                      <span className="flex-1 truncate">{p.name}</span>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {p.cabins?.name || 'Uten hytte'}{t ? ` · Stamme ${t.slot}` : ''}
+                      </span>
+                    </label>
+                  );
+                })}
+                {pickerResults.length === 0 && (
+                  <div className="text-xs text-muted-foreground py-2 text-center">Ingen treff.</div>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
