@@ -23,7 +23,6 @@ import { CachedImage } from '@/components/ui/cached-image';
 import { TeamBadge } from '@/components/participants/TeamBadge';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { IncidentSheet } from '@/components/incidents/IncidentSheet';
-import { useState as useReactState } from 'react';
 
 interface ParticipantWithCabin {
   id: string;
