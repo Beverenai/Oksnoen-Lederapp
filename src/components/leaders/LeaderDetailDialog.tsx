@@ -141,7 +141,7 @@ export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailD
 
   const formatCabinsDisplay = () => {
     if (linkedCabins.length === 0) return null;
-    return linkedCabins.map(c => c.name).join(', ');
+    return formatMainCabins(linkedCabins, ', ') || null;
   };
 
   const getIcon = (iconName: string) => {
