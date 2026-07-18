@@ -238,8 +238,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const contentNavItems = [
     ...(hasScheduleImage ? [scheduleNavItem] : []),
     importantInfoNavItem,
-    skjaerNavItem,
-    storiesNavItem,
+    ...(isAdmin ? [skjaerNavItem, storiesNavItem] : []),
     fixNavItem,
   ];
 
