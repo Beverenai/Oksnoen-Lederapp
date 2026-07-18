@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +24,8 @@ import { TeamBadge } from '@/components/participants/TeamBadge';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { isNativeCameraAvailable, takePhoto } from '@/lib/capacitorCamera';
 import { IncidentSheet } from '@/components/incidents/IncidentSheet';
+import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailSheet';
+import type { Tables } from '@/integrations/supabase/types';
 
 interface ParticipantWithCabin {
   id: string;
@@ -121,6 +123,9 @@ export const ParticipantDetailDialog = ({
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [incidentOpen, setIncidentOpen] = useState(false);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingData, setBookingData] = useState<Tables<'participant_bookings'> | null>(null);
+  const [bookingOpen, setBookingOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedIndicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -644,6 +649,54 @@ export const ParticipantDetailDialog = ({
                   Registrer hendelse
                 </Button>
 
+                {/* Admin: booking info */}
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    disabled={bookingLoading}
+                    onClick={async () => {
+                      if (!participant) return;
+                      setBookingLoading(true);
+                      try {
+                        const { data: periodRow } = await supabase
+                          .from('periods')
+                          .select('id')
+                          .eq('is_active', true)
+                          .maybeSingle();
+                        let query = supabase
+                          .from('participant_bookings')
+                          .select('*')
+                          .ilike('first_name', (participant.first_name || '').trim())
+                          .ilike('last_name', (participant.last_name || '').trim());
+                        if (periodRow?.id) query = query.eq('period_id', periodRow.id);
+                        if (participant.birth_date) query = query.eq('birth_date', participant.birth_date);
+                        const { data: rows, error } = await query.limit(1);
+                        if (error) throw error;
+                        const row = rows?.[0];
+                        if (!row) {
+                          showInfo('Ingen booking', 'Fant ikke booking for denne deltakeren i aktiv periode.');
+                          return;
+                        }
+                        setBookingData(row as Tables<'participant_bookings'>);
+                        setBookingOpen(true);
+                      } catch (e) {
+                        console.error(e);
+                        showError('Feil', 'Kunne ikke hente booking.');
+                      } finally {
+                        setBookingLoading(false);
+                      }
+                    }}
+                  >
+                    {bookingLoading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <BookUser className="h-4 w-4 mr-2" />
+                    )}
+                    Booking info
+                  </Button>
+                )}
+
                 {/* Pass written toggle - only visible when checkout is enabled */}
                 {checkoutEnabled && (
                 <div className="space-y-1.5">
@@ -702,6 +755,19 @@ export const ParticipantDetailDialog = ({
         open={incidentOpen}
         onOpenChange={setIncidentOpen}
         prefillParticipantId={participantId}
+      />
+    )}
+    {bookingOpen && bookingData && participant && (
+      <BookingDetailSheet
+        booking={bookingData}
+        participant={{
+          id: participant.id,
+          first_name: participant.first_name,
+          last_name: participant.last_name,
+          birth_date: participant.birth_date,
+          image_url: participant.image_url,
+        }}
+        onClose={() => setBookingOpen(false)}
       />
     )}
     </>

@@ -15,7 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Shuffle, ChevronDown, Users2 } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Trophy, ChefHat } from 'lucide-react';
+import { Trophy, ChefHat, Plus, Minus, MoreHorizontal } from 'lucide-react';
 import { useKitchenDutyConfig, computeTodayPair, todayIso, pairForCycleIndex } from '@/hooks/useKitchenDutyToday';
 
 const PALETTE = [
@@ -119,12 +119,85 @@ export function TeamsTab() {
       .map((t) => {
         const pts = teamPoints?.[t.id] ?? { matches: 0, activities: 0, total: 0 };
         const members = membersByTeam.get(t.id)?.length ?? 0;
-        return { ...t, ...pts, members };
+        const bonus = t.bonus_points ?? 0;
+        return { ...t, ...pts, bonus, total: pts.total + bonus, members };
       })
       .sort((a, b) => b.total - a.total || a.slot - b.slot);
   }, [teams, teamPoints, membersByTeam]);
 
   const maxPoints = Math.max(1, ...leaderboard.map((t) => t.total));
+
+  const adjustBonus = async (teamId: string, delta: number) => {
+    const team = teams?.find((t) => t.id === teamId);
+    if (!team) return;
+    const next = Math.max(0, (team.bonus_points ?? 0) + delta);
+    // optimistic update
+    qc.setQueryData(['participant-teams', periodId ?? 'none'], (old: any) =>
+      (old || []).map((t: any) => (t.id === teamId ? { ...t, bonus_points: next } : t))
+    );
+    const { error } = await supabase
+      .from('participant_teams')
+      .update({ bonus_points: next })
+      .eq('id', teamId);
+    if (error) {
+      showError('Kunne ikke lagre', error.message);
+      qc.invalidateQueries({ queryKey: ['participant-teams'] });
+    }
+  };
+
+  const BonusAmountPopover = ({ teamId }: { teamId: string }) => {
+    const [custom, setCustom] = useState('');
+    const [open, setOpen] = useState(false);
+    const apply = (n: number) => {
+      if (!n || Number.isNaN(n)) return;
+      adjustBonus(teamId, n);
+      setOpen(false);
+      setCustom('');
+    };
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button size="icon" variant="outline" className="h-7 w-7" aria-label="Velg antall poeng">
+            <MoreHorizontal className="w-3.5 h-3.5" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-2 space-y-2" align="end">
+          <div className="grid grid-cols-4 gap-1">
+            {[1, 2, 3, 5, 10, -1, -2, -5].map((n) => (
+              <Button
+                key={n}
+                size="sm"
+                variant={n > 0 ? 'default' : 'outline'}
+                className="h-8 px-0 tabular-nums"
+                onClick={() => apply(n)}
+              >
+                {n > 0 ? `+${n}` : n}
+              </Button>
+            ))}
+          </div>
+          <form
+            className="flex gap-1"
+            onSubmit={(e) => {
+              e.preventDefault();
+              apply(Number(custom));
+            }}
+          >
+            <Input
+              type="number"
+              inputMode="numeric"
+              placeholder="Antall"
+              value={custom}
+              onChange={(e) => setCustom(e.target.value)}
+              className="h-8"
+            />
+            <Button type="submit" size="sm" disabled={!custom || Number.isNaN(Number(custom))}>
+              Legg til
+            </Button>
+          </form>
+        </PopoverContent>
+      </Popover>
+    );
+  };
 
   const toggleEnabled = async (val: boolean) => {
     const { error } = await supabase
@@ -351,7 +424,7 @@ export function TeamsTab() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base"><Trophy className="w-4 h-4" /> Poengoversikt</CardTitle>
-          <CardDescription>+1 poeng per fullført aktivitet og +1 per hemmelig-ord-match (til begge lag).</CardDescription>
+          <CardDescription>+1 poeng per fullført aktivitet og +1 per hemmelig-ord-match. Bruk +/- for å tildele bonuspoeng manuelt.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {leaderboard.map((t, idx) => (
@@ -360,11 +433,38 @@ export function TeamsTab() {
                 <span className="w-5 text-muted-foreground tabular-nums">{idx + 1}.</span>
                 <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
                 <span className="flex-1 truncate font-medium">{t.name}</span>
-                <span className="text-xs text-muted-foreground tabular-nums">
-                  {t.activities} akt · {t.matches} match
+                <span className="text-xs text-muted-foreground tabular-nums hidden sm:inline">
+                  {t.activities} akt · {t.matches} match{t.bonus ? ` · ${t.bonus} bonus` : ''}
                 </span>
-                <Badge variant="default" className="tabular-nums min-w-[2.5rem] justify-center">{t.total}</Badge>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-7 w-7"
+                    onClick={() => adjustBonus(t.id, -1)}
+                    disabled={(t.bonus ?? 0) <= 0}
+                    aria-label="Fjern bonuspoeng"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </Button>
+                  <Badge variant="default" className="tabular-nums min-w-[2.5rem] justify-center">{t.total}</Badge>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-7 w-7"
+                    onClick={() => adjustBonus(t.id, 1)}
+                    aria-label="Legg til bonuspoeng"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </Button>
+                  <BonusAmountPopover teamId={t.id} />
+                </div>
               </div>
+              {t.bonus > 0 && (
+                <div className="pl-7 text-xs text-muted-foreground sm:hidden">
+                  {t.activities} akt · {t.matches} match · {t.bonus} bonus
+                </div>
+              )}
               <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all"

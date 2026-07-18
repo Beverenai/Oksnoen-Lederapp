@@ -36,7 +36,7 @@ export default function Gensere() {
   const { data: periodId } = useActivePeriodId();
   const [search, setSearch] = useState('');
   const [cabinFilter, setCabinFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'todo' | 'done'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'todo' | 'done' | 'preordered_pending'>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -69,8 +69,10 @@ export default function Gensere() {
     return participants.filter((p) => {
       const s = sweaters.get(p.id);
       const done = !!(s && (s.picked_up || s.bought_on_camp));
+      const preorderedPending = !!(s && s.preordered_size && !s.picked_up && !s.bought_on_camp);
       if (statusFilter === 'todo' && done) return false;
       if (statusFilter === 'done' && !done) return false;
+      if (statusFilter === 'preordered_pending' && !preorderedPending) return false;
       if (cabinFilter !== 'all' && p.cabin_id !== cabinFilter) return false;
       if (!q) return true;
       return p.name.toLowerCase().includes(q) || (p.cabins?.name || '').toLowerCase().includes(q);
@@ -80,6 +82,11 @@ export default function Gensere() {
   const doneCount = participants.filter((p) => {
     const s = sweaters.get(p.id);
     return !!(s && (s.picked_up || s.bought_on_camp));
+  }).length;
+
+  const preorderedPendingCount = participants.filter((p) => {
+    const s = sweaters.get(p.id);
+    return !!(s && s.preordered_size && !s.picked_up && !s.bought_on_camp);
   }).length;
 
   if (!enabled) {
@@ -95,6 +102,15 @@ export default function Gensere() {
         <p className="text-muted-foreground mt-1">
           {doneCount} av {participants.length} registrert
         </p>
+        {preorderedPendingCount > 0 && (
+          <button
+            onClick={() => setStatusFilter('preordered_pending')}
+            className="mt-2 inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
+          >
+            <ShoppingBag className="w-3 h-3" />
+            {preorderedPendingCount} forhåndsbestilt, ikke hentet
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -116,6 +132,7 @@ export default function Gensere() {
           <SelectContent>
             <SelectItem value="all">Alle</SelectItem>
             <SelectItem value="todo">Ikke registrert</SelectItem>
+            <SelectItem value="preordered_pending">Forhåndsbestilt, ikke hentet</SelectItem>
             <SelectItem value="done">Registrert</SelectItem>
           </SelectContent>
         </Select>
