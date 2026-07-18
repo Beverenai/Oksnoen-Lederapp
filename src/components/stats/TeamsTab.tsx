@@ -157,18 +157,18 @@ export function TeamsTab() {
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button size="icon" variant="outline" className="h-7 w-7" aria-label="Velg antall poeng">
-            <MoreHorizontal className="w-3.5 h-3.5" />
+          <Button size="icon" variant="outline" className="h-9 w-9 sm:h-7 sm:w-7 shrink-0 touch-manipulation" aria-label="Velg antall poeng">
+            <MoreHorizontal className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-56 p-2 space-y-2" align="end">
-          <div className="grid grid-cols-4 gap-1">
+        <PopoverContent className="w-[calc(100vw-2rem)] max-w-xs p-2 space-y-2" align="end" sideOffset={6}>
+          <div className="grid grid-cols-4 gap-1.5">
             {[1, 2, 3, 5, 10, -1, -2, -5].map((n) => (
               <Button
                 key={n}
                 size="sm"
                 variant={n > 0 ? 'default' : 'outline'}
-                className="h-8 px-0 tabular-nums"
+                className="h-10 sm:h-8 px-0 tabular-nums touch-manipulation"
                 onClick={() => apply(n)}
               >
                 {n > 0 ? `+${n}` : n}
@@ -188,9 +188,9 @@ export function TeamsTab() {
               placeholder="Antall"
               value={custom}
               onChange={(e) => setCustom(e.target.value)}
-              className="h-8"
+              className="h-10 sm:h-8"
             />
-            <Button type="submit" size="sm" disabled={!custom || Number.isNaN(Number(custom))}>
+            <Button type="submit" size="sm" className="h-10 sm:h-8 touch-manipulation" disabled={!custom || Number.isNaN(Number(custom))}>
               Legg til
             </Button>
           </form>
@@ -429,42 +429,39 @@ export function TeamsTab() {
         <CardContent className="space-y-2">
           {leaderboard.map((t, idx) => (
             <div key={t.id} className="space-y-1">
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-sm flex-wrap">
                 <span className="w-5 text-muted-foreground tabular-nums">{idx + 1}.</span>
                 <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
-                <span className="flex-1 truncate font-medium">{t.name}</span>
+                <span className="flex-1 min-w-0 truncate font-medium">{t.name}</span>
                 <span className="text-xs text-muted-foreground tabular-nums hidden sm:inline">
                   {t.activities} akt · {t.matches} match{t.bonus ? ` · ${t.bonus} bonus` : ''}
                 </span>
-                <div className="flex items-center gap-1">
+                <Badge variant="default" className="tabular-nums min-w-[2.5rem] justify-center shrink-0 sm:hidden">{t.total}</Badge>
+                <div className="flex items-center gap-1 shrink-0 ml-auto sm:ml-0 w-full sm:w-auto justify-end">
                   <Button
                     size="icon"
                     variant="outline"
-                    className="h-7 w-7"
+                    className="h-9 w-9 sm:h-7 sm:w-7 shrink-0 touch-manipulation"
                     onClick={() => adjustBonus(t.id, -1)}
                     disabled={(t.bonus ?? 0) <= 0}
                     aria-label="Fjern bonuspoeng"
                   >
-                    <Minus className="w-3.5 h-3.5" />
+                    <Minus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                   </Button>
-                  <Badge variant="default" className="tabular-nums min-w-[2.5rem] justify-center">{t.total}</Badge>
+                  <Badge variant="default" className="tabular-nums min-w-[2.5rem] justify-center hidden sm:inline-flex">{t.total}</Badge>
+                  <Badge variant="outline" className="tabular-nums min-w-[2.5rem] justify-center sm:hidden">{t.bonus ?? 0}</Badge>
                   <Button
                     size="icon"
                     variant="outline"
-                    className="h-7 w-7"
+                    className="h-9 w-9 sm:h-7 sm:w-7 shrink-0 touch-manipulation"
                     onClick={() => adjustBonus(t.id, 1)}
                     aria-label="Legg til bonuspoeng"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                   </Button>
                   <BonusAmountPopover teamId={t.id} />
                 </div>
               </div>
-              {t.bonus > 0 && (
-                <div className="pl-7 text-xs text-muted-foreground sm:hidden">
-                  {t.activities} akt · {t.matches} match · {t.bonus} bonus
-                </div>
-              )}
               <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all"
