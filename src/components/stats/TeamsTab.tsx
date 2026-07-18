@@ -15,7 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Shuffle, ChevronDown, Users2 } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Trophy, ChefHat } from 'lucide-react';
+import { Trophy, ChefHat, Plus, Minus } from 'lucide-react';
 import { useKitchenDutyConfig, computeTodayPair, todayIso, pairForCycleIndex } from '@/hooks/useKitchenDutyToday';
 
 const PALETTE = [
@@ -119,12 +119,31 @@ export function TeamsTab() {
       .map((t) => {
         const pts = teamPoints?.[t.id] ?? { matches: 0, activities: 0, total: 0 };
         const members = membersByTeam.get(t.id)?.length ?? 0;
-        return { ...t, ...pts, members };
+        const bonus = t.bonus_points ?? 0;
+        return { ...t, ...pts, bonus, total: pts.total + bonus, members };
       })
       .sort((a, b) => b.total - a.total || a.slot - b.slot);
   }, [teams, teamPoints, membersByTeam]);
 
   const maxPoints = Math.max(1, ...leaderboard.map((t) => t.total));
+
+  const adjustBonus = async (teamId: string, delta: number) => {
+    const team = teams?.find((t) => t.id === teamId);
+    if (!team) return;
+    const next = Math.max(0, (team.bonus_points ?? 0) + delta);
+    // optimistic update
+    qc.setQueryData(['participant-teams', periodId ?? 'none'], (old: any) =>
+      (old || []).map((t: any) => (t.id === teamId ? { ...t, bonus_points: next } : t))
+    );
+    const { error } = await supabase
+      .from('participant_teams')
+      .update({ bonus_points: next })
+      .eq('id', teamId);
+    if (error) {
+      showError('Kunne ikke lagre', error.message);
+      qc.invalidateQueries({ queryKey: ['participant-teams'] });
+    }
+  };
 
   const toggleEnabled = async (val: boolean) => {
     const { error } = await supabase
