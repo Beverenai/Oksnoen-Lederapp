@@ -45,6 +45,7 @@ const Gjenglemt = lazy(() => import("@/pages/Gjenglemt"));
 const PublicGjenglemt = lazy(() => import("@/pages/PublicGjenglemt"));
 const GjenglemtAdmin = lazy(() => import("@/pages/GjenglemtAdmin"));
 const Roulette = lazy(() => import("@/pages/Roulette"));
+const Gensere = lazy(() => import("@/pages/Gensere"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -201,6 +202,7 @@ function AppRoutes() {
         <Route path="/gjenglemt-admin" element={<GjenglemtAdmin />} />
         <Route path="/gjenglemt/:slug" element={<PublicGjenglemt />} />
         <Route path="/roulette" element={<ProtectedRoute><Roulette /></ProtectedRoute>} />
+        <Route path="/gensere" element={<ProtectedRoute><Gensere /></ProtectedRoute>} />
         <Route path="/participant-stats" element={<ProtectedRoute><ParticipantStats /></ProtectedRoute>} />
         <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
         <Route path="/fix" element={<ProtectedRoute><Fix /></ProtectedRoute>} />

@@ -33,7 +33,7 @@ export function TeamBadge({ teamId, size = 'sm' }: TeamBadgeProps) {
         className={size === 'sm' ? 'w-2 h-2 rounded-full' : 'w-2.5 h-2.5 rounded-full'}
         style={{ backgroundColor: team.color }}
       />
-      {team.name}
+      {team.slot}. {team.name}
     </Badge>
   );
 }

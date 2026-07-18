@@ -15,9 +15,11 @@ import {
   Sparkles,
   AlertTriangle,
   X,
+  KeyRound,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
+import { SecretWordsSheet } from '@/components/passport/SecretWordsSheet';
 import { useAuth } from '@/contexts/AuthContext';
 import { VirtualizedParticipantList } from '@/components/passport/VirtualizedParticipantList';
 import { hapticImpact } from '@/lib/capacitorHaptics';
@@ -95,19 +97,34 @@ async function fetchCabins(): Promise<Cabin[]> {
 
 // Fetch leader cabins map
 async function fetchLeaderCabins(): Promise<Map<string, { id: string; name: string }[]>> {
-  const { data, error } = await supabase
-    .from('leader_cabins')
-    .select('cabin_id, leaders(id, name)');
-  if (error) throw error;
+  const [leaderCabinsRes, activeLeadersRes] = await Promise.all([
+    supabase
+      .from('leader_cabins')
+      .select('cabin_id, leader_id'),
+    supabase
+      .from('leaders')
+      .select('id, name')
+      .eq('is_active', true),
+  ]);
+
+  if (leaderCabinsRes.error) throw leaderCabinsRes.error;
+  if (activeLeadersRes.error) throw activeLeadersRes.error;
+
+  const activeLeaders = new Map(
+    (activeLeadersRes.data || []).map((leader) => [leader.id, { id: leader.id, name: leader.name }])
+  );
   
   const map = new Map<string, { id: string; name: string }[]>();
-  (data || []).forEach((lc: any) => {
-    if (lc.cabin_id && lc.leaders) {
+  (leaderCabinsRes.data || []).forEach((lc) => {
+    const leader = activeLeaders.get(lc.leader_id);
+
+    if (lc.cabin_id && leader) {
       const existing = map.get(lc.cabin_id) || [];
-      existing.push({ id: lc.leaders.id, name: lc.leaders.name });
+      existing.push(leader);
       map.set(lc.cabin_id, existing);
     }
   });
+
   return map;
 }
 
@@ -123,6 +140,7 @@ export default function Passport() {
   const [teamFilter, setTeamFilter] = useState<string>('all');
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [secretWordsOpen, setSecretWordsOpen] = useState(false);
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
   // (bulk activity registration moved to dedicated route /passport/activity)
 
@@ -151,10 +169,12 @@ export default function Passport() {
   });
 
   const { data: leaderCabins = new Map<string, { id: string; name: string }[]>() } = useQuery({
-    queryKey: ['leader-cabins-map'],
+    queryKey: ['leader-cabins-map', 'active-only'],
     queryFn: fetchLeaderCabins,
-    staleTime: 10 * 60 * 1000,
+    staleTime: 0,
     gcTime: 24 * 60 * 60 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const { data: checkoutEnabled = false } = useQuery({
@@ -430,6 +450,15 @@ export default function Passport() {
             <AlertTriangle className="w-4 h-4 mr-1.5" />
             Viktig Info
           </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSecretWordsOpen(true)}
+          >
+            <KeyRound className="w-4 h-4 mr-1.5" />
+            Ord
+          </Button>
           
           {/* My cabin filter button - only show if leader has assigned cabins */}
           {myCabinIds.length > 0 && (
@@ -544,6 +573,8 @@ export default function Passport() {
         onOpenChange={setIsDetailDialogOpen}
         onParticipantUpdated={() => loadData()}
       />
+
+      <SecretWordsSheet open={secretWordsOpen} onOpenChange={setSecretWordsOpen} />
     </div>
   );
 }

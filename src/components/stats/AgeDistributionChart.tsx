@@ -3,22 +3,63 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, LabelList } fro
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { Button } from '@/components/ui/button';
+import { guessGender } from '@/lib/nameGender';
 
 interface Participant {
   id: string;
   birth_date: string | null;
+  first_name?: string | null;
+  name?: string | null;
+  cabin_id?: string | null;
 }
 
 interface AgeDistributionChartProps {
   participants: Participant[];
 }
 
-type GroupMode = 'age' | 'birthYear';
+type GroupMode = 'age' | 'birthYear' | 'gender';
 
 export function AgeDistributionChart({ participants }: AgeDistributionChartProps) {
   const [groupMode, setGroupMode] = useState<GroupMode>('age');
 
   const ageData = useMemo(() => {
+    if (groupMode === 'gender') {
+      // Step 1: initial guess per participant
+      const guesses = participants.map((p) => {
+        const raw = guessGender(p.first_name || p.name || null);
+        return { p, g: (raw === 'male' || raw === 'female' ? raw : null) as 'male' | 'female' | null };
+      });
+      // Step 2: infer room gender (rooms are single-sex). Use majority of known
+      // guesses in each cabin to fill in unknowns.
+      const cabinGender = new Map<string, 'male' | 'female'>();
+      const tally = new Map<string, { m: number; f: number }>();
+      guesses.forEach(({ p, g }) => {
+        if (!p.cabin_id || !g) return;
+        const t = tally.get(p.cabin_id) || { m: 0, f: 0 };
+        if (g === 'male') t.m++; else t.f++;
+        tally.set(p.cabin_id, t);
+      });
+      tally.forEach((t, cabinId) => {
+        if (t.m === 0 && t.f === 0) return;
+        cabinGender.set(cabinId, t.f >= t.m ? 'female' : 'male');
+      });
+      let girls = 0, boys = 0, unknown = 0;
+      guesses.forEach(({ p, g }) => {
+        let final = g;
+        if (!final && p.cabin_id && cabinGender.has(p.cabin_id)) {
+          final = cabinGender.get(p.cabin_id)!;
+        }
+        if (final === 'female') girls++;
+        else if (final === 'male') boys++;
+        else unknown++;
+      });
+      const out = [
+        { name: 'Jenter', count: girls, fill: 'hsl(var(--chart-4))' },
+        { name: 'Gutter', count: boys, fill: 'hsl(var(--chart-1))' },
+      ];
+      if (unknown > 0) out.push({ name: 'Ukjent', count: unknown, fill: 'hsl(var(--chart-3))' });
+      return out.map((o) => ({ ...o })) as { name: string; count: number; fill: string }[];
+    }
     const today = new Date();
     const counts: Record<number, number> = {};
 
@@ -73,7 +114,7 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <CardTitle className="text-base font-medium">
-            {groupMode === 'birthYear' ? 'Fødselsårfordeling' : 'Aldersfordeling'}
+            {groupMode === 'birthYear' ? 'Fødselsårfordeling' : groupMode === 'gender' ? 'Jenter og gutter' : 'Aldersfordeling'}
           </CardTitle>
           <div className="flex items-center gap-1">
             <Button
@@ -89,6 +130,13 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
               onClick={() => setGroupMode('birthYear')}
             >
               Fødselsår
+            </Button>
+            <Button
+              variant={groupMode === 'gender' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setGroupMode('gender')}
+            >
+              Kjønn
             </Button>
           </div>
         </div>
@@ -120,7 +168,9 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
           </ResponsiveContainer>
         </ChartContainer>
         <p className="text-xs text-muted-foreground text-center mt-2">
-          Totalt {total} deltakere med fødselsdato
+          {groupMode === 'gender'
+            ? `Totalt ${total} deltakere (kjønn gjettet fra fornavn)`
+            : `Totalt ${total} deltakere med fødselsdato`}
         </p>
       </CardContent>
     </Card>

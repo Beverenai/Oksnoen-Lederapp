@@ -1,51 +1,65 @@
-## Ny funksjon: Deltakerlag (10 grupper)
+## Gensere (Sweater pickup) feature
 
-En ny seksjon på **Deltaker­statistikk** som fordeler alle deltakerne i aktiv periode i 10 lag. Admin kan endre navn og farge per lag, og når funksjonen er skrudd på vises lagnavn + farge­merke på hvert deltakerkort rundt om i appen.
-
-### Brukerflyt
-
-1. Admin går inn på `/participant-stats` → nytt kort **"Lag"**.
-2. Toggle øverst: **"Vis lag i appen"** (av som standard).
-3. Under: 10 lag-rader. Hver rad viser fargeplukker, navnefelt, antall deltakere, og en `Se deltakere`-knapp.
-4. Knapp **"Fordel deltakere"** som tilfeldig deler alle deltakere i aktiv periode i 10 tilnærmet like store lag. Kan kjøres på nytt (bekreftelse). Manuell flytting av enkelt­deltakere via dropdown i deltaker­listen.
-5. Når togglen er på, får deltaker­kort i Passkontroll, Deltaljvisning, Nurse-søk osv. en liten fargeprikk + lagnavn.
+En ny funksjon som lar ledere krysse av om deltagere har hentet forhåndsbestilt genser, eller kjøpt en på leir — med størrelse. Fungerer som Passkontroll (søk + kryss av). Kan skrus av/på fra admin (kun aktiv første dagen). Skopet til aktiv periode.
 
 ### Datamodell
 
-Ny tabell `participant_teams`:
-- `period_id` (fk periods)
-- `slot` 1–10 (unikt per periode)
-- `name` (default "Lag 1" … "Lag 10")
-- `color` (hex, default fra en 10-fargers palett)
+Ny tabell `participant_sweaters` (period-scoped):
+- `participant_id` (fk), `period_id` (fk)
+- `preordered_size` (text, nullable) — fra importert liste ("s", "m", "l", "xl", "xs" osv.)
+- `picked_up` (boolean)
+- `picked_up_at` (timestamptz)
+- `bought_on_camp` (boolean)
+- `bought_size` (text, nullable)
+- `bought_at` (timestamptz)
+- Unique (participant_id, period_id)
+- RLS: leser for authenticated (aktive ledere), skriving for authenticated, full for service_role
+- GRANTs som vanlig
 
-Ny kolonne på `participants`:
-- `team_id uuid` (fk participant_teams, nullable, ON DELETE SET NULL)
+Ny `app_config` nøkkel: `sweaters_enabled` (true/false) — realtime-hook `useSweatersEnabled` som styrer synlighet.
 
-Ny flagg i `app_config`:
-- `teams_enabled` (boolean, styrer om lag vises i appen). Lest via en enkel hook `useTeamsEnabled()` med realtime, likt `useCheckoutEnabled`.
+### Import
 
-RLS: Ledere kan lese; admin kan skrive.
+Admin-fane "Gensere" får en import-boks som tar Excel/CSV/tekst i formatet:
+```
+Navn | Etternavn | Forhåndsbestilt | Hentet | Kjøpt på leir
+```
+- Matcher deltager på fullt navn (fornavn + etternavn, case-insensitive, trim).
+- Setter `preordered_size` fra kolonne C. Kolonne D/E ignoreres ved import (de fylles i appen).
+- Rapport: X matchet, Y ikke funnet (vises som liste).
 
-### Frontend
+### Admin (Innstillinger → Deltakere)
 
-- **Ny tab** i `src/pages/admin/ParticipantStats.tsx`: `teams` → komponent `src/components/stats/TeamsTab.tsx`.
-  - Toggle for `teams_enabled`.
-  - Liste med 10 lag: fargeplukker (enkel swatch-grid), inline navneredigering med debounced save, antall medlemmer, expander som lister deltakerne med mulighet til å flytte til annet lag.
-  - "Fordel automatisk"-knapp (shuffle + jevn fordeling over 10 lag i aktiv periode).
-- **Deltakervisning**: ny liten komponent `TeamBadge` (fargeprikk + navn) som brukes i:
-  - `ParticipantDetailDialog` (topp av dialog)
-  - `VirtualizedParticipantList` (ved navnet)
-  - `Nurse.tsx` deltakersøk-resultater
-  - Kun rendret når `teams_enabled = true`.
-- Ny hook `useParticipantTeams(periodId)` som henter de 10 lagene for aktiv periode og cacher via React Query.
+Ny tab `SweatersTab.tsx`:
+- Toggle "Aktiver Gensere i appen" (skriver `sweaters_enabled`).
+- Import-boks (paste liste eller last opp `.xlsx`/`.csv`).
+- Oversikt: antall forhåndsbestilte, antall hentet, antall kjøpt på leir, per størrelse.
+- **"Kopier arket"-knapp**: kopierer full tabell til clipboard i samme kolonneformat (Navn, Etternavn, Forhåndsbestilt, Hentet, Kjøpt på leir) med avkrysningsstatus + valgt størrelse — klar til å limes tilbake i Excel/Sheets.
+- Eksporter som `.xlsx` (samme format).
 
-### Teknisk
+### Leder-side: `/gensere`
 
-- Fordelings­algoritme: hent alle `participants.id` for aktiv periode, shuffle, del i 10 buckets (Math.floor(i / (n/10)) med overskudd fordelt fra start), oppdater `team_id` i én batch pr. lag.
-- Migrasjonen seeder 10 tomme lag for hver eksisterende periode så UI-et alltid har 10 rader å redigere.
-- Deltakerlister som allerede henter `participants` legger til `team:participant_teams(name, color)` i selecten kun der badgen skal vises, for å holde payload lav ellers.
+Ny rute + nav-ikon (kun synlig når `sweaters_enabled = true`, akin til Checkout-mønsteret):
+- Layout kopiert fra Passport: søk, filter på hytte/lag, virtualisert liste.
+- Deltager-kort viser: navn, hytte, forhåndsbestilt størrelse (badge), status.
+- Trykk på kort → sheet med to seksjoner:
+  - **Hentet**: toggle-knapp, viser forhåndsbestilt størrelse (kan overstyres hvis feil).
+  - **Kjøpt på leir**: toggle + størrelses-velger (XS/S/M/L/XL/XXL).
+- Skiller "Trenger genser" fra "Ferdig" (som Checkout gjør med `pass_written`).
 
-### Ute av scope
+### Filer som lages/endres
 
-- Ikke automatisk regenerering når nye deltakere importeres — de får `team_id = null` og admin trykker "Fordel" på nytt, eller tildeler manuelt.
-- Ikke egne poeng/scoreboard per lag i denne omgangen.
+- `supabase/migrations/...` — ny tabell + GRANTs + RLS + policies + trigger `set_period_id_default`.
+- `src/hooks/useSweatersEnabled.ts` — realtime `app_config` flag.
+- `src/hooks/useSweaters.ts` — spørring per periode.
+- `src/components/admin/SweatersTab.tsx` — admin-UI (toggle, import, oversikt, kopier, eksport).
+- `src/pages/Gensere.tsx` — leder-side (søk + kryss av).
+- `src/components/gensere/SweaterDetailSheet.tsx` — detalj-sheet per deltaker.
+- `src/App.tsx` — route `/gensere`.
+- `src/components/layout/AppLayout.tsx` (eller nav-komponent) — bunn-nav-ikon gated på flag.
+- `src/pages/admin/AdminSettings.tsx` eller `ParticipantStats.tsx` — legg til ny tab.
+
+### Åpne spørsmål
+
+1. Hvor skal admin-fanen ligge — under **Innstillinger** eller under **Deltaker-statistikk** (der Ambassadører/Lag ligger)?
+2. Skal ikonet for `/gensere` vises i bunn-nav for alle ledere, eller bare admin? (Passkontroll er for alle ledere — antar samme her.)
