@@ -193,7 +193,7 @@ export function SecretWordsTab() {
     let html = `<!doctype html><html><head><meta charset="utf-8"><title>Hemmelige Ord</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Rammetto+One&family=Bagel+Fat+One&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Caesar+Dressing&family=Rubik+Beastly&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   @page { size: A4; margin: 10mm; }
   * { box-sizing: border-box; }
