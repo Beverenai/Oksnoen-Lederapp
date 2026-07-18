@@ -120,7 +120,12 @@ export function SweatersTab() {
     try {
       const isCsv = /\.(csv|txt)$/i.test(file.name) || file.type.includes('csv') || file.type === 'text/plain';
       if (isCsv) {
-        const text = await file.text();
+        // Try UTF-8 first; if it contains replacement chars, fall back to Latin-1 (common for Norwegian CSVs from Excel).
+        const buf = await file.arrayBuffer();
+        let text = new TextDecoder('utf-8', { fatal: false }).decode(buf);
+        if (text.includes('\uFFFD')) {
+          text = new TextDecoder('iso-8859-1').decode(buf);
+        }
         const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
         const first = lines[0] || '';
         const delim = first.includes('\t') ? '\t' : first.includes(';') ? ';' : ',';
@@ -132,12 +137,13 @@ export function SweatersTab() {
         if (hasHeader) {
           startIdx = 1;
           const findIdx = (preds: RegExp[]) => header.findIndex((h) => preds.some((r) => r.test(h)));
-          const fullIdx = findIdx([/^fullt\s*navn$/, /^navn$/, /^full\s*name$/, /^name$/]);
-          const firstIdx = findIdx([/^fornavn$/, /^first/]);
+          const fullIdx = findIdx([/^fullt\s*navn$/, /^full\s*name$/]);
+          const firstIdx = findIdx([/^fornavn$/, /^first/, /^navn$/, /^name$/]);
           const lastIdx = findIdx([/^etternavn$/, /^last/]);
           const sizeIdx = findIdx([/størrelse|storrelse|size|forhånd|forhand|pre/]);
           if (firstIdx >= 0 && lastIdx >= 0) { iFirst = firstIdx; iLast = lastIdx; }
           else if (fullIdx >= 0) { iFull = fullIdx; }
+          else if (firstIdx >= 0) { iFull = firstIdx; }
           if (sizeIdx >= 0) iSize = sizeIdx;
         }
         const rows: { fullName: string; size: string | null }[] = [];
@@ -150,9 +156,9 @@ export function SweatersTab() {
         await applyRows(rows);
         return;
       }
-      const buf = await file.arrayBuffer();
+      const xbuf = await file.arrayBuffer();
       const wb = new ExcelJS.Workbook();
-      await wb.xlsx.load(buf);
+      await wb.xlsx.load(xbuf);
       const ws = wb.worksheets[0];
       const headerRow = ws.getRow(1);
       const cols: Record<string, number> = {};
