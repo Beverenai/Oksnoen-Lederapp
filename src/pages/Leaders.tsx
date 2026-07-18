@@ -211,10 +211,9 @@ export default function Leaders() {
     return full ? { ...selectedLeader, content: full } : selectedLeader;
   }, [canEdit, selectedLeader, fullContentMap]);
 
-  // Format linked cabins display with "+" between them
+  // Format linked cabins display grouped by main cabin name
   const formatCabinsDisplay = (cabins: CabinInfo[] | undefined): string => {
-    if (!cabins || cabins.length === 0) return '';
-    return cabins.map(c => c.name).join(' + ');
+    return formatMainCabins(cabins);
   };
 
   // Get teams for filter chips (only show FILTER_TEAMS that are in use)
