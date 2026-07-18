@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { Shirt, Loader2, Upload, Copy, Search, CheckCircle2, ShoppingBag } from 'lucide-react';
+import { Shirt, Loader2, Upload, Copy, Search, CheckCircle2, ShoppingBag, Download } from 'lucide-react';
 import ExcelJS from 'exceljs';
 
 interface ParticipantRow {
@@ -249,6 +249,38 @@ export function SweatersTab() {
     }
   };
 
+  const buildRows = () =>
+    participants.map((p) => {
+      const s = sweaters.get(p.id);
+      const [first, ...rest] = p.name.split(' ');
+      const last = rest.join(' ');
+      return {
+        first: first || '',
+        last,
+        pre: s?.preordered_size || '',
+        hentet: s?.picked_up ? (s.picked_up_size || 'x') : '',
+        kjopt: s?.bought_on_camp ? (s.bought_size || 'x') : '',
+      };
+    });
+
+  const downloadCsv = () => {
+    const header = ['Navn', 'Etternavn', 'Forhåndsbestilt', 'Hentet', 'Kjøpt på leir'];
+    const esc = (v: string) => (/[;"\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+    const lines = [header.join(';'), ...buildRows().map((r) => [r.first, r.last, r.pre, r.hentet, r.kjopt].map(esc).join(';'))];
+    // Prepend BOM so Excel opens UTF-8 correctly
+    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `Genserliste_${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showSuccess('CSV lastet ned');
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -300,6 +332,9 @@ export function SweatersTab() {
             />
             <Button variant="outline" onClick={copySheet}>
               <Copy className="w-4 h-4 mr-2" /> Kopier ark
+            </Button>
+            <Button variant="outline" onClick={downloadCsv}>
+              <Download className="w-4 h-4 mr-2" /> Last ned CSV
             </Button>
           </div>
 
