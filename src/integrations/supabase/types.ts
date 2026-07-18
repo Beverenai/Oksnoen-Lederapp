@@ -1367,6 +1367,7 @@ export type Database = {
           gift_card_number: string | null
           has_arrived: boolean | null
           id: string
+          image_thumb_url: string | null
           image_url: string | null
           insj_points: number
           last_name: string | null
@@ -1392,6 +1393,7 @@ export type Database = {
           gift_card_number?: string | null
           has_arrived?: boolean | null
           id?: string
+          image_thumb_url?: string | null
           image_url?: string | null
           insj_points?: number
           last_name?: string | null
@@ -1417,6 +1419,7 @@ export type Database = {
           gift_card_number?: string | null
           has_arrived?: boolean | null
           id?: string
+          image_thumb_url?: string | null
           image_url?: string | null
           insj_points?: number
           last_name?: string | null
