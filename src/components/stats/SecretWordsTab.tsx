@@ -193,7 +193,7 @@ export function SecretWordsTab() {
     let html = `<!doctype html><html><head><meta charset="utf-8"><title>Hemmelige Ord</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Rammetto+One&family=Bagel+Fat+One&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Caesar+Dressing&family=Rubik+Beastly&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   @page { size: A4; margin: 10mm; }
   * { box-sizing: border-box; }
@@ -210,12 +210,12 @@ export function SecretWordsTab() {
   .cell.empty { border-color: transparent; }
   .cabin-tag { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 8pt; text-transform: uppercase; letter-spacing: 2px; color: #a97a3b; margin: 0 0 3mm; }
   .name {
-    font-family: 'Bagel Fat One', 'Rammetto One', system-ui, sans-serif;
+    font-family: 'Caesar Dressing', 'Rubik Beastly', system-ui, sans-serif;
     font-weight: 400;
-    font-size: 22pt;
+    font-size: 24pt;
     margin: 0 0 3mm;
     line-height: 1.05;
-    letter-spacing: 0.5px;
+    letter-spacing: 1.5px;
     color: #7a3b1a;
     transform: rotate(-1.5deg);
   }
@@ -224,10 +224,10 @@ export function SecretWordsTab() {
   .dot { width: 3.5mm; height: 3.5mm; border-radius: 50%; display: inline-block; }
   .word-label { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 8pt; text-transform: uppercase; letter-spacing: 2px; color: #a97a3b; margin: 0 0 2mm; }
   .word {
-    font-family: 'Bagel Fat One', 'Rammetto One', system-ui, sans-serif;
+    font-family: 'Caesar Dressing', 'Rubik Beastly', system-ui, sans-serif;
     font-weight: 400;
-    font-size: 40pt;
-    letter-spacing: 1px;
+    font-size: 42pt;
+    letter-spacing: 2px;
     margin: 0;
     line-height: 1;
     word-break: break-word;
