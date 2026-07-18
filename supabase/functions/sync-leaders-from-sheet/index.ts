@@ -101,7 +101,10 @@ function extractSpreadsheetId(input: string): string {
   return m ? m[1] : input.trim();
 }
 
-const sheetPrefix = (title: string) => /[^A-Za-z0-9_]/.test(title) ? `'${title.replace(/'/g, "''")}'` : title;
+const sheetPrefix = (title: string) => {
+  const t = title.trim();
+  return /[^A-Za-z0-9_]/.test(t) ? `'${t.replace(/'/g, "''")}'` : t;
+};
 const isAutoDefaultRange = (range: string) => /^'?Sheet1'?!A1:Z{1,2}1000$/i.test(range.trim());
 
 async function fetchSheetValues(spreadsheetId: string, range: string, headers: HeadersInit) {
