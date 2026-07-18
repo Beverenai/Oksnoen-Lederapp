@@ -119,6 +119,7 @@ export const ParticipantDetailDialog = ({
   const [isTogglingPass, setIsTogglingPass] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [incidentOpen, setIncidentOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedIndicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
