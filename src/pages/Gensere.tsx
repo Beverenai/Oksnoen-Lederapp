@@ -11,11 +11,13 @@ import { Search, User, Home, CheckCircle2, ShoppingBag, Shirt } from 'lucide-rea
 import { useSweatersEnabled } from '@/hooks/useSweatersEnabled';
 import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import { SweaterDetailSheet } from '@/components/gensere/SweaterDetailSheet';
+import { getParticipantThumb } from '@/lib/participantImage';
 
 interface ParticipantRow {
   id: string;
   name: string;
   image_url: string | null;
+  image_thumb_url?: string | null;
   cabin_id: string | null;
   cabins?: { id: string; name: string } | null;
 }
@@ -43,7 +45,7 @@ export default function Gensere() {
     enabled: !!periodId,
     queryFn: async () => {
       const [pRes, cRes, sRes] = await Promise.all([
-        supabase.from('participants').select('id, name, image_url, cabin_id, cabins(id, name)').order('name'),
+        supabase.from('participants').select('id, name, image_url, image_thumb_url, cabin_id, cabins(id, name)').order('name'),
         supabase.from('cabins').select('id, name').order('name'),
         supabase.from('participant_sweaters').select('participant_id, preordered_size, picked_up, picked_up_size, bought_on_camp, bought_size').eq('period_id', periodId!),
       ]);
@@ -141,7 +143,7 @@ export default function Gensere() {
               >
                 <div className="flex items-start gap-3">
                   <Avatar className="w-10 h-10 shrink-0">
-                    <AvatarImage src={p.image_url || undefined} />
+                    <AvatarImage src={getParticipantThumb(p)} loading="lazy" decoding="async" />
                     <AvatarFallback><User className="w-4 h-4" /></AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
