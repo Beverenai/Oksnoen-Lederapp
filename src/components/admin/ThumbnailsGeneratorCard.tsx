@@ -22,18 +22,21 @@ export function ThumbnailsGeneratorCard() {
     try {
       let totalProcessed = 0;
       let totalFailed = 0;
-      let safety = 100;
+      let safety = 200;
       while (safety-- > 0) {
         const { data, error } = await supabase.functions.invoke('generate-participant-thumbs', {
-          body: { batch_size: 25, force: force && totalProcessed === 0 ? true : false },
+          body: { batch_size: 25, force },
         });
         if (error) throw error;
-        totalProcessed += data?.processed || 0;
+        const p = data?.processed || 0;
+        totalProcessed += p;
         totalFailed += data?.failed || 0;
         setProcessed(totalProcessed);
         setFailed(totalFailed);
         setRemaining(data?.remaining ?? 0);
-        if (!data?.remaining || data.remaining === 0) break;
+        // Stop when nothing more to do (missing-mode) or when a force batch returns empty.
+        if (!force && (!data?.remaining || data.remaining === 0)) break;
+        if (force && p === 0) break;
       }
       setDone(true);
       toast.success(`Ferdig! Genererte ${totalProcessed} thumbnails`);
