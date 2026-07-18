@@ -15,7 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Shuffle, ChevronDown, Users2 } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Trophy, ChefHat, Plus, Minus } from 'lucide-react';
+import { Trophy, ChefHat, Plus, Minus, MoreHorizontal } from 'lucide-react';
 import { useKitchenDutyConfig, computeTodayPair, todayIso, pairForCycleIndex } from '@/hooks/useKitchenDutyToday';
 
 const PALETTE = [
@@ -143,6 +143,60 @@ export function TeamsTab() {
       showError('Kunne ikke lagre', error.message);
       qc.invalidateQueries({ queryKey: ['participant-teams'] });
     }
+  };
+
+  const BonusAmountPopover = ({ teamId }: { teamId: string }) => {
+    const [custom, setCustom] = useState('');
+    const [open, setOpen] = useState(false);
+    const apply = (n: number) => {
+      if (!n || Number.isNaN(n)) return;
+      adjustBonus(teamId, n);
+      setOpen(false);
+      setCustom('');
+    };
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button size="icon" variant="outline" className="h-7 w-7" aria-label="Velg antall poeng">
+            <MoreHorizontal className="w-3.5 h-3.5" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-2 space-y-2" align="end">
+          <div className="grid grid-cols-4 gap-1">
+            {[1, 2, 3, 5, 10, -1, -2, -5].map((n) => (
+              <Button
+                key={n}
+                size="sm"
+                variant={n > 0 ? 'default' : 'outline'}
+                className="h-8 px-0 tabular-nums"
+                onClick={() => apply(n)}
+              >
+                {n > 0 ? `+${n}` : n}
+              </Button>
+            ))}
+          </div>
+          <form
+            className="flex gap-1"
+            onSubmit={(e) => {
+              e.preventDefault();
+              apply(Number(custom));
+            }}
+          >
+            <Input
+              type="number"
+              inputMode="numeric"
+              placeholder="Antall"
+              value={custom}
+              onChange={(e) => setCustom(e.target.value)}
+              className="h-8"
+            />
+            <Button type="submit" size="sm" disabled={!custom || Number.isNaN(Number(custom))}>
+              Legg til
+            </Button>
+          </form>
+        </PopoverContent>
+      </Popover>
+    );
   };
 
   const toggleEnabled = async (val: boolean) => {
@@ -403,6 +457,7 @@ export function TeamsTab() {
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </Button>
+                  <BonusAmountPopover teamId={t.id} />
                 </div>
               </div>
               {t.bonus > 0 && (
