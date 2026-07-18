@@ -1175,6 +1175,90 @@ export type Database = {
           },
         ]
       }
+      participant_incident_participants: {
+        Row: {
+          created_at: string
+          incident_id: string
+          participant_id: string
+        }
+        Insert: {
+          created_at?: string
+          incident_id: string
+          participant_id: string
+        }
+        Update: {
+          created_at?: string
+          incident_id?: string
+          participant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_incident_participants_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "participant_incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_incident_participants_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      participant_incidents: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          leader_id: string
+          period_id: string | null
+          severity: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          leader_id: string
+          period_id?: string | null
+          severity?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          leader_id?: string
+          period_id?: string | null
+          severity?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_incidents_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_incidents_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participant_sweaters: {
         Row: {
           bought_at: string | null
@@ -2240,6 +2324,47 @@ export type Database = {
             foreignKeyName: "stories_period_id_fkey"
             columns: ["period_id"]
             isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_kitchen_duty: {
+        Row: {
+          created_at: string
+          id: string
+          manual_override_date: string | null
+          manual_override_slot_a: number | null
+          manual_override_slot_b: number | null
+          period_id: string
+          rotation_start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          manual_override_date?: string | null
+          manual_override_slot_a?: number | null
+          manual_override_slot_b?: number | null
+          period_id: string
+          rotation_start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          manual_override_date?: string | null
+          manual_override_slot_a?: number | null
+          manual_override_slot_b?: number | null
+          period_id?: string
+          rotation_start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_kitchen_duty_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: true
             referencedRelation: "periods"
             referencedColumns: ["id"]
           },

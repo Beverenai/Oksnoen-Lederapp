@@ -1,65 +1,42 @@
-## Gensere (Sweater pickup) feature
+## Kjøkkentjeneste for lag (2 og 2)
 
-En ny funksjon som lar ledere krysse av om deltagere har hentet forhåndsbestilt genser, eller kjøpt en på leir — med størrelse. Fungerer som Passkontroll (søk + kryss av). Kan skrus av/på fra admin (kun aktiv første dagen). Skopet til aktiv periode.
+Legger til en automatisk rotasjon der 2 av de 10 lagene har kjøkkentjeneste hver dag, med visning i admin, på lederens hjemskjerm, og et klikk-filter i Passkontroll.
 
-### Datamodell
+### Rotasjonsmodell
+- Fem par som roterer daglig: (Lag 1+2), (Lag 3+4), (Lag 5+6), (Lag 7+8), (Lag 9+10).
+- Par for i dag = `((antall dager siden startdato) mod 5)`.
+- Admin setter én "startdato" per periode (default = periodens startdato). Ingen kompleks kalender.
+- Admin kan også manuelt overstyre dagens par ved behov (valgfritt felt for "override for dato").
 
-Ny tabell `participant_sweaters` (period-scoped):
-- `participant_id` (fk), `period_id` (fk)
-- `preordered_size` (text, nullable) — fra importert liste ("s", "m", "l", "xl", "xs" osv.)
-- `picked_up` (boolean)
-- `picked_up_at` (timestamptz)
-- `bought_on_camp` (boolean)
-- `bought_size` (text, nullable)
-- `bought_at` (timestamptz)
-- Unique (participant_id, period_id)
-- RLS: leser for authenticated (aktive ledere), skriving for authenticated, full for service_role
-- GRANTs som vanlig
+### 1. Data
+Ny tabell `team_kitchen_duty` (per periode):
+- `period_id`, `rotation_start_date`, `manual_override_date`, `manual_override_slot_a`, `manual_override_slot_b`.
+- RLS: alle innloggede kan lese; kun admin kan skrive.
 
-Ny `app_config` nøkkel: `sweaters_enabled` (true/false) — realtime-hook `useSweatersEnabled` som styrer synlighet.
+### 2. Admin — Lag-fanen (`TeamsTab.tsx`)
+- Nytt kort "Kjøkkentjeneste":
+  - Datovelger for `rotation_start_date`.
+  - Viser dagens 2 lag (navn + farge + slot-nr) og hele ukens rotasjon som liste.
+  - Knapp "Overstyr i dag" → velg 2 slots manuelt.
 
-### Import
+### 3. Lederens hjemskjerm (`Home.tsx`)
+- Nytt kort "Kjøkkentjeneste i dag" som kun vises når `teams_enabled = true`.
+- Viser de 2 lag-badgene (samme stil som `TeamBadge`) side ved side.
+- Trykk på kortet → navigerer til `/passport?kitchenDuty=1` (viser begge lag).
+- Trykk på ett enkelt badge → `/passport?team=<team_id>` (kun det ene laget).
 
-Admin-fane "Gensere" får en import-boks som tar Excel/CSV/tekst i formatet:
-```
-Navn | Etternavn | Forhåndsbestilt | Hentet | Kjøpt på leir
-```
-- Matcher deltager på fullt navn (fornavn + etternavn, case-insensitive, trim).
-- Setter `preordered_size` fra kolonne C. Kolonne D/E ignoreres ved import (de fylles i appen).
-- Rapport: X matchet, Y ikke funnet (vises som liste).
+### 4. Passkontroll (`Passport.tsx`)
+- Leser `?kitchenDuty=1` fra URL: aktiverer et multi-team-filter som viser deltagere i begge dagens kjøkken-lag.
+- Eksisterende single-team filter (`?team=`) beholdes uendret.
+- Legger til en liten "Kjøkkentjeneste i dag"-chip i filter-baren når aktiv, med X for å fjerne.
 
-### Admin (Innstillinger → Deltakere)
+### 5. Hook
+Ny `useKitchenDutyToday(periodId)` som:
+- Henter `team_kitchen_duty` for perioden og `participant_teams` (slot 1–10).
+- Regner ut dagens par (eller bruker override hvis satt for i dag).
+- Returnerer `{ teamA, teamB }` (fulle team-objekter med navn/farge/slot).
 
-Ny tab `SweatersTab.tsx`:
-- Toggle "Aktiver Gensere i appen" (skriver `sweaters_enabled`).
-- Import-boks (paste liste eller last opp `.xlsx`/`.csv`).
-- Oversikt: antall forhåndsbestilte, antall hentet, antall kjøpt på leir, per størrelse.
-- **"Kopier arket"-knapp**: kopierer full tabell til clipboard i samme kolonneformat (Navn, Etternavn, Forhåndsbestilt, Hentet, Kjøpt på leir) med avkrysningsstatus + valgt størrelse — klar til å limes tilbake i Excel/Sheets.
-- Eksporter som `.xlsx` (samme format).
-
-### Leder-side: `/gensere`
-
-Ny rute + nav-ikon (kun synlig når `sweaters_enabled = true`, akin til Checkout-mønsteret):
-- Layout kopiert fra Passport: søk, filter på hytte/lag, virtualisert liste.
-- Deltager-kort viser: navn, hytte, forhåndsbestilt størrelse (badge), status.
-- Trykk på kort → sheet med to seksjoner:
-  - **Hentet**: toggle-knapp, viser forhåndsbestilt størrelse (kan overstyres hvis feil).
-  - **Kjøpt på leir**: toggle + størrelses-velger (XS/S/M/L/XL/XXL).
-- Skiller "Trenger genser" fra "Ferdig" (som Checkout gjør med `pass_written`).
-
-### Filer som lages/endres
-
-- `supabase/migrations/...` — ny tabell + GRANTs + RLS + policies + trigger `set_period_id_default`.
-- `src/hooks/useSweatersEnabled.ts` — realtime `app_config` flag.
-- `src/hooks/useSweaters.ts` — spørring per periode.
-- `src/components/admin/SweatersTab.tsx` — admin-UI (toggle, import, oversikt, kopier, eksport).
-- `src/pages/Gensere.tsx` — leder-side (søk + kryss av).
-- `src/components/gensere/SweaterDetailSheet.tsx` — detalj-sheet per deltaker.
-- `src/App.tsx` — route `/gensere`.
-- `src/components/layout/AppLayout.tsx` (eller nav-komponent) — bunn-nav-ikon gated på flag.
-- `src/pages/admin/AdminSettings.tsx` eller `ParticipantStats.tsx` — legg til ny tab.
-
-### Åpne spørsmål
-
-1. Hvor skal admin-fanen ligge — under **Innstillinger** eller under **Deltaker-statistikk** (der Ambassadører/Lag ligger)?
-2. Skal ikonet for `/gensere` vises i bunn-nav for alle ledere, eller bare admin? (Passkontroll er for alle ledere — antar samme her.)
+### Teknisk oppsummering
+- Migrering: `team_kitchen_duty` + GRANTs + RLS (admin write, authenticated read) + `updated_at`-trigger.
+- Frontend: `useKitchenDutyToday`, kort i `TeamsTab`, kort i `Home`, URL-param-håndtering i `Passport`.
+- Ingen endringer i eksisterende team- eller passregistrerings-logikk.

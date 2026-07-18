@@ -25,6 +25,7 @@ import {
   Wrench,
   Bed,
   Dices,
+  ChefHat,
   type LucideIcon
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -34,6 +35,9 @@ import type { Tables } from '@/integrations/supabase/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullIndicator } from '@/components/ui/pull-indicator';
 import { updateWidgetData } from '@/lib/capacitorWidget';
+import { MessageSquareWarning } from 'lucide-react';
+import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
+import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
 
@@ -155,6 +159,8 @@ export default function Home() {
   const [rouletteEnabled, setRouletteEnabled] = useState(false);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
   const showRoulette = rouletteEnabled && inRoulette;
+  const teamsEnabled = useTeamsEnabled();
+  const { teamA: dutyTeamA, teamB: dutyTeamB } = useKitchenDutyToday();
 
   useEffect(() => {
     if (!effectiveLeader) return;
@@ -511,6 +517,47 @@ export default function Home() {
 
       {/* Content Cards - consistent spacing */}
       <div className="px-4 mt-4 sm:mt-6 space-y-3 sm:space-y-4">
+        {/* Kjøkkentjeneste i dag */}
+        {teamsEnabled && dutyTeamA && dutyTeamB && (
+          <Card className="border border-orange-500/30 bg-orange-50/50 dark:bg-orange-950/20 shadow-sm">
+            <CardContent className="py-3 sm:py-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-orange-500/15 shrink-0">
+                  <ChefHat className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] uppercase tracking-wide text-orange-600/80 dark:text-orange-400/80 font-medium mb-1">
+                    Kjøkkentjeneste i dag
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {[dutyTeamA, dutyTeamB].map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/passport?teams=${t.id}`);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border transition hover:opacity-80"
+                        style={{ backgroundColor: `${t.color}20`, borderColor: `${t.color}80`, color: t.color }}
+                      >
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
+                        {t.slot}. {t.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigate(`/passport?teams=${dutyTeamA.id},${dutyTeamB.id}&kitchenDuty=1`)}
+                >
+                  Vis alle
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Oppgave-roulette */}
         {showRoulette && (
         <Card
@@ -809,6 +856,19 @@ export default function Home() {
             </CardContent>
           </Card>
         )}
+
+        {/* Register incident - compact button */}
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/hendelser')}
+            className="border-red-500/30 bg-red-50/50 dark:bg-red-950/20 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 gap-2"
+          >
+            <MessageSquareWarning className="w-4 h-4" />
+            Hendelse
+          </Button>
+        </div>
       </div>
     </div>
   );

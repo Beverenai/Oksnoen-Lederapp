@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,6 +23,7 @@ import { CachedImage } from '@/components/ui/cached-image';
 import { TeamBadge } from '@/components/participants/TeamBadge';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { isNativeCameraAvailable, takePhoto } from '@/lib/capacitorCamera';
+import { IncidentSheet } from '@/components/incidents/IncidentSheet';
 
 interface ParticipantWithCabin {
   id: string;
@@ -119,6 +120,7 @@ export const ParticipantDetailDialog = ({
   const [isTogglingPass, setIsTogglingPass] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [incidentOpen, setIncidentOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedIndicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -387,6 +389,7 @@ export const ParticipantDetailDialog = ({
     .slice(0, 2) || '??';
 
   return (
+    <>
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
       <ResponsiveDialogContent className="sm:max-w-md">
         {isLoading ? (
@@ -635,6 +638,12 @@ export const ParticipantDetailDialog = ({
                   {participant.has_arrived ? 'Marker som ikke ankommet' : 'Marker som ankommet'}
                 </Button>
 
+                {/* Register incident */}
+                <Button variant="outline" className="w-full" onClick={() => setIncidentOpen(true)}>
+                  <MessageSquareWarning className="h-4 w-4 mr-2 text-red-600" />
+                  Registrer hendelse
+                </Button>
+
                 {/* Pass written toggle - only visible when checkout is enabled */}
                 {checkoutEnabled && (
                 <div className="space-y-1.5">
@@ -688,5 +697,13 @@ export const ParticipantDetailDialog = ({
         )}
       </ResponsiveDialogContent>
     </ResponsiveDialog>
+    {participantId && (
+      <IncidentSheet
+        open={incidentOpen}
+        onOpenChange={setIncidentOpen}
+        prefillParticipantId={participantId}
+      />
+    )}
+    </>
   );
 };

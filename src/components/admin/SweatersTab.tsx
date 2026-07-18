@@ -229,6 +229,24 @@ export function SweatersTab() {
     return { pre, picked, bought };
   }, [sweaters]);
 
+  const sizeBreakdown = useMemo(() => {
+    const order = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+    const counts: Record<string, number> = {};
+    const other: Record<string, number> = {};
+    sweaters.forEach((s) => {
+      const raw = (s.preordered_size || '').trim().toUpperCase();
+      if (!raw) return;
+      if (order.includes(raw)) counts[raw] = (counts[raw] || 0) + 1;
+      else other[raw] = (other[raw] || 0) + 1;
+    });
+    const total = Object.values(counts).reduce((a, b) => a + b, 0) + Object.values(other).reduce((a, b) => a + b, 0);
+    const rows = order
+      .filter((k) => counts[k])
+      .map((k) => ({ size: k, count: counts[k] }));
+    Object.entries(other).forEach(([k, v]) => rows.push({ size: k, count: v }));
+    return { rows, total };
+  }, [sweaters]);
+
   const copySheet = async () => {
     const header = 'Navn\tEtternavn\tForhåndsbest\tHentet\tKjøpt på leir';
     const lines = participants.map((p) => {
@@ -317,6 +335,23 @@ export function SweatersTab() {
               <p className="text-xs text-muted-foreground">Kjøpt på leir</p>
             </div>
           </div>
+
+          {sizeBreakdown.rows.length > 0 && (
+            <div className="rounded-lg border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Forhåndsbestilte størrelser</p>
+                <p className="text-xs text-muted-foreground">{sizeBreakdown.total} totalt</p>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {sizeBreakdown.rows.map((r) => (
+                  <Badge key={r.size} variant="outline" className="text-xs">
+                    <span className="font-semibold uppercase mr-1">{r.size}</span>
+                    <span className="text-muted-foreground">×{r.count}</span>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={importing}>

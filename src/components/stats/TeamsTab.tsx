@@ -15,7 +15,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Shuffle, ChevronDown, Users2 } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Trophy } from 'lucide-react';
+import { Trophy, ChefHat } from 'lucide-react';
+import { useKitchenDutyConfig, computeTodayPair, todayIso, pairForCycleIndex } from '@/hooks/useKitchenDutyToday';
 
 const PALETTE = [
   '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
@@ -35,6 +36,7 @@ export function TeamsTab() {
   const enabled = useTeamsEnabled();
   const { data: periodId } = useActivePeriodId();
   const { data: teams } = useParticipantTeams();
+  const { data: dutyConfig } = useKitchenDutyConfig();
   const [saving, setSaving] = useState<string | null>(null);
   const [distributing, setDistributing] = useState(false);
 
@@ -191,6 +193,21 @@ export function TeamsTab() {
     qc.invalidateQueries({ queryKey: ['participants'] });
   };
 
+  const saveDuty = async (patch: Partial<{ rotation_start_date: string | null; manual_override_date: string | null; manual_override_slot_a: number | null; manual_override_slot_b: number | null }>) => {
+    if (!periodId) return;
+    const payload: any = { period_id: periodId, ...patch };
+    const { error } = await (supabase as any)
+      .from('team_kitchen_duty')
+      .upsert(payload, { onConflict: 'period_id' });
+    if (error) { showError('Kunne ikke lagre', error.message); return; }
+    qc.invalidateQueries({ queryKey: ['team-kitchen-duty', periodId] });
+  };
+
+  const today = todayIso();
+  const todayPair = computeTodayPair(dutyConfig ?? null, today);
+  const teamBySlot = new Map<number, typeof teams extends (infer T)[] | undefined ? T : never>();
+  (teams || []).forEach((t) => teamBySlot.set(t.slot, t as any));
+
   if (!periodId || !teams) {
     return <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -221,6 +238,113 @@ export function TeamsTab() {
               {unassigned.length} deltakere er ikke tildelt et lag.
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Kjøkkentjeneste */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base"><ChefHat className="w-4 h-4" /> Kjøkkentjeneste</CardTitle>
+          <CardDescription>
+            To lag har kjøkkentjeneste hver dag. Rotasjonen bytter par daglig: (1+2), (3+4), (5+6), (7+8), (9+10).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Label htmlFor="duty-start" className="text-sm">Startdato (dag 1: par 1+2)</Label>
+            <Input
+              id="duty-start"
+              type="date"
+              className="h-9 w-auto"
+              defaultValue={dutyConfig?.rotation_start_date ?? ''}
+              onBlur={(e) => {
+                const v = e.target.value || null;
+                if (v !== (dutyConfig?.rotation_start_date ?? null)) saveDuty({ rotation_start_date: v });
+              }}
+            />
+          </div>
+
+          <div className="p-3 rounded-lg border bg-muted/30">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">I dag ({today})</p>
+            {todayPair ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                {todayPair.map((slot) => {
+                  const t: any = teamBySlot.get(slot);
+                  if (!t) return <Badge key={slot} variant="outline">Lag {slot}</Badge>;
+                  return (
+                    <Badge key={slot} variant="outline" className="gap-1.5" style={{ backgroundColor: `${t.color}20`, borderColor: `${t.color}80`, color: t.color }}>
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
+                      {t.slot}. {t.name}
+                    </Badge>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Sett startdato for å beregne dagens par.</p>
+            )}
+          </div>
+
+          {dutyConfig?.rotation_start_date && (
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Kommende dager</p>
+              <div className="space-y-1">
+                {Array.from({ length: 5 }).map((_, i) => {
+                  const d = new Date(today + 'T00:00:00');
+                  d.setDate(d.getDate() + i);
+                  const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                  const pair = computeTodayPair(dutyConfig ?? null, ds);
+                  return (
+                    <div key={ds} className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground w-24 tabular-nums">{ds}</span>
+                      {pair?.map((slot) => {
+                        const t: any = teamBySlot.get(slot);
+                        if (!t) return null;
+                        return (
+                          <span key={slot} className="inline-flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
+                            <span>{t.slot}. {t.name}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="border-t pt-3">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Overstyr i dag</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={dutyConfig?.manual_override_date === today ? String(dutyConfig?.manual_override_slot_a ?? '') : ''}
+                onValueChange={(v) => saveDuty({ manual_override_date: today, manual_override_slot_a: v ? Number(v) : null, manual_override_slot_b: dutyConfig?.manual_override_slot_b ?? null })}
+              >
+                <SelectTrigger className="h-9 w-32"><SelectValue placeholder="Lag A" /></SelectTrigger>
+                <SelectContent>
+                  {teams.map((t) => (
+                    <SelectItem key={t.id} value={String(t.slot)}>{t.slot}. {t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={dutyConfig?.manual_override_date === today ? String(dutyConfig?.manual_override_slot_b ?? '') : ''}
+                onValueChange={(v) => saveDuty({ manual_override_date: today, manual_override_slot_a: dutyConfig?.manual_override_slot_a ?? null, manual_override_slot_b: v ? Number(v) : null })}
+              >
+                <SelectTrigger className="h-9 w-32"><SelectValue placeholder="Lag B" /></SelectTrigger>
+                <SelectContent>
+                  {teams.map((t) => (
+                    <SelectItem key={t.id} value={String(t.slot)}>{t.slot}. {t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {dutyConfig?.manual_override_date === today && (
+                <Button size="sm" variant="ghost" onClick={() => saveDuty({ manual_override_date: null, manual_override_slot_a: null, manual_override_slot_b: null })}>
+                  Fjern overstyring
+                </Button>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
 
