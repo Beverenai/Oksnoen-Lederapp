@@ -26,6 +26,7 @@ import { hapticImpact } from '@/lib/capacitorHaptics';
 import { useParticipantTeams } from '@/hooks/useParticipantTeams';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 type Cabin = Tables<'cabins'>;
 
@@ -134,6 +135,9 @@ export default function Passport() {
   const { leader, effectiveLeader } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const cabinFilterFromUrl = searchParams.get('cabin');
+  const teamsParamFromUrl = searchParams.get('teams');
+  const multiTeamIds = teamsParamFromUrl ? teamsParamFromUrl.split(',').filter(Boolean) : [];
+  const kitchenDutyActive = searchParams.get('kitchenDuty') === '1';
   
   const [searchQuery, setSearchQuery] = useState('');
   const [myCabinsFilter, setMyCabinsFilter] = useState(false);
@@ -298,9 +302,13 @@ export default function Passport() {
           ? !p.team_id
           : p.team_id === teamFilter;
 
-      return matchesSearch && matchesCabin && matchesUrlCabin && matchesTeam;
+      const matchesMultiTeam = multiTeamIds.length > 0
+        ? !!p.team_id && multiTeamIds.includes(p.team_id)
+        : true;
+
+      return matchesSearch && matchesCabin && matchesUrlCabin && matchesTeam && matchesMultiTeam;
     });
-  }, [participants, searchQuery, myCabinsFilter, myCabinIds, cabinFilterFromUrl, teamFilter]);
+  }, [participants, searchQuery, myCabinsFilter, myCabinIds, cabinFilterFromUrl, teamFilter, teamsParamFromUrl]);
 
   // Group participants by cabin
   const cabinGroups = useMemo((): CabinGroup[] => {
