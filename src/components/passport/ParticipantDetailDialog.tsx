@@ -673,5 +673,13 @@ export const ParticipantDetailDialog = ({
         )}
       </ResponsiveDialogContent>
     </ResponsiveDialog>
+    {participantId && (
+      <IncidentSheet
+        open={incidentOpen}
+        onOpenChange={setIncidentOpen}
+        prefillParticipantId={participantId}
+      />
+    )}
+    </>
   );
 };
