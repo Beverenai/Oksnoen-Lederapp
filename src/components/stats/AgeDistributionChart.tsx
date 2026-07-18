@@ -10,6 +10,7 @@ interface Participant {
   birth_date: string | null;
   first_name?: string | null;
   name?: string | null;
+  cabin_id?: string | null;
 }
 
 interface AgeDistributionChartProps {
@@ -23,11 +24,33 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
 
   const ageData = useMemo(() => {
     if (groupMode === 'gender') {
+      // Step 1: initial guess per participant
+      const guesses = participants.map((p) => ({
+        p,
+        g: guessGender(p.first_name || p.name || null) as 'male' | 'female' | null,
+      }));
+      // Step 2: infer room gender (rooms are single-sex). Use majority of known
+      // guesses in each cabin to fill in unknowns.
+      const cabinGender = new Map<string, 'male' | 'female'>();
+      const tally = new Map<string, { m: number; f: number }>();
+      guesses.forEach(({ p, g }) => {
+        if (!p.cabin_id || !g) return;
+        const t = tally.get(p.cabin_id) || { m: 0, f: 0 };
+        if (g === 'male') t.m++; else t.f++;
+        tally.set(p.cabin_id, t);
+      });
+      tally.forEach((t, cabinId) => {
+        if (t.m === 0 && t.f === 0) return;
+        cabinGender.set(cabinId, t.f >= t.m ? 'female' : 'male');
+      });
       let girls = 0, boys = 0, unknown = 0;
-      participants.forEach((p) => {
-        const g = guessGender(p.first_name || p.name || null);
-        if (g === 'female') girls++;
-        else if (g === 'male') boys++;
+      guesses.forEach(({ p, g }) => {
+        let final = g;
+        if (!final && p.cabin_id && cabinGender.has(p.cabin_id)) {
+          final = cabinGender.get(p.cabin_id)!;
+        }
+        if (final === 'female') girls++;
+        else if (final === 'male') boys++;
         else unknown++;
       });
       const out = [
