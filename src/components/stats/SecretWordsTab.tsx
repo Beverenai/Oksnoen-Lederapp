@@ -185,9 +185,9 @@ export function SecretWordsTab() {
       grouped.set(key, list);
     });
     const sortedCabins = [...grouped.keys()].sort((a, b) => a.localeCompare(b, 'nb'));
-    const COLS = 3;
-    const ROWS = 4;
-    const PER_PAGE = COLS * ROWS; // 12 kort per A4
+    const COLS = 2;
+    const ROWS = 3;
+    const PER_PAGE = COLS * ROWS; // 6 kort per A4
     const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
     let html = `<!doctype html><html><head><meta charset="utf-8"><title>Hemmelige Ord</title>
 <style>
@@ -195,24 +195,24 @@ export function SecretWordsTab() {
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body { font-family: -apple-system, system-ui, sans-serif; color: #111; }
-  .sheet { width: 190mm; height: 277mm; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr); gap: 3mm; page-break-after: always; page-break-inside: avoid; }
+  .sheet { width: 190mm; height: 277mm; display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, 1fr); gap: 4mm; page-break-after: always; page-break-inside: avoid; }
   .sheet:last-child { page-break-after: auto; }
-  .cell { border: 1px dashed #bbb; border-radius: 3mm; padding: 4mm; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; }
+  .cell { border: 1px dashed #bbb; border-radius: 3mm; padding: 6mm; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; }
   .cell.empty { border-color: transparent; }
-  .cabin-tag { font-size: 7pt; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin: 0 0 2mm; }
-  .name { font-size: 16pt; font-weight: 800; margin: 0 0 2mm; line-height: 1.1; }
-  .welcome { font-size: 8.5pt; color: #555; margin: 0 0 2mm; font-style: italic; }
-  .team { display: inline-flex; align-items: center; gap: 1.5mm; font-size: 9pt; font-weight: 600; margin: 0; }
-  .dot { width: 3mm; height: 3mm; border-radius: 50%; display: inline-block; }
-  .word-label { font-size: 7pt; text-transform: uppercase; letter-spacing: 1.5px; color: #666; margin: 0 0 2mm; }
-  .word { font-size: 28pt; font-weight: 800; font-family: 'SF Mono', Menlo, monospace; letter-spacing: 1.5px; margin: 0; line-height: 1; word-break: break-word; }
+  .cabin-tag { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin: 0 0 3mm; }
+  .name { font-size: 22pt; font-weight: 800; margin: 0 0 3mm; line-height: 1.1; }
+  .welcome { font-size: 10pt; color: #555; margin: 0 0 3mm; font-style: italic; }
+  .team { display: inline-flex; align-items: center; gap: 2mm; font-size: 11pt; font-weight: 600; margin: 0 0 5mm; }
+  .dot { width: 3.5mm; height: 3.5mm; border-radius: 50%; display: inline-block; }
+  .word-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.5px; color: #666; margin: 0 0 2mm; }
+  .word { font-size: 30pt; font-weight: 800; font-family: 'SF Mono', Menlo, monospace; letter-spacing: 1.5px; margin: 0; line-height: 1; word-break: break-word; }
 </style></head><body>`;
     sortedCabins.forEach((cabin) => {
       const rows = grouped.get(cabin)!.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
       const cabinEsc = escapeHtml(cabin);
       for (let start = 0; start < rows.length; start += PER_PAGE) {
         const chunk = rows.slice(start, start + PER_PAGE);
-        // FRONT — normal order (top-left → bottom-right)
+        // Enkeltsidig — alt på ett kort
         html += `<div class="sheet">`;
         for (let i = 0; i < PER_PAGE; i++) {
           const r = chunk[i];
@@ -224,21 +224,9 @@ export function SecretWordsTab() {
             <div class="name">${escapeHtml(r.name)}</div>
             <div class="welcome">Velkommen til De Ti Stammene</div>
             <div class="team"><span class="dot" style="background:${teamColor}"></span>${teamLabel}</div>
+            <div class="word-label">Ditt hemmelige ord</div>
+            <div class="word">${escapeHtml(r.word)}</div>
           </div>`;
-        }
-        html += `</div>`;
-        // BACK — mirror columns per row so posisjonen matcher når arket snus langs langsiden (bok-vending)
-        html += `<div class="sheet">`;
-        for (let row = 0; row < ROWS; row++) {
-          for (let col = COLS - 1; col >= 0; col--) {
-            const idx = row * COLS + col;
-            const r = chunk[idx];
-            if (!r) { html += `<div class="cell empty"></div>`; continue; }
-            html += `<div class="cell">
-              <div class="word-label">Ditt hemmelige ord</div>
-              <div class="word">${escapeHtml(r.word)}</div>
-            </div>`;
-          }
         }
         html += `</div>`;
       }
@@ -313,7 +301,7 @@ export function SecretWordsTab() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Tips: Skriv ut dobbeltsidig og vend langs <strong>langsiden</strong> (bok-vending). Navnet står på forsiden og det hemmelige ordet på baksiden.
+            Utskriften er enkeltsidig med 6 kort per A4-ark. Alt (navn, lag og hemmelig ord) står på samme side.
           </p>
         </CardContent>
       </Card>
