@@ -255,11 +255,6 @@ export function ActivityStatsTab() {
         </Card>
       </div>
 
-      {/* Top 10 Most Active Participants */}
-      <Card>
-        {/* placeholder to keep diff clean */}
-      </Card>
-
       {/* Insjpoeng overview */}
       <Card>
         <CardHeader>
