@@ -519,6 +519,21 @@ export default function Passport() {
       {/* Team filter — only when teams are enabled */}
       {teamsEnabled && teams.length > 0 && (
         <div className="flex items-center gap-2">
+          {multiTeamIds.length > 0 && (
+            <Badge
+              variant="secondary"
+              className="gap-1.5 cursor-pointer"
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                next.delete('teams');
+                next.delete('kitchenDuty');
+                setSearchParams(next);
+              }}
+            >
+              {kitchenDutyActive ? 'Kjøkkentjeneste i dag' : `${multiTeamIds.length} lag valgt`}
+              <X className="w-3 h-3" />
+            </Badge>
+          )}
           <Select value={teamFilter} onValueChange={setTeamFilter}>
             <SelectTrigger className="w-full sm:w-64">
               <SelectValue placeholder="Filtrer etter lag" />
