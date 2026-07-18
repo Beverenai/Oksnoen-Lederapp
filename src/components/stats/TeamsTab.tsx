@@ -111,6 +111,19 @@ export function TeamsTab() {
 
   const unassigned = (participants || []).filter((p) => !p.team_id);
 
+  const leaderboard = useMemo(() => {
+    if (!teams) return [];
+    return [...teams]
+      .map((t) => {
+        const pts = teamPoints?.[t.id] ?? { matches: 0, activities: 0, total: 0 };
+        const members = membersByTeam.get(t.id)?.length ?? 0;
+        return { ...t, ...pts, members };
+      })
+      .sort((a, b) => b.total - a.total || a.slot - b.slot);
+  }, [teams, teamPoints, membersByTeam]);
+
+  const maxPoints = Math.max(1, ...leaderboard.map((t) => t.total));
+
   const toggleEnabled = async (val: boolean) => {
     const { error } = await supabase
       .from('app_config')
