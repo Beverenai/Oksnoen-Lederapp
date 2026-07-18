@@ -34,9 +34,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullIndicator } from '@/components/ui/pull-indicator';
 import { updateWidgetData } from '@/lib/capacitorWidget';
-import { MyIncidentsList } from '@/components/incidents/MyIncidentsList';
 import { MessageSquareWarning } from 'lucide-react';
-import { IncidentSheet } from '@/components/incidents/IncidentSheet';
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
 
@@ -156,7 +154,6 @@ export default function Home() {
   const [overnattingJoining, setOvernattingJoining] = useState(false);
   const [overnattingSaving, setOvernattingSaving] = useState(false);
   const [rouletteEnabled, setRouletteEnabled] = useState(false);
-  const [incidentSheetOpen, setIncidentSheetOpen] = useState(false);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
   const showRoulette = rouletteEnabled && inRoulette;
 
@@ -817,7 +814,7 @@ export default function Home() {
         {/* Register incident */}
         <Card
           className="border border-red-500/30 bg-red-50/50 dark:bg-red-950/20 cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors shadow-sm"
-          onClick={() => setIncidentSheetOpen(true)}
+          onClick={() => navigate('/hendelser')}
         >
           <CardContent className="py-3 sm:py-4">
             <div className="flex items-center gap-3">
@@ -829,20 +826,12 @@ export default function Home() {
                   Hendelse
                 </p>
                 <p className="text-sm sm:text-base font-medium text-foreground">
-                  Registrer en hendelse for én eller flere deltagere
+                  Registrer og se hendelser for deltagere
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-
-        <Card className="border border-border/50">
-          <CardContent className="py-4">
-            <MyIncidentsList />
-          </CardContent>
-        </Card>
-
-        <IncidentSheet open={incidentSheetOpen} onOpenChange={setIncidentSheetOpen} />
       </div>
     </div>
   );
