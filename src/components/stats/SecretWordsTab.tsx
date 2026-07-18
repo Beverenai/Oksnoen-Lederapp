@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Shuffle, Download, Trash2, RefreshCw } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { formatFullRoom } from '@/lib/utils';
 
 interface Pair { id: string; word_1: string; word_2: string }
 interface Assignment { id: string; participant_id: string; word: string; pair_id: string; slot: number }
 interface MatchRow { id: string; pair_id: string; participant_a_id: string; participant_b_id: string; matched_at: string }
-interface P { id: string; name: string; cabin_id: string | null; team_id: string | null; cabins?: { name: string } | null }
+interface P { id: string; name: string; cabin_id: string | null; team_id: string | null; room: string | null; cabins?: { name: string } | null }
 interface Team { id: string; name: string; slot: number; color: string }
 
 export function SecretWordsTab() {
@@ -55,7 +56,7 @@ export function SecretWordsTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('participants')
-        .select('id, name, cabin_id, team_id, cabins:cabin_id(name)')
+        .select('id, name, cabin_id, team_id, room, cabins:cabin_id(name)')
         .eq('period_id', periodId!)
         .order('name');
       if (error) throw error;
@@ -175,13 +176,13 @@ export function SecretWordsTab() {
     if (!assignments || !participants) return;
     const teamById = new Map<string, Team>();
     (teams || []).forEach((t) => teamById.set(t.id, t));
-    const grouped = new Map<string, { name: string; word: string; team: Team | null }[]>();
+    const grouped = new Map<string, { name: string; word: string; team: Team | null; room: string | null; cabinName: string | null }[]>();
     assignments.forEach((a) => {
       const p = byId.get(a.participant_id);
       if (!p) return;
       const key = p.cabins?.name || 'Uten hytte';
       const list = grouped.get(key) || [];
-      list.push({ name: p.name, word: a.word, team: p.team_id ? teamById.get(p.team_id) || null : null });
+      list.push({ name: p.name, word: a.word, team: p.team_id ? teamById.get(p.team_id) || null : null, room: p.room, cabinName: p.cabins?.name || null });
       grouped.set(key, list);
     });
     const sortedCabins = [...grouped.keys()].sort((a, b) => a.localeCompare(b, 'nb'));
@@ -210,7 +211,6 @@ export function SecretWordsTab() {
 </style></head><body>`;
     sortedCabins.forEach((cabin) => {
       const rows = grouped.get(cabin)!.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
-      const cabinEsc = escapeHtml(cabin);
       for (let start = 0; start < rows.length; start += PER_PAGE) {
         const chunk = rows.slice(start, start + PER_PAGE);
         // Enkeltsidig — alt på ett kort
@@ -220,8 +220,9 @@ export function SecretWordsTab() {
           if (!r) { html += `<div class="cell empty"></div>`; continue; }
           const teamLabel = r.team ? `Stamme ${r.team.slot}. ${escapeHtml(r.team.name)}` : 'Uten stamme';
           const teamColor = r.team?.color || '#999';
+          const fullRoom = formatFullRoom(r.cabinName, r.room) || r.cabinName || cabin;
           html += `<div class="cell">
-            <div class="cabin-tag">${cabinEsc}</div>
+            <div class="cabin-tag">${escapeHtml(fullRoom)}</div>
             <div class="name">${escapeHtml(r.name)}</div>
             <div class="welcome">Velkommen til De Ti Stammene</div>
             <div class="team"><span class="dot" style="background:${teamColor}"></span>${teamLabel}</div>
