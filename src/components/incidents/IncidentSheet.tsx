@@ -17,6 +17,8 @@ import {
   type IncidentSeverity,
 } from '@/hooks/useParticipantIncidents';
 import { cn } from '@/lib/utils';
+import { getParticipantThumb } from '@/lib/participantImage';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface IncidentSheetProps {
   open: boolean;
@@ -205,6 +207,10 @@ export function IncidentSheet({ open, onOpenChange, incident, prefillParticipant
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {selectedList.map((p) => (
                   <Badge key={p.id} variant="secondary" className="gap-1 pr-1">
+                    <Avatar className="h-5 w-5 -ml-1 mr-1">
+                      <AvatarImage src={getParticipantThumb(p as any)} alt="" />
+                      <AvatarFallback className="text-[9px]">{p.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
                     {p.name}
                     <button
                       type="button"
@@ -235,12 +241,16 @@ export function IncidentSheet({ open, onOpenChange, incident, prefillParticipant
                     type="button"
                     onClick={() => toggle(p.id)}
                     className={cn(
-                      'w-full flex items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted transition',
+                      'w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted transition',
                       selected && 'bg-primary/5'
                     )}
                   >
-                    <span>{p.name}</span>
-                    {selected && <Check className="h-4 w-4 text-primary" />}
+                    <Avatar className="h-8 w-8 shrink-0">
+                      <AvatarImage src={getParticipantThumb(p as any)} alt="" loading="lazy" decoding="async" />
+                      <AvatarFallback className="text-xs">{p.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <span className="flex-1 truncate">{p.name}</span>
+                    {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
                   </button>
                 );
               })}
