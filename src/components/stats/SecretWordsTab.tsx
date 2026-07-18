@@ -185,42 +185,66 @@ export function SecretWordsTab() {
       grouped.set(key, list);
     });
     const sortedCabins = [...grouped.keys()].sort((a, b) => a.localeCompare(b, 'nb'));
+    const PER_PAGE = 6; // 2 kolonner × 3 rader
+    const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
     let html = `<!doctype html><html><head><meta charset="utf-8"><title>Hemmelige Ord</title>
 <style>
-  @page { size: A4; margin: 12mm; }
-  body { font-family: -apple-system, system-ui, sans-serif; color: #111; margin: 0; }
-  .cabin-header { font-size: 11pt; text-transform: uppercase; letter-spacing: 2px; color: #666; margin: 0 0 4mm; padding-bottom: 2mm; border-bottom: 1px solid #333; }
-  .cabin { }
-  .cabin.break { page-break-before: always; }
-  .card { page-break-inside: avoid; border: 1px solid #ddd; border-radius: 4mm; padding: 4mm 5mm; margin-bottom: 4mm; display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto auto; column-gap: 6mm; row-gap: 1mm; align-items: center; }
-  .name { font-size: 20pt; font-weight: 700; margin: 0; grid-column: 1; grid-row: 1; }
-  .welcome { font-size: 10pt; color: #666; margin: 0; grid-column: 1; grid-row: 2; }
-  .team { display: inline-flex; align-items: center; gap: 2mm; font-size: 11pt; font-weight: 600; grid-column: 1; grid-row: 3; margin-top: 1mm; }
+  @page { size: A4; margin: 10mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: -apple-system, system-ui, sans-serif; color: #111; }
+  .sheet { width: 190mm; height: 277mm; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, 1fr); gap: 4mm; page-break-after: always; page-break-inside: avoid; }
+  .sheet:last-child { page-break-after: auto; }
+  .cell { border: 1px dashed #bbb; border-radius: 4mm; padding: 6mm; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; }
+  .cell.empty { border-color: transparent; }
+  .cabin-tag { font-size: 8pt; text-transform: uppercase; letter-spacing: 2px; color: #888; margin: 0 0 3mm; }
+  .name { font-size: 22pt; font-weight: 800; margin: 0 0 2mm; line-height: 1.1; }
+  .welcome { font-size: 11pt; color: #555; margin: 0 0 4mm; font-style: italic; }
+  .team { display: inline-flex; align-items: center; gap: 2mm; font-size: 11pt; font-weight: 600; margin: 0 0 4mm; }
   .dot { width: 4mm; height: 4mm; border-radius: 50%; display: inline-block; }
-  .word-box { grid-column: 2; grid-row: 1 / span 3; text-align: center; padding-left: 6mm; border-left: 1px dashed #bbb; }
-  .word-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 1px; color: #666; margin: 0 0 1mm; }
-  .word { font-size: 34pt; font-weight: 800; font-family: 'SF Mono', Menlo, monospace; letter-spacing: 1px; margin: 0; line-height: 1; }
-  .hint { grid-column: 1 / span 2; grid-row: 4; font-size: 9pt; color: #555; margin: 2mm 0 0; }
+  .flip { font-size: 9pt; color: #666; margin-top: auto; }
+  .word-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 2px; color: #666; margin: 0 0 3mm; }
+  .word { font-size: 40pt; font-weight: 800; font-family: 'SF Mono', Menlo, monospace; letter-spacing: 2px; margin: 0 0 4mm; line-height: 1; word-break: break-word; }
+  .hint { font-size: 9pt; color: #555; margin: 0; max-width: 70mm; }
 </style></head><body>`;
-    sortedCabins.forEach((cabin, ci) => {
+    sortedCabins.forEach((cabin) => {
       const rows = grouped.get(cabin)!.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
-      html += `<div class="cabin${ci > 0 ? ' break' : ''}">`;
-      html += `<div class="cabin-header">${cabin} — ${rows.length} deltakere</div>`;
-      rows.forEach((r) => {
-        const teamLabel = r.team ? `Lag ${r.team.slot} – ${r.team.name}` : 'Uten lag';
-        const teamColor = r.team?.color || '#999';
-        html += `<div class="card">
-          <div class="name">${r.name}</div>
-          <div class="welcome">Velkommen til De Ti Stammene</div>
-          <div class="team"><span class="dot" style="background:${teamColor}"></span>${teamLabel}</div>
-          <div class="word-box">
-            <div class="word-label">Ditt hemmelige ord</div>
-            <div class="word">${r.word}</div>
-          </div>
-          <div class="hint">Finn en annen deltaker som har ordet som hører sammen med ditt. Når dere tror dere har funnet hverandre, gå til en leder som verifiserer paret i appen.</div>
-        </div>`;
-      });
-      html += `</div>`;
+      const cabinEsc = escapeHtml(cabin);
+      for (let start = 0; start < rows.length; start += PER_PAGE) {
+        const chunk = rows.slice(start, start + PER_PAGE);
+        // FRONT — normal order (top-left → bottom-right)
+        html += `<div class="sheet">`;
+        for (let i = 0; i < PER_PAGE; i++) {
+          const r = chunk[i];
+          if (!r) { html += `<div class="cell empty"></div>`; continue; }
+          const teamLabel = r.team ? `Lag ${r.team.slot} – ${escapeHtml(r.team.name)}` : 'Uten lag';
+          const teamColor = r.team?.color || '#999';
+          html += `<div class="cell">
+            <div class="cabin-tag">${cabinEsc}</div>
+            <div class="name">${escapeHtml(r.name)}</div>
+            <div class="welcome">Velkommen til De Ti Stammene</div>
+            <div class="team"><span class="dot" style="background:${teamColor}"></span>${teamLabel}</div>
+            <div class="flip">Snu lappen for å se ditt hemmelige ord →</div>
+          </div>`;
+        }
+        html += `</div>`;
+        // BACK — mirror columns per row so posisjonen matcher når arket snus langs langsiden (bok-vending)
+        // Row i: front [0,1] → back [1,0], og så videre.
+        html += `<div class="sheet">`;
+        for (let row = 0; row < 3; row++) {
+          for (let col = 1; col >= 0; col--) {
+            const idx = row * 2 + col;
+            const r = chunk[idx];
+            if (!r) { html += `<div class="cell empty"></div>`; continue; }
+            html += `<div class="cell">
+              <div class="word-label">Ditt hemmelige ord</div>
+              <div class="word">${escapeHtml(r.word)}</div>
+              <div class="hint">Finn en annen deltaker med ordet som hører sammen med ditt. Når dere tror dere har funnet hverandre, gå til en leder som verifiserer paret i appen.</div>
+            </div>`;
+          }
+        }
+        html += `</div>`;
+      }
     });
     html += `</body></html>`;
     const iframe = document.createElement('iframe');
@@ -291,6 +315,9 @@ export function SecretWordsTab() {
               <Trash2 className="w-4 h-4 mr-2" /> Fjern alt
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Tips: Skriv ut dobbeltsidig og vend langs <strong>langsiden</strong> (bok-vending). Navnet står på forsiden og det hemmelige ordet på baksiden.
+          </p>
         </CardContent>
       </Card>
 
