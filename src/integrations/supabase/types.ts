@@ -2329,6 +2329,47 @@ export type Database = {
           },
         ]
       }
+      team_kitchen_duty: {
+        Row: {
+          created_at: string
+          id: string
+          manual_override_date: string | null
+          manual_override_slot_a: number | null
+          manual_override_slot_b: number | null
+          period_id: string
+          rotation_start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          manual_override_date?: string | null
+          manual_override_slot_a?: number | null
+          manual_override_slot_b?: number | null
+          period_id: string
+          rotation_start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          manual_override_date?: string | null
+          manual_override_slot_a?: number | null
+          manual_override_slot_b?: number | null
+          period_id?: string
+          rotation_start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_kitchen_duty_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: true
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
