@@ -140,6 +140,20 @@ export const ParticipantDetailDialog = ({
     staleTime: 60_000,
   });
 
+  const { data: secretWord } = useQuery({
+    queryKey: ['secret-word', participantId],
+    enabled: open && !!participantId,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from('secret_word_assignments')
+        .select('word')
+        .eq('participant_id', participantId!)
+        .maybeSingle();
+      return (data?.word as string | undefined) ?? null;
+    },
+    staleTime: 60_000,
+  });
+
   const participant = data?.participant;
   const healthInfo = data?.healthInfo;
   const activities = data?.activities || [];
