@@ -217,7 +217,7 @@ export function SecretWordsTab() {
         for (let i = 0; i < PER_PAGE; i++) {
           const r = chunk[i];
           if (!r) { html += `<div class="cell empty"></div>`; continue; }
-          const teamLabel = r.team ? `Lag ${r.team.slot} – ${escapeHtml(r.team.name)}` : 'Uten lag';
+          const teamLabel = r.team ? `Stamme ${r.team.slot}. ${escapeHtml(r.team.name)}` : 'Uten stamme';
           const teamColor = r.team?.color || '#999';
           html += `<div class="cell">
             <div class="cabin-tag">${cabinEsc}</div>
