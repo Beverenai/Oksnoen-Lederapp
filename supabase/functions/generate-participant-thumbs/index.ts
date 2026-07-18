@@ -17,17 +17,20 @@ Deno.serve(async (req) => {
 
     let batchSize = 25;
     let force = false;
+    let offset = 0;
     try {
       const body = await req.json();
       if (body?.batch_size) batchSize = Math.min(Math.max(1, body.batch_size), 100);
       if (body?.force) force = true;
+      if (typeof body?.offset === 'number') offset = Math.max(0, body.offset);
     } catch { /* defaults */ }
 
     let query = supabase
       .from('participants')
       .select('id, name, image_url, image_thumb_url')
+      .order('name', { ascending: true })
       .not('image_url', 'is', null)
-      .limit(batchSize);
+      .range(offset, offset + batchSize - 1);
 
     if (!force) query = query.is('image_thumb_url', null);
 
