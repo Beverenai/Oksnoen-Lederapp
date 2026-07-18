@@ -231,6 +231,10 @@ export function TeamsTab() {
                     }}
                   />
                   <Badge variant="secondary" className="shrink-0">{members.length}</Badge>
+                  <Badge variant="default" className="shrink-0 gap-1">
+                    <Trophy className="w-3 h-3" />
+                    {teamPoints?.[team.id] ?? 0}
+                  </Badge>
                   {saving === team.id && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
                   <CollapsibleTrigger asChild>
                     <Button size="icon" variant="ghost" className="h-9 w-9 shrink-0">
