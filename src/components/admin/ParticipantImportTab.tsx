@@ -1098,9 +1098,33 @@ export function ParticipantImportTab() {
                               )}
                             </div>
                           </div>
-                          <Button variant="ghost" size="icon" className="shrink-0">
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
+                           <div className="flex items-center gap-1 shrink-0">
+                             <Button variant="ghost" size="icon">
+                               <Edit2 className="w-4 h-4" />
+                             </Button>
+                             <Button
+                               variant="ghost"
+                               size="icon"
+                               className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                               onClick={async (e) => {
+                                 e.stopPropagation();
+                                 if (!confirm(`Slette ${p.name}? Dette kan ikke angres.`)) return;
+                                 try {
+                                   const { error } = await supabase.from('participants').delete().eq('id', p.id);
+                                   if (error) throw error;
+                                   hapticSuccess();
+                                   showSuccess(`${p.name} slettet`);
+                                   setAllParticipants((prev) => prev.filter((x) => x.id !== p.id));
+                                   loadData();
+                                 } catch (err: any) {
+                                   hapticError();
+                                   showError(err?.message || 'Kunne ikke slette deltaker');
+                                 }
+                               }}
+                             >
+                               <Trash2 className="w-4 h-4" />
+                             </Button>
+                           </div>
                         </div>
                       );
                     })
