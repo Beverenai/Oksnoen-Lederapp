@@ -202,10 +202,18 @@ Deno.serve(async (req) => {
       const hasPhone = mappedHeaders.includes('phone');
       return (hasPhone ? 100000 : 0) + mappedHeaders.length * 1000 + values.length;
     };
-    let best = await fetchSheetValues(spreadsheetId, rangesToTry[0], gatewayHeaders);
-    for (const candidate of rangesToTry.slice(1)) {
-      const next = await fetchSheetValues(spreadsheetId, candidate, gatewayHeaders);
-      if (scoreSheet(next.values) > scoreSheet(best.values)) best = next;
+    let best: { range: string; values: string[][] } | null = null;
+    const fetchErrors: string[] = [];
+    for (const candidate of rangesToTry) {
+      try {
+        const next = await fetchSheetValues(spreadsheetId, candidate, gatewayHeaders);
+        if (!best || scoreSheet(next.values) > scoreSheet(best.values)) best = next;
+      } catch (e: any) {
+        fetchErrors.push(`${candidate}: ${e?.message || e}`);
+      }
+    }
+    if (!best) {
+      return new Response(JSON.stringify({ error: `Kunne ikke lese noen fane. ${fetchErrors.join(' | ')}` }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     range = best.range;
     const values = best.values;
