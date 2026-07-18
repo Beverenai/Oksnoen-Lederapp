@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,6 +22,8 @@ import { compressImage } from '@/lib/imageUtils';
 import { CachedImage } from '@/components/ui/cached-image';
 import { TeamBadge } from '@/components/participants/TeamBadge';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { IncidentSheet } from '@/components/incidents/IncidentSheet';
+import { useState as useReactState } from 'react';
 
 interface ParticipantWithCabin {
   id: string;
@@ -610,6 +612,12 @@ export const ParticipantDetailDialog = ({
                     <CheckCircle className="h-4 w-4 mr-2" />
                   )}
                   {participant.has_arrived ? 'Marker som ikke ankommet' : 'Marker som ankommet'}
+                </Button>
+
+                {/* Register incident */}
+                <Button variant="outline" className="w-full" onClick={() => setIncidentOpen(true)}>
+                  <MessageSquareWarning className="h-4 w-4 mr-2 text-red-600" />
+                  Registrer hendelse
                 </Button>
 
                 {/* Pass written toggle - only visible when checkout is enabled */}
