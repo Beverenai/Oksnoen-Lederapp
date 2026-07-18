@@ -97,7 +97,8 @@ async function fetchCabins(): Promise<Cabin[]> {
 async function fetchLeaderCabins(): Promise<Map<string, { id: string; name: string }[]>> {
   const { data, error } = await supabase
     .from('leader_cabins')
-    .select('cabin_id, leaders(id, name)');
+    .select('cabin_id, leaders!inner(id, name, is_active)')
+    .eq('leaders.is_active', true);
   if (error) throw error;
   
   const map = new Map<string, { id: string; name: string }[]>();
