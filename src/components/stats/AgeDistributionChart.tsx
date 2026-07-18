@@ -25,10 +25,10 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
   const ageData = useMemo(() => {
     if (groupMode === 'gender') {
       // Step 1: initial guess per participant
-      const guesses = participants.map((p) => ({
-        p,
-        g: guessGender(p.first_name || p.name || null) as 'male' | 'female' | null,
-      }));
+      const guesses = participants.map((p) => {
+        const raw = guessGender(p.first_name || p.name || null);
+        return { p, g: (raw === 'male' || raw === 'female' ? raw : null) as 'male' | 'female' | null };
+      });
       // Step 2: infer room gender (rooms are single-sex). Use majority of known
       // guesses in each cabin to fill in unknowns.
       const cabinGender = new Map<string, 'male' | 'female'>();
