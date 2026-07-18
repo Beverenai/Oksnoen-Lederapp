@@ -101,11 +101,29 @@ function extractSpreadsheetId(input: string): string {
   return m ? m[1] : input.trim();
 }
 
-const sheetPrefix = (title: string) => /[^A-Za-z0-9_]/.test(title) ? `'${title.replace(/'/g, "''")}'` : title;
+const sheetPrefix = (title: string) => {
+  const t = title.trim();
+  return /[^A-Za-z0-9_]/.test(t) ? `'${t.replace(/'/g, "''")}'` : t;
+};
+const normalizeSheetRange = (range: string) => {
+  const trimmed = range.trim();
+  const bangIndex = trimmed.indexOf('!');
+  if (bangIndex === -1) return trimmed;
+
+  const rawTitle = trimmed.slice(0, bangIndex).trim();
+  const cells = trimmed.slice(bangIndex + 1).trim() || 'A1:ZZ1000';
+  const unquotedTitle = rawTitle.startsWith("'") && rawTitle.endsWith("'")
+    ? rawTitle.slice(1, -1).replace(/''/g, "'")
+    : rawTitle;
+
+  return `${sheetPrefix(unquotedTitle)}!${cells}`;
+};
 const isAutoDefaultRange = (range: string) => /^'?Sheet1'?!A1:Z{1,2}1000$/i.test(range.trim());
 
 async function fetchSheetValues(spreadsheetId: string, range: string, headers: HeadersInit) {
-  const res = await fetch(`${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${range}`, { headers });
+  // Encode special chars like '+' (which Google decodes as space in paths) but keep ':' and '!' readable.
+  const encodedRange = encodeURIComponent(range).replace(/%3A/gi, ':').replace(/%21/g, '!');
+  const res = await fetch(`${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${encodedRange}`, { headers });
   const text = await res.text();
   if (!res.ok) throw new Error(`Google Sheets fetch failed [${res.status}]: ${text}`);
   const data = JSON.parse(text);
@@ -143,7 +161,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const spreadsheetIdInput: string = body.spreadsheetId || body.spreadsheetUrl || '';
-    const rangeInput: string = (body.range || '').trim();
+    const rangeInput: string = normalizeSheetRange(body.range || '');
     const dryRun: boolean = !!body.dryRun;
     if (!spreadsheetIdInput) {
       return new Response(JSON.stringify({ error: 'spreadsheetId required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -184,10 +202,18 @@ Deno.serve(async (req) => {
       const hasPhone = mappedHeaders.includes('phone');
       return (hasPhone ? 100000 : 0) + mappedHeaders.length * 1000 + values.length;
     };
-    let best = await fetchSheetValues(spreadsheetId, rangesToTry[0], gatewayHeaders);
-    for (const candidate of rangesToTry.slice(1)) {
-      const next = await fetchSheetValues(spreadsheetId, candidate, gatewayHeaders);
-      if (scoreSheet(next.values) > scoreSheet(best.values)) best = next;
+    let best: { range: string; values: string[][] } | null = null;
+    const fetchErrors: string[] = [];
+    for (const candidate of rangesToTry) {
+      try {
+        const next = await fetchSheetValues(spreadsheetId, candidate, gatewayHeaders);
+        if (!best || scoreSheet(next.values) > scoreSheet(best.values)) best = next;
+      } catch (e: any) {
+        fetchErrors.push(`${candidate}: ${e?.message || e}`);
+      }
+    }
+    if (!best) {
+      return new Response(JSON.stringify({ error: `Kunne ikke lese noen fane. ${fetchErrors.join(' | ')}` }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     range = best.range;
     const values = best.values;
