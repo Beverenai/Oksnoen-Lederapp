@@ -37,6 +37,7 @@ import { PassIcon } from '@/components/icons/PassIcon';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
 import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
 import { useCheckoutEnabled } from '@/hooks/useCheckoutEnabled';
+import { useSweatersEnabled } from '@/hooks/useSweatersEnabled';
 import {
   Collapsible,
   CollapsibleContent,
@@ -73,6 +74,8 @@ const leaderNavItems: NavItem[] = [
   { to: '/rope-control', icon: Anchor, label: 'Tau Kontroll' },
   { to: '/gjenglemt', icon: Shirt, label: 'Gjenglemt' },
 ];
+
+const sweatersNavItem: NavItem = { to: '/gensere', icon: Shirt, label: 'Gensere' };
 
 // Dynamic content items
 const scheduleNavItem: NavItem = { to: '/schedule', icon: Calendar, label: 'Vaktplan' };
@@ -194,6 +197,7 @@ const NavGroup = ({
 export default function AppLayout({ children }: AppLayoutProps) {
   const { leader, isAdmin, isNurse, logout, viewAsLeader, setViewAsLeader } = useAuth();
   const checkoutEnabled = useCheckoutEnabled();
+  const sweatersEnabled = useSweatersEnabled();
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
@@ -226,7 +230,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   // Passkontroll is always available so leaders can see participants.
   // Pass-writing UI inside the page is still gated by checkoutEnabled.
-  const visibleLeaderNavItems = leaderNavItems;
+  const visibleLeaderNavItems = sweatersEnabled
+    ? [...leaderNavItems, sweatersNavItem]
+    : leaderNavItems;
 
   // Build dynamic content items based on schedule image availability
   const contentNavItems = [

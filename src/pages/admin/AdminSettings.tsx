@@ -60,6 +60,7 @@ const navItems = [
   { key: 'nurse-periods', label: 'Periode', desc: 'Velg aktiv periode (1–7)', icon: Heart, color: 'bg-rose-500/15 text-rose-600 dark:text-rose-400' },
   { key: 'roulette', label: 'Oppgave-roulette', desc: 'Legg inn senior/U18-oppgaver', icon: Dices, color: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
   { key: 'bookings', label: 'Booking-info', desc: 'Importer booking-data per periode', icon: ClipboardList, color: 'bg-sky-500/15 text-sky-600 dark:text-sky-400' },
+  { key: 'sweaters', label: 'Gensere', desc: 'Hentet / kjøpt genser dag 1', icon: Shirt, color: 'bg-lime-500/15 text-lime-600 dark:text-lime-400' },
 ];
 
 const sectionLabels: Record<string, string> = {
@@ -72,6 +73,7 @@ const sectionLabels: Record<string, string> = {
   'nurse-periods': 'Periode',
   roulette: 'Oppgave-roulette',
   bookings: 'Booking-info',
+  sweaters: 'Gensere',
 };
 
 export default function AdminSettings() {
