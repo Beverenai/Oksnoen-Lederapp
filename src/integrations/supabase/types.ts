@@ -1175,6 +1175,66 @@ export type Database = {
           },
         ]
       }
+      participant_sweaters: {
+        Row: {
+          bought_at: string | null
+          bought_on_camp: boolean
+          bought_size: string | null
+          created_at: string
+          id: string
+          participant_id: string
+          period_id: string
+          picked_up: boolean
+          picked_up_at: string | null
+          picked_up_size: string | null
+          preordered_size: string | null
+          updated_at: string
+        }
+        Insert: {
+          bought_at?: string | null
+          bought_on_camp?: boolean
+          bought_size?: string | null
+          created_at?: string
+          id?: string
+          participant_id: string
+          period_id: string
+          picked_up?: boolean
+          picked_up_at?: string | null
+          picked_up_size?: string | null
+          preordered_size?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bought_at?: string | null
+          bought_on_camp?: boolean
+          bought_size?: string | null
+          created_at?: string
+          id?: string
+          participant_id?: string
+          period_id?: string
+          picked_up?: boolean
+          picked_up_at?: string | null
+          picked_up_size?: string | null
+          preordered_size?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_sweaters_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_sweaters_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participant_teams: {
         Row: {
           color: string
