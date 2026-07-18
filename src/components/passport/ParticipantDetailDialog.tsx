@@ -366,6 +366,7 @@ export const ParticipantDetailDialog = ({
     .slice(0, 2) || '??';
 
   return (
+    <>
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
       <ResponsiveDialogContent className="sm:max-w-md">
         {isLoading ? (
