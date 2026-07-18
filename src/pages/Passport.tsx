@@ -450,6 +450,15 @@ export default function Passport() {
             <AlertTriangle className="w-4 h-4 mr-1.5" />
             Viktig Info
           </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSecretWordsOpen(true)}
+          >
+            <KeyRound className="w-4 h-4 mr-1.5" />
+            Ord
+          </Button>
           
           {/* My cabin filter button - only show if leader has assigned cabins */}
           {myCabinIds.length > 0 && (
