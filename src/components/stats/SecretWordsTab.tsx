@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Shuffle, Download, Trash2, RefreshCw } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { formatFullRoom } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { CheckCircle2, Clock } from 'lucide-react';
 
 interface Pair { id: string; word_1: string; word_2: string }
 interface Assignment { id: string; participant_id: string; word: string; pair_id: string; slot: number }
@@ -284,6 +286,44 @@ export function SecretWordsTab() {
   const totalPairs = assignments ? assignments.length / 2 : 0;
   const assignedCount = assignments?.length ?? 0;
 
+  const [pairFilter, setPairFilter] = useState('');
+
+  const pairOverview = useMemo(() => {
+    if (!assignments) return [] as {
+      pair_id: string;
+      a?: Assignment; b?: Assignment;
+      matched: boolean;
+      matchedAt?: string;
+    }[];
+    const byPair = new Map<string, { a?: Assignment; b?: Assignment }>();
+    assignments.forEach((as) => {
+      const cur = byPair.get(as.pair_id) || {};
+      if (as.slot === 1) cur.a = as; else cur.b = as;
+      byPair.set(as.pair_id, cur);
+    });
+    const matchByPair = new Map<string, MatchRow>();
+    (matches || []).forEach((m) => matchByPair.set(m.pair_id, m));
+    const rows = [...byPair.entries()].map(([pair_id, v]) => {
+      const m = matchByPair.get(pair_id);
+      return { pair_id, a: v.a, b: v.b, matched: !!m, matchedAt: m?.matched_at };
+    });
+    rows.sort((x, y) => {
+      if (x.matched !== y.matched) return x.matched ? 1 : -1;
+      const nx = byId.get(x.a?.participant_id || '')?.name || '';
+      const ny = byId.get(y.a?.participant_id || '')?.name || '';
+      return nx.localeCompare(ny, 'nb');
+    });
+    const q = pairFilter.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) => {
+      const an = byId.get(r.a?.participant_id || '')?.name?.toLowerCase() || '';
+      const bn = byId.get(r.b?.participant_id || '')?.name?.toLowerCase() || '';
+      const w1 = r.a?.word?.toLowerCase() || '';
+      const w2 = r.b?.word?.toLowerCase() || '';
+      return an.includes(q) || bn.includes(q) || w1.includes(q) || w2.includes(q);
+    });
+  }, [assignments, matches, byId, pairFilter]);
+
   if (!periodId) {
     return <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -358,6 +398,77 @@ export function SecretWordsTab() {
                 </div>
               );
             })}
+          </CardContent>
+        </Card>
+      )}
+
+      {assignedCount > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Ordpar-oversikt</CardTitle>
+            <CardDescription>
+              Alle par i aktiv periode. Grønn = funnet, grå = venter fortsatt på match.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Input
+              placeholder="Søk navn eller ord…"
+              value={pairFilter}
+              onChange={(e) => setPairFilter(e.target.value)}
+              className="h-9"
+            />
+            <div className="text-xs text-muted-foreground">
+              {pairOverview.filter((r) => r.matched).length} av {pairOverview.length} par funnet
+            </div>
+            <div className="divide-y">
+              {pairOverview.map((r) => {
+                const a = r.a ? byId.get(r.a.participant_id) : null;
+                const b = r.b ? byId.get(r.b.participant_id) : null;
+                return (
+                  <div
+                    key={r.pair_id}
+                    className={`py-2 px-2 rounded-md ${r.matched ? 'bg-emerald-50 dark:bg-emerald-950/20' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="grid grid-cols-2 gap-2 flex-1 min-w-0 text-sm">
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{a?.name ?? '— ukjent —'}</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {a?.cabins?.name ?? ''}
+                          </div>
+                          <Badge variant="outline" className="mt-1 font-mono text-[11px]">
+                            {r.a?.word}
+                          </Badge>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{b?.name ?? '— ukjent —'}</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {b?.cabins?.name ?? ''}
+                          </div>
+                          <Badge variant="outline" className="mt-1 font-mono text-[11px]">
+                            {r.b?.word}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="shrink-0">
+                        {r.matched ? (
+                          <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> Funnet
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="gap-1">
+                            <Clock className="w-3 h-3" /> Venter
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {pairOverview.length === 0 && (
+                <div className="py-6 text-center text-sm text-muted-foreground">Ingen treff.</div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
