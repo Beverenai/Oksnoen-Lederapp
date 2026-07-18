@@ -224,6 +224,34 @@ export function TeamsTab() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base"><Trophy className="w-4 h-4" /> Poengoversikt</CardTitle>
+          <CardDescription>+1 poeng per fullført aktivitet og +1 per hemmelig-ord-match (til begge lag).</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {leaderboard.map((t, idx) => (
+            <div key={t.id} className="space-y-1">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="w-5 text-muted-foreground tabular-nums">{idx + 1}.</span>
+                <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
+                <span className="flex-1 truncate font-medium">{t.name}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {t.activities} akt · {t.matches} match
+                </span>
+                <Badge variant="default" className="tabular-nums min-w-[2.5rem] justify-center">{t.total}</Badge>
+              </div>
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${(t.total / maxPoints) * 100}%`, backgroundColor: t.color }}
+                />
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
       <div className="space-y-2">
         {teams.map((team) => {
           const members = membersByTeam.get(team.id) || [];
