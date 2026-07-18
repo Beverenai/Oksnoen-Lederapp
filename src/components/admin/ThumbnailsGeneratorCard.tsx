@@ -23,20 +23,24 @@ export function ThumbnailsGeneratorCard() {
       let totalProcessed = 0;
       let totalFailed = 0;
       let safety = 200;
+      let offset = 0;
       while (safety-- > 0) {
         const { data, error } = await supabase.functions.invoke('generate-participant-thumbs', {
-          body: { batch_size: 25, force },
+          body: { batch_size: 25, force, offset: force ? offset : 0 },
         });
         if (error) throw error;
         const p = data?.processed || 0;
+        const f = data?.failed || 0;
         totalProcessed += p;
-        totalFailed += data?.failed || 0;
+        totalFailed += f;
         setProcessed(totalProcessed);
         setFailed(totalFailed);
         setRemaining(data?.remaining ?? 0);
-        // Stop when nothing more to do (missing-mode) or when a force batch returns empty.
         if (!force && (!data?.remaining || data.remaining === 0)) break;
-        if (force && p === 0) break;
+        if (force) {
+          offset += 25;
+          if (p + f < 25) break; // last page
+        }
       }
       setDone(true);
       toast.success(`Ferdig! Genererte ${totalProcessed} thumbnails`);
