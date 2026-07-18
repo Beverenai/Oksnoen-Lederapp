@@ -114,34 +114,53 @@ export function ParticipantEditDialog({
       setTimesAttended(participant.times_attended || 0);
       setNotes(participant.notes || '');
       setHasArrived(participant.has_arrived || false);
+    } else if (open) {
+      // Reset for "create new" mode
+      setFirstName('');
+      setLastName('');
+      setBirthDate('');
+      setCabinId('none');
+      setRoom('none');
+      setTimesAttended(0);
+      setNotes('');
+      setHasArrived(false);
     }
-  }, [participant]);
+  }, [participant, open]);
 
   const handleSave = async () => {
-    if (!participant) return;
-
     setIsSaving(true);
     try {
       const fullName = `${firstName} ${lastName}`.trim();
-      
-      const { error } = await supabase
-        .from('participants')
-        .update({
-          first_name: firstName || null,
-          last_name: lastName || null,
-          name: fullName || participant.name,
-          birth_date: birthDate || null,
-          cabin_id: cabinId === 'none' ? null : cabinId,
-          room: room === 'none' ? null : room,
-          times_attended: timesAttended,
-          notes: notes || null,
-          has_arrived: hasArrived,
-        })
-        .eq('id', participant.id);
+      if (!fullName) {
+        showError('Fornavn eller etternavn må fylles ut');
+        setIsSaving(false);
+        return;
+      }
 
-      if (error) throw error;
+      const payload = {
+        first_name: firstName || null,
+        last_name: lastName || null,
+        name: fullName,
+        birth_date: birthDate || null,
+        cabin_id: cabinId === 'none' ? null : cabinId,
+        room: room === 'none' ? null : room,
+        times_attended: timesAttended,
+        notes: notes || null,
+        has_arrived: hasArrived,
+      };
 
-      showSuccess('Deltaker oppdatert');
+      if (participant) {
+        const { error } = await supabase
+          .from('participants')
+          .update(payload)
+          .eq('id', participant.id);
+        if (error) throw error;
+        showSuccess('Deltaker oppdatert');
+      } else {
+        const { error } = await supabase.from('participants').insert(payload);
+        if (error) throw error;
+        showSuccess('Deltaker lagt til');
+      }
       onSaved();
       onOpenChange(false);
     } catch (error) {
@@ -158,7 +177,7 @@ export function ParticipantEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] p-0 flex flex-col">
         <DialogHeader className="p-4 sm:p-6 pb-0">
-          <DialogTitle>Rediger deltaker</DialogTitle>
+          <DialogTitle>{participant ? 'Rediger deltaker' : 'Ny deltaker'}</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
