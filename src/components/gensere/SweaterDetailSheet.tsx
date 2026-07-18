@@ -160,6 +160,13 @@ export function SweaterDetailSheet({ participantId, open, onOpenChange, onSaved 
     await persist(next);
   };
 
+  const setPreorderedSize = async (size: SizeOption | null) => {
+    if (!row) return;
+    const next: SweaterRow = { ...row, preordered_size: size };
+    setRow(next);
+    await persist(next);
+  };
+
   const preNorm = normalizeSize(row?.preordered_size);
 
   return (
@@ -196,6 +203,35 @@ export function SweaterDetailSheet({ participantId, open, onOpenChange, onSaved 
               ) : (
                 <Badge variant="secondary">Ikke bestilt</Badge>
               )}
+            </div>
+
+            {/* Forhåndsbestilt størrelse */}
+            <div className="rounded-xl border p-4 space-y-3 bg-card">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium text-sm">Forhåndsbestilt størrelse</span>
+                {row.preordered_size && (
+                  <Button size="sm" variant="ghost" onClick={() => setPreorderedSize(null)} disabled={saving} className="h-7 text-xs">
+                    Fjern
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {SIZES.map((s) => {
+                  const active = (row.preordered_size || '').toUpperCase() === s;
+                  return (
+                    <Button
+                      key={s}
+                      size="sm"
+                      variant={active ? 'default' : 'outline'}
+                      onClick={() => setPreorderedSize(s)}
+                      disabled={saving}
+                      className="h-8 px-3"
+                    >
+                      {s}
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Hentet */}
