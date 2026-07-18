@@ -206,6 +206,7 @@ export function SecretWordsTab() {
   .dot { width: 3.5mm; height: 3.5mm; border-radius: 50%; display: inline-block; }
   .word-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.5px; color: #666; margin: 0 0 2mm; }
   .word { font-size: 30pt; font-weight: 800; font-family: 'SF Mono', Menlo, monospace; letter-spacing: 1.5px; margin: 0; line-height: 1; word-break: break-word; }
+  .ps { font-size: 9pt; color: #888; margin: 4mm 0 0; font-style: italic; }
 </style></head><body>`;
     sortedCabins.forEach((cabin) => {
       const rows = grouped.get(cabin)!.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
@@ -226,6 +227,7 @@ export function SecretWordsTab() {
             <div class="team"><span class="dot" style="background:${teamColor}"></span>${teamLabel}</div>
             <div class="word-label">Ditt hemmelige ord</div>
             <div class="word">${escapeHtml(r.word)}</div>
+            <div class="ps">PS: Ikke mist denne lappen!</div>
           </div>`;
         }
         html += `</div>`;
