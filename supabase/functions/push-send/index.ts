@@ -109,6 +109,7 @@ serve(async (req) => {
       .select("role")
       .eq("leader_id", sender_leader_id)
       .in("role", ["admin", "superadmin"])
+      .limit(1)
       .maybeSingle();
 
     if (!roleData) {
