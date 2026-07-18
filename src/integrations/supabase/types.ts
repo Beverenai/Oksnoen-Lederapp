@@ -1224,6 +1224,7 @@ export type Database = {
           has_arrived: boolean | null
           id: string
           image_url: string | null
+          insj_points: number
           last_name: string | null
           name: string
           notes: string | null
@@ -1248,6 +1249,7 @@ export type Database = {
           has_arrived?: boolean | null
           id?: string
           image_url?: string | null
+          insj_points?: number
           last_name?: string | null
           name: string
           notes?: string | null
@@ -1272,6 +1274,7 @@ export type Database = {
           has_arrived?: boolean | null
           id?: string
           image_url?: string | null
+          insj_points?: number
           last_name?: string | null
           name?: string
           notes?: string | null
