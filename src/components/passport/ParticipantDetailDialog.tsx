@@ -437,6 +437,15 @@ export const ParticipantDetailDialog = ({
                   <TeamBadge teamId={(participant as any).team_id} size="md" />
                 </div>
 
+                {secretWord && (
+                  <div className="flex justify-center mt-2">
+                    <div className="inline-flex flex-col items-center px-4 py-2 rounded-xl bg-primary/10 border border-primary/20">
+                      <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Hemmelig ord</span>
+                      <span className="font-mono text-lg font-bold tracking-wider">{secretWord}</span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground flex-wrap">
                   {participant.birth_date && (
                     <span>{format(new Date(participant.birth_date), 'dd.MM.yyyy')}</span>
