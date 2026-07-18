@@ -25,6 +25,7 @@ import {
 import { ParticipantEditDialog } from './ParticipantEditDialog';
 import { hapticSuccess, hapticWarning, hapticError } from '@/lib/capacitorHaptics';
 import { GiftCardImportCard } from './GiftCardImportCard';
+import { ThumbnailsGeneratorCard } from './ThumbnailsGeneratorCard';
 
 interface ImportProgress {
   status: 'idle' | 'running' | 'done' | 'error';
@@ -779,6 +780,7 @@ export function ParticipantImportTab() {
       </Card>
 
       <GiftCardImportCard onImported={loadData} />
+      <ThumbnailsGeneratorCard />
 
       {/* CSV Upload */}
       <Card>

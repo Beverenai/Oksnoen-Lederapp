@@ -17,6 +17,7 @@ import { TeamBadge } from '@/components/participants/TeamBadge';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { formatFullRoom } from '@/lib/utils';
+import { getParticipantThumb } from '@/lib/participantImage';
 
 type Cabin = Tables<'cabins'>;
 
@@ -29,6 +30,7 @@ interface ParticipantWithCabin {
   room: string | null;
   cabin_id: string | null;
   image_url: string | null;
+  image_thumb_url?: string | null;
   has_arrived: boolean | null;
   notes: string | null;
   activity_notes: string | null;
@@ -97,7 +99,7 @@ const ParticipantCard = memo(({
     >
     <div className="flex items-start gap-3">
       <Avatar className="w-10 h-10 shrink-0">
-        <AvatarImage src={participant.image_url || undefined} loading="lazy" />
+        <AvatarImage src={getParticipantThumb(participant)} loading="lazy" decoding="async" />
         <AvatarFallback className="bg-muted text-muted-foreground">
           <User className="w-4 h-4" />
         </AvatarFallback>
