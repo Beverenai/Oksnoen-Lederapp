@@ -15,6 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Shuffle, ChevronDown, Users2 } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { Trophy } from 'lucide-react';
 
 const PALETTE = [
   '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
@@ -49,6 +50,34 @@ export function TeamsTab() {
         .order('name');
       if (error) throw error;
       return (data || []) as ParticipantRow[];
+    },
+  });
+
+  // Points per team = number of secret-word matches where at least one participant is on the team.
+  // Each match awards +1 to BOTH teams involved.
+  const { data: teamPoints } = useQuery({
+    queryKey: ['team-points', periodId ?? 'none'],
+    enabled: !!periodId,
+    queryFn: async (): Promise<Record<string, number>> => {
+      const { data: matches, error } = await (supabase as any)
+        .from('secret_word_matches')
+        .select('participant_a_id, participant_b_id')
+        .eq('period_id', periodId!);
+      if (error) throw error;
+      const { data: parts } = await supabase
+        .from('participants')
+        .select('id, team_id')
+        .eq('period_id', periodId!);
+      const teamById = new Map<string, string | null>();
+      (parts || []).forEach((p: any) => teamById.set(p.id, p.team_id));
+      const pts: Record<string, number> = {};
+      (matches || []).forEach((m: any) => {
+        const ta = teamById.get(m.participant_a_id);
+        const tb = teamById.get(m.participant_b_id);
+        if (ta) pts[ta] = (pts[ta] || 0) + 1;
+        if (tb && tb !== ta) pts[tb] = (pts[tb] || 0) + 1;
+      });
+      return pts;
     },
   });
 
