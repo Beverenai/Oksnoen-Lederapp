@@ -1028,15 +1028,27 @@ export function ParticipantImportTab() {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent className="space-y-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Søk etter navn eller hytte..."
-                  value={participantSearch}
-                  onChange={(e) => setParticipantSearch(e.target.value)}
-                  className="pl-10"
-                />
+              {/* Search + Add */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Søk etter navn eller hytte..."
+                    value={participantSearch}
+                    onChange={(e) => setParticipantSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Button
+                  onClick={() => {
+                    setSelectedParticipant(null);
+                    setIsEditDialogOpen(true);
+                  }}
+                  className="shrink-0"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Ny deltaker
+                </Button>
               </div>
 
               {isLoadingParticipants ? (
