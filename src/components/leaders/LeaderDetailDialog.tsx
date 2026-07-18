@@ -1,4 +1,5 @@
 import { Phone, Activity, Car, Anchor, Mountain, Cable, AlertTriangle, Wrench } from "lucide-react";
+import { formatMainCabins } from "@/lib/cabinDisplay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
