@@ -288,6 +288,29 @@ export function SecretWordsTab() {
   const assignedCount = assignments?.length ?? 0;
 
   const [pairFilter, setPairFilter] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState('');
+  const [pickedIds, setPickedIds] = useState<Set<string>>(new Set());
+
+  const togglePicked = (id: string) => {
+    setPickedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  const assignedParticipants = useMemo(() => {
+    if (!assignments || !participants) return [] as P[];
+    const ids = new Set(assignments.map((a) => a.participant_id));
+    return participants.filter((p) => ids.has(p.id));
+  }, [assignments, participants]);
+
+  const pickerResults = useMemo(() => {
+    const q = pickerQuery.trim().toLowerCase();
+    if (!q) return assignedParticipants.slice(0, 50);
+    return assignedParticipants.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 50);
+  }, [assignedParticipants, pickerQuery]);
 
   const pairOverview = useMemo(() => {
     if (!assignments) return [] as {
