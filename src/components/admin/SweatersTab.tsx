@@ -118,6 +118,38 @@ export function SweatersTab() {
   const handleFile = async (file: File) => {
     setImporting(true);
     try {
+      const isCsv = /\.(csv|txt)$/i.test(file.name) || file.type.includes('csv') || file.type === 'text/plain';
+      if (isCsv) {
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        const first = lines[0] || '';
+        const delim = first.includes('\t') ? '\t' : first.includes(';') ? ';' : ',';
+        const splitLine = (l: string) => l.split(delim).map((c) => c.replace(/^"|"$/g, '').trim());
+        const header = splitLine(first).map((h) => h.toLowerCase());
+        let startIdx = 0;
+        let iFirst = 0, iLast = 1, iSize = 2, iFull = -1;
+        const hasHeader = header.some((h) => /navn|name|størrelse|storrelse|size|forhånd|forhand/.test(h));
+        if (hasHeader) {
+          startIdx = 1;
+          const findIdx = (preds: RegExp[]) => header.findIndex((h) => preds.some((r) => r.test(h)));
+          const fullIdx = findIdx([/^fullt\s*navn$/, /^navn$/, /^full\s*name$/, /^name$/]);
+          const firstIdx = findIdx([/^fornavn$/, /^first/]);
+          const lastIdx = findIdx([/^etternavn$/, /^last/]);
+          const sizeIdx = findIdx([/størrelse|storrelse|size|forhånd|forhand|pre/]);
+          if (firstIdx >= 0 && lastIdx >= 0) { iFirst = firstIdx; iLast = lastIdx; }
+          else if (fullIdx >= 0) { iFull = fullIdx; }
+          if (sizeIdx >= 0) iSize = sizeIdx;
+        }
+        const rows: { fullName: string; size: string | null }[] = [];
+        for (let i = startIdx; i < lines.length; i++) {
+          const parts = splitLine(lines[i]);
+          const fullName = iFull >= 0 ? (parts[iFull] || '') : `${parts[iFirst] || ''} ${parts[iLast] || ''}`.trim();
+          const size = parseSize(parts[iSize]);
+          if (fullName) rows.push({ fullName, size });
+        }
+        await applyRows(rows);
+        return;
+      }
       const buf = await file.arrayBuffer();
       const wb = new ExcelJS.Workbook();
       await wb.xlsx.load(buf);
@@ -251,12 +283,12 @@ export function SweatersTab() {
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={importing}>
               {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-              Importer XLSX
+              Importer XLSX / CSV
             </Button>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".xlsx"
+              accept=".xlsx,.csv,.txt"
               className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
             />
