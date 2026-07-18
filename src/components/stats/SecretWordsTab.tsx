@@ -191,6 +191,9 @@ export function SecretWordsTab() {
     const PER_PAGE = COLS * ROWS; // 6 kort per A4
     const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
     let html = `<!doctype html><html><head><meta charset="utf-8"><title>Hemmelige Ord</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik+Wet+Paint&family=Bungee+Shade&family=Rye&display=swap" rel="stylesheet">
 <style>
   @page { size: A4; margin: 10mm; }
   * { box-sizing: border-box; }
@@ -201,12 +204,12 @@ export function SecretWordsTab() {
   .cell { border: 1px dashed #bbb; border-radius: 3mm; padding: 6mm; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; }
   .cell.empty { border-color: transparent; }
   .cabin-tag { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin: 0 0 3mm; }
-  .name { font-size: 22pt; font-weight: 800; margin: 0 0 3mm; line-height: 1.1; }
+  .name { font-family: 'Rye', 'Georgia', serif; font-size: 24pt; font-weight: 400; margin: 0 0 3mm; line-height: 1.1; letter-spacing: 0.5px; }
   .welcome { font-size: 10pt; color: #555; margin: 0 0 3mm; font-style: italic; }
   .team { display: inline-flex; align-items: center; gap: 2mm; font-size: 11pt; font-weight: 600; margin: 0 0 5mm; }
   .dot { width: 3.5mm; height: 3.5mm; border-radius: 50%; display: inline-block; }
   .word-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.5px; color: #666; margin: 0 0 2mm; }
-  .word { font-size: 30pt; font-weight: 800; font-family: 'SF Mono', Menlo, monospace; letter-spacing: 1.5px; margin: 0; line-height: 1; word-break: break-word; }
+  .word { font-family: 'Rubik Wet Paint', 'Bungee Shade', 'Rye', cursive; font-size: 40pt; font-weight: 400; letter-spacing: 2px; margin: 0; line-height: 1; word-break: break-word; color: #111; transform: rotate(-2deg); }
   .ps { font-size: 9pt; color: #888; margin: 4mm 0 0; font-style: italic; }
 </style></head><body>`;
     sortedCabins.forEach((cabin) => {
