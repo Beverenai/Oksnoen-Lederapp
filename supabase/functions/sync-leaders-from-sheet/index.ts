@@ -121,7 +121,9 @@ const normalizeSheetRange = (range: string) => {
 const isAutoDefaultRange = (range: string) => /^'?Sheet1'?!A1:Z{1,2}1000$/i.test(range.trim());
 
 async function fetchSheetValues(spreadsheetId: string, range: string, headers: HeadersInit) {
-  const res = await fetch(`${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${range}`, { headers });
+  // Encode special chars like '+' (which Google decodes as space in paths) but keep ':' and '!' readable.
+  const encodedRange = encodeURIComponent(range).replace(/%3A/gi, ':').replace(/%21/g, '!');
+  const res = await fetch(`${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${encodedRange}`, { headers });
   const text = await res.text();
   if (!res.ok) throw new Error(`Google Sheets fetch failed [${res.status}]: ${text}`);
   const data = JSON.parse(text);
