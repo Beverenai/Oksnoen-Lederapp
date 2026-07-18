@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { AgeDistributionChart } from '@/components/stats/AgeDistributionChart';
-import { GenderDistributionChart } from '@/components/stats/GenderDistributionChart';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 interface Participant {
   id: string;
@@ -383,9 +382,6 @@ export function ParticipantStatsCard() {
 
       {/* Age Distribution Chart */}
       <AgeDistributionChart participants={participants} />
-
-      {/* Gender Distribution Chart */}
-      <GenderDistributionChart />
 
       {/* Participant Detail Dialog */}
       <ParticipantDetailDialog
