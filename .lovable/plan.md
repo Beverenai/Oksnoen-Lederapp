@@ -1,64 +1,42 @@
-# Hendelseslogg for deltagere
+## Kjøkkentjeneste for lag (2 og 2)
 
-Ledere kan raskt loggføre en hendelse knyttet til én eller flere deltagere. Lederen ser kun sine egne hendelser. Admin ser alt samlet i en ny fane under Deltagere, samt inne på hver deltager.
+Legger til en automatisk rotasjon der 2 av de 10 lagene har kjøkkentjeneste hver dag, med visning i admin, på lederens hjemskjerm, og et klikk-filter i Passkontroll.
 
-## Datamodell (backend)
+### Rotasjonsmodell
+- Fem par som roterer daglig: (Lag 1+2), (Lag 3+4), (Lag 5+6), (Lag 7+8), (Lag 9+10).
+- Par for i dag = `((antall dager siden startdato) mod 5)`.
+- Admin setter én "startdato" per periode (default = periodens startdato). Ingen kompleks kalender.
+- Admin kan også manuelt overstyre dagens par ved behov (valgfritt felt for "override for dato").
 
-**Ny tabell `participant_incidents`**
-- `title` (tekst)
-- `description` (tekst)
-- `category` (enum-tekst: `konflikt`, `skade`, `hjemlengsel`, `positivt`, `annet`)
-- `severity` (`low` | `medium` | `high`)
-- `leader_id` (referanse til `leaders`)
-- `period_id` (auto-sett via eksisterende `set_period_id_default`-trigger)
-- standard `created_at` / `updated_at`
+### 1. Data
+Ny tabell `team_kitchen_duty` (per periode):
+- `period_id`, `rotation_start_date`, `manual_override_date`, `manual_override_slot_a`, `manual_override_slot_b`.
+- RLS: alle innloggede kan lese; kun admin kan skrive.
 
-**Ny koblingstabell `participant_incident_participants`**
-- `incident_id`, `participant_id` (mange-til-mange)
+### 2. Admin — Lag-fanen (`TeamsTab.tsx`)
+- Nytt kort "Kjøkkentjeneste":
+  - Datovelger for `rotation_start_date`.
+  - Viser dagens 2 lag (navn + farge + slot-nr) og hele ukens rotasjon som liste.
+  - Knapp "Overstyr i dag" → velg 2 slots manuelt.
 
-**RLS-policyer**
-- Leder kan SELECT/INSERT/UPDATE/DELETE egne rader (`leader_id = current_leader_id()`)
-- Admin (`is_admin()`) kan SELECT/UPDATE/DELETE alt
-- GRANTs til `authenticated` og `service_role` iht. prosjektstandard
+### 3. Lederens hjemskjerm (`Home.tsx`)
+- Nytt kort "Kjøkkentjeneste i dag" som kun vises når `teams_enabled = true`.
+- Viser de 2 lag-badgene (samme stil som `TeamBadge`) side ved side.
+- Trykk på kortet → navigerer til `/passport?kitchenDuty=1` (viser begge lag).
+- Trykk på ett enkelt badge → `/passport?team=<team_id>` (kun det ene laget).
 
-## Ledergrensesnitt
+### 4. Passkontroll (`Passport.tsx`)
+- Leser `?kitchenDuty=1` fra URL: aktiverer et multi-team-filter som viser deltagere i begge dagens kjøkken-lag.
+- Eksisterende single-team filter (`?team=`) beholdes uendret.
+- Legger til en liten "Kjøkkentjeneste i dag"-chip i filter-baren når aktiv, med X for å fjerne.
 
-**1. Knapp på Hjem-skjermen** ("Hendelse")
-- Åpner et `Sheet` med:
-  - Tittel-felt
-  - Beskrivelse (textarea)
-  - Kategori (chip-velger: Konflikt / Skade / Hjemlengsel / Positivt / Annet)
-  - Alvorlighet (Lav / Middels / Høy)
-  - Deltagere: søkbar multi-select fra `participants` (aktiv periode)
-- Lagrer → toast + lukker
+### 5. Hook
+Ny `useKitchenDutyToday(periodId)` som:
+- Henter `team_kitchen_duty` for perioden og `participant_teams` (slot 1–10).
+- Regner ut dagens par (eller bruker override hvis satt for i dag).
+- Returnerer `{ teamA, teamB }` (fulle team-objekter med navn/farge/slot).
 
-**2. Snarvei inne på deltager (Passkontroll → ParticipantDetailDialog)**
-- "Registrer hendelse"-knapp som åpner samme Sheet, forhåndsvalgt deltager (kan legge til flere).
-
-**3. Min historikk**
-- Liste over egne hendelser vises inne på Hjem-sheeten (eller egen «Mine hendelser»-liste) slik at lederen kan gå tilbake og redigere/slette.
-
-## Admin-grensesnitt
-
-**Ny fane «Hendelser» i Deltagere-siden** (`/participant-stats`)
-- Liste over alle hendelser i aktiv periode
-- Filter: kategori, alvorlighet, leder, deltager (søk)
-- Hver rad viser: tittel, deltagernavn (badges), kategori, alvorlighet, leder, tid
-- Klikk → detaljvisning med full beskrivelse
-
-Historikk per deltager inne på admin sitt deltagerkort kommer i en senere runde (kun global fane nå iht. valg).
-
-## Periode-scoping
-- `period_id` settes automatisk via eksisterende trigger.
-- Alle queries filtrerer på `useActivePeriodId()`, konsistent med Dynga/Gjenglemt.
-
-## Filer som opprettes / endres
-
-- Migrasjon: `participant_incidents` + `participant_incident_participants` (tabeller, GRANTs, RLS, policies, `set_period_id_default`-trigger, `updated_at`-trigger)
-- `src/hooks/useParticipantIncidents.ts` – React Query-hook (list/create/update/delete)
-- `src/components/incidents/IncidentSheet.tsx` – felles skjema-Sheet (opprett/rediger)
-- `src/components/incidents/MyIncidentsList.tsx` – lederens egen liste
-- `src/components/admin/IncidentsTab.tsx` – admin-fanen
-- `src/pages/Home.tsx` – ny «Hendelse»-knapp
-- `src/components/passport/ParticipantDetailDialog.tsx` – «Registrer hendelse»-knapp
-- `src/pages/admin/ParticipantStats.tsx` – legg til fane «Hendelser»
+### Teknisk oppsummering
+- Migrering: `team_kitchen_duty` + GRANTs + RLS (admin write, authenticated read) + `updated_at`-trigger.
+- Frontend: `useKitchenDutyToday`, kort i `TeamsTab`, kort i `Home`, URL-param-håndtering i `Passport`.
+- Ingen endringer i eksisterende team- eller passregistrerings-logikk.
