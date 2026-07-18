@@ -15,9 +15,11 @@ import {
   Sparkles,
   AlertTriangle,
   X,
+  KeyRound,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
+import { SecretWordsSheet } from '@/components/passport/SecretWordsSheet';
 import { useAuth } from '@/contexts/AuthContext';
 import { VirtualizedParticipantList } from '@/components/passport/VirtualizedParticipantList';
 import { hapticImpact } from '@/lib/capacitorHaptics';
