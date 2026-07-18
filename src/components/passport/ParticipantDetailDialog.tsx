@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,6 +43,7 @@ interface ParticipantWithCabin {
   pass_suggestion: string | null;
   gift_card_number: string | null;
   team_id?: string | null;
+  insj_points?: number | null;
   cabin?: { id: string; name: string } | null;
 }
 
@@ -115,6 +116,7 @@ export const ParticipantDetailDialog = ({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isTogglingArrival, setIsTogglingArrival] = useState(false);
   const [isTogglingPass, setIsTogglingPass] = useState(false);
+  const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -325,6 +327,34 @@ export const ParticipantDetailDialog = ({
     }
   };
 
+  const adjustInsjPoints = async (delta: number) => {
+    if (!participant) return;
+    setIsUpdatingPoints(true);
+    const current = (participant.insj_points ?? 0);
+    const next = Math.max(0, current + delta);
+    // Optimistic update
+    queryClient.setQueryData(['participant-detail-v2', participant.id], (old: any) => old ? {
+      ...old,
+      participant: { ...old.participant, insj_points: next },
+    } : old);
+    try {
+      const { error } = await supabase
+        .from('participants')
+        .update({ insj_points: next })
+        .eq('id', participant.id);
+      if (error) throw error;
+      hapticSuccess();
+      onParticipantUpdated?.();
+    } catch (error) {
+      console.error('Error updating insj_points:', error);
+      hapticError();
+      showError('Feil', 'Kunne ikke oppdatere insjpoeng');
+      refetchParticipant();
+    } finally {
+      setIsUpdatingPoints(false);
+    }
+  };
+
   const age = participant ? calculateAge(participant.birth_date) : null;
   const initials = participant?.name
     ?.split(' ')
@@ -493,6 +523,37 @@ export const ParticipantDetailDialog = ({
                 <div className="space-y-1.5">
                   <h4 className="text-sm font-medium">Styrkeprøve</h4>
                   <StyrkeproveBadges completedActivities={activities.map((a) => a.activity)} />
+                </div>
+
+                {/* Insjpoeng */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Sparkles className="h-4 w-4 text-purple-600" />
+                    <span>Insjpoeng</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900 rounded-lg">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 rounded-full"
+                      onClick={() => adjustInsjPoints(-1)}
+                      disabled={isUpdatingPoints || (participant.insj_points ?? 0) <= 0}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="text-2xl font-bold tabular-nums">
+                      {participant.insj_points ?? 0}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 rounded-full"
+                      onClick={() => adjustInsjPoints(1)}
+                      disabled={isUpdatingPoints}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Activities */}
