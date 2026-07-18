@@ -34,6 +34,9 @@ import type { Tables } from '@/integrations/supabase/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullIndicator } from '@/components/ui/pull-indicator';
 import { updateWidgetData } from '@/lib/capacitorWidget';
+import { MyIncidentsList } from '@/components/incidents/MyIncidentsList';
+import { MessageSquareWarning } from 'lucide-react';
+import { IncidentSheet } from '@/components/incidents/IncidentSheet';
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
 
@@ -153,6 +156,7 @@ export default function Home() {
   const [overnattingJoining, setOvernattingJoining] = useState(false);
   const [overnattingSaving, setOvernattingSaving] = useState(false);
   const [rouletteEnabled, setRouletteEnabled] = useState(false);
+  const [incidentSheetOpen, setIncidentSheetOpen] = useState(false);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
   const showRoulette = rouletteEnabled && inRoulette;
 
@@ -809,6 +813,36 @@ export default function Home() {
             </CardContent>
           </Card>
         )}
+
+        {/* Register incident */}
+        <Card
+          className="border border-red-500/30 bg-red-50/50 dark:bg-red-950/20 cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors shadow-sm"
+          onClick={() => setIncidentSheetOpen(true)}
+        >
+          <CardContent className="py-3 sm:py-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-red-500/15 shrink-0">
+                <MessageSquareWarning className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] uppercase tracking-wide text-red-600/80 dark:text-red-400/80 font-medium mb-0.5">
+                  Hendelse
+                </p>
+                <p className="text-sm sm:text-base font-medium text-foreground">
+                  Registrer en hendelse for én eller flere deltagere
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-border/50">
+          <CardContent className="py-4">
+            <MyIncidentsList />
+          </CardContent>
+        </Card>
+
+        <IncidentSheet open={incidentSheetOpen} onOpenChange={setIncidentSheetOpen} />
       </div>
     </div>
   );
