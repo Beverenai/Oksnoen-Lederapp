@@ -3,22 +3,40 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, LabelList } fro
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { Button } from '@/components/ui/button';
+import { guessGender } from '@/lib/nameGender';
 
 interface Participant {
   id: string;
   birth_date: string | null;
+  first_name?: string | null;
+  name?: string | null;
 }
 
 interface AgeDistributionChartProps {
   participants: Participant[];
 }
 
-type GroupMode = 'age' | 'birthYear';
+type GroupMode = 'age' | 'birthYear' | 'gender';
 
 export function AgeDistributionChart({ participants }: AgeDistributionChartProps) {
   const [groupMode, setGroupMode] = useState<GroupMode>('age');
 
   const ageData = useMemo(() => {
+    if (groupMode === 'gender') {
+      let girls = 0, boys = 0, unknown = 0;
+      participants.forEach((p) => {
+        const g = guessGender(p.first_name || p.name || null);
+        if (g === 'female') girls++;
+        else if (g === 'male') boys++;
+        else unknown++;
+      });
+      const out = [
+        { name: 'Jenter', count: girls, fill: 'hsl(var(--chart-4))' },
+        { name: 'Gutter', count: boys, fill: 'hsl(var(--chart-1))' },
+      ];
+      if (unknown > 0) out.push({ name: 'Ukjent', count: unknown, fill: 'hsl(var(--chart-3))' });
+      return out.map((o) => ({ ...o })) as { name: string; count: number; fill: string }[];
+    }
     const today = new Date();
     const counts: Record<number, number> = {};
 
@@ -73,7 +91,7 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <CardTitle className="text-base font-medium">
-            {groupMode === 'birthYear' ? 'Fødselsårfordeling' : 'Aldersfordeling'}
+            {groupMode === 'birthYear' ? 'Fødselsårfordeling' : groupMode === 'gender' ? 'Jenter og gutter' : 'Aldersfordeling'}
           </CardTitle>
           <div className="flex items-center gap-1">
             <Button
@@ -89,6 +107,13 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
               onClick={() => setGroupMode('birthYear')}
             >
               Fødselsår
+            </Button>
+            <Button
+              variant={groupMode === 'gender' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setGroupMode('gender')}
+            >
+              Kjønn
             </Button>
           </div>
         </div>
@@ -120,7 +145,9 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
           </ResponsiveContainer>
         </ChartContainer>
         <p className="text-xs text-muted-foreground text-center mt-2">
-          Totalt {total} deltakere med fødselsdato
+          {groupMode === 'gender'
+            ? `Totalt ${total} deltakere (kjønn gjettet fra fornavn)`
+            : `Totalt ${total} deltakere med fødselsdato`}
         </p>
       </CardContent>
     </Card>
