@@ -12,6 +12,7 @@ interface Pair { id: string; word_1: string; word_2: string }
 interface Assignment { id: string; participant_id: string; word: string; pair_id: string; slot: number }
 interface MatchRow { id: string; pair_id: string; participant_a_id: string; participant_b_id: string; matched_at: string }
 interface P { id: string; name: string; cabin_id: string | null; team_id: string | null; cabins?: { name: string } | null }
+interface Team { id: string; name: string; slot: number; color: string }
 
 export function SecretWordsTab() {
   const qc = useQueryClient();
@@ -59,6 +60,19 @@ export function SecretWordsTab() {
         .order('name');
       if (error) throw error;
       return (data || []) as unknown as P[];
+    },
+  });
+
+  const { data: teams } = useQuery({
+    queryKey: ['secret-word-teams', periodId],
+    enabled: !!periodId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('participant_teams')
+        .select('id, name, slot, color')
+        .eq('period_id', periodId!);
+      if (error) throw error;
+      return (data || []) as Team[];
     },
   });
 
@@ -159,35 +173,54 @@ export function SecretWordsTab() {
 
   const printPerCabin = () => {
     if (!assignments || !participants) return;
-    const grouped = new Map<string, { name: string; word: string }[]>();
+    const teamById = new Map<string, Team>();
+    (teams || []).forEach((t) => teamById.set(t.id, t));
+    const grouped = new Map<string, { name: string; word: string; team: Team | null }[]>();
     assignments.forEach((a) => {
       const p = byId.get(a.participant_id);
       if (!p) return;
       const key = p.cabins?.name || 'Uten hytte';
       const list = grouped.get(key) || [];
-      list.push({ name: p.name, word: a.word });
+      list.push({ name: p.name, word: a.word, team: p.team_id ? teamById.get(p.team_id) || null : null });
       grouped.set(key, list);
     });
     const sortedCabins = [...grouped.keys()].sort((a, b) => a.localeCompare(b, 'nb'));
     let html = `<!doctype html><html><head><meta charset="utf-8"><title>Hemmelige Ord</title>
 <style>
-  @page { margin: 15mm; }
-  body { font-family: -apple-system, system-ui, sans-serif; color: #111; }
-  .cabin { page-break-after: always; padding: 8mm 0; }
-  .cabin:last-child { page-break-after: auto; }
-  h1 { font-size: 26pt; margin: 0 0 4mm; letter-spacing: 0.5px; }
-  .sub { font-size: 11pt; color: #666; margin-bottom: 8mm; }
-  table { width: 100%; border-collapse: collapse; font-size: 13pt; }
-  th, td { text-align: left; padding: 5mm 3mm; border-bottom: 1px solid #ddd; }
-  th { font-size: 10pt; text-transform: uppercase; letter-spacing: 1px; color: #666; }
-  .word { font-weight: 700; font-family: 'SF Mono', Menlo, monospace; letter-spacing: 1px; }
+  @page { size: A4; margin: 12mm; }
+  body { font-family: -apple-system, system-ui, sans-serif; color: #111; margin: 0; }
+  .cabin-header { font-size: 11pt; text-transform: uppercase; letter-spacing: 2px; color: #666; margin: 0 0 4mm; padding-bottom: 2mm; border-bottom: 1px solid #333; }
+  .cabin { }
+  .cabin.break { page-break-before: always; }
+  .card { page-break-inside: avoid; border: 1px solid #ddd; border-radius: 4mm; padding: 4mm 5mm; margin-bottom: 4mm; display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto auto; column-gap: 6mm; row-gap: 1mm; align-items: center; }
+  .name { font-size: 20pt; font-weight: 700; margin: 0; grid-column: 1; grid-row: 1; }
+  .welcome { font-size: 10pt; color: #666; margin: 0; grid-column: 1; grid-row: 2; }
+  .team { display: inline-flex; align-items: center; gap: 2mm; font-size: 11pt; font-weight: 600; grid-column: 1; grid-row: 3; margin-top: 1mm; }
+  .dot { width: 4mm; height: 4mm; border-radius: 50%; display: inline-block; }
+  .word-box { grid-column: 2; grid-row: 1 / span 3; text-align: center; padding-left: 6mm; border-left: 1px dashed #bbb; }
+  .word-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 1px; color: #666; margin: 0 0 1mm; }
+  .word { font-size: 34pt; font-weight: 800; font-family: 'SF Mono', Menlo, monospace; letter-spacing: 1px; margin: 0; line-height: 1; }
+  .hint { grid-column: 1 / span 2; grid-row: 4; font-size: 9pt; color: #555; margin: 2mm 0 0; }
 </style></head><body>`;
-    sortedCabins.forEach((cabin) => {
+    sortedCabins.forEach((cabin, ci) => {
       const rows = grouped.get(cabin)!.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
-      html += `<div class="cabin"><h1>${cabin}</h1><div class="sub">Hemmelige Ord — ${rows.length} deltakere</div>`;
-      html += `<table><thead><tr><th>Navn</th><th>Ord</th></tr></thead><tbody>`;
-      rows.forEach((r) => { html += `<tr><td>${r.name}</td><td class="word">${r.word}</td></tr>`; });
-      html += `</tbody></table></div>`;
+      html += `<div class="cabin${ci > 0 ? ' break' : ''}">`;
+      html += `<div class="cabin-header">${cabin} — ${rows.length} deltakere</div>`;
+      rows.forEach((r) => {
+        const teamLabel = r.team ? `Lag ${r.team.slot} – ${r.team.name}` : 'Uten lag';
+        const teamColor = r.team?.color || '#999';
+        html += `<div class="card">
+          <div class="name">${r.name}</div>
+          <div class="welcome">Velkommen til De Ti Stammene</div>
+          <div class="team"><span class="dot" style="background:${teamColor}"></span>${teamLabel}</div>
+          <div class="word-box">
+            <div class="word-label">Ditt hemmelige ord</div>
+            <div class="word">${r.word}</div>
+          </div>
+          <div class="hint">Finn en annen deltaker som har ordet som hører sammen med ditt. Når dere tror dere har funnet hverandre, gå til en leder som verifiserer paret i appen.</div>
+        </div>`;
+      });
+      html += `</div>`;
     });
     html += `</body></html>`;
     const iframe = document.createElement('iframe');

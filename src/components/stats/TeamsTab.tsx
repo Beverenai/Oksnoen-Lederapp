@@ -54,7 +54,7 @@ export function TeamsTab() {
   });
 
   // Points per team = number of secret-word matches where at least one participant is on the team.
-  // Each match awards +1 to BOTH teams involved.
+  // Each match awards +1 to BOTH teams involved. Each completed activity awards +1 to the team.
   const { data: teamPoints } = useQuery({
     queryKey: ['team-points', periodId ?? 'none'],
     enabled: !!periodId,
@@ -77,6 +77,18 @@ export function TeamsTab() {
         if (ta) pts[ta] = (pts[ta] || 0) + 1;
         if (tb && tb !== ta) pts[tb] = (pts[tb] || 0) + 1;
       });
+      // Activities: +1 per completed activity to the participant's team
+      const participantIds = (parts || []).map((p: any) => p.id);
+      if (participantIds.length > 0) {
+        const { data: acts } = await supabase
+          .from('participant_activities')
+          .select('participant_id')
+          .in('participant_id', participantIds);
+        (acts || []).forEach((a: any) => {
+          const t = teamById.get(a.participant_id);
+          if (t) pts[t] = (pts[t] || 0) + 1;
+        });
+      }
       return pts;
     },
   });
