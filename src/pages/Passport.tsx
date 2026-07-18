@@ -140,6 +140,7 @@ export default function Passport() {
   const [teamFilter, setTeamFilter] = useState<string>('all');
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [secretWordsOpen, setSecretWordsOpen] = useState(false);
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
   // (bulk activity registration moved to dedicated route /passport/activity)
 
