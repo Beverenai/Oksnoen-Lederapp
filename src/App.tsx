@@ -45,6 +45,7 @@ const Gjenglemt = lazy(() => import("@/pages/Gjenglemt"));
 const PublicGjenglemt = lazy(() => import("@/pages/PublicGjenglemt"));
 const GjenglemtAdmin = lazy(() => import("@/pages/GjenglemtAdmin"));
 const Roulette = lazy(() => import("@/pages/Roulette"));
+const Gensere = lazy(() => import("@/pages/Gensere"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
