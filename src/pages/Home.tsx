@@ -25,6 +25,7 @@ import {
   Wrench,
   Bed,
   Dices,
+  ChefHat,
   type LucideIcon
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -35,6 +36,8 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullIndicator } from '@/components/ui/pull-indicator';
 import { updateWidgetData } from '@/lib/capacitorWidget';
 import { MessageSquareWarning } from 'lucide-react';
+import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
+import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
 
