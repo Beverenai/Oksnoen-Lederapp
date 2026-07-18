@@ -811,27 +811,18 @@ export default function Home() {
           </Card>
         )}
 
-        {/* Register incident */}
-        <Card
-          className="border border-red-500/30 bg-red-50/50 dark:bg-red-950/20 cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors shadow-sm"
-          onClick={() => navigate('/hendelser')}
-        >
-          <CardContent className="py-3 sm:py-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-red-500/15 shrink-0">
-                <MessageSquareWarning className="w-5 h-5 text-red-600 dark:text-red-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] uppercase tracking-wide text-red-600/80 dark:text-red-400/80 font-medium mb-0.5">
-                  Hendelse
-                </p>
-                <p className="text-sm sm:text-base font-medium text-foreground">
-                  Registrer og se hendelser for deltagere
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Register incident - compact button */}
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/hendelser')}
+            className="border-red-500/30 bg-red-50/50 dark:bg-red-950/20 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 gap-2"
+          >
+            <MessageSquareWarning className="w-4 h-4" />
+            Hendelse
+          </Button>
+        </div>
       </div>
     </div>
   );
