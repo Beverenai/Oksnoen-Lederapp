@@ -315,6 +315,9 @@ export function SecretWordsTab() {
               <Trash2 className="w-4 h-4 mr-2" /> Fjern alt
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Tips: Skriv ut dobbeltsidig og vend langs <strong>langsiden</strong> (bok-vending). Navnet står på forsiden og det hemmelige ordet på baksiden.
+          </p>
         </CardContent>
       </Card>
 
