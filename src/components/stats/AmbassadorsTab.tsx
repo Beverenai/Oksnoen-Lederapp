@@ -14,6 +14,17 @@ interface Row {
   times_attended: number | null;
   cabin: { name: string } | null;
   room: string | null;
+  sweater_size: string | null;
+  sweater_source: 'bought' | 'picked_up' | 'preordered' | null;
+}
+
+const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+
+function sourceLabel(src: Row['sweater_source']): string {
+  if (src === 'bought') return 'Kjøpt';
+  if (src === 'picked_up') return 'Hentet';
+  if (src === 'preordered') return 'Forhåndsbest.';
+  return '';
 }
 
 export function AmbassadorsTab() {
@@ -28,12 +39,26 @@ export function AmbassadorsTab() {
     (async () => {
       const { data } = await supabase
         .from("participants")
-        .select("id, name, image_url, times_attended, room, cabin:cabins(name)")
+        .select("id, name, image_url, times_attended, room, cabin:cabins(name), participant_sweaters(preordered_size, picked_up, picked_up_size, bought_on_camp, bought_size, period_id)")
         .eq("period_id", activePeriodId)
         .gte("times_attended", 4)
         .order("times_attended", { ascending: false })
         .order("name");
-      setRows((data as any) || []);
+      const mapped: Row[] = ((data as any[]) || []).map((p) => {
+        const sw = (p.participant_sweaters || []).find((s: any) => s.period_id === activePeriodId) || (p.participant_sweaters || [])[0];
+        let size: string | null = null;
+        let source: Row['sweater_source'] = null;
+        if (sw?.bought_on_camp && sw?.bought_size) { size = sw.bought_size; source = 'bought'; }
+        else if (sw?.picked_up && sw?.picked_up_size) { size = sw.picked_up_size; source = 'picked_up'; }
+        else if (sw?.preordered_size) { size = sw.preordered_size; source = 'preordered'; }
+        return {
+          id: p.id, name: p.name, image_url: p.image_url,
+          times_attended: p.times_attended, room: p.room, cabin: p.cabin,
+          sweater_size: size ? size.toUpperCase() : null,
+          sweater_source: source,
+        };
+      });
+      setRows(mapped);
       setLoading(false);
     })();
   }, [activePeriodId]);
@@ -71,6 +96,17 @@ export function AmbassadorsTab() {
                   {p.cabin?.name}{p.room ? ` • ${p.room}` : ""}
                 </p>
               </div>
+              {p.sweater_size ? (
+                <Badge
+                  variant="outline"
+                  className="whitespace-nowrap"
+                  title={sourceLabel(p.sweater_source)}
+                >
+                  Str. {p.sweater_size}
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="whitespace-nowrap opacity-70">Ukjent str.</Badge>
+              )}
               <Badge variant="secondary" className="gap-1">
                 <Award className="w-3 h-3" />
                 {years} år
@@ -78,6 +114,32 @@ export function AmbassadorsTab() {
             </Card>
           );
         })}
+      </div>
+    );
+  };
+
+  const renderSizeSummary = (list: Row[]) => {
+    const counts = new Map<string, number>();
+    for (const r of list) {
+      const key = r.sweater_size || 'Ukjent';
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    const entries = Array.from(counts.entries()).sort((a, b) => {
+      const ai = SIZE_ORDER.indexOf(a[0]);
+      const bi = SIZE_ORDER.indexOf(b[0]);
+      if (ai === -1 && bi === -1) return a[0].localeCompare(b[0]);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+    if (entries.length === 0) return null;
+    return (
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {entries.map(([size, count]) => (
+          <Badge key={size} variant="outline" className="text-xs">
+            {size}: {count}
+          </Badge>
+        ))}
       </div>
     );
   };
@@ -99,12 +161,14 @@ export function AmbassadorsTab() {
         <p className="text-xs text-muted-foreground mb-3">
           Deltakere som har vært her 4 år – de blir ambassadører i år.
         </p>
+        {renderSizeSummary(newOnes)}
         {renderList(newOnes)}
       </div>
 
       {veterans.length > 0 && (
         <div className="pt-4 border-t">
           <h3 className="text-sm font-semibold mb-2">Eksisterende ambassadører ({veterans.length})</h3>
+          {renderSizeSummary(veterans)}
           {renderList(veterans)}
         </div>
       )}
