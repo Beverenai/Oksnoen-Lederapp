@@ -140,6 +140,20 @@ export const ParticipantDetailDialog = ({
     staleTime: 60_000,
   });
 
+  const { data: secretWord } = useQuery({
+    queryKey: ['secret-word', participantId],
+    enabled: open && !!participantId,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from('secret_word_assignments')
+        .select('word')
+        .eq('participant_id', participantId!)
+        .maybeSingle();
+      return (data?.word as string | undefined) ?? null;
+    },
+    staleTime: 60_000,
+  });
+
   const participant = data?.participant;
   const healthInfo = data?.healthInfo;
   const activities = data?.activities || [];
@@ -422,6 +436,15 @@ export const ParticipantDetailDialog = ({
                 <div className="flex justify-center mt-1">
                   <TeamBadge teamId={(participant as any).team_id} size="md" />
                 </div>
+
+                {secretWord && (
+                  <div className="flex justify-center mt-2">
+                    <div className="inline-flex flex-col items-center px-4 py-2 rounded-xl bg-primary/10 border border-primary/20">
+                      <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Hemmelig ord</span>
+                      <span className="font-mono text-lg font-bold tracking-wider">{secretWord}</span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground flex-wrap">
                   {participant.birth_date && (
