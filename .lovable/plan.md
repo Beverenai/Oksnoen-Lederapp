@@ -1,31 +1,61 @@
-## Problem
+## Mål
+Ledere kan tildele ekstra poeng til deltakere for prestasjoner (1p for aktivitet, 2p for "ekstra"-variant). Kun synlig når Lag-funksjonen er på. Poeng logges per prestasjon og ruller opp til lagets totale poengsum.
 
-I `TeamsTab.tsx` ligger navn + poeng + +/- knapper + "..." på én rad (`flex items-center gap-2`). På mobil blir raden for trang: lagnavnet (med `flex-1`) skyver kontroll-gruppen mot kanten, knappene (`h-7 w-7`) krymper, og popover-triggeren blir vanskelig/umulig å treffe. Derfor får man ikke lagt til poeng fra telefon.
+## Database
+Ny tabell `participant_bonus_points`:
+- `participant_id` (fk participants)
+- `period_id` (fk periods, default active)
+- `team_id` (fk participant_teams, snapshot av lag ved tildeling)
+- `activity_key` (text, f.eks. "tube", "klatring")
+- `activity_label` (text)
+- `variant` ('base' = 1p | 'extra' = 2p)
+- `points` (int, 1 eller 2)
+- `awarded_by` (fk leaders)
+- `created_at`
 
-## Løsning
+RLS: leaders kan insert/select/delete egne rader i aktiv periode; admin kan alt. GRANT authenticated + service_role.
 
-Rediger kun `src/components/stats/TeamsTab.tsx` (leaderboard-raden ~L430–475). Ingen datalogikk endres.
+## Fast liste (hardkodet i `src/lib/bonusActivities.ts`)
+| Aktivitet (1p) | Ekstra (2p) |
+|---|---|
+| Tube | I blinde |
+| Vannski | En ski |
+| Seiling | Til og fra strand uten hjelp |
+| Skrikeren Svømming | 1, 2, 3 plass |
+| Sjøslag | 1, 2, 3 plass |
+| Triatlon | 1, 2, 3 plass |
+| Klatring | Toppen av vanskelig vegg |
+| Ræppis | Under 30 sekunder |
+| Slottsholmen | 13 meter |
+| Bruskasser | Over 20 kasser |
+| Pil og bue | 8 eller bedre |
+| Motorbåter | — |
+| Riding | — |
+| Tau-bane | — |
 
-1. Splitt raden i to linjer på mobil:
-   - Linje 1: rank + fargeprikk + lagnavn + totalpoeng-badge.
-   - Linje 2: full-bredde kontroll-rad med `Minus` / bonus-tall / `Plus` / `BonusAmountPopover`, høyrejustert.
-   - På `sm:` og oppover: behold én-linje layout som i dag.
+## UI
+**ParticipantDetailDialog** (Passkontroll):
+- Ny seksjon "Ekstra poeng" mellom Insjpoeng og aktiviteter
+- Kun synlig når `teams_enabled = true` OG deltaker har `team_id`
+- Header viser lagbadge + sum tildelte bonuspoeng for deltakeren i aktiv periode
+- Grid med aktivitetsrader: navn til venstre, to knapper til høyre — `+1 Aktivitet` og `+2 Ekstra` (skjul Ekstra der den ikke finnes)
+- Trykk = optimistisk insert, toast "Tildelt X poeng til {navn}"
+- Under: liste over allerede tildelte poeng med sletteknapp (leder kan slette egne, admin kan slette alle)
 
-2. Gjør knappene lettere å trykke på mobil:
-   - `Minus` / `Plus` / `MoreHorizontal`: `h-9 w-9` på mobil, `sm:h-7 sm:w-7` på desktop.
-   - Legg til `shrink-0` på hele kontroll-gruppen og på total-badge slik at ingenting krymper bort.
-   - `touch-manipulation` på knappene for å hindre 300ms tap-delay.
+## Poeng-oppsummering i TeamsTab
+Utvid `TeamsTab` leaderboard slik at lagets totale poeng også inkluderer sum av `participant_bonus_points.points` for laget (filtrert på aktiv periode), i tillegg til eksisterende insjpoeng + bonus_points-justeringer.
 
-3. Sørg for at `BonusAmountPopover` fungerer på mobil:
-   - `PopoverContent` med `align="end"` og `sideOffset={6}`, `className="w-[calc(100vw-2rem)] max-w-xs"` slik at popoveren ikke går utenfor viewport.
-   - Grid av forhåndsvalg: `grid-cols-4` med `h-10` knapper på mobil for bedre trykkflate.
-   - Custom-input: `type="number" inputMode="numeric"` (allerede der) — behold, men gjør `Input` `h-10` og `Legg til`-knappen `h-10` på mobil.
+## Hook
+`useParticipantBonusPoints(participantId)` — henter rader for aktiv periode + `addBonus({activityKey, label, variant, points})` + `removeBonus(id)`, optimistiske oppdateringer, invalidate `participant-teams` og `bonus-points`.
 
-4. Fjern duplisert "bonus"-linje under raden (L463–467) siden bonuspoenget nå alltid vises i kontroll-raden.
+## Filer
+- Ny: `supabase/migrations/*` (tabell + RLS + GRANTs + indeks på period_id, team_id, participant_id)
+- Ny: `src/lib/bonusActivities.ts`
+- Ny: `src/hooks/useParticipantBonusPoints.ts`
+- Endret: `src/components/passport/ParticipantDetailDialog.tsx` (seksjon skjules når `!teamsEnabled`)
+- Endret: `src/components/stats/TeamsTab.tsx` (inkluder bonuspoeng i lag-sum)
 
-## Verifikasjon
-
-- Sett preview til mobil-viewport og bekreft at +/-/... er trykkbare og popover åpner innenfor skjermen.
-- Trykk +1 og bekreft at totalen øker (optimistisk update finnes allerede i `adjustBonus`).
-
-Ingen migrasjoner, ingen backend-endringer.
+## Avgrensninger
+- Ingen admin-UI for å redigere listen — hardkodet per bekreftelse
+- Ingen egen side/hjem-snarvei
+- Insjpoeng-telleren beholdes uendret (separat fra bonuspoeng)

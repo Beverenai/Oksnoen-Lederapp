@@ -10,11 +10,12 @@ import {
   ResponsiveDialogTitle,
 } from '@/components/ui/responsive-dialog';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +26,9 @@ import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { isNativeCameraAvailable, takePhoto } from '@/lib/capacitorCamera';
 import { IncidentSheet } from '@/components/incidents/IncidentSheet';
 import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailSheet';
+import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
+import { useParticipantBonusPoints } from '@/hooks/useParticipantBonusPoints';
+import { BONUS_ACTIVITIES } from '@/lib/bonusActivities';
 import type { Tables } from '@/integrations/supabase/types';
 
 interface ParticipantWithCabin {
@@ -106,6 +110,117 @@ const calculateAge = (birthDate: string | null): number | null => {
   return age;
 };
 
+function BonusPointsSection({
+  participantId,
+  teamId,
+  isAdmin,
+  currentLeaderId,
+}: {
+  participantId: string;
+  teamId: string | null;
+  isAdmin: boolean;
+  currentLeaderId: string | null;
+}) {
+  const { data: rows = [], addBonus, removeBonus } = useParticipantBonusPoints(participantId);
+  const { showSuccess, showError } = useStatusPopup();
+  const total = rows.reduce((sum, r) => sum + r.points, 0);
+  const [open, setOpen] = useState(false);
+  const extraActivities = BONUS_ACTIVITIES.filter((a) => !!a.extra);
+
+  const handleAdd = async (activityKey: string, activityLabel: string) => {
+    const points = 2;
+    try {
+      await addBonus.mutateAsync({ activityKey, activityLabel, variant: 'extra', points, teamId });
+      hapticSuccess();
+      showSuccess('Poeng tildelt', `+${points} for ${activityLabel}`);
+    } catch (e: any) {
+      hapticError();
+      showError('Feil', e?.message ?? 'Kunne ikke tildele poeng');
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    try {
+      await removeBonus.mutateAsync(id);
+      hapticSuccess();
+    } catch (e: any) {
+      showError('Feil', e?.message ?? 'Kunne ikke fjerne');
+    }
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="outline" className="w-full justify-between h-11">
+          <span className="flex items-center gap-2">
+            <Star className="h-4 w-4 text-amber-500" />
+            Ekstra poeng
+          </span>
+          <Badge variant="secondary" className="tabular-nums">{total} p</Badge>
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <Star className="h-4 w-4 text-amber-500" />
+            Ekstra poeng
+            <Badge variant="secondary" className="tabular-nums ml-auto">{total} p</Badge>
+          </SheetTitle>
+        </SheetHeader>
+        <div className="space-y-3 mt-3">
+          <p className="text-xs text-muted-foreground">
+            Vanlige aktiviteter registreres i «Aktiviteter». Her gir du +2 for ekstra-varianter.
+          </p>
+          <div className="rounded-lg border divide-y overflow-hidden">
+            {extraActivities.map((a) => (
+              <div key={a.key} className="flex items-center gap-2 p-2 text-sm">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{a.label}</div>
+                  <div className="text-xs text-muted-foreground truncate">{a.extra}</div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9 px-3 shrink-0"
+                  onClick={() => handleAdd(a.key, `${a.label} — ${a.extra}`)}
+                  disabled={addBonus.isPending}
+                >
+                  +2
+                </Button>
+              </div>
+            ))}
+          </div>
+          {rows.length > 0 && (
+            <div className="space-y-1 pt-1">
+              <p className="text-xs text-muted-foreground">Tildelt</p>
+              {rows.map((r) => {
+                const canDelete = isAdmin || (currentLeaderId && r.awarded_by === currentLeaderId);
+                return (
+                  <div key={r.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-muted/40">
+                    <Badge variant="default" className="tabular-nums">+{r.points}</Badge>
+                    <span className="flex-1 truncate">{r.activity_label}</span>
+                    {canDelete && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 shrink-0"
+                        onClick={() => handleRemove(r.id)}
+                        aria-label="Fjern"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export const ParticipantDetailDialog = ({
   participantId,
   open,
@@ -115,6 +230,7 @@ export const ParticipantDetailDialog = ({
   const { leader, isAdmin, isNurse } = useAuth();
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const queryClient = useQueryClient();
+  const teamsEnabled = useTeamsEnabled();
   const [activityNotes, setActivityNotes] = useState('');
   const [notesStatus, setNotesStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -586,6 +702,16 @@ export const ParticipantDetailDialog = ({
                     </Button>
                   </div>
                 </div>
+
+                {/* Ekstra poeng — kun når Lag er aktivt */}
+                {teamsEnabled && (
+                  <BonusPointsSection
+                    participantId={participant.id}
+                    teamId={(participant as any).team_id ?? null}
+                    isAdmin={isAdmin}
+                    currentLeaderId={leader?.id ?? null}
+                  />
+                )}
 
                 {/* Activities */}
                 <div className="space-y-1.5">

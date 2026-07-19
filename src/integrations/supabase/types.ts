@@ -897,6 +897,74 @@ export type Database = {
           },
         ]
       }
+      participant_bonus_points: {
+        Row: {
+          activity_key: string
+          activity_label: string
+          awarded_by: string | null
+          created_at: string
+          id: string
+          participant_id: string
+          period_id: string
+          points: number
+          team_id: string | null
+          variant: string
+        }
+        Insert: {
+          activity_key: string
+          activity_label: string
+          awarded_by?: string | null
+          created_at?: string
+          id?: string
+          participant_id: string
+          period_id: string
+          points: number
+          team_id?: string | null
+          variant: string
+        }
+        Update: {
+          activity_key?: string
+          activity_label?: string
+          awarded_by?: string | null
+          created_at?: string
+          id?: string
+          participant_id?: string
+          period_id?: string
+          points?: number
+          team_id?: string | null
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_bonus_points_awarded_by_fkey"
+            columns: ["awarded_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_bonus_points_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_bonus_points_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_bonus_points_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "participant_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participant_bookings: {
         Row: {
           address: string | null
