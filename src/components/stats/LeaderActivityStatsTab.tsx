@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronDown, ChevronUp, ChevronRight, Activity, Users, Clock } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronRight, Activity, Users, Clock, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 
@@ -132,6 +132,58 @@ export function LeaderActivityStatsTab() {
   const totalRegistrations = activities?.length || 0;
   const totalLeaders = leaderStats.length;
 
+  // Extra points (bonus) per leader
+  const { data: bonusRows } = useQuery({
+    queryKey: ['leader-bonus-stats', activePeriodId],
+    enabled: !!activePeriodId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('participant_bonus_points')
+        .select(`
+          id, activity_label, variant, points, created_at, awarded_by,
+          leaders:awarded_by (id, name, profile_image_url),
+          participants:participant_id (id, name, first_name, cabins:cabin_id (name))
+        `)
+        .eq('period_id', activePeriodId!)
+        .not('awarded_by', 'is', null)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+  });
+
+  const bonusStats = useMemo(() => {
+    if (!bonusRows) return [];
+    const map = new Map<string, {
+      id: string; name: string; profileImage: string | null;
+      totalPoints: number; totalCount: number;
+      entries: { id: string; label: string; points: number; participant: string; cabin: string | null; when: Date }[];
+    }>();
+    for (const r of bonusRows) {
+      if (!r.leaders) continue;
+      const id = r.leaders.id;
+      let s = map.get(id);
+      if (!s) {
+        s = { id, name: r.leaders.name, profileImage: r.leaders.profile_image_url, totalPoints: 0, totalCount: 0, entries: [] };
+        map.set(id, s);
+      }
+      s.totalPoints += r.points || 0;
+      s.totalCount += 1;
+      s.entries.push({
+        id: r.id,
+        label: r.activity_label,
+        points: r.points || 0,
+        participant: r.participants?.first_name || r.participants?.name || 'Ukjent',
+        cabin: r.participants?.cabins?.name || null,
+        when: new Date(r.created_at),
+      });
+    }
+    return Array.from(map.values()).sort((a, b) => b.totalPoints - a.totalPoints);
+  }, [bonusRows]);
+
+  const totalBonusPoints = bonusStats.reduce((a, s) => a + s.totalPoints, 0);
+  const [expandedBonusLeader, setExpandedBonusLeader] = useState<string | null>(null);
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -172,6 +224,72 @@ export function LeaderActivityStatsTab() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Extra points */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            Ekstra poeng gitt
+            <Badge variant="secondary" className="ml-auto">{totalBonusPoints} p</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {bonusStats.length === 0 ? (
+            <div className="p-6 text-center text-muted-foreground text-sm">
+              Ingen ekstra poeng gitt ennå
+            </div>
+          ) : (
+            <ScrollArea className="max-h-[400px]">
+              <div className="divide-y">
+                {bonusStats.map((leader) => {
+                  const isExpanded = expandedBonusLeader === leader.id;
+                  return (
+                    <div key={leader.id}>
+                      <button
+                        className="w-full p-4 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left"
+                        onClick={() => setExpandedBonusLeader(isExpanded ? null : leader.id)}
+                      >
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={leader.profileImage || undefined} />
+                          <AvatarFallback>{leader.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{leader.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {leader.totalCount} tildelinger
+                          </p>
+                        </div>
+                        <Badge variant="secondary" className="font-bold">
+                          {leader.totalPoints} p
+                        </Badge>
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                      {isExpanded && (
+                        <div className="px-4 pb-4 bg-muted/30 space-y-1">
+                          {leader.entries.map((e) => (
+                            <div key={e.id} className="flex items-center justify-between text-xs py-1 border-b border-muted last:border-0">
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate"><span className="font-medium">{e.participant}</span>{e.cabin && <span className="text-muted-foreground"> · {e.cabin}</span>}</p>
+                                <p className="text-muted-foreground truncate">{e.label} · {format(e.when, 'dd. MMM HH:mm', { locale: nb })}</p>
+                              </div>
+                              <Badge variant="outline" className="ml-2 shrink-0">+{e.points}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Leader List */}
       <Card>
