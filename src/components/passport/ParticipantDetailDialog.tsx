@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +24,9 @@ import { TeamBadge } from '@/components/participants/TeamBadge';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { IncidentSheet } from '@/components/incidents/IncidentSheet';
 import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailSheet';
+import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
+import { useParticipantBonusPoints } from '@/hooks/useParticipantBonusPoints';
+import { BONUS_ACTIVITIES } from '@/lib/bonusActivities';
 import type { Tables } from '@/integrations/supabase/types';
 
 interface ParticipantWithCabin {
@@ -114,6 +117,7 @@ export const ParticipantDetailDialog = ({
   const { leader, isAdmin, isNurse } = useAuth();
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const queryClient = useQueryClient();
+  const teamsEnabled = useTeamsEnabled();
   const [activityNotes, setActivityNotes] = useState('');
   const [notesStatus, setNotesStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -563,6 +567,16 @@ export const ParticipantDetailDialog = ({
                     </Button>
                   </div>
                 </div>
+
+                {/* Ekstra poeng — kun når Lag er aktivt */}
+                {teamsEnabled && (
+                  <BonusPointsSection
+                    participantId={participant.id}
+                    teamId={(participant as any).team_id ?? null}
+                    isAdmin={isAdmin}
+                    currentLeaderId={leader?.id ?? null}
+                  />
+                )}
 
                 {/* Activities */}
                 <div className="space-y-1.5">
