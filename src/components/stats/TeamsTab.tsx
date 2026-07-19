@@ -60,7 +60,7 @@ export function TeamsTab() {
   const { data: teamPoints } = useQuery({
     queryKey: ['team-points', periodId ?? 'none'],
     enabled: !!periodId,
-    queryFn: async (): Promise<Record<string, { matches: number; activities: number; total: number }>> => {
+    queryFn: async (): Promise<Record<string, { matches: number; activities: number; bonus: number; total: number }>> => {
       const { data: matches, error } = await (supabase as any)
         .from('secret_word_matches')
         .select('participant_a_id, participant_b_id')
@@ -72,11 +72,11 @@ export function TeamsTab() {
         .eq('period_id', periodId!);
       const teamById = new Map<string, string | null>();
       (parts || []).forEach((p: any) => teamById.set(p.id, p.team_id));
-      const pts: Record<string, { matches: number; activities: number; total: number }> = {};
-      const bump = (t: string, key: 'matches' | 'activities') => {
-        if (!pts[t]) pts[t] = { matches: 0, activities: 0, total: 0 };
-        pts[t][key] += 1;
-        pts[t].total += 1;
+      const pts: Record<string, { matches: number; activities: number; bonus: number; total: number }> = {};
+      const bump = (t: string, key: 'matches' | 'activities' | 'bonus', amount = 1) => {
+        if (!pts[t]) pts[t] = { matches: 0, activities: 0, bonus: 0, total: 0 };
+        pts[t][key] += amount;
+        pts[t].total += amount;
       };
       (matches || []).forEach((m: any) => {
         const ta = teamById.get(m.participant_a_id);
@@ -94,6 +94,15 @@ export function TeamsTab() {
         (acts || []).forEach((a: any) => {
           const t = teamById.get(a.participant_id);
           if (t) bump(t, 'activities');
+        });
+        // Bonus points from participant_bonus_points
+        const { data: bonuses } = await (supabase as any)
+          .from('participant_bonus_points')
+          .select('participant_id, points, team_id')
+          .eq('period_id', periodId!);
+        (bonuses || []).forEach((b: any) => {
+          const t = b.team_id ?? teamById.get(b.participant_id);
+          if (t) bump(t, 'bonus', b.points ?? 0);
         });
       }
       return pts;
@@ -117,7 +126,7 @@ export function TeamsTab() {
     if (!teams) return [];
     return [...teams]
       .map((t) => {
-        const pts = teamPoints?.[t.id] ?? { matches: 0, activities: 0, total: 0 };
+        const pts = teamPoints?.[t.id] ?? { matches: 0, activities: 0, bonus: 0, total: 0 };
         const members = membersByTeam.get(t.id)?.length ?? 0;
         const bonus = t.bonus_points ?? 0;
         return { ...t, ...pts, bonus, total: pts.total + bonus, members };
