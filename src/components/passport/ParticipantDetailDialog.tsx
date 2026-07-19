@@ -10,6 +10,7 @@ import {
   ResponsiveDialogTitle,
 } from '@/components/ui/responsive-dialog';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -122,15 +123,13 @@ function BonusPointsSection({
   const { data: rows = [], addBonus, removeBonus } = useParticipantBonusPoints(participantId);
   const { showSuccess, showError } = useStatusPopup();
   const total = rows.reduce((sum, r) => sum + r.points, 0);
+  const [open, setOpen] = useState(false);
+  const extraActivities = BONUS_ACTIVITIES.filter((a) => !!a.extra);
 
-  const handleAdd = async (
-    activityKey: string,
-    activityLabel: string,
-    variant: 'base' | 'extra',
-  ) => {
-    const points = variant === 'extra' ? 2 : 1;
+  const handleAdd = async (activityKey: string, activityLabel: string) => {
+    const points = 2;
     try {
-      await addBonus.mutateAsync({ activityKey, activityLabel, variant, points, teamId });
+      await addBonus.mutateAsync({ activityKey, activityLabel, variant: 'extra', points, teamId });
       hapticSuccess();
       showSuccess('Poeng tildelt', `+${points} for ${activityLabel}`);
     } catch (e: any) {
@@ -149,72 +148,75 @@ function BonusPointsSection({
   };
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between text-sm font-medium">
-        <div className="flex items-center gap-2">
-          <Star className="h-4 w-4 text-amber-500" />
-          <span>Ekstra poeng</span>
-        </div>
-        <Badge variant="secondary" className="tabular-nums">{total} p</Badge>
-      </div>
-      <div className="rounded-lg border divide-y overflow-hidden">
-        {BONUS_ACTIVITIES.map((a) => (
-          <div key={a.key} className="flex items-center gap-2 p-2 text-sm">
-            <span className="flex-1 truncate">{a.label}</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 px-2 shrink-0"
-              onClick={() => handleAdd(a.key, a.label, 'base')}
-              disabled={addBonus.isPending}
-            >
-              +1
-            </Button>
-            {a.extra ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 px-2 shrink-0"
-                onClick={() => handleAdd(a.key, `${a.label} — ${a.extra}`, 'extra')}
-                disabled={addBonus.isPending}
-                title={a.extra}
-              >
-                +2
-              </Button>
-            ) : (
-              <span className="w-[42px] shrink-0" />
-            )}
-          </div>
-        ))}
-      </div>
-      {rows.length > 0 && (
-        <div className="space-y-1 pt-1">
-          <p className="text-xs text-muted-foreground">Tildelt</p>
-          {rows.map((r) => {
-            const canDelete = isAdmin || (currentLeaderId && r.awarded_by === currentLeaderId);
-            return (
-              <div key={r.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-muted/40">
-                <Badge variant={r.variant === 'extra' ? 'default' : 'secondary'} className="tabular-nums">
-                  +{r.points}
-                </Badge>
-                <span className="flex-1 truncate">{r.activity_label}</span>
-                {canDelete && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-6 w-6 shrink-0"
-                    onClick={() => handleRemove(r.id)}
-                    aria-label="Fjern"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                )}
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="outline" className="w-full justify-between h-11">
+          <span className="flex items-center gap-2">
+            <Star className="h-4 w-4 text-amber-500" />
+            Ekstra poeng
+          </span>
+          <Badge variant="secondary" className="tabular-nums">{total} p</Badge>
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <Star className="h-4 w-4 text-amber-500" />
+            Ekstra poeng
+            <Badge variant="secondary" className="tabular-nums ml-auto">{total} p</Badge>
+          </SheetTitle>
+        </SheetHeader>
+        <div className="space-y-3 mt-3">
+          <p className="text-xs text-muted-foreground">
+            Vanlige aktiviteter registreres i «Aktiviteter». Her gir du +2 for ekstra-varianter.
+          </p>
+          <div className="rounded-lg border divide-y overflow-hidden">
+            {extraActivities.map((a) => (
+              <div key={a.key} className="flex items-center gap-2 p-2 text-sm">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{a.label}</div>
+                  <div className="text-xs text-muted-foreground truncate">{a.extra}</div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9 px-3 shrink-0"
+                  onClick={() => handleAdd(a.key, `${a.label} — ${a.extra}`)}
+                  disabled={addBonus.isPending}
+                >
+                  +2
+                </Button>
               </div>
-            );
-          })}
+            ))}
+          </div>
+          {rows.length > 0 && (
+            <div className="space-y-1 pt-1">
+              <p className="text-xs text-muted-foreground">Tildelt</p>
+              {rows.map((r) => {
+                const canDelete = isAdmin || (currentLeaderId && r.awarded_by === currentLeaderId);
+                return (
+                  <div key={r.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-muted/40">
+                    <Badge variant="default" className="tabular-nums">+{r.points}</Badge>
+                    <span className="flex-1 truncate">{r.activity_label}</span>
+                    {canDelete && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 shrink-0"
+                        onClick={() => handleRemove(r.id)}
+                        aria-label="Fjern"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
