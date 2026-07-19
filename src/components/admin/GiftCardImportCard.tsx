@@ -16,7 +16,8 @@ interface Parsed {
 
 // Split "AdaAurmo" / "AnneMariaSchøyen" into first + last (last = last capitalized chunk)
 function splitCamelName(blob: string): { firstName: string; lastName: string } {
-  const parts = blob.match(/[A-ZÆØÅ][^A-ZÆØÅ]*/g) || [];
+  // Split on capital letters, keeping initials like "H." together and preserving spaces.
+  const parts = blob.match(/[A-ZÆØÅ][a-zæøåA-ZÆØÅ.\-']*/g) || [];
   if (parts.length === 0) return { firstName: blob, lastName: '' };
   if (parts.length === 1) return { firstName: parts[0], lastName: '' };
   const lastName = parts[parts.length - 1];
@@ -27,13 +28,14 @@ function splitCamelName(blob: string): { firstName: string; lastName: string } {
 function parseGiftCardBlob(text: string): Parsed[] {
   // Remove common headers
   let cleaned = text.replace(/Fornavn|Etternavn|Gavekort/gi, '');
-  // Split on whitespace/newlines first, then process each chunk
-  cleaned = cleaned.replace(/\s+/g, '');
+  // Collapse repeated whitespace but keep single spaces so initials with periods survive
+  cleaned = cleaned.replace(/\s+/g, ' ');
   const out: Parsed[] = [];
-  const regex = /([A-Za-zÆØÅæøå\-']+?)(\d{4,8})/g;
+  // Allow periods, hyphens, apostrophes and spaces inside the name segment
+  const regex = /([A-Za-zÆØÅæøå][A-Za-zÆØÅæøå.\-'\s]*?)(\d{4,8})/g;
   let m: RegExpExecArray | null;
   while ((m = regex.exec(cleaned)) !== null) {
-    const nameBlob = m[1];
+    const nameBlob = m[1].trim();
     const num = m[2];
     const { firstName, lastName } = splitCamelName(nameBlob);
     out.push({ rawName: nameBlob, firstName, lastName, giftCard: num });
@@ -42,7 +44,7 @@ function parseGiftCardBlob(text: string): Parsed[] {
 }
 
 function norm(s: string | null | undefined) {
-  return (s || '').toLowerCase().replace(/[\s\-']/g, '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+  return (s || '').toLowerCase().replace(/[\s\-'.]/g, '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
 }
 
 export function GiftCardImportCard({ onImported }: { onImported?: () => void }) {
