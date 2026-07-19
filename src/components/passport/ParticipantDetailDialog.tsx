@@ -108,6 +108,116 @@ const calculateAge = (birthDate: string | null): number | null => {
   return age;
 };
 
+function BonusPointsSection({
+  participantId,
+  teamId,
+  isAdmin,
+  currentLeaderId,
+}: {
+  participantId: string;
+  teamId: string | null;
+  isAdmin: boolean;
+  currentLeaderId: string | null;
+}) {
+  const { data: rows = [], addBonus, removeBonus } = useParticipantBonusPoints(participantId);
+  const { showSuccess, showError } = useStatusPopup();
+  const total = rows.reduce((sum, r) => sum + r.points, 0);
+
+  const handleAdd = async (
+    activityKey: string,
+    activityLabel: string,
+    variant: 'base' | 'extra',
+  ) => {
+    const points = variant === 'extra' ? 2 : 1;
+    try {
+      await addBonus.mutateAsync({ activityKey, activityLabel, variant, points, teamId });
+      hapticSuccess();
+      showSuccess('Poeng tildelt', `+${points} for ${activityLabel}`);
+    } catch (e: any) {
+      hapticError();
+      showError('Feil', e?.message ?? 'Kunne ikke tildele poeng');
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    try {
+      await removeBonus.mutateAsync(id);
+      hapticSuccess();
+    } catch (e: any) {
+      showError('Feil', e?.message ?? 'Kunne ikke fjerne');
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-sm font-medium">
+        <div className="flex items-center gap-2">
+          <Star className="h-4 w-4 text-amber-500" />
+          <span>Ekstra poeng</span>
+        </div>
+        <Badge variant="secondary" className="tabular-nums">{total} p</Badge>
+      </div>
+      <div className="rounded-lg border divide-y overflow-hidden">
+        {BONUS_ACTIVITIES.map((a) => (
+          <div key={a.key} className="flex items-center gap-2 p-2 text-sm">
+            <span className="flex-1 truncate">{a.label}</span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 px-2 shrink-0"
+              onClick={() => handleAdd(a.key, a.label, 'base')}
+              disabled={addBonus.isPending}
+            >
+              +1
+            </Button>
+            {a.extra ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 px-2 shrink-0"
+                onClick={() => handleAdd(a.key, `${a.label} — ${a.extra}`, 'extra')}
+                disabled={addBonus.isPending}
+                title={a.extra}
+              >
+                +2
+              </Button>
+            ) : (
+              <span className="w-[42px] shrink-0" />
+            )}
+          </div>
+        ))}
+      </div>
+      {rows.length > 0 && (
+        <div className="space-y-1 pt-1">
+          <p className="text-xs text-muted-foreground">Tildelt</p>
+          {rows.map((r) => {
+            const canDelete = isAdmin || (currentLeaderId && r.awarded_by === currentLeaderId);
+            return (
+              <div key={r.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-muted/40">
+                <Badge variant={r.variant === 'extra' ? 'default' : 'secondary'} className="tabular-nums">
+                  +{r.points}
+                </Badge>
+                <span className="flex-1 truncate">{r.activity_label}</span>
+                {canDelete && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 shrink-0"
+                    onClick={() => handleRemove(r.id)}
+                    aria-label="Fjern"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const ParticipantDetailDialog = ({
   participantId,
   open,
