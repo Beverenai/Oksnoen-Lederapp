@@ -18,5 +18,5 @@ export const BONUS_ACTIVITIES: BonusActivity[] = [
   { key: 'pil_og_bue', label: 'Pil og bue', extra: '8 eller bedre' },
   { key: 'motorbater', label: 'Motorbåter' },
   { key: 'riding', label: 'Riding' },
-  { key: 'tau_bane', label: 'Tau-bane' },
+  { key: 'tau_bane', label: 'Tau-bane', extra: 'Baklengs' },
 ];
