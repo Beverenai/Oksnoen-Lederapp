@@ -61,28 +61,27 @@ export function TeamsTab() {
     queryKey: ['team-points', periodId ?? 'none'],
     enabled: !!periodId,
     queryFn: async (): Promise<Record<string, { matches: number; activities: number; bonus: number; total: number }>> => {
-      const { data: matches, error } = await (supabase as any)
-        .from('secret_word_matches')
-        .select('participant_a_id, participant_b_id')
-        .eq('period_id', periodId!);
-      if (error) throw error;
-      const { data: parts } = await supabase
+      const { data: parts } = await (supabase as any)
         .from('participants')
-        .select('id, team_id')
+        .select('id, team_id, insj_points')
         .eq('period_id', periodId!);
       const teamById = new Map<string, string | null>();
-      (parts || []).forEach((p: any) => teamById.set(p.id, p.team_id));
+      const insjById = new Map<string, number>();
+      (parts || []).forEach((p: any) => {
+        teamById.set(p.id, p.team_id);
+        insjById.set(p.id, p.insj_points ?? 0);
+      });
       const pts: Record<string, { matches: number; activities: number; bonus: number; total: number }> = {};
       const bump = (t: string, key: 'matches' | 'activities' | 'bonus', amount = 1) => {
         if (!pts[t]) pts[t] = { matches: 0, activities: 0, bonus: 0, total: 0 };
         pts[t][key] += amount;
         pts[t].total += amount;
       };
-      (matches || []).forEach((m: any) => {
-        const ta = teamById.get(m.participant_a_id);
-        const tb = teamById.get(m.participant_b_id);
-        if (ta) bump(ta, 'matches');
-        if (tb && tb !== ta) bump(tb, 'matches');
+      // Insjpoeng: sum av participants.insj_points (samme kilde som +/- på deltakerprofil)
+      (parts || []).forEach((p: any) => {
+        if (p.team_id && (p.insj_points ?? 0) > 0) {
+          bump(p.team_id, 'matches', p.insj_points);
+        }
       });
       // Activities: +1 per completed activity to the participant's team
       const participantIds = (parts || []).map((p: any) => p.id);
