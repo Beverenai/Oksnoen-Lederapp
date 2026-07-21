@@ -631,6 +631,15 @@ export const ParticipantDetailDialog = ({
               </ResponsiveDialogHeader>
 
               <div className="space-y-4">
+                {/* Total poeng — kun når Lag er aktivt */}
+                {teamsEnabled && (
+                  <ParticipantTotalPoints
+                    participantId={participant.id}
+                    activities={activities}
+                    insjPoints={participant.insj_points ?? 0}
+                  />
+                )}
+
                 {/* Info fra Nurse */}
                 {healthInfo?.info && (
                   <div className="space-y-1.5">
