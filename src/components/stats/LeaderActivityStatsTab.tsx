@@ -463,7 +463,7 @@ export function LeaderActivityStatsTab() {
               <p>Ingen aktiviteter registrert ennå</p>
             </div>
           ) : (
-            <ScrollArea className="max-h-[400px]">
+            <div className="max-h-[400px] overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
               <div className="divide-y">
                 {leaderStats.map((leader) => {
                   const isExpanded = expandedLeader === leader.id;
