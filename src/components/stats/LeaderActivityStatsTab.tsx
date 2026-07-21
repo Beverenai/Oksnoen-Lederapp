@@ -333,7 +333,7 @@ export function LeaderActivityStatsTab() {
               Ingen ekstra poeng gitt ennå
             </div>
           ) : (
-            <ScrollArea className="max-h-[400px]">
+            <div className="max-h-[400px] overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
               <div className="divide-y">
                 {bonusStats.map((leader) => {
                   const isExpanded = expandedBonusLeader === leader.id;
@@ -379,7 +379,7 @@ export function LeaderActivityStatsTab() {
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -399,7 +399,7 @@ export function LeaderActivityStatsTab() {
               Ingen notater eller hendelser registrert ennå
             </div>
           ) : (
-            <ScrollArea className="max-h-[400px]">
+            <div className="max-h-[400px] overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
               <div className="divide-y">
                 {contribStats.map((leader) => {
                   const isExpanded = expandedContribLeader === leader.id;
@@ -446,7 +446,7 @@ export function LeaderActivityStatsTab() {
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -463,7 +463,7 @@ export function LeaderActivityStatsTab() {
               <p>Ingen aktiviteter registrert ennå</p>
             </div>
           ) : (
-            <ScrollArea className="max-h-[400px]">
+            <div className="max-h-[400px] overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
               <div className="divide-y">
                 {leaderStats.map((leader) => {
                   const isExpanded = expandedLeader === leader.id;
@@ -551,7 +551,7 @@ export function LeaderActivityStatsTab() {
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
           )}
         </CardContent>
       </Card>

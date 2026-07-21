@@ -123,11 +123,27 @@ const isAutoDefaultRange = (range: string) => /^'?Sheet1'?!A1:Z{1,2}1000$/i.test
 async function fetchSheetValues(spreadsheetId: string, range: string, headers: HeadersInit) {
   // Encode special chars like '+' (which Google decodes as space in paths) but keep ':' and '!' readable.
   const encodedRange = encodeURIComponent(range).replace(/%3A/gi, ':').replace(/%21/g, '!');
-  const res = await fetch(`${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${encodedRange}`, { headers });
+  const res = await fetchWithRetry(`${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${encodedRange}`, { headers });
   const text = await res.text();
   if (!res.ok) throw new Error(`Google Sheets fetch failed [${res.status}]: ${text}`);
   const data = JSON.parse(text);
   return { range, values: (data.values || []) as string[][] };
+}
+
+async function fetchWithRetry(url: string, init: RequestInit, maxRetries = 5): Promise<Response> {
+  let attempt = 0;
+  while (true) {
+    const res = await fetch(url, init);
+    if (res.status !== 429 && res.status < 500) return res;
+    if (attempt >= maxRetries) return res;
+    const retryAfter = Number(res.headers.get('retry-after'));
+    const delay = Number.isFinite(retryAfter) && retryAfter > 0
+      ? retryAfter * 1000
+      : Math.min(30000, 1000 * Math.pow(2, attempt)) + Math.floor(Math.random() * 500);
+    try { await res.body?.cancel(); } catch { /* ignore */ }
+    await new Promise((r) => setTimeout(r, delay));
+    attempt++;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -179,7 +195,7 @@ Deno.serve(async (req) => {
     let sheetTitles: string[] = [];
     const needsMetadata = !range.includes('!') || isAutoDefaultRange(range);
     if (needsMetadata) {
-      const metaRes = await fetch(`${GATEWAY_URL}/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`, { headers: gatewayHeaders });
+      const metaRes = await fetchWithRetry(`${GATEWAY_URL}/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`, { headers: gatewayHeaders });
       const metaText = await metaRes.text();
       if (!metaRes.ok) return new Response(JSON.stringify({ error: `Kunne ikke hente arkinfo [${metaRes.status}]: ${metaText}` }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       const meta = JSON.parse(metaText);
