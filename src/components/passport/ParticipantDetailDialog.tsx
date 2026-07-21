@@ -28,6 +28,7 @@ import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailShe
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { useParticipantBonusPoints } from '@/hooks/useParticipantBonusPoints';
 import { BONUS_ACTIVITIES } from '@/lib/bonusActivities';
+import { computeParticipantPoints } from '@/lib/participantPoints';
 import type { Tables } from '@/integrations/supabase/types';
 
 interface ParticipantWithCabin {
