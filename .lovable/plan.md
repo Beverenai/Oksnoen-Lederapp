@@ -29,7 +29,7 @@ Total = aktiviteter + insjpoeng + bonus.
 ## Teknisk
 
 ```text
-Standard-aktivitet? 
+Standard-aktivitet?
   ja  -> legg navnet i Set, +1 kun første gang
   nei -> +1 hver gang
 ```

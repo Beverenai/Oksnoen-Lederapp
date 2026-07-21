@@ -864,7 +864,7 @@ export const ParticipantDetailDialog = ({
                          };
 
                          // Try progressively looser matches
-                         let row =
+                         const row =
                            (await runQuery({ firstPattern: firstFull, lastPattern: lastFull, useDob: true })) ||
                            (await runQuery({ firstPattern: firstFull, lastPattern: lastFull, useDob: false })) ||
                            (await runQuery({ firstPattern: `${firstToken}%`, lastPattern: `%${lastToken}`, useDob: true })) ||

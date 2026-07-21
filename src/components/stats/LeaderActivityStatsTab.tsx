@@ -5,7 +5,6 @@ import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, ChevronUp, ChevronRight, Activity, Users, Clock, Sparkles, MessageSquare, AlertTriangle, Home, Stethoscope } from 'lucide-react';
 import { format } from 'date-fns';
