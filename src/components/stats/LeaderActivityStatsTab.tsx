@@ -551,7 +551,7 @@ export function LeaderActivityStatsTab() {
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
           )}
         </CardContent>
       </Card>
