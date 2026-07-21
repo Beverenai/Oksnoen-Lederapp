@@ -28,6 +28,7 @@ import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailShe
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { useParticipantBonusPoints } from '@/hooks/useParticipantBonusPoints';
 import { BONUS_ACTIVITIES } from '@/lib/bonusActivities';
+import { computeParticipantPoints } from '@/lib/participantPoints';
 import type { Tables } from '@/integrations/supabase/types';
 
 interface ParticipantWithCabin {
@@ -108,6 +109,54 @@ const calculateAge = (birthDate: string | null): number | null => {
   }
   return age;
 };
+
+function ParticipantTotalPoints({
+  participantId,
+  activities,
+  insjPoints,
+}: {
+  participantId: string;
+  activities: Array<{ activity: string }>;
+  insjPoints: number;
+}) {
+  const { data: rows = [] } = useParticipantBonusPoints(participantId);
+  const bonusPoints = (rows as Array<{ points: number }>).reduce(
+    (sum, r) => sum + (r.points || 0),
+    0,
+  );
+  const { activities: actPts, secretWord, bonus, total } = computeParticipantPoints({
+    activities,
+    insjPoints,
+    bonusPoints,
+  });
+  return (
+    <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/20 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Trophy className="h-5 w-5 text-amber-600" />
+          <span className="text-sm font-medium">Totalt poeng</span>
+        </div>
+        <span className="text-3xl font-bold tabular-nums text-amber-700 dark:text-amber-300">
+          {total}
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+        <div className="rounded-lg bg-background/60 py-1.5">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Aktivitet</div>
+          <div className="text-base font-semibold tabular-nums">{actPts}</div>
+        </div>
+        <div className="rounded-lg bg-background/60 py-1.5">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Insj</div>
+          <div className="text-base font-semibold tabular-nums">{secretWord}</div>
+        </div>
+        <div className="rounded-lg bg-background/60 py-1.5">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Bonus</div>
+          <div className="text-base font-semibold tabular-nums">{bonus}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function BonusPointsSection({
   participantId,
@@ -630,6 +679,15 @@ export const ParticipantDetailDialog = ({
               </ResponsiveDialogHeader>
 
               <div className="space-y-4">
+                {/* Total poeng — kun når Lag er aktivt */}
+                {teamsEnabled && (
+                  <ParticipantTotalPoints
+                    participantId={participant.id}
+                    activities={activities}
+                    insjPoints={participant.insj_points ?? 0}
+                  />
+                )}
+
                 {/* Info fra Nurse */}
                 {healthInfo?.info && (
                   <div className="space-y-1.5">
