@@ -47,6 +47,9 @@ REGLER:
 - Av og til bruk uttrykket "ekte Oksnøyaner"
 - VIKTIG: Hvis det finnes "Aktivitetsnotater fra ledere", bruk disse! De inneholder prestasjoner (f.eks. "1. plass i svømmekonkurranse", "rekord i bruskasser")
 - Hvis de har klart Lille eller Store Styrkeprøven, fremhev dette som en stor prestasjon
+- Hvis "Stamme (lag)" er oppgitt, nevn stammen naturlig (f.eks. "bidratt godt for stammen X"). Hvis stammen ligger på 1., 2. eller 3. plass, nevn dette som en gratulasjon.
+- Hvis "Insjpoeng" er oppgitt, nevn at deltakeren har knakt mange hemmelige ord (uten å nevne tallet).
+- Hvis "Ekstra bragder" er oppgitt, fremhev én eller to av dem naturlig i teksten (f.eks. "tok taubanen baklengs").
 
 GODE ADJEKTIVER Å BRUKE (varier):
 søt, snill, herlig, sprudlende, rå, tøff, kul, sjarmerende, aktiv, glad, skjønn, god, morsom, hyggelig, flott, supertrivelig
