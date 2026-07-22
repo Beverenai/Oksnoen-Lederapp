@@ -529,6 +529,50 @@ export type Database = {
         }
         Relationships: []
       }
+      leader_availability: {
+        Row: {
+          available: boolean
+          created_at: string
+          date: string
+          from_time: string | null
+          id: string
+          note: string | null
+          period_leader_id: string
+          to_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          available?: boolean
+          created_at?: string
+          date: string
+          from_time?: string | null
+          id?: string
+          note?: string | null
+          period_leader_id: string
+          to_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          available?: boolean
+          created_at?: string
+          date?: string
+          from_time?: string | null
+          id?: string
+          note?: string | null
+          period_leader_id?: string
+          to_time?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_availability_period_leader_id_fkey"
+            columns: ["period_leader_id"]
+            isOneToOne: false
+            referencedRelation: "period_leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leader_cabins: {
         Row: {
           cabin_id: string
@@ -1538,6 +1582,57 @@ export type Database = {
           },
         ]
       }
+      period_leaders: {
+        Row: {
+          created_at: string
+          id: string
+          leader_id: string
+          max_hours_per_day: number
+          notes: string | null
+          period_id: string
+          period_number: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leader_id: string
+          max_hours_per_day?: number
+          notes?: string | null
+          period_id: string
+          period_number: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leader_id?: string
+          max_hours_per_day?: number
+          notes?: string | null
+          period_id?: string
+          period_number?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "period_leaders_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "period_leaders_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       periods: {
         Row: {
           created_at: string
@@ -1917,6 +2012,177 @@ export type Database = {
           },
         ]
       }
+      schedule_generator_runs: {
+        Row: {
+          created_at: string
+          id: string
+          keep_locked: boolean
+          run_at: string
+          run_by: string | null
+          schedule_id: string
+          stats: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          keep_locked?: boolean
+          run_at?: string
+          run_by?: string | null
+          schedule_id: string
+          stats?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          keep_locked?: boolean
+          run_at?: string
+          run_by?: string | null
+          schedule_id?: string
+          stats?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_generator_runs_run_by_fkey"
+            columns: ["run_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_generator_runs_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "shift_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_post_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_manually: boolean
+          created_at: string
+          generator_run_id: string | null
+          id: string
+          is_locked: boolean
+          period_leader_id: string
+          post_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_manually?: boolean
+          created_at?: string
+          generator_run_id?: string | null
+          id?: string
+          is_locked?: boolean
+          period_leader_id: string
+          post_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_manually?: boolean
+          created_at?: string
+          generator_run_id?: string | null
+          id?: string
+          is_locked?: boolean
+          period_leader_id?: string
+          post_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_post_assignments_period_leader_id_fkey"
+            columns: ["period_leader_id"]
+            isOneToOne: false
+            referencedRelation: "period_leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_post_assignments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_posts: {
+        Row: {
+          created_at: string
+          date: string
+          duration_hours: number
+          end_time: string
+          id: string
+          is_breakfast: boolean
+          is_main_session: boolean
+          is_night: boolean
+          name: string
+          notes: string | null
+          required_leaders: number
+          schedule_id: string
+          shift_type_id: string | null
+          slug: string | null
+          sort_order: number
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          duration_hours: number
+          end_time: string
+          id?: string
+          is_breakfast?: boolean
+          is_main_session?: boolean
+          is_night?: boolean
+          name: string
+          notes?: string | null
+          required_leaders?: number
+          schedule_id: string
+          shift_type_id?: string | null
+          slug?: string | null
+          sort_order?: number
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          duration_hours?: number
+          end_time?: string
+          id?: string
+          is_breakfast?: boolean
+          is_main_session?: boolean
+          is_night?: boolean
+          name?: string
+          notes?: string | null
+          required_leaders?: number
+          schedule_id?: string
+          shift_type_id?: string | null
+          slug?: string | null
+          sort_order?: number
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_posts_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "shift_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_posts_shift_type_id_fkey"
+            columns: ["shift_type_id"]
+            isOneToOne: false
+            referencedRelation: "shift_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       secret_word_assignments: {
         Row: {
           created_at: string
@@ -2236,6 +2502,8 @@ export type Database = {
           generated_at: string | null
           generated_by: string | null
           id: string
+          is_published: boolean
+          period_id: string | null
           period_length: number
           period_number: number
           start_date: string | null
@@ -2247,6 +2515,8 @@ export type Database = {
           generated_at?: string | null
           generated_by?: string | null
           id?: string
+          is_published?: boolean
+          period_id?: string | null
           period_length?: number
           period_number: number
           start_date?: string | null
@@ -2258,6 +2528,8 @@ export type Database = {
           generated_at?: string | null
           generated_by?: string | null
           id?: string
+          is_published?: boolean
+          period_id?: string | null
           period_length?: number
           period_number?: number
           start_date?: string | null
@@ -2271,6 +2543,13 @@ export type Database = {
             columns: ["generated_by"]
             isOneToOne: false
             referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_schedules_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
         ]
