@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { differenceInYears } from "https://esm.sh/date-fns@3.6.0";
+import { loadPassContext, buildTeamPromptLines } from "../_shared/passContext.ts";
 
 // Declare EdgeRuntime for Deno
 declare const EdgeRuntime: {
@@ -22,6 +23,7 @@ interface ParticipantData {
   leaderNotes?: string;
   littleStyrkeprove: boolean;
   bigStyrkeprove: boolean;
+  teamContextLines?: string;
 }
 
 const SYSTEM_PROMPT = `Du er en leirsjef på Oksnøen sommerleir som skriver personlige pass til deltakerne.
@@ -178,6 +180,7 @@ Aktiviteter gjort: ${friendlyActivities.length > 0 ? friendlyActivities.join(', 
 ${participant.activityNotes ? `Aktivitetsnotater fra ledere: ${participant.activityNotes}` : ''}
 ${participant.leaderNotes ? `Lederkommentarer om deltakeren: ${participant.leaderNotes}` : ''}
 Styrkeprøve: ${participant.bigStyrkeprove ? 'Store Styrkeprøven ✅' : participant.littleStyrkeprove ? 'Lille Styrkeprøven ✅' : 'Ingen styrkeprøve'}
+${participant.teamContextLines ? participant.teamContextLines : ''}
 
 VIKTIG ORDLISTE: "Rappis" = rappellering ned fjellveggen (skriv "rappellert ned fjellveggen" eller lignende, aldri "rappis").
 
@@ -240,6 +243,8 @@ async function processAllParticipants(supabase: any, LOVABLE_API_KEY: string) {
     const cabins = cabinsRes.data || [];
     const activities = activitiesRes.data || [];
 
+    const passContext = await loadPassContext(supabase, activePeriodId);
+
     // Filter out participants who already have a pass_suggestion
     const participants = allParticipants.filter((p: any) => !p.pass_suggestion || p.pass_suggestion.trim() === '');
     const skipped = allParticipants.length - participants.length;
@@ -294,6 +299,7 @@ async function processAllParticipants(supabase: any, LOVABLE_API_KEY: string) {
           leaderNotes: p.notes,
           littleStyrkeprove: hasLilleStyrkprove(completedActivities),
           bigStyrkeprove: hasStoreStyrkprove(completedActivities),
+          teamContextLines: buildTeamPromptLines(passContext, p.id),
         };
 
         console.log(`Generating pass for ${p.name} (${i + 1}/${total})`);
