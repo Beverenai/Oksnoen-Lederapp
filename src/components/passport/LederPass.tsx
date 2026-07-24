@@ -914,7 +914,14 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
       aria-label="Lederpass"
     >
       {/* Slim top bar */}
-      <div className="shrink-0 flex items-center gap-3 px-4 pt-3 pb-2 relative">
+      <div
+        className="shrink-0 flex items-center gap-3 px-4 pb-2 relative"
+        style={{
+          paddingTop: inline
+            ? '12px'
+            : 'max(env(safe-area-inset-top, 0px), 12px)',
+        }}
+      >
         {/* mini seal */}
         <div
           className="relative w-10 h-10 rounded-full flex items-center justify-center shrink-0"
