@@ -30,8 +30,6 @@ import {
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
 import type { Tables } from '@/integrations/supabase/types';
-import { useAppMode, setAppMode } from '@/hooks/useAppMode';
-import { Power } from 'lucide-react';
 
 type Leader = Tables<'leaders'>;
 type UserRole = Tables<'user_roles'>;
@@ -81,8 +79,6 @@ const sectionLabels: Record<string, string> = {
 export default function AdminSettings() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { isAdmin, isSuperAdmin } = useAuth();
-  const { mode: appMode } = useAppMode();
-  const [changingMode, setChangingMode] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   
   const [leaders, setLeaders] = useState<LeaderWithRole[]>([]);
@@ -322,24 +318,6 @@ export default function AdminSettings() {
     );
   }
 
-  const toggleAppMode = async () => {
-    const next = appMode === 'inactive' ? 'active' : 'inactive';
-    const confirmMsg = next === 'inactive'
-      ? 'Sette appen til INAKTIV? Alle ledere vil kun se Ledersnakk-chatten. Superadmin beholder full tilgang.'
-      : 'Skru på AKTIV-modus igjen? Alle funksjoner blir tilgjengelig for alle.';
-    if (!confirm(confirmMsg)) return;
-    setChangingMode(true);
-    try {
-      await setAppMode(next);
-      showSuccess(next === 'inactive' ? 'Appen er nå inaktiv' : 'Appen er nå aktiv');
-    } catch (e) {
-      console.error(e);
-      showError('Kunne ikke endre app-modus');
-    } finally {
-      setChangingMode(false);
-    }
-  };
-
   return (
     <>
       <div className="space-y-6">
@@ -359,37 +337,6 @@ export default function AdminSettings() {
             </p>
           </div>
         </div>
-
-        {/* Superadmin: App mode toggle */}
-        {isSuperAdmin && (
-          <Card className={`p-4 border-2 ${appMode === 'inactive' ? 'border-destructive bg-destructive/5' : 'border-primary/20'}`}>
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className={`p-2 rounded-lg ${appMode === 'inactive' ? 'bg-destructive/15 text-destructive' : 'bg-primary/15 text-primary'}`}>
-                  <Power className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold">
-                    App-modus: {appMode === 'inactive' ? 'Inaktiv' : 'Aktiv'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {appMode === 'inactive'
-                      ? 'Alle ledere ser kun Ledersnakk-chatten.'
-                      : 'Alle funksjoner er tilgjengelig.'}
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant={appMode === 'inactive' ? 'default' : 'destructive'}
-                size="sm"
-                disabled={changingMode}
-                onClick={toggleAppMode}
-              >
-                {appMode === 'inactive' ? 'Aktiver app' : 'Sett inaktiv'}
-              </Button>
-            </div>
-          </Card>
-        )}
 
         {/* Top cards - Ledere & Deltakere */}
         <div className="grid grid-cols-2 gap-3">
