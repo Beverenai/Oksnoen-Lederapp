@@ -7,6 +7,7 @@ import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Calendar, Loader2, Power } from 'lucide-react';
 import { useAppMode, setAppMode } from '@/hooks/useAppMode';
 import { useAuth } from '@/contexts/AuthContext';
+import { LeaderHistoryImportCard } from '@/components/admin/LeaderHistoryImportCard';
 
 interface Period {
   id: string;
@@ -169,6 +170,7 @@ export function NursePeriodsTab() {
           )}
         </CardContent>
       </Card>
+      <LeaderHistoryImportCard />
     </div>
   );
 }
