@@ -1,15 +1,25 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, ShieldCheck } from 'lucide-react';
+import { X, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, ShieldCheck, CalendarDays } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 import { hapticSelection, hapticImpact } from '@/lib/capacitorHaptics';
+import { supabase } from '@/integrations/supabase/client';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import oksnoenHeaderAsset from '@/assets/oksnoen-header.png.asset.json';
 import redCloth from '@/assets/red-bookcloth.webp.asset.json';
 import ivoryPaper from '@/assets/ivory-paper.webp.asset.json';
 
 type Leader = Tables<'leaders'>;
+
+interface PeriodHistoryEntry {
+  id: string;
+  name: string;
+  start_date: string | null;
+  end_date: string | null;
+  is_active: boolean;
+  status: string | null;
+}
 
 interface LederPassProps {
   leader: Leader | null | undefined;
@@ -194,13 +204,15 @@ function CertBadge({ icon: Icon, label, active }: { icon: any; label: string; ac
   );
 }
 
-function buildSpreads(leader: Leader | null | undefined, periodLabel?: string | null): Spread[] {
+function buildSpreads(
+  leader: Leader | null | undefined,
+  periodLabel?: string | null,
+  history: PeriodHistoryEntry[] = [],
+): Spread[] {
   const name = leader?.name ?? 'Ukjent leder';
-  const first = name.split(' ')[0];
   const initials = getInitials(name);
   const role = leader?.ministerpost || 'Leder';
   const team = formatTeamDisplay(leader?.team ?? null);
-  const cabin = leader?.cabin || '';
   const age = leader?.age ? `${leader.age} år` : '—';
 
   const photo = leader?.profile_image_url;
@@ -246,7 +258,6 @@ function buildSpreads(leader: Leader | null | undefined, periodLabel?: string | 
       eyebrow: 'Lederopplysninger',
       left: (
         <div className="flex flex-col justify-center h-full gap-4 px-4">
-          <LabeledField label="Fornavn" value={first} />
           <LabeledField label="Fullt navn" value={name} />
           <LabeledField label="Alder" value={age} />
           <LabeledField label="Statsborgerskap" value="Øksnøyaner" />
@@ -256,8 +267,65 @@ function buildSpreads(leader: Leader | null | undefined, periodLabel?: string | 
         <div className="flex flex-col justify-center h-full gap-4 px-4">
           <LabeledField label="Rolle" value={role} />
           <LabeledField label="Lag" value={team || '—'} />
-          <LabeledField label="Hytte" value={cabin || '—'} />
           <LabeledField label="Telefon" value={leader?.phone || '—'} />
+        </div>
+      ),
+    },
+    {
+      key: 'historikk',
+      eyebrow: 'Tjenestehistorikk',
+      left: (
+        <div className="flex flex-col justify-center h-full gap-3 px-3 text-center">
+          <div className="text-[10px] tracking-[0.3em] uppercase text-[#7a5a20]">
+            Tjenestehistorikk
+          </div>
+          <div className="mx-auto w-14 h-14 rounded-full flex items-center justify-center border border-[#3a2410]/30 bg-[#f0cd78]/30">
+            <CalendarDays className="w-6 h-6 text-[#7a0a0e]" />
+          </div>
+          <div className="text-[11px] italic text-[#3a2410]/70 leading-relaxed px-2">
+            Perioder {name.split(' ')[0]} har jobbet eller er satt opp på ved Øksnøen.
+          </div>
+          <div className="h-px w-14 mx-auto bg-[#3a2410]/30" />
+          <div className="text-[10px] uppercase tracking-[0.25em] text-[#3a2410]/60">
+            {history.length} {history.length === 1 ? 'periode' : 'perioder'}
+          </div>
+        </div>
+      ),
+      right: (
+        <div className="flex flex-col justify-center h-full gap-2 px-3">
+          <div className="text-[10px] tracking-[0.3em] uppercase text-[#7a5a20] text-center mb-1">
+            Stempler
+          </div>
+          {history.length === 0 ? (
+            <div className="text-[11px] italic text-[#3a2410]/60 text-center px-2 leading-relaxed">
+              Ingen registrerte perioder ennå.
+            </div>
+          ) : (
+            <ul className="space-y-1.5 max-h-[240px] overflow-y-auto pr-1">
+              {history.map((p) => {
+                const range = [p.start_date, p.end_date]
+                  .filter(Boolean)
+                  .map((d) => new Date(d as string).toLocaleDateString('nb-NO', { day: '2-digit', month: 'short' }))
+                  .join(' – ');
+                return (
+                  <li
+                    key={p.id}
+                    className={cn(
+                      'flex items-center justify-between gap-2 rounded-md border px-2 py-1.5 text-[11px]',
+                      p.is_active
+                        ? 'border-[#7a0a0e]/50 bg-[#f0cd78]/30 text-[#3a2410]'
+                        : 'border-[#3a2410]/20 bg-[#f4ede0]/70 text-[#3a2410]/80',
+                    )}
+                  >
+                    <span className="font-semibold truncate">{p.name}</span>
+                    <span className="shrink-0 text-[10px] text-[#3a2410]/60">
+                      {range || (p.is_active ? 'Aktiv' : '')}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       ),
     },
@@ -306,7 +374,7 @@ function buildSpreads(leader: Leader | null | undefined, periodLabel?: string | 
             varme, oppmerksomhet og godt humør — og å bære Øksnøen-ånden videre.»
           </p>
           <div className="mt-2 text-center text-[10px] uppercase tracking-[0.25em] text-[#3a2410]/60">
-            — {first}
+            — {name}
           </div>
         </div>
       ),
@@ -347,7 +415,47 @@ interface FullViewProps {
 }
 
 function LederPassFullView({ leader, onClose, inline = false, periodLabel }: FullViewProps) {
-  const spreads = useMemo(() => buildSpreads(leader, periodLabel), [leader, periodLabel]);
+  const [history, setHistory] = useState<PeriodHistoryEntry[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const leaderId = leader?.id;
+    if (!leaderId) {
+      setHistory([]);
+      return;
+    }
+    (async () => {
+      const { data, error } = await supabase
+        .from('period_leaders')
+        .select('status, periods!inner(id,name,start_date,end_date,is_active)')
+        .eq('leader_id', leaderId);
+      if (cancelled) return;
+      if (error || !data) {
+        setHistory([]);
+        return;
+      }
+      const rows: PeriodHistoryEntry[] = (data as any[])
+        .map((r) => ({
+          id: r.periods.id as string,
+          name: r.periods.name as string,
+          start_date: (r.periods.start_date as string | null) ?? null,
+          end_date: (r.periods.end_date as string | null) ?? null,
+          is_active: !!r.periods.is_active,
+          status: (r.status as string | null) ?? null,
+        }))
+        .sort((a, b) => {
+          const av = a.start_date ?? '';
+          const bv = b.start_date ?? '';
+          return bv.localeCompare(av);
+        });
+      setHistory(rows);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [leader?.id]);
+
+  const spreads = useMemo(() => buildSpreads(leader, periodLabel, history), [leader, periodLabel, history]);
   const [index, setIndex] = useState(0);
   const total = spreads.length;
   const trackRef = useRef<HTMLDivElement>(null);
@@ -441,9 +549,9 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
 
       {/* Title */}
       <div className="px-5 pt-3 pb-2 shrink-0">
-        <div className="text-sm text-[#3a2410]/70">Hei, {leader?.name?.split(' ')[0] ?? ''}!</div>
-        <h1 className="text-2xl font-serif font-bold text-[#3a2410] leading-tight">Ditt lederpass</h1>
-        <p className="text-xs text-[#3a2410]/60 mt-0.5">Bla gjennom passet med fingeren.</p>
+        <div className="text-[10px] uppercase tracking-[0.3em] text-[#7a5a20]">Lederpass</div>
+        <h1 className="text-2xl font-serif font-bold text-[#3a2410] leading-tight">{leader?.name ?? 'Ditt pass'}</h1>
+        <p className="text-xs text-[#3a2410]/60 mt-0.5">Dra sidene for å bla.</p>
       </div>
 
       {/* Book */}
@@ -526,66 +634,33 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
             </div>
           </div>
 
-          {/* Controls */}
-          <div className="mt-5 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => goto(index - 1)}
-              disabled={index === 0}
-              aria-label="Forrige side"
-              className={cn(
-                'w-11 h-11 rounded-full flex items-center justify-center shadow-sm',
-                'bg-emerald-700/90 text-white',
-                'disabled:opacity-40 disabled:cursor-not-allowed',
-                'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-700',
-              )}
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <div className="flex-1 text-center">
-              <div className="text-xs font-semibold tracking-wide text-[#3a2410]">
-                {spread.eyebrow}
-              </div>
-              <div className="text-[11px] text-[#3a2410]/60 mt-0.5">
-                {index + 1} / {total}
-              </div>
-              <div
-                role="tablist"
-                aria-label="Sidevalg"
-                className="mt-1.5 flex items-center justify-center gap-1.5"
-              >
-                {spreads.map((s, i) => (
-                  <button
-                    key={s.key}
-                    role="tab"
-                    aria-selected={i === index}
-                    aria-label={`Gå til ${s.eyebrow}`}
-                    onClick={() => goto(i)}
-                    className={cn(
-                      'h-1.5 rounded-full transition-all',
-                      i === index ? 'w-6 bg-emerald-700' : 'w-1.5 bg-[#3a2410]/25',
-                    )}
-                  />
-                ))}
-              </div>
-              <div className="text-[10px] text-[#3a2410]/50 mt-1">
-                Sveip på passet for å bla
-              </div>
+          {/* Page indicator (dots only — no arrows; use swipe to turn pages) */}
+          <div className="mt-5 flex flex-col items-center gap-1.5">
+            <div className="text-xs font-semibold tracking-wide text-[#3a2410]">
+              {spread.eyebrow}
             </div>
-            <button
-              type="button"
-              onClick={() => goto(index + 1)}
-              disabled={index === total - 1}
-              aria-label="Neste side"
-              className={cn(
-                'w-11 h-11 rounded-full flex items-center justify-center shadow-sm',
-                'bg-emerald-700/90 text-white',
-                'disabled:opacity-40 disabled:cursor-not-allowed',
-                'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-700',
-              )}
+            <div
+              role="tablist"
+              aria-label="Sidevalg"
+              className="flex items-center justify-center gap-1.5"
             >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+              {spreads.map((s, i) => (
+                <button
+                  key={s.key}
+                  role="tab"
+                  aria-selected={i === index}
+                  aria-label={`Gå til ${s.eyebrow}`}
+                  onClick={() => goto(i)}
+                  className={cn(
+                    'h-1.5 rounded-full transition-all',
+                    i === index ? 'w-6 bg-[#7a0a0e]' : 'w-1.5 bg-[#3a2410]/25',
+                  )}
+                />
+              ))}
+            </div>
+            <div className="text-[10px] text-[#3a2410]/50">
+              Dra sidene for å bla
+            </div>
           </div>
 
           {!inline && (
