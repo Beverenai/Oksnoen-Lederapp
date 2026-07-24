@@ -193,8 +193,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         { to: '/', icon: Home, label: 'Hjem' },
         { to: '/chat', icon: MessageCircle, label: 'Ledersnakk' },
       ]
-    : getBottomNavItems(isAdmin, isNurse, checkoutEnabled);
-  const mainTabRoutes = bottomNavItems.map(item => item.to).filter(to => to !== '#');
+    : getBottomNavItems();
+  const mainTabRoutes = bottomNavItems.map(item => item.to);
   const isSubPage = !mainTabRoutes.includes(location.pathname);
 
   // Passkontroll is always available so leaders can see participants.
