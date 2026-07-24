@@ -1,5 +1,5 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -8,14 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Info, Star, Heart, Bell, Zap, Activity, MessageSquare,
-  Save, AlertTriangle, Bold, Italic, GripVertical, Calendar, Plus, Loader2, BookOpen
+  Save, AlertTriangle, Bold, Italic, GripVertical, Calendar, Plus, Loader2
 } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
+import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { supabase } from '@/integrations/supabase/client';
-import { useLeaderHomeMode, setLeaderHomeMode } from '@/hooks/useLeaderHomeMode';
 
 interface HomeScreenConfig {
   id: string;
@@ -103,34 +102,6 @@ export default function HomeConfigTab({ homeConfig, localHomeConfig, setLocalHom
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const { mode: leaderHomeMode, isLoading: modeLoading } = useLeaderHomeMode();
-  const [modeOverride, setModeOverride] = useState<'active' | 'inactive' | null>(null);
-  const [modeSaving, setModeSaving] = useState(false);
-  // Clear optimistic override when realtime confirms the value.
-  useEffect(() => {
-    if (modeOverride && leaderHomeMode === modeOverride) setModeOverride(null);
-  }, [leaderHomeMode, modeOverride]);
-  const effectiveMode = modeOverride ?? leaderHomeMode;
-  const inactive = effectiveMode === 'inactive';
-
-  const toggleInactive = async (next: boolean) => {
-    const target = next ? 'inactive' : 'active';
-    const previous = leaderHomeMode;
-    setModeOverride(target);
-    setModeSaving(true);
-    hapticImpact('light');
-    try {
-      await setLeaderHomeMode(target);
-      showSuccess(next ? 'Inaktiv modus på — lederpasset fyller hjem' : 'Inaktiv modus av — vanlig hjem');
-    } catch (e) {
-      console.error(e);
-      setModeOverride(previous);
-      hapticError();
-      showError('Kunne ikke oppdatere hjem-modus');
-    } finally {
-      setModeSaving(false);
-    }
-  };
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -192,31 +163,6 @@ export default function HomeConfigTab({ homeConfig, localHomeConfig, setLocalHom
 
   return (
     <div className="space-y-4">
-      {/* Prominent leader home mode toggle */}
-      <div className="rounded-xl border border-red-900/25 bg-gradient-to-br from-red-900/5 via-amber-100/30 to-transparent p-4 flex items-start gap-3">
-        <div className="mt-0.5 p-2 rounded-full bg-red-900/10 text-red-900">
-          <BookOpen className="w-5 h-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="font-semibold text-sm">Inaktiv modus</div>
-            {modeSaving && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
-            {inactive && !modeSaving && (
-              <Badge variant="secondary" className="text-[10px]">Aktiv</Badge>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Når på: hjemskjermen erstattes av det interaktive lederpasset for alle ledere.
-          </p>
-        </div>
-        <Switch
-          checked={inactive}
-          disabled={modeLoading || modeSaving}
-          onCheckedChange={toggleInactive}
-          aria-label="Slå inaktiv modus av eller på"
-        />
-      </div>
-
       <div className="flex flex-wrap gap-2 mb-4">
         <Button onClick={saveAll} disabled={!hasUnsavedChanges || isSaving}>
           {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
