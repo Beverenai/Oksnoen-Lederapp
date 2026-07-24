@@ -1,124 +1,68 @@
+# Periode-arkiv + Inaktiv-modus med chat
 
-# Vaktplan Auto — automatisk generering per leirskoleperiode
+## Del 1 — Sikre og arkivere periode 4-data
 
-## Utgangspunkt fra dagens kode
+**Verifisering (ingen datamigrering nødvendig):**
+Alle sentrale tabeller er allerede `period_id`-scopet: deltakere (inkl. bilder via `image_url`/thumb), aktiviteter, Dynga (cards+columns), nurse (reports/notes/events/health_info), hendelser, sveitere, hemmelige ord, hytterapporter, Fix, Gjenglemt, rombytter, tau-kontroll, roulette-tildelinger, booking, teams + bonus, storiesm.m. Bilder ligger i Storage-buckets og bindes til deltaker-rader — de forsvinner ikke ved periodebytte.
 
-Camp Commander har allerede tre relaterte moduler:
-- `shift_types` (posttyper: navn, slug, start/slutt, varighet, min_leaders, day_type)
-- `shift_schedules` (skjema per periode-nummer + år, status draft/published/archived)
-- `shift_assignments` (leder- eller lag-tildeling per dag + posttype, med `is_locked` og `excluded_leader_ids`)
-- To sider: `ShiftPlanner` (full generator, teams+F-team) og `ShiftPlannerMini` (matrise, manuell)
-- Edge function `revalidate-shift-schedule` som allerede sjekker 8t/dag, F-team etter 21, 11t hvile
+Handling:
+- Kjør en verifikasjons-migrering som legger til CHECK-triggere som forhindrer sletting av rader i historiske perioder (kun aktiv periode + service_role kan slette).
+- Legg til `archived_at`-tidsstempel på `periods` (settes automatisk når `is_active` går fra true → false).
 
-**Antagelse (bekreft gjerne):** Vi skal *ikke* kaste den eksisterende Vaktplan/Vaktplan Mini. Vi legger til en tredje, ren "Auto"-modus som:
-1. Kobler direkte mot `periods` (ikke bare period_number/year), slik at én aktiv periode = én plan.
-2. Genererer per **navngitt leder** (ikke team-baserte "team1/team2"-tildelinger).
-3. Har konfigurerbart bemanningsbehov per post (i dag ligger dette som `min_leaders` men brukes ikke som hardt behov).
-4. Tar med tilgjengelighet per leder per dato/tidsrom og maks-timer per leder.
+**Arkiv-visning i admin:**
+Ny side `/admin/arkiv` (kun admin/superadmin):
+- Periode-velger (alle perioder utenom aktiv).
+- Faner: Deltakere (grid m/ bilder + søk), Aktiviteter (aggregert), Dynga (read-only board), Nurse (rapport-eksport), Hendelser, Lag & poeng, Hytterapporter, Gjenglemt, Sveitere.
+- Alt skrivebeskyttet — gjenbruker eksisterende komponenter med `readOnly`-prop der det finnes, ellers wrapper som deaktiverer mutasjoner.
+- «Eksporter periode» knapp: samler nurse-rapport (HTML), CSV over aktiviteter/poeng, og lister til nedlasting.
 
-Hvis du heller vil at auto-generatoren skal *erstatte* dagens `ShiftPlanner`, si fra — planen under bygger den som ny modul ved siden av.
+## Del 2 — Inaktiv-modus (global bryter, superadmin-styrt)
 
-## Datamodell (kun det som mangler)
+**Datamodell:**
+- Utvid `app_config` med `app_mode` (`'active' | 'inactive'`). Standard `'active'`.
+- Kun superadmin kan sette (RLS-policy + UI).
 
-Gjenbruk `leaders`, `periods`, `shift_types`, `shift_schedules`, `shift_assignments`. Legg til:
+**Gating i frontend:**
+- Ny `useAppMode()`-hook med realtime-subscribe på `app_config`.
+- I `AppLayout`: når `app_mode === 'inactive'` og bruker ikke er superadmin → alle ruter unntatt `/chat` og `/profile` redirecter til `/chat`. Bunn-nav byttes ut med minimal versjon (Chat + Profil).
+- Superadmin ser en banner «Appen er i inaktiv-modus» og beholder full tilgang.
+- Ny superadmin-kort i AdminSettings: «Sett app til inaktiv / aktiv» med bekreftelses-dialog.
 
-- `period_leaders` — kobling leder ↔ periode
-  - `period_id`, `leader_id`, `period_number` (int, unik per periode; visnings­nummer 1..N), `max_hours_per_day` (default 8), `status` (approved/pending), `notes`
-  - unique(period_id, leader_id), unique(period_id, period_number)
-- `leader_availability` — tilgjengelighet
-  - `period_leader_id`, `date`, `available` (bool), `from_time`, `to_time`, `note`
-- `schedule_posts` — auto-modus poster (parallell til `shift_assignments` sitt behov, men per dato)
-  - `schedule_id`, `date`, `shift_type_id` (nullable) *eller* inline navn/tid, `start_time`, `end_time`, `duration_hours` (generated), `required_leaders`, `sort_order`, `notes`, `is_main_session` (bool)
-- `schedule_post_assignments`
-  - `post_id`, `period_leader_id`, `is_locked`, `assigned_manually`, `generator_run_id`, `assigned_at`
-- `schedule_generator_runs`
-  - `schedule_id`, `run_at`, `run_by`, `stats` (jsonb: unfilled, warnings, hours per leader)
+## Del 3 — Global chat
 
-Utvid `shift_schedules` med `period_id uuid references periods(id)` og `is_published bool default false`.
+**Datamodell (ny migrering):**
+- `chat_messages(id, leader_id, body text, created_at)` — én global kanal.
+- GRANTS: `authenticated` full CRUD på egne, SELECT alle; `service_role` ALL.
+- RLS: alle aktive ledere kan lese; kun forfatter kan slette egen melding; superadmin kan slette alle; INSERT krever `leader_id = current_leader_id()` og `leaders.is_active = true`.
+- Realtime: `ALTER PUBLICATION supabase_realtime ADD TABLE chat_messages`.
+- Ingen periode-scoping — meldinger persisterer på tvers av perioder/år (som ønsket for «chat mellom sesonger»).
 
-Alle nye tabeller: RLS — admin full tilgang; ledere kan lese egne rader + publiserte poster/assignments hvor de er tildelt.
+**UI (`/chat`):**
+- Enkel meldingsliste (navn + `image_url_thumb` fra `leaders`) med auto-scroll og realtime.
+- Kun tekst i første versjon (utvidbart senere).
+- Tilgjengelig kun når `app_mode === 'inactive'` (rute-guard); superadmin kan alltid åpne.
+- Debounced typing er ikke nødvendig — vanlig submit på Enter.
 
-## Generator (edge function `generate-shift-schedule-auto`)
+## Filer som endres/opprettes
 
-Ren TypeScript i Deno. Deterministisk med seed.
-
-**Harde regler** (aldri brutt av auto):
-1. Post får nøyaktig `required_leaders`.
-2. Leder ≤ `max_hours_per_day` (default 8) per kalenderdag.
-3. Ingen tidsoverlapp per leder.
-4. Nattevakt → ingen frokost neste dag.
-5. Kun `status=approved` og tilgjengelige i tidsrommet.
-6. `is_locked=true` beholdes; hvis de bryter regler → rapporteres som konflikt, ikke skjules.
-
-**Prioritering (rekkefølge):** vanskeligste post først — nattevakt → færrest kandidater → hovedøkter → måltider → øvrige.
-
-**Score per kandidat** (lavere = bedre, deterministisk):
-```
-score = w1*totale_timer + w2*timer_denne_dag + w3*natt_count + w4*måltid_count
-      + w5*belastning_forrige_24t - w6*preferanse_match
-      + tiny_hash(leader_id, post_id)  // stabilt tie-break
-```
-
-**Metode:** greedy med backtracking — hvis en post blir uløselig, rull tilbake siste ikke-låste valg. Returnerer alltid delplan + liste over utildelte poster med forklaring ("Tirsdag Økt 2 mangler 1 leder; 4 kandidater over 8t, 2 opptatt, 1 utilgjengelig").
-
-**Timer over midnatt:** hele vakten teller på startdato (dokumentert i én konstant `HOURS_ATTRIBUTION = 'start_date'` i shared helper).
-
-**Server-side validering** ved manuell endring: trigger + `validate-shift-assignment` edge function som avviser overlapp/over-timer med mindre `is_locked=true` og admin.
-
-## Admin-UI (`/admin/shifts-auto`)
-
-Ny side, gjenbruker Camp Commanders komponenter (`Card`, `Sheet`, `Table`, `Badge`).
-
-**Toppsone:** valgt periode (default aktiv), status (utkast/publisert), knapper: *Generer alt*, *Generer resten på nytt* (beholder låste), *Publiser/Avpubliser*, *Valideringsstatus*.
-
-**Tabs:**
-- **Ledere** — liste over godkjente ledere i perioden, tildel periodenummer, sett `max_hours_per_day`, rediger tilgjengelighet per dag.
-- **Posttyper & Poster** — CRUD på posttyper (bruker `shift_types`), per-dag oversikt med `required_leaders`, mulighet til å markere `is_main_session`.
-- **Plan (uke/matrise)** — dager × poster. Hver celle viser tildelt(e) leder(e) som pill med navn + `#nummer`. Dra/drop for å bytte, klikk = velg leder, hengelås-ikon for lock. Fargekoding: rødt = overlapp/over timer, oransje = under­bemannet, gult = natt→frokost.
-- **Timer** — kolonne pr. dag + total pr. leder, med visuell varsel når > maks.
-- **Konflikter** — liste over alle brudd med "hopp til"-lenker.
-
-Publisering blokkeres til harde regler er OK (låste konflikter må aksepteres eksplisitt).
-
-## Ledervisning
-
-- `/my-shifts` utvides: hvis publisert Auto-plan finnes for aktiv periode → vis lederens egne vakter (dato, post, tid, varighet) + toggle for hele dagens/ukens oversikt (read-only).
-- Ingen redigering. Uendret hvis ingen Auto-plan er publisert (viser fortsatt opplastet bilde).
-
-## Tester
-
-- Vitest for generator-logikken (`src/lib/shiftGenerator.test.ts` med Deno-shim): overlapp, 8t-tak, natt→frokost, låste tildelinger, backtracking, deterministisk output for gitt seed.
-- Én integrasjonstest som kjører generator mot fikstur-periode med 10 ledere / 7 dager og verifiserer at ingen harde regler brytes.
-
-## Filer som endres / opprettes
-
-**Migration** (én): nye tabeller + kolonner + RLS + GRANTs + indekser + triggere for timer-beregning.
-
-**Edge functions:**
-- `supabase/functions/generate-shift-schedule-auto/index.ts` (ny)
-- `supabase/functions/validate-shift-assignment/index.ts` (ny)
-- `supabase/functions/_shared/shiftGenerator.ts` (delt logikk, testbar)
+**Migreringer:**
+- `app_config`: `app_mode` kolonne + policy for superadmin-write.
+- `periods.archived_at` + trigger.
+- Ny tabell `chat_messages` med RLS/GRANTS/realtime.
+- Slettings-guard trigger på historiske periode-rader (deltakere, aktiviteter, dynga, nurse osv.).
 
 **Frontend:**
-- `src/pages/admin/ShiftPlannerAuto.tsx` (ny hovedside)
-- `src/components/admin/shifts-auto/*` (LederTab, PosterTab, PlanMatrix, TimerTab, KonfliktList, LockToggle, AvailabilitySheet)
-- `src/hooks/useAutoSchedule.ts`, `usePeriodLeaders.ts`, `useShiftPosts.ts`
-- `src/pages/MyShifts.tsx` (utvidelse)
-- Route + meny-oppføring i `src/App.tsx` og `AdminSettings.tsx` under "Vaktplan"-kortet.
+- `src/hooks/useAppMode.ts` (ny)
+- `src/components/layout/AppLayout.tsx` (gate ruter i inaktiv-modus)
+- `src/pages/Chat.tsx` (ny)
+- `src/pages/admin/Arkiv.tsx` (ny) + underkomponenter som gjenbruker eksisterende visninger read-only
+- `src/pages/admin/AdminSettings.tsx` (kort for app-modus, kun superadmin)
+- `src/App.tsx` (ruter: `/chat`, `/admin/arkiv`)
 
-**Uendret:** eksisterende `ShiftPlanner`, `ShiftPlannerMini`, `revalidate-shift-schedule` beholdes som de er.
+**Ingen endring på:** eksisterende ShiftPlanner, passgenerator, checkout-flow, deltaker/leder-CRUD.
 
-## Rekkefølge for utrulling
-
-1. Migration (behøver din godkjenning i UI).
-2. Edge functions + shared generator + tester.
-3. Frontend-side + hooks.
-4. Ledervisning + rutekobling.
-
-## Manuelle steg som gjenstår for deg
-
-- Godkjenne migration i Cloud-panelet når den kommer.
-- Etter deploy: opprette/importere `period_leaders` for aktiv periode (evt. bulk-knapp "Legg til alle aktive ledere" leveres).
-- Konfigurere `required_leaders` per posttype hvis defaultene (6/2/1) ikke stemmer.
-
-Si "kjør" så starter jeg med migrationen. Hvis noe skal justeres (f.eks. erstatte gammel ShiftPlanner, andre bemanningsdefaults, ekstra harde regler) — flagg det først.
+## Manuelle steg etter deploy
+1. Godkjenn migreringer.
+2. Verifiser at `app_mode` starter som `'active'`.
+3. Test inaktiv-modus i en test-økt før faktisk sesongslutt.
+4. Når P4 er ferdig: skru på inaktiv-modus → bytt til P5 senere ved å reaktivere + sette ny aktiv periode.
