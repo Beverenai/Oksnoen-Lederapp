@@ -1,15 +1,25 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, ShieldCheck } from 'lucide-react';
+import { X, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, ShieldCheck, CalendarDays } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 import { hapticSelection, hapticImpact } from '@/lib/capacitorHaptics';
+import { supabase } from '@/integrations/supabase/client';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import oksnoenHeaderAsset from '@/assets/oksnoen-header.png.asset.json';
 import redCloth from '@/assets/red-bookcloth.webp.asset.json';
 import ivoryPaper from '@/assets/ivory-paper.webp.asset.json';
 
 type Leader = Tables<'leaders'>;
+
+interface PeriodHistoryEntry {
+  id: string;
+  name: string;
+  start_date: string | null;
+  end_date: string | null;
+  is_active: boolean;
+  status: string | null;
+}
 
 interface LederPassProps {
   leader: Leader | null | undefined;
@@ -194,13 +204,15 @@ function CertBadge({ icon: Icon, label, active }: { icon: any; label: string; ac
   );
 }
 
-function buildSpreads(leader: Leader | null | undefined, periodLabel?: string | null): Spread[] {
+function buildSpreads(
+  leader: Leader | null | undefined,
+  periodLabel?: string | null,
+  history: PeriodHistoryEntry[] = [],
+): Spread[] {
   const name = leader?.name ?? 'Ukjent leder';
-  const first = name.split(' ')[0];
   const initials = getInitials(name);
   const role = leader?.ministerpost || 'Leder';
   const team = formatTeamDisplay(leader?.team ?? null);
-  const cabin = leader?.cabin || '';
   const age = leader?.age ? `${leader.age} år` : '—';
 
   const photo = leader?.profile_image_url;
@@ -246,7 +258,6 @@ function buildSpreads(leader: Leader | null | undefined, periodLabel?: string | 
       eyebrow: 'Lederopplysninger',
       left: (
         <div className="flex flex-col justify-center h-full gap-4 px-4">
-          <LabeledField label="Fornavn" value={first} />
           <LabeledField label="Fullt navn" value={name} />
           <LabeledField label="Alder" value={age} />
           <LabeledField label="Statsborgerskap" value="Øksnøyaner" />
@@ -256,8 +267,65 @@ function buildSpreads(leader: Leader | null | undefined, periodLabel?: string | 
         <div className="flex flex-col justify-center h-full gap-4 px-4">
           <LabeledField label="Rolle" value={role} />
           <LabeledField label="Lag" value={team || '—'} />
-          <LabeledField label="Hytte" value={cabin || '—'} />
           <LabeledField label="Telefon" value={leader?.phone || '—'} />
+        </div>
+      ),
+    },
+    {
+      key: 'historikk',
+      eyebrow: 'Tjenestehistorikk',
+      left: (
+        <div className="flex flex-col justify-center h-full gap-3 px-3 text-center">
+          <div className="text-[10px] tracking-[0.3em] uppercase text-[#7a5a20]">
+            Tjenestehistorikk
+          </div>
+          <div className="mx-auto w-14 h-14 rounded-full flex items-center justify-center border border-[#3a2410]/30 bg-[#f0cd78]/30">
+            <CalendarDays className="w-6 h-6 text-[#7a0a0e]" />
+          </div>
+          <div className="text-[11px] italic text-[#3a2410]/70 leading-relaxed px-2">
+            Perioder {name.split(' ')[0]} har jobbet eller er satt opp på ved Øksnøen.
+          </div>
+          <div className="h-px w-14 mx-auto bg-[#3a2410]/30" />
+          <div className="text-[10px] uppercase tracking-[0.25em] text-[#3a2410]/60">
+            {history.length} {history.length === 1 ? 'periode' : 'perioder'}
+          </div>
+        </div>
+      ),
+      right: (
+        <div className="flex flex-col justify-center h-full gap-2 px-3">
+          <div className="text-[10px] tracking-[0.3em] uppercase text-[#7a5a20] text-center mb-1">
+            Stempler
+          </div>
+          {history.length === 0 ? (
+            <div className="text-[11px] italic text-[#3a2410]/60 text-center px-2 leading-relaxed">
+              Ingen registrerte perioder ennå.
+            </div>
+          ) : (
+            <ul className="space-y-1.5 max-h-[240px] overflow-y-auto pr-1">
+              {history.map((p) => {
+                const range = [p.start_date, p.end_date]
+                  .filter(Boolean)
+                  .map((d) => new Date(d as string).toLocaleDateString('nb-NO', { day: '2-digit', month: 'short' }))
+                  .join(' – ');
+                return (
+                  <li
+                    key={p.id}
+                    className={cn(
+                      'flex items-center justify-between gap-2 rounded-md border px-2 py-1.5 text-[11px]',
+                      p.is_active
+                        ? 'border-[#7a0a0e]/50 bg-[#f0cd78]/30 text-[#3a2410]'
+                        : 'border-[#3a2410]/20 bg-[#f4ede0]/70 text-[#3a2410]/80',
+                    )}
+                  >
+                    <span className="font-semibold truncate">{p.name}</span>
+                    <span className="shrink-0 text-[10px] text-[#3a2410]/60">
+                      {range || (p.is_active ? 'Aktiv' : '')}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       ),
     },
@@ -306,7 +374,7 @@ function buildSpreads(leader: Leader | null | undefined, periodLabel?: string | 
             varme, oppmerksomhet og godt humør — og å bære Øksnøen-ånden videre.»
           </p>
           <div className="mt-2 text-center text-[10px] uppercase tracking-[0.25em] text-[#3a2410]/60">
-            — {first}
+            — {name}
           </div>
         </div>
       ),
