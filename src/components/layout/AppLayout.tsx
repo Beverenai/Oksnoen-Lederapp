@@ -10,12 +10,10 @@ import {
   AlertTriangle,
   Settings,
   LogOut,
-  Menu,
   X,
   Heart,
   User,
   Wrench,
-  Check,
   BarChart2,
   Bell,
   Anchor,
@@ -26,13 +24,13 @@ import {
   ArrowLeft,
   ClipboardList,
   Shirt,
+  LayoutGrid,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import confetti from 'canvas-confetti';
-import { hapticSuccess, hapticImpact } from '@/lib/capacitorHaptics';
+import { hapticImpact } from '@/lib/capacitorHaptics';
 import { PassIcon } from '@/components/icons/PassIcon';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
 import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
@@ -45,11 +43,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -96,49 +89,15 @@ type BottomNavItem = {
   to: string;
   icon: LucideIcon | typeof PassIcon;
   label: string;
-  isHajolo?: boolean;
 };
 
-// Base bottom nav items - will be adjusted based on role.
-// `checkoutEnabled` controls whether pass-related UI (Passkontor) is shown to
-// non-admins. Admins always see it so they can prepare passes.
-const getBottomNavItems = (
-  isAdmin: boolean,
-  isNurse: boolean,
-  checkoutEnabled: boolean,
-): BottomNavItem[] => {
-  if (isAdmin) {
-    return [
-      { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
-      { to: '/admin', icon: Settings, label: 'Dashboard' },
-      { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '/fix', icon: Wrench, label: 'Fix' },
-    ];
-  } else if (isNurse) {
-    const items: BottomNavItem[] = [
-      { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
-    ];
-    items.push(
-      { to: '/nurse', icon: Heart, label: 'Nurse' },
-      { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '/fix', icon: Wrench, label: 'Fix' },
-    );
-    return items;
-  } else {
-    const items: BottomNavItem[] = [
-      { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
-    ];
-    items.push(
-      { to: '#', icon: Check, label: 'Hajolo', isHajolo: true },
-      { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '/fix', icon: Wrench, label: 'Fix' },
-    );
-    return items;
-  }
-};
+// Bunnraden er felles for alle roller. Alt annet ligger på /mer.
+const getBottomNavItems = (): BottomNavItem[] => [
+  { to: '/', icon: Home, label: 'Hjem' },
+  { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
+  { to: '/leaders', icon: Users, label: 'Ledere' },
+  { to: '/mer', icon: LayoutGrid, label: 'Mer' },
+];
 
 // Helper component for rendering nav links
 const NavLinkItem = ({ 
@@ -234,8 +193,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         { to: '/', icon: Home, label: 'Hjem' },
         { to: '/chat', icon: MessageCircle, label: 'Ledersnakk' },
       ]
-    : getBottomNavItems(isAdmin, isNurse, checkoutEnabled);
-  const mainTabRoutes = bottomNavItems.map(item => item.to).filter(to => to !== '#');
+    : getBottomNavItems();
+  const mainTabRoutes = bottomNavItems.map(item => item.to);
   const isSubPage = !mainTabRoutes.includes(location.pathname);
 
   // Passkontroll is always available so leaders can see participants.
@@ -485,43 +444,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
     setShowHajoloTooltip(false);
   };
 
-  // Handle Hajolo click
-  const handleHajoloClick = async () => {
-    if (!leader) return;
-
-    // Check if button was red (unread) before updating
-    const wasUnread = !hasRead;
-
-    const { error } = await supabase
-      .from('leader_content')
-      .upsert({ leader_id: leader.id, has_read: true }, { onConflict: 'leader_id' });
-
-    if (error) {
-      showError('Kunne ikke bekrefte');
-      return;
-    }
-
-    setHasRead(true);
-    setShowHajoloSuccess(true);
-    
-    // Haptic feedback for native feel
-    hapticSuccess();
-    
-    confetti({
-      particleCount: 150,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
-    
-      // Navigate to home screen only if button was red (unread)
-      // Include forceRefresh state to ensure Home reloads data
-      if (wasUnread) {
-        navigate('/', { state: { forceRefresh: Date.now() } });
-    }
-    
-    setTimeout(() => setShowHajoloSuccess(false), 3000);
-  };
-
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
@@ -538,21 +460,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </button>
         </div>
       )}
-      {/* Hajolo Success Overlay */}
-      {showHajoloSuccess && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setShowHajoloSuccess(false)}
-        >
-          <div className="animate-scale-in bg-card rounded-3xl p-10 text-center shadow-2xl border border-border">
-            <div className="text-7xl mb-4">🎉</div>
-            <h2 className="text-3xl font-heading font-bold text-green-600">Hajolo!</h2>
-            <p className="text-muted-foreground mt-3 text-lg">Du har bekreftet at du har lest informasjonen</p>
-            <p className="text-sm text-muted-foreground/70 mt-4">Trykk hvor som helst for å lukke</p>
-          </div>
-        </div>
-      )}
-
       {/* Mobile Header - collapsible on scroll like Facebook/Instagram */}
       {!mobileMenuOpen && (
         <header 
@@ -585,16 +492,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <span className="text-sm text-muted-foreground truncate max-w-[140px]">
               {leader?.name}
             </span>
-            {!inactiveForUser && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setMobileMenuOpen(true)}
-              className="shrink-0"
-            >
-              <Menu className="w-5 h-5" />
-            </Button>
-            )}
           </div>
         </header>
       )}
@@ -817,57 +714,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         >
           <div className="flex items-stretch justify-around px-1">
             {bottomNavItems.map((item) => {
-              const isActive = item.isHajolo ? false : location.pathname === item.to;
-
-              if (item.isHajolo) {
-                return (
-                  <Popover key="hajolo" open={showHajoloTooltip}>
-                    <PopoverTrigger asChild>
-                      <button
-                        data-active={false}
-                        onClick={() => {
-                          hapticImpact('medium');
-                          handleHajoloClick();
-                        }}
-                        className="flex flex-col items-center justify-center gap-0.5 flex-1 relative"
-                        aria-label={hasRead ? 'Bekreftet' : 'Hajolo — trykk for å bekrefte'}
-                      >
-                        <span
-                          className={cn(
-                            'flex items-center justify-center w-9 h-9 rounded-full shadow-md transition-colors',
-                            hasRead
-                              ? 'bg-green-500 text-white'
-                              : 'bg-destructive text-white animate-pulse'
-                          )}
-                        >
-                          <Check className="w-5 h-5" strokeWidth={3} />
-                        </span>
-                        <span
-                          className={cn(
-                            'text-[10px] leading-none font-semibold',
-                            hasRead ? 'text-green-600' : 'text-destructive'
-                          )}
-                        >
-                          {hasRead ? 'Bekreftet' : 'Hajolo'}
-                        </span>
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent side="top" className="max-w-[280px] p-4" sideOffset={8}>
-                      <div className="text-center space-y-3">
-                        <p className="text-sm font-semibold">Hva er Hajolo-knappen?</p>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          Når det kommer ny info til deg blir denne knappen rød. Admin ser hvem som ikke har lest ennå.
-                          Trykk på knappen for å bekrefte at du har sett infoen.
-                        </p>
-                        <Button size="sm" onClick={handleDismissTooltip} className="w-full">
-                          Forstått
-                        </Button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                );
-              }
-
+              const isActive = location.pathname === item.to;
               const isHomeWithUnread = item.to === '/' && !hasRead && isRegularLeader;
 
               return (

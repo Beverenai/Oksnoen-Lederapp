@@ -49,6 +49,7 @@ const Roulette = lazy(() => import("@/pages/Roulette"));
 const Gensere = lazy(() => import("@/pages/Gensere"));
 const Hendelser = lazy(() => import("@/pages/Hendelser"));
 const Chat = lazy(() => import("@/pages/Chat"));
+const More = lazy(() => import("@/pages/More"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -224,6 +225,7 @@ function AppRoutes() {
         <Route path="/stories" element={<ProtectedRoute><Stories /></ProtectedRoute>} />
         <Route path="/hendelser" element={<ProtectedRoute><Hendelser /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+        <Route path="/mer" element={<ProtectedRoute><More /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
