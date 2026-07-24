@@ -1195,51 +1195,34 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
         )}
       </div>
 
-      {/* Slim bottom controls */}
-      <div className="shrink-0 flex flex-col items-center gap-1.5 pb-4 pt-2 px-3">
+      {/* Slim bottom controls — dots only, plus corner-drag hint */}
+      <div
+        className="shrink-0 flex flex-col items-center gap-1.5 pt-2 px-3"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)' }}
+      >
         <div className="text-[10px] uppercase tracking-[0.28em] text-[#7a5a20] font-semibold">
           {currentEyebrow}
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => startAnimatedFlip('prev')}
-            disabled={!canPrev || !!flip?.animating}
-            aria-label="Forrige side"
-            className="inline-flex items-center justify-center rounded-full h-9 w-9 border border-[#3a2410]/20 bg-white/85 text-[#3a2410] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-red-700"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <div
-            role="tablist"
-            aria-label="Sidevalg"
-            className="flex items-center justify-center gap-1.5 max-w-[60vw] overflow-hidden"
-          >
-            {Array.from({ length: dotCount }).map((_, i) => (
-              <button
-                key={i}
-                role="tab"
-                aria-selected={i === index}
-                aria-label={`Gå til side ${i + 1}`}
-                onClick={() => goToSpread(i)}
-                className={cn(
-                  'h-1.5 rounded-full transition-all',
-                  i === index ? 'w-5 bg-[#7a0a0e]' : 'w-1.5 bg-[#3a2410]/25',
-                )}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => startAnimatedFlip('next')}
-            disabled={!canNext || !!flip?.animating}
-            aria-label="Neste side"
-            className="inline-flex items-center justify-center rounded-full h-9 w-9 border border-[#3a2410]/20 bg-white/85 text-[#3a2410] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-red-700"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
+        <div
+          role="tablist"
+          aria-label="Sidevalg"
+          className="flex items-center justify-center gap-1.5 max-w-[80vw] overflow-hidden"
+        >
+          {Array.from({ length: dotCount }).map((_, i) => (
+            <button
+              key={i}
+              role="tab"
+              aria-selected={i === index}
+              aria-label={`Gå til side ${i + 1}`}
+              onClick={() => goToSpread(i)}
+              className={cn(
+                'h-1.5 rounded-full transition-all',
+                i === index ? 'w-5 bg-[#7a0a0e]' : 'w-1.5 bg-[#3a2410]/25',
+              )}
+            />
+          ))}
         </div>
-        <div className="text-[10px] text-[#3a2410]/50">Dra siden for å bla</div>
+        <div className="text-[10px] text-[#3a2410]/55">Dra hjørnet for å bla</div>
       </div>
     </div>
   );
