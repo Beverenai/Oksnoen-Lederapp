@@ -466,7 +466,12 @@ export default function Home() {
           fetchPriority="high"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
-        
+
+        {/* Small 3D lederpass icon — replaces logo, only in active mode */}
+        <div className="absolute top-3 left-3">
+          <LederPass leader={effectiveLeader} periodLabel={activePeriodLabel} />
+        </div>
+
         {/* Refresh button */}
         <Button 
           variant="ghost" 
@@ -501,11 +506,6 @@ export default function Home() {
           <p className="text-base font-medium text-foreground mt-2">
             {effectiveLeader?.name}
           </p>
-
-          {/* Small 3D lederpass icon — only on Home, only in active mode */}
-          <div className="mt-3">
-            <LederPass leader={effectiveLeader} periodLabel={activePeriodLabel} />
-          </div>
 
           {effectiveLeader?.ministerpost && (
             <p className="text-sm text-muted-foreground mt-0.5">{effectiveLeader.ministerpost}</p>
