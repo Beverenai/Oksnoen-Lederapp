@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, ShieldCheck, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
@@ -418,7 +418,8 @@ interface FullViewProps {
 /*  3D page-flip mechanics                                                    */
 /* -------------------------------------------------------------------------- */
 
-const FLIP_TRANSITION = 'transform 470ms cubic-bezier(0.32, 0.72, 0.28, 1)';
+const FLIP_TRANSITION_SPREAD = 'transform 470ms cubic-bezier(0.32, 0.72, 0.28, 1)';
+const FLIP_TRANSITION_SINGLE = 'transform 540ms cubic-bezier(0.32, 0.72, 0.28, 1)';
 
 type FlipState = {
   direction: 'next' | 'prev';
@@ -507,9 +508,62 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
   }, [leader?.id]);
 
   const spreads = useMemo(() => buildSpreads(leader, periodLabel, history), [leader, periodLabel, history]);
+  // Flat page list for single-page (portrait / passport) mode.
+  const pages = useMemo(
+    () =>
+      spreads.flatMap((s) => [
+        { key: `${s.key}-l`, eyebrow: s.eyebrow, content: s.left },
+        { key: `${s.key}-r`, eyebrow: s.eyebrow, content: s.right },
+      ]),
+    [spreads],
+  );
 
-  const total = spreads.length;
+  // Measure the book container and decide layout (single portrait vs. spread).
+  const bookAreaRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState<{ mode: 'single' | 'spread'; W: number; H: number }>({
+    mode: 'single',
+    W: 300,
+    H: 450,
+  });
+
+  useLayoutEffect(() => {
+    const el = bookAreaRef.current;
+    if (!el) return;
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      // Reserve a bit of breathing room inside the area.
+      const availW = Math.max(200, rect.width - 24);
+      const availH = Math.max(240, rect.height - 24);
+      const useSpread = availW >= 720 && availW > availH;
+      // ratio = W / H
+      const ratio = useSpread ? 3 / 2 : 2 / 3;
+      let H = availH;
+      let W = H * ratio;
+      if (W > availW) {
+        W = availW;
+        H = W / ratio;
+      }
+      setSize({
+        mode: useSpread ? 'spread' : 'single',
+        W: Math.floor(W),
+        H: Math.floor(H),
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const isSingle = size.mode === 'single';
+  const total = isSingle ? pages.length : spreads.length;
   const [index, setIndex] = useState(0);
+  useEffect(() => {
+    // Keep index in range when mode toggles between single/spread.
+    setIndex((i) => Math.max(0, Math.min(total - 1, i)));
+    setFlip(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [total]);
   const [flip, setFlip] = useState<FlipState | null>(null);
 
   const bookRef = useRef<HTMLDivElement>(null);
@@ -677,52 +731,123 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
   const nextSpread = spreads[index + 1];
   const prevSpread = spreads[index - 1];
 
-  // Content of the fixed base halves — reveals under the flipping leaf.
-  const leftBase =
-    flip?.direction === 'prev' ? prevSpread?.left : currentSpread?.left;
-  const rightBase =
-    flip?.direction === 'next' ? nextSpread?.right : currentSpread?.right;
+  // ------- Derived content per current mode -------
+  // In single mode: base = destination page during flip, else current page.
+  // In spread mode: two halves, keep the existing model.
+  const currentPage = pages[index];
+  const nextPage = pages[index + 1];
+  const prevPage = pages[index - 1];
 
-  // Flipping leaf faces.
-  const leafFront: React.ReactNode =
+  // Flipping progress + shading (shared)
+  const flipProgress = flip?.progress ?? 0;
+  const frontShadow = flipProgress <= 0.5 ? flipProgress * 0.55 : (1 - flipProgress) * 0.55;
+  const backShadow = flipProgress >= 0.5 ? (1 - flipProgress) * 0.55 : flipProgress * 0.55;
+
+  const currentEyebrow = isSingle
+    ? currentPage?.eyebrow ?? 'Lederpass'
+    : currentSpread?.eyebrow ?? 'Lederpass';
+
+  // ---- Single mode leaf geometry ----
+  // Pivot at LEFT edge for both directions.
+  //   next: angle 0 → -180 (progress 0..1)
+  //   prev: angle -180 → 0 (progress 0..1)
+  const singleLeafAngle = flip
+    ? flip.direction === 'next'
+      ? -180 * flip.progress
+      : -180 * (1 - flip.progress)
+    : 0;
+
+  // ---- Spread mode leaf geometry (existing) ----
+  const spreadLeafAngle = flip
+    ? flip.direction === 'next'
+      ? -180 * flip.progress
+      : 180 * flip.progress
+    : 0;
+  const spreadLeafOrigin = flip?.direction === 'next' ? 'left center' : 'right center';
+  const spreadLeafSideStyle: React.CSSProperties =
+    flip?.direction === 'next' ? { left: '50%' } : { left: 0 };
+
+  // Spread base halves + leaf faces (existing model).
+  const spreadLeftBase = flip?.direction === 'prev' ? prevSpread?.left : currentSpread?.left;
+  const spreadRightBase = flip?.direction === 'next' ? nextSpread?.right : currentSpread?.right;
+  const spreadLeafFront: React.ReactNode =
     flip?.direction === 'next'
       ? currentSpread?.right
       : flip?.direction === 'prev'
       ? currentSpread?.left
       : null;
-  const leafBack: React.ReactNode =
+  const spreadLeafBack: React.ReactNode =
     flip?.direction === 'next'
       ? nextSpread?.left
       : flip?.direction === 'prev'
       ? prevSpread?.right
       : null;
 
-  const leafAngle = flip
-    ? flip.direction === 'next'
-      ? -180 * flip.progress
-      : 180 * flip.progress
-    : 0;
-  const leafOrigin = flip?.direction === 'next' ? 'left center' : 'right center';
-  const leafSideStyle: React.CSSProperties =
-    flip?.direction === 'next' ? { left: '50%' } : { left: 0 };
+  // ---- Single-mode base + leaf faces ----
+  // Base is the DESTINATION page during a flip, else the current page.
+  const singleBase: React.ReactNode =
+    flip?.direction === 'next'
+      ? nextPage?.content
+      : flip?.direction === 'prev'
+      ? prevPage?.content
+      : currentPage?.content;
+  // Leaf front face is what the user starts seeing (the page currently on top
+  // before the flip lands on the destination).
+  const singleLeafFront: React.ReactNode =
+    flip?.direction === 'next'
+      ? currentPage?.content
+      : flip?.direction === 'prev'
+      ? prevPage?.content
+      : null;
+  const singleLeafBack: React.ReactNode =
+    flip?.direction === 'next'
+      ? nextPage?.content
+      : flip?.direction === 'prev'
+      ? currentPage?.content
+      : null;
 
-  // Front face is fully lit at rest, dims mid-flip; back face inverse.
-  const flipProgress = flip?.progress ?? 0;
-  const frontShadow = flipProgress <= 0.5 ? flipProgress * 0.7 : (1 - flipProgress) * 0.7;
-  const backShadow = flipProgress >= 0.5 ? (1 - flipProgress) * 0.7 : flipProgress * 0.7;
-
-  const currentEyebrow = currentSpread?.eyebrow ?? 'Lederpass';
+  const flipTransition = isSingle ? FLIP_TRANSITION_SINGLE : FLIP_TRANSITION_SPREAD;
 
   const containerClass = inline
-    ? 'relative w-full h-full flex flex-col'
-    : 'fixed inset-0 z-50 flex flex-col bg-[#f4ede0] motion-safe:animate-fade-in';
+    ? 'relative w-full h-full flex flex-col overflow-hidden'
+    : 'fixed inset-0 z-50 flex flex-col bg-[#f4ede0] motion-safe:animate-fade-in overflow-hidden';
+
+  // Compute total dot count based on mode.
+  const dotCount = total;
+
+  // Pixel size of the book element.
+  const bookW = size.W;
+  const bookH = size.H;
+  const perspective = Math.min(2000, Math.max(1200, bookW * 3));
 
   const passportBody = (
-    <div className={containerClass} role={inline ? undefined : 'dialog'} aria-modal={inline ? undefined : true} aria-label="Lederpass">
-      {/* Header image */}
-      <div className="relative shrink-0 h-32 md:h-40 overflow-hidden">
-        <img src={HEADER_URL} alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/25 to-[#f4ede0]" />
+    <div
+      className={containerClass}
+      style={{ backgroundColor: '#f4ede0' }}
+      role={inline ? undefined : 'dialog'}
+      aria-modal={inline ? undefined : true}
+      aria-label="Lederpass"
+    >
+      {/* Slim top bar */}
+      <div className="shrink-0 flex items-center gap-3 px-4 pt-3 pb-2 relative">
+        {/* mini seal */}
+        <div
+          className="relative w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+          style={{
+            background: 'radial-gradient(circle at 30% 30%, #a01a1e, #6a0a10 70%)',
+            boxShadow: 'inset 0 0 0 1.5px rgba(240,205,120,0.65), 0 2px 4px rgba(0,0,0,0.25)',
+          }}
+        >
+          <img src={oksnoenLogo} alt="" className="w-6 h-6 object-contain" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[9px] uppercase tracking-[0.28em] text-[#7a5a20] font-semibold truncate">
+            Lederpass{periodLabel ? ` · ${periodLabel}` : ''}
+          </div>
+          <div className="text-base sm:text-lg font-serif font-bold text-[#3a2410] leading-tight truncate">
+            {leader?.name ?? 'Ditt pass'}
+          </div>
+        </div>
         {!inline && (
           <button
             type="button"
@@ -731,25 +856,21 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
               onClose?.();
             }}
             aria-label="Lukk passet"
-            className="absolute top-3 right-3 rounded-full bg-white/90 backdrop-blur px-3 py-1.5 text-xs font-medium text-[#3a2410] shadow-sm inline-flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-red-700"
+            className="rounded-full bg-white/90 backdrop-blur px-3 py-1.5 text-xs font-medium text-[#3a2410] shadow-sm inline-flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-red-700"
           >
             <X className="w-3.5 h-3.5" /> Lukk
           </button>
         )}
       </div>
 
-      {/* Title */}
-      <div className="px-5 pt-3 pb-2 shrink-0">
-        <div className="text-[10px] uppercase tracking-[0.3em] text-[#7a5a20]">Lederpass</div>
-        <h1 className="text-2xl font-serif font-bold text-[#3a2410] leading-tight">{leader?.name ?? 'Ditt pass'}</h1>
-        <p className="text-xs text-[#3a2410]/60 mt-0.5">Dra siden for å bla i passet.</p>
-      </div>
-
-      {/* Book */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3">
-        <div className="mx-auto w-full max-w-[560px]">
-          {/* Depth: ivory page edges peeking below/right, and back cover below */}
-          <div className="relative">
+      {/* Book area — fills the middle, book is sized to fit */}
+      <div
+        ref={bookAreaRef}
+        className="flex-1 min-h-0 flex items-center justify-center px-3"
+      >
+        {bookW > 0 && bookH > 0 && (
+          <div className="relative" style={{ width: bookW, height: bookH }}>
+            {/* Depth: ivory page edges peeking below/right, and back cover below */}
             <div
               aria-hidden
               className="absolute -inset-x-1 -bottom-2 h-3 rounded-b-[10px]"
@@ -773,7 +894,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
 
             {/* Red cloth cover */}
             <div
-              className="relative rounded-[10px] p-2.5 shadow-[0_18px_36px_-14px_rgba(0,0,0,0.55),0_6px_14px_rgba(0,0,0,0.28),inset_0_0_0_1px_rgba(0,0,0,0.5)]"
+              className="relative w-full h-full rounded-[12px] p-2.5 shadow-[0_22px_44px_-16px_rgba(0,0,0,0.6),0_8px_18px_rgba(0,0,0,0.3),inset_0_0_0_1px_rgba(0,0,0,0.5)]"
               style={{
                 backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.10), rgba(0,0,0,0.35)), url(${RED_CLOTH_URL})`,
                 backgroundSize: 'cover',
@@ -782,19 +903,19 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
             >
               {/* Gold inner border */}
               <div
-                className="rounded-[7px] p-1"
+                className="w-full h-full rounded-[8px] p-1"
                 style={{ boxShadow: 'inset 0 0 0 1px rgba(240,205,120,0.55)' }}
               >
                 {/* 3D scene */}
                 <div
-                  className="relative rounded-[5px] overflow-hidden"
-                  style={{ perspective: '1400px' }}
+                  className="relative w-full h-full rounded-[6px] overflow-hidden"
+                  style={{ perspective: `${perspective}px` }}
                 >
                   <div
                     ref={bookRef}
                     role="group"
                     aria-label={currentEyebrow}
-                    className="relative aspect-[3/2] w-full select-none"
+                    className="relative w-full h-full select-none"
                     style={{
                       transformStyle: 'preserve-3d',
                       touchAction: 'pan-y',
@@ -804,140 +925,212 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                     onPointerUp={onPointerUpOrCancel}
                     onPointerCancel={onPointerUpOrCancel}
                   >
-                    {/* Left base half */}
-                    <div className="absolute inset-y-0 left-0 w-1/2 overflow-hidden">
-                      <BookPageFace content={leftBase} side="left" />
-                    </div>
-                    {/* Right base half */}
-                    <div className="absolute inset-y-0 right-0 w-1/2 overflow-hidden">
-                      <BookPageFace content={rightBase} side="right" />
-                    </div>
-                    {/* Center fold */}
-                    <div
-                      aria-hidden
-                      className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[3px] pointer-events-none z-10"
-                      style={{
-                        background:
-                          'linear-gradient(to right, rgba(60,30,10,0.35), rgba(60,30,10,0.55), rgba(60,30,10,0.35))',
-                      }}
-                    />
-                    {/* Flipping leaf */}
-                    {flip && leafFront != null && leafBack != null && (
-                      <div
-                        aria-hidden
-                        className="absolute inset-y-0 w-1/2 z-20 pointer-events-none"
-                        style={{
-                          ...leafSideStyle,
-                          transformOrigin: leafOrigin,
-                          transformStyle: 'preserve-3d',
-                          transform: `rotateY(${leafAngle}deg)`,
-                          transition: flip.animating ? FLIP_TRANSITION : 'none',
-                          willChange: 'transform',
-                        }}
-                        onTransitionEnd={onLeafTransitionEnd}
-                      >
-                        {/* Front face */}
-                        <div className="absolute inset-0" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' as any }}>
-                          <BookPageFace
-                            content={leafFront}
-                            side={flip.direction === 'next' ? 'right' : 'left'}
-                          />
-                          <div
-                            className="absolute inset-0 pointer-events-none"
-                            style={{ backgroundColor: `rgba(0,0,0,${frontShadow})` }}
-                          />
+                    {isSingle ? (
+                      <>
+                        {/* Single-page base (destination during flip) */}
+                        <div className="absolute inset-0 overflow-hidden">
+                          <BookPageFace content={singleBase} side="right" />
                         </div>
-                        {/* Back face (pre-rotated 180°) */}
+                        {/* Spine shadow on left edge */}
                         <div
-                          className="absolute inset-0"
+                          aria-hidden
+                          className="absolute inset-y-0 left-0 w-3 pointer-events-none z-10"
                           style={{
-                            backfaceVisibility: 'hidden',
-                            WebkitBackfaceVisibility: 'hidden' as any,
-                            transform: 'rotateY(180deg)',
+                            background:
+                              'linear-gradient(to right, rgba(60,30,10,0.45), rgba(60,30,10,0.10) 60%, rgba(60,30,10,0) 100%)',
                           }}
-                        >
-                          <BookPageFace
-                            content={leafBack}
-                            side={flip.direction === 'next' ? 'left' : 'right'}
-                          />
+                        />
+                        {/* Flipping leaf (full page, pivots on LEFT edge) */}
+                        {flip && singleLeafFront != null && singleLeafBack != null && (
                           <div
-                            className="absolute inset-0 pointer-events-none"
-                            style={{ backgroundColor: `rgba(0,0,0,${backShadow})` }}
-                          />
+                            aria-hidden
+                            className="absolute inset-0 z-20 pointer-events-none"
+                            style={{
+                              transformOrigin: 'left center',
+                              transformStyle: 'preserve-3d',
+                              transform: `rotateY(${singleLeafAngle}deg) translateZ(0)`,
+                              transition: flip.animating ? flipTransition : 'none',
+                              willChange: 'transform',
+                            }}
+                            onTransitionEnd={onLeafTransitionEnd}
+                          >
+                            {/* Front face */}
+                            <div
+                              className="absolute inset-0"
+                              style={{
+                                backfaceVisibility: 'hidden',
+                                WebkitBackfaceVisibility: 'hidden' as any,
+                              }}
+                            >
+                              <BookPageFace content={singleLeafFront} side="right" />
+                              {/* Curl highlight along free (right) edge */}
+                              <div
+                                className="absolute inset-y-0 right-0 w-16 pointer-events-none"
+                                style={{
+                                  background:
+                                    'linear-gradient(to left, rgba(0,0,0,0.18), rgba(0,0,0,0))',
+                                  opacity: 1 - Math.abs(flipProgress - 0.5) * 2,
+                                }}
+                              />
+                              <div
+                                className="absolute inset-0 pointer-events-none"
+                                style={{ backgroundColor: `rgba(0,0,0,${frontShadow})` }}
+                              />
+                            </div>
+                            {/* Back face (pre-rotated 180°) */}
+                            <div
+                              className="absolute inset-0"
+                              style={{
+                                backfaceVisibility: 'hidden',
+                                WebkitBackfaceVisibility: 'hidden' as any,
+                                transform: 'rotateY(180deg)',
+                              }}
+                            >
+                              <BookPageFace content={singleLeafBack} side="left" />
+                              <div
+                                className="absolute inset-y-0 left-0 w-16 pointer-events-none"
+                                style={{
+                                  background:
+                                    'linear-gradient(to right, rgba(0,0,0,0.18), rgba(0,0,0,0))',
+                                  opacity: 1 - Math.abs(flipProgress - 0.5) * 2,
+                                }}
+                              />
+                              <div
+                                className="absolute inset-0 pointer-events-none"
+                                style={{ backgroundColor: `rgba(0,0,0,${backShadow})` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {/* Spread mode — two halves + center-pivoting leaf */}
+                        <div className="absolute inset-y-0 left-0 w-1/2 overflow-hidden">
+                          <BookPageFace content={spreadLeftBase} side="left" />
                         </div>
-                      </div>
+                        <div className="absolute inset-y-0 right-0 w-1/2 overflow-hidden">
+                          <BookPageFace content={spreadRightBase} side="right" />
+                        </div>
+                        <div
+                          aria-hidden
+                          className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[3px] pointer-events-none z-10"
+                          style={{
+                            background:
+                              'linear-gradient(to right, rgba(60,30,10,0.35), rgba(60,30,10,0.55), rgba(60,30,10,0.35))',
+                          }}
+                        />
+                        {flip && spreadLeafFront != null && spreadLeafBack != null && (
+                          <div
+                            aria-hidden
+                            className="absolute inset-y-0 w-1/2 z-20 pointer-events-none"
+                            style={{
+                              ...spreadLeafSideStyle,
+                              transformOrigin: spreadLeafOrigin,
+                              transformStyle: 'preserve-3d',
+                              transform: `rotateY(${spreadLeafAngle}deg) translateZ(0)`,
+                              transition: flip.animating ? flipTransition : 'none',
+                              willChange: 'transform',
+                            }}
+                            onTransitionEnd={onLeafTransitionEnd}
+                          >
+                            <div
+                              className="absolute inset-0"
+                              style={{
+                                backfaceVisibility: 'hidden',
+                                WebkitBackfaceVisibility: 'hidden' as any,
+                              }}
+                            >
+                              <BookPageFace
+                                content={spreadLeafFront}
+                                side={flip.direction === 'next' ? 'right' : 'left'}
+                              />
+                              <div
+                                className="absolute inset-0 pointer-events-none"
+                                style={{ backgroundColor: `rgba(0,0,0,${frontShadow})` }}
+                              />
+                            </div>
+                            <div
+                              className="absolute inset-0"
+                              style={{
+                                backfaceVisibility: 'hidden',
+                                WebkitBackfaceVisibility: 'hidden' as any,
+                                transform: 'rotateY(180deg)',
+                              }}
+                            >
+                              <BookPageFace
+                                content={spreadLeafBack}
+                                side={flip.direction === 'next' ? 'left' : 'right'}
+                              />
+                              <div
+                                className="absolute inset-0 pointer-events-none"
+                                style={{ backgroundColor: `rgba(0,0,0,${backShadow})` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        )}
+      </div>
 
-          {/* Controls */}
-          <div className="mt-5 flex flex-col items-center gap-2">
-            <div className="text-xs font-semibold tracking-wide text-[#3a2410]">
-              {currentEyebrow}
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => startAnimatedFlip('prev')}
-                disabled={!canPrev || !!flip?.animating}
-                aria-label="Forrige side"
-                className="inline-flex items-center justify-center rounded-full h-10 w-10 border border-[#3a2410]/20 bg-white/80 text-[#3a2410] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-red-700"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <div
-                role="tablist"
-                aria-label="Sidevalg"
-                className="flex items-center justify-center gap-1.5"
-              >
-                {spreads.map((s, i) => (
-                  <button
-                    key={s.key}
-                    role="tab"
-                    aria-selected={i === index}
-                    aria-label={`Gå til ${s.eyebrow}`}
-                    onClick={() => goToSpread(i)}
-                    className={cn(
-                      'h-1.5 rounded-full transition-all',
-                      i === index ? 'w-6 bg-[#7a0a0e]' : 'w-1.5 bg-[#3a2410]/25',
-                    )}
-                  />
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => startAnimatedFlip('next')}
-                disabled={!canNext || !!flip?.animating}
-                aria-label="Neste side"
-                className="inline-flex items-center justify-center rounded-full h-10 w-10 border border-[#3a2410]/20 bg-white/80 text-[#3a2410] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-red-700"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="text-[10px] text-[#3a2410]/50">Dra siden for å bla</div>
-          </div>
-
-          {!inline && (
-            <div className="mt-4 flex justify-center pb-6">
-              <button
-                type="button"
-                onClick={() => {
-                  hapticImpact('light');
-                  onClose?.();
-                }}
-                className="inline-flex items-center gap-2 rounded-full bg-white/90 border border-[#3a2410]/15 px-4 py-2 text-sm text-[#3a2410] shadow-sm focus-visible:ring-2 focus-visible:ring-red-700"
-              >
-                <X className="w-4 h-4" /> Lukk passet
-              </button>
-            </div>
-          )}
+      {/* Slim bottom controls */}
+      <div className="shrink-0 flex flex-col items-center gap-1.5 pb-4 pt-2 px-3">
+        <div className="text-[10px] uppercase tracking-[0.28em] text-[#7a5a20] font-semibold">
+          {currentEyebrow}
         </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => startAnimatedFlip('prev')}
+            disabled={!canPrev || !!flip?.animating}
+            aria-label="Forrige side"
+            className="inline-flex items-center justify-center rounded-full h-9 w-9 border border-[#3a2410]/20 bg-white/85 text-[#3a2410] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-red-700"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <div
+            role="tablist"
+            aria-label="Sidevalg"
+            className="flex items-center justify-center gap-1.5 max-w-[60vw] overflow-hidden"
+          >
+            {Array.from({ length: dotCount }).map((_, i) => (
+              <button
+                key={i}
+                role="tab"
+                aria-selected={i === index}
+                aria-label={`Gå til side ${i + 1}`}
+                onClick={() => goToSpread(i)}
+                className={cn(
+                  'h-1.5 rounded-full transition-all',
+                  i === index ? 'w-5 bg-[#7a0a0e]' : 'w-1.5 bg-[#3a2410]/25',
+                )}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => startAnimatedFlip('next')}
+            disabled={!canNext || !!flip?.animating}
+            aria-label="Neste side"
+            className="inline-flex items-center justify-center rounded-full h-9 w-9 border border-[#3a2410]/20 bg-white/85 text-[#3a2410] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-red-700"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="text-[10px] text-[#3a2410]/50">Dra siden for å bla</div>
       </div>
     </div>
   );
+
+  // Silence unused var warning when HEADER_URL isn't referenced anymore in the
+  // slim layout — keep the import so the asset stays bundled for any future use.
+  void HEADER_URL;
 
   return passportBody;
 }
