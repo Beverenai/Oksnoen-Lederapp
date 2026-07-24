@@ -167,6 +167,35 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          leader_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          leader_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          leader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dynga_cards: {
         Row: {
           column_id: string
@@ -1635,6 +1664,7 @@ export type Database = {
       }
       periods: {
         Row: {
+          archived_at: string | null
           created_at: string
           end_date: string | null
           id: string
@@ -1646,6 +1676,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           end_date?: string | null
           id?: string
@@ -1657,6 +1688,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           end_date?: string | null
           id?: string
