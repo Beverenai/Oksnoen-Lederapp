@@ -1013,7 +1013,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                     className="relative w-full h-full select-none"
                     style={{
                       transformStyle: 'preserve-3d',
-                      touchAction: 'pan-y',
+                      touchAction: 'none',
                     }}
                     onPointerDown={onPointerDown}
                     onPointerMove={onPointerMove}
