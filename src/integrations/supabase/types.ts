@@ -706,6 +706,51 @@ export type Database = {
           },
         ]
       }
+      leader_period_history: {
+        Row: {
+          created_at: string
+          id: string
+          leader_id: string
+          note: string | null
+          period_id: string
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leader_id: string
+          note?: string | null
+          period_id: string
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leader_id?: string
+          note?: string | null
+          period_id?: string
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_period_history_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_period_history_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leader_teams: {
         Row: {
           created_at: string | null
