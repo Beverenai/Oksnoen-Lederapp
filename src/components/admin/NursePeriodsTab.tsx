@@ -4,7 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Calendar, Loader2 } from 'lucide-react';
+import { Calendar, Loader2, Power } from 'lucide-react';
+import { useAppMode, setAppMode } from '@/hooks/useAppMode';
+import { useAuth } from '@/contexts/AuthContext';
+import { LeaderHistoryImportCard } from '@/components/admin/LeaderHistoryImportCard';
 
 interface Period {
   id: string;
@@ -15,6 +18,9 @@ interface Period {
 
 export function NursePeriodsTab() {
   const { showSuccess, showError } = useStatusPopup();
+  const { isSuperAdmin } = useAuth();
+  const { mode: appMode } = useAppMode();
+  const [changingMode, setChangingMode] = useState(false);
   const [periods, setPeriods] = useState<Period[]>([]);
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
@@ -39,6 +45,21 @@ export function NursePeriodsTab() {
     if (e1 || e2) {
       showError('Kunne ikke bytte periode');
     } else {
+      // Reset feature toggles so the new period starts with everything off.
+      // Admins re-enable Utsjekk / Overnatting / Lag / Gensere / Roulette as needed.
+      const resetKeys = [
+        'checkout_enabled',
+        'overnatting_enabled',
+        'teams_enabled',
+        'sweaters_enabled',
+        'roulette_enabled',
+      ];
+      await supabase
+        .from('app_config')
+        .upsert(
+          resetKeys.map((key) => ({ key, value: 'false' })),
+          { onConflict: 'key' },
+        );
       showSuccess(`Aktiv periode: ${p.name}`);
       setPeriods((prev) => prev.map((x) => ({ ...x, is_active: x.id === p.id })));
     }
@@ -47,8 +68,68 @@ export function NursePeriodsTab() {
 
   const active = periods.find((p) => p.is_active);
 
+  const toggleAppMode = async () => {
+    const next = appMode === 'inactive' ? 'active' : 'inactive';
+    const confirmMsg = next === 'inactive'
+      ? 'Sette appen til INAKTIV? Alle ledere blir aktivert og ser kun Hjem + Ledersnakk. Superadmin beholder full tilgang.'
+      : 'Skru på AKTIV-modus igjen? Alle funksjoner blir tilgjengelig for alle.';
+    if (!confirm(confirmMsg)) return;
+    setChangingMode(true);
+    try {
+      await setAppMode(next);
+      if (next === 'inactive') {
+        // Activate every leader so off-season broadcasts + login work for all.
+        const { data, error } = await supabase.functions.invoke('activate-all-leaders');
+        if (error) {
+          console.error(error);
+          showError('Modus satt, men klarte ikke aktivere alle ledere');
+        } else {
+          const n = (data as { activated?: number } | null)?.activated ?? 0;
+          showSuccess(`Appen er nå inaktiv. ${n} ledere ble aktivert.`);
+        }
+      } else {
+        showSuccess('Appen er nå aktiv');
+      }
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke endre app-modus');
+    } finally {
+      setChangingMode(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {isSuperAdmin && (
+        <Card className={`p-4 border-2 ${appMode === 'inactive' ? 'border-destructive bg-destructive/5' : 'border-primary/20'}`}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`p-2 rounded-lg ${appMode === 'inactive' ? 'bg-destructive/15 text-destructive' : 'bg-primary/15 text-primary'}`}>
+                <Power className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold">
+                  App-modus: {appMode === 'inactive' ? 'Inaktiv' : 'Aktiv'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {appMode === 'inactive'
+                    ? 'Alle ledere ser kun Ledersnakk-chatten.'
+                    : 'Alle funksjoner er tilgjengelig.'}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant={appMode === 'inactive' ? 'default' : 'destructive'}
+              size="sm"
+              disabled={changingMode}
+              onClick={toggleAppMode}
+            >
+              {appMode === 'inactive' ? 'Aktiver app' : 'Sett inaktiv'}
+            </Button>
+          </div>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -89,6 +170,7 @@ export function NursePeriodsTab() {
           )}
         </CardContent>
       </Card>
+      <LeaderHistoryImportCard />
     </div>
   );
 }

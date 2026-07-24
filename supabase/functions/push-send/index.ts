@@ -97,6 +97,16 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // In "inactive" app mode, all leaders should receive notifications
+    // regardless of their is_active flag (off-season broadcasts).
+    const { data: appModeRow } = await supabaseAdmin
+      .from("app_config")
+      .select("value")
+      .eq("key", "app_mode")
+      .maybeSingle();
+    const isAppInactive = (appModeRow?.value ?? "active") === "inactive";
+    console.log(`App mode: ${isAppInactive ? "inactive (skip is_active filter)" : "active"}`);
+
     if (!sender_leader_id) {
       return new Response(
         JSON.stringify({ error: "Sender leader ID is required" }),
@@ -164,8 +174,21 @@ serve(async (req) => {
         .from("leaders")
         .select("id")
         .eq("id", single_leader_id)
-        .eq("is_active", true)
         .maybeSingle();
+      if (leaderRow && !isAppInactive) {
+        const { data: activeRow } = await supabaseAdmin
+          .from("leaders")
+          .select("id")
+          .eq("id", single_leader_id)
+          .eq("is_active", true)
+          .maybeSingle();
+        if (!activeRow) {
+          return new Response(
+            JSON.stringify({ success: true, sent: 0, message: "Leader is inactive" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
       if (!leaderRow) {
         return new Response(
           JSON.stringify({ success: true, sent: 0, message: "Leader is inactive" }),
@@ -315,15 +338,19 @@ serve(async (req) => {
 
     // Filter out subscriptions for inactive leaders
     const uniqueLeaderIds = Array.from(new Set(subscriptions.map(s => s.leader_id)));
-    const { data: activeLeaders } = await supabaseAdmin
-      .from("leaders")
-      .select("id")
-      .in("id", uniqueLeaderIds)
-      .eq("is_active", true);
-    const activeSet = new Set((activeLeaders ?? []).map(l => l.id));
-    const totalSubs = subscriptions.length;
-    const filteredSubscriptions = subscriptions.filter(s => activeSet.has(s.leader_id));
-    const inactiveSkipped = totalSubs - filteredSubscriptions.length;
+    let filteredSubscriptions = subscriptions;
+    let inactiveSkipped = 0;
+    if (!isAppInactive) {
+      const { data: activeLeaders } = await supabaseAdmin
+        .from("leaders")
+        .select("id")
+        .in("id", uniqueLeaderIds)
+        .eq("is_active", true);
+      const activeSet = new Set((activeLeaders ?? []).map(l => l.id));
+      const totalSubs = subscriptions.length;
+      filteredSubscriptions = subscriptions.filter(s => activeSet.has(s.leader_id));
+      inactiveSkipped = totalSubs - filteredSubscriptions.length;
+    }
 
     console.log(`Sending push to ${filteredSubscriptions.length}/${totalSubs} subscriptions (skipped ${inactiveSkipped} inactive), personalize: ${personalize_activity}`);
 

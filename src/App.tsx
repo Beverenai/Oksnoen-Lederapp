@@ -11,6 +11,7 @@ import { SplashScreen } from "@/components/SplashScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AppLayout from "@/components/layout/AppLayout";
 import { useStatusBarTheme } from "@/hooks/useStatusBarTheme";
+import { useAppMode } from "@/hooks/useAppMode";
 
 // Critical path - load immediately
 import Login from "@/pages/Login";
@@ -47,6 +48,8 @@ const GjenglemtAdmin = lazy(() => import("@/pages/GjenglemtAdmin"));
 const Roulette = lazy(() => import("@/pages/Roulette"));
 const Gensere = lazy(() => import("@/pages/Gensere"));
 const Hendelser = lazy(() => import("@/pages/Hendelser"));
+const Chat = lazy(() => import("@/pages/Chat"));
+const More = lazy(() => import("@/pages/More"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,7 +85,8 @@ function PageLoader() {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { leader, isLoading, isInitialized, isProfileComplete, authError, deactivatedMessage, retryAuth } = useAuth();
+  const { leader, isLoading, isInitialized, isProfileComplete, authError, deactivatedMessage, retryAuth, isSuperAdmin } = useAuth();
+  const { mode } = useAppMode();
 
   // Only show full-page loader during initial app load, never between page navigations
   if (!isInitialized && isLoading) {
@@ -108,6 +112,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!isProfileComplete) {
     return <Navigate to="/onboarding" replace />;
+  }
+
+  // Inactive mode: hide all features for non-superadmins, only chat + profile allowed.
+  if (mode === 'inactive' && !isSuperAdmin) {
+    const path = window.location.pathname;
+    const allowed = ['/', '/chat', '/profile'];
+    if (!allowed.includes(path)) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return <AppLayout>{children}</AppLayout>;
@@ -211,6 +224,8 @@ function AppRoutes() {
         <Route path="/skjaer" element={<ProtectedRoute><Skjaer /></ProtectedRoute>} />
         <Route path="/stories" element={<ProtectedRoute><Stories /></ProtectedRoute>} />
         <Route path="/hendelser" element={<ProtectedRoute><Hendelser /></ProtectedRoute>} />
+        <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+        <Route path="/mer" element={<ProtectedRoute><More /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

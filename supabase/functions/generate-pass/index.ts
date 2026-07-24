@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { loadPassContext, buildTeamPromptLines } from "../_shared/passContext.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,6 +40,9 @@ REGLER:
 - Av og til bruk uttrykket "ekte Oksnøyaner"
 - VIKTIG: Hvis det finnes "Aktivitetsnotater fra ledere", bruk disse! De inneholder prestasjoner (f.eks. "1. plass i svømmekonkurranse", "rekord i bruskasser")
 - Hvis de har klart Lille eller Store Styrkeprøven, fremhev dette som en stor prestasjon
+- Hvis "Stamme (lag)" er oppgitt, nevn stammen naturlig (f.eks. "bidratt godt for stammen X"). Hvis stammen ligger på 1., 2. eller 3. plass, nevn dette som en gratulasjon.
+- Hvis "Insjpoeng" er oppgitt, nevn at deltakeren har knakt mange hemmelige ord (uten å nevne tallet).
+- Hvis "Ekstra bragder" er oppgitt, fremhev én eller to av dem naturlig i teksten (f.eks. "tok taubanen baklengs").
 
 GODE ADJEKTIVER Å BRUKE (varier):
 søt, snill, herlig, sprudlende, rå, tøff, kul, sjarmerende, aktiv, glad, skjønn, god, morsom, hyggelig, flott, supertrivelig
@@ -83,12 +87,28 @@ serve(async (req) => {
     // Process participants (either single or batch)
     const participantList: ParticipantData[] = single ? [participants] : participants;
 
+    // Resolve active period + team context (only enriches when Lag is enabled).
+    let teamLinesById = new Map<string, string>();
+    try {
+      const { data: activePeriod } = await supabase
+        .from('periods').select('id').eq('is_active', true).maybeSingle();
+      if (activePeriod?.id) {
+        const ctx = await loadPassContext(supabase, activePeriod.id);
+        for (const p of participantList) {
+          teamLinesById.set(p.id, buildTeamPromptLines(ctx, p.id));
+        }
+      }
+    } catch (e) {
+      console.error('Team context load failed (non-fatal):', e);
+    }
+
     for (const participant of participantList) {
       const firstName = participant.name.split(' ')[0];
 
       const friendlyActivities = participant.activities.map((a) =>
         a.toLowerCase().trim() === 'rappis' ? 'rappellering ned fjellveggen' : a
       );
+      const teamLines = teamLinesById.get(participant.id) || '';
 
       const userPrompt = `Skriv et pass for denne deltakeren:
 
@@ -100,6 +120,7 @@ Aktiviteter gjort: ${friendlyActivities.length > 0 ? friendlyActivities.join(', 
 ${participant.activityNotes ? `Aktivitetsnotater fra ledere: ${participant.activityNotes}` : ''}
 ${participant.leaderNotes ? `Lederkommentarer om deltakeren: ${participant.leaderNotes}` : ''}
 Styrkeprøve: ${participant.bigStyrkeprove ? 'Store Styrkeprøven ✅' : participant.littleStyrkeprove ? 'Lille Styrkeprøven ✅' : 'Ingen styrkeprøve'}
+${teamLines}
 
 VIKTIG ORDLISTE: "Rappis" = rappellering ned fjellveggen (skriv "rappellert ned fjellveggen" eller lignende, aldri "rappis").
 

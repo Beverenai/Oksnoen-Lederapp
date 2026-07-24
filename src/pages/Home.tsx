@@ -38,6 +38,9 @@ import { updateWidgetData } from '@/lib/capacitorWidget';
 import { MessageSquareWarning } from 'lucide-react';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
+import { useAppMode } from '@/hooks/useAppMode';
+import { Link as LinkIcon } from 'lucide-react';
+import { LederPass } from '@/components/passport/LederPass';
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
 
@@ -139,7 +142,8 @@ const formatTeamDisplay = (team: string | null): string => {
 };
 
 export default function Home() {
-  const { leader, effectiveLeader, isAdmin, isNurse } = useAuth();
+  const { leader, effectiveLeader, isAdmin, isNurse, isSuperAdmin } = useAuth();
+  const { mode: appMode } = useAppMode();
   const navigate = useNavigate();
   const location = useLocation();
   const [content, setContent] = useState<LeaderContent | null>(null);
@@ -157,6 +161,7 @@ export default function Home() {
   const [overnattingJoining, setOvernattingJoining] = useState(false);
   const [overnattingSaving, setOvernattingSaving] = useState(false);
   const [rouletteEnabled, setRouletteEnabled] = useState(false);
+  const [activePeriodLabel, setActivePeriodLabel] = useState<string | null>(null);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
   const showRoulette = rouletteEnabled && inRoulette;
   const teamsEnabled = useTeamsEnabled();
@@ -183,8 +188,12 @@ export default function Home() {
     setIsLoading(true);
     setLoadFailed(false);
     try {
-      const periodRes = await supabase.from('periods').select('id').eq('is_active', true).maybeSingle();
+      const periodRes = await supabase.from('periods').select('id,name').eq('is_active', true).maybeSingle();
       const activePeriodId = periodRes.data?.id ?? null;
+      setActivePeriodLabel(periodRes.data?.name ?? null);
+      const sessionActivitiesKey = activePeriodId
+        ? `session_activities_data:${activePeriodId}`
+        : 'session_activities_data';
       const fixTasksQuery = supabase
         .from('fix_tasks')
         .select('id, title, assigned_to, status')
@@ -200,7 +209,9 @@ export default function Home() {
         supabase
           .from('app_config')
           .select('value')
-          .eq('key', 'session_activities_data')
+          .in('key', [sessionActivitiesKey, 'session_activities_data'])
+          .order('key', { ascending: false })
+          .limit(1)
           .maybeSingle(),
         supabase
           .from('home_screen_config')
@@ -415,6 +426,17 @@ export default function Home() {
     );
   }
 
+  // App-wide inactive mode (off-season): the real interactive 3D lederpass
+  // fills the entire home surface. Chat remains reachable via bottom nav.
+  // Superadmin keeps the full home to manage the app.
+  if (appMode === 'inactive' && !isSuperAdmin) {
+    return (
+      <div className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 h-[calc(100dvh-4rem)]">
+        <LederPass leader={effectiveLeader} fill periodLabel={activePeriodLabel} />
+      </div>
+    );
+  }
+
   // Check if there's any content to show
   const hasExtraContent = ['extra_1', 'extra_2', 'extra_3', 'extra_4', 'extra_5'].some(
     key => config.find(c => c.element_key === key) && getExtraFieldValue(key)
@@ -444,7 +466,12 @@ export default function Home() {
           fetchPriority="high"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
-        
+
+        {/* Small 3D lederpass icon — replaces logo, only in active mode */}
+        <div className="absolute top-3 left-3">
+          <LederPass leader={effectiveLeader} periodLabel={activePeriodLabel} />
+        </div>
+
         {/* Refresh button */}
         <Button 
           variant="ghost" 
@@ -479,7 +506,7 @@ export default function Home() {
           <p className="text-base font-medium text-foreground mt-2">
             {effectiveLeader?.name}
           </p>
-          
+
           {effectiveLeader?.ministerpost && (
             <p className="text-sm text-muted-foreground mt-0.5">{effectiveLeader.ministerpost}</p>
           )}
