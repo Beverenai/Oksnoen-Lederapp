@@ -975,16 +975,6 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
             {/* Depth: ivory page edges peeking below/right, and back cover below */}
             <div
               aria-hidden
-              className="absolute -inset-x-1 -bottom-2 h-3 rounded-b-[10px]"
-              style={{
-                backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.15)), url(${RED_CLOTH_URL})`,
-                backgroundSize: 'cover',
-                backgroundColor: '#5a0508',
-                filter: 'blur(0.2px)',
-              }}
-            />
-            <div
-              aria-hidden
               className="absolute inset-y-3 -right-[3px] w-[3px] rounded-r-sm"
               style={{ backgroundColor: '#e8dcc0', boxShadow: 'inset 0 0 0 1px rgba(60,30,10,0.25)' }}
             />
