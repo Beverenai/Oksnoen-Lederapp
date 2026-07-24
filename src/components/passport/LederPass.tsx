@@ -464,30 +464,19 @@ function buildSpreads(
               Ingen registrerte perioder ennå.
             </div>
           ) : (
-            <ul className="space-y-1.5 max-h-[240px] overflow-y-auto pr-1">
-              {history.map((p) => {
-                const range = [p.start_date, p.end_date]
-                  .filter(Boolean)
-                  .map((d) => new Date(d as string).toLocaleDateString('nb-NO', { day: '2-digit', month: 'short' }))
-                  .join(' – ');
-                return (
-                  <li
-                    key={p.id}
-                    className={cn(
-                      'flex items-center justify-between gap-2 rounded-md border px-2 py-1.5 text-[11px]',
-                      p.is_active
-                        ? 'border-[#7a0a0e]/50 bg-[#f0cd78]/30 text-[#3a2410]'
-                        : 'border-[#3a2410]/20 bg-[#f4ede0]/70 text-[#3a2410]/80',
-                    )}
-                  >
-                    <span className="font-semibold truncate">{p.name}</span>
-                    <span className="shrink-0 text-[10px] text-[#3a2410]/60">
-                      {range || (p.is_active ? 'Aktiv' : '')}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+            <div
+              className="grid grid-cols-3 gap-x-1 gap-y-2 justify-items-center place-content-center px-1"
+              aria-label="Periodestempler"
+            >
+              {history.slice(0, 7).map((p) => (
+                <PeriodStamp key={p.id} period={p} size={72} />
+              ))}
+            </div>
+          )}
+          {history.length > 7 && (
+            <div className="text-center text-[9px] italic text-[#3a2410]/50 mt-1">
+              +{history.length - 7} eldre stempel
+            </div>
           )}
         </div>
       ),
