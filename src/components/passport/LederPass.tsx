@@ -1,10 +1,6 @@
-import { forwardRef, useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, ShieldCheck, CalendarDays } from 'lucide-react';
-// react-pageflip has loose types; import default and cast where needed.
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - no bundled types
-import HTMLFlipBook from 'react-pageflip';
+import { X, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, ShieldCheck, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 import { hapticSelection, hapticImpact } from '@/lib/capacitorHaptics';
@@ -419,106 +415,55 @@ interface FullViewProps {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Individual page components (used inside HTMLFlipBook)                     */
+/*  3D page-flip mechanics                                                    */
 /* -------------------------------------------------------------------------- */
 
-interface PassportPageProps {
-  side: 'left' | 'right';
-  eyebrow?: string;
-  children: React.ReactNode;
-}
+const FLIP_TRANSITION = 'transform 470ms cubic-bezier(0.32, 0.72, 0.28, 1)';
 
-// react-pageflip passes a ref to each direct child; that ref must land on a
-// DOM node, so we use forwardRef.
-const PassportPage = forwardRef<HTMLDivElement, PassportPageProps>(function PassportPage(
-  { side, children },
-  ref,
-) {
+type FlipState = {
+  direction: 'next' | 'prev';
+  progress: number; // 0..1
+  animating: boolean;
+};
+
+function BookPageFace({
+  content,
+  side,
+  isFlipping = false,
+}: {
+  content: React.ReactNode;
+  side: 'left' | 'right';
+  isFlipping?: boolean;
+}) {
   return (
     <div
-      ref={ref}
-      className="relative w-full h-full overflow-hidden"
+      className="absolute inset-0 overflow-hidden"
       style={{
         backgroundImage: `url(${IVORY_URL})`,
         backgroundSize: 'cover',
         backgroundColor: '#f5ecd8',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
+        // Back faces are pre-rotated 180° in the parent; those pass isFlipping.
+        transform: isFlipping && side === 'right' ? 'rotateY(180deg)' : undefined,
       }}
     >
-      <div className="absolute inset-0 p-4 overflow-hidden">{children}</div>
+      <div className="absolute inset-0 p-3">{content}</div>
       {/* Spine shadow along the binding edge */}
       <div
         aria-hidden
-        className="absolute inset-y-0 w-6 pointer-events-none"
+        className="absolute inset-y-0 w-5 pointer-events-none"
         style={{
           [side === 'left' ? 'right' : 'left']: 0,
           background:
             side === 'left'
-              ? 'linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(60,30,10,0.22) 100%)'
-              : 'linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(60,30,10,0.22) 100%)',
+              ? 'linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(60,30,10,0.20) 100%)'
+              : 'linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(60,30,10,0.20) 100%)',
         }}
       />
     </div>
   );
-});
-
-// Hard cover pages (front / back). Uses the red bookcloth texture.
-const PassportCoverPage = forwardRef<HTMLDivElement, { side: 'front' | 'back' }>(
-  function PassportCoverPage({ side }, ref) {
-    return (
-      <div
-        ref={ref}
-        className="relative w-full h-full flex items-center justify-center overflow-hidden"
-        data-density="hard"
-        style={{
-          backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.10), rgba(0,0,0,0.35)), url(${RED_CLOTH_URL})`,
-          backgroundSize: 'cover',
-          backgroundColor: '#7a0a0e',
-          boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.5)',
-        }}
-      >
-        {/* Gold inner frame */}
-        <div
-          aria-hidden
-          className="absolute inset-[6%] rounded-sm pointer-events-none"
-          style={{ boxShadow: 'inset 0 0 0 1px rgba(240,205,120,0.55)' }}
-        />
-        {side === 'front' ? (
-          <div className="relative flex flex-col items-center gap-3 text-center px-6">
-            <span
-              className="text-[10px] tracking-[0.35em] font-semibold"
-              style={{ color: '#f0cd78' }}
-            >
-              PASS
-            </span>
-            <img src={oksnoenLogo} alt="" className="w-20 h-20 object-contain opacity-95" />
-            <span
-              className="text-lg tracking-[0.25em] font-serif font-bold"
-              style={{ color: '#f0cd78' }}
-            >
-              ØKSNØEN
-            </span>
-            <span
-              className="text-[10px] tracking-[0.3em]"
-              style={{ color: '#f0cd78', opacity: 0.85 }}
-            >
-              LEDERPASS
-            </span>
-          </div>
-        ) : (
-          <div className="relative flex flex-col items-center gap-2 text-center px-6">
-            <span
-              className="text-[9px] tracking-[0.3em] italic"
-              style={{ color: '#f0cd78', opacity: 0.85 }}
-            >
-              Anno 1962
-            </span>
-            <img src={oksnoenLogo} alt="" className="w-12 h-12 object-contain opacity-80" />
-          </div>
-        )}
-      </div>
-    );
-  },
-);
+}
 
 function LederPassFullView({ leader, onClose, inline = false, periodLabel }: FullViewProps) {
   const [history, setHistory] = useState<PeriodHistoryEntry[]>([]);
@@ -563,54 +508,210 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
 
   const spreads = useMemo(() => buildSpreads(leader, periodLabel, history), [leader, periodLabel, history]);
 
-  // Flatten spreads into a linear list of pages so the book flips one leaf at
-  // a time (front cover → left/right per spread → back cover).
-  const pages = useMemo(() => {
-    const inner: { key: string; eyebrow: string; side: 'left' | 'right'; content: React.ReactNode }[] = [];
-    spreads.forEach((s) => {
-      inner.push({ key: `${s.key}-l`, eyebrow: s.eyebrow, side: 'left', content: s.left });
-      inner.push({ key: `${s.key}-r`, eyebrow: s.eyebrow, side: 'right', content: s.right });
-    });
-    return inner;
-  }, [spreads]);
+  const total = spreads.length;
+  const [index, setIndex] = useState(0);
+  const [flip, setFlip] = useState<FlipState | null>(null);
 
-  const totalPages = pages.length + 2; // + front + back cover
-  const [pageIndex, setPageIndex] = useState(0);
-  const bookRef = useRef<any>(null);
+  const bookRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{
+    x: number;
+    y: number;
+    locked: 'x' | 'y' | null;
+    direction: 'next' | 'prev' | null;
+    started: boolean;
+    pointerId: number;
+  } | null>(null);
+  const prefersReducedRef = useRef(false);
 
-  // Spread index shown in the pill/dot indicator. Front cover -> 0, back
-  // cover -> last spread. Otherwise map inner page → spread.
-  const spreadIndex = useMemo(() => {
-    if (pageIndex === 0) return 0;
-    if (pageIndex >= totalPages - 1) return spreads.length - 1;
-    return Math.floor((pageIndex - 1) / 2);
-  }, [pageIndex, totalPages, spreads.length]);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    prefersReducedRef.current = mq.matches;
+    const handler = () => { prefersReducedRef.current = mq.matches; };
+    mq.addEventListener?.('change', handler);
+    return () => mq.removeEventListener?.('change', handler);
+  }, []);
 
-  const currentEyebrow = spreads[spreadIndex]?.eyebrow ?? 'Lederpass';
+  const canNext = index < total - 1;
+  const canPrev = index > 0;
+
+  // Kick off a flip animation programmatically (buttons/keyboard).
+  const startAnimatedFlip = useCallback(
+    (direction: 'next' | 'prev') => {
+      if (flip) return;
+      if (direction === 'next' && !canNext) return;
+      if (direction === 'prev' && !canPrev) return;
+      hapticSelection();
+      if (prefersReducedRef.current) {
+        setIndex((i) => (direction === 'next' ? i + 1 : i - 1));
+        return;
+      }
+      // Paint the 0-progress frame first, then flip transition ON and set
+      // progress→1. Two rAFs guarantee the browser committed the starting
+      // transform before the transition kicks in.
+      setFlip({ direction, progress: 0, animating: false });
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setFlip((f) => (f ? { ...f, progress: 1, animating: true } : f));
+        });
+      });
+    },
+    [flip, canNext, canPrev],
+  );
 
   const goToSpread = useCallback(
     (i: number) => {
-      const target = 1 + i * 2; // land on the left page of the spread
-      bookRef.current?.pageFlip?.()?.flip(target);
+      const clamped = Math.max(0, Math.min(total - 1, i));
+      if (clamped === index) return;
+      // Jump target when it's more than one spread away or reduced-motion.
+      if (Math.abs(clamped - index) !== 1 || prefersReducedRef.current) {
+        setFlip(null);
+        setIndex(clamped);
+        hapticSelection();
+        return;
+      }
+      startAnimatedFlip(clamped > index ? 'next' : 'prev');
     },
-    [],
+    [total, index, startAnimatedFlip],
   );
 
   useEffect(() => {
     if (inline) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose?.();
-      else if (e.key === 'ArrowLeft') bookRef.current?.pageFlip?.()?.flipPrev();
-      else if (e.key === 'ArrowRight') bookRef.current?.pageFlip?.()?.flipNext();
+      else if (e.key === 'ArrowLeft') startAnimatedFlip('prev');
+      else if (e.key === 'ArrowRight') startAnimatedFlip('next');
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [inline, onClose]);
+  }, [inline, onClose, startAnimatedFlip]);
 
-  const onFlip = useCallback((e: { data: number }) => {
-    setPageIndex(e.data);
-    hapticSelection();
+  const onLeafTransitionEnd = useCallback((e: React.TransitionEvent<HTMLDivElement>) => {
+    if (e.propertyName !== 'transform') return;
+    setFlip((f) => {
+      if (!f || !f.animating) return f;
+      if (f.progress >= 1) {
+        setIndex((i) => (f.direction === 'next' ? i + 1 : i - 1));
+      }
+      return null;
+    });
   }, []);
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (flip?.animating) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    dragRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      locked: null,
+      direction: null,
+      started: false,
+      pointerId: e.pointerId,
+    };
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (d.locked == null) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if (Math.abs(dx) <= Math.abs(dy)) {
+        // Vertical gesture — release, let the page scroll.
+        d.locked = 'y';
+        return;
+      }
+      d.locked = 'x';
+      d.direction = dx < 0 ? 'next' : 'prev';
+      if ((d.direction === 'next' && !canNext) || (d.direction === 'prev' && !canPrev)) {
+        d.direction = null;
+        d.locked = 'y';
+        return;
+      }
+      try {
+        (e.currentTarget as Element).setPointerCapture(e.pointerId);
+      } catch {
+        /* noop */
+      }
+      d.started = true;
+      setFlip({ direction: d.direction, progress: 0, animating: false });
+    }
+    if (d.locked === 'x' && d.direction) {
+      e.preventDefault();
+      const w = bookRef.current?.clientWidth ?? 320;
+      const half = w / 2;
+      const progress = Math.max(0, Math.min(1, Math.abs(dx) / half));
+      setFlip((f) => (f && !f.animating ? { ...f, progress } : f));
+    }
+  };
+
+  const onPointerUpOrCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    if (!d) return;
+    try {
+      (e.currentTarget as Element).releasePointerCapture(d.pointerId);
+    } catch {
+      /* noop */
+    }
+    if (!d.started || !d.direction) return;
+    setFlip((f) => {
+      if (!f) return f;
+      const commit = f.progress > 0.5;
+      if (prefersReducedRef.current) {
+        if (commit) {
+          setIndex((i) => (f.direction === 'next' ? i + 1 : i - 1));
+        }
+        return null;
+      }
+      // Kick off transition to the resolved endpoint.
+      requestAnimationFrame(() => {
+        setFlip((cur) => (cur ? { ...cur, progress: commit ? 1 : 0, animating: true } : cur));
+      });
+      return f;
+    });
+  };
+
+  const currentSpread = spreads[index];
+  const nextSpread = spreads[index + 1];
+  const prevSpread = spreads[index - 1];
+
+  // Content of the fixed base halves — reveals under the flipping leaf.
+  const leftBase =
+    flip?.direction === 'prev' ? prevSpread?.left : currentSpread?.left;
+  const rightBase =
+    flip?.direction === 'next' ? nextSpread?.right : currentSpread?.right;
+
+  // Flipping leaf faces.
+  const leafFront: React.ReactNode =
+    flip?.direction === 'next'
+      ? currentSpread?.right
+      : flip?.direction === 'prev'
+      ? currentSpread?.left
+      : null;
+  const leafBack: React.ReactNode =
+    flip?.direction === 'next'
+      ? nextSpread?.left
+      : flip?.direction === 'prev'
+      ? prevSpread?.right
+      : null;
+
+  const leafAngle = flip
+    ? flip.direction === 'next'
+      ? -180 * flip.progress
+      : 180 * flip.progress
+    : 0;
+  const leafOrigin = flip?.direction === 'next' ? 'left center' : 'right center';
+  const leafSideStyle: React.CSSProperties =
+    flip?.direction === 'next' ? { left: '50%' } : { left: 0 };
+
+  // Front face is fully lit at rest, dims mid-flip; back face inverse.
+  const flipProgress = flip?.progress ?? 0;
+  const frontShadow = flipProgress <= 0.5 ? flipProgress * 0.7 : (1 - flipProgress) * 0.7;
+  const backShadow = flipProgress >= 0.5 ? (1 - flipProgress) * 0.7 : flipProgress * 0.7;
+
+  const currentEyebrow = currentSpread?.eyebrow ?? 'Lederpass';
 
   const containerClass = inline
     ? 'relative w-full h-full flex flex-col'
@@ -641,83 +742,186 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
       <div className="px-5 pt-3 pb-2 shrink-0">
         <div className="text-[10px] uppercase tracking-[0.3em] text-[#7a5a20]">Lederpass</div>
         <h1 className="text-2xl font-serif font-bold text-[#3a2410] leading-tight">{leader?.name ?? 'Ditt pass'}</h1>
-        <p className="text-xs text-[#3a2410]/60 mt-0.5">Dra hjørnet for å bla i passet.</p>
+        <p className="text-xs text-[#3a2410]/60 mt-0.5">Dra siden for å bla i passet.</p>
       </div>
 
       {/* Book */}
-      <div className="flex-1 min-h-0 overflow-hidden px-3 py-3 flex flex-col items-center">
-        <div className="w-full max-w-[560px] mx-auto flex-1 min-h-0">
-          <HTMLFlipBook
-            ref={bookRef}
-            width={340}
-            height={520}
-            size="stretch"
-            minWidth={280}
-            maxWidth={560}
-            minHeight={380}
-            maxHeight={760}
-            showCover
-            drawShadow
-            flippingTime={700}
-            maxShadowOpacity={0.4}
-            usePortrait
-            mobileScrollSupport
-            className="mx-auto"
-            style={{}}
-            startPage={0}
-            startZIndex={0}
-            autoSize
-            clickEventForward
-            useMouseEvents
-            swipeDistance={30}
-            showPageCorners
-            disableFlipByClick={false}
-            onFlip={onFlip}
-          >
-            {/* Front cover */}
-            <PassportCoverPage side="front" />
-            {/* Inner pages */}
-            {pages.map((p) => (
-              <PassportPage key={p.key} side={p.side} eyebrow={p.eyebrow}>
-                {p.content}
-              </PassportPage>
-            ))}
-            {/* Back cover */}
-            <PassportCoverPage side="back" />
-          </HTMLFlipBook>
-        </div>
-
-          {/* Page indicator (dots only — no arrows; use swipe to turn pages) */}
-          <div className="mt-3 flex flex-col items-center gap-1.5 shrink-0">
-            <div className="text-xs font-semibold tracking-wide text-[#3a2410]">
-              {currentEyebrow}
-            </div>
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3">
+        <div className="mx-auto w-full max-w-[560px]">
+          {/* Depth: ivory page edges peeking below/right, and back cover below */}
+          <div className="relative">
             <div
-              role="tablist"
-              aria-label="Sidevalg"
-              className="flex items-center justify-center gap-1.5"
+              aria-hidden
+              className="absolute -inset-x-1 -bottom-2 h-3 rounded-b-[10px]"
+              style={{
+                backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.15)), url(${RED_CLOTH_URL})`,
+                backgroundSize: 'cover',
+                backgroundColor: '#5a0508',
+                filter: 'blur(0.2px)',
+              }}
+            />
+            <div
+              aria-hidden
+              className="absolute inset-y-3 -right-[3px] w-[3px] rounded-r-sm"
+              style={{ backgroundColor: '#e8dcc0', boxShadow: 'inset 0 0 0 1px rgba(60,30,10,0.25)' }}
+            />
+            <div
+              aria-hidden
+              className="absolute inset-y-3 -left-[3px] w-[3px] rounded-l-sm"
+              style={{ backgroundColor: '#e8dcc0', boxShadow: 'inset 0 0 0 1px rgba(60,30,10,0.25)' }}
+            />
+
+            {/* Red cloth cover */}
+            <div
+              className="relative rounded-[10px] p-2.5 shadow-[0_18px_36px_-14px_rgba(0,0,0,0.55),0_6px_14px_rgba(0,0,0,0.28),inset_0_0_0_1px_rgba(0,0,0,0.5)]"
+              style={{
+                backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.10), rgba(0,0,0,0.35)), url(${RED_CLOTH_URL})`,
+                backgroundSize: 'cover',
+                backgroundColor: '#7a0a0e',
+              }}
             >
-              {spreads.map((s, i) => (
-                <button
-                  key={s.key}
-                  role="tab"
-                  aria-selected={i === spreadIndex}
-                  aria-label={`Gå til ${s.eyebrow}`}
-                  onClick={() => goToSpread(i)}
-                  className={cn(
-                    'h-1.5 rounded-full transition-all',
-                    i === spreadIndex ? 'w-6 bg-[#7a0a0e]' : 'w-1.5 bg-[#3a2410]/25',
-                  )}
-                />
-              ))}
-            </div>
-            <div className="text-[10px] text-[#3a2410]/50">
-              Dra hjørnet for å bla
+              {/* Gold inner border */}
+              <div
+                className="rounded-[7px] p-1"
+                style={{ boxShadow: 'inset 0 0 0 1px rgba(240,205,120,0.55)' }}
+              >
+                {/* 3D scene */}
+                <div
+                  className="relative rounded-[5px] overflow-hidden"
+                  style={{ perspective: '1400px' }}
+                >
+                  <div
+                    ref={bookRef}
+                    role="group"
+                    aria-label={currentEyebrow}
+                    className="relative aspect-[3/2] w-full select-none"
+                    style={{
+                      transformStyle: 'preserve-3d',
+                      touchAction: 'pan-y',
+                    }}
+                    onPointerDown={onPointerDown}
+                    onPointerMove={onPointerMove}
+                    onPointerUp={onPointerUpOrCancel}
+                    onPointerCancel={onPointerUpOrCancel}
+                  >
+                    {/* Left base half */}
+                    <div className="absolute inset-y-0 left-0 w-1/2 overflow-hidden">
+                      <BookPageFace content={leftBase} side="left" />
+                    </div>
+                    {/* Right base half */}
+                    <div className="absolute inset-y-0 right-0 w-1/2 overflow-hidden">
+                      <BookPageFace content={rightBase} side="right" />
+                    </div>
+                    {/* Center fold */}
+                    <div
+                      aria-hidden
+                      className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[3px] pointer-events-none z-10"
+                      style={{
+                        background:
+                          'linear-gradient(to right, rgba(60,30,10,0.35), rgba(60,30,10,0.55), rgba(60,30,10,0.35))',
+                      }}
+                    />
+                    {/* Flipping leaf */}
+                    {flip && leafFront != null && leafBack != null && (
+                      <div
+                        aria-hidden
+                        className="absolute inset-y-0 w-1/2 z-20 pointer-events-none"
+                        style={{
+                          ...leafSideStyle,
+                          transformOrigin: leafOrigin,
+                          transformStyle: 'preserve-3d',
+                          transform: `rotateY(${leafAngle}deg)`,
+                          transition: flip.animating ? FLIP_TRANSITION : 'none',
+                          willChange: 'transform',
+                        }}
+                        onTransitionEnd={onLeafTransitionEnd}
+                      >
+                        {/* Front face */}
+                        <div className="absolute inset-0" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' as any }}>
+                          <BookPageFace
+                            content={leafFront}
+                            side={flip.direction === 'next' ? 'right' : 'left'}
+                          />
+                          <div
+                            className="absolute inset-0 pointer-events-none"
+                            style={{ backgroundColor: `rgba(0,0,0,${frontShadow})` }}
+                          />
+                        </div>
+                        {/* Back face (pre-rotated 180°) */}
+                        <div
+                          className="absolute inset-0"
+                          style={{
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden' as any,
+                            transform: 'rotateY(180deg)',
+                          }}
+                        >
+                          <BookPageFace
+                            content={leafBack}
+                            side={flip.direction === 'next' ? 'left' : 'right'}
+                          />
+                          <div
+                            className="absolute inset-0 pointer-events-none"
+                            style={{ backgroundColor: `rgba(0,0,0,${backShadow})` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
+          {/* Controls */}
+          <div className="mt-5 flex flex-col items-center gap-2">
+            <div className="text-xs font-semibold tracking-wide text-[#3a2410]">
+              {currentEyebrow}
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => startAnimatedFlip('prev')}
+                disabled={!canPrev || !!flip?.animating}
+                aria-label="Forrige side"
+                className="inline-flex items-center justify-center rounded-full h-10 w-10 border border-[#3a2410]/20 bg-white/80 text-[#3a2410] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-red-700"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div
+                role="tablist"
+                aria-label="Sidevalg"
+                className="flex items-center justify-center gap-1.5"
+              >
+                {spreads.map((s, i) => (
+                  <button
+                    key={s.key}
+                    role="tab"
+                    aria-selected={i === index}
+                    aria-label={`Gå til ${s.eyebrow}`}
+                    onClick={() => goToSpread(i)}
+                    className={cn(
+                      'h-1.5 rounded-full transition-all',
+                      i === index ? 'w-6 bg-[#7a0a0e]' : 'w-1.5 bg-[#3a2410]/25',
+                    )}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => startAnimatedFlip('next')}
+                disabled={!canNext || !!flip?.animating}
+                aria-label="Neste side"
+                className="inline-flex items-center justify-center rounded-full h-10 w-10 border border-[#3a2410]/20 bg-white/80 text-[#3a2410] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-red-700"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="text-[10px] text-[#3a2410]/50">Dra siden for å bla</div>
+          </div>
+
           {!inline && (
-            <div className="mt-3 flex justify-center pb-4 shrink-0">
+            <div className="mt-4 flex justify-center pb-6">
               <button
                 type="button"
                 onClick={() => {
@@ -730,6 +934,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
               </button>
             </div>
           )}
+        </div>
       </div>
     </div>
   );
