@@ -40,8 +40,7 @@ import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
 import { useAppMode } from '@/hooks/useAppMode';
 import { Link as LinkIcon } from 'lucide-react';
-import { useLeaderHomeMode } from '@/hooks/useLeaderHomeMode';
-import { LederPass, LederPassIcon } from '@/components/passport/LederPass';
+import { LederPass } from '@/components/passport/LederPass';
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
 
@@ -145,7 +144,6 @@ const formatTeamDisplay = (team: string | null): string => {
 export default function Home() {
   const { leader, effectiveLeader, isAdmin, isNurse, isSuperAdmin } = useAuth();
   const { mode: appMode } = useAppMode();
-  const { mode: leaderHomeMode } = useLeaderHomeMode();
   const navigate = useNavigate();
   const location = useLocation();
   const [content, setContent] = useState<LeaderContent | null>(null);
@@ -428,18 +426,9 @@ export default function Home() {
     );
   }
 
-  // Leader home mode "inactive": replace the entire home surface with the
-  // interactive lederpass. Superadmin keeps the full home to manage the app.
-  if (leaderHomeMode === 'inactive' && !isSuperAdmin) {
-    return (
-      <div className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 h-[calc(100dvh-4rem)]">
-        <LederPass leader={effectiveLeader} fill periodLabel={activePeriodLabel} />
-      </div>
-    );
-  }
-
-  // App-wide inactive mode (off-season, legacy): minimalist off-season view
-  // for non-superadmins when leader_home_mode is not driving inactivity.
+  // App-wide inactive mode (off-season): replace the "Ditt pass kommer her"
+  // placeholder with the real interactive 3D lederpass. Superadmin keeps
+  // the full home to manage the app.
   if (appMode === 'inactive' && !isSuperAdmin) {
     return (
       <div className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8">
@@ -462,17 +451,7 @@ export default function Home() {
         </div>
 
         <div className="px-4 py-6 space-y-4 max-w-xl mx-auto">
-          <Card className="border-primary/30">
-            <CardContent className="p-6 text-center space-y-3">
-              <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <Star className="w-7 h-7 text-primary" />
-              </div>
-              <h2 className="text-lg font-heading font-semibold">Ditt pass kommer her</h2>
-              <p className="text-sm text-muted-foreground">
-                Passet ditt fra sommeren blir tilgjengelig her når det er klart.
-              </p>
-            </CardContent>
-          </Card>
+          <LederPass leader={effectiveLeader} periodLabel={activePeriodLabel} />
 
           <Card className="bg-muted/40">
             <CardContent className="p-4 flex items-center gap-3">
