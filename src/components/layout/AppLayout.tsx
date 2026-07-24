@@ -714,57 +714,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         >
           <div className="flex items-stretch justify-around px-1">
             {bottomNavItems.map((item) => {
-              const isActive = item.isHajolo ? false : location.pathname === item.to;
-
-              if (item.isHajolo) {
-                return (
-                  <Popover key="hajolo" open={showHajoloTooltip}>
-                    <PopoverTrigger asChild>
-                      <button
-                        data-active={false}
-                        onClick={() => {
-                          hapticImpact('medium');
-                          handleHajoloClick();
-                        }}
-                        className="flex flex-col items-center justify-center gap-0.5 flex-1 relative"
-                        aria-label={hasRead ? 'Bekreftet' : 'Hajolo — trykk for å bekrefte'}
-                      >
-                        <span
-                          className={cn(
-                            'flex items-center justify-center w-9 h-9 rounded-full shadow-md transition-colors',
-                            hasRead
-                              ? 'bg-green-500 text-white'
-                              : 'bg-destructive text-white animate-pulse'
-                          )}
-                        >
-                          <Check className="w-5 h-5" strokeWidth={3} />
-                        </span>
-                        <span
-                          className={cn(
-                            'text-[10px] leading-none font-semibold',
-                            hasRead ? 'text-green-600' : 'text-destructive'
-                          )}
-                        >
-                          {hasRead ? 'Bekreftet' : 'Hajolo'}
-                        </span>
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent side="top" className="max-w-[280px] p-4" sideOffset={8}>
-                      <div className="text-center space-y-3">
-                        <p className="text-sm font-semibold">Hva er Hajolo-knappen?</p>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          Når det kommer ny info til deg blir denne knappen rød. Admin ser hvem som ikke har lest ennå.
-                          Trykk på knappen for å bekrefte at du har sett infoen.
-                        </p>
-                        <Button size="sm" onClick={handleDismissTooltip} className="w-full">
-                          Forstått
-                        </Button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                );
-              }
-
+              const isActive = location.pathname === item.to;
               const isHomeWithUnread = item.to === '/' && !hasRead && isRegularLeader;
 
               return (
