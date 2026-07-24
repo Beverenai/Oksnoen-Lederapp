@@ -1,10 +1,6 @@
-import { forwardRef, useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, ShieldCheck, CalendarDays } from 'lucide-react';
-// react-pageflip has loose types; import default and cast where needed.
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - no bundled types
-import HTMLFlipBook from 'react-pageflip';
+import { X, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, ShieldCheck, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 import { hapticSelection, hapticImpact } from '@/lib/capacitorHaptics';
