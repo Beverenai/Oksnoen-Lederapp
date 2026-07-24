@@ -89,49 +89,15 @@ type BottomNavItem = {
   to: string;
   icon: LucideIcon | typeof PassIcon;
   label: string;
-  isHajolo?: boolean;
 };
 
-// Base bottom nav items - will be adjusted based on role.
-// `checkoutEnabled` controls whether pass-related UI (Passkontor) is shown to
-// non-admins. Admins always see it so they can prepare passes.
-const getBottomNavItems = (
-  isAdmin: boolean,
-  isNurse: boolean,
-  checkoutEnabled: boolean,
-): BottomNavItem[] => {
-  if (isAdmin) {
-    return [
-      { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
-      { to: '/admin', icon: Settings, label: 'Dashboard' },
-      { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '/fix', icon: Wrench, label: 'Fix' },
-    ];
-  } else if (isNurse) {
-    const items: BottomNavItem[] = [
-      { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
-    ];
-    items.push(
-      { to: '/nurse', icon: Heart, label: 'Nurse' },
-      { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '/fix', icon: Wrench, label: 'Fix' },
-    );
-    return items;
-  } else {
-    const items: BottomNavItem[] = [
-      { to: '/', icon: Home, label: 'Hjem' },
-      { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
-    ];
-    items.push(
-      { to: '#', icon: Check, label: 'Hajolo', isHajolo: true },
-      { to: '/leaders', icon: Users, label: 'Ledere' },
-      { to: '/fix', icon: Wrench, label: 'Fix' },
-    );
-    return items;
-  }
-};
+// Bunnraden er felles for alle roller. Alt annet ligger på /mer.
+const getBottomNavItems = (): BottomNavItem[] => [
+  { to: '/', icon: Home, label: 'Hjem' },
+  { to: '/passport', icon: PassIcon, label: 'Passkontroll' },
+  { to: '/leaders', icon: Users, label: 'Ledere' },
+  { to: '/mer', icon: LayoutGrid, label: 'Mer' },
+];
 
 // Helper component for rendering nav links
 const NavLinkItem = ({ 
