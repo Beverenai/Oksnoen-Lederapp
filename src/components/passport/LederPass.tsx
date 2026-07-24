@@ -946,7 +946,17 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
         className="flex-1 min-h-0 flex items-center justify-center px-3"
       >
         {bookW > 0 && bookH > 0 && (
-          <div className="relative" style={{ width: bookW, height: bookH }}>
+          <div
+            className="relative"
+            style={{
+              width: bookW,
+              height: bookH,
+              // Restrained tilt so the closed book reads as physical at rest.
+              transform: flip ? 'none' : 'perspective(1600px) rotateX(4deg) rotateY(-3deg)',
+              transformOrigin: 'center 65%',
+              transition: 'transform 320ms cubic-bezier(0.32,0.72,0.28,1)',
+            }}
+          >
             {/* Depth: ivory page edges peeking below/right, and back cover below */}
             <div
               aria-hidden
