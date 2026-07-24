@@ -708,6 +708,8 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
 
   useEffect(() => {
     if (inline) return;
+    // Åpning: kraftigere impact når passet vises i full skjerm
+    hapticImpact('medium');
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose?.();
       else if (e.key === 'ArrowLeft') startAnimatedFlip('prev');
