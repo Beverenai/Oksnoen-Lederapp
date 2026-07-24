@@ -78,7 +78,7 @@ export function LederPassIcon({
     <button
       type="button"
       onClick={() => {
-        hapticSelection();
+        hapticImpact('medium');
         onClick?.();
       }}
       aria-label={ariaLabel}
