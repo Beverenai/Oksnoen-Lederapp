@@ -13,7 +13,7 @@ import {
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
 import { supabase } from '@/integrations/supabase/client';
 
 interface HomeScreenConfig {
