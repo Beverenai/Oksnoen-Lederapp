@@ -225,6 +225,7 @@ function AppRoutes() {
         <Route path="/stories" element={<ProtectedRoute><Stories /></ProtectedRoute>} />
         <Route path="/hendelser" element={<ProtectedRoute><Hendelser /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+        <Route path="/mer" element={<ProtectedRoute><More /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
