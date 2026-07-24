@@ -88,7 +88,7 @@ serve(async (req) => {
     const participantList: ParticipantData[] = single ? [participants] : participants;
 
     // Resolve active period + team context (only enriches when Lag is enabled).
-    let teamLinesById = new Map<string, string>();
+    const teamLinesById = new Map<string, string>();
     try {
       const { data: activePeriod } = await supabase
         .from('periods').select('id').eq('is_active', true).maybeSingle();
