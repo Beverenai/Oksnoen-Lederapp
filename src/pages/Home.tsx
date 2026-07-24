@@ -185,6 +185,9 @@ export default function Home() {
     try {
       const periodRes = await supabase.from('periods').select('id').eq('is_active', true).maybeSingle();
       const activePeriodId = periodRes.data?.id ?? null;
+      const sessionActivitiesKey = activePeriodId
+        ? `session_activities_data:${activePeriodId}`
+        : 'session_activities_data';
       const fixTasksQuery = supabase
         .from('fix_tasks')
         .select('id, title, assigned_to, status')
@@ -200,7 +203,9 @@ export default function Home() {
         supabase
           .from('app_config')
           .select('value')
-          .eq('key', 'session_activities_data')
+          .in('key', [sessionActivitiesKey, 'session_activities_data'])
+          .order('key', { ascending: false })
+          .limit(1)
           .maybeSingle(),
         supabase
           .from('home_screen_config')
