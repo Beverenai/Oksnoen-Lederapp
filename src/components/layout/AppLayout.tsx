@@ -444,43 +444,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
     setShowHajoloTooltip(false);
   };
 
-  // Handle Hajolo click
-  const handleHajoloClick = async () => {
-    if (!leader) return;
-
-    // Check if button was red (unread) before updating
-    const wasUnread = !hasRead;
-
-    const { error } = await supabase
-      .from('leader_content')
-      .upsert({ leader_id: leader.id, has_read: true }, { onConflict: 'leader_id' });
-
-    if (error) {
-      showError('Kunne ikke bekrefte');
-      return;
-    }
-
-    setHasRead(true);
-    setShowHajoloSuccess(true);
-    
-    // Haptic feedback for native feel
-    hapticSuccess();
-    
-    confetti({
-      particleCount: 150,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
-    
-      // Navigate to home screen only if button was red (unread)
-      // Include forceRefresh state to ensure Home reloads data
-      if (wasUnread) {
-        navigate('/', { state: { forceRefresh: Date.now() } });
-    }
-    
-    setTimeout(() => setShowHajoloSuccess(false), 3000);
-  };
-
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
