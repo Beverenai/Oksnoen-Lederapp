@@ -68,7 +68,7 @@ function Tile({ item }: { item: MoreItem }) {
 }
 
 export default function More() {
-  const { isAdmin, isNurse, logout } = useAuth();
+  const { isAdmin, isNurse, logout, leader } = useAuth();
   const sweatersEnabled = useSweatersEnabled();
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
@@ -147,7 +147,6 @@ export default function More() {
         ...(isAdmin
           ? [
               { to: '/participant-stats', icon: BarChart2, label: 'Deltagere' } as MoreItem,
-              { to: '/admin', icon: Settings, label: 'Admin Dashboard' } as MoreItem,
             ]
           : []),
       ],
@@ -169,12 +168,27 @@ export default function More() {
     },
   ];
 
+  const firstName = (leader?.name || '').split(' ')[0] || '';
+
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 pb-6">
       <header className="pt-1">
-        <h1 className="text-2xl font-heading font-bold text-foreground">Mer</h1>
+        <h1 className="text-2xl font-heading font-bold text-foreground">
+          Hei{firstName ? `, ${firstName}` : ''} <span aria-hidden>👋</span>
+        </h1>
         <p className="text-sm text-muted-foreground">Alle sider og funksjoner</p>
       </header>
+
+      {isAdmin && (
+        <NavLink
+          to="/admin"
+          onClick={() => hapticImpact('medium')}
+          className="flex items-center justify-center gap-2 rounded-2xl bg-primary text-primary-foreground px-4 py-4 shadow-md active:scale-[0.99] transition-transform"
+        >
+          <Settings className="w-5 h-5" strokeWidth={2} />
+          <span className="text-base font-semibold">Admin</span>
+        </NavLink>
+      )}
 
       {sections.map((section) =>
         section.items.length === 0 ? null : (

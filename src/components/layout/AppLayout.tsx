@@ -489,9 +489,36 @@ export default function AppLayout({ children }: AppLayoutProps) {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground truncate max-w-[140px]">
-              {leader?.name}
-            </span>
+            {location.pathname === '/mer' ? (
+              <NavLink
+                to="/profile"
+                onClick={() => hapticImpact('light')}
+                aria-label="Min profil"
+                className="shrink-0"
+              >
+                {leader?.profile_image_url ? (
+                  <img
+                    src={leader.profile_image_url}
+                    alt={leader?.name || 'Profil'}
+                    className="w-9 h-9 rounded-full object-cover border border-border"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold border border-border">
+                    {(leader?.name || '?')
+                      .split(' ')
+                      .map((n) => n[0])
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .join('')
+                      .toUpperCase()}
+                  </div>
+                )}
+              </NavLink>
+            ) : (
+              <span className="text-sm text-muted-foreground truncate max-w-[140px]">
+                {leader?.name}
+              </span>
+            )}
           </div>
         </header>
       )}
