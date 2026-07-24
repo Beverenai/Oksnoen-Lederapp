@@ -426,8 +426,8 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
     }
     (async () => {
       const { data, error } = await supabase
-        .from('period_leaders')
-        .select('status, periods!inner(id,name,start_date,end_date,is_active)')
+        .from('leader_period_history')
+        .select('periods!inner(id,name,start_date,end_date,is_active)')
         .eq('leader_id', leaderId);
       if (cancelled) return;
       if (error || !data) {
@@ -441,7 +441,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
           start_date: (r.periods.start_date as string | null) ?? null,
           end_date: (r.periods.end_date as string | null) ?? null,
           is_active: !!r.periods.is_active,
-          status: (r.status as string | null) ?? null,
+          status: null,
         }))
         .sort((a, b) => {
           const av = a.start_date ?? '';
