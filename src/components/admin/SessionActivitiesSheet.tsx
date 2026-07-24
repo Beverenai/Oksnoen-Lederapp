@@ -27,7 +27,9 @@ const EMPTY: SessionsPayload = {
   },
 };
 
-export const APP_CONFIG_KEY = 'session_activities_data';
+export const APP_CONFIG_KEY_LEGACY = 'session_activities_data';
+export const sessionActivitiesKey = (periodId: string | null | undefined) =>
+  periodId ? `session_activities_data:${periodId}` : APP_CONFIG_KEY_LEGACY;
 
 interface Props {
   open: boolean;
@@ -63,16 +65,36 @@ export function SessionActivitiesSheet({ open, onOpenChange }: Props) {
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [periodId, setPeriodId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     (async () => {
       setLoading(true);
-      const { data: row } = await supabase
+      // Resolve active period
+      const { data: period } = await supabase
+        .from('periods')
+        .select('id')
+        .eq('is_active', true)
+        .maybeSingle();
+      const pid = period?.id ?? null;
+      setPeriodId(pid);
+
+      // Try period-scoped key first; fall back to legacy global key
+      const key = sessionActivitiesKey(pid);
+      let { data: row } = await supabase
         .from('app_config')
         .select('value')
-        .eq('key', APP_CONFIG_KEY)
+        .eq('key', key)
         .maybeSingle();
+      if (!row && pid) {
+        const legacy = await supabase
+          .from('app_config')
+          .select('value')
+          .eq('key', APP_CONFIG_KEY_LEGACY)
+          .maybeSingle();
+        row = legacy.data ?? null;
+      }
       let next: SessionsPayload = EMPTY;
       if (row?.value) {
         try {
@@ -109,8 +131,9 @@ export function SessionActivitiesSheet({ open, onOpenChange }: Props) {
         ...data,
         sessions: { ...data.sessions, [activeKey]: textToSession(text) },
       };
+      const key = sessionActivitiesKey(periodId);
       const { error } = await supabase.from('app_config').upsert(
-        { key: APP_CONFIG_KEY, value: JSON.stringify(payload), updated_at: new Date().toISOString() },
+        { key, value: JSON.stringify(payload), updated_at: new Date().toISOString() },
         { onConflict: 'key' }
       );
       if (error) throw error;
