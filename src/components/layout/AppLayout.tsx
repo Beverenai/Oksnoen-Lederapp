@@ -460,21 +460,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </button>
         </div>
       )}
-      {/* Hajolo Success Overlay */}
-      {showHajoloSuccess && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setShowHajoloSuccess(false)}
-        >
-          <div className="animate-scale-in bg-card rounded-3xl p-10 text-center shadow-2xl border border-border">
-            <div className="text-7xl mb-4">🎉</div>
-            <h2 className="text-3xl font-heading font-bold text-green-600">Hajolo!</h2>
-            <p className="text-muted-foreground mt-3 text-lg">Du har bekreftet at du har lest informasjonen</p>
-            <p className="text-sm text-muted-foreground/70 mt-4">Trykk hvor som helst for å lukke</p>
-          </div>
-        </div>
-      )}
-
       {/* Mobile Header - collapsible on scroll like Facebook/Instagram */}
       {!mobileMenuOpen && (
         <header 
@@ -507,16 +492,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <span className="text-sm text-muted-foreground truncate max-w-[140px]">
               {leader?.name}
             </span>
-            {!inactiveForUser && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setMobileMenuOpen(true)}
-              className="shrink-0"
-            >
-              <Menu className="w-5 h-5" />
-            </Button>
-            )}
           </div>
         </header>
       )}
