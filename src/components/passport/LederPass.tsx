@@ -415,106 +415,55 @@ interface FullViewProps {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Individual page components (used inside HTMLFlipBook)                     */
+/*  3D page-flip mechanics                                                    */
 /* -------------------------------------------------------------------------- */
 
-interface PassportPageProps {
-  side: 'left' | 'right';
-  eyebrow?: string;
-  children: React.ReactNode;
-}
+const FLIP_TRANSITION = 'transform 470ms cubic-bezier(0.32, 0.72, 0.28, 1)';
 
-// react-pageflip passes a ref to each direct child; that ref must land on a
-// DOM node, so we use forwardRef.
-const PassportPage = forwardRef<HTMLDivElement, PassportPageProps>(function PassportPage(
-  { side, children },
-  ref,
-) {
+type FlipState = {
+  direction: 'next' | 'prev';
+  progress: number; // 0..1
+  animating: boolean;
+};
+
+function BookPageFace({
+  content,
+  side,
+  isFlipping = false,
+}: {
+  content: React.ReactNode;
+  side: 'left' | 'right';
+  isFlipping?: boolean;
+}) {
   return (
     <div
-      ref={ref}
-      className="relative w-full h-full overflow-hidden"
+      className="absolute inset-0 overflow-hidden"
       style={{
         backgroundImage: `url(${IVORY_URL})`,
         backgroundSize: 'cover',
         backgroundColor: '#f5ecd8',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
+        // Back faces are pre-rotated 180° in the parent; those pass isFlipping.
+        transform: isFlipping && side === 'right' ? 'rotateY(180deg)' : undefined,
       }}
     >
-      <div className="absolute inset-0 p-4 overflow-hidden">{children}</div>
+      <div className="absolute inset-0 p-3">{content}</div>
       {/* Spine shadow along the binding edge */}
       <div
         aria-hidden
-        className="absolute inset-y-0 w-6 pointer-events-none"
+        className="absolute inset-y-0 w-5 pointer-events-none"
         style={{
           [side === 'left' ? 'right' : 'left']: 0,
           background:
             side === 'left'
-              ? 'linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(60,30,10,0.22) 100%)'
-              : 'linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(60,30,10,0.22) 100%)',
+              ? 'linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(60,30,10,0.20) 100%)'
+              : 'linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(60,30,10,0.20) 100%)',
         }}
       />
     </div>
   );
-});
-
-// Hard cover pages (front / back). Uses the red bookcloth texture.
-const PassportCoverPage = forwardRef<HTMLDivElement, { side: 'front' | 'back' }>(
-  function PassportCoverPage({ side }, ref) {
-    return (
-      <div
-        ref={ref}
-        className="relative w-full h-full flex items-center justify-center overflow-hidden"
-        data-density="hard"
-        style={{
-          backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.10), rgba(0,0,0,0.35)), url(${RED_CLOTH_URL})`,
-          backgroundSize: 'cover',
-          backgroundColor: '#7a0a0e',
-          boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.5)',
-        }}
-      >
-        {/* Gold inner frame */}
-        <div
-          aria-hidden
-          className="absolute inset-[6%] rounded-sm pointer-events-none"
-          style={{ boxShadow: 'inset 0 0 0 1px rgba(240,205,120,0.55)' }}
-        />
-        {side === 'front' ? (
-          <div className="relative flex flex-col items-center gap-3 text-center px-6">
-            <span
-              className="text-[10px] tracking-[0.35em] font-semibold"
-              style={{ color: '#f0cd78' }}
-            >
-              PASS
-            </span>
-            <img src={oksnoenLogo} alt="" className="w-20 h-20 object-contain opacity-95" />
-            <span
-              className="text-lg tracking-[0.25em] font-serif font-bold"
-              style={{ color: '#f0cd78' }}
-            >
-              ØKSNØEN
-            </span>
-            <span
-              className="text-[10px] tracking-[0.3em]"
-              style={{ color: '#f0cd78', opacity: 0.85 }}
-            >
-              LEDERPASS
-            </span>
-          </div>
-        ) : (
-          <div className="relative flex flex-col items-center gap-2 text-center px-6">
-            <span
-              className="text-[9px] tracking-[0.3em] italic"
-              style={{ color: '#f0cd78', opacity: 0.85 }}
-            >
-              Anno 1962
-            </span>
-            <img src={oksnoenLogo} alt="" className="w-12 h-12 object-contain opacity-80" />
-          </div>
-        )}
-      </div>
-    );
-  },
-);
+}
 
 function LederPassFullView({ leader, onClose, inline = false, periodLabel }: FullViewProps) {
   const [history, setHistory] = useState<PeriodHistoryEntry[]>([]);
