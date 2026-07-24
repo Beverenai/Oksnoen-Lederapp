@@ -38,6 +38,8 @@ import { QuickNotificationSheet } from '@/components/admin/QuickNotificationShee
 import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
 import { useCheckoutEnabled } from '@/hooks/useCheckoutEnabled';
 import { useSweatersEnabled } from '@/hooks/useSweatersEnabled';
+import { useAppMode } from '@/hooks/useAppMode';
+import { MessageCircle } from 'lucide-react';
 import {
   Collapsible,
   CollapsibleContent,
@@ -195,9 +197,11 @@ const NavGroup = ({
 };
 
 export default function AppLayout({ children }: AppLayoutProps) {
-  const { leader, isAdmin, isNurse, logout, viewAsLeader, setViewAsLeader } = useAuth();
+  const { leader, isAdmin, isNurse, isSuperAdmin, logout, viewAsLeader, setViewAsLeader } = useAuth();
   const checkoutEnabled = useCheckoutEnabled();
   const sweatersEnabled = useSweatersEnabled();
+  const { mode: appMode } = useAppMode();
+  const inactiveForUser = appMode === 'inactive' && !isSuperAdmin;
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
@@ -225,7 +229,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const isRegularLeader = !isAdmin && !isNurse;
 
   // Determine if current route is a sub-page (not one of the main tab routes)
-  const mainTabRoutes = getBottomNavItems(isAdmin, isNurse, checkoutEnabled).map(item => item.to).filter(to => to !== '#');
+  const bottomNavItems: BottomNavItem[] = inactiveForUser
+    ? [
+        { to: '/', icon: Home, label: 'Hjem' },
+        { to: '/chat', icon: MessageCircle, label: 'Ledersnakk' },
+      ]
+    : getBottomNavItems(isAdmin, isNurse, checkoutEnabled);
+  const mainTabRoutes = bottomNavItems.map(item => item.to).filter(to => to !== '#');
   const isSubPage = !mainTabRoutes.includes(location.pathname);
 
   // Passkontroll is always available so leaders can see participants.
