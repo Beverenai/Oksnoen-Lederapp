@@ -11,6 +11,7 @@ import { SplashScreen } from "@/components/SplashScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AppLayout from "@/components/layout/AppLayout";
 import { useStatusBarTheme } from "@/hooks/useStatusBarTheme";
+import { useAppMode } from "@/hooks/useAppMode";
 
 // Critical path - load immediately
 import Login from "@/pages/Login";
@@ -221,6 +222,7 @@ function AppRoutes() {
         <Route path="/skjaer" element={<ProtectedRoute><Skjaer /></ProtectedRoute>} />
         <Route path="/stories" element={<ProtectedRoute><Stories /></ProtectedRoute>} />
         <Route path="/hendelser" element={<ProtectedRoute><Hendelser /></ProtectedRoute>} />
+        <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
