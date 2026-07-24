@@ -541,14 +541,59 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
 
   const spreads = useMemo(() => buildSpreads(leader, periodLabel, history), [leader, periodLabel, history]);
   // Flat page list for single-page (portrait / passport) mode.
-  const pages = useMemo(
-    () =>
-      spreads.flatMap((s) => [
-        { key: `${s.key}-l`, eyebrow: s.eyebrow, content: s.left },
-        { key: `${s.key}-r`, eyebrow: s.eyebrow, content: s.right },
-      ]),
-    [spreads],
-  );
+  // The FIRST page is always the red cloth cover.
+  const pages = useMemo(() => {
+    const cover = {
+      key: 'cover',
+      eyebrow: 'Forside',
+      variant: 'cover' as const,
+      content: (
+        <div className="flex flex-col items-center justify-between h-full py-8 text-center">
+          <div
+            className="text-[10px] tracking-[0.35em] font-semibold"
+            style={{ color: '#f0cd78' }}
+          >
+            LEDERPASS
+          </div>
+          <div className="flex flex-col items-center gap-4">
+            <div
+              className="relative w-24 h-24 rounded-full flex items-center justify-center"
+              style={{
+                background: 'radial-gradient(circle at 30% 30%, #b7212a, #6a0a10 70%)',
+                boxShadow:
+                  'inset 0 0 0 2px rgba(240,205,120,0.65), 0 4px 10px rgba(0,0,0,0.35)',
+              }}
+            >
+              <img src={oksnoenLogo} alt="" className="w-14 h-14 object-contain" />
+            </div>
+            <div
+              className="text-xl font-serif font-bold tracking-wide"
+              style={{ color: '#f0cd78' }}
+            >
+              OKSNØEN
+            </div>
+            <div
+              className="text-[10px] tracking-[0.3em]"
+              style={{ color: '#f0cd78', opacity: 0.75 }}
+            >
+              LEIRSKOLE & SOMMERLEIR
+            </div>
+          </div>
+          <div
+            className="text-[9px] tracking-[0.3em] font-semibold"
+            style={{ color: '#f0cd78' }}
+          >
+            LEDER · ANNO 1962
+          </div>
+        </div>
+      ),
+    };
+    const inner = spreads.flatMap((s) => [
+      { key: `${s.key}-l`, eyebrow: s.eyebrow, variant: 'ivory' as const, content: s.left },
+      { key: `${s.key}-r`, eyebrow: s.eyebrow, variant: 'ivory' as const, content: s.right },
+    ]);
+    return [cover, ...inner];
+  }, [spreads]);
 
   // Measure the book container and decide layout (single portrait vs. spread).
   const bookAreaRef = useRef<HTMLDivElement>(null);
