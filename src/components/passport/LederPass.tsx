@@ -1002,6 +1002,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                     ref={bookRef}
                     role="group"
                     aria-label={currentEyebrow}
+                    data-lederpass-book
                     className="relative w-full h-full select-none"
                     style={{
                       transformStyle: 'preserve-3d',
