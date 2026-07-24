@@ -431,11 +431,43 @@ function BookPageFace({
   content,
   side,
   isFlipping = false,
+  variant = 'ivory',
 }: {
   content: React.ReactNode;
   side: 'left' | 'right';
   isFlipping?: boolean;
+  variant?: 'ivory' | 'cover';
 }) {
+  if (variant === 'cover') {
+    return (
+      <div
+        className="absolute inset-0 overflow-hidden"
+        style={{
+          backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.10), rgba(0,0,0,0.32)), url(${RED_CLOTH_URL})`,
+          backgroundSize: 'cover',
+          backgroundColor: '#7a0a0e',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+        }}
+      >
+        {/* Gold inner border */}
+        <div
+          className="absolute inset-3 rounded-[6px] pointer-events-none"
+          style={{ boxShadow: 'inset 0 0 0 1px rgba(240,205,120,0.55)' }}
+        />
+        <div className="absolute inset-0 p-3">{content}</div>
+        {/* Spine shadow on left */}
+        <div
+          aria-hidden
+          className="absolute inset-y-0 left-0 w-6 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(to right, rgba(0,0,0,0.35), rgba(0,0,0,0) 100%)',
+          }}
+        />
+      </div>
+    );
+  }
   return (
     <div
       className="absolute inset-0 overflow-hidden"
