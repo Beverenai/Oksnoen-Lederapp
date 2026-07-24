@@ -38,6 +38,8 @@ import { updateWidgetData } from '@/lib/capacitorWidget';
 import { MessageSquareWarning } from 'lucide-react';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
+import { useAppMode } from '@/hooks/useAppMode';
+import { Link as LinkIcon } from 'lucide-react';
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
 
@@ -139,7 +141,8 @@ const formatTeamDisplay = (team: string | null): string => {
 };
 
 export default function Home() {
-  const { leader, effectiveLeader, isAdmin, isNurse } = useAuth();
+  const { leader, effectiveLeader, isAdmin, isNurse, isSuperAdmin } = useAuth();
+  const { mode: appMode } = useAppMode();
   const navigate = useNavigate();
   const location = useLocation();
   const [content, setContent] = useState<LeaderContent | null>(null);
@@ -416,6 +419,55 @@ export default function Home() {
           <RefreshCw className="w-4 h-4 mr-2" />
           Prøv igjen
         </Button>
+      </div>
+    );
+  }
+
+  // Inactive mode (off-season): show a minimalist "Ditt pass"-placeholder for
+  // non-superadmins. Superadmin still sees the full home to manage the app.
+  if (appMode === 'inactive' && !isSuperAdmin) {
+    return (
+      <div className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8">
+        <div className="relative h-44 md:h-52 overflow-hidden">
+          <img
+            src={oksnoenHeader}
+            alt="Oksnøen"
+            className="w-full h-full object-cover"
+            fetchPriority="high"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/50" />
+          <div className="absolute inset-0 flex items-end p-6">
+            <div className="text-white">
+              <h1 className="text-2xl font-heading font-bold drop-shadow-lg">
+                Hei, {effectiveLeader?.name?.split(' ')[0]}!
+              </h1>
+              <p className="text-sm opacity-90">Sesongen er over — vi sees neste år.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-4 py-6 space-y-4 max-w-xl mx-auto">
+          <Card className="border-primary/30">
+            <CardContent className="p-6 text-center space-y-3">
+              <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                <Star className="w-7 h-7 text-primary" />
+              </div>
+              <h2 className="text-lg font-heading font-semibold">Ditt pass kommer her</h2>
+              <p className="text-sm text-muted-foreground">
+                Passet ditt fra sommeren blir tilgjengelig her når det er klart.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-muted/40">
+            <CardContent className="p-4 flex items-center gap-3">
+              <MessageSquare className="w-5 h-5 text-primary shrink-0" />
+              <div className="text-sm">
+                Bruk <Link to="/chat" className="font-semibold underline">Øksnøen Chat</Link> for å holde kontakten med de andre lederne.
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }

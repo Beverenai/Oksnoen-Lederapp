@@ -38,6 +38,8 @@ import { QuickNotificationSheet } from '@/components/admin/QuickNotificationShee
 import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
 import { useCheckoutEnabled } from '@/hooks/useCheckoutEnabled';
 import { useSweatersEnabled } from '@/hooks/useSweatersEnabled';
+import { useAppMode } from '@/hooks/useAppMode';
+import { MessageCircle } from 'lucide-react';
 import {
   Collapsible,
   CollapsibleContent,
@@ -195,9 +197,11 @@ const NavGroup = ({
 };
 
 export default function AppLayout({ children }: AppLayoutProps) {
-  const { leader, isAdmin, isNurse, logout, viewAsLeader, setViewAsLeader } = useAuth();
+  const { leader, isAdmin, isNurse, isSuperAdmin, logout, viewAsLeader, setViewAsLeader } = useAuth();
   const checkoutEnabled = useCheckoutEnabled();
   const sweatersEnabled = useSweatersEnabled();
+  const { mode: appMode } = useAppMode();
+  const inactiveForUser = appMode === 'inactive' && !isSuperAdmin;
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
@@ -225,7 +229,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const isRegularLeader = !isAdmin && !isNurse;
 
   // Determine if current route is a sub-page (not one of the main tab routes)
-  const mainTabRoutes = getBottomNavItems(isAdmin, isNurse, checkoutEnabled).map(item => item.to).filter(to => to !== '#');
+  const bottomNavItems: BottomNavItem[] = inactiveForUser
+    ? [
+        { to: '/', icon: Home, label: 'Hjem' },
+        { to: '/chat', icon: MessageCircle, label: 'Ledersnakk' },
+      ]
+    : getBottomNavItems(isAdmin, isNurse, checkoutEnabled);
+  const mainTabRoutes = bottomNavItems.map(item => item.to).filter(to => to !== '#');
   const isSubPage = !mainTabRoutes.includes(location.pathname);
 
   // Passkontroll is always available so leaders can see participants.
@@ -575,6 +585,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <span className="text-sm text-muted-foreground truncate max-w-[140px]">
               {leader?.name}
             </span>
+            {!inactiveForUser && (
             <Button
               variant="ghost"
               size="icon"
@@ -583,6 +594,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             >
               <Menu className="w-5 h-5" />
             </Button>
+            )}
           </div>
         </header>
       )}
@@ -599,6 +611,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {inactiveForUser ? (
+            <div className="space-y-1">
+              <NavLinkItem item={{ to: '/', icon: Home, label: 'Hjem' }} />
+              <NavLinkItem item={{ to: '/chat', icon: MessageCircle, label: 'Ledersnakk' }} />
+              <NavLinkItem item={{ to: '/profile', icon: User, label: 'Min Profil' }} />
+            </div>
+          ) : (<>
           {/* Main navigation - always visible */}
           <div className="space-y-1">
             {mainNavItems.map((item) => (
@@ -643,6 +662,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <NavLinkItem item={adminNavItem} />
             </div>
           )}
+          </>)}
         </nav>
 
         <div className="p-4 border-t border-border space-y-1">
@@ -796,7 +816,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           aria-label="Hovednavigasjon"
         >
           <div className="flex items-stretch justify-around px-1">
-            {getBottomNavItems(isAdmin, isNurse, checkoutEnabled).map((item) => {
+            {bottomNavItems.map((item) => {
               const isActive = item.isHajolo ? false : location.pathname === item.to;
 
               if (item.isHajolo) {
