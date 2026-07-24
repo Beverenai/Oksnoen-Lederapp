@@ -672,9 +672,9 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
       if (flip) return;
       if (direction === 'next' && !canNext) return;
       if (direction === 'prev' && !canPrev) return;
-      hapticSelection();
       if (prefersReducedRef.current) {
         setIndex((i) => (direction === 'next' ? i + 1 : i - 1));
+        hapticImpact('light');
         return;
       }
       // Paint the 0-progress frame first, then flip transition ON and set
@@ -698,7 +698,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
       if (Math.abs(clamped - index) !== 1 || prefersReducedRef.current) {
         setFlip(null);
         setIndex(clamped);
-        hapticSelection();
+        hapticImpact('light');
         return;
       }
       startAnimatedFlip(clamped > index ? 'next' : 'prev');
@@ -723,6 +723,11 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
       if (!f || !f.animating) return f;
       if (f.progress >= 1) {
         setIndex((i) => (f.direction === 'next' ? i + 1 : i - 1));
+        // Sidebytte fullført
+        hapticImpact('light');
+      } else {
+        // Snap-back: brukeren slapp hjørnet under 50 %
+        hapticImpact('light');
       }
       return null;
     });
