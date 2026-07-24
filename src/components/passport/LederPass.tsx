@@ -431,11 +431,43 @@ function BookPageFace({
   content,
   side,
   isFlipping = false,
+  variant = 'ivory',
 }: {
   content: React.ReactNode;
   side: 'left' | 'right';
   isFlipping?: boolean;
+  variant?: 'ivory' | 'cover';
 }) {
+  if (variant === 'cover') {
+    return (
+      <div
+        className="absolute inset-0 overflow-hidden"
+        style={{
+          backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.10), rgba(0,0,0,0.32)), url(${RED_CLOTH_URL})`,
+          backgroundSize: 'cover',
+          backgroundColor: '#7a0a0e',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+        }}
+      >
+        {/* Gold inner border */}
+        <div
+          className="absolute inset-3 rounded-[6px] pointer-events-none"
+          style={{ boxShadow: 'inset 0 0 0 1px rgba(240,205,120,0.55)' }}
+        />
+        <div className="absolute inset-0 p-3">{content}</div>
+        {/* Spine shadow on left */}
+        <div
+          aria-hidden
+          className="absolute inset-y-0 left-0 w-6 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(to right, rgba(0,0,0,0.35), rgba(0,0,0,0) 100%)',
+          }}
+        />
+      </div>
+    );
+  }
   return (
     <div
       className="absolute inset-0 overflow-hidden"
@@ -509,14 +541,59 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
 
   const spreads = useMemo(() => buildSpreads(leader, periodLabel, history), [leader, periodLabel, history]);
   // Flat page list for single-page (portrait / passport) mode.
-  const pages = useMemo(
-    () =>
-      spreads.flatMap((s) => [
-        { key: `${s.key}-l`, eyebrow: s.eyebrow, content: s.left },
-        { key: `${s.key}-r`, eyebrow: s.eyebrow, content: s.right },
-      ]),
-    [spreads],
-  );
+  // The FIRST page is always the red cloth cover.
+  const pages = useMemo(() => {
+    const cover = {
+      key: 'cover',
+      eyebrow: 'Forside',
+      variant: 'cover' as const,
+      content: (
+        <div className="flex flex-col items-center justify-between h-full py-8 text-center">
+          <div
+            className="text-[10px] tracking-[0.35em] font-semibold"
+            style={{ color: '#f0cd78' }}
+          >
+            LEDERPASS
+          </div>
+          <div className="flex flex-col items-center gap-4">
+            <div
+              className="relative w-24 h-24 rounded-full flex items-center justify-center"
+              style={{
+                background: 'radial-gradient(circle at 30% 30%, #b7212a, #6a0a10 70%)',
+                boxShadow:
+                  'inset 0 0 0 2px rgba(240,205,120,0.65), 0 4px 10px rgba(0,0,0,0.35)',
+              }}
+            >
+              <img src={oksnoenLogo} alt="" className="w-14 h-14 object-contain" />
+            </div>
+            <div
+              className="text-xl font-serif font-bold tracking-wide"
+              style={{ color: '#f0cd78' }}
+            >
+              OKSNØEN
+            </div>
+            <div
+              className="text-[10px] tracking-[0.3em]"
+              style={{ color: '#f0cd78', opacity: 0.75 }}
+            >
+              LEIRSKOLE & SOMMERLEIR
+            </div>
+          </div>
+          <div
+            className="text-[9px] tracking-[0.3em] font-semibold"
+            style={{ color: '#f0cd78' }}
+          >
+            LEDER · ANNO 1962
+          </div>
+        </div>
+      ),
+    };
+    const inner = spreads.flatMap((s) => [
+      { key: `${s.key}-l`, eyebrow: s.eyebrow, variant: 'ivory' as const, content: s.left },
+      { key: `${s.key}-r`, eyebrow: s.eyebrow, variant: 'ivory' as const, content: s.right },
+    ]);
+    return [cover, ...inner];
+  }, [spreads]);
 
   // Measure the book container and decide layout (single portrait vs. spread).
   const bookAreaRef = useRef<HTMLDivElement>(null);
@@ -869,7 +946,17 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
         className="flex-1 min-h-0 flex items-center justify-center px-3"
       >
         {bookW > 0 && bookH > 0 && (
-          <div className="relative" style={{ width: bookW, height: bookH }}>
+          <div
+            className="relative"
+            style={{
+              width: bookW,
+              height: bookH,
+              // Restrained tilt so the closed book reads as physical at rest.
+              transform: flip ? 'none' : 'perspective(1600px) rotateX(4deg) rotateY(-3deg)',
+              transformOrigin: 'center 65%',
+              transition: 'transform 320ms cubic-bezier(0.32,0.72,0.28,1)',
+            }}
+          >
             {/* Depth: ivory page edges peeking below/right, and back cover below */}
             <div
               aria-hidden
@@ -915,6 +1002,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                     ref={bookRef}
                     role="group"
                     aria-label={currentEyebrow}
+                    data-lederpass-book
                     className="relative w-full h-full select-none"
                     style={{
                       transformStyle: 'preserve-3d',
@@ -929,7 +1017,17 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                       <>
                         {/* Single-page base (destination during flip) */}
                         <div className="absolute inset-0 overflow-hidden">
-                          <BookPageFace content={singleBase} side="right" />
+                          <BookPageFace
+                            content={singleBase}
+                            side="right"
+                            variant={
+                              (flip?.direction === 'next'
+                                ? nextPage?.variant
+                                : flip?.direction === 'prev'
+                                ? prevPage?.variant
+                                : currentPage?.variant) ?? 'ivory'
+                            }
+                          />
                         </div>
                         {/* Spine shadow on left edge */}
                         <div
@@ -940,6 +1038,19 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                               'linear-gradient(to right, rgba(60,30,10,0.45), rgba(60,30,10,0.10) 60%, rgba(60,30,10,0) 100%)',
                           }}
                         />
+                        {/* Corner peel affordance — bottom-right */}
+                        {!flip && canNext && (
+                          <div
+                            aria-hidden
+                            className="absolute bottom-0 right-0 pointer-events-none z-[15]"
+                            style={{
+                              width: 44,
+                              height: 44,
+                              background:
+                                'linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.18) 50%, rgba(0,0,0,0.05) 100%)',
+                            }}
+                          />
+                        )}
                         {/* Flipping leaf (full page, pivots on LEFT edge) */}
                         {flip && singleLeafFront != null && singleLeafBack != null && (
                           <div
@@ -962,7 +1073,15 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                                 WebkitBackfaceVisibility: 'hidden' as any,
                               }}
                             >
-                              <BookPageFace content={singleLeafFront} side="right" />
+                              <BookPageFace
+                                content={singleLeafFront}
+                                side="right"
+                                variant={
+                                  (flip.direction === 'next'
+                                    ? currentPage?.variant
+                                    : prevPage?.variant) ?? 'ivory'
+                                }
+                              />
                               {/* Curl highlight along free (right) edge */}
                               <div
                                 className="absolute inset-y-0 right-0 w-16 pointer-events-none"
@@ -986,7 +1105,15 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                                 transform: 'rotateY(180deg)',
                               }}
                             >
-                              <BookPageFace content={singleLeafBack} side="left" />
+                              <BookPageFace
+                                content={singleLeafBack}
+                                side="left"
+                                variant={
+                                  (flip.direction === 'next'
+                                    ? nextPage?.variant
+                                    : currentPage?.variant) ?? 'ivory'
+                                }
+                              />
                               <div
                                 className="absolute inset-y-0 left-0 w-16 pointer-events-none"
                                 style={{
@@ -1079,51 +1206,34 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
         )}
       </div>
 
-      {/* Slim bottom controls */}
-      <div className="shrink-0 flex flex-col items-center gap-1.5 pb-4 pt-2 px-3">
+      {/* Slim bottom controls — dots only, plus corner-drag hint */}
+      <div
+        className="shrink-0 flex flex-col items-center gap-1.5 pt-2 px-3"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)' }}
+      >
         <div className="text-[10px] uppercase tracking-[0.28em] text-[#7a5a20] font-semibold">
           {currentEyebrow}
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => startAnimatedFlip('prev')}
-            disabled={!canPrev || !!flip?.animating}
-            aria-label="Forrige side"
-            className="inline-flex items-center justify-center rounded-full h-9 w-9 border border-[#3a2410]/20 bg-white/85 text-[#3a2410] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-red-700"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <div
-            role="tablist"
-            aria-label="Sidevalg"
-            className="flex items-center justify-center gap-1.5 max-w-[60vw] overflow-hidden"
-          >
-            {Array.from({ length: dotCount }).map((_, i) => (
-              <button
-                key={i}
-                role="tab"
-                aria-selected={i === index}
-                aria-label={`Gå til side ${i + 1}`}
-                onClick={() => goToSpread(i)}
-                className={cn(
-                  'h-1.5 rounded-full transition-all',
-                  i === index ? 'w-5 bg-[#7a0a0e]' : 'w-1.5 bg-[#3a2410]/25',
-                )}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => startAnimatedFlip('next')}
-            disabled={!canNext || !!flip?.animating}
-            aria-label="Neste side"
-            className="inline-flex items-center justify-center rounded-full h-9 w-9 border border-[#3a2410]/20 bg-white/85 text-[#3a2410] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-red-700"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
+        <div
+          role="tablist"
+          aria-label="Sidevalg"
+          className="flex items-center justify-center gap-1.5 max-w-[80vw] overflow-hidden"
+        >
+          {Array.from({ length: dotCount }).map((_, i) => (
+            <button
+              key={i}
+              role="tab"
+              aria-selected={i === index}
+              aria-label={`Gå til side ${i + 1}`}
+              onClick={() => goToSpread(i)}
+              className={cn(
+                'h-1.5 rounded-full transition-all',
+                i === index ? 'w-5 bg-[#7a0a0e]' : 'w-1.5 bg-[#3a2410]/25',
+              )}
+            />
+          ))}
         </div>
-        <div className="text-[10px] text-[#3a2410]/50">Dra siden for å bla</div>
+        <div className="text-[10px] text-[#3a2410]/55">Dra hjørnet for å bla</div>
       </div>
     </div>
   );
