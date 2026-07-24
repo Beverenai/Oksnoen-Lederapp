@@ -10,12 +10,10 @@ import {
   AlertTriangle,
   Settings,
   LogOut,
-  Menu,
   X,
   Heart,
   User,
   Wrench,
-  Check,
   BarChart2,
   Bell,
   Anchor,
@@ -26,13 +24,13 @@ import {
   ArrowLeft,
   ClipboardList,
   Shirt,
+  LayoutGrid,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import confetti from 'canvas-confetti';
-import { hapticSuccess, hapticImpact } from '@/lib/capacitorHaptics';
+import { hapticImpact } from '@/lib/capacitorHaptics';
 import { PassIcon } from '@/components/icons/PassIcon';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
 import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
@@ -45,11 +43,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 
 interface AppLayoutProps {
   children: ReactNode;
