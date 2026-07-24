@@ -585,6 +585,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <span className="text-sm text-muted-foreground truncate max-w-[140px]">
               {leader?.name}
             </span>
+            {!inactiveForUser && (
             <Button
               variant="ghost"
               size="icon"
@@ -593,6 +594,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             >
               <Menu className="w-5 h-5" />
             </Button>
+            )}
           </div>
         </header>
       )}
@@ -609,6 +611,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {inactiveForUser ? (
+            <div className="space-y-1">
+              <NavLinkItem item={{ to: '/', icon: Home, label: 'Hjem' }} />
+              <NavLinkItem item={{ to: '/chat', icon: MessageCircle, label: 'Ledersnakk' }} />
+              <NavLinkItem item={{ to: '/profile', icon: User, label: 'Min Profil' }} />
+            </div>
+          ) : (<>
           {/* Main navigation - always visible */}
           <div className="space-y-1">
             {mainNavItems.map((item) => (
@@ -653,6 +662,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <NavLinkItem item={adminNavItem} />
             </div>
           )}
+          </>)}
         </nav>
 
         <div className="p-4 border-t border-border space-y-1">
