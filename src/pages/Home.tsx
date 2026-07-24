@@ -40,6 +40,8 @@ import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
 import { useAppMode } from '@/hooks/useAppMode';
 import { Link as LinkIcon } from 'lucide-react';
+import { useLeaderHomeMode } from '@/hooks/useLeaderHomeMode';
+import { LederPass, LederPassIcon } from '@/components/passport/LederPass';
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
 
@@ -143,6 +145,7 @@ const formatTeamDisplay = (team: string | null): string => {
 export default function Home() {
   const { leader, effectiveLeader, isAdmin, isNurse, isSuperAdmin } = useAuth();
   const { mode: appMode } = useAppMode();
+  const { mode: leaderHomeMode } = useLeaderHomeMode();
   const navigate = useNavigate();
   const location = useLocation();
   const [content, setContent] = useState<LeaderContent | null>(null);
@@ -160,6 +163,7 @@ export default function Home() {
   const [overnattingJoining, setOvernattingJoining] = useState(false);
   const [overnattingSaving, setOvernattingSaving] = useState(false);
   const [rouletteEnabled, setRouletteEnabled] = useState(false);
+  const [activePeriodLabel, setActivePeriodLabel] = useState<string | null>(null);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
   const showRoulette = rouletteEnabled && inRoulette;
   const teamsEnabled = useTeamsEnabled();
@@ -186,8 +190,9 @@ export default function Home() {
     setIsLoading(true);
     setLoadFailed(false);
     try {
-      const periodRes = await supabase.from('periods').select('id').eq('is_active', true).maybeSingle();
+      const periodRes = await supabase.from('periods').select('id,name').eq('is_active', true).maybeSingle();
       const activePeriodId = periodRes.data?.id ?? null;
+      setActivePeriodLabel(periodRes.data?.name ?? null);
       const sessionActivitiesKey = activePeriodId
         ? `session_activities_data:${activePeriodId}`
         : 'session_activities_data';
