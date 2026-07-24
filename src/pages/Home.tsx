@@ -428,8 +428,18 @@ export default function Home() {
     );
   }
 
-  // Inactive mode (off-season): show a minimalist "Ditt pass"-placeholder for
-  // non-superadmins. Superadmin still sees the full home to manage the app.
+  // Leader home mode "inactive": replace the entire home surface with the
+  // interactive lederpass. Superadmin keeps the full home to manage the app.
+  if (leaderHomeMode === 'inactive' && !isSuperAdmin) {
+    return (
+      <div className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 h-[calc(100dvh-4rem)]">
+        <LederPass leader={effectiveLeader} fill periodLabel={activePeriodLabel} />
+      </div>
+    );
+  }
+
+  // App-wide inactive mode (off-season, legacy): minimalist off-season view
+  // for non-superadmins when leader_home_mode is not driving inactivity.
   if (appMode === 'inactive' && !isSuperAdmin) {
     return (
       <div className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8">
@@ -541,7 +551,12 @@ export default function Home() {
           <p className="text-base font-medium text-foreground mt-2">
             {effectiveLeader?.name}
           </p>
-          
+
+          {/* Small 3D lederpass icon — only on Home, only in active mode */}
+          <div className="mt-3">
+            <LederPass leader={effectiveLeader} periodLabel={activePeriodLabel} />
+          </div>
+
           {effectiveLeader?.ministerpost && (
             <p className="text-sm text-muted-foreground mt-0.5">{effectiveLeader.ministerpost}</p>
           )}
