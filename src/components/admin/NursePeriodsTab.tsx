@@ -44,6 +44,21 @@ export function NursePeriodsTab() {
     if (e1 || e2) {
       showError('Kunne ikke bytte periode');
     } else {
+      // Reset feature toggles so the new period starts with everything off.
+      // Admins re-enable Utsjekk / Overnatting / Lag / Gensere / Roulette as needed.
+      const resetKeys = [
+        'checkout_enabled',
+        'overnatting_enabled',
+        'teams_enabled',
+        'sweaters_enabled',
+        'roulette_enabled',
+      ];
+      await supabase
+        .from('app_config')
+        .upsert(
+          resetKeys.map((key) => ({ key, value: 'false' })),
+          { onConflict: 'key' },
+        );
       showSuccess(`Aktiv periode: ${p.name}`);
       setPeriods((prev) => prev.map((x) => ({ ...x, is_active: x.id === p.id })));
     }
