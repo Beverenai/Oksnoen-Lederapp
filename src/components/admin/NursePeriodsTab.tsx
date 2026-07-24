@@ -70,13 +70,25 @@ export function NursePeriodsTab() {
   const toggleAppMode = async () => {
     const next = appMode === 'inactive' ? 'active' : 'inactive';
     const confirmMsg = next === 'inactive'
-      ? 'Sette appen til INAKTIV? Alle ledere vil kun se Ledersnakk-chatten. Superadmin beholder full tilgang.'
+      ? 'Sette appen til INAKTIV? Alle ledere blir aktivert og ser kun Hjem + Ledersnakk. Superadmin beholder full tilgang.'
       : 'Skru på AKTIV-modus igjen? Alle funksjoner blir tilgjengelig for alle.';
     if (!confirm(confirmMsg)) return;
     setChangingMode(true);
     try {
       await setAppMode(next);
-      showSuccess(next === 'inactive' ? 'Appen er nå inaktiv' : 'Appen er nå aktiv');
+      if (next === 'inactive') {
+        // Activate every leader so off-season broadcasts + login work for all.
+        const { data, error } = await supabase.functions.invoke('activate-all-leaders');
+        if (error) {
+          console.error(error);
+          showError('Modus satt, men klarte ikke aktivere alle ledere');
+        } else {
+          const n = (data as { activated?: number } | null)?.activated ?? 0;
+          showSuccess(`Appen er nå inaktiv. ${n} ledere ble aktivert.`);
+        }
+      } else {
+        showSuccess('Appen er nå aktiv');
+      }
     } catch (e) {
       console.error(e);
       showError('Kunne ikke endre app-modus');
