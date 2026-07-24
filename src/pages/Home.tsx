@@ -38,6 +38,8 @@ import { updateWidgetData } from '@/lib/capacitorWidget';
 import { MessageSquareWarning } from 'lucide-react';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
+import { useAppMode } from '@/hooks/useAppMode';
+import { Link as LinkIcon } from 'lucide-react';
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
 
@@ -139,7 +141,8 @@ const formatTeamDisplay = (team: string | null): string => {
 };
 
 export default function Home() {
-  const { leader, effectiveLeader, isAdmin, isNurse } = useAuth();
+  const { leader, effectiveLeader, isAdmin, isNurse, isSuperAdmin } = useAuth();
+  const { mode: appMode } = useAppMode();
   const navigate = useNavigate();
   const location = useLocation();
   const [content, setContent] = useState<LeaderContent | null>(null);
