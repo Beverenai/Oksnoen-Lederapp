@@ -18,8 +18,7 @@ interface ChatMessage {
 interface LeaderLite {
   id: string;
   name: string;
-  image_url: string | null;
-  image_url_thumb?: string | null;
+  profile_image_url: string | null;
 }
 
 export default function Chat() {
@@ -47,7 +46,7 @@ export default function Chat() {
           .select('*')
           .order('created_at', { ascending: true })
           .limit(500),
-        supabase.from('leaders').select('id,name,image_url,image_url_thumb'),
+        supabase.from('leaders').select('id,name,profile_image_url'),
       ]);
       if (cancelled) return;
       setMessages((msgs || []) as ChatMessage[]);
@@ -140,7 +139,7 @@ export default function Chat() {
               className={cn('flex gap-2 items-end group', isMe && 'flex-row-reverse')}
             >
               <Avatar className="w-8 h-8 shrink-0">
-                <AvatarImage src={author?.image_url_thumb || author?.image_url || undefined} />
+                <AvatarImage src={author?.profile_image_url || undefined} />
                 <AvatarFallback className="text-xs">
                   {author?.name?.slice(0, 2).toUpperCase() || '??'}
                 </AvatarFallback>
