@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { forwardRef, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Car, Anchor, Mountain, ArrowDown, Cable, Wrench, ShieldCheck, CalendarDays } from 'lucide-react';
+// react-pageflip has loose types; import default and cast where needed.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - no bundled types
+import HTMLFlipBook from 'react-pageflip';
 import type { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 import { hapticSelection, hapticImpact } from '@/lib/capacitorHaptics';
@@ -414,6 +418,108 @@ interface FullViewProps {
   periodLabel?: string | null;
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Individual page components (used inside HTMLFlipBook)                     */
+/* -------------------------------------------------------------------------- */
+
+interface PassportPageProps {
+  side: 'left' | 'right';
+  eyebrow?: string;
+  children: React.ReactNode;
+}
+
+// react-pageflip passes a ref to each direct child; that ref must land on a
+// DOM node, so we use forwardRef.
+const PassportPage = forwardRef<HTMLDivElement, PassportPageProps>(function PassportPage(
+  { side, children },
+  ref,
+) {
+  return (
+    <div
+      ref={ref}
+      className="relative w-full h-full overflow-hidden"
+      style={{
+        backgroundImage: `url(${IVORY_URL})`,
+        backgroundSize: 'cover',
+        backgroundColor: '#f5ecd8',
+      }}
+    >
+      <div className="absolute inset-0 p-4 overflow-hidden">{children}</div>
+      {/* Spine shadow along the binding edge */}
+      <div
+        aria-hidden
+        className="absolute inset-y-0 w-6 pointer-events-none"
+        style={{
+          [side === 'left' ? 'right' : 'left']: 0,
+          background:
+            side === 'left'
+              ? 'linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(60,30,10,0.22) 100%)'
+              : 'linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(60,30,10,0.22) 100%)',
+        }}
+      />
+    </div>
+  );
+});
+
+// Hard cover pages (front / back). Uses the red bookcloth texture.
+const PassportCoverPage = forwardRef<HTMLDivElement, { side: 'front' | 'back' }>(
+  function PassportCoverPage({ side }, ref) {
+    return (
+      <div
+        ref={ref}
+        className="relative w-full h-full flex items-center justify-center overflow-hidden"
+        data-density="hard"
+        style={{
+          backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.10), rgba(0,0,0,0.35)), url(${RED_CLOTH_URL})`,
+          backgroundSize: 'cover',
+          backgroundColor: '#7a0a0e',
+          boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.5)',
+        }}
+      >
+        {/* Gold inner frame */}
+        <div
+          aria-hidden
+          className="absolute inset-[6%] rounded-sm pointer-events-none"
+          style={{ boxShadow: 'inset 0 0 0 1px rgba(240,205,120,0.55)' }}
+        />
+        {side === 'front' ? (
+          <div className="relative flex flex-col items-center gap-3 text-center px-6">
+            <span
+              className="text-[10px] tracking-[0.35em] font-semibold"
+              style={{ color: '#f0cd78' }}
+            >
+              PASS
+            </span>
+            <img src={oksnoenLogo} alt="" className="w-20 h-20 object-contain opacity-95" />
+            <span
+              className="text-lg tracking-[0.25em] font-serif font-bold"
+              style={{ color: '#f0cd78' }}
+            >
+              ØKSNØEN
+            </span>
+            <span
+              className="text-[10px] tracking-[0.3em]"
+              style={{ color: '#f0cd78', opacity: 0.85 }}
+            >
+              LEDERPASS
+            </span>
+          </div>
+        ) : (
+          <div className="relative flex flex-col items-center gap-2 text-center px-6">
+            <span
+              className="text-[9px] tracking-[0.3em] italic"
+              style={{ color: '#f0cd78', opacity: 0.85 }}
+            >
+              Anno 1962
+            </span>
+            <img src={oksnoenLogo} alt="" className="w-12 h-12 object-contain opacity-80" />
+          </div>
+        )}
+      </div>
+    );
+  },
+);
+
 function LederPassFullView({ leader, onClose, inline = false, periodLabel }: FullViewProps) {
   const [history, setHistory] = useState<PeriodHistoryEntry[]>([]);
 
@@ -456,71 +562,55 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
   }, [leader?.id]);
 
   const spreads = useMemo(() => buildSpreads(leader, periodLabel, history), [leader, periodLabel, history]);
-  const [index, setIndex] = useState(0);
-  const total = spreads.length;
-  const trackRef = useRef<HTMLDivElement>(null);
-  const dragStart = useRef<{ x: number; y: number; locked: 'x' | 'y' | null } | null>(null);
-  const [dragDx, setDragDx] = useState(0);
 
-  const goto = useCallback(
+  // Flatten spreads into a linear list of pages so the book flips one leaf at
+  // a time (front cover → left/right per spread → back cover).
+  const pages = useMemo(() => {
+    const inner: { key: string; eyebrow: string; side: 'left' | 'right'; content: React.ReactNode }[] = [];
+    spreads.forEach((s) => {
+      inner.push({ key: `${s.key}-l`, eyebrow: s.eyebrow, side: 'left', content: s.left });
+      inner.push({ key: `${s.key}-r`, eyebrow: s.eyebrow, side: 'right', content: s.right });
+    });
+    return inner;
+  }, [spreads]);
+
+  const totalPages = pages.length + 2; // + front + back cover
+  const [pageIndex, setPageIndex] = useState(0);
+  const bookRef = useRef<any>(null);
+
+  // Spread index shown in the pill/dot indicator. Front cover -> 0, back
+  // cover -> last spread. Otherwise map inner page → spread.
+  const spreadIndex = useMemo(() => {
+    if (pageIndex === 0) return 0;
+    if (pageIndex >= totalPages - 1) return spreads.length - 1;
+    return Math.floor((pageIndex - 1) / 2);
+  }, [pageIndex, totalPages, spreads.length]);
+
+  const currentEyebrow = spreads[spreadIndex]?.eyebrow ?? 'Lederpass';
+
+  const goToSpread = useCallback(
     (i: number) => {
-      const clamped = Math.max(0, Math.min(total - 1, i));
-      if (clamped !== index) {
-        hapticSelection();
-        setIndex(clamped);
-      }
+      const target = 1 + i * 2; // land on the left page of the spread
+      bookRef.current?.pageFlip?.()?.flip(target);
     },
-    [index, total],
+    [],
   );
 
   useEffect(() => {
     if (inline) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose?.();
-      else if (e.key === 'ArrowLeft') goto(index - 1);
-      else if (e.key === 'ArrowRight') goto(index + 1);
+      else if (e.key === 'ArrowLeft') bookRef.current?.pageFlip?.()?.flipPrev();
+      else if (e.key === 'ArrowRight') bookRef.current?.pageFlip?.()?.flipNext();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [inline, onClose, goto, index]);
+  }, [inline, onClose]);
 
-  const onPointerDown = (e: React.PointerEvent) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    dragStart.current = { x: e.clientX, y: e.clientY, locked: null };
-  };
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragStart.current) return;
-    const dx = e.clientX - dragStart.current.x;
-    const dy = e.clientY - dragStart.current.y;
-    if (dragStart.current.locked == null) {
-      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-        // Lock direction: only horizontal drags become swipes; vertical
-        // gestures fall through to native scrolling.
-        dragStart.current.locked = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-      }
-    }
-    if (dragStart.current.locked === 'x') {
-      e.preventDefault();
-      setDragDx(dx);
-    }
-  };
-  const onPointerUp = () => {
-    if (!dragStart.current) return;
-    const dx = dragDx;
-    const locked = dragStart.current.locked;
-    dragStart.current = null;
-    setDragDx(0);
-    if (locked !== 'x') return;
-    const trackW = trackRef.current?.clientWidth ?? 320;
-    if (Math.abs(dx) > trackW * 0.18) {
-      if (dx < 0) goto(index + 1);
-      else goto(index - 1);
-    }
-  };
-
-  const percent = -(index * 100) + (trackRef.current ? (dragDx / trackRef.current.clientWidth) * 100 : 0);
-
-  const spread = spreads[index];
+  const onFlip = useCallback((e: { data: number }) => {
+    setPageIndex(e.data);
+    hapticSelection();
+  }, []);
 
   const containerClass = inline
     ? 'relative w-full h-full flex flex-col'
@@ -551,93 +641,56 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
       <div className="px-5 pt-3 pb-2 shrink-0">
         <div className="text-[10px] uppercase tracking-[0.3em] text-[#7a5a20]">Lederpass</div>
         <h1 className="text-2xl font-serif font-bold text-[#3a2410] leading-tight">{leader?.name ?? 'Ditt pass'}</h1>
-        <p className="text-xs text-[#3a2410]/60 mt-0.5">Dra sidene for å bla.</p>
+        <p className="text-xs text-[#3a2410]/60 mt-0.5">Dra hjørnet for å bla i passet.</p>
       </div>
 
       {/* Book */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
-        <div
-          ref={trackRef}
-          className="mx-auto max-w-md select-none touch-pan-y"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          style={{ perspective: 1400 }}
-        >
-          {/* Book cover */}
-          <div
-            className="relative rounded-[10px] p-2.5 shadow-[0_18px_36px_-14px_rgba(0,0,0,0.55),0_6px_14px_rgba(0,0,0,0.28),inset_0_0_0_1px_rgba(0,0,0,0.5)]"
-            style={{
-              backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.10), rgba(0,0,0,0.35)), url(${RED_CLOTH_URL})`,
-              backgroundSize: 'cover',
-              backgroundColor: '#7a0a0e',
-            }}
+      <div className="flex-1 min-h-0 overflow-hidden px-3 py-3 flex flex-col items-center">
+        <div className="w-full max-w-[560px] mx-auto flex-1 min-h-0">
+          <HTMLFlipBook
+            ref={bookRef}
+            width={340}
+            height={520}
+            size="stretch"
+            minWidth={280}
+            maxWidth={560}
+            minHeight={380}
+            maxHeight={760}
+            showCover
+            drawShadow
+            flippingTime={700}
+            maxShadowOpacity={0.4}
+            usePortrait
+            mobileScrollSupport
+            className="mx-auto"
+            style={{}}
+            startPage={0}
+            startZIndex={0}
+            autoSize
+            clickEventForward
+            useMouseEvents
+            swipeDistance={30}
+            showPageCorners
+            disableFlipByClick={false}
+            onFlip={onFlip}
           >
-            {/* Gold inner border */}
-            <div
-              className="rounded-[7px] p-1"
-              style={{ boxShadow: 'inset 0 0 0 1px rgba(240,205,120,0.55)' }}
-            >
-              {/* Pages window */}
-              <div className="relative rounded-[5px] overflow-hidden">
-                <div
-                  className="flex transition-transform duration-500 ease-[cubic-bezier(.2,.7,.2,1)] motion-reduce:transition-none"
-                  style={{
-                    transform: `translateX(${percent}%)`,
-                    transitionProperty: dragStart.current ? 'none' : 'transform',
-                  }}
-                >
-                  {spreads.map((sp) => (
-                    <div
-                      key={sp.key}
-                      className="shrink-0 w-full grid grid-cols-2 min-h-[360px]"
-                      style={{
-                        backgroundImage: `url(${IVORY_URL})`,
-                        backgroundSize: 'cover',
-                      }}
-                      role="group"
-                      aria-label={sp.eyebrow}
-                    >
-                      <div className="relative p-3">
-                        {sp.left}
-                        {/* Right shadow on left page */}
-                        <div
-                          aria-hidden
-                          className="absolute inset-y-0 right-0 w-4 pointer-events-none"
-                          style={{
-                            background:
-                              'linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(60,30,10,0.18) 100%)',
-                          }}
-                        />
-                      </div>
-                      <div className="relative p-3">
-                        {sp.right}
-                        <div
-                          aria-hidden
-                          className="absolute inset-y-0 left-0 w-4 pointer-events-none"
-                          style={{
-                            background:
-                              'linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(60,30,10,0.18) 100%)',
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {/* Center gutter */}
-                <div
-                  aria-hidden
-                  className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] bg-[#3a2410]/25 pointer-events-none"
-                />
-              </div>
-            </div>
-          </div>
+            {/* Front cover */}
+            <PassportCoverPage side="front" />
+            {/* Inner pages */}
+            {pages.map((p) => (
+              <PassportPage key={p.key} side={p.side} eyebrow={p.eyebrow}>
+                {p.content}
+              </PassportPage>
+            ))}
+            {/* Back cover */}
+            <PassportCoverPage side="back" />
+          </HTMLFlipBook>
+        </div>
 
           {/* Page indicator (dots only — no arrows; use swipe to turn pages) */}
-          <div className="mt-5 flex flex-col items-center gap-1.5">
+          <div className="mt-3 flex flex-col items-center gap-1.5 shrink-0">
             <div className="text-xs font-semibold tracking-wide text-[#3a2410]">
-              {spread.eyebrow}
+              {currentEyebrow}
             </div>
             <div
               role="tablist"
@@ -648,23 +701,23 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                 <button
                   key={s.key}
                   role="tab"
-                  aria-selected={i === index}
+                  aria-selected={i === spreadIndex}
                   aria-label={`Gå til ${s.eyebrow}`}
-                  onClick={() => goto(i)}
+                  onClick={() => goToSpread(i)}
                   className={cn(
                     'h-1.5 rounded-full transition-all',
-                    i === index ? 'w-6 bg-[#7a0a0e]' : 'w-1.5 bg-[#3a2410]/25',
+                    i === spreadIndex ? 'w-6 bg-[#7a0a0e]' : 'w-1.5 bg-[#3a2410]/25',
                   )}
                 />
               ))}
             </div>
             <div className="text-[10px] text-[#3a2410]/50">
-              Dra sidene for å bla
+              Dra hjørnet for å bla
             </div>
           </div>
 
           {!inline && (
-            <div className="mt-4 flex justify-center pb-6">
+            <div className="mt-3 flex justify-center pb-4 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -677,7 +730,6 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
               </button>
             </div>
           )}
-        </div>
       </div>
     </div>
   );

@@ -1,63 +1,51 @@
+## Mål
 
-# Inaktiv-modus: full "off-season"-opplevelse
+Erstatte den horisontale slide-animasjonen i `LederPass` med en ekte 3D-bokfølelse: sidene skal løftes fra hjørnet, rotere om ryggen med perspektiv, kaste skygge på siden under, og lande på venstre halvdel — akkurat som når man blar i et pass.
 
-Når admin skrur på **Inaktiv** i Periode-fanen skal appen automatisk endre form for alle ledere:
+## Bibliotek
 
-- Alle ledere blir satt til `is_active = true` (så varsler når frem, og alle kan logge inn).
-- Alle push-varsler går til absolutt alle ledere (ingen filtrering på periode).
-- Vanlige ledere ser kun to sider i bunnmenyen: **Hjem** og **Øksnøen Chat**. Alt annet skjules.
-- Hjem forenkles til en "off-season"-visning som senere skal vise deres pass (placeholder nå).
-- Superadmin/admin beholder full tilgang for å styre appen.
+Bruke `react-pageflip` (StPageFlip-porten for React). Den håndterer det som er vanskelig å få riktig for hånd:
+- Hjørne-peel som følger fingeren
+- Myk skygge over den siden man blar til
+- Papir-«bøying» midtveis i vendingen
+- Riktig z-orden så flere ark kan ligge oppå hverandre
+- Tastatur- og drag-input, med snap tilbake hvis man ikke drar langt nok
 
-## Endringer
+Alternativ hvis vi vil unngå ny avhengighet: håndbygget CSS-3D med `rotateY` + `transform-style: preserve-3d` og en stack av «ark» der front = høyre side i oppslag N og bakside = venstre side i oppslag N+1. Fungerer, men mister hjørne-peel og realistisk skygge uten mye ekstra kode. Anbefaler biblioteket.
 
-### 1. Toggle-effekt (`src/components/admin/NursePeriodsTab.tsx`)
-Når `app_mode` bytter fra `active` → `inactive`:
-- Kall en ny Edge Function `activate-all-leaders` som setter `is_active = true` på alle rader i `leaders` (service role, superadmin-only via JWT-sjekk).
-- Vis bekreftelse i StatusPopup ("Alle ledere er aktivert. Kun Hjem + Chat vises.").
+## Endringer i `src/components/passport/LederPass.tsx`
 
-Når `app_mode` bytter tilbake til `active`: ingen automatisk deaktivering (admin styrer det manuelt som før).
+1. **Bytt datamodell fra oppslag til enkeltsider.** I dag bygger `buildSpreads` par av `{ left, right }`. Flate ut til en lineær liste med sider `pages = [cover, spread0.left, spread0.right, spread1.left, spread1.right, …, backCover]` slik at boken har ekte enkeltark som vendes én og én. Første og siste side blir cover/bakside i rødt bokbind (samme tekstur som i dag).
 
-### 2. Ny Edge Function `supabase/functions/activate-all-leaders/index.ts`
-- Verifiserer at kaller er superadmin (via `has_role` med bruker-JWT).
-- Kjører `update leaders set is_active = true` med service role.
-- Returnerer antall aktiverte.
+2. **Rendre `<HTMLFlipBook>` inne i «Book»-området** (der `trackRef`-diven ligger nå, linje 558–636). Konfigurasjon:
+   - `size="stretch"`, `minWidth={280} maxWidth={520}`, `minHeight={380} maxHeight={720}` slik at boken skalerer med skjermen på både mobil (én synlig side) og bredere layout (to synlige sider).
+   - `showCover={true}` for at rødt bokbind står som et ekte cover som vippes opp første gang.
+   - `usePortrait={true}` på mobil (via `window.matchMedia('(max-width: 640px)')`) så vi ser én side av gangen; ellers to.
+   - `drawShadow`, `flippingTime={700}`, `maxShadowOpacity={0.35}`, `mobileScrollSupport={true}`.
+   - `onFlip` → oppdatere lokal `index` og trigge `hapticSelection()` for taktil vending.
 
-### 3. Push-varsling i inaktiv modus
-Oppdater `supabase/functions/push-send/index.ts` og `push-admin-alert/index.ts`:
-- Les `app_config.app_mode` først. Hvis `inactive`, drop alle filtre og send til alle `push_subscriptions` som tilhører ledere (uansett `is_active`, periode, rolle).
-- I aktiv modus: uendret oppførsel.
+3. **Fjerne dagens pointer-drag-håndtering** (`onPointerDown/Move/Up`, `dragDx`, `percent`, `translateX`). Biblioteket eier gestene.
 
-### 4. Bunnmeny i inaktiv modus (`src/components/layout/AppLayout.tsx`)
-- Les `useAppMode()`.
-- Hvis `mode === 'inactive'` og bruker ikke er superadmin: bunnmeny vises kun med `Hjem` og `Øksnøen Chat`. Hamburgermeny/øvrige nav-grupper skjules.
-- Header/logo beholdes.
+4. **Beholde:**
+   - Hentekallet til `leader_period_history` og `buildSpreads`-innholdet (bare pakke om til enkeltsider).
+   - Punktindikatoren nederst (viser gjeldende side; klikk kaller `bookRef.current.pageFlip().flip(i)`).
+   - Header-bildet, tittelen, «Lukk»-knappen når `inline={false}`, tastatursnarveiene (piler/Escape) — koblet til `pageFlip().flipNext()/flipPrev()`.
+   - Rødt bokbind + gullramme rundt boken (som ytre wrapper utenfor `HTMLFlipBook`).
 
-### 5. Rute-gate (`src/App.tsx`)
-Allerede finnes en redirect til `/chat` for inactive. Utvides:
-- Tillatte ruter for ikke-superadmin i inactive: `/`, `/chat`, `/profile`.
-- Alle andre ruter redirecter til `/`.
+5. **Sidebakgrunn og papir.** Hver side er en `<div>` med samme `ivory-paper`-tekstur som i dag, med indre padding og et lite «ryggskygge»-gradient i innerkant (venstre side har skygge til høyre, høyre side har skygge til venstre) — det gir illusjon av papir mot rygg.
 
-### 6. Hjem i inaktiv modus (`src/pages/Home.tsx`)
-Når `mode === 'inactive'` og ikke superadmin:
-- Rendrer en enkel "off-season"-visning: velkomstkort med tekst "Sesongen er over — vi sees neste år!" og en placeholder-seksjon "Ditt pass kommer her" (tom card foreløpig, koples opp senere).
-- Alle andre Home-widgets (overnatting, kjøkkentjeneste, aktiviteter osv.) skjules.
+6. **`LederPassIcon`** (den lille 3D-ikonknappen) forblir uendret.
 
-### 7. Chat-oppgradering til messenger-stil (`src/pages/Chat.tsx`)
-Behold eksisterende datamodell (`chat_messages` + realtime). UI-forbedringer:
-- Grupper meldinger fra samme avsender innen 5 min (skjul avatar/navn på oppfølging).
-- "I dag / I går / dato"-separator mellom meldingsgrupper.
-- Automatisk scroll kun hvis brukeren allerede er nær bunn.
-- Enter sender, Shift+Enter = ny linje (bytt `Input` → `Textarea` med auto-grow).
-- Vis "leser skriver…"-indikator via en lettvekts Realtime broadcast-kanal (`presence`/broadcast, ingen DB-endring).
-- Døgnrytme: rundede bobler, samme høykontrast-tokens som i dag.
-- "Sees av"-teller er utenfor scope for nå.
+## Avhengighet
 
-## Teknisk
+Legge til `react-pageflip@^2` (aktivt vedlikeholdt, MIT, ~40 kB gzipped, ingen peer-avhengigheter utover React 18 som prosjektet allerede bruker).
 
-- Ingen nye DB-tabeller. Kun ny Edge Function + små UI/logikk-endringer.
-- `useAppMode` er allerede realtime, så alle klienter reagerer umiddelbart på toggle.
-- Push-endringene sikrer at "Egen varsling" fra QuickNotificationSheet også når alle i inaktiv modus.
+## Verifisering
 
-## Åpne spørsmål
-Ingen — jeg antar at Chat-messenger-stilen (typing-indikator via broadcast, gruppering) er ønsket. Si fra hvis du vil droppe typing-indikator eller ha "sett av"-markører.
+- Typecheck kjøres etter endringene.
+- Manuell test på mobil-viewport (393×844) via preview: åpne inaktivt-modus, sjekk at:
+  - Cover åpnes med vipp
+  - Enkeltsider vendes én og én med finger-peel
+  - Punktindikatoren følger med
+  - Escape/piltaster fortsatt virker
+  - `LederPassIcon` åpner fullskjerm på Home når active-mode
