@@ -47,6 +47,7 @@ const GjenglemtAdmin = lazy(() => import("@/pages/GjenglemtAdmin"));
 const Roulette = lazy(() => import("@/pages/Roulette"));
 const Gensere = lazy(() => import("@/pages/Gensere"));
 const Hendelser = lazy(() => import("@/pages/Hendelser"));
+const Chat = lazy(() => import("@/pages/Chat"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,7 +83,8 @@ function PageLoader() {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { leader, isLoading, isInitialized, isProfileComplete, authError, deactivatedMessage, retryAuth } = useAuth();
+  const { leader, isLoading, isInitialized, isProfileComplete, authError, deactivatedMessage, retryAuth, isSuperAdmin } = useAuth();
+  const { mode } = useAppMode();
 
   // Only show full-page loader during initial app load, never between page navigations
   if (!isInitialized && isLoading) {
@@ -108,6 +110,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!isProfileComplete) {
     return <Navigate to="/onboarding" replace />;
+  }
+
+  // Inactive mode: hide all features for non-superadmins, only chat + profile allowed.
+  if (mode === 'inactive' && !isSuperAdmin) {
+    const path = window.location.pathname;
+    if (path !== '/chat' && path !== '/profile') {
+      return <Navigate to="/chat" replace />;
+    }
   }
 
   return <AppLayout>{children}</AppLayout>;
