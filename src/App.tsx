@@ -49,6 +49,7 @@ const Roulette = lazy(() => import("@/pages/Roulette"));
 const Gensere = lazy(() => import("@/pages/Gensere"));
 const Hendelser = lazy(() => import("@/pages/Hendelser"));
 const Chat = lazy(() => import("@/pages/Chat"));
+const More = lazy(() => import("@/pages/More"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
