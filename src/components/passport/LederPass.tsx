@@ -754,8 +754,9 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
     const dx = e.clientX - d.x;
     const dy = e.clientY - d.y;
     if (d.locked == null) {
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-      if (Math.abs(dx) <= Math.abs(dy)) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      // Favor horizontal: only release to vertical when clearly a vertical swipe.
+      if (Math.abs(dy) > Math.abs(dx) * 1.4) {
         // Vertical gesture — release, let the page scroll.
         d.locked = 'y';
         return;
@@ -1013,7 +1014,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                     className="relative w-full h-full select-none"
                     style={{
                       transformStyle: 'preserve-3d',
-                      touchAction: 'pan-y',
+                      touchAction: 'none',
                     }}
                     onPointerDown={onPointerDown}
                     onPointerMove={onPointerMove}
