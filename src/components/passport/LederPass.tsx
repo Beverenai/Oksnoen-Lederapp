@@ -1006,7 +1006,17 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                       <>
                         {/* Single-page base (destination during flip) */}
                         <div className="absolute inset-0 overflow-hidden">
-                          <BookPageFace content={singleBase} side="right" />
+                          <BookPageFace
+                            content={singleBase}
+                            side="right"
+                            variant={
+                              (flip?.direction === 'next'
+                                ? nextPage?.variant
+                                : flip?.direction === 'prev'
+                                ? prevPage?.variant
+                                : currentPage?.variant) ?? 'ivory'
+                            }
+                          />
                         </div>
                         {/* Spine shadow on left edge */}
                         <div
@@ -1017,6 +1027,19 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                               'linear-gradient(to right, rgba(60,30,10,0.45), rgba(60,30,10,0.10) 60%, rgba(60,30,10,0) 100%)',
                           }}
                         />
+                        {/* Corner peel affordance — bottom-right */}
+                        {!flip && canNext && (
+                          <div
+                            aria-hidden
+                            className="absolute bottom-0 right-0 pointer-events-none z-[15]"
+                            style={{
+                              width: 44,
+                              height: 44,
+                              background:
+                                'linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.18) 50%, rgba(0,0,0,0.05) 100%)',
+                            }}
+                          />
+                        )}
                         {/* Flipping leaf (full page, pivots on LEFT edge) */}
                         {flip && singleLeafFront != null && singleLeafBack != null && (
                           <div
@@ -1039,7 +1062,15 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                                 WebkitBackfaceVisibility: 'hidden' as any,
                               }}
                             >
-                              <BookPageFace content={singleLeafFront} side="right" />
+                              <BookPageFace
+                                content={singleLeafFront}
+                                side="right"
+                                variant={
+                                  (flip.direction === 'next'
+                                    ? currentPage?.variant
+                                    : prevPage?.variant) ?? 'ivory'
+                                }
+                              />
                               {/* Curl highlight along free (right) edge */}
                               <div
                                 className="absolute inset-y-0 right-0 w-16 pointer-events-none"
@@ -1063,7 +1094,15 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                                 transform: 'rotateY(180deg)',
                               }}
                             >
-                              <BookPageFace content={singleLeafBack} side="left" />
+                              <BookPageFace
+                                content={singleLeafBack}
+                                side="left"
+                                variant={
+                                  (flip.direction === 'next'
+                                    ? nextPage?.variant
+                                    : currentPage?.variant) ?? 'ivory'
+                                }
+                              />
                               <div
                                 className="absolute inset-y-0 left-0 w-16 pointer-events-none"
                                 style={{
