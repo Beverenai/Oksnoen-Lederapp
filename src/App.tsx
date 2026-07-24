@@ -116,8 +116,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // Inactive mode: hide all features for non-superadmins, only chat + profile allowed.
   if (mode === 'inactive' && !isSuperAdmin) {
     const path = window.location.pathname;
-    if (path !== '/chat' && path !== '/profile') {
-      return <Navigate to="/chat" replace />;
+    const allowed = ['/', '/chat', '/profile'];
+    if (!allowed.includes(path)) {
+      return <Navigate to="/" replace />;
     }
   }
 
