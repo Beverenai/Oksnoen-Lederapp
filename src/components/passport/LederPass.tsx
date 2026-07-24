@@ -188,6 +188,169 @@ function LabeledField({ label, value }: { label: string; value: React.ReactNode 
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Period stamp — one distinct ink stamp per period                          */
+/* -------------------------------------------------------------------------- */
+
+const STAMP_INKS: { ink: string; shadow: string }[] = [
+  { ink: '#7a0a0e', shadow: 'rgba(122,10,14,0.30)' },
+  { ink: '#1b3a5b', shadow: 'rgba(27,58,91,0.30)' },
+  { ink: '#2f5d3a', shadow: 'rgba(47,93,58,0.30)' },
+  { ink: '#6a3410', shadow: 'rgba(106,52,16,0.30)' },
+  { ink: '#5a2a6a', shadow: 'rgba(90,42,106,0.30)' },
+  { ink: '#1f5f66', shadow: 'rgba(31,95,102,0.30)' },
+  { ink: '#8a5a10', shadow: 'rgba(138,90,16,0.30)' },
+];
+
+function stampInkFor(seed: string) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return STAMP_INKS[h % STAMP_INKS.length];
+}
+
+function stampTiltFor(seed: string) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 17 + seed.charCodeAt(i)) >>> 0;
+  return (h % 17) - 8; // -8°..+8°
+}
+
+function shortPeriodLabel(name: string): string {
+  const m = name.match(/(\d+\+?)/);
+  return m ? m[1] : name.trim().slice(0, 3).toUpperCase();
+}
+
+function stampYearFor(p: PeriodHistoryEntry): string {
+  const src = p.start_date || p.end_date;
+  if (!src) return '';
+  const y = new Date(src).getFullYear();
+  return Number.isFinite(y) ? String(y) : '';
+}
+
+function PeriodStamp({ period, size = 72 }: { period: PeriodHistoryEntry; size?: number }) {
+  const ink = stampInkFor(period.id || period.name);
+  const tilt = stampTiltFor(period.id || period.name);
+  const label = shortPeriodLabel(period.name);
+  const year = stampYearFor(period);
+
+  const rOuter = 46;
+  const rInner = 39;
+  const rText = 42;
+
+  const topPathId = `stamp-top-${period.id}`;
+  const bottomPathId = `stamp-bot-${period.id}`;
+
+  return (
+    <div
+      className="relative flex items-center justify-center select-none"
+      style={{
+        width: size,
+        height: size,
+        transform: `rotate(${tilt}deg)`,
+        filter: `drop-shadow(0 1px 0 ${ink.shadow})`,
+      }}
+      aria-label={`Stempel ${period.name}${year ? ` ${year}` : ''}`}
+    >
+      <svg
+        viewBox="0 0 100 100"
+        width={size}
+        height={size}
+        style={{ color: ink.ink, opacity: 0.92 }}
+      >
+        <defs>
+          <path
+            id={topPathId}
+            d={`M ${50 - rText},50 a ${rText},${rText} 0 1,1 ${rText * 2},0`}
+            fill="none"
+          />
+          <path
+            id={bottomPathId}
+            d={`M ${50 - rText + 2},50 a ${rText - 2},${rText - 2} 0 1,0 ${(rText - 2) * 2},0`}
+            fill="none"
+          />
+        </defs>
+
+        <circle cx="50" cy="50" r={rOuter} fill="none" stroke="currentColor" strokeWidth="2.4" />
+        <circle cx="50" cy="50" r={rInner} fill="none" stroke="currentColor" strokeWidth="0.9" />
+
+        <g fill="currentColor">
+          <circle cx="7.5" cy="50" r="1.4" />
+          <circle cx="92.5" cy="50" r="1.4" />
+        </g>
+
+        <text
+          fill="currentColor"
+          style={{
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontWeight: 700,
+            fontSize: 8.2,
+            letterSpacing: 2.6,
+          }}
+        >
+          <textPath href={`#${topPathId}`} startOffset="50%" textAnchor="middle">
+            ØKSNØEN · LEDER
+          </textPath>
+        </text>
+
+        <text
+          fill="currentColor"
+          style={{
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontWeight: 600,
+            fontSize: 7,
+            letterSpacing: 3,
+          }}
+        >
+          <textPath href={`#${bottomPathId}`} startOffset="50%" textAnchor="middle">
+            {year ? `ANNO ${year}` : 'ANNO 1962'}
+          </textPath>
+        </text>
+
+        <line x1="34" y1="60" x2="66" y2="60" stroke="currentColor" strokeWidth="0.9" />
+
+        <text
+          x="50"
+          y="52"
+          textAnchor="middle"
+          fill="currentColor"
+          style={{
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontWeight: 800,
+            fontSize: label.length > 2 ? 18 : 22,
+            letterSpacing: 0.5,
+          }}
+        >
+          {label}
+        </text>
+
+        <text
+          x="50"
+          y="70"
+          textAnchor="middle"
+          fill="currentColor"
+          style={{
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontWeight: 600,
+            fontSize: 6.2,
+            letterSpacing: 2.4,
+          }}
+        >
+          PERIODE
+        </text>
+      </svg>
+
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-full"
+        style={{
+          background:
+            'radial-gradient(circle at 30% 25%, rgba(255,255,255,0.35), transparent 40%), radial-gradient(circle at 70% 75%, rgba(0,0,0,0.10), transparent 45%)',
+          mixBlendMode: 'multiply',
+        }}
+      />
+    </div>
+  );
+}
+
 function CertBadge({ icon: Icon, label, active }: { icon: any; label: string; active: boolean }) {
   return (
     <div
