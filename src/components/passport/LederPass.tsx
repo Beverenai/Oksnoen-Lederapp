@@ -415,7 +415,47 @@ interface FullViewProps {
 }
 
 function LederPassFullView({ leader, onClose, inline = false, periodLabel }: FullViewProps) {
-  const spreads = useMemo(() => buildSpreads(leader, periodLabel), [leader, periodLabel]);
+  const [history, setHistory] = useState<PeriodHistoryEntry[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const leaderId = leader?.id;
+    if (!leaderId) {
+      setHistory([]);
+      return;
+    }
+    (async () => {
+      const { data, error } = await supabase
+        .from('period_leaders')
+        .select('status, periods!inner(id,name,start_date,end_date,is_active)')
+        .eq('leader_id', leaderId);
+      if (cancelled) return;
+      if (error || !data) {
+        setHistory([]);
+        return;
+      }
+      const rows: PeriodHistoryEntry[] = (data as any[])
+        .map((r) => ({
+          id: r.periods.id as string,
+          name: r.periods.name as string,
+          start_date: (r.periods.start_date as string | null) ?? null,
+          end_date: (r.periods.end_date as string | null) ?? null,
+          is_active: !!r.periods.is_active,
+          status: (r.status as string | null) ?? null,
+        }))
+        .sort((a, b) => {
+          const av = a.start_date ?? '';
+          const bv = b.start_date ?? '';
+          return bv.localeCompare(av);
+        });
+      setHistory(rows);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [leader?.id]);
+
+  const spreads = useMemo(() => buildSpreads(leader, periodLabel, history), [leader, periodLabel, history]);
   const [index, setIndex] = useState(0);
   const total = spreads.length;
   const trackRef = useRef<HTMLDivElement>(null);
@@ -509,9 +549,9 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
 
       {/* Title */}
       <div className="px-5 pt-3 pb-2 shrink-0">
-        <div className="text-sm text-[#3a2410]/70">Hei, {leader?.name?.split(' ')[0] ?? ''}!</div>
-        <h1 className="text-2xl font-serif font-bold text-[#3a2410] leading-tight">Ditt lederpass</h1>
-        <p className="text-xs text-[#3a2410]/60 mt-0.5">Bla gjennom passet med fingeren.</p>
+        <div className="text-[10px] uppercase tracking-[0.3em] text-[#7a5a20]">Lederpass</div>
+        <h1 className="text-2xl font-serif font-bold text-[#3a2410] leading-tight">{leader?.name ?? 'Ditt pass'}</h1>
+        <p className="text-xs text-[#3a2410]/60 mt-0.5">Dra sidene for å bla.</p>
       </div>
 
       {/* Book */}
@@ -594,66 +634,33 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
             </div>
           </div>
 
-          {/* Controls */}
-          <div className="mt-5 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => goto(index - 1)}
-              disabled={index === 0}
-              aria-label="Forrige side"
-              className={cn(
-                'w-11 h-11 rounded-full flex items-center justify-center shadow-sm',
-                'bg-emerald-700/90 text-white',
-                'disabled:opacity-40 disabled:cursor-not-allowed',
-                'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-700',
-              )}
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <div className="flex-1 text-center">
-              <div className="text-xs font-semibold tracking-wide text-[#3a2410]">
-                {spread.eyebrow}
-              </div>
-              <div className="text-[11px] text-[#3a2410]/60 mt-0.5">
-                {index + 1} / {total}
-              </div>
-              <div
-                role="tablist"
-                aria-label="Sidevalg"
-                className="mt-1.5 flex items-center justify-center gap-1.5"
-              >
-                {spreads.map((s, i) => (
-                  <button
-                    key={s.key}
-                    role="tab"
-                    aria-selected={i === index}
-                    aria-label={`Gå til ${s.eyebrow}`}
-                    onClick={() => goto(i)}
-                    className={cn(
-                      'h-1.5 rounded-full transition-all',
-                      i === index ? 'w-6 bg-emerald-700' : 'w-1.5 bg-[#3a2410]/25',
-                    )}
-                  />
-                ))}
-              </div>
-              <div className="text-[10px] text-[#3a2410]/50 mt-1">
-                Sveip på passet for å bla
-              </div>
+          {/* Page indicator (dots only — no arrows; use swipe to turn pages) */}
+          <div className="mt-5 flex flex-col items-center gap-1.5">
+            <div className="text-xs font-semibold tracking-wide text-[#3a2410]">
+              {spread.eyebrow}
             </div>
-            <button
-              type="button"
-              onClick={() => goto(index + 1)}
-              disabled={index === total - 1}
-              aria-label="Neste side"
-              className={cn(
-                'w-11 h-11 rounded-full flex items-center justify-center shadow-sm',
-                'bg-emerald-700/90 text-white',
-                'disabled:opacity-40 disabled:cursor-not-allowed',
-                'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-700',
-              )}
+            <div
+              role="tablist"
+              aria-label="Sidevalg"
+              className="flex items-center justify-center gap-1.5"
             >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+              {spreads.map((s, i) => (
+                <button
+                  key={s.key}
+                  role="tab"
+                  aria-selected={i === index}
+                  aria-label={`Gå til ${s.eyebrow}`}
+                  onClick={() => goto(i)}
+                  className={cn(
+                    'h-1.5 rounded-full transition-all',
+                    i === index ? 'w-6 bg-[#7a0a0e]' : 'w-1.5 bg-[#3a2410]/25',
+                  )}
+                />
+              ))}
+            </div>
+            <div className="text-[10px] text-[#3a2410]/50">
+              Dra sidene for å bla
+            </div>
           </div>
 
           {!inline && (
