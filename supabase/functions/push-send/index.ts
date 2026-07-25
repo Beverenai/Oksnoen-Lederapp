@@ -335,6 +335,7 @@ serve(async (req) => {
     const uniqueLeaderIds = Array.from(new Set(subscriptions.map(s => s.leader_id)));
     let filteredSubscriptions = subscriptions;
     let inactiveSkipped = 0;
+    const totalSubs = subscriptions.length;
     if (!isAppInactive) {
       const { data: activeLeaders } = await supabaseAdmin
         .from("leaders")
@@ -342,7 +343,6 @@ serve(async (req) => {
         .in("id", uniqueLeaderIds)
         .eq("is_active", true);
       const activeSet = new Set((activeLeaders ?? []).map(l => l.id));
-      const totalSubs = subscriptions.length;
       filteredSubscriptions = subscriptions.filter(s => activeSet.has(s.leader_id));
       inactiveSkipped = totalSubs - filteredSubscriptions.length;
     }
