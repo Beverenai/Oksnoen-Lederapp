@@ -249,10 +249,10 @@ async function processParticipant(
     .from('participants')
     .select('id, birth_date')
     .ilike('name', fullName)
-    .maybeSingle();
+    .limit(1);
 
-  if (exactMatch) {
-    existingParticipant = exactMatch;
+  if (exactMatch && exactMatch.length > 0) {
+    existingParticipant = exactMatch[0];
   } else if (participant.birthDate) {
     // If no exact match, try birth date + first name
     const { data: birthDateMatch } = await supabase
@@ -260,8 +260,8 @@ async function processParticipant(
       .select('id')
       .eq('birth_date', participant.birthDate)
       .ilike('name', `%${participant.firstName}%`)
-      .maybeSingle();
-    existingParticipant = birthDateMatch;
+      .limit(1);
+    existingParticipant = birthDateMatch && birthDateMatch.length > 0 ? birthDateMatch[0] : null;
   }
 
   if (existingParticipant) {
@@ -277,7 +277,8 @@ async function processParticipant(
     };
     
     if (participant.imageUrl) updateData.image_url = participant.imageUrl;
-    if (participant.info) updateData.notes = participant.info;
+    // Do NOT copy info into participants.notes — the CSV "notater" column is
+    // sykepleier-info and belongs only in participant_health_info.
 
     const { error } = await supabase
       .from('participants')
@@ -316,7 +317,7 @@ async function processParticipant(
       times_attended: participant.timesAttended,
       has_arrived: participant.hasArrived,
       image_url: participant.imageUrl || null,
-      notes: participant.info || null
+      notes: null
     };
 
     const { data: newParticipant, error } = await supabase
