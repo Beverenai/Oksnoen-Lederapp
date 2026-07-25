@@ -796,6 +796,11 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
   const [flip, setFlip] = useState<FlipState | null>(null);
 
   const bookRef = useRef<HTMLDivElement>(null);
+  const leafRef = useRef<HTMLDivElement>(null);
+  const leafFrontShadowRef = useRef<HTMLDivElement>(null);
+  const leafBackShadowRef = useRef<HTMLDivElement>(null);
+  const leafFrontCurlRef = useRef<HTMLDivElement>(null);
+  const leafBackCurlRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     x: number;
     y: number;
@@ -803,6 +808,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
     direction: 'next' | 'prev' | null;
     started: boolean;
     pointerId: number;
+    progress: number;
   } | null>(null);
   const prefersReducedRef = useRef(false);
 
@@ -897,6 +903,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
       direction: null,
       started: false,
       pointerId: e.pointerId,
+      progress: 0,
     };
   };
 
@@ -906,9 +913,9 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
     const dx = e.clientX - d.x;
     const dy = e.clientY - d.y;
     if (d.locked == null) {
-      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
       // Favor horizontal: only release to vertical when clearly a vertical swipe.
-      if (Math.abs(dy) > Math.abs(dx) * 1.4) {
+      if (Math.abs(dy) > Math.abs(dx) * 1.6) {
         // Vertical gesture — release, let the page scroll.
         d.locked = 'y';
         return;
@@ -926,6 +933,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
         /* noop */
       }
       d.started = true;
+      // Mount the leaf ONCE for this drag; subsequent moves are imperative.
       setFlip({ direction: d.direction, progress: 0, animating: false });
     }
     if (d.locked === 'x' && d.direction) {
@@ -933,7 +941,28 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
       const w = bookRef.current?.clientWidth ?? 320;
       const half = w / 2;
       const progress = Math.max(0, Math.min(1, Math.abs(dx) / half));
-      setFlip((f) => (f && !f.animating ? { ...f, progress } : f));
+      d.progress = progress;
+      // Imperatively update the leaf without triggering React re-render.
+      const angle =
+        isSingle
+          ? d.direction === 'next'
+            ? -180 * progress
+            : -180 * (1 - progress)
+          : d.direction === 'next'
+            ? -180 * progress
+            : 180 * progress;
+      const leaf = leafRef.current;
+      if (leaf) {
+        leaf.style.transition = 'none';
+        leaf.style.transform = `rotateY(${angle}deg) translateZ(0)`;
+      }
+      const fs = progress <= 0.5 ? progress * 0.55 : (1 - progress) * 0.55;
+      const bs = progress >= 0.5 ? (1 - progress) * 0.55 : progress * 0.55;
+      if (leafFrontShadowRef.current) leafFrontShadowRef.current.style.backgroundColor = `rgba(0,0,0,${fs})`;
+      if (leafBackShadowRef.current) leafBackShadowRef.current.style.backgroundColor = `rgba(0,0,0,${bs})`;
+      const curlOpacity = String(1 - Math.abs(progress - 0.5) * 2);
+      if (leafFrontCurlRef.current) leafFrontCurlRef.current.style.opacity = curlOpacity;
+      if (leafBackCurlRef.current) leafBackCurlRef.current.style.opacity = curlOpacity;
     }
   };
 
@@ -947,20 +976,18 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
       /* noop */
     }
     if (!d.started || !d.direction) return;
-    setFlip((f) => {
-      if (!f) return f;
-      const commit = f.progress > 0.5;
-      if (prefersReducedRef.current) {
-        if (commit) {
-          setIndex((i) => (f.direction === 'next' ? i + 1 : i - 1));
-        }
-        return null;
-      }
-      // Kick off transition to the resolved endpoint.
+    const commit = d.progress > 0.4; // slightly easier commit threshold
+    if (prefersReducedRef.current) {
+      if (commit) setIndex((i) => (d.direction === 'next' ? i + 1 : i - 1));
+      setFlip(null);
+      return;
+    }
+    // Sync React state to current visual progress, then transition to endpoint.
+    setFlip({ direction: d.direction, progress: d.progress, animating: false });
+    requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         setFlip((cur) => (cur ? { ...cur, progress: commit ? 1 : 0, animating: true } : cur));
       });
-      return f;
     });
   };
 
