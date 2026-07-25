@@ -367,11 +367,14 @@ export function ParticipantImportTab() {
     const imageIdx = headers.findIndex(h => h === 'bilde' || h === 'image' || h === 'image_url');
     const arrivedIdx = headers.findIndex(h => h.includes('ankommet') || h.includes('arrived'));
 
-    // Find activity column indices
+    // Find activity column indices. Use EXACT header match to avoid false hits
+    // (e.g. "Deltatt tidligere" contains "ti" which used to trigger the Ti activity).
     const activityColumns: { name: string; idx: number }[] = [];
     const activityNames = ['tube', 'tretten', 'taubane', 'vannski', 'triatlon', 'klatring', 'skrikern', 'åtte', 'ti', 'bruskasse', 'rappis', 'outboard', 'pil & bue', 'styrkeprøven'];
+    const reservedIdx = new Set([firstNameIdx, lastNameIdx, birthDateIdx, cabinIdx, timesIdx, infoIdx, imageIdx, arrivedIdx].filter(i => i >= 0));
     headers.forEach((h, idx) => {
-      const match = activityNames.find(a => h === a || h.includes(a));
+      if (reservedIdx.has(idx)) return;
+      const match = activityNames.find(a => h === a);
       if (match) {
         activityColumns.push({ name: match, idx });
       }
