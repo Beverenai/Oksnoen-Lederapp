@@ -1238,6 +1238,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                         {/* Flipping leaf (full page, pivots on LEFT edge) */}
                         {flip && singleLeafFront != null && singleLeafBack != null && (
                           <div
+                            ref={leafRef}
                             aria-hidden
                             className="absolute inset-0 z-20 pointer-events-none"
                             style={{
@@ -1268,6 +1269,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                               />
                               {/* Curl highlight along free (right) edge */}
                               <div
+                                ref={leafFrontCurlRef}
                                 className="absolute inset-y-0 right-0 w-16 pointer-events-none"
                                 style={{
                                   background:
@@ -1276,6 +1278,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                                 }}
                               />
                               <div
+                                ref={leafFrontShadowRef}
                                 className="absolute inset-0 pointer-events-none"
                                 style={{ backgroundColor: `rgba(0,0,0,${frontShadow})` }}
                               />
@@ -1299,6 +1302,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                                 }
                               />
                               <div
+                                ref={leafBackCurlRef}
                                 className="absolute inset-y-0 left-0 w-16 pointer-events-none"
                                 style={{
                                   background:
@@ -1307,6 +1311,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                                 }}
                               />
                               <div
+                                ref={leafBackShadowRef}
                                 className="absolute inset-0 pointer-events-none"
                                 style={{ backgroundColor: `rgba(0,0,0,${backShadow})` }}
                               />
@@ -1333,6 +1338,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                         />
                         {flip && spreadLeafFront != null && spreadLeafBack != null && (
                           <div
+                            ref={leafRef}
                             aria-hidden
                             className="absolute inset-y-0 w-1/2 z-20 pointer-events-none"
                             style={{
@@ -1357,6 +1363,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                                 side={flip.direction === 'next' ? 'right' : 'left'}
                               />
                               <div
+                                ref={leafFrontShadowRef}
                                 className="absolute inset-0 pointer-events-none"
                                 style={{ backgroundColor: `rgba(0,0,0,${frontShadow})` }}
                               />
@@ -1374,6 +1381,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                                 side={flip.direction === 'next' ? 'left' : 'right'}
                               />
                               <div
+                                ref={leafBackShadowRef}
                                 className="absolute inset-0 pointer-events-none"
                                 style={{ backgroundColor: `rgba(0,0,0,${backShadow})` }}
                               />
