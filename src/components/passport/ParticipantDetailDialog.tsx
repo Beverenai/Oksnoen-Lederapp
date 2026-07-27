@@ -810,8 +810,8 @@ export const ParticipantDetailDialog = ({
                   Registrer hendelse
                 </Button>
 
-                {/* Admin: booking info */}
-                {isAdmin && (
+                {/* Admin/Nurse: booking info (guardian contact) */}
+                {(isAdmin || isNurse) && (
                   <Button
                     variant="outline"
                     className="w-full"

@@ -1,0 +1,1 @@
+CREATE POLICY "Nurses can view bookings" ON public.participant_bookings FOR SELECT USING (public.is_nurse());
