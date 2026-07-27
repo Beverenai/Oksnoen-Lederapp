@@ -1,5 +1,5 @@
-import { ReactNode, useState, useEffect, useCallback, useRef } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { CSSProperties, ReactNode, Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -17,7 +17,7 @@ import {
   BarChart2,
   Bell,
   Anchor,
-  Map,
+  Map as MapIcon,
   BookOpen,
   LucideIcon,
   ChevronDown,
@@ -25,6 +25,7 @@ import {
   ClipboardList,
   Shirt,
   LayoutGrid,
+  LoaderCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -45,7 +46,7 @@ import {
 } from '@/components/ui/collapsible';
 
 interface AppLayoutProps {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 // Type for nav items that can use either Lucide icons or custom components
@@ -76,7 +77,7 @@ const sweatersNavItem: NavItem = { to: '/gensere', icon: Shirt, label: 'Gensere'
 const scheduleNavItem: NavItem = { to: '/schedule', icon: Calendar, label: 'Vaktplan' };
 const importantInfoNavItem: NavItem = { to: '/important-info', icon: AlertTriangle, label: 'Viktig info' };
 const fixNavItem: NavItem = { to: '/fix', icon: Wrench, label: 'FIX' };
-const skjaerNavItem: NavItem = { to: '/skjaer', icon: Map, label: 'Skjær' };
+const skjaerNavItem: NavItem = { to: '/skjaer', icon: MapIcon, label: 'Skjær' };
 const storiesNavItem: NavItem = { to: '/stories', icon: BookOpen, label: 'Historier' };
 
 // Special access items
@@ -98,6 +99,31 @@ const getBottomNavItems = (): BottomNavItem[] => [
   { to: '/leaders', icon: Users, label: 'Ledere' },
   { to: '/mer', icon: LayoutGrid, label: 'Mer' },
 ];
+
+const PageContentLoader = () => (
+  <div className="flex min-h-[42vh] items-center justify-center" role="status" aria-live="polite">
+    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+      <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" />
+      <span>Laster</span>
+    </div>
+  </div>
+);
+
+const getPageScrollY = () => Math.max(
+  window.scrollY,
+  document.documentElement.scrollTop,
+  document.body.scrollTop,
+);
+
+const scrollPageTo = (top: number, behavior: ScrollBehavior) => {
+  const options: ScrollToOptions = { top, left: 0, behavior };
+  window.scrollTo(options);
+  document.documentElement.scrollTo(options);
+  document.body.scrollTo(options);
+};
+
+const supportsViewTransitions = typeof document !== 'undefined' &&
+  typeof (document as Document & { startViewTransition?: unknown }).startViewTransition === 'function';
 
 // Helper component for rendering nav links
 const NavLinkItem = ({ 
@@ -176,6 +202,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const headerVisibleRef = useRef(true);
   const lastScrollY = useRef(0);
   const scrollContainerRef = useRef<HTMLElement>(null);
+  const tabBarRef = useRef<HTMLElement>(null);
+  const tabScrollPositions = useRef(new Map<string, number>());
 
   // Collapsible group states
   const [openGroups, setOpenGroups] = useState({
@@ -196,6 +224,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
     : getBottomNavItems();
   const mainTabRoutes = bottomNavItems.map(item => item.to);
   const isSubPage = !mainTabRoutes.includes(location.pathname);
+  const activeTabIndex = bottomNavItems.findIndex((item) => (
+    location.pathname === item.to ||
+    (item.to === '/passport' && location.pathname.startsWith('/passport/'))
+  ));
+  const bottomNavStyle = {
+    '--bottom-nav-tab-count': bottomNavItems.length,
+    '--bottom-nav-active-index': Math.max(activeTabIndex, 0),
+    '--bottom-nav-active-opacity': activeTabIndex >= 0 ? 1 : 0,
+  } as CSSProperties;
 
   // Passkontroll is always available so leaders can see participants.
   // Pass-writing UI inside the page is still gated by checkoutEnabled.
@@ -204,12 +241,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
     : leaderNavItems;
 
   // Build dynamic content items based on schedule image availability
-  const contentNavItems = [
+  const contentNavItems = useMemo(() => [
     ...(hasScheduleImage ? [scheduleNavItem] : []),
     importantInfoNavItem,
     ...(isAdmin ? [skjaerNavItem, storiesNavItem] : []),
     fixNavItem,
-  ];
+  ], [hasScheduleImage, isAdmin]);
 
   // Build special access items based on role (only for nurse, not admin)
   const specialAccessItems = isNurse && !isAdmin ? [nurseNavItem] : [];
@@ -273,15 +310,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
     const el = tabBarRef.current;
     if (!el) return;
     const update = () => {
-      const h = el.getBoundingClientRect().height;
-      if (h > 0) {
-        document.documentElement.style.setProperty('--nav-actual-h', `${Math.round(h)}px`);
+      const rect = el.getBoundingClientRect();
+      const clearance = window.innerHeight - rect.top;
+      if (rect.height > 0 && clearance > 0) {
+        document.documentElement.style.setProperty('--nav-actual-h', `${Math.ceil(clearance)}px`);
       }
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
-    return () => ro.disconnect();
+    window.addEventListener('resize', update);
+    window.visualViewport?.addEventListener('resize', update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', update);
+      window.visualViewport?.removeEventListener('resize', update);
+    };
   }, [mobileMenuOpen]);
 
   // Auto-expand groups based on current route
@@ -299,14 +343,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
     if (specialPaths.includes(location.pathname)) {
       setOpenGroups(prev => ({ ...prev, special: true }));
     }
-  }, [location.pathname, hasScheduleImage]);
+  }, [location.pathname, contentNavItems]);
 
   // Collapsible header scroll tracking (Facebook/Instagram-style)
   // Listen on window so the body can scroll natively — fixes iOS PWA bottom strip.
   useEffect(() => {
     const SCROLL_THRESHOLD = 50;
     let rafId = 0;
-    let latestScrollY = window.scrollY;
+    let latestScrollY = getPageScrollY();
 
     const setHeaderVisibility = (visible: boolean) => {
       if (headerVisibleRef.current === visible) return;
@@ -334,14 +378,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
     };
 
     const handleScroll = () => {
-      latestScrollY = window.scrollY;
+      latestScrollY = getPageScrollY();
       if (rafId) return;
       rafId = window.requestAnimationFrame(updateHeaderFromScroll);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
+    document.addEventListener('scroll', handleScroll, { passive: true, capture: true });
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('scroll', handleScroll, { capture: true });
       if (rafId) window.cancelAnimationFrame(rafId);
     };
   }, []);
@@ -422,17 +468,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
     };
   }, [leader, isAdmin, isNurse, fetchHasReadStatus]);
 
-  // Auto-scroll active tab into view when route changes
-  const tabBarRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const bar = tabBarRef.current;
-    if (!bar) return;
-    const active = bar.querySelector<HTMLElement>('[data-active="true"]');
-    if (active) {
-      active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-    }
-  }, [location.pathname]);
-
   // Handle dismissing the Hajolo tooltip
   const handleDismissTooltip = async () => {
     if (!leader?.id) return;
@@ -445,6 +480,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
+
+  const handleBottomNavigation = (to: string) => {
+    void hapticImpact('light');
+
+    if (to === location.pathname) {
+      scrollPageTo(0, 'smooth');
+      return;
+    }
+
+    if (mainTabRoutes.includes(location.pathname)) {
+      tabScrollPositions.current.set(location.pathname, getPageScrollY());
+    }
+
+    navigate(to, { viewTransition: true });
+
+    const savedScrollY = tabScrollPositions.current.get(to) ?? 0;
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        scrollPageTo(savedScrollY, 'auto');
+      });
+    });
+  };
 
   return (
     <div className="bg-background flex min-h-[100svh] lg:min-h-dvh flex-col overflow-x-hidden w-full max-w-full pl-safe pr-safe">
@@ -736,33 +793,38 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {!mobileMenuOpen && (
         <nav
           ref={tabBarRef}
-          className="lg:hidden bottom-nav-fixed bottom-nav box-content transition-transform duration-300 ease-out will-change-transform"
+          className="lg:hidden bottom-nav-fixed"
           aria-label="Hovednavigasjon"
+          style={bottomNavStyle}
         >
-          <div className="flex items-stretch justify-around px-1">
+          <div className="bottom-nav-track">
+            <span className="bottom-nav-active-indicator" aria-hidden="true" />
             {bottomNavItems.map((item) => {
-              const isActive = location.pathname === item.to;
+              const isActive = location.pathname === item.to ||
+                (item.to === '/passport' && location.pathname.startsWith('/passport/'));
               const isHomeWithUnread = item.to === '/' && !hasRead && isRegularLeader;
 
               return (
-                <NavLink
+                <button
                   key={item.to}
-                  to={item.to}
+                  type="button"
                   data-active={isActive}
-                  onClick={() => hapticImpact('light')}
+                  aria-current={isActive ? 'page' : undefined}
+                  aria-label={item.label}
+                  onClick={() => handleBottomNavigation(item.to)}
                   className={cn(
-                    'flex flex-col items-center justify-center gap-0.5 flex-1 relative transition-colors',
-                    isActive ? 'text-primary' : 'text-muted-foreground/80'
+                    'bottom-nav-item',
+                    isActive ? 'text-foreground' : 'text-muted-foreground'
                   )}
                 >
-                  <item.icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
-                  <span className={cn('text-[10px] leading-none', isActive ? 'font-semibold' : 'font-medium')}>
+                  <item.icon className="bottom-nav-icon" strokeWidth={isActive ? 2.6 : 2.2} />
+                  <span className={cn('bottom-nav-label', isActive && 'font-semibold')}>
                     {item.label}
                   </span>
                   {isHomeWithUnread && (
-                    <span className="absolute top-1 right-1/3 w-2 h-2 bg-destructive rounded-full animate-pulse" />
+                    <span className="bottom-nav-unread" aria-label="Ulest innhold" />
                   )}
-                </NavLink>
+                </button>
               );
             })}
           </div>
@@ -782,8 +844,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
           className="lg:hidden shrink-0"
           style={{ height: 'calc(56px + var(--safe-top))' }}
         />
-        <div className="p-4 lg:p-6 min-w-0 w-full">
-          {children}
+        <div className="app-page-surface p-4 lg:p-6 min-w-0 w-full">
+          <div
+            key={location.key}
+            className={cn('app-page-route', !supportsViewTransitions && 'app-page-fallback-enter')}
+          >
+            <Suspense fallback={<PageContentLoader />}>
+              {children ?? <Outlet />}
+            </Suspense>
+          </div>
         </div>
       </main>
 

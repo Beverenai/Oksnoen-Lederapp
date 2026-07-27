@@ -2,7 +2,7 @@ import { Suspense, lazy } from "react";
 import { StatusPopupProvider } from "@/hooks/useStatusPopup";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
@@ -21,10 +21,16 @@ import Home from "@/pages/Home";
 import NotFound from "@/pages/NotFound";
 
 // Lazy load non-critical pages for better performance
-const Profile = lazy(() => import("@/pages/Profile"));
-const Leaders = lazy(() => import("@/pages/Leaders"));
+const loadProfile = () => import("@/pages/Profile");
+const loadLeaders = () => import("@/pages/Leaders");
+const loadPassport = () => import("@/pages/Passport");
+const loadChat = () => import("@/pages/Chat");
+const loadMore = () => import("@/pages/More");
+
+const Profile = lazy(loadProfile);
+const Leaders = lazy(loadLeaders);
 const Team = lazy(() => import("@/pages/Team"));
-const Passport = lazy(() => import("@/pages/Passport"));
+const Passport = lazy(loadPassport);
 const PassportActivity = lazy(() => import("@/pages/PassportActivity"));
 const MyCabins = lazy(() => import("@/pages/MyCabins"));
 const Schedule = lazy(() => import("@/pages/Schedule"));
@@ -48,8 +54,8 @@ const GjenglemtAdmin = lazy(() => import("@/pages/GjenglemtAdmin"));
 const Roulette = lazy(() => import("@/pages/Roulette"));
 const Gensere = lazy(() => import("@/pages/Gensere"));
 const Hendelser = lazy(() => import("@/pages/Hendelser"));
-const Chat = lazy(() => import("@/pages/Chat"));
-const More = lazy(() => import("@/pages/More"));
+const Chat = lazy(loadChat);
+const More = lazy(loadMore);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,12 +73,17 @@ const queryClient = new QueryClient({
   },
 });
 
-// Preload frequently accessed pages after initial render
+// Warm the primary tabs after startup so the first tab switch feels immediate.
 if (typeof window !== 'undefined') {
   setTimeout(() => {
-    import("@/pages/Leaders");
-    import("@/pages/Profile");
-  }, 2000);
+    void Promise.allSettled([
+      loadProfile(),
+      loadLeaders(),
+      loadPassport(),
+      loadChat(),
+      loadMore(),
+    ]);
+  }, 800);
 }
 
 // Loading fallback for lazy-loaded pages
@@ -84,9 +95,10 @@ function PageLoader() {
   );
 }
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute() {
   const { leader, isLoading, isInitialized, isProfileComplete, authError, deactivatedMessage, retryAuth, isSuperAdmin } = useAuth();
   const { mode } = useAppMode();
+  const location = useLocation();
 
   // Only show full-page loader during initial app load, never between page navigations
   if (!isInitialized && isLoading) {
@@ -116,14 +128,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   // Inactive mode: hide all features for non-superadmins, only chat + profile allowed.
   if (mode === 'inactive' && !isSuperAdmin) {
-    const path = window.location.pathname;
     const allowed = ['/', '/chat', '/profile'];
-    if (!allowed.includes(path)) {
+    if (!allowed.includes(location.pathname)) {
       return <Navigate to="/" replace />;
     }
   }
 
-  return <AppLayout>{children}</AppLayout>;
+  return <AppLayout />;
 }
 
 function OnboardingRoute({ children }: { children: React.ReactNode }) {
@@ -195,37 +206,41 @@ function AppRoutes() {
           }
         />
 
-        {/* Protected routes */}
-        <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/leaders" element={<ProtectedRoute><Leaders /></ProtectedRoute>} />
-        <Route path="/passport" element={<ProtectedRoute><Passport /></ProtectedRoute>} />
-        <Route path="/passport/activity" element={<ProtectedRoute><PassportActivity /></ProtectedRoute>} />
-        <Route path="/team/:team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
-        <Route path="/my-cabins" element={<ProtectedRoute><MyCabins /></ProtectedRoute>} />
-        <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
-        <Route path="/my-shifts" element={<ProtectedRoute><MyShifts /></ProtectedRoute>} />
-        <Route path="/important-info" element={<ProtectedRoute><ImportantInfo /></ProtectedRoute>} />
-        <Route path="/nurse" element={<ProtectedRoute><Nurse /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-        <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
-        <Route path="/admin/shifts" element={<ProtectedRoute><ShiftPlanner /></ProtectedRoute>} />
-        <Route path="/admin/shifts-mini" element={<ProtectedRoute><ShiftPlannerMini /></ProtectedRoute>} />
-        <Route path="/admin/dynga" element={<ProtectedRoute><Dynga /></ProtectedRoute>} />
-        <Route path="/gjenglemt" element={<ProtectedRoute><Gjenglemt /></ProtectedRoute>} />
+        {/* Protected routes share one persistent app shell. */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/leaders" element={<Leaders />} />
+          <Route path="/passport" element={<Passport />} />
+          <Route path="/passport/activity" element={<PassportActivity />} />
+          <Route path="/team/:team" element={<Team />} />
+          <Route path="/my-cabins" element={<MyCabins />} />
+          <Route path="/schedule" element={<Schedule />} />
+          <Route path="/my-shifts" element={<MyShifts />} />
+          <Route path="/important-info" element={<ImportantInfo />} />
+          <Route path="/nurse" element={<Nurse />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/shifts" element={<ShiftPlanner />} />
+          <Route path="/admin/shifts-mini" element={<ShiftPlannerMini />} />
+          <Route path="/admin/dynga" element={<Dynga />} />
+          <Route path="/gjenglemt" element={<Gjenglemt />} />
+          <Route path="/roulette" element={<Roulette />} />
+          <Route path="/gensere" element={<Gensere />} />
+          <Route path="/participant-stats" element={<ParticipantStats />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/fix" element={<Fix />} />
+          <Route path="/rope-control" element={<RopeControl />} />
+          <Route path="/skjaer" element={<Skjaer />} />
+          <Route path="/stories" element={<Stories />} />
+          <Route path="/hendelser" element={<Hendelser />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/mer" element={<More />} />
+        </Route>
+
+        {/* Public routes */}
         <Route path="/gjenglemt-admin" element={<GjenglemtAdmin />} />
         <Route path="/gjenglemt/:slug" element={<PublicGjenglemt />} />
-        <Route path="/roulette" element={<ProtectedRoute><Roulette /></ProtectedRoute>} />
-        <Route path="/gensere" element={<ProtectedRoute><Gensere /></ProtectedRoute>} />
-        <Route path="/participant-stats" element={<ProtectedRoute><ParticipantStats /></ProtectedRoute>} />
-        <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
-        <Route path="/fix" element={<ProtectedRoute><Fix /></ProtectedRoute>} />
-        <Route path="/rope-control" element={<ProtectedRoute><RopeControl /></ProtectedRoute>} />
-        <Route path="/skjaer" element={<ProtectedRoute><Skjaer /></ProtectedRoute>} />
-        <Route path="/stories" element={<ProtectedRoute><Stories /></ProtectedRoute>} />
-        <Route path="/hendelser" element={<ProtectedRoute><Hendelser /></ProtectedRoute>} />
-        <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-        <Route path="/mer" element={<ProtectedRoute><More /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
