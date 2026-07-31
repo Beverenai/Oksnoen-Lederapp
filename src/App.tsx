@@ -56,6 +56,7 @@ const Gensere = lazy(() => import("@/pages/Gensere"));
 const Hendelser = lazy(() => import("@/pages/Hendelser"));
 const Chat = lazy(loadChat);
 const More = lazy(loadMore);
+const PeriodArchive = lazy(() => import("@/pages/admin/PeriodArchive"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -224,6 +225,7 @@ function AppRoutes() {
           <Route path="/admin/shifts" element={<ShiftPlanner />} />
           <Route path="/admin/shifts-mini" element={<ShiftPlannerMini />} />
           <Route path="/admin/dynga" element={<Dynga />} />
+          <Route path="/arkiv" element={<PeriodArchive />} />
           <Route path="/gjenglemt" element={<Gjenglemt />} />
           <Route path="/roulette" element={<Roulette />} />
           <Route path="/gensere" element={<Gensere />} />

@@ -1,0 +1,169 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, Archive, FileSpreadsheet, Loader2, Printer } from 'lucide-react';
+import { archiveGroups, datasetsForGroup, archiveDatasets } from '@/lib/archiveDatasets';
+import { downloadWorkbook } from '@/lib/archiveExport';
+import { ArchiveDatasetCard } from '@/components/archive/ArchiveDatasetCard';
+
+interface Period {
+  id: string;
+  name: string;
+  is_active: boolean;
+  start_date: string | null;
+  end_date: string | null;
+}
+
+export default function PeriodArchive() {
+  const navigate = useNavigate();
+  const { isAdmin, isNurse } = useAuth();
+  const { showError, showSuccess } = useStatusPopup();
+  const [periodId, setPeriodId] = useState<string>('');
+  const [group, setGroup] = useState<string>('participants');
+  const [exporting, setExporting] = useState(false);
+
+  const { data: periods = [], isLoading } = useQuery({
+    queryKey: ['archive', 'periods'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('periods')
+        .select('id,name,is_active,start_date,end_date')
+        .order('start_date', { ascending: true });
+      if (error) throw error;
+      return (data || []) as Period[];
+    },
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (!periodId && periods.length) {
+      setPeriodId((periods.find((p) => p.is_active) ?? periods[0]).id);
+    }
+  }, [periods, periodId]);
+
+  const period = useMemo(() => periods.find((p) => p.id === periodId) ?? null, [periods, periodId]);
+  const datasets = useMemo(() => datasetsForGroup(group), [group]);
+
+  const exportAll = async () => {
+    if (!period) return;
+    setExporting(true);
+    try {
+      const sheets = [];
+      for (const ds of archiveDatasets) {
+        const rows = await ds.fetch(period.id);
+        sheets.push({ name: ds.label, rows });
+      }
+      await downloadWorkbook(sheets, `${period.name.replace(/\s+/g, '-')}-arkiv.xlsx`);
+      showSuccess('Eksport lastet ned');
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke eksportere');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  if (!isAdmin && !isNurse) {
+    return (
+      <div className="p-6 text-center text-muted-foreground">
+        Du har ikke tilgang til periodearkivet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-full pb-24">
+      <div className="p-4 space-y-4">
+        <div className="flex items-center gap-2 print:hidden">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <Archive className="h-5 w-5" /> Periodearkiv
+          </h1>
+        </div>
+
+        <Card className="p-4 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Se all lagret data fra en tidligere periode. Å velge periode her endrer <strong>ikke</strong> aktiv
+            periode eller noen innstillinger.
+          </p>
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Laster perioder...
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={periodId} onValueChange={setPeriodId}>
+                <SelectTrigger className="w-[240px]">
+                  <SelectValue placeholder="Velg periode" />
+                </SelectTrigger>
+                <SelectContent>
+                  {periods.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                      {p.is_active ? ' (aktiv)' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {period?.start_date && (
+                <Badge variant="secondary">
+                  {new Date(period.start_date).toLocaleDateString('nb-NO')}
+                  {period.end_date ? ` – ${new Date(period.end_date).toLocaleDateString('nb-NO')}` : ''}
+                </Badge>
+              )}
+              <div className="flex gap-2 ml-auto print:hidden">
+                <Button size="sm" variant="outline" onClick={() => window.print()} disabled={!period}>
+                  <Printer className="h-4 w-4 mr-1" /> Print / PDF
+                </Button>
+                <Button size="sm" onClick={exportAll} disabled={!period || exporting}>
+                  {exporting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-4 w-4 mr-1" />
+                  )}
+                  Eksporter alt
+                </Button>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        <div className="flex gap-2 overflow-x-auto pb-1 print:hidden">
+          {archiveGroups.map((g) => (
+            <Button
+              key={g.key}
+              size="sm"
+              variant={group === g.key ? 'default' : 'outline'}
+              className="whitespace-nowrap"
+              onClick={() => setGroup(g.key)}
+            >
+              {g.label}
+            </Button>
+          ))}
+        </div>
+
+        {period && (
+          <div className="space-y-4">
+            {datasets.map((ds) => (
+              <ArchiveDatasetCard
+                key={ds.key}
+                dataset={ds}
+                periodId={period.id}
+                periodName={period.name.replace(/\s+/g, '-')}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

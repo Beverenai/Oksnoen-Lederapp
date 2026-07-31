@@ -2895,6 +2895,22 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }[]
       }
+      get_archive_participants: {
+        Args: { _period_id: string }
+        Returns: {
+          birth_date: string
+          cabin_id: string
+          has_arrived: boolean
+          id: string
+          insj_points: number
+          name: string
+          notes: string
+          pass_written: boolean
+          room: string
+          team_id: string
+          times_attended: number
+        }[]
+      }
       get_my_roles: {
         Args: never
         Returns: {
