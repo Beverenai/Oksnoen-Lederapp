@@ -1,6 +1,6 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { normalizePhone } from '@/lib/utils';
@@ -26,6 +26,7 @@ import {
   Heart,
   Dices,
   ClipboardList,
+  Archive,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
@@ -61,6 +62,7 @@ const navItems = [
   { key: 'roulette', label: 'Oppgave-roulette', desc: 'Legg inn senior/U18-oppgaver', icon: Dices, color: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
   { key: 'bookings', label: 'Booking-info', desc: 'Importer booking-data per periode', icon: ClipboardList, color: 'bg-sky-500/15 text-sky-600 dark:text-sky-400' },
   { key: 'sweaters', label: 'Gensere', desc: 'Hentet / kjøpt genser dag 1', icon: Shirt, color: 'bg-lime-500/15 text-lime-600 dark:text-lime-400' },
+  { key: 'archive', label: 'Periodearkiv', desc: 'Se data fra alle perioder', icon: Archive, color: 'bg-slate-500/15 text-slate-600 dark:text-slate-300', path: '/arkiv' },
 ];
 
 const sectionLabels: Record<string, string> = {
@@ -78,6 +80,7 @@ const sectionLabels: Record<string, string> = {
 
 export default function AdminSettings() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
+  const navigate = useNavigate();
   const { isAdmin, isSuperAdmin } = useAuth();
   const [activeSection, setActiveSection] = useState('');
   
