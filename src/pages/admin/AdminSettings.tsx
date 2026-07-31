@@ -358,17 +358,22 @@ export default function AdminSettings() {
 
         {/* Rest of nav cards */}
         <div className="grid grid-cols-2 gap-3">
-          {navItems.map(({ key, label, desc, icon: Icon, color }) => (
-            <Card
-              key={key}
-              className={`p-4 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${color}`}
-              onClick={() => setActiveSection(key)}
-            >
-              <Icon className="h-7 w-7 mb-2" />
-              <p className="font-semibold text-sm">{label}</p>
-              <p className="text-xs opacity-70 mt-0.5">{desc}</p>
-            </Card>
-          ))}
+          {navItems.map((item) => {
+            const { key, label, desc, color } = item;
+            const Icon = item.icon;
+            const path = (item as { path?: string }).path;
+            return (
+              <Card
+                key={key}
+                className={`p-4 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${color}`}
+                onClick={() => (path ? navigate(path) : setActiveSection(key))}
+              >
+                <Icon className="h-7 w-7 mb-2" />
+                <p className="font-semibold text-sm">{label}</p>
+                <p className="text-xs opacity-70 mt-0.5">{desc}</p>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </>
