@@ -50,6 +50,7 @@ const Gensere = lazy(() => import("@/pages/Gensere"));
 const Hendelser = lazy(() => import("@/pages/Hendelser"));
 const Chat = lazy(() => import("@/pages/Chat"));
 const More = lazy(() => import("@/pages/More"));
+const PeriodArchive = lazy(() => import("@/pages/admin/PeriodArchive"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -212,6 +213,7 @@ function AppRoutes() {
         <Route path="/admin/shifts" element={<ProtectedRoute><ShiftPlanner /></ProtectedRoute>} />
         <Route path="/admin/shifts-mini" element={<ProtectedRoute><ShiftPlannerMini /></ProtectedRoute>} />
         <Route path="/admin/dynga" element={<ProtectedRoute><Dynga /></ProtectedRoute>} />
+        <Route path="/arkiv" element={<ProtectedRoute><PeriodArchive /></ProtectedRoute>} />
         <Route path="/gjenglemt" element={<ProtectedRoute><Gjenglemt /></ProtectedRoute>} />
         <Route path="/gjenglemt-admin" element={<GjenglemtAdmin />} />
         <Route path="/gjenglemt/:slug" element={<PublicGjenglemt />} />

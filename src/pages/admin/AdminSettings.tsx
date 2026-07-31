@@ -1,6 +1,6 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { normalizePhone } from '@/lib/utils';
@@ -26,6 +26,7 @@ import {
   Heart,
   Dices,
   ClipboardList,
+  Archive,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
@@ -61,6 +62,7 @@ const navItems = [
   { key: 'roulette', label: 'Oppgave-roulette', desc: 'Legg inn senior/U18-oppgaver', icon: Dices, color: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
   { key: 'bookings', label: 'Booking-info', desc: 'Importer booking-data per periode', icon: ClipboardList, color: 'bg-sky-500/15 text-sky-600 dark:text-sky-400' },
   { key: 'sweaters', label: 'Gensere', desc: 'Hentet / kjøpt genser dag 1', icon: Shirt, color: 'bg-lime-500/15 text-lime-600 dark:text-lime-400' },
+  { key: 'archive', label: 'Periodearkiv', desc: 'Se data fra alle perioder', icon: Archive, color: 'bg-slate-500/15 text-slate-600 dark:text-slate-300', path: '/arkiv' },
 ];
 
 const sectionLabels: Record<string, string> = {
@@ -78,6 +80,7 @@ const sectionLabels: Record<string, string> = {
 
 export default function AdminSettings() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
+  const navigate = useNavigate();
   const { isAdmin, isSuperAdmin } = useAuth();
   const [activeSection, setActiveSection] = useState('');
   
@@ -355,17 +358,22 @@ export default function AdminSettings() {
 
         {/* Rest of nav cards */}
         <div className="grid grid-cols-2 gap-3">
-          {navItems.map(({ key, label, desc, icon: Icon, color }) => (
-            <Card
-              key={key}
-              className={`p-4 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${color}`}
-              onClick={() => setActiveSection(key)}
-            >
-              <Icon className="h-7 w-7 mb-2" />
-              <p className="font-semibold text-sm">{label}</p>
-              <p className="text-xs opacity-70 mt-0.5">{desc}</p>
-            </Card>
-          ))}
+          {navItems.map((item) => {
+            const { key, label, desc, color } = item;
+            const Icon = item.icon;
+            const path = (item as { path?: string }).path;
+            return (
+              <Card
+                key={key}
+                className={`p-4 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${color}`}
+                onClick={() => (path ? navigate(path) : setActiveSection(key))}
+              >
+                <Icon className="h-7 w-7 mb-2" />
+                <p className="font-semibold text-sm">{label}</p>
+                <p className="text-xs opacity-70 mt-0.5">{desc}</p>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </>
