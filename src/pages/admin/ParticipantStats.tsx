@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { ParticipantStatsCard } from "@/components/admin/ParticipantStatsCard";
 import { RoomSwapTab } from "@/components/stats/RoomSwapTab";
 import { CabinReportsTab } from "@/components/stats/CabinReportsTab";
+import { CabinsInUseTab } from "@/components/stats/CabinsInUseTab";
 import { CheckoutTab } from "@/components/stats/CheckoutTab";
 import { LeaderActivityStatsTab } from "@/components/stats/LeaderActivityStatsTab";
 import { ActivityStatsTab } from "@/components/stats/ActivityStatsTab";
@@ -14,7 +15,7 @@ import { ExportDataSheet } from "@/components/stats/ExportDataSheet";
 import { IncidentsTab } from "@/components/admin/IncidentsTab";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity, ArrowLeft, LayoutDashboard, Trophy, Award, Users2, KeyRound, MessageSquareWarning } from "lucide-react";
+import { ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity, ArrowLeft, LayoutDashboard, Trophy, Award, Users2, KeyRound, MessageSquareWarning, Building2 } from "lucide-react";
 
 
 const dyngaNavItem = {
@@ -27,6 +28,7 @@ const dyngaNavItem = {
 } as const;
 
 const navItems = [
+  { key: "cabins-in-use", label: "Hytter i bruk", desc: "Oversikt over hytter og rom denne perioden", icon: Building2, color: "bg-teal-500/15 text-teal-700 dark:text-teal-400" },
   { key: "room-swap", label: "Rombytter", desc: "Bytt rom mellom deltakere", icon: ArrowLeftRight, color: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
   { key: "cabin-reports", label: "Hytterapporter", desc: "Se rapporter per hytte", icon: Home, color: "bg-green-500/15 text-green-600 dark:text-green-400" },
   { key: "checkout", label: "Utsjekk", desc: "Håndter utsjekk av deltakere", icon: Sparkles, color: "bg-purple-500/15 text-purple-600 dark:text-purple-400" },
@@ -40,6 +42,7 @@ const navItems = [
 ];
 
 const tabComponents: Record<string, React.FC> = {
+  "cabins-in-use": CabinsInUseTab,
   "room-swap": RoomSwapTab,
   "cabin-reports": CabinReportsTab,
   "checkout": CheckoutTab,
@@ -53,6 +56,7 @@ const tabComponents: Record<string, React.FC> = {
 };
 
 const tabLabels: Record<string, string> = {
+  "cabins-in-use": "Hytter i bruk",
   "room-swap": "Rombytter",
   "cabin-reports": "Hytterapporter",
   "checkout": "Utsjekk",
