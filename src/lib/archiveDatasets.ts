@@ -43,11 +43,19 @@ async function nameMap(table: string, field = 'name'): Promise<Record<string, st
   return map;
 }
 
-async function participantMap(periodId: string): Promise<Record<string, string>> {
-  const { data, error } = await sb.from('participants').select('id,name').eq('period_id', periodId);
+/**
+ * Participants are RLS-restricted to the active period, so archived periods must
+ * be read through the admin/nurse-only security-definer function.
+ */
+async function archiveParticipants(periodId: string): Promise<any[]> {
+  const { data, error } = await sb.rpc('get_archive_participants', { _period_id: periodId });
   if (error) throw error;
+  return (data || []) as any[];
+}
+
+async function participantMap(periodId: string): Promise<Record<string, string>> {
   const map: Record<string, string> = {};
-  (data || []).forEach((r: any) => { map[r.id] = r.name; });
+  (await archiveParticipants(periodId)).forEach((r: any) => { map[r.id] = r.name; });
   return map;
 }
 
@@ -63,7 +71,7 @@ export const archiveDatasets: ArchiveDataset[] = [
     group: 'participants',
     fetch: async (periodId) => {
       const [list, cabins, teams] = await Promise.all([
-        rows('participants', 'id,name,birth_date,cabin_id,room,team_id,has_arrived,insj_points,times_attended,pass_written,notes', periodId, 'name'),
+        archiveParticipants(periodId),
         nameMap('cabins'),
         (async () => {
           const { data } = await sb.from('participant_teams').select('id,name').eq('period_id', periodId);
@@ -287,7 +295,7 @@ export const archiveDatasets: ArchiveDataset[] = [
     fetch: async (periodId) => {
       const [teams, parts, bonus] = await Promise.all([
         rows('participant_teams', 'id,slot,name,color,bonus_points', periodId, 'slot'),
-        rows('participants', 'id,team_id,insj_points', periodId),
+        archiveParticipants(periodId),
         rows('participant_bonus_points', 'team_id,points', periodId),
       ]);
       return teams.map((t) => {
@@ -314,7 +322,7 @@ export const archiveDatasets: ArchiveDataset[] = [
     fetch: async (periodId) => {
       const [teams, parts] = await Promise.all([
         rows('participant_teams', 'id,slot,name', periodId, 'slot'),
-        rows('participants', 'name,team_id,insj_points', periodId, 'name'),
+        archiveParticipants(periodId),
       ]);
       const m: Record<string, string> = {};
       teams.forEach((t) => { m[t.id] = t.name; });
