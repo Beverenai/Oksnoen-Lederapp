@@ -1,61 +1,35 @@
 ## Mål
 
-1. Passet skal bla helt smooth (ingen hakking / stopp).
-2. Ledere kan selv huke av år (2013 → i år) og periode (1, 2, 3, 4, 4+, 5, 6, 7) på første side.
-3. Hver kombinasjon år + periode gir ett stempel — designet kan byttes til egne filer senere.
+Tre endringer i lederpasset (`src/components/passport/LederPass.tsx`).
 
-## Del 1 — Silke-smooth blaing (gjøres først)
+### 1. Tjenesteår blir siste side
+Flytt siden `tjenestear` (med `ServiceHistoryEditor`) fra plass 2 til aller siste posisjon i siderekkefølgen. Ny rekkefølge:
 
-Dagens 3D-flip i `LederPass.tsx` bygger opp/ned DOM per drag, oppdaterer flere skygge-lag imperativt, kjører dobbel `requestAnimationFrame`-koreografi og bygger hele sidelisten på nytt hver gang historikken endres. Det er hovedårsaken til hakkingen.
+```text
+Forside → Legitimasjon → Lederopplysninger → Godkjenninger → Lederløftet → Stempler (1..n) → Tjenesteår
+```
 
-Ny modell:
+### 2. Snarvei når man ikke har stempler
+Når lederen ikke har huket av noen år/perioder, viser «Stempler»-siden i dag bare en tekst om å bla tilbake. Erstattes med:
+- kort forklarende tekst («Ingen tjenesteår registrert ennå»)
+- en tydelig knapp «Velg år og perioder» som hopper direkte til siste side (Tjenesteår) via sidestaten
+- knappen skjules når passet vises for en annen leder uten redigeringsrettigheter (kun lesetilgang) — da vises bare teksten
 
-- Én horisontal "rail" med alle sidene side om side, flyttet med `transform: translate3d(...)`. Ingen rotasjon, ingen flip-blad, ingen skygge-animasjon under drag.
-- Under drag: kun én stil-oppdatering per frame (`transform` på rail), ingen React-state.
-- Ved slipp: snap til nærmeste side med én CSS-transition (cubic-bezier, ~320 ms). Terskel: 25 % av bredden eller rask flikk.
-- Kun tre sider mountes (forrige / nåværende / neste); resten er lettvekts-placeholder. Bilder får `loading="lazy"` og `decoding="async"`.
-- Alle side-noder memoiseres, så historikk-endring ikke re-renderer hele passet.
-- Beholder: haptics ved sidebytte, `Escape` for lukk, piltaster, `prefers-reduced-motion` (hopper rett til side).
-- Fjerner: flip-blad, curl-lag, dobbel-rAF-koreografi, spread-modus-flippen (spread beholdes visuelt på store skjermer, men samme rail-mekanikk).
+### 3. Flere stempler per side + automatisk ny side
+Stempelrutenettet går fra 2 kolonner / 7 stempler til 3 kolonner / 12 stempler per side, med mindre stempelstørrelse (ca. 56 px) og tettere avstand slik at 12 får plass på 2:3-formatet uten scrolling. Overflyt fortsetter automatisk på nye sider (logikken finnes allerede via `chunk`), og teller-etiketten «Stempler 1/3» oppdateres av seg selv. År/periode-etiketten under hvert stempel beholdes i mindre skrift.
 
-Etterpå verifiserer jeg med Playwright at drag-sekvensen ender på riktig side uten feil i konsollen.
+Sideindikator-punktene nederst begrenses så de ikke sprenger bredden når mange sider finnes (kompakt visning når antall sider er høyt).
 
-## Del 2 — Tjenestehistorikk: huk av år + periode
+### 4. Lederløftet — ny tekst
+Erstatt dagens tekst med:
 
-Ny tabell `leader_service_periods`:
-
-| kolonne | type |
-| --- | --- |
-| id | uuid |
-| leader_id | uuid → leaders |
-| year | int (2013–inneværende år) |
-| period_code | text ('1','2','3','4','4+','5','6','7') |
-| created_at | timestamptz |
-
-Unik på (leader_id, year, period_code). Med GRANTs + RLS: leder ser/redigerer kun sine egne rader (via `current_leader_id()`), admin ser og redigerer alle.
-
-UI på første side i passet ("Tjenestehistorikk"-oppslaget):
-
-- Kompakt årsliste 2013 → i år. Trykk på et år åpner de 8 periodesjekkboksene for det året.
-- Avhuking lagres umiddelbart (optimistisk), i tråd med app-mønsteret for auto-lagring.
-- Sammendragslinje: totalt antall perioder + antall år.
-- Kun egen pass er redigerbar; ser du en annen leders pass er avhukingen låst (admin unntatt).
-
-## Del 3 — Stempler
-
-- Ett stempel per år + periode, sortert nyest først, i grid som får plass til 7 per side og paginerer videre til neste stempel-side.
-- Stempeltekst: periodenummer stort, "ANNO {år}" rundt kanten (samme visuelle språk som i dag), men flyttet til egen fil `PeriodStamp.tsx`.
-- Stempelet slår opp i et register `stampRegistry` med nøkkel `"{år}-{periode}"`. Mangler egendefinert fil, brukes dagens SVG-stempel som fallback. Når du sender inn bildefiler senere legger vi dem inn i registeret uten å røre resten av koden.
+> «Jeg lover å ta vare på deltakerne, lederene og øya. Å gå foran med varme, oppmerksomhet og godt humør — og å bære Øksnøen-ånden videre.»
 
 ## Teknisk
 
-- Filer: `src/components/passport/LederPass.tsx` (deles opp i `PassRail.tsx`, `PeriodStamp.tsx`, `ServiceHistoryEditor.tsx`, `stampRegistry.ts`).
-- Ny hook `useLeaderServicePeriods(leaderId)` med React Query for lesing/skriving.
-- `leader_period_history` (CSV-importert) beholdes; stemplene slås sammen fra begge kilder, duplikater filtreres på år+periode.
-- Én migrering for den nye tabellen.
+- `STAMPS_PER_PAGE` 7 → 12, `grid-cols-2` → `grid-cols-3`, `PeriodStamp size` 72 → 56.
+- Sidearrayet reorganiseres; en hjelpefunksjon/indeks brukes for «gå til Tjenesteår»-knappen (siste indeks) i stedet for hardkodet tall.
+- Tekst i tom-tilstanden og `canEdit`-sjekken gjenbruker eksisterende `canEdit`.
+- Ingen databaseendringer.
 
-## Rekkefølge
-
-1. Smooth blaing + verifisering.
-2. Migrering + avhuking-UI.
-3. Stempel-refaktor med register for kommende filer.
+Verifiseres i mobil-preview med testdata for både 0, 7 og 20+ stempler.
