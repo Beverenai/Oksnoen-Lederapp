@@ -546,7 +546,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
     <div
       className={cn(
         'flex flex-col',
-        inline ? 'w-full h-full' : 'fixed inset-0 z-[100] bg-[#1b1008]/95 backdrop-blur-sm',
+        inline ? 'w-full h-full' : 'fixed inset-0 z-[100] bg-[#1b1008] backdrop-blur-sm',
       )}
     >
       {!inline && (
