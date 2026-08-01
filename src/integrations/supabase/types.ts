@@ -751,6 +751,38 @@ export type Database = {
           },
         ]
       }
+      leader_service_periods: {
+        Row: {
+          created_at: string
+          id: string
+          leader_id: string
+          period_code: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leader_id: string
+          period_code: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leader_id?: string
+          period_code?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_service_periods_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leader_teams: {
         Row: {
           created_at: string | null
