@@ -533,6 +533,26 @@ export default function Passport() {
         )}
       </form>
 
+      {/* Search result summary — counts per match */}
+      {searchQuery.trim().length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="secondary" className="text-xs">
+            {filteredParticipants.length} deltakere
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            {cabinGroups.length} {cabinGroups.length === 1 ? 'hytte' : 'hytter'}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            {filteredParticipants.filter((p) => p.has_arrived).length} ankommet
+          </Badge>
+          {cabinGroups.map((g) => (
+            <Badge key={g.cabin.id} variant="secondary" className="text-xs">
+              {g.cabin.name}: {g.participants.length}
+            </Badge>
+          ))}
+        </div>
+      )}
+
       {/* Team filter — only when teams are enabled */}
       {teamsEnabled && teams.length > 0 && (
         <div className="space-y-2">
