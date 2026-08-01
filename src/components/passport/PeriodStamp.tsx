@@ -24,33 +24,55 @@ function hash(seed: string, salt: number) {
   return h;
 }
 
-export function PeriodStamp({ entry, size = 72 }: { entry: StampEntry; size?: number }) {
+export function PeriodStamp({
+  entry,
+  size = 72,
+  offsetX = 0,
+  offsetY = 0,
+  delayMs = 0,
+  animate = true,
+}: {
+  entry: StampEntry;
+  size?: number;
+  offsetX?: number;
+  offsetY?: number;
+  delayMs?: number;
+  animate?: boolean;
+}) {
   const artwork =
     getPeriodStampPath(entry.year, entry.periodCode) ??
     getStampArtwork(entry.year, entry.periodCode);
   const ink = STAMP_INKS[hash(entry.key, 31) % STAMP_INKS.length];
-  const tilt = (hash(entry.key, 17) % 7) - 3;
+  const tilt = (hash(entry.key, 17) % 13) - 6;
   const label = entry.periodCode;
+  const alt = `Periode ${label}, ${entry.year}`;
+  const wrapStyle: React.CSSProperties = {
+    transform: `translate(${offsetX}px, ${offsetY}px)`,
+    animation: animate ? `stamp-press 420ms cubic-bezier(0.2,1.4,0.4,1) ${delayMs}ms both` : undefined,
+  };
 
   const topPathId = `stamp-top-${entry.key.replace(/[^a-zA-Z0-9]/g, '')}`;
   const bottomPathId = `stamp-bot-${entry.key.replace(/[^a-zA-Z0-9]/g, '')}`;
 
   if (artwork) {
     return (
-      <img
-        src={artwork}
-        alt={`Stempel periode ${label} ${entry.year}`}
-        width={size}
-        height={size}
-        loading="lazy"
-        decoding="async"
-        className="object-contain select-none"
-        style={{ width: size, height: size, transform: `rotate(${tilt}deg)` }}
-      />
+      <span className="inline-block" style={wrapStyle}>
+        <img
+          src={artwork}
+          alt={alt}
+          width={size}
+          height={size}
+          loading="lazy"
+          decoding="async"
+          className="object-contain select-none"
+          style={{ width: size, height: size, transform: `rotate(${tilt}deg)` }}
+        />
+      </span>
     );
   }
 
   return (
+    <span className="inline-block" style={wrapStyle}>
     <div
       className="relative flex items-center justify-center select-none"
       style={{
@@ -59,7 +81,7 @@ export function PeriodStamp({ entry, size = 72 }: { entry: StampEntry; size?: nu
         transform: `rotate(${tilt}deg)`,
         filter: `drop-shadow(0 1px 0 ${ink.shadow})`,
       }}
-      aria-label={`Stempel periode ${label} ${entry.year}`}
+      aria-label={alt}
     >
       <svg viewBox="0 0 100 100" width={size} height={size} style={{ color: ink.ink, opacity: 0.92 }}>
         <defs>
