@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Download, User, FileText, Search, Trash2, Clock, Plus } from 'lucide-react';
+import { Loader2, Download, User, FileText, Search, Trash2, Clock, Plus, Pencil, ChevronRight } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +51,7 @@ interface ReportEntry {
 interface NurseReportEditorProps {
   participants: Participant[];
   onDataChange?: () => void;
+  onOpenParticipant?: (participantId: string) => void;
 }
 
 const sourceLabels: Record<EntrySource, string> = {
@@ -59,7 +60,7 @@ const sourceLabels: Record<EntrySource, string> = {
   health_event: 'Hendelse',
 };
 
-export function NurseReportEditor({ participants, onDataChange }: NurseReportEditorProps) {
+export function NurseReportEditor({ participants, onDataChange, onOpenParticipant }: NurseReportEditorProps) {
   const { showSuccess, showError } = useStatusPopup();
   const { leader } = useAuth();
   const [reportId, setReportId] = useState<string | null>(null);
@@ -80,6 +81,11 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
 
   // Delete confirmation (mention notes only — others are managed elsewhere)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; participantName: string } | null>(null);
+
+  // Inline editing
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const getParticipant = useCallback((id: string) => participants.find((p) => p.id === id), [participants]);
 
@@ -280,6 +286,43 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
     } catch (e) {
       console.error(e);
       showError('Kunne ikke slette');
+    }
+  };
+
+  const startEdit = (entry: ReportEntry) => {
+    setEditingId(entry.id);
+    setEditText(entry.text);
+  };
+
+  const saveEdit = async (entry: ReportEntry) => {
+    const value = editText.trim();
+    if (!value) return;
+    setSavingEdit(true);
+    try {
+      if (entry.source === 'mention') {
+        const { error } = await supabase
+          .from('nurse_report_mentions')
+          .update({ mention_text: value })
+          .eq('id', entry.id);
+        if (error) throw error;
+        setMentions((prev) => prev.map((m) => (m.id === entry.id ? { ...m, mention_text: value } : m)));
+      } else if (entry.source === 'health_note') {
+        const { error } = await supabase
+          .from('participant_health_notes')
+          .update({ content: value })
+          .eq('id', entry.id);
+        if (error) throw error;
+        setHealthNotes((prev) => prev.map((n) => (n.id === entry.id ? { ...n, content: value } : n)));
+      }
+      setEditingId(null);
+      hapticSuccess();
+      showSuccess('Notat oppdatert');
+      onDataChange?.();
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke lagre endringen');
+    } finally {
+      setSavingEdit(false);
     }
   };
 

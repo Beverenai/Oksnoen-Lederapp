@@ -1211,7 +1211,14 @@ export default function Nurse() {
         </TabsContent>
 
         <TabsContent value="report" className="mt-4">
-          <NurseReportEditor participants={reportParticipants} onDataChange={handleReportChange} />
+          <NurseReportEditor
+            participants={reportParticipants}
+            onDataChange={handleReportChange}
+            onOpenParticipant={(id) => {
+              const p = participants.find((x) => x.id === id);
+              if (p) openParticipantDetail(p);
+            }}
+          />
         </TabsContent>
       </Tabs>
 
