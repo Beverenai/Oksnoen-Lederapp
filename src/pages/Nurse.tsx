@@ -1306,6 +1306,21 @@ export default function Nurse() {
             </ResponsiveDialogTitle>
           </ResponsiveDialogHeader>
 
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            disabled={bookingLoading}
+            onClick={() => void openBookingInfo(selectedParticipant)}
+          >
+            {bookingLoading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <BookUser className="w-4 h-4 mr-2" />
+            )}
+            Booking info (foresatte, telefon, adresse)
+          </Button>
+
           <Tabs defaultValue="notes" className="flex-1 flex flex-col min-h-0">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="notes" className="gap-2">
