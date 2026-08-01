@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
+import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailSheet';
 import { 
   Search, 
   Heart, 
@@ -52,7 +53,8 @@ import {
   Download,
   Trash2,
   Pencil,
-  X
+  X,
+  BookUser
 } from 'lucide-react';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -123,6 +125,9 @@ export default function Nurse() {
   const [selectedParticipant, setSelectedParticipant] = useState<ParticipantWithHealth | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isImageOpen, setIsImageOpen] = useState(false);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingData, setBookingData] = useState<Tables<'participant_bookings'> | null>(null);
+  const [bookingOpen, setBookingOpen] = useState(false);
   
   // Form states
   const [newNote, setNewNote] = useState('');
@@ -367,6 +372,51 @@ export default function Nurse() {
   const openParticipantDetail = async (participant: ParticipantWithHealth) => {
     await loadParticipantDetails(participant);
     setIsDetailOpen(true);
+  };
+
+  const openBookingInfo = async (participant: ParticipantWithHealth | null) => {
+    if (!participant) return;
+    setBookingLoading(true);
+    try {
+      const { data: periodRow } = await supabase
+        .from('periods')
+        .select('id')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      const firstFull = (participant.first_name || participant.name.split(' ')[0] || '').trim();
+      const lastFull = (participant.last_name || participant.name.split(' ').slice(1).join(' ') || '').trim();
+      const firstToken = firstFull.split(/\s+/)[0] || firstFull;
+      const lastToken = lastFull.split(/\s+/).slice(-1)[0] || lastFull;
+
+      const runQuery = async (opts: { firstPattern: string; lastPattern: string; useDob: boolean }) => {
+        let q = supabase.from('participant_bookings').select('*');
+        if (periodRow?.id) q = q.eq('period_id', periodRow.id);
+        q = q.ilike('first_name', opts.firstPattern).ilike('last_name', opts.lastPattern);
+        if (opts.useDob && participant.birth_date) q = q.eq('birth_date', participant.birth_date);
+        const { data, error } = await q.limit(1);
+        if (error) throw error;
+        return data?.[0];
+      };
+
+      const row =
+        (await runQuery({ firstPattern: firstFull, lastPattern: lastFull, useDob: true })) ||
+        (await runQuery({ firstPattern: firstFull, lastPattern: lastFull, useDob: false })) ||
+        (await runQuery({ firstPattern: `${firstToken}%`, lastPattern: `%${lastToken}`, useDob: true })) ||
+        (await runQuery({ firstPattern: `${firstToken}%`, lastPattern: `%${lastToken}`, useDob: false }));
+
+      if (!row) {
+        showInfo('Ingen booking', 'Fant ikke booking for denne deltakeren i aktiv periode.');
+        return;
+      }
+      setBookingData(row as Tables<'participant_bookings'>);
+      setBookingOpen(true);
+    } catch (e) {
+      console.error(e);
+      showError('Feil', 'Kunne ikke hente booking.');
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   const handleDetailOpenChange = (open: boolean) => {
@@ -1256,6 +1306,21 @@ export default function Nurse() {
             </ResponsiveDialogTitle>
           </ResponsiveDialogHeader>
 
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            disabled={bookingLoading}
+            onClick={() => void openBookingInfo(selectedParticipant)}
+          >
+            {bookingLoading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <BookUser className="w-4 h-4 mr-2" />
+            )}
+            Booking info (foresatte, telefon, adresse)
+          </Button>
+
           <Tabs defaultValue="notes" className="flex-1 flex flex-col min-h-0">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="notes" className="gap-2">
@@ -1588,6 +1653,20 @@ export default function Nurse() {
           </Tabs>
         </ResponsiveDialogContent>
       </ResponsiveDialog>
+
+      {bookingOpen && bookingData && selectedParticipant && (
+        <BookingDetailSheet
+          booking={bookingData}
+          participant={{
+            id: selectedParticipant.id,
+            first_name: selectedParticipant.first_name,
+            last_name: selectedParticipant.last_name,
+            birth_date: selectedParticipant.birth_date,
+            image_url: selectedParticipant.image_url,
+          }}
+          onClose={() => setBookingOpen(false)}
+        />
+      )}
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
