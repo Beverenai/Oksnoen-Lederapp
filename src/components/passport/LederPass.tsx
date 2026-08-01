@@ -290,6 +290,8 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
   const team = formatTeamDisplay(leader?.team ?? null);
   const age = leader?.age ? `${leader.age} år` : '—';
 
+  const [index, setIndex] = useState(0);
+
   const pages = useMemo<(RailPage & { eyebrow: string })[]>(() => {
     const photo = leader?.profile_image_url;
     const Photo = (
@@ -319,13 +321,13 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                 Stempler
               </div>
               <div
-                className="flex-1 grid grid-cols-2 gap-x-1 gap-y-2 justify-items-center content-center px-1"
+                className="flex-1 grid grid-cols-3 gap-x-1 gap-y-1.5 justify-items-center content-center px-0.5"
                 aria-label="Periodestempler"
               >
                 {group.map(entry => (
                   <div key={entry.key} className="flex flex-col items-center gap-0.5">
-                    <PeriodStamp entry={entry} size={72} />
-                    <span className="text-[9px] tabular-nums text-[#3a2410]/60">
+                    <PeriodStamp entry={entry} size={56} />
+                    <span className="text-[8px] tabular-nums text-[#3a2410]/60">
                       {entry.year} · P{entry.periodCode}
                     </span>
                   </div>
@@ -345,13 +347,27 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                   Stempler
                 </div>
                 <p className="text-[11px] italic text-[#3a2410]/60 leading-relaxed">
-                  Ingen tjenesteår huket av ennå. Bla tilbake til «Tjenesteår» og
-                  velg år og perioder du har jobbet.
+                  Ingen tjenesteår registrert ennå.
                 </p>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      hapticImpact('light');
+                      setIndex(serviceIndex);
+                    }}
+                    className="px-4 py-2 rounded-full text-[11px] font-semibold tracking-[0.12em] uppercase border border-[#7a0a0e]/50 bg-[#f0cd78]/40 text-[#7a0a0e] active:scale-95 transition-transform"
+                  >
+                    Velg år og perioder
+                  </button>
+                )}
               </div>
             ),
           },
         ];
+
+    // Fixed pages before stamps: cover, legitimasjon, opplysninger, godkjenninger, lederloftet
+    const serviceIndex = 5 + stampPages.length;
 
     return [
       {
