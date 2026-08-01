@@ -163,6 +163,7 @@ export function PeriodStamp({
         }}
       />
     </div>
+    </span>
   );
 }
 
