@@ -41,7 +41,6 @@ export function AmbassadorsTab() {
         .from("participants")
         .select("id, name, image_url, times_attended, room, cabin:cabins(name), participant_sweaters(preordered_size, picked_up, picked_up_size, bought_on_camp, bought_size, period_id)")
         .eq("period_id", activePeriodId)
-        .gte("times_attended", 4)
         .order("times_attended", { ascending: false })
         .order("name");
       const mapped: Row[] = ((data as any[]) || []).map((p) => {
