@@ -47,7 +47,8 @@ export function PeriodStamp({
   const label = entry.periodCode;
   const alt = `Periode ${label}, ${entry.year}`;
   const wrapStyle: React.CSSProperties = {
-    transform: `translate(${offsetX}px, ${offsetY}px)`,
+    marginLeft: offsetX,
+    marginTop: offsetY,
     animation: animate ? `stamp-press 420ms cubic-bezier(0.2,1.4,0.4,1) ${delayMs}ms both` : undefined,
   };
 
