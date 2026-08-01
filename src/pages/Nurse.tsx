@@ -1115,14 +1115,25 @@ export default function Nurse() {
 
           {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Søk etter deltaker eller hytte..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex flex-1 max-w-md gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder={searchMode === 'name' ? 'Søk etter deltaker eller hytte...' : 'Søk i rapport/notater...'}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={searchMode} onValueChange={(v) => setSearchMode(v as typeof searchMode)}>
+                <SelectTrigger className="w-[130px] shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Navn</SelectItem>
+                  <SelectItem value="report">Rapport</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <Select value={cabinFilter} onValueChange={setCabinFilter}>
               <SelectTrigger className="w-full sm:w-[200px]">
