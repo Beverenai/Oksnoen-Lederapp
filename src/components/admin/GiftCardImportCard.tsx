@@ -197,10 +197,10 @@ export function GiftCardImportCard({ onImported }: { onImported?: () => void }) 
       let matched = 0;
 
       for (const p of parsed) {
-        const fullNorm = norm(p.firstName + p.lastName);
+        const fullNorm = norm(stripInitials(p.firstName) + p.lastName);
         const match = (participants || []).find((row) => {
-          const a = norm((row.first_name || '') + (row.last_name || ''));
-          const b = norm(row.name || '');
+          const a = norm(stripInitials(row.first_name || '') + (row.last_name || ''));
+          const b = norm(stripInitials(row.name || ''));
           return a === fullNorm || b === fullNorm;
         });
         if (!match) {
