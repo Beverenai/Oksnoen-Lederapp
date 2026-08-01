@@ -35,7 +35,7 @@ interface LederPassProps {
 const RED_CLOTH_URL = redCloth.url;
 const IVORY_URL = ivoryPaper.url;
 
-const STAMPS_PER_PAGE = 12;
+const STAMPS_PER_PAGE = 8;
 
 function getInitials(name?: string | null): string {
   if (!name) return '?';
@@ -275,12 +275,19 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
       const i = (PERIOD_CODES as readonly string[]).indexOf(code);
       return i === -1 ? 99 : i;
     };
+    const seen = new Set<string>();
     return [...servicePeriods]
+      .filter(r => {
+        const k = `${r.year}-${r.period_code}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      })
       .sort((a, b) => a.year - b.year || order(a.period_code) - order(b.period_code))
       .map(r => ({
         key: `${r.year}-${r.period_code}`,
         year: r.year,
-        periodCode: r.period_code,
+        periodCode: String(r.period_code),
       }));
   }, [servicePeriods]);
 
@@ -313,24 +320,20 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
     const stampPages = stamps.length
       ? chunk(stamps, STAMPS_PER_PAGE).map((group, pageIdx, all) => ({
           key: `stempler-${pageIdx}`,
-          eyebrow: all.length > 1 ? `Stempler ${pageIdx + 1}/${all.length}` : 'Stempler',
+          eyebrow:
+            all.length > 1 ? `Periodestempler ${pageIdx + 1}/${all.length}` : 'Periodestempler',
           variant: 'ivory' as const,
           content: (
             <div className="flex flex-col h-full gap-2">
               <div className="text-[10px] tracking-[0.3em] uppercase text-[#7a5a20] text-center">
-                Stempler
+                Periodestempler
               </div>
               <div
-                className="flex-1 grid grid-cols-3 gap-x-1 gap-y-1.5 justify-items-center content-center px-0.5"
+                className="flex-1 grid grid-cols-2 grid-rows-4 gap-x-2 gap-y-2 justify-items-center items-center px-1"
                 aria-label="Periodestempler"
               >
                 {group.map(entry => (
-                  <div key={entry.key} className="flex flex-col items-center gap-0.5">
-                    <PeriodStamp entry={entry} size={56} />
-                    <span className="text-[8px] tabular-nums text-[#3a2410]/60">
-                      {entry.year} · P{entry.periodCode}
-                    </span>
-                  </div>
+                  <PeriodStamp key={entry.key} entry={entry} size={72} />
                 ))}
               </div>
             </div>
@@ -339,15 +342,15 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
       : [
           {
             key: 'stempler-tom',
-            eyebrow: 'Stempler',
+            eyebrow: 'Periodestempler',
             variant: 'ivory' as const,
             content: (
               <div className="flex flex-col items-center justify-center h-full gap-3 px-4 text-center">
                 <div className="text-[10px] tracking-[0.3em] uppercase text-[#7a5a20]">
-                  Stempler
+                  Periodestempler
                 </div>
                 <p className="text-[11px] italic text-[#3a2410]/60 leading-relaxed">
-                  Ingen tjenesteår registrert ennå.
+                  Ingen periodestempler registrert ennå.
                 </p>
                 {canEdit && (
                   <button
