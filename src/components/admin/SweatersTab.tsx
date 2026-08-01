@@ -36,7 +36,7 @@ function parseSize(v: unknown): string | null {
   if (v === null || v === undefined) return null;
   const s = String(v).trim().toUpperCase();
   if (!s) return null;
-  if (['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].includes(s)) return s;
+  if (['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].includes(s)) return s;
   return s.slice(0, 5);
 }
 
@@ -230,7 +230,7 @@ export function SweatersTab() {
   }, [sweaters]);
 
   const sizeBreakdown = useMemo(() => {
-    const order = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+    const order = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
     const counts: Record<string, number> = {};
     const other: Record<string, number> = {};
     sweaters.forEach((s) => {
