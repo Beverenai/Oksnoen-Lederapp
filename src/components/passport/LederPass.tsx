@@ -603,7 +603,10 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
         <div
           role="tablist"
           aria-label="Sidevalg"
-          className="flex items-center justify-center gap-1.5 max-w-[80vw] overflow-hidden"
+          className={cn(
+            'flex items-center justify-center max-w-[80vw] overflow-hidden',
+            pages.length > 10 ? 'gap-1' : 'gap-1.5',
+          )}
         >
           {pages.map((p, i) => (
             <button
