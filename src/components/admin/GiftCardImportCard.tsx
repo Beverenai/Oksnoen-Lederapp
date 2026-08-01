@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { CreditCard, Loader2, CheckCircle2, AlertTriangle, Upload, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 
@@ -47,13 +47,112 @@ function norm(s: string | null | undefined) {
   return (s || '').toLowerCase().replace(/[\s\-'.]/g, '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
 }
 
+function splitCsvLine(line: string, delim: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; } else inQuotes = !inQuotes;
+    } else if (ch === delim && !inQuotes) {
+      out.push(cur); cur = '';
+    } else cur += ch;
+  }
+  out.push(cur);
+  return out.map((c) => c.trim().replace(/^"|"$/g, ''));
+}
+
+// Parses a CSV/TXT file with columns for name(s) and gift card number.
+// Supports: "Fornavn;Etternavn;Gavekort", "Navn,Gavekort" — with or without header.
+function parseGiftCardCsv(raw: string): Parsed[] {
+  const lines = raw.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length === 0) return [];
+  const delim = [';', ',', '\t'].sort(
+    (a, b) => (lines[0].split(b).length - 1) - (lines[0].split(a).length - 1)
+  )[0];
+
+  const first = splitCsvLine(lines[0], delim).map((c) => c.toLowerCase());
+  const hasHeader = first.some((c) => /fornavn|etternavn|navn|gavekort|kortnr|nummer/.test(c));
+
+  let iFirst = 0, iLast = -1, iCard = 1, iName = -1;
+  if (hasHeader) {
+    iFirst = first.findIndex((c) => c.includes('fornavn'));
+    iLast = first.findIndex((c) => c.includes('etternavn'));
+    iName = first.findIndex((c) => c === 'navn' || c.includes('fullt navn') || c.includes('deltaker'));
+    iCard = first.findIndex((c) => /gavekort|kortnr|kortnummer|nummer|number/.test(c));
+    if (iCard === -1) iCard = first.length - 1;
+  }
+
+  const out: Parsed[] = [];
+  for (const line of hasHeader ? lines.slice(1) : lines) {
+    const cols = splitCsvLine(line, delim);
+    const card = (cols[iCard] || '').replace(/\s/g, '');
+    if (!/^\d{3,12}$/.test(card)) continue;
+
+    let firstName = '';
+    let lastName = '';
+    if (iName >= 0 && cols[iName]) {
+      const parts = cols[iName].trim().split(/\s+/);
+      firstName = parts.slice(0, -1).join(' ') || parts[0];
+      lastName = parts.length > 1 ? parts[parts.length - 1] : '';
+    } else if (iLast >= 0) {
+      firstName = cols[iFirst] || '';
+      lastName = cols[iLast] || '';
+    } else {
+      const blob = (cols[iFirst] || '').trim();
+      if (/\s/.test(blob)) {
+        const parts = blob.split(/\s+/);
+        firstName = parts.slice(0, -1).join(' ');
+        lastName = parts[parts.length - 1];
+      } else {
+        const s = splitCamelName(blob);
+        firstName = s.firstName;
+        lastName = s.lastName;
+      }
+    }
+    if (!firstName && !lastName) continue;
+    out.push({ rawName: `${firstName} ${lastName}`.trim(), firstName, lastName, giftCard: card });
+  }
+  return out;
+}
+
 export function GiftCardImportCard({ onImported }: { onImported?: () => void }) {
   const { showSuccess, showError } = useStatusPopup();
   const [text, setText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<{ matched: number; unmatched: string[] } | null>(null);
+  const [csvRows, setCsvRows] = useState<Parsed[] | null>(null);
+  const [csvName, setCsvName] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const parsed = useMemo(() => parseGiftCardBlob(text), [text]);
+  const pastedParsed = useMemo(() => parseGiftCardBlob(text), [text]);
+  const parsed = csvRows ?? pastedParsed;
+
+  const handleFile = async (file: File) => {
+    setResult(null);
+    try {
+      const raw = await file.text();
+      const rows = parseGiftCardCsv(raw);
+      if (rows.length === 0) {
+        showError('Fant ingen gavekortnumre i filen');
+        return;
+      }
+      setCsvRows(rows);
+      setCsvName(file.name);
+      showSuccess(`${rows.length} rader lest fra ${file.name}`);
+    } catch (e: any) {
+      showError(e.message || 'Kunne ikke lese filen');
+    } finally {
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const clearCsv = () => {
+    setCsvRows(null);
+    setCsvName(null);
+    setResult(null);
+  };
 
   const handleImport = async () => {
     if (parsed.length === 0) return;
@@ -109,13 +208,42 @@ export function GiftCardImportCard({ onImported }: { onImported?: () => void }) 
           Importer gavekortnumre
         </CardTitle>
         <CardDescription>
-          Lim inn liste på formatet "FornavnEtternavnGavekort" – matches på navn mot eksisterende deltakere.
+          Last opp CSV-fil (Fornavn;Etternavn;Gavekort eller Navn,Gavekort) eller lim inn liste på formatet
+          "FornavnEtternavnGavekort" – matches på navn mot eksisterende deltakere.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,.txt,text/csv,text/plain"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleFile(f);
+            }}
+          />
+          <Button variant="outline" onClick={() => fileRef.current?.click()}>
+            <Upload className="w-4 h-4 mr-2" />
+            Last opp CSV
+          </Button>
+          {csvName && (
+            <Badge variant="secondary" className="gap-1">
+              {csvName}
+              <button type="button" aria-label="Fjern fil" onClick={clearCsv} className="hover:text-destructive">
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+        </div>
+
         <Textarea
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            if (csvRows) clearCsv();
+          }}
           placeholder="FornavnEtternavnGavekort&#10;AdaAurmo200000&#10;AdeleMellbye200001..."
           rows={6}
         />
