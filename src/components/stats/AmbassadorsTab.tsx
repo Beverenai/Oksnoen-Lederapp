@@ -63,6 +63,7 @@ export function AmbassadorsTab() {
   }, [activePeriodId]);
 
   const filtered = rows.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()));
+  const firstTimers = filtered.filter((r) => (r.times_attended ?? 0) === 0);
   const newOnes = filtered.filter((r) => (r.times_attended ?? 0) === 4);
   const veterans = filtered.filter((r) => (r.times_attended ?? 0) > 4);
 
@@ -162,6 +163,15 @@ export function AmbassadorsTab() {
         </p>
         {renderSizeSummary(newOnes)}
         {renderList(newOnes)}
+      </div>
+
+      <div className="pt-4 border-t">
+        <h3 className="text-sm font-semibold mb-2">Førstegangsdeltakere ({firstTimers.length})</h3>
+        <p className="text-xs text-muted-foreground mb-3">
+          Deltakere som er her for første gang (0 år).
+        </p>
+        {renderSizeSummary(firstTimers)}
+        {renderList(firstTimers)}
       </div>
 
       {veterans.length > 0 && (
