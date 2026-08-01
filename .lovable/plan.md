@@ -1,26 +1,35 @@
-## Hva jeg fant
+## Mål
 
-Dette er ikke gamle data som henger igjen fra en tidligere periode. Alt i Periode 6 er korrekt merket med periodens ID, og de eldre 450 aktivitetene ligger fortsatt trygt på Periode 5.
+Tre endringer i lederpasset (`src/components/passport/LederPass.tsx`).
 
-Det som finnes i Periode 6 er registreringer gjort i går (31. juli), alle av samme leder — **August Raae Frisvold**, mest sannsynlig testing:
+### 1. Tjenesteår blir siste side
+Flytt siden `tjenestear` (med `ServiceHistoryEditor`) fra plass 2 til aller siste posisjon i siderekkefølgen. Ny rekkefølge:
 
-| Deltaker | Registrert |
-|---|---|
-| Augusta Josefine Dahl | Åtte meter (17:42), insj-poeng 2 |
-| Maria Bjercke-Henriksen | Vannski x2, Skrikeren begge veier (19:05–19:06), insj-poeng 1, profilbilde lastet opp 19:06 |
+```text
+Forside → Legitimasjon → Lederopplysninger → Godkjenninger → Lederløftet → Stempler (1..n) → Tjenesteår
+```
 
-Ingen bonuspoeng er gitt. Ingen andre av de 190 deltakerne har aktivitet, poeng eller bilde.
+### 2. Snarvei når man ikke har stempler
+Når lederen ikke har huket av noen år/perioder, viser «Stempler»-siden i dag bare en tekst om å bla tilbake. Erstattes med:
+- kort forklarende tekst («Ingen tjenesteår registrert ennå»)
+- en tydelig knapp «Velg år og perioder» som hopper direkte til siste side (Tjenesteår) via sidestaten
+- knappen skjules når passet vises for en annen leder uten redigeringsrettigheter (kun lesetilgang) — da vises bare teksten
 
-## Forslag til opprydding
+### 3. Flere stempler per side + automatisk ny side
+Stempelrutenettet går fra 2 kolonner / 7 stempler til 3 kolonner / 12 stempler per side, med mindre stempelstørrelse (ca. 56 px) og tettere avstand slik at 12 får plass på 2:3-formatet uten scrolling. Overflyt fortsetter automatisk på nye sider (logikken finnes allerede via `chunk`), og teller-etiketten «Stempler 1/3» oppdateres av seg selv. År/periode-etiketten under hvert stempel beholdes i mindre skrift.
 
-1. Slette de 4 aktivitetsradene i Periode 6.
-2. Nullstille insj-poeng (2 og 1) for de to deltakerne.
-3. Fjerne profilbildet på Maria Bjercke-Henriksen (og bildefilen i lagringen), slik at alle starter uten bilde.
+Sideindikator-punktene nederst begrenses så de ikke sprenger bredden når mange sider finnes (kompakt visning når antall sider er høyt).
 
-Etter det er Periode 6 helt blank: 0 aktiviteter, 0 poeng, 0 bilder.
+### 4. Lederløftet — ny tekst
+Erstatt dagens tekst med:
+
+> «Jeg lover å ta vare på deltakerne, lederene og øya. Å gå foran med varme, oppmerksomhet og godt humør — og å bære Øksnøen-ånden videre.»
 
 ## Teknisk
 
-Utføres som en dataendring mot `participant_activities` (slett der `period_id` = aktiv periode) og `participants` (`insj_points = 0`, `image_url`/`image_thumb_url` = null for de to). Ingen kodeendringer nødvendig — det er ingen feil i logikken.
+- `STAMPS_PER_PAGE` 7 → 12, `grid-cols-2` → `grid-cols-3`, `PeriodStamp size` 72 → 56.
+- Sidearrayet reorganiseres; en hjelpefunksjon/indeks brukes for «gå til Tjenesteår»-knappen (siste indeks) i stedet for hardkodet tall.
+- Tekst i tom-tilstanden og `canEdit`-sjekken gjenbruker eksisterende `canEdit`.
+- Ingen databaseendringer.
 
-Vil du at jeg også skal si til August at han bør bruke arkiv/testmodus, eller er det greit?
+Verifiseres i mobil-preview med testdata for både 0, 7 og 20+ stempler.
