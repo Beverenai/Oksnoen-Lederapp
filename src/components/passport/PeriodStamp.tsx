@@ -141,21 +141,4 @@ export function PeriodStamp({ entry, size = 72 }: { entry: StampEntry; size?: nu
   );
 }
 
-export function StampSeal({ label = 'OKSNØEN' }: { label?: string }) {
-  return (
-    <div
-      className="relative w-24 h-24 rounded-full flex items-center justify-center shrink-0"
-      style={{
-        background: 'radial-gradient(circle at 30% 30%, #a01a1e, #6a0a10 70%)',
-        boxShadow: 'inset 0 0 0 2px rgba(240,205,120,0.65), 0 2px 6px rgba(0,0,0,0.25)',
-      }}
-    >
-      <img src={oksnoenLogo} alt="Oksnøen" className="w-14 h-14 object-contain" loading="lazy" decoding="async" />
-      <span className="absolute -bottom-2 text-[9px] tracking-[0.25em] text-[#6a0a10] font-semibold bg-[#f0cd78] rounded-full px-2 py-0.5">
-        {label}
-      </span>
-    </div>
-  );
-}
-
 export default PeriodStamp;
