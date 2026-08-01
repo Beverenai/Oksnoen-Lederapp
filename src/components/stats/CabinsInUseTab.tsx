@@ -15,7 +15,16 @@ import {
 import { toast } from 'sonner';
 import { guessGender } from '@/lib/nameGender';
 import { differenceInYears } from 'date-fns';
-import { Home, Users, Bed, Loader2, ChevronDown, ChevronRight, UserPlus, X } from 'lucide-react';
+import { Home, Users, Bed, Loader2, ChevronDown, ChevronRight, UserPlus, X, AlertTriangle } from 'lucide-react';
+
+const GIRL_CLASS =
+  'bg-pink-500/15 text-pink-700 dark:text-pink-300 border-pink-500/30';
+const BOY_CLASS =
+  'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30';
+const LEADER_CLASS =
+  'bg-green-500/15 text-green-700 dark:text-green-300 border-green-500/40';
+const WARN_CLASS =
+  'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40';
 
 interface RoomParticipant {
   id: string;
@@ -224,8 +233,10 @@ export function CabinsInUseTab() {
         </CardContent>
       </Card>
 
-      {rows.map((row) => (
-        <Card key={row.cabinId}>
+      {rows.map((row) => {
+        const noLeader = row.leaders.length === 0;
+        return (
+        <Card key={row.cabinId} className={noLeader ? 'border-red-500/50' : undefined}>
           <CardHeader
             className="pb-2 cursor-pointer select-none"
             onClick={() => toggle(row.cabinId)}
@@ -240,10 +251,18 @@ export function CabinsInUseTab() {
                 <Home className="h-4 w-4 text-muted-foreground" />
                 {row.cabinName}
               </span>
-              <Badge variant="secondary" className="gap-1">
-                <Users className="h-3 w-3" />
-                {row.total}
-              </Badge>
+              <span className="flex items-center gap-1">
+                {noLeader && (
+                  <Badge variant="outline" className={`gap-1 text-[11px] ${WARN_CLASS}`}>
+                    <AlertTriangle className="h-3 w-3" />
+                    Mangler hytteleder
+                  </Badge>
+                )}
+                <Badge variant="secondary" className="gap-1">
+                  <Users className="h-3 w-3" />
+                  {row.total}
+                </Badge>
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -265,12 +284,12 @@ export function CabinsInUseTab() {
                       </Badge>
                     )}
                     {r.girls > 0 && (
-                      <Badge variant="outline" className="text-[11px]">
+                      <Badge variant="outline" className={`text-[11px] ${GIRL_CLASS}`}>
                         {r.girls} jenter
                       </Badge>
                     )}
                     {r.boys > 0 && (
-                      <Badge variant="outline" className="text-[11px]">
+                      <Badge variant="outline" className={`text-[11px] ${BOY_CLASS}`}>
                         {r.boys} gutter
                       </Badge>
                     )}
@@ -282,7 +301,7 @@ export function CabinsInUseTab() {
             {/* Hytteledere */}
             <div className="flex flex-wrap items-center gap-1 pt-1">
               {row.leaders.map((l) => (
-                <Badge key={l.id} variant="outline" className="text-xs gap-1">
+                <Badge key={l.id} variant="outline" className={`text-xs gap-1 ${LEADER_CLASS}`}>
                   {l.name}
                   <button
                     type="button"
@@ -294,6 +313,12 @@ export function CabinsInUseTab() {
                   </button>
                 </Badge>
               ))}
+              {noLeader && (
+                <Badge variant="outline" className={`text-xs gap-1 ${WARN_CLASS}`}>
+                  <AlertTriangle className="h-3 w-3" />
+                  Ingen leder på hytta
+                </Badge>
+              )}
               {assigning === row.cabinId ? (
                 <Select
                   onValueChange={(leaderId) => assignLeader.mutate({ cabinId: row.cabinId, leaderId })}
@@ -345,7 +370,16 @@ export function CabinsInUseTab() {
                                 {p.age} år
                               </Badge>
                             )}
-                            <Badge variant="outline" className="text-[11px]">
+                            <Badge
+                              variant="outline"
+                              className={`text-[11px] ${
+                                p.gender === 'female'
+                                  ? GIRL_CLASS
+                                  : p.gender === 'male'
+                                  ? BOY_CLASS
+                                  : ''
+                              }`}
+                            >
                               {p.gender === 'female' ? 'Jente' : p.gender === 'male' ? 'Gutt' : '—'}
                             </Badge>
                           </span>
@@ -358,7 +392,8 @@ export function CabinsInUseTab() {
             )}
           </CardContent>
         </Card>
-      ))}
+        );
+      })}
     </div>
   );
 }
