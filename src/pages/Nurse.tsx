@@ -240,20 +240,33 @@ export default function Nurse() {
     const participant = selectedParticipant;
     if (!participant || !value.trim()) return Promise.resolve();
 
-    const existingNote = participant.healthNotes[0];
-    if (existingNote?.content === value) return Promise.resolve();
+    const noteHint = participant.healthNotes[0];
+    if (noteHint?.content === value) return Promise.resolve();
 
     setIsAutoSavingNote(true);
     const save = async () => {
       try {
-        if (existingNote) {
-          const { error } = await supabase.from('participant_health_notes')
+        const { data: currentNote, error: lookupError } = await supabase
+          .from('participant_health_notes')
+          .select('*')
+          .eq('participant_id', participant.id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (lookupError) throw lookupError;
+
+        let savedNote: HealthNote;
+        if (currentNote) {
+          const { data, error } = await supabase.from('participant_health_notes')
             .update({ content: value, created_by: leader?.id })
-            .eq('id', existingNote.id);
+            .eq('id', currentNote.id)
+            .select()
+            .single();
           if (error) throw error;
+          savedNote = data as HealthNote;
           setSelectedParticipant((prev) => prev?.id === participant.id ? ({
             ...prev,
-            healthNotes: prev.healthNotes.map((n) => n.id === existingNote.id ? { ...n, content: value } : n),
+            healthNotes: [savedNote, ...prev.healthNotes.filter((n) => n.id !== savedNote.id)],
           }) : prev);
         } else {
           const { data, error } = await supabase.from('participant_health_notes')
@@ -265,18 +278,15 @@ export default function Nurse() {
             })
             .select().single();
           if (error) throw error;
-          if (data) {
-            setSelectedParticipant((prev) => prev?.id === participant.id ? ({
-              ...prev, healthNotes: [data as HealthNote, ...prev.healthNotes],
-            }) : prev);
-          }
+          savedNote = data as HealthNote;
+          setSelectedParticipant((prev) => prev?.id === participant.id ? ({
+            ...prev, healthNotes: [savedNote, ...prev.healthNotes.filter((n) => n.id !== savedNote.id)],
+          }) : prev);
         }
 
         setParticipants((prev) => prev.map((item) => item.id === participant.id ? ({
           ...item,
-          healthNotes: existingNote
-            ? item.healthNotes.map((note) => note.id === existingNote.id ? { ...note, content: value } : note)
-            : item.healthNotes,
+          healthNotes: [savedNote, ...item.healthNotes.filter((note) => note.id !== savedNote.id)],
         }) : item));
       } catch (e) {
         console.error('auto-save health note error', e);
@@ -334,7 +344,7 @@ export default function Nurse() {
   // Debounce effects
   useEffect(() => {
     if (!isDetailOpen || !selectedParticipant) return;
-    const t = setTimeout(() => { autoSaveHealthNote(newNote); }, 700);
+    const t = setTimeout(() => { void autoSaveHealthNote(newNote).catch(() => undefined); }, 700);
     return () => clearTimeout(t);
      
   }, [newNote, isDetailOpen, selectedParticipant?.id]);
@@ -363,7 +373,7 @@ export default function Nurse() {
       setIsDetailOpen(true);
       return;
     }
-    void autoSaveHealthNote(newNote).finally(() => setIsDetailOpen(false));
+    void autoSaveHealthNote(newNote).catch(() => undefined).finally(() => setIsDetailOpen(false));
   };
 
   const saveHealthNote = async () => {
@@ -1279,7 +1289,7 @@ export default function Nurse() {
                     placeholder="Skriv helsenotater her..."
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
-                    onBlur={() => { void autoSaveHealthNote(newNote); }}
+                    onBlur={() => { void autoSaveHealthNote(newNote).catch(() => undefined); }}
                     className="min-h-[150px]"
                   />
                   <p className="text-xs text-muted-foreground flex items-center gap-2">
