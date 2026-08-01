@@ -566,12 +566,14 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
       )}
 
       <div ref={areaRef} className="flex-1 min-h-0 flex items-center justify-center">
-        <PassRail
-          pages={railPages}
-          index={index}
-          onIndexChange={handleIndexChange}
-          className="rounded-[10px]"
-        />
+        <div style={{ width: box.W, height: box.H }}>
+          <PassRail
+            pages={railPages}
+            index={index}
+            onIndexChange={handleIndexChange}
+            className="w-full h-full rounded-[10px]"
+          />
+        </div>
       </div>
 
       <div
@@ -616,21 +618,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
     </div>
   );
 
-  // Constrain the rail viewport to the measured passport box.
-  return (
-    <div
-      className={cn(inline ? 'w-full h-full' : 'contents')}
-      style={
-        {
-          ['--pass-w' as any]: `${box.W}px`,
-          ['--pass-h' as any]: `${box.H}px`,
-        } as React.CSSProperties
-      }
-    >
-      <style>{`.pass-rail-box{width:var(--pass-w);height:var(--pass-h);}`}</style>
-      {body}
-    </div>
-  );
+  return body;
 }
 
 /* -------------------------------------------------------------------------- */
