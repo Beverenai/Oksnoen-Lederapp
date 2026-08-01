@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { formatMainCabins } from '@/lib/cabinDisplay';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -82,6 +83,7 @@ export function LeaderDetailSheet({
   extraFieldsConfig
 }: LeaderDetailSheetProps) {
   const [linkedCabins, setLinkedCabins] = useState<CabinInfo[]>([]);
+  const [imageOpen, setImageOpen] = useState(false);
   
   // Load linked cabins when leader changes
   useEffect(() => {
@@ -151,14 +153,22 @@ export function LeaderDetailSheet({
       <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl pb-safe">
         <SheetHeader className="text-left pb-4">
           <div className="flex items-start gap-4">
-            <Avatar className="w-20 h-20 border-2 border-primary/20">
-              {leader.profile_image_url && (
-                <AvatarImage src={leader.profile_image_url} alt={leader.name} />
-              )}
-              <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                {getFirstName(leader.name).slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <button
+              type="button"
+              onClick={() => leader.profile_image_url && setImageOpen(true)}
+              disabled={!leader.profile_image_url}
+              aria-label={`Vis bilde av ${getFirstName(leader.name)}`}
+              className="rounded-full transition-transform active:scale-95 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Avatar className="w-20 h-20 border-2 border-primary/20">
+                {leader.profile_image_url && (
+                  <AvatarImage src={leader.profile_image_url} alt={leader.name} />
+                )}
+                <AvatarFallback className="bg-primary/10 text-primary text-xl">
+                  {getFirstName(leader.name).slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </button>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <SheetTitle className="text-xl">{getFirstName(leader.name)}</SheetTitle>
@@ -297,6 +307,19 @@ export function LeaderDetailSheet({
           )}
         </div>
       </SheetContent>
+
+      <Dialog open={imageOpen} onOpenChange={setImageOpen}>
+        <DialogContent className="max-w-md p-2 sm:p-3">
+          {leader.profile_image_url && (
+            <img
+              src={leader.profile_image_url}
+              alt={leader.name}
+              className="w-full h-auto rounded-lg object-contain max-h-[75vh]"
+            />
+          )}
+          <p className="text-center text-sm font-medium text-foreground pb-1">{leader.name}</p>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }
