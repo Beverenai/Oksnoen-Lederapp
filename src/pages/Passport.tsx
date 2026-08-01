@@ -251,14 +251,18 @@ export default function Passport() {
 
   const clearCabinFilter = () => {
     setMyCabinsFilter(false);
-    setSearchParams({});
+    setExpandedCabins(new Set(cabins.map((c) => c.id)));
+    setSearchParams({}, { replace: true });
+    window.scrollTo({ top: 0 });
   };
 
   // Filter by specific cabin — triggered from cabin header click
   const handleFilterByCabin = useCallback((cabinId: string) => {
     setSearchQuery('');
     setMyCabinsFilter(false);
+    setExpandedCabins(new Set([cabinId]));
     setSearchParams({ cabin: cabinId });
+    window.scrollTo({ top: 0 });
   }, [setSearchParams]);
 
   // Handler for opening participant detail dialog
