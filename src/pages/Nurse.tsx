@@ -119,6 +119,7 @@ export default function Nurse() {
   const [searchQuery, setSearchQuery] = useState('');
   const [cabinFilter, setCabinFilter] = useState<string>('all');
   const [infoFilter, setInfoFilter] = useState<'all' | 'with' | 'important' | 'without'>('all');
+  const [searchMode, setSearchMode] = useState<'name' | 'report'>('name');
   const [selectedParticipant, setSelectedParticipant] = useState<ParticipantWithHealth | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isImageOpen, setIsImageOpen] = useState(false);
@@ -636,8 +637,17 @@ export default function Nurse() {
 
   // Filter participants by search query, cabin and info
   const filteredParticipants = participants.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.cabin?.name?.toLowerCase().includes(searchQuery.toLowerCase()));
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch = !q ? true : searchMode === 'name'
+      ? (p.name.toLowerCase().includes(q) || !!p.cabin?.name?.toLowerCase().includes(q))
+      : (
+          (p.healthInfo?.info || '').toLowerCase().includes(q) ||
+          p.healthNotes.some(n => (n.content || '').toLowerCase().includes(q)) ||
+          p.healthEvents.some(e =>
+            (e.description || '').toLowerCase().includes(q) ||
+            (e.event_type || '').toLowerCase().includes(q)
+          )
+        );
     const matchesCabin = cabinFilter === 'all' || p.cabin?.name === cabinFilter;
     const score = infoScore(p);
     const matchesInfo =
@@ -1105,14 +1115,25 @@ export default function Nurse() {
 
           {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Søk etter deltaker eller hytte..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex flex-1 max-w-md gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder={searchMode === 'name' ? 'Søk etter deltaker eller hytte...' : 'Søk i rapport/notater...'}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={searchMode} onValueChange={(v) => setSearchMode(v as typeof searchMode)}>
+                <SelectTrigger className="w-[130px] shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Navn</SelectItem>
+                  <SelectItem value="report">Rapport</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <Select value={cabinFilter} onValueChange={setCabinFilter}>
               <SelectTrigger className="w-full sm:w-[200px]">
