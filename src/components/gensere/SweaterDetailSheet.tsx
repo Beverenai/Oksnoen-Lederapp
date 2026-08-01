@@ -15,8 +15,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2, User, Home, CheckCircle2, ShoppingBag, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type SizeOption = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';
-const SIZES: SizeOption[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+export type SizeOption = 'XXS' | 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';
+const SIZES: SizeOption[] = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
 function normalizeSize(v: string | null | undefined): SizeOption | null {
   if (!v) return null;

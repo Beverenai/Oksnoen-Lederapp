@@ -251,14 +251,18 @@ export default function Passport() {
 
   const clearCabinFilter = () => {
     setMyCabinsFilter(false);
-    setSearchParams({});
+    setExpandedCabins(new Set(cabins.map((c) => c.id)));
+    setSearchParams({}, { replace: true });
+    window.scrollTo({ top: 0 });
   };
 
   // Filter by specific cabin — triggered from cabin header click
   const handleFilterByCabin = useCallback((cabinId: string) => {
     setSearchQuery('');
     setMyCabinsFilter(false);
+    setExpandedCabins(new Set([cabinId]));
     setSearchParams({ cabin: cabinId });
+    window.scrollTo({ top: 0 });
   }, [setSearchParams]);
 
   // Handler for opening participant detail dialog
@@ -415,18 +419,31 @@ export default function Passport() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Back button when filtered by cabin */}
+      {/* Back bar when filtered by cabin — sticky so it's always reachable */}
       {(cabinFilterFromUrl || myCabinsFilter) && (
-        <Button variant="ghost" onClick={clearCabinFilter} className="mb-2">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Tilbake til alle hytter
-        </Button>
+        <div className="sticky top-0 z-20 -mx-4 px-4 py-2 bg-background/80 backdrop-blur-md border-b">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              hapticImpact('light');
+              clearCabinFilter();
+            }}
+            className="h-11 w-full justify-start px-2 text-base font-semibold"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2 shrink-0" />
+            <span className="truncate">Tilbake til alle hytter</span>
+          </Button>
+        </div>
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-heading font-bold text-foreground">
-            {myCabinsFilter && myCabinNames ? myCabinNames : 'Passkontroll'}
+            {cabinFilterFromUrl
+              ? cabins.find((c) => c.id === cabinFilterFromUrl)?.name ?? 'Passkontroll'
+              : myCabinsFilter && myCabinNames
+              ? myCabinNames
+              : 'Passkontroll'}
           </h1>
           <p className="text-muted-foreground mt-1">
             {arrivedCount} av {participants.length} deltakere har ankommet
@@ -515,6 +532,26 @@ export default function Passport() {
           </button>
         )}
       </form>
+
+      {/* Search result summary — counts per match */}
+      {searchQuery.trim().length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="secondary" className="text-xs">
+            {filteredParticipants.length} deltakere
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            {cabinGroups.length} {cabinGroups.length === 1 ? 'hytte' : 'hytter'}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            {filteredParticipants.filter((p) => p.has_arrived).length} ankommet
+          </Badge>
+          {cabinGroups.map((g) => (
+            <Badge key={g.cabin.id} variant="secondary" className="text-xs">
+              {g.cabin.name}: {g.participants.length}
+            </Badge>
+          ))}
+        </div>
+      )}
 
       {/* Team filter — only when teams are enabled */}
       {teamsEnabled && teams.length > 0 && (

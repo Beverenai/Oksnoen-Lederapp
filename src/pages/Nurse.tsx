@@ -1,5 +1,5 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { NurseReportEditor } from '@/components/nurse/NurseReportEditor';
 import { useAuth } from '@/contexts/AuthContext';
@@ -118,6 +118,8 @@ export default function Nurse() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [cabinFilter, setCabinFilter] = useState<string>('all');
+  const [infoFilter, setInfoFilter] = useState<'all' | 'with' | 'important' | 'without'>('all');
+  const [searchMode, setSearchMode] = useState<'name' | 'report'>('name');
   const [selectedParticipant, setSelectedParticipant] = useState<ParticipantWithHealth | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isImageOpen, setIsImageOpen] = useState(false);
@@ -142,6 +144,7 @@ export default function Nurse() {
   const [editEventSeverity, setEditEventSeverity] = useState('low');
   const [periods, setPeriods] = useState<Array<{ id: string; name: string; start_date: string; end_date: string; is_active: boolean }>>([]);
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>('all');
+  const healthNoteSaveQueue = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     loadParticipants();
@@ -234,45 +237,69 @@ export default function Nurse() {
   };
 
   // ---- Auto-save (debounced) for notes fields ----
-  const autoSaveHealthNote = async (value: string) => {
-    if (!selectedParticipant) return;
-    const existingNote = selectedParticipant.healthNotes[0];
+  const autoSaveHealthNote = (value: string) => {
+    const participant = selectedParticipant;
+    if (!participant || !value.trim()) return Promise.resolve();
+
+    const noteHint = participant.healthNotes[0];
+    if (noteHint?.content === value) return Promise.resolve();
+
     setIsAutoSavingNote(true);
-    try {
-      if (!value.trim()) {
-        if (existingNote) {
-          await supabase.from('participant_health_notes').delete().eq('id', existingNote.id);
-          setSelectedParticipant((prev) => prev ? ({
+    const save = async () => {
+      try {
+        const { data: currentNote, error: lookupError } = await supabase
+          .from('participant_health_notes')
+          .select('*')
+          .eq('participant_id', participant.id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (lookupError) throw lookupError;
+
+        let savedNote: HealthNote;
+        if (currentNote) {
+          const { data, error } = await supabase.from('participant_health_notes')
+            .update({ content: value, created_by: leader?.id })
+            .eq('id', currentNote.id)
+            .select()
+            .single();
+          if (error) throw error;
+          savedNote = data as HealthNote;
+          setSelectedParticipant((prev) => prev?.id === participant.id ? ({
             ...prev,
-            healthNotes: prev.healthNotes.filter((n) => n.id !== existingNote.id),
+            healthNotes: [savedNote, ...prev.healthNotes.filter((n) => n.id !== savedNote.id)],
+          }) : prev);
+        } else {
+          const { data, error } = await supabase.from('participant_health_notes')
+            .insert({
+              participant_id: participant.id,
+              period_id: participant.period_id,
+              content: value,
+              created_by: leader?.id,
+            })
+            .select().single();
+          if (error) throw error;
+          savedNote = data as HealthNote;
+          setSelectedParticipant((prev) => prev?.id === participant.id ? ({
+            ...prev, healthNotes: [savedNote, ...prev.healthNotes.filter((n) => n.id !== savedNote.id)],
           }) : prev);
         }
-        return;
+
+        setParticipants((prev) => prev.map((item) => item.id === participant.id ? ({
+          ...item,
+          healthNotes: [savedNote, ...item.healthNotes.filter((note) => note.id !== savedNote.id)],
+        }) : item));
+      } catch (e) {
+        console.error('auto-save health note error', e);
+        showError('Internt helsenotat ble ikke lagret. Teksten står fortsatt i feltet.');
+        throw e;
+      } finally {
+        setIsAutoSavingNote(false);
       }
-      if (existingNote) {
-        if (existingNote.content === value) return;
-        await supabase.from('participant_health_notes')
-          .update({ content: value, created_by: leader?.id })
-          .eq('id', existingNote.id);
-        setSelectedParticipant((prev) => prev ? ({
-          ...prev,
-          healthNotes: prev.healthNotes.map((n) => n.id === existingNote.id ? { ...n, content: value } : n),
-        }) : prev);
-      } else {
-        const { data } = await supabase.from('participant_health_notes')
-          .insert({ participant_id: selectedParticipant.id, content: value, created_by: leader?.id })
-          .select().single();
-        if (data) {
-          setSelectedParticipant((prev) => prev ? ({
-            ...prev, healthNotes: [data as HealthNote, ...prev.healthNotes],
-          }) : prev);
-        }
-      }
-    } catch (e) {
-      console.error('auto-save health note error', e);
-    } finally {
-      setIsAutoSavingNote(false);
-    }
+    };
+
+    healthNoteSaveQueue.current = healthNoteSaveQueue.current.catch(() => undefined).then(save);
+    return healthNoteSaveQueue.current;
   };
 
   const autoSavePublicNote = async (value: string) => {
@@ -318,7 +345,7 @@ export default function Nurse() {
   // Debounce effects
   useEffect(() => {
     if (!isDetailOpen || !selectedParticipant) return;
-    const t = setTimeout(() => { autoSaveHealthNote(newNote); }, 700);
+    const t = setTimeout(() => { void autoSaveHealthNote(newNote).catch(() => undefined); }, 700);
     return () => clearTimeout(t);
      
   }, [newNote, isDetailOpen, selectedParticipant?.id]);
@@ -340,6 +367,14 @@ export default function Nurse() {
   const openParticipantDetail = async (participant: ParticipantWithHealth) => {
     await loadParticipantDetails(participant);
     setIsDetailOpen(true);
+  };
+
+  const handleDetailOpenChange = (open: boolean) => {
+    if (open) {
+      setIsDetailOpen(true);
+      return;
+    }
+    void autoSaveHealthNote(newNote).catch(() => undefined).finally(() => setIsDetailOpen(false));
   };
 
   const saveHealthNote = async () => {
@@ -597,19 +632,37 @@ export default function Nurse() {
     new Set(participants.filter(p => p.cabin?.name).map(p => p.cabin!.name))
   ).sort();
 
-  // Filter participants by search query and cabin
+  const infoScore = (p: typeof participants[number]) =>
+    (p.healthInfo?.info ? 100 : 0) + p.healthEvents.length * 10 + p.healthNotes.length;
+
+  // Filter participants by search query, cabin and info
   const filteredParticipants = participants.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.cabin?.name?.toLowerCase().includes(searchQuery.toLowerCase()));
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch = !q ? true : searchMode === 'name'
+      ? (p.name.toLowerCase().includes(q) || !!p.cabin?.name?.toLowerCase().includes(q))
+      : (
+          (p.healthInfo?.info || '').toLowerCase().includes(q) ||
+          p.healthNotes.some(n => (n.content || '').toLowerCase().includes(q)) ||
+          p.healthEvents.some(e =>
+            (e.description || '').toLowerCase().includes(q) ||
+            (e.event_type || '').toLowerCase().includes(q)
+          )
+        );
     const matchesCabin = cabinFilter === 'all' || p.cabin?.name === cabinFilter;
-    return matchesSearch && matchesCabin;
+    const score = infoScore(p);
+    const matchesInfo =
+      infoFilter === 'all' ? true :
+      infoFilter === 'with' ? score > 0 :
+      infoFilter === 'important' ? !!p.healthInfo?.info :
+      score === 0;
+    return matchesSearch && matchesCabin && matchesInfo;
   });
 
   // Separate participants with ACTUAL health info from others
   // NOTE: We only consider health-related data, NOT activity_notes
-  const participantsWithHealthInfo = filteredParticipants.filter(p => 
-    p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info
-  );
+  const participantsWithHealthInfo = filteredParticipants
+    .filter(p => p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info)
+    .sort((a, b) => infoScore(b) - infoScore(a) || a.name.localeCompare(b.name, 'nb'));
   const participantsWithoutHealthInfo = filteredParticipants.filter(p => 
     p.healthNotes.length === 0 && p.healthEvents.length === 0 && !p.healthInfo?.info
   );
@@ -1062,14 +1115,25 @@ export default function Nurse() {
 
           {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Søk etter deltaker eller hytte..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex flex-1 max-w-md gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder={searchMode === 'name' ? 'Søk etter deltaker eller hytte...' : 'Søk i rapport/notater...'}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={searchMode} onValueChange={(v) => setSearchMode(v as typeof searchMode)}>
+                <SelectTrigger className="w-[130px] shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Navn</SelectItem>
+                  <SelectItem value="report">Rapport</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <Select value={cabinFilter} onValueChange={setCabinFilter}>
               <SelectTrigger className="w-full sm:w-[200px]">
@@ -1083,6 +1147,18 @@ export default function Nurse() {
                     {cabin}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={infoFilter} onValueChange={(v) => setInfoFilter(v as typeof infoFilter)}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <Heart className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Filtrer info" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle deltakere</SelectItem>
+                <SelectItem value="with">Kun med info</SelectItem>
+                <SelectItem value="important">Kun viktig info</SelectItem>
+                <SelectItem value="without">Uten info</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -1140,7 +1216,7 @@ export default function Nurse() {
       </Tabs>
 
       {/* Participant Detail Dialog */}
-      <ResponsiveDialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+      <ResponsiveDialog open={isDetailOpen} onOpenChange={handleDetailOpenChange}>
         <ResponsiveDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85vh] flex flex-col mx-auto">
           <ResponsiveDialogHeader>
             <ResponsiveDialogTitle className="flex items-center gap-3">
@@ -1234,13 +1310,14 @@ export default function Nurse() {
                     placeholder="Skriv helsenotater her..."
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
+                    onBlur={() => { void autoSaveHealthNote(newNote).catch(() => undefined); }}
                     className="min-h-[150px]"
                   />
                   <p className="text-xs text-muted-foreground flex items-center gap-2">
                     {isAutoSavingNote ? (
                       <><Loader2 className="w-3 h-3 animate-spin" /> Lagrer…</>
                     ) : (
-                      <>Lagres automatisk – tøm feltet for å slette notatet</>
+                      <>Lagret automatisk</>
                     )}
                   </p>
                 </CardContent>
