@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Download, User, FileText, Search, Trash2, Clock, Plus } from 'lucide-react';
+import { Loader2, Download, User, FileText, Search, Trash2, Clock, Plus, Pencil, ChevronRight } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +51,7 @@ interface ReportEntry {
 interface NurseReportEditorProps {
   participants: Participant[];
   onDataChange?: () => void;
+  onOpenParticipant?: (participantId: string) => void;
 }
 
 const sourceLabels: Record<EntrySource, string> = {
@@ -59,7 +60,7 @@ const sourceLabels: Record<EntrySource, string> = {
   health_event: 'Hendelse',
 };
 
-export function NurseReportEditor({ participants, onDataChange }: NurseReportEditorProps) {
+export function NurseReportEditor({ participants, onDataChange, onOpenParticipant }: NurseReportEditorProps) {
   const { showSuccess, showError } = useStatusPopup();
   const { leader } = useAuth();
   const [reportId, setReportId] = useState<string | null>(null);
@@ -80,6 +81,11 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
 
   // Delete confirmation (mention notes only — others are managed elsewhere)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; participantName: string } | null>(null);
+
+  // Inline editing
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const getParticipant = useCallback((id: string) => participants.find((p) => p.id === id), [participants]);
 
@@ -283,6 +289,43 @@ export function NurseReportEditor({ participants, onDataChange }: NurseReportEdi
     }
   };
 
+  const startEdit = (entry: ReportEntry) => {
+    setEditingId(entry.id);
+    setEditText(entry.text);
+  };
+
+  const saveEdit = async (entry: ReportEntry) => {
+    const value = editText.trim();
+    if (!value) return;
+    setSavingEdit(true);
+    try {
+      if (entry.source === 'mention') {
+        const { error } = await supabase
+          .from('nurse_report_mentions')
+          .update({ mention_text: value })
+          .eq('id', entry.id);
+        if (error) throw error;
+        setMentions((prev) => prev.map((m) => (m.id === entry.id ? { ...m, mention_text: value } : m)));
+      } else if (entry.source === 'health_note') {
+        const { error } = await supabase
+          .from('participant_health_notes')
+          .update({ content: value })
+          .eq('id', entry.id);
+        if (error) throw error;
+        setHealthNotes((prev) => prev.map((n) => (n.id === entry.id ? { ...n, content: value } : n)));
+      }
+      setEditingId(null);
+      hapticSuccess();
+      showSuccess('Notat oppdatert');
+      onDataChange?.();
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke lagre endringen');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const exportPdf = () => {
     const dateStr = format(new Date(), 'd. MMMM yyyy', { locale: nb });
     let sectionsHtml = '';
@@ -430,19 +473,26 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
               className="rounded-xl border-2 border-primary/20 bg-primary/[0.03] overflow-hidden"
             >
               <div className="flex items-center gap-3 px-4 py-3 bg-primary/[0.06] border-b border-primary/10">
-                <Avatar className="w-8 h-8">
-                  <AvatarImage src={p.image_url || undefined} alt={p.name} />
-                  <AvatarFallback className="text-xs"><User className="w-3 h-3" /></AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm">{p.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {p.cabin?.name || 'Ingen hytte'}
-                    {age ? ` · ${age} år` : ''}
-                    {' · '}
-                    {pEntries.length} oppføring{pEntries.length !== 1 ? 'er' : ''}
+                <button
+                  type="button"
+                  className="flex items-center gap-3 flex-1 min-w-0 text-left rounded-lg -m-1 p-1 hover:bg-primary/10 transition-colors"
+                  onClick={() => onOpenParticipant?.(p.id)}
+                >
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={p.image_url || undefined} alt={p.name} />
+                    <AvatarFallback className="text-xs"><User className="w-3 h-3" /></AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate">{p.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {p.cabin?.name || 'Ingen hytte'}
+                      {age ? ` · ${age} år` : ''}
+                      {' · '}
+                      {pEntries.length} oppføring{pEntries.length !== 1 ? 'er' : ''}
+                    </div>
                   </div>
-                </div>
+                  {onOpenParticipant && <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
+                </button>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -467,18 +517,47 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
                             {entry.source_label}
                           </span>
                         </div>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap mt-0.5">
-                          {entry.text}
-                        </p>
+                        {editingId === entry.id ? (
+                          <div className="mt-1 space-y-2">
+                            <Textarea
+                              autoFocus
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              className="min-h-[90px] text-sm"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>Avbryt</Button>
+                              <Button size="sm" onClick={() => saveEdit(entry)} disabled={savingEdit || !editText.trim()}>
+                                {savingEdit ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                                Lagre
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap mt-0.5">
+                            {entry.text}
+                          </p>
+                        )}
                       </div>
-                      {entry.source === 'mention' && (
-                        <button
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-1"
-                          onClick={() => setDeleteTarget({ id: entry.id, participantName: p.name })}
-                          aria-label="Slett notat"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                      {entry.source !== 'health_event' && editingId !== entry.id && (
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            className="text-muted-foreground hover:text-primary p-1"
+                            onClick={() => startEdit(entry)}
+                            aria-label="Rediger notat"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          {entry.source === 'mention' && (
+                            <button
+                              className="text-muted-foreground hover:text-destructive p-1"
+                              onClick={() => setDeleteTarget({ id: entry.id, participantName: p.name })}
+                              aria-label="Slett notat"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
