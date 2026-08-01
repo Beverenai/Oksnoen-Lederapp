@@ -637,8 +637,17 @@ export default function Nurse() {
 
   // Filter participants by search query, cabin and info
   const filteredParticipants = participants.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.cabin?.name?.toLowerCase().includes(searchQuery.toLowerCase()));
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch = !q ? true : searchMode === 'name'
+      ? (p.name.toLowerCase().includes(q) || !!p.cabin?.name?.toLowerCase().includes(q))
+      : (
+          (p.healthInfo?.info || '').toLowerCase().includes(q) ||
+          p.healthNotes.some(n => (n.content || '').toLowerCase().includes(q)) ||
+          p.healthEvents.some(e =>
+            (e.description || '').toLowerCase().includes(q) ||
+            (e.event_type || '').toLowerCase().includes(q)
+          )
+        );
     const matchesCabin = cabinFilter === 'all' || p.cabin?.name === cabinFilter;
     const score = infoScore(p);
     const matchesInfo =
