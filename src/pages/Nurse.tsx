@@ -374,6 +374,51 @@ export default function Nurse() {
     setIsDetailOpen(true);
   };
 
+  const openBookingInfo = async (participant: ParticipantWithHealth | null) => {
+    if (!participant) return;
+    setBookingLoading(true);
+    try {
+      const { data: periodRow } = await supabase
+        .from('periods')
+        .select('id')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      const firstFull = (participant.first_name || participant.name.split(' ')[0] || '').trim();
+      const lastFull = (participant.last_name || participant.name.split(' ').slice(1).join(' ') || '').trim();
+      const firstToken = firstFull.split(/\s+/)[0] || firstFull;
+      const lastToken = lastFull.split(/\s+/).slice(-1)[0] || lastFull;
+
+      const runQuery = async (opts: { firstPattern: string; lastPattern: string; useDob: boolean }) => {
+        let q = supabase.from('participant_bookings').select('*');
+        if (periodRow?.id) q = q.eq('period_id', periodRow.id);
+        q = q.ilike('first_name', opts.firstPattern).ilike('last_name', opts.lastPattern);
+        if (opts.useDob && participant.birth_date) q = q.eq('birth_date', participant.birth_date);
+        const { data, error } = await q.limit(1);
+        if (error) throw error;
+        return data?.[0];
+      };
+
+      const row =
+        (await runQuery({ firstPattern: firstFull, lastPattern: lastFull, useDob: true })) ||
+        (await runQuery({ firstPattern: firstFull, lastPattern: lastFull, useDob: false })) ||
+        (await runQuery({ firstPattern: `${firstToken}%`, lastPattern: `%${lastToken}`, useDob: true })) ||
+        (await runQuery({ firstPattern: `${firstToken}%`, lastPattern: `%${lastToken}`, useDob: false }));
+
+      if (!row) {
+        showInfo('Ingen booking', 'Fant ikke booking for denne deltakeren i aktiv periode.');
+        return;
+      }
+      setBookingData(row as Tables<'participant_bookings'>);
+      setBookingOpen(true);
+    } catch (e) {
+      console.error(e);
+      showError('Feil', 'Kunne ikke hente booking.');
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
   const handleDetailOpenChange = (open: boolean) => {
     if (open) {
       setIsDetailOpen(true);
