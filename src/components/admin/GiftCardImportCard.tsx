@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { CreditCard, Loader2, CheckCircle2, AlertTriangle, Upload, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 
 interface Parsed {
   rawName: string;
@@ -119,6 +120,7 @@ function parseGiftCardCsv(raw: string): Parsed[] {
 
 export function GiftCardImportCard({ onImported }: { onImported?: () => void }) {
   const { showSuccess, showError } = useStatusPopup();
+  const { data: activePeriodId } = useActivePeriodId();
   const [text, setText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<{ matched: number; unmatched: string[] } | null>(null);
@@ -159,9 +161,9 @@ export function GiftCardImportCard({ onImported }: { onImported?: () => void }) 
     setIsImporting(true);
     setResult(null);
     try {
-      const { data: participants, error } = await supabase
-        .from('participants')
-        .select('id, first_name, last_name, name');
+      let query = supabase.from('participants').select('id, first_name, last_name, name');
+      if (activePeriodId) query = query.eq('period_id', activePeriodId);
+      const { data: participants, error } = await query;
       if (error) throw error;
 
       const unmatched: string[] = [];
