@@ -83,6 +83,13 @@ function parseGiftCardCsv(raw: string): Parsed[] {
     iName = first.findIndex((c) => c === 'navn' || c.includes('fullt navn') || c.includes('deltaker'));
     iCard = first.findIndex((c) => /gavekort|kortnr|kortnummer|nummer|number/.test(c));
     if (iCard === -1) iCard = first.length - 1;
+    // When a separate surname column exists, the other name column holds the first name(s)
+    if (iLast >= 0) {
+      if (iFirst === -1) iFirst = iName >= 0 ? iName : 0;
+      iName = -1;
+    } else if (iFirst === -1) {
+      iFirst = iName >= 0 ? iName : 0;
+    }
   }
 
   const out: Parsed[] = [];
