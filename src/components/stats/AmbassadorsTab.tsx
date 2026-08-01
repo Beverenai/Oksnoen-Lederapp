@@ -18,7 +18,7 @@ interface Row {
   sweater_source: 'bought' | 'picked_up' | 'preordered' | null;
 }
 
-const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const SIZE_ORDER = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
 function sourceLabel(src: Row['sweater_source']): string {
   if (src === 'bought') return 'Kjøpt';
