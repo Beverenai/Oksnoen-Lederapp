@@ -1,4 +1,3 @@
-import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import { getStampArtwork } from './stampRegistry';
 
 export interface StampEntry {
