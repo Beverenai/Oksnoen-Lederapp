@@ -61,7 +61,7 @@ export function PeriodStamp({ entry, size = 72 }: { entry: StampEntry; size?: nu
       <svg viewBox="0 0 100 100" width={size} height={size} style={{ color: ink.ink, opacity: 0.92 }}>
         <defs>
           <path id={topPathId} d="M 8 50 A 42 42 0 0 1 92 50" fill="none" />
-          <path id={bottomPathId} d="M 92 50 A 42 42 0 0 1 8 50" fill="none" />
+          <path id={bottomPathId} d="M 12 50 A 38 38 0 0 0 88 50" fill="none" />
         </defs>
 
         <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="2.2" />
