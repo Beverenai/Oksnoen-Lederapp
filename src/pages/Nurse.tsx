@@ -1,5 +1,5 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { NurseReportEditor } from '@/components/nurse/NurseReportEditor';
 import { useAuth } from '@/contexts/AuthContext';
@@ -143,6 +143,7 @@ export default function Nurse() {
   const [editEventSeverity, setEditEventSeverity] = useState('low');
   const [periods, setPeriods] = useState<Array<{ id: string; name: string; start_date: string; end_date: string; is_active: boolean }>>([]);
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>('all');
+  const healthNoteSaveQueue = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     loadParticipants();
@@ -235,45 +236,69 @@ export default function Nurse() {
   };
 
   // ---- Auto-save (debounced) for notes fields ----
-  const autoSaveHealthNote = async (value: string) => {
-    if (!selectedParticipant) return;
-    const existingNote = selectedParticipant.healthNotes[0];
+  const autoSaveHealthNote = (value: string) => {
+    const participant = selectedParticipant;
+    if (!participant || !value.trim()) return Promise.resolve();
+
+    const noteHint = participant.healthNotes[0];
+    if (noteHint?.content === value) return Promise.resolve();
+
     setIsAutoSavingNote(true);
-    try {
-      if (!value.trim()) {
-        if (existingNote) {
-          await supabase.from('participant_health_notes').delete().eq('id', existingNote.id);
-          setSelectedParticipant((prev) => prev ? ({
+    const save = async () => {
+      try {
+        const { data: currentNote, error: lookupError } = await supabase
+          .from('participant_health_notes')
+          .select('*')
+          .eq('participant_id', participant.id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (lookupError) throw lookupError;
+
+        let savedNote: HealthNote;
+        if (currentNote) {
+          const { data, error } = await supabase.from('participant_health_notes')
+            .update({ content: value, created_by: leader?.id })
+            .eq('id', currentNote.id)
+            .select()
+            .single();
+          if (error) throw error;
+          savedNote = data as HealthNote;
+          setSelectedParticipant((prev) => prev?.id === participant.id ? ({
             ...prev,
-            healthNotes: prev.healthNotes.filter((n) => n.id !== existingNote.id),
+            healthNotes: [savedNote, ...prev.healthNotes.filter((n) => n.id !== savedNote.id)],
+          }) : prev);
+        } else {
+          const { data, error } = await supabase.from('participant_health_notes')
+            .insert({
+              participant_id: participant.id,
+              period_id: participant.period_id,
+              content: value,
+              created_by: leader?.id,
+            })
+            .select().single();
+          if (error) throw error;
+          savedNote = data as HealthNote;
+          setSelectedParticipant((prev) => prev?.id === participant.id ? ({
+            ...prev, healthNotes: [savedNote, ...prev.healthNotes.filter((n) => n.id !== savedNote.id)],
           }) : prev);
         }
-        return;
+
+        setParticipants((prev) => prev.map((item) => item.id === participant.id ? ({
+          ...item,
+          healthNotes: [savedNote, ...item.healthNotes.filter((note) => note.id !== savedNote.id)],
+        }) : item));
+      } catch (e) {
+        console.error('auto-save health note error', e);
+        showError('Internt helsenotat ble ikke lagret. Teksten står fortsatt i feltet.');
+        throw e;
+      } finally {
+        setIsAutoSavingNote(false);
       }
-      if (existingNote) {
-        if (existingNote.content === value) return;
-        await supabase.from('participant_health_notes')
-          .update({ content: value, created_by: leader?.id })
-          .eq('id', existingNote.id);
-        setSelectedParticipant((prev) => prev ? ({
-          ...prev,
-          healthNotes: prev.healthNotes.map((n) => n.id === existingNote.id ? { ...n, content: value } : n),
-        }) : prev);
-      } else {
-        const { data } = await supabase.from('participant_health_notes')
-          .insert({ participant_id: selectedParticipant.id, content: value, created_by: leader?.id })
-          .select().single();
-        if (data) {
-          setSelectedParticipant((prev) => prev ? ({
-            ...prev, healthNotes: [data as HealthNote, ...prev.healthNotes],
-          }) : prev);
-        }
-      }
-    } catch (e) {
-      console.error('auto-save health note error', e);
-    } finally {
-      setIsAutoSavingNote(false);
-    }
+    };
+
+    healthNoteSaveQueue.current = healthNoteSaveQueue.current.catch(() => undefined).then(save);
+    return healthNoteSaveQueue.current;
   };
 
   const autoSavePublicNote = async (value: string) => {
@@ -319,7 +344,7 @@ export default function Nurse() {
   // Debounce effects
   useEffect(() => {
     if (!isDetailOpen || !selectedParticipant) return;
-    const t = setTimeout(() => { autoSaveHealthNote(newNote); }, 700);
+    const t = setTimeout(() => { void autoSaveHealthNote(newNote).catch(() => undefined); }, 700);
     return () => clearTimeout(t);
      
   }, [newNote, isDetailOpen, selectedParticipant?.id]);
@@ -341,6 +366,14 @@ export default function Nurse() {
   const openParticipantDetail = async (participant: ParticipantWithHealth) => {
     await loadParticipantDetails(participant);
     setIsDetailOpen(true);
+  };
+
+  const handleDetailOpenChange = (open: boolean) => {
+    if (open) {
+      setIsDetailOpen(true);
+      return;
+    }
+    void autoSaveHealthNote(newNote).catch(() => undefined).finally(() => setIsDetailOpen(false));
   };
 
   const saveHealthNote = async () => {
@@ -1162,7 +1195,7 @@ export default function Nurse() {
       </Tabs>
 
       {/* Participant Detail Dialog */}
-      <ResponsiveDialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+      <ResponsiveDialog open={isDetailOpen} onOpenChange={handleDetailOpenChange}>
         <ResponsiveDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85vh] flex flex-col mx-auto">
           <ResponsiveDialogHeader>
             <ResponsiveDialogTitle className="flex items-center gap-3">
@@ -1256,13 +1289,14 @@ export default function Nurse() {
                     placeholder="Skriv helsenotater her..."
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
+                    onBlur={() => { void autoSaveHealthNote(newNote).catch(() => undefined); }}
                     className="min-h-[150px]"
                   />
                   <p className="text-xs text-muted-foreground flex items-center gap-2">
                     {isAutoSavingNote ? (
                       <><Loader2 className="w-3 h-3 animate-spin" /> Lagrer…</>
                     ) : (
-                      <>Lagres automatisk – tøm feltet for å slette notatet</>
+                      <>Lagret automatisk</>
                     )}
                   </p>
                 </CardContent>
