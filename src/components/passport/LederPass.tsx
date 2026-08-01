@@ -35,7 +35,7 @@ interface LederPassProps {
 const RED_CLOTH_URL = redCloth.url;
 const IVORY_URL = ivoryPaper.url;
 
-const STAMPS_PER_PAGE = 8;
+const STAMPS_PER_PAGE = 12;
 
 function getInitials(name?: string | null): string {
   if (!name) return '?';
