@@ -118,6 +118,7 @@ export default function Nurse() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [cabinFilter, setCabinFilter] = useState<string>('all');
+  const [infoFilter, setInfoFilter] = useState<'all' | 'with' | 'important' | 'without'>('all');
   const [selectedParticipant, setSelectedParticipant] = useState<ParticipantWithHealth | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isImageOpen, setIsImageOpen] = useState(false);
@@ -597,19 +598,28 @@ export default function Nurse() {
     new Set(participants.filter(p => p.cabin?.name).map(p => p.cabin!.name))
   ).sort();
 
-  // Filter participants by search query and cabin
+  const infoScore = (p: typeof participants[number]) =>
+    (p.healthInfo?.info ? 100 : 0) + p.healthEvents.length * 10 + p.healthNotes.length;
+
+  // Filter participants by search query, cabin and info
   const filteredParticipants = participants.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.cabin?.name?.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCabin = cabinFilter === 'all' || p.cabin?.name === cabinFilter;
-    return matchesSearch && matchesCabin;
+    const score = infoScore(p);
+    const matchesInfo =
+      infoFilter === 'all' ? true :
+      infoFilter === 'with' ? score > 0 :
+      infoFilter === 'important' ? !!p.healthInfo?.info :
+      score === 0;
+    return matchesSearch && matchesCabin && matchesInfo;
   });
 
   // Separate participants with ACTUAL health info from others
   // NOTE: We only consider health-related data, NOT activity_notes
-  const participantsWithHealthInfo = filteredParticipants.filter(p => 
-    p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info
-  );
+  const participantsWithHealthInfo = filteredParticipants
+    .filter(p => p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info)
+    .sort((a, b) => infoScore(b) - infoScore(a) || a.name.localeCompare(b.name, 'nb'));
   const participantsWithoutHealthInfo = filteredParticipants.filter(p => 
     p.healthNotes.length === 0 && p.healthEvents.length === 0 && !p.healthInfo?.info
   );
@@ -1083,6 +1093,18 @@ export default function Nurse() {
                     {cabin}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={infoFilter} onValueChange={(v) => setInfoFilter(v as typeof infoFilter)}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <Heart className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Filtrer info" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle deltakere</SelectItem>
+                <SelectItem value="with">Kun med info</SelectItem>
+                <SelectItem value="important">Kun viktig info</SelectItem>
+                <SelectItem value="without">Uten info</SelectItem>
               </SelectContent>
             </Select>
           </div>
