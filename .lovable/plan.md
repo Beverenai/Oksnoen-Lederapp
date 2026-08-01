@@ -1,26 +1,25 @@
-## Hva jeg fant
+## Mål
+I Nurse → fanen "Rapport" skal du kunne:
+1. Trykke på en deltaker for å åpne deltakerkortet (samme detaljvisning som i "Deltakere"-fanen).
+2. Redigere teksten i notatene direkte i rapporten, ikke bare slette dem.
 
-Dette er ikke gamle data som henger igjen fra en tidligere periode. Alt i Periode 6 er korrekt merket med periodens ID, og de eldre 450 aktivitetene ligger fortsatt trygt på Periode 5.
+## Hva som endres
 
-Det som finnes i Periode 6 er registreringer gjort i går (31. juli), alle av samme leder — **August Raae Frisvold**, mest sannsynlig testing:
+### 1. Trykk på deltaker i rapporten
+- `NurseReportEditor` får en ny valgfri prop `onOpenParticipant(participantId)`.
+- Deltakerens topplinje (bilde + navn + hytte/alder) blir en klikkbar flate som kaller propen. "+ Notat"-knappen forblir egen knapp og trigger ikke åpning.
+- `Nurse.tsx` sender inn en funksjon som finner deltakeren i den eksisterende lista og kaller `openParticipantDetail(...)`, som allerede laster helseinfo/notater og åpner detaljdialogen. Ingen ny dialog bygges.
 
-| Deltaker | Registrert |
-|---|---|
-| Augusta Josefine Dahl | Åtte meter (17:42), insj-poeng 2 |
-| Maria Bjercke-Henriksen | Vannski x2, Skrikeren begge veier (19:05–19:06), insj-poeng 1, profilbilde lastet opp 19:06 |
+### 2. Redigere notater i rapporten
+- Hver oppføring får en blyant-knapp ved siden av slett-knappen. Trykk gir et redigeringsfelt (textarea) i stedet for teksten, med Lagre / Avbryt.
+- Redigerbare kilder:
+  - "Nurse" (nurse_report_mentions) → oppdaterer `mention_text`.
+  - "Nurse-notat" (participant_health_notes) → oppdaterer `content`.
+  - "Hendelse" (participant_health_events) → forblir lesbar/ikke redigerbar, siden den logges fra ledere med type/alvorlighet.
+- Lagring oppdaterer lista lokalt umiddelbart og kaller `onDataChange` slik at deltakerlista og filtrene oppdateres.
+- Feil ved lagring viser feilmelding via eksisterende StatusPopup; ingen tekst mistes (feltet forblir åpent).
 
-Ingen bonuspoeng er gitt. Ingen andre av de 190 deltakerne har aktivitet, poeng eller bilde.
-
-## Forslag til opprydding
-
-1. Slette de 4 aktivitetsradene i Periode 6.
-2. Nullstille insj-poeng (2 og 1) for de to deltakerne.
-3. Fjerne profilbildet på Maria Bjercke-Henriksen (og bildefilen i lagringen), slik at alle starter uten bilde.
-
-Etter det er Periode 6 helt blank: 0 aktiviteter, 0 poeng, 0 bilder.
-
-## Teknisk
-
-Utføres som en dataendring mot `participant_activities` (slett der `period_id` = aktiv periode) og `participants` (`insj_points = 0`, `image_url`/`image_thumb_url` = null for de to). Ingen kodeendringer nødvendig — det er ingen feil i logikken.
-
-Vil du at jeg også skal si til August at han bør bruke arkiv/testmodus, eller er det greit?
+### Teknisk
+- Kun frontend: `src/components/nurse/NurseReportEditor.tsx` (redigeringsmodus + ny prop) og `src/pages/Nurse.tsx` (kobler propen til `openParticipantDetail`).
+- Ingen databaseendringer; skrivetilgang til begge tabellene finnes allerede siden appen både oppretter og sletter disse radene i dag.
+- Slett-knapp og PDF-eksport blir uendret.
