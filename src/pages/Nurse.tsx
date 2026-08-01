@@ -1654,6 +1654,20 @@ export default function Nurse() {
         </ResponsiveDialogContent>
       </ResponsiveDialog>
 
+      {bookingOpen && bookingData && selectedParticipant && (
+        <BookingDetailSheet
+          booking={bookingData}
+          participant={{
+            id: selectedParticipant.id,
+            first_name: selectedParticipant.first_name,
+            last_name: selectedParticipant.last_name,
+            birth_date: selectedParticipant.birth_date,
+            image_url: selectedParticipant.image_url,
+          }}
+          onClose={() => setBookingOpen(false)}
+        />
+      )}
+
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
         <AlertDialogContent>
