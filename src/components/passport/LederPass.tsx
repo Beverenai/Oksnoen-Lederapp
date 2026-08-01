@@ -457,7 +457,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
           <div className="flex flex-col justify-center h-full gap-4 px-4 text-center">
             <div className="text-[10px] tracking-[0.3em] uppercase text-[#7a5a20]">Lederløftet</div>
             <p className="text-[12px] leading-relaxed text-[#3a2410] font-serif italic">
-              «Jeg lover å ta vare på deltakerne, kollegene og øya. Å gå foran med
+              «Jeg lover å ta vare på deltakerne, lederene og øya. Å gå foran med
               varme, oppmerksomhet og godt humør — og å bære Øksnøen-ånden videre.»
             </p>
             <div className="text-[10px] uppercase tracking-[0.25em] text-[#3a2410]/60">— {name}</div>
@@ -474,10 +474,25 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
           </div>
         ),
       },
+      ...stampPages,
+      {
+        key: 'tjenestear',
+        eyebrow: 'Tjenesteår',
+        variant: 'ivory' as const,
+        content: (
+          <div className="flex flex-col h-full gap-2">
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <ServiceHistoryEditor leaderId={leader?.id} readOnly={!canEdit} />
+            </div>
+            <div className="text-center text-[9px] italic text-[#3a2410]/55">
+              {stamps.length} {stamps.length === 1 ? 'stempel' : 'stempler'}
+            </div>
+          </div>
+        ),
+      },
     ];
   }, [leader, name, initials, role, team, age, stamps, canEdit, periodLabel]);
 
-  const [index, setIndex] = useState(0);
   useEffect(() => {
     setIndex(i => Math.min(i, pages.length - 1));
   }, [pages.length]);
