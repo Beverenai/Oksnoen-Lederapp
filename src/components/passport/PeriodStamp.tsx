@@ -1,4 +1,5 @@
 import { getStampArtwork } from './stampRegistry';
+import { getPeriodStampPath } from '@/lib/period-stamp-paths';
 
 export interface StampEntry {
   /** Stable key, e.g. "2019-4+" */
@@ -24,9 +25,11 @@ function hash(seed: string, salt: number) {
 }
 
 export function PeriodStamp({ entry, size = 72 }: { entry: StampEntry; size?: number }) {
-  const artwork = getStampArtwork(entry.year, entry.periodCode);
+  const artwork =
+    getPeriodStampPath(entry.year, entry.periodCode) ??
+    getStampArtwork(entry.year, entry.periodCode);
   const ink = STAMP_INKS[hash(entry.key, 31) % STAMP_INKS.length];
-  const tilt = (hash(entry.key, 17) % 15) - 7;
+  const tilt = (hash(entry.key, 17) % 7) - 3;
   const label = entry.periodCode;
 
   const topPathId = `stamp-top-${entry.key.replace(/[^a-zA-Z0-9]/g, '')}`;
