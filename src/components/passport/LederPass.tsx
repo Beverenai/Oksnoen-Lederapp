@@ -318,27 +318,57 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
     );
 
     const stampPages = stamps.length
-      ? chunk(stamps, STAMPS_PER_PAGE).map((group, pageIdx, all) => ({
+      ? chunk(stamps, STAMPS_PER_PAGE).map((group, pageIdx, all) => {
+          const years = group.map(g => g.year);
+          const minY = Math.min(...years);
+          const maxY = Math.max(...years);
+          const yearRange = minY === maxY ? `${minY}` : `${minY}–${maxY}`;
+          // Offsets: hand-stamped feel, but same-year stamps nudge toward each other
+          const jitter = (seed: string, salt: number, span: number) =>
+            ((hash(seed, salt) % (span * 2 + 1)) - span);
+          return {
           key: `stempler-${pageIdx}`,
           eyebrow:
             all.length > 1 ? `Periodestempler ${pageIdx + 1}/${all.length}` : 'Periodestempler',
           variant: 'ivory' as const,
           content: (
-            <div className="flex flex-col h-full gap-1.5">
+            <div className="relative flex flex-col h-full gap-1">
+              <img
+                src={oksnoenLogo}
+                alt=""
+                aria-hidden
+                className="pointer-events-none absolute left-1/2 top-1/2 w-[78%] -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.06]"
+              />
               <div className="text-[10px] tracking-[0.3em] uppercase text-[#7a5a20] text-center">
                 Periodestempler
               </div>
+              <div className="text-[8px] tracking-[0.22em] uppercase text-[#3a2410]/45 text-center">
+                {group.length} stempelminner · {yearRange}
+              </div>
               <div
-                className="flex-1 grid grid-cols-3 grid-rows-4 gap-x-1 gap-y-1 justify-items-center items-center px-0.5 py-0.5"
+                className="relative flex-1 grid grid-cols-3 grid-rows-4 gap-x-0.5 gap-y-0 justify-items-center items-center px-0.5"
                 aria-label="Periodestempler"
               >
-                {group.map(entry => (
-                  <PeriodStamp key={entry.key} entry={entry} size={68} />
-                ))}
+                {group.map((entry, i) => {
+                  const prevSame = i > 0 && group[i - 1].year === entry.year;
+                  const nextSame = i < group.length - 1 && group[i + 1].year === entry.year;
+                  const pull = (prevSame ? -3 : 0) + (nextSame ? 3 : 0);
+                  return (
+                    <PeriodStamp
+                      key={entry.key}
+                      entry={entry}
+                      size={82}
+                      offsetX={jitter(entry.key, 29, 4) + pull}
+                      offsetY={jitter(entry.key, 41, 4) - (prevSame || nextSame ? 1 : 0)}
+                      delayMs={i * 55}
+                    />
+                  );
+                })}
               </div>
             </div>
           ),
-        }))
+          };
+        })
       : [
           {
             key: 'stempler-tom',
