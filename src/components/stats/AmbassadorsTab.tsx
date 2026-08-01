@@ -41,7 +41,6 @@ export function AmbassadorsTab() {
         .from("participants")
         .select("id, name, image_url, times_attended, room, cabin:cabins(name), participant_sweaters(preordered_size, picked_up, picked_up_size, bought_on_camp, bought_size, period_id)")
         .eq("period_id", activePeriodId)
-        .gte("times_attended", 4)
         .order("times_attended", { ascending: false })
         .order("name");
       const mapped: Row[] = ((data as any[]) || []).map((p) => {
@@ -64,6 +63,7 @@ export function AmbassadorsTab() {
   }, [activePeriodId]);
 
   const filtered = rows.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()));
+  const firstTimers = filtered.filter((r) => (r.times_attended ?? 0) === 0);
   const newOnes = filtered.filter((r) => (r.times_attended ?? 0) === 4);
   const veterans = filtered.filter((r) => (r.times_attended ?? 0) > 4);
 
@@ -163,6 +163,15 @@ export function AmbassadorsTab() {
         </p>
         {renderSizeSummary(newOnes)}
         {renderList(newOnes)}
+      </div>
+
+      <div className="pt-4 border-t">
+        <h3 className="text-sm font-semibold mb-2">Førstegangsdeltakere ({firstTimers.length})</h3>
+        <p className="text-xs text-muted-foreground mb-3">
+          Deltakere som er her for første gang (0 år).
+        </p>
+        {renderSizeSummary(firstTimers)}
+        {renderList(firstTimers)}
       </div>
 
       {veterans.length > 0 && (
