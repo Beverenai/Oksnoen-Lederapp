@@ -403,22 +403,6 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
         ),
       },
       {
-        key: 'tjenestear',
-        eyebrow: 'Tjenesteår',
-        variant: 'ivory' as const,
-        content: (
-          <div className="flex flex-col h-full gap-2">
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <ServiceHistoryEditor leaderId={leader?.id} readOnly={!canEdit} />
-            </div>
-            <div className="text-center text-[9px] italic text-[#3a2410]/55">
-              {stamps.length} {stamps.length === 1 ? 'stempel' : 'stempler'}
-            </div>
-          </div>
-        ),
-      },
-      ...stampPages,
-      {
         key: 'legitimasjon',
         eyebrow: 'Legitimasjon',
         variant: 'ivory' as const,
