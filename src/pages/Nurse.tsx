@@ -1095,6 +1095,18 @@ export default function Nurse() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={infoFilter} onValueChange={(v) => setInfoFilter(v as typeof infoFilter)}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <Heart className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Filtrer info" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle deltakere</SelectItem>
+                <SelectItem value="with">Kun med info</SelectItem>
+                <SelectItem value="important">Kun viktig info</SelectItem>
+                <SelectItem value="without">Uten info</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Participants with health info */}
