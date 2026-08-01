@@ -466,3 +466,29 @@ header, nav {
     transform: scale(1);
   }
 }
+
+@keyframes stamp-press {
+  0% {
+    opacity: 0;
+    transform: scale(1.5) translate(var(--stamp-x, 0), var(--stamp-y, 0));
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes status-popup-in-unused {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
