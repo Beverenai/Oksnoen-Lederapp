@@ -15,7 +15,7 @@ import {
 import { toast } from 'sonner';
 import { guessGender } from '@/lib/nameGender';
 import { differenceInYears } from 'date-fns';
-import { Home, Users, Bed, Loader2, ChevronDown, ChevronRight, UserPlus, X } from 'lucide-react';
+import { Home, Users, Bed, Loader2, ChevronDown, ChevronRight, UserPlus, X, AlertTriangle } from 'lucide-react';
 
 const GIRL_CLASS =
   'bg-pink-500/15 text-pink-700 dark:text-pink-300 border-pink-500/30';
