@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
+import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailSheet';
 import { 
   Search, 
   Heart, 
@@ -52,7 +53,8 @@ import {
   Download,
   Trash2,
   Pencil,
-  X
+  X,
+  BookUser
 } from 'lucide-react';
 import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
