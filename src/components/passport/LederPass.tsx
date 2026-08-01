@@ -35,7 +35,7 @@ interface LederPassProps {
 const RED_CLOTH_URL = redCloth.url;
 const IVORY_URL = ivoryPaper.url;
 
-const STAMPS_PER_PAGE = 7;
+const STAMPS_PER_PAGE = 12;
 
 function getInitials(name?: string | null): string {
   if (!name) return '?';
@@ -290,6 +290,8 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
   const team = formatTeamDisplay(leader?.team ?? null);
   const age = leader?.age ? `${leader.age} år` : '—';
 
+  const [index, setIndex] = useState(0);
+
   const pages = useMemo<(RailPage & { eyebrow: string })[]>(() => {
     const photo = leader?.profile_image_url;
     const Photo = (
@@ -319,13 +321,13 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                 Stempler
               </div>
               <div
-                className="flex-1 grid grid-cols-2 gap-x-1 gap-y-2 justify-items-center content-center px-1"
+                className="flex-1 grid grid-cols-3 gap-x-1 gap-y-1.5 justify-items-center content-center px-0.5"
                 aria-label="Periodestempler"
               >
                 {group.map(entry => (
                   <div key={entry.key} className="flex flex-col items-center gap-0.5">
-                    <PeriodStamp entry={entry} size={72} />
-                    <span className="text-[9px] tabular-nums text-[#3a2410]/60">
+                    <PeriodStamp entry={entry} size={56} />
+                    <span className="text-[8px] tabular-nums text-[#3a2410]/60">
                       {entry.year} · P{entry.periodCode}
                     </span>
                   </div>
@@ -345,13 +347,27 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
                   Stempler
                 </div>
                 <p className="text-[11px] italic text-[#3a2410]/60 leading-relaxed">
-                  Ingen tjenesteår huket av ennå. Bla tilbake til «Tjenesteår» og
-                  velg år og perioder du har jobbet.
+                  Ingen tjenesteår registrert ennå.
                 </p>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      hapticImpact('light');
+                      setIndex(serviceIndex);
+                    }}
+                    className="px-4 py-2 rounded-full text-[11px] font-semibold tracking-[0.12em] uppercase border border-[#7a0a0e]/50 bg-[#f0cd78]/40 text-[#7a0a0e] active:scale-95 transition-transform"
+                  >
+                    Velg år og perioder
+                  </button>
+                )}
               </div>
             ),
           },
         ];
+
+    // Fixed pages before stamps: cover, legitimasjon, opplysninger, godkjenninger, lederloftet
+    const serviceIndex = 5 + stampPages.length;
 
     return [
       {
@@ -386,22 +402,6 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
           </div>
         ),
       },
-      {
-        key: 'tjenestear',
-        eyebrow: 'Tjenesteår',
-        variant: 'ivory' as const,
-        content: (
-          <div className="flex flex-col h-full gap-2">
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <ServiceHistoryEditor leaderId={leader?.id} readOnly={!canEdit} />
-            </div>
-            <div className="text-center text-[9px] italic text-[#3a2410]/55">
-              {stamps.length} {stamps.length === 1 ? 'stempel' : 'stempler'}
-            </div>
-          </div>
-        ),
-      },
-      ...stampPages,
       {
         key: 'legitimasjon',
         eyebrow: 'Legitimasjon',
@@ -457,7 +457,7 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
           <div className="flex flex-col justify-center h-full gap-4 px-4 text-center">
             <div className="text-[10px] tracking-[0.3em] uppercase text-[#7a5a20]">Lederløftet</div>
             <p className="text-[12px] leading-relaxed text-[#3a2410] font-serif italic">
-              «Jeg lover å ta vare på deltakerne, kollegene og øya. Å gå foran med
+              «Jeg lover å ta vare på deltakerne, lederene og øya. Å gå foran med
               varme, oppmerksomhet og godt humør — og å bære Øksnøen-ånden videre.»
             </p>
             <div className="text-[10px] uppercase tracking-[0.25em] text-[#3a2410]/60">— {name}</div>
@@ -474,10 +474,25 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
           </div>
         ),
       },
+      ...stampPages,
+      {
+        key: 'tjenestear',
+        eyebrow: 'Tjenesteår',
+        variant: 'ivory' as const,
+        content: (
+          <div className="flex flex-col h-full gap-2">
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <ServiceHistoryEditor leaderId={leader?.id} readOnly={!canEdit} />
+            </div>
+            <div className="text-center text-[9px] italic text-[#3a2410]/55">
+              {stamps.length} {stamps.length === 1 ? 'stempel' : 'stempler'}
+            </div>
+          </div>
+        ),
+      },
     ];
   }, [leader, name, initials, role, team, age, stamps, canEdit, periodLabel]);
 
-  const [index, setIndex] = useState(0);
   useEffect(() => {
     setIndex(i => Math.min(i, pages.length - 1));
   }, [pages.length]);
@@ -588,7 +603,10 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
         <div
           role="tablist"
           aria-label="Sidevalg"
-          className="flex items-center justify-center gap-1.5 max-w-[80vw] overflow-hidden"
+          className={cn(
+            'flex items-center justify-center max-w-[80vw] overflow-hidden',
+            pages.length > 10 ? 'gap-1' : 'gap-1.5',
+          )}
         >
           {pages.map((p, i) => (
             <button
@@ -598,9 +616,15 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
               aria-label={`Gå til side ${i + 1}`}
               onClick={() => setIndex(i)}
               className={cn(
-                'h-1.5 rounded-full transition-all',
+                'h-1.5 rounded-full transition-all shrink-0',
                 i === index
-                  ? 'w-5 bg-[#7a0a0e]'
+                  ? pages.length > 10
+                    ? 'w-3 bg-[#7a0a0e]'
+                    : 'w-5 bg-[#7a0a0e]'
+                  : pages.length > 10
+                    ? inline
+                      ? 'w-1 bg-[#3a2410]/25'
+                      : 'w-1 bg-[#f0cd78]/35'
                   : inline
                     ? 'w-1.5 bg-[#3a2410]/25'
                     : 'w-1.5 bg-[#f0cd78]/35',
