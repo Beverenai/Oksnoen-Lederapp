@@ -307,6 +307,19 @@ export function LeaderDetailSheet({
           )}
         </div>
       </SheetContent>
+
+      <Dialog open={imageOpen} onOpenChange={setImageOpen}>
+        <DialogContent className="max-w-md p-2 sm:p-3">
+          {leader.profile_image_url && (
+            <img
+              src={leader.profile_image_url}
+              alt={leader.name}
+              className="w-full h-auto rounded-lg object-contain max-h-[75vh]"
+            />
+          )}
+          <p className="text-center text-sm font-medium text-foreground pb-1">{leader.name}</p>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }
