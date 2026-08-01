@@ -48,6 +48,26 @@ function norm(s: string | null | undefined) {
   return (s || '').toLowerCase().replace(/[\s\-'.]/g, '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
 }
 
+// Removes single-letter initials like "R." / "S.-L." from a name so
+// "Charlotte R." matches "Charlotte"
+function stripInitials(s: string) {
+  return (s || '')
+    .trim()
+    .split(/\s+/)
+    .filter((t) => t && !/^[A-Za-zÆØÅæøå]\.?(-[A-Za-zÆØÅæøå]\.?)*$/.test(t))
+    .join(' ');
+}
+
+// CSV files exported from Excel are often Windows-1252/Latin-1 encoded
+async function readTextSmart(file: File): Promise<string> {
+  const buf = await file.arrayBuffer();
+  const utf8 = new TextDecoder('utf-8', { fatal: false }).decode(buf);
+  if (utf8.includes('\uFFFD')) {
+    return new TextDecoder('windows-1252').decode(buf);
+  }
+  return utf8;
+}
+
 function splitCsvLine(line: string, delim: string): string[] {
   const out: string[] = [];
   let cur = '';
@@ -141,7 +161,7 @@ export function GiftCardImportCard({ onImported }: { onImported?: () => void }) 
   const handleFile = async (file: File) => {
     setResult(null);
     try {
-      const raw = await file.text();
+      const raw = await readTextSmart(file);
       const rows = parseGiftCardCsv(raw);
       if (rows.length === 0) {
         showError('Fant ingen gavekortnumre i filen');
