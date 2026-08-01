@@ -35,7 +35,7 @@ interface LederPassProps {
 const RED_CLOTH_URL = redCloth.url;
 const IVORY_URL = ivoryPaper.url;
 
-const STAMPS_PER_PAGE = 8;
+const STAMPS_PER_PAGE = 12;
 
 function getInitials(name?: string | null): string {
   if (!name) return '?';
@@ -324,16 +324,16 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
             all.length > 1 ? `Periodestempler ${pageIdx + 1}/${all.length}` : 'Periodestempler',
           variant: 'ivory' as const,
           content: (
-            <div className="flex flex-col h-full gap-2">
+            <div className="flex flex-col h-full gap-1.5">
               <div className="text-[10px] tracking-[0.3em] uppercase text-[#7a5a20] text-center">
                 Periodestempler
               </div>
               <div
-                className="flex-1 grid grid-cols-2 grid-rows-4 gap-x-2 gap-y-2 justify-items-center items-center px-1"
+                className="flex-1 grid grid-cols-3 grid-rows-4 gap-x-1 gap-y-1 justify-items-center items-center px-0.5 py-0.5"
                 aria-label="Periodestempler"
               >
                 {group.map(entry => (
-                  <PeriodStamp key={entry.key} entry={entry} size={72} />
+                  <PeriodStamp key={entry.key} entry={entry} size={68} />
                 ))}
               </div>
             </div>
