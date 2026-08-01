@@ -48,7 +48,7 @@ export function ServiceHistoryEditor({
   };
 
   return (
-    <div className="space-y-1.5">
+    <div className="flex flex-col h-full gap-1.5">
       <div className="flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-[0.24em] text-[#7a5a20] font-semibold">
           Tjenesteår
@@ -56,7 +56,7 @@ export function ServiceHistoryEditor({
         {isLoading && <Loader2 className="h-3 w-3 animate-spin text-[#7a5a20]" />}
       </div>
 
-      <div className="max-h-[42vh] overflow-y-auto overscroll-contain pr-0.5 space-y-1">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 space-y-1">
         {years.map(year => {
           const selected = byYear.get(year) ?? [];
           const isOpen = openYear === year;

@@ -392,9 +392,6 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
         variant: 'ivory' as const,
         content: (
           <div className="flex flex-col h-full gap-2">
-            <div className="text-[10px] tracking-[0.3em] uppercase text-[#7a5a20] text-center">
-              Tjenesteår
-            </div>
             <div className="flex-1 min-h-0 overflow-hidden">
               <ServiceHistoryEditor leaderId={leader?.id} readOnly={!canEdit} />
             </div>
