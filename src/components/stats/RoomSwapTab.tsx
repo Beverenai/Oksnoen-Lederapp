@@ -76,8 +76,10 @@ export function RoomSwapTab() {
       setActivePeriodId(periodId);
       const swapsQuery = supabase.from('room_swaps').select('*').order('created_at', { ascending: false });
       if (periodId) swapsQuery.eq('period_id', periodId);
+      const participantsQuery = supabase.from('participants').select('id, name, cabin_id, room');
+      if (periodId) participantsQuery.eq('period_id', periodId);
       const [participantsRes, cabinsRes, capacityRes, swapsRes] = await Promise.all([
-        supabase.from('participants').select('id, name, cabin_id, room'),
+        participantsQuery,
         supabase.from('cabins').select('id, name').order('sort_order'),
         supabase.from('room_capacity').select('cabin_id, room, bed_count'),
         swapsQuery,
