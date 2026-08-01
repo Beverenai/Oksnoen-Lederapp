@@ -613,9 +613,15 @@ function LederPassFullView({ leader, onClose, inline = false, periodLabel }: Ful
               aria-label={`Gå til side ${i + 1}`}
               onClick={() => setIndex(i)}
               className={cn(
-                'h-1.5 rounded-full transition-all',
+                'h-1.5 rounded-full transition-all shrink-0',
                 i === index
-                  ? 'w-5 bg-[#7a0a0e]'
+                  ? pages.length > 10
+                    ? 'w-3 bg-[#7a0a0e]'
+                    : 'w-5 bg-[#7a0a0e]'
+                  : pages.length > 10
+                    ? inline
+                      ? 'w-1 bg-[#3a2410]/25'
+                      : 'w-1 bg-[#f0cd78]/35'
                   : inline
                     ? 'w-1.5 bg-[#3a2410]/25'
                     : 'w-1.5 bg-[#f0cd78]/35',
