@@ -125,6 +125,9 @@ export default function Nurse() {
   const [selectedParticipant, setSelectedParticipant] = useState<ParticipantWithHealth | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isImageOpen, setIsImageOpen] = useState(false);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingData, setBookingData] = useState<Tables<'participant_bookings'> | null>(null);
+  const [bookingOpen, setBookingOpen] = useState(false);
   
   // Form states
   const [newNote, setNewNote] = useState('');
