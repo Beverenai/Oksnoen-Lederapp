@@ -37,6 +37,12 @@ const IVORY_URL = ivoryPaper.url;
 
 const STAMPS_PER_PAGE = 12;
 
+function hash(seed: string, salt: number) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * salt + seed.charCodeAt(i)) >>> 0;
+  return h;
+}
+
 function getInitials(name?: string | null): string {
   if (!name) return '?';
   return name
