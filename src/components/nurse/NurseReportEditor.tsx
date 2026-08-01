@@ -473,19 +473,26 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
               className="rounded-xl border-2 border-primary/20 bg-primary/[0.03] overflow-hidden"
             >
               <div className="flex items-center gap-3 px-4 py-3 bg-primary/[0.06] border-b border-primary/10">
-                <Avatar className="w-8 h-8">
-                  <AvatarImage src={p.image_url || undefined} alt={p.name} />
-                  <AvatarFallback className="text-xs"><User className="w-3 h-3" /></AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm">{p.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {p.cabin?.name || 'Ingen hytte'}
-                    {age ? ` · ${age} år` : ''}
-                    {' · '}
-                    {pEntries.length} oppføring{pEntries.length !== 1 ? 'er' : ''}
+                <button
+                  type="button"
+                  className="flex items-center gap-3 flex-1 min-w-0 text-left rounded-lg -m-1 p-1 hover:bg-primary/10 transition-colors"
+                  onClick={() => onOpenParticipant?.(p.id)}
+                >
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={p.image_url || undefined} alt={p.name} />
+                    <AvatarFallback className="text-xs"><User className="w-3 h-3" /></AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate">{p.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {p.cabin?.name || 'Ingen hytte'}
+                      {age ? ` · ${age} år` : ''}
+                      {' · '}
+                      {pEntries.length} oppføring{pEntries.length !== 1 ? 'er' : ''}
+                    </div>
                   </div>
-                </div>
+                  {onOpenParticipant && <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
+                </button>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -510,18 +517,47 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
                             {entry.source_label}
                           </span>
                         </div>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap mt-0.5">
-                          {entry.text}
-                        </p>
+                        {editingId === entry.id ? (
+                          <div className="mt-1 space-y-2">
+                            <Textarea
+                              autoFocus
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              className="min-h-[90px] text-sm"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>Avbryt</Button>
+                              <Button size="sm" onClick={() => saveEdit(entry)} disabled={savingEdit || !editText.trim()}>
+                                {savingEdit ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                                Lagre
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap mt-0.5">
+                            {entry.text}
+                          </p>
+                        )}
                       </div>
-                      {entry.source === 'mention' && (
-                        <button
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-1"
-                          onClick={() => setDeleteTarget({ id: entry.id, participantName: p.name })}
-                          aria-label="Slett notat"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                      {entry.source !== 'health_event' && editingId !== entry.id && (
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            className="text-muted-foreground hover:text-primary p-1"
+                            onClick={() => startEdit(entry)}
+                            aria-label="Rediger notat"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          {entry.source === 'mention' && (
+                            <button
+                              className="text-muted-foreground hover:text-destructive p-1"
+                              onClick={() => setDeleteTarget({ id: entry.id, participantName: p.name })}
+                              aria-label="Slett notat"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
