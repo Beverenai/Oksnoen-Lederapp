@@ -181,7 +181,7 @@ export function NurseReportEditor({ participants, onDataChange, onOpenParticipan
         text: m.mention_text,
         created_at: m.created_at,
         source: 'mention',
-        source_label: sourceLabels.mention,
+        source_label: m.mention_text?.startsWith('[Hendelse]') ? 'Hendelse (leder)' : sourceLabels.mention,
       });
     });
     healthNotes.forEach((n) => {
@@ -236,6 +236,27 @@ export function NurseReportEditor({ participants, onDataChange, onOpenParticipan
       return p?.name.toLowerCase().includes(q);
     });
   }, [groupedEntries, searchQuery, getParticipant]);
+
+  // Chronological view: group entries by day (newest day first)
+  const dateGroups = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const entries = allEntries.filter((e) => {
+      if (!q) return true;
+      const p = getParticipant(e.participant_id);
+      return (p?.name.toLowerCase().includes(q) ?? false) || e.text.toLowerCase().includes(q);
+    });
+    const map = new Map<string, ReportEntry[]>();
+    entries.forEach((e) => {
+      const key = e.created_at ? e.created_at.slice(0, 10) : 'ukjent';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(e);
+    });
+    const order = Array.from(map.keys()).sort((a, b) => b.localeCompare(a));
+    order.forEach((k) =>
+      map.get(k)!.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+    );
+    return { map, order };
+  }, [allEntries, searchQuery, getParticipant]);
 
   // Participants available for "add note" dropdown (all)
   const sortedParticipants = useMemo(
