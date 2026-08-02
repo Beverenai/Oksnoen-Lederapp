@@ -31,12 +31,14 @@ interface Review {
   reviewed_at: string | null;
 }
 
-function incidentText(i: Incident) {
+function incidentText(i: Incident, nurseComment?: string, nurseName?: string) {
   const parts = [`[Hendelse] ${i.title}`];
   if (i.description) parts.push(i.description);
-  parts.push(
-    `(${CATEGORY_LABELS[i.category]} · ${SEVERITY_LABELS[i.severity]} · meldt av ${i.leader?.name ?? 'ukjent leder'})`
-  );
+  parts.push(`Meldt av: ${i.leader?.name ?? 'ukjent leder'}`);
+  parts.push(`${CATEGORY_LABELS[i.category]} · ${SEVERITY_LABELS[i.severity]}`);
+  if (nurseComment?.trim()) {
+    parts.push(`Kommentar (${nurseName || 'nurse'}): ${nurseComment.trim()}`);
+  }
   return parts.join('\n');
 }
 
