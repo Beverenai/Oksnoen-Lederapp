@@ -210,23 +210,18 @@ export function NurseReportEditor({ participants, onDataChange, onOpenParticipan
     return out;
   }, [mentions, healthNotes, healthEvents]);
 
-  // Group by participant, sorted by participant name (alphabetical)
+  // Group by participant. Default: most recently written report first.
   const groupedEntries = useMemo(() => {
     const map = new Map<string, ReportEntry[]>();
     allEntries.forEach((e) => {
       if (!map.has(e.participant_id)) map.set(e.participant_id, []);
       map.get(e.participant_id)!.push(e);
     });
-    const order = Array.from(map.keys()).sort((a, b) => {
-      const pa = getParticipant(a)?.name || '';
-      const pb = getParticipant(b)?.name || '';
-      return pa.localeCompare(pb, 'nb');
-    });
     order.forEach((pid) => {
       map.get(pid)!.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
     });
     return { map, order };
-  }, [allEntries, getParticipant]);
+  }, [allEntries, getParticipant, viewMode]);
 
   // Search across participants who have any entry
   const filteredOrder = useMemo(() => {
