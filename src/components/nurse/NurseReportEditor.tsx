@@ -217,6 +217,16 @@ export function NurseReportEditor({ participants, onDataChange, onOpenParticipan
       if (!map.has(e.participant_id)) map.set(e.participant_id, []);
       map.get(e.participant_id)!.push(e);
     });
+    const latest = (pid: string) =>
+      (map.get(pid) || []).reduce((acc, e) => (e.created_at > acc ? e.created_at : acc), '');
+    const order = Array.from(map.keys()).sort((a, b) => {
+      if (viewMode === 'name') {
+        const pa = getParticipant(a)?.name || '';
+        const pb = getParticipant(b)?.name || '';
+        return pa.localeCompare(pb, 'nb');
+      }
+      return latest(b).localeCompare(latest(a));
+    });
     order.forEach((pid) => {
       map.get(pid)!.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
     });
