@@ -1105,9 +1105,10 @@ export default function Nurse() {
       </div>
 
       <Tabs defaultValue="participants" className="w-full">
-        <TabsList className="w-full grid grid-cols-2">
+        <TabsList className="w-full grid grid-cols-3">
           <TabsTrigger value="participants">Alle deltakere</TabsTrigger>
           <TabsTrigger value="report">Rapport</TabsTrigger>
+          <TabsTrigger value="incidents">Hendelser</TabsTrigger>
         </TabsList>
 
         <TabsContent value="participants" className="space-y-6 mt-4">
@@ -1269,6 +1270,10 @@ export default function Nurse() {
               if (p) openParticipantDetail(p);
             }}
           />
+        </TabsContent>
+
+        <TabsContent value="incidents" className="mt-4">
+          <IncidentInboxTab onDataChange={handleReportChange} />
         </TabsContent>
       </Tabs>
 
