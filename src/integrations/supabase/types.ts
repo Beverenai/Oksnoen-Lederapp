@@ -902,6 +902,54 @@ export type Database = {
         }
         Relationships: []
       }
+      nurse_incident_reviews: {
+        Row: {
+          created_at: string
+          id: string
+          incident_id: string
+          mention_ids: string[]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          incident_id: string
+          mention_ids?: string[]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          incident_id?: string
+          mention_ids?: string[]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nurse_incident_reviews_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: true
+            referencedRelation: "participant_incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nurse_incident_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nurse_report_mentions: {
         Row: {
           created_at: string | null
