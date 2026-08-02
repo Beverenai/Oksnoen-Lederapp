@@ -540,7 +540,6 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
           ))}
         </div>
       ) : (
-      {/* Scrollable list */}
       <div className="flex-1 min-h-0 overflow-y-auto space-y-4 p-1 pb-4">
         {filteredOrder.length === 0 && (
           <div className="text-center py-8 text-muted-foreground text-sm">
