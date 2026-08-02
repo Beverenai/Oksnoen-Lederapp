@@ -223,16 +223,47 @@ export function IncidentInboxTab({ onDataChange }: Props) {
           </p>
 
           {!review ? (
-            <div className="flex gap-2 pt-1">
-              <Button size="sm" className="flex-1" disabled={busy} onClick={() => approve(i)}>
-                {busy ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
-                Godkjenn til rapport
-              </Button>
-              <Button size="sm" variant="outline" disabled={busy} onClick={() => dismiss(i)}>
-                <X className="w-4 h-4 mr-1" />
-                Ikke relevant
-              </Button>
-            </div>
+            openCommentFor === i.id ? (
+              <div className="space-y-2 pt-1">
+                <Textarea
+                  autoFocus
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Kommentar fra nurse (valgfritt)…"
+                  className="min-h-[70px] text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" className="flex-1" disabled={busy} onClick={() => approve(i, commentText)}>
+                    {busy ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
+                    Legg i rapporten
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => { setOpenCommentFor(null); setCommentText(''); }}
+                  >
+                    Avbryt
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2 pt-1">
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  disabled={busy}
+                  onClick={() => { setOpenCommentFor(i.id); setCommentText(''); }}
+                >
+                  <Check className="w-4 h-4 mr-1" />
+                  Godkjenn til rapport
+                </Button>
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => dismiss(i)}>
+                  <X className="w-4 h-4 mr-1" />
+                  Ikke relevant
+                </Button>
+              </div>
+            )
           ) : (
             <div className="flex items-center justify-between gap-2 pt-1">
               <span
