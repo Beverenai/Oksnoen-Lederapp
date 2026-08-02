@@ -15,6 +15,7 @@ import { getOrCreateActiveNurseReportId } from '@/lib/nurseReport';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Bell, Check, Loader2, Undo2, X, Inbox } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -31,12 +32,14 @@ interface Review {
   reviewed_at: string | null;
 }
 
-function incidentText(i: Incident) {
+function incidentText(i: Incident, nurseComment?: string, nurseName?: string) {
   const parts = [`[Hendelse] ${i.title}`];
   if (i.description) parts.push(i.description);
-  parts.push(
-    `(${CATEGORY_LABELS[i.category]} · ${SEVERITY_LABELS[i.severity]} · meldt av ${i.leader?.name ?? 'ukjent leder'})`
-  );
+  parts.push(`Meldt av: ${i.leader?.name ?? 'ukjent leder'}`);
+  parts.push(`${CATEGORY_LABELS[i.category]} · ${SEVERITY_LABELS[i.severity]}`);
+  if (nurseComment?.trim()) {
+    parts.push(`Kommentar (${nurseName || 'nurse'}): ${nurseComment.trim()}`);
+  }
   return parts.join('\n');
 }
 
@@ -51,6 +54,8 @@ export function IncidentInboxTab({ onDataChange }: Props) {
   const { data: incidents = [], isLoading } = useParticipantIncidents({ adminAll: true });
   const [busyId, setBusyId] = useState<string | null>(null);
   const [showHandled, setShowHandled] = useState(false);
+  const [openCommentFor, setOpenCommentFor] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState('');
 
   const { data: reviews = [], refetch: refetchReviews } = useQuery({
     queryKey: ['nurse-incident-reviews'],
@@ -73,12 +78,12 @@ export function IncidentInboxTab({ onDataChange }: Props) {
   const pending = incidents.filter((i) => !reviewMap.get(i.id));
   const handled = incidents.filter((i) => !!reviewMap.get(i.id));
 
-  const approve = async (incident: Incident) => {
+  const approve = async (incident: Incident, comment?: string) => {
     setBusyId(incident.id);
     try {
       const rid = await getOrCreateActiveNurseReportId(leader?.id);
       if (!rid) throw new Error('Ingen aktiv rapport');
-      const text = incidentText(incident);
+      const text = incidentText(incident, comment, leader?.name);
       const targets = incident.participants.length > 0 ? incident.participants : [];
       let mentionIds: string[] = [];
       if (targets.length > 0) {
@@ -115,6 +120,8 @@ export function IncidentInboxTab({ onDataChange }: Props) {
       await refetchReviews();
       qc.invalidateQueries({ queryKey: ['nurse-report'] });
       onDataChange?.();
+      setOpenCommentFor(null);
+      setCommentText('');
     } catch (e) {
       console.error(e);
       showError('Kunne ikke legge inn i rapporten');
@@ -216,16 +223,47 @@ export function IncidentInboxTab({ onDataChange }: Props) {
           </p>
 
           {!review ? (
-            <div className="flex gap-2 pt-1">
-              <Button size="sm" className="flex-1" disabled={busy} onClick={() => approve(i)}>
-                {busy ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
-                Godkjenn til rapport
-              </Button>
-              <Button size="sm" variant="outline" disabled={busy} onClick={() => dismiss(i)}>
-                <X className="w-4 h-4 mr-1" />
-                Ikke relevant
-              </Button>
-            </div>
+            openCommentFor === i.id ? (
+              <div className="space-y-2 pt-1">
+                <Textarea
+                  autoFocus
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Kommentar fra nurse (valgfritt)…"
+                  className="min-h-[70px] text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" className="flex-1" disabled={busy} onClick={() => approve(i, commentText)}>
+                    {busy ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
+                    Legg i rapporten
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => { setOpenCommentFor(null); setCommentText(''); }}
+                  >
+                    Avbryt
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2 pt-1">
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  disabled={busy}
+                  onClick={() => { setOpenCommentFor(i.id); setCommentText(''); }}
+                >
+                  <Check className="w-4 h-4 mr-1" />
+                  Godkjenn til rapport
+                </Button>
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => dismiss(i)}>
+                  <X className="w-4 h-4 mr-1" />
+                  Ikke relevant
+                </Button>
+              </div>
+            )
           ) : (
             <div className="flex items-center justify-between gap-2 pt-1">
               <span
