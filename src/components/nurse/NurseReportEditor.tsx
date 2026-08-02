@@ -481,7 +481,7 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
       {/* View mode */}
       <div className="flex items-center gap-1 pb-3">
         <span className="text-[11px] uppercase tracking-wide text-muted-foreground mr-1">Sortering</span>
-        {(['participant', 'date'] as const).map((m) => (
+        {(['recent', 'name', 'date'] as const).map((m) => (
           <button
             key={m}
             type="button"
@@ -493,7 +493,7 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
                 : 'bg-background border-border text-muted-foreground')
             }
           >
-            {m === 'participant' ? 'Deltaker' : 'Dato'}
+            {m === 'recent' ? 'Sist skrevet' : m === 'name' ? 'Navn' : 'Dato'}
           </button>
         ))}
       </div>
