@@ -582,6 +582,9 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
                       {age ? ` · ${age} år` : ''}
                       {' · '}
                       {pEntries.length} oppføring{pEntries.length !== 1 ? 'er' : ''}
+                      {pEntries.length > 0 && pEntries[pEntries.length - 1].created_at
+                        ? ` · sist ${format(new Date(pEntries[pEntries.length - 1].created_at), 'd. MMM HH:mm', { locale: nb })}`
+                        : ''}
                     </div>
                   </div>
                   {onOpenParticipant && <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
