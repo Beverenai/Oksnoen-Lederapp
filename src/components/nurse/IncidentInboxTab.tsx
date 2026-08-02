@@ -15,6 +15,7 @@ import { getOrCreateActiveNurseReportId } from '@/lib/nurseReport';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Bell, Check, Loader2, Undo2, X, Inbox } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -53,6 +54,8 @@ export function IncidentInboxTab({ onDataChange }: Props) {
   const { data: incidents = [], isLoading } = useParticipantIncidents({ adminAll: true });
   const [busyId, setBusyId] = useState<string | null>(null);
   const [showHandled, setShowHandled] = useState(false);
+  const [openCommentFor, setOpenCommentFor] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState('');
 
   const { data: reviews = [], refetch: refetchReviews } = useQuery({
     queryKey: ['nurse-incident-reviews'],
@@ -75,12 +78,12 @@ export function IncidentInboxTab({ onDataChange }: Props) {
   const pending = incidents.filter((i) => !reviewMap.get(i.id));
   const handled = incidents.filter((i) => !!reviewMap.get(i.id));
 
-  const approve = async (incident: Incident) => {
+  const approve = async (incident: Incident, comment?: string) => {
     setBusyId(incident.id);
     try {
       const rid = await getOrCreateActiveNurseReportId(leader?.id);
       if (!rid) throw new Error('Ingen aktiv rapport');
-      const text = incidentText(incident);
+      const text = incidentText(incident, comment, leader?.name);
       const targets = incident.participants.length > 0 ? incident.participants : [];
       let mentionIds: string[] = [];
       if (targets.length > 0) {
@@ -117,6 +120,8 @@ export function IncidentInboxTab({ onDataChange }: Props) {
       await refetchReviews();
       qc.invalidateQueries({ queryKey: ['nurse-report'] });
       onDataChange?.();
+      setOpenCommentFor(null);
+      setCommentText('');
     } catch (e) {
       console.error(e);
       showError('Kunne ikke legge inn i rapporten');
