@@ -507,36 +507,89 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
             </div>
           )}
           {dateGroups.order.map((day) => (
-            <div key={day} className="rounded-xl border border-border overflow-hidden">
-              <div className="px-4 py-2 bg-muted/60 border-b border-border flex items-center justify-between">
-                <span className="text-sm font-semibold">
+            <div key={day} className="rounded-xl border-2 border-primary/20 bg-primary/[0.03] overflow-hidden">
+              <div className="px-4 py-3 bg-primary/[0.06] border-b border-primary/10 flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold capitalize truncate">
                   {day === 'ukjent' ? 'Ukjent dato' : format(new Date(day), 'EEEE d. MMMM', { locale: nb })}
                 </span>
-                <span className="text-[11px] text-muted-foreground">
-                  {dateGroups.map.get(day)!.length} oppføringer
+                <span className="text-xs text-muted-foreground flex-shrink-0">
+                  {dateGroups.map.get(day)!.length} oppføring{dateGroups.map.get(day)!.length !== 1 ? 'er' : ''}
                 </span>
               </div>
               <div className="divide-y divide-border/50">
                 {dateGroups.map.get(day)!.map((entry) => {
                   const p = getParticipant(entry.participant_id);
                   return (
-                    <div key={`${entry.source}-${entry.id}`} className="px-4 py-2.5">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[11px] text-muted-foreground">
-                          {entry.created_at ? format(new Date(entry.created_at), 'HH:mm') : '—'}
-                        </span>
+                    <div key={`${entry.source}-${entry.id}`} className="px-4 py-2.5 group">
+                      <div className="flex items-start gap-2">
                         <button
                           type="button"
-                          className="text-xs font-semibold hover:text-primary"
+                          className="flex-shrink-0 mt-0.5"
                           onClick={() => onOpenParticipant?.(entry.participant_id)}
+                          aria-label={p?.name || 'Deltaker'}
                         >
-                          {p?.name || 'Ukjent deltaker'}
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={p?.image_url || undefined} alt={p?.name || ''} />
+                            <AvatarFallback className="text-xs"><User className="w-3 h-3" /></AvatarFallback>
+                          </Avatar>
                         </button>
-                        <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                          {entry.source_label}
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                              type="button"
+                              className="font-semibold text-sm truncate hover:text-primary"
+                              onClick={() => onOpenParticipant?.(entry.participant_id)}
+                            >
+                              {p?.name || 'Ukjent deltaker'}
+                            </button>
+                            <span className="text-[11px] text-muted-foreground">
+                              {entry.created_at ? format(new Date(entry.created_at), 'HH:mm') : '—'}
+                            </span>
+                            <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                              {entry.source_label}
+                            </span>
+                          </div>
+                          {editingId === entry.id ? (
+                            <div className="mt-1 space-y-2">
+                              <Textarea
+                                autoFocus
+                                value={editText}
+                                onChange={(e) => setEditText(e.target.value)}
+                                className="min-h-[90px] text-sm"
+                              />
+                              <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>Avbryt</Button>
+                                <Button size="sm" onClick={() => saveEdit(entry)} disabled={savingEdit || !editText.trim()}>
+                                  {savingEdit ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                                  Lagre
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap mt-0.5">{entry.text}</p>
+                          )}
+                        </div>
+                        {entry.source !== 'health_event' && editingId !== entry.id && (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              className="text-muted-foreground hover:text-primary p-1"
+                              onClick={() => startEdit(entry)}
+                              aria-label="Rediger notat"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            {entry.source === 'mention' && (
+                              <button
+                                className="text-muted-foreground hover:text-destructive p-1"
+                                onClick={() => setDeleteTarget({ id: entry.id, participantName: p?.name || '' })}
+                                aria-label="Slett notat"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap mt-0.5">{entry.text}</p>
                     </div>
                   );
                 })}
