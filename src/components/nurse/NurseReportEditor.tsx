@@ -655,6 +655,7 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
           );
         })}
       </div>
+      )}
 
       {/* Add note dialog */}
       <ResponsiveDialog open={!!addNoteFor} onOpenChange={(o) => { if (!o) { setAddNoteFor(null); setNewNoteText(''); } }}>
