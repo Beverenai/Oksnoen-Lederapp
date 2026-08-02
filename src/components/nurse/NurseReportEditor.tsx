@@ -461,7 +461,7 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Søk deltaker..."
+            placeholder={viewMode === 'date' ? 'Søk deltaker eller tekst...' : 'Søk deltaker...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-9 text-sm"
@@ -473,6 +473,73 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
         </Button>
       </div>
 
+      {/* View mode */}
+      <div className="flex items-center gap-1 pb-3">
+        <span className="text-[11px] uppercase tracking-wide text-muted-foreground mr-1">Sortering</span>
+        {(['participant', 'date'] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setViewMode(m)}
+            className={
+              'px-3 py-1 rounded-full text-xs border ' +
+              (viewMode === m
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background border-border text-muted-foreground')
+            }
+          >
+            {m === 'participant' ? 'Deltaker' : 'Dato'}
+          </button>
+        ))}
+      </div>
+
+      {viewMode === 'date' ? (
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 p-1 pb-4">
+          {dateGroups.order.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              <Clock className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p>Ingen oppføringer.</p>
+            </div>
+          )}
+          {dateGroups.order.map((day) => (
+            <div key={day} className="rounded-xl border border-border overflow-hidden">
+              <div className="px-4 py-2 bg-muted/60 border-b border-border flex items-center justify-between">
+                <span className="text-sm font-semibold">
+                  {day === 'ukjent' ? 'Ukjent dato' : format(new Date(day), 'EEEE d. MMMM', { locale: nb })}
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  {dateGroups.map.get(day)!.length} oppføringer
+                </span>
+              </div>
+              <div className="divide-y divide-border/50">
+                {dateGroups.map.get(day)!.map((entry) => {
+                  const p = getParticipant(entry.participant_id);
+                  return (
+                    <div key={`${entry.source}-${entry.id}`} className="px-4 py-2.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] text-muted-foreground">
+                          {entry.created_at ? format(new Date(entry.created_at), 'HH:mm') : '—'}
+                        </span>
+                        <button
+                          type="button"
+                          className="text-xs font-semibold hover:text-primary"
+                          onClick={() => onOpenParticipant?.(entry.participant_id)}
+                        >
+                          {p?.name || 'Ukjent deltaker'}
+                        </button>
+                        <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                          {entry.source_label}
+                        </span>
+                      </div>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap mt-0.5">{entry.text}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
       {/* Scrollable list */}
       <div className="flex-1 min-h-0 overflow-y-auto space-y-4 p-1 pb-4">
         {filteredOrder.length === 0 && (
