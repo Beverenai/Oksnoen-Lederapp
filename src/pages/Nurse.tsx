@@ -2,6 +2,7 @@ import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { NurseReportEditor } from '@/components/nurse/NurseReportEditor';
+import { IncidentInboxTab } from '@/components/nurse/IncidentInboxTab';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
