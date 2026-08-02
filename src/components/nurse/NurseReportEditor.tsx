@@ -86,7 +86,7 @@ export function NurseReportEditor({ participants, onDataChange, onOpenParticipan
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
-  const [viewMode, setViewMode] = useState<'participant' | 'date'>('participant');
+  const [viewMode, setViewMode] = useState<'recent' | 'name' | 'date'>('recent');
 
   const getParticipant = useCallback((id: string) => participants.find((p) => p.id === id), [participants]);
 
