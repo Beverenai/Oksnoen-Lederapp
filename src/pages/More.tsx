@@ -72,11 +72,25 @@ function Tile({ item }: { item: MoreItem }) {
 }
 
 export default function More() {
-  const { isAdmin, isNurse, logout, leader } = useAuth();
+  const { isAdmin, isNurse, logout, leader, effectiveLeader } = useAuth();
   const sweatersEnabled = useSweatersEnabled();
   const { data: murderState } = useMyMurderState();
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
+  const [periodLabel, setPeriodLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from('periods')
+      .select('name')
+      .eq('is_active', true)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setPeriodLabel(data?.name ?? null);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
