@@ -25,6 +25,7 @@ import {
   Shirt,
   Heart,
   Dices,
+  Skull,
   ClipboardList,
   Archive,
 } from 'lucide-react';
@@ -60,6 +61,7 @@ const navItems = [
   { key: 'gjenglemt', label: 'Gjenglemt', desc: 'Perioder og offentlige lenker', icon: Shirt, color: 'bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400' },
   { key: 'nurse-periods', label: 'Periode', desc: 'Velg aktiv periode (1–7)', icon: Heart, color: 'bg-rose-500/15 text-rose-600 dark:text-rose-400' },
   { key: 'roulette', label: 'Oppgave-roulette', desc: 'Legg inn senior/U18-oppgaver', icon: Dices, color: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
+  { key: 'murder', label: 'Morder-leken', desc: 'Start spillet og se hele kjeden', icon: Skull, color: 'bg-stone-500/15 text-stone-600 dark:text-stone-300' },
   { key: 'bookings', label: 'Booking-info', desc: 'Importer booking-data per periode', icon: ClipboardList, color: 'bg-sky-500/15 text-sky-600 dark:text-sky-400' },
   { key: 'sweaters', label: 'Gensere', desc: 'Hentet / kjøpt genser dag 1', icon: Shirt, color: 'bg-lime-500/15 text-lime-600 dark:text-lime-400' },
   { key: 'archive', label: 'Periodearkiv', desc: 'Se data fra alle perioder', icon: Archive, color: 'bg-slate-500/15 text-slate-600 dark:text-slate-300', path: '/arkiv' },
@@ -74,6 +76,7 @@ const sectionLabels: Record<string, string> = {
   overnatting: 'Overnatting',
   'nurse-periods': 'Periode',
   roulette: 'Oppgave-roulette',
+  murder: 'Morder-leken',
   bookings: 'Booking-info',
   sweaters: 'Gensere',
 };
