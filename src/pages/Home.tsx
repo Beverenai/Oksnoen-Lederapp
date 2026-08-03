@@ -45,6 +45,7 @@ import { Skull } from 'lucide-react';
 import { Tent, AlertCircle } from 'lucide-react';
 import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
 import { OvernattingGateDialog, OvernattingEditDialog } from '@/components/home/OvernattingDialogs';
+import { groupMainCabins } from '@/lib/cabinDisplay';
 
 type SessionData = { reminder: string; items: string[] };
 type SessionsPayload = { active: 1 | 2 | 3; sessions: Record<'1' | '2' | '3', SessionData> };
