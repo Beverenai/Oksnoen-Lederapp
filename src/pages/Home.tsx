@@ -459,73 +459,58 @@ export default function Home() {
   return (
     <div ref={pullRef} className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 pb-24 overflow-y-auto">
       <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
-      {/* Profile Section — top of page (no header image) */}
-      <div className="relative px-4 pt-6">
-        {/* Refresh button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={loadData}
-          aria-label="Oppdater"
-          className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
-        >
-          <RefreshCw className="w-5 h-5" />
-        </Button>
-        <div className="flex flex-col items-center text-center">
-          {/* User name at the very top */}
-          <h1 className="text-xl font-heading font-bold text-foreground mb-3">
-            Hei, {effectiveLeader?.name?.split(' ')[0]}!
-          </h1>
-
-          {/* Pass (left) — Avatar (center) — Morderleken (right) */}
-          <div className="flex items-center justify-center gap-4 sm:gap-6">
-            <div className="w-16 flex justify-center shrink-0">
-              <LederPass leader={effectiveLeader} periodLabel={activePeriodLabel} />
-            </div>
-
-            <Avatar className={cn(
-              "h-20 w-20 sm:h-24 sm:w-24 border-2 shadow-lg ring-2 shrink-0",
-              (isAdmin || isNurse || hasRead)
-                ? "border-green-500 ring-green-500/20"
-                : "border-red-500 ring-red-500/20"
-            )}>
-              <AvatarImage src={effectiveLeader?.profile_image_url || ''} alt={effectiveLeader?.name} />
-              <AvatarFallback className="bg-primary text-primary-foreground font-heading text-xl">
-                {effectiveLeader?.name ? getInitials(effectiveLeader.name) : '?'}
-              </AvatarFallback>
-            </Avatar>
-
-            <div className="w-16 flex justify-center shrink-0">
-              {showMurder && (
-                <button
-                  type="button"
-                  aria-label="Morderleken"
-                  onClick={() => navigate('/morder')}
-                  className="flex flex-col items-center gap-1 group"
-                >
-                  <span className="relative p-2.5 rounded-full bg-stone-500/15 border border-stone-500/30 transition-colors group-hover:bg-stone-500/25">
-                    <Skull className="w-6 h-6 text-stone-700 dark:text-stone-300" />
-                    {murderState?.incoming_claim_id && (
-                      <span className="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-background" />
-                    )}
-                  </span>
-                  <span className="text-[9px] uppercase tracking-wide font-medium text-muted-foreground leading-none">
-                    Morderleken
-                  </span>
-                </button>
-              )}
-            </div>
+      {/* Profile Section — compact single row (iOS-style) */}
+      <div className="px-4 pt-4">
+        <div className="flex items-center gap-3">
+          {/* Pass */}
+          <div className="shrink-0">
+            <LederPass leader={effectiveLeader} periodLabel={activePeriodLabel} />
           </div>
-          
-          <p className="text-base font-medium text-foreground mt-2">
-            {effectiveLeader?.name}
-          </p>
 
-          {effectiveLeader?.ministerpost && (
-            <p className="text-sm text-muted-foreground mt-0.5">{effectiveLeader.ministerpost}</p>
+          <Avatar className={cn(
+            "h-14 w-14 border-2 shadow-sm ring-2 shrink-0",
+            (isAdmin || isNurse || hasRead)
+              ? "border-green-500 ring-green-500/20"
+              : "border-red-500 ring-red-500/20"
+          )}>
+            <AvatarImage src={effectiveLeader?.profile_image_url || ''} alt={effectiveLeader?.name} />
+            <AvatarFallback className="bg-primary text-primary-foreground font-heading">
+              {effectiveLeader?.name ? getInitials(effectiveLeader.name) : '?'}
+            </AvatarFallback>
+          </Avatar>
+
+          {showMurder && (
+            <button
+              type="button"
+              aria-label="Morderleken"
+              onClick={() => navigate('/morder')}
+              className="shrink-0 relative p-2 rounded-full bg-stone-500/15 border border-stone-500/30 transition-colors hover:bg-stone-500/25"
+            >
+              <Skull className="w-5 h-5 text-stone-700 dark:text-stone-300" />
+              {murderState?.incoming_claim_id && (
+                <span className="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-background" />
+              )}
+            </button>
           )}
-          
-          <div className="flex flex-wrap gap-1.5 mt-2 justify-center">
+
+          <div className="flex-1 min-w-0 text-right">
+            {effectiveLeader?.ministerpost && (
+              <p className="text-xs text-muted-foreground truncate">{effectiveLeader.ministerpost}</p>
+            )}
+          </div>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={loadData}
+            aria-label="Oppdater"
+            className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5 mt-2">
             {leaderCabins.length > 0 ? (
               leaderCabins.map(cabin => (
                 <Badge 
@@ -552,36 +537,73 @@ export default function Home() {
                 </Badge>
               </Link>
             )}
-          </div>
         </div>
       </div>
 
       {/* Content Cards - consistent spacing */}
       <div className="px-4 mt-4 sm:mt-6 space-y-3 sm:space-y-4">
-        {/* Registrer hendelse — prominent */}
-        <Card
-          role="button"
-          tabIndex={0}
+        {/* Aktiviteter denne økten — viktigst, øverst */}
+        {isElementVisible('session_activities') && sessionsPayload && (() => {
+          const sessionConfig = getConfigForElement('session_activities');
+          const activeKey = String(sessionsPayload.active) as '1' | '2' | '3';
+          const current = sessionsPayload.sessions[activeKey];
+          if (!current || (!current.reminder && !current.items?.length)) return null;
+          const reminder = current.reminder?.trim() || '';
+          const activities = current.items || [];
+          const sessionLabel = `${sessionsPayload.active}. økt`;
+          return (
+            <Card className={cn(
+              "border-2 border-primary/30 bg-primary/5 dark:bg-primary/10 shadow-md",
+              getCardStyle(sessionConfig)
+            )}>
+              <CardContent className="py-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="p-1.5 rounded-full bg-primary/15 shrink-0">
+                      <SessionIcon className="w-4 h-4 text-primary" />
+                    </div>
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {getElementTitle('session_activities', 'Aktiviteter denne økten')}
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/15 text-primary shrink-0">
+                    {sessionLabel}
+                  </span>
+                </div>
+
+                {reminder && (
+                  <div className="rounded-lg border border-amber-200/60 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30 p-2.5 flex gap-2">
+                    <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-900 dark:text-amber-100 leading-snug min-w-0">{reminder}</p>
+                  </div>
+                )}
+
+                {activities.length > 0 && (
+                  <ul className="space-y-1.5">
+                    {activities.map((a, i) => (
+                      <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                        <span className={cn("text-foreground leading-snug", getTextStyle(sessionConfig))}>{a}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
+
+        {/* Registrer hendelse — kompakt */}
+        <button
+          type="button"
           onClick={() => navigate('/hendelser')}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/hendelser'); }}
-          className="border-2 border-red-500/50 bg-red-50/70 dark:bg-red-950/30 shadow-md cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
+          className="w-full flex items-center gap-2.5 rounded-xl border-2 border-red-500/50 bg-red-50/70 dark:bg-red-950/30 px-3 py-2.5 text-left transition-colors hover:bg-red-50 dark:hover:bg-red-950/50"
         >
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-full bg-red-500/20 shrink-0">
-                <MessageSquareWarning className="w-6 h-6 text-red-600 dark:text-red-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-base font-semibold text-red-800 dark:text-red-200">
-                  Registrer hendelse
-                </p>
-                <p className="text-xs text-red-700/80 dark:text-red-300/80">
-                  Meld inn noe som har skjedd med en deltaker
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <MessageSquareWarning className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
+          <span className="text-sm font-semibold text-red-800 dark:text-red-200">
+            Registrer hendelse
+          </span>
+        </button>
 
         {/* Kjøkkentjeneste i dag */}
         {teamsEnabled && dutyTeamA && dutyTeamB && (
@@ -624,36 +646,7 @@ export default function Home() {
           </Card>
         )}
 
-        {/* Oppgave-roulette */}
-        {showMurder && (
-        <Card
-          className="border border-stone-500/30 bg-stone-100/60 dark:bg-stone-900/30 cursor-pointer hover:bg-stone-100 dark:hover:bg-stone-900/50 transition-colors shadow-sm"
-          onClick={() => navigate('/morder')}
-        >
-          <CardContent className="py-3 sm:py-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-stone-500/15 shrink-0">
-                <Skull className="w-5 h-5 text-stone-700 dark:text-stone-300" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] uppercase tracking-wide text-stone-600/80 dark:text-stone-300/80 font-medium mb-0.5">
-                  Morder-leken
-                </p>
-                <p className="text-sm sm:text-base font-medium text-foreground">
-                  {murderState?.is_alive === false
-                    ? 'Du er ute av leken'
-                    : murderState?.incoming_claim_id
-                      ? 'Noen har meldt at du er tatt – bekreft'
-                      : murderState?.pending_claim_id
-                        ? 'Venter på bekreftelse fra offeret'
-                        : 'Se hvem du skal drepe'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        )}
-
+        {/* Morder-leken: kun ikonet ved profilbildet (ingen kort her) */}
         {showRoulette && (
         <Card
           className="border border-violet-500/30 bg-violet-50/50 dark:bg-violet-950/20 cursor-pointer hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors shadow-sm"
@@ -887,57 +880,6 @@ export default function Home() {
             </Card>
           );
         })}
-
-        {/* Session Activities - structured */}
-        {isElementVisible('session_activities') && sessionsPayload && (() => {
-          const sessionConfig = getConfigForElement('session_activities');
-          const activeKey = String(sessionsPayload.active) as '1' | '2' | '3';
-          const current = sessionsPayload.sessions[activeKey];
-          if (!current || (!current.reminder && !current.items?.length)) return null;
-          const reminder = current.reminder?.trim() || '';
-          const activities = current.items || [];
-          const sessionLabel = `${sessionsPayload.active}. økt`;
-          return (
-            <Card className={cn(
-              "border border-border/50",
-              getCardStyle(sessionConfig)
-            )}>
-              <CardContent className="py-4 space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-full bg-primary/10">
-                      <SessionIcon className="w-4 h-4 text-primary" />
-                    </div>
-                    <p className="text-[10px] uppercase tracking-wide text-primary/80 font-semibold">
-                      {getElementTitle('session_activities', 'Aktiviteter denne økten')}
-                    </p>
-                  </div>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                    {sessionLabel}
-                  </span>
-                </div>
-
-                {reminder && (
-                  <div className="rounded-lg border border-amber-200/60 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30 p-2.5 flex gap-2">
-                    <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                    <p className="text-sm text-amber-900 dark:text-amber-100 leading-snug min-w-0">{reminder}</p>
-                  </div>
-                )}
-
-                {activities.length > 0 && (
-                  <ul className="space-y-1.5">
-                    {activities.map((a, i) => (
-                      <li key={i} className="flex items-start gap-2.5">
-                        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                        <span className={cn("text-foreground leading-snug", getTextStyle(sessionConfig))}>{a}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })()}
 
         {/* Empty State */}
         {!hasAnyContent && (
