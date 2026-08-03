@@ -191,7 +191,7 @@ export default function Nurse() {
       const participantIds = participantsData?.map(p => p.id) || [];
       
       const [notesRes, eventsRes, healthInfoRes, activitiesRes] = await Promise.all([
-        supabase.from('participant_health_notes').select('*').in('participant_id', participantIds),
+        supabase.from('participant_health_notes').select('*').in('participant_id', participantIds).order('updated_at', { ascending: false }),
         supabase.from('participant_health_events').select('*').in('participant_id', participantIds).order('created_at', { ascending: false }),
         supabase.from('participant_health_info').select('*').in('participant_id', participantIds),
         supabase.from('participant_activities').select('*').in('participant_id', participantIds),
@@ -221,7 +221,7 @@ export default function Nurse() {
 
   const loadParticipantDetails = async (participant: ParticipantWithHealth) => {
     const [notesRes, eventsRes, activitiesRes, healthInfoRes] = await Promise.all([
-      supabase.from('participant_health_notes').select('*').eq('participant_id', participant.id),
+      supabase.from('participant_health_notes').select('*').eq('participant_id', participant.id).order('updated_at', { ascending: false }),
       supabase.from('participant_health_events').select('*').eq('participant_id', participant.id).order('created_at', { ascending: false }),
       supabase.from('participant_activities').select('*').eq('participant_id', participant.id),
       supabase.from('participant_health_info').select('*').eq('participant_id', participant.id).maybeSingle(),
@@ -245,10 +245,11 @@ export default function Nurse() {
   // ---- Auto-save (debounced) for notes fields ----
   const autoSaveHealthNote = (value: string) => {
     const participant = selectedParticipant;
-    if (!participant || !value.trim()) return Promise.resolve();
+    if (!participant) return Promise.resolve();
 
     const noteHint = participant.healthNotes[0];
-    if (noteHint?.content === value) return Promise.resolve();
+    if ((noteHint?.content ?? '') === value) return Promise.resolve();
+    if (!noteHint && !value.trim()) return Promise.resolve();
 
     setIsAutoSavingNote(true);
     const save = async () => {
@@ -265,7 +266,7 @@ export default function Nurse() {
         let savedNote: HealthNote;
         if (currentNote) {
           const { data, error } = await supabase.from('participant_health_notes')
-            .update({ content: value, created_by: leader?.id })
+            .update({ content: value, created_by: leader?.id, updated_at: new Date().toISOString() })
             .eq('id', currentNote.id)
             .select()
             .single();
@@ -442,7 +443,7 @@ export default function Nurse() {
       if (existingNote) {
         const { error } = await supabase
           .from('participant_health_notes')
-          .update({ content: newNote, created_by: leader?.id })
+          .update({ content: newNote, created_by: leader?.id, updated_at: new Date().toISOString() })
           .eq('id', existingNote.id);
         if (error) throw error;
         setSelectedParticipant((prev) => prev ? ({
