@@ -15,6 +15,8 @@ import {
   Settings,
   LogOut,
   Bell,
+  Skull,
+  IdCard,
   LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -22,6 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useSweatersEnabled } from '@/hooks/useSweatersEnabled';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
+import { useMyMurderState } from '@/hooks/useMurderGame';
 import { cn } from '@/lib/utils';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 
@@ -70,6 +73,7 @@ function Tile({ item }: { item: MoreItem }) {
 export default function More() {
   const { isAdmin, isNurse, logout, leader } = useAuth();
   const sweatersEnabled = useSweatersEnabled();
+  const { data: murderState } = useMyMurderState();
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
 
@@ -108,6 +112,7 @@ export default function More() {
       label: 'Min side',
       items: [
         { to: '/profile', icon: User, label: 'Min Profil' },
+        { to: '/lederpass', icon: IdCard, label: 'Lederpasset' },
         { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
         { to: '/my-shifts', icon: ClipboardList, label: 'Min vakt' },
       ],
@@ -141,6 +146,9 @@ export default function More() {
     {
       label: 'Spesial',
       items: [
+        ...(murderState?.is_active
+          ? [{ to: '/morder', icon: Skull, label: 'Morderleken' } as MoreItem]
+          : []),
         ...(isNurse || isAdmin
           ? [{ to: '/nurse', icon: Heart, label: 'Nurse' } as MoreItem]
           : []),

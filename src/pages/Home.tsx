@@ -28,7 +28,6 @@ import {
   ChefHat,
   type LucideIcon
 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
@@ -43,6 +42,9 @@ import { Link as LinkIcon } from 'lucide-react';
 import { LederPass } from '@/components/passport/LederPass';
 import { useMyMurderState } from '@/hooks/useMurderGame';
 import { Skull } from 'lucide-react';
+import { Tent, AlertCircle } from 'lucide-react';
+import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
+import { OvernattingGateDialog, OvernattingEditDialog } from '@/components/home/OvernattingDialogs';
 
 type SessionData = { reminder: string; items: string[] };
 type SessionsPayload = { active: 1 | 2 | 3; sessions: Record<'1' | '2' | '3', SessionData> };
@@ -160,6 +162,8 @@ export default function Home() {
   const [overnattingQuestion, setOvernattingQuestion] = useState('Vil du være med på overnatting?');
   const [overnattingJoining, setOvernattingJoining] = useState(false);
   const [overnattingSaving, setOvernattingSaving] = useState(false);
+  const [overnattingAnswered, setOvernattingAnswered] = useState(true);
+  const [overnattingEditOpen, setOvernattingEditOpen] = useState(false);
   const [rouletteEnabled, setRouletteEnabled] = useState(false);
   const [activePeriodLabel, setActivePeriodLabel] = useState<string | null>(null);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
@@ -242,6 +246,7 @@ export default function Home() {
       setOvernattingTitle(cfgMap.get('overnatting_title') || 'Overnatting');
       setOvernattingQuestion(cfgMap.get('overnatting_question') || 'Vil du være med på overnatting?');
       setOvernattingJoining(overRespRes.data?.is_joining ?? false);
+      setOvernattingAnswered(!!overRespRes.data);
       setRouletteEnabled(cfgMap.get('roulette_enabled') === 'true');
 
       setContent(contentRes.data);
@@ -396,9 +401,11 @@ export default function Home() {
         .from('overnatting_responses')
         .upsert({ leader_id: effectiveLeader.id, is_joining: next, updated_at: new Date().toISOString() }, { onConflict: 'leader_id' });
       if (error) throw error;
+      setOvernattingAnswered(true);
     } catch (e) {
       console.error('Overnatting toggle failed', e);
       setOvernattingJoining(!next);
+      throw e;
     } finally {
       setOvernattingSaving(false);
     }
@@ -456,66 +463,63 @@ export default function Home() {
   const ObsIcon = getElementIcon('obs_message', AlertTriangle);
   const SessionIcon = getElementIcon('session_activities', Calendar);
 
+  const quickActions: QuickAction[] = [
+    {
+      key: 'hendelser',
+      icon: AlertCircle,
+      label: 'Hendelser',
+      tone: 'danger',
+      onClick: () => navigate('/hendelser'),
+    },
+    ...(overnattingEnabled
+      ? [{
+          key: 'overnatting',
+          icon: Tent,
+          label: overnattingTitle,
+          active: overnattingJoining,
+          onClick: () => setOvernattingEditOpen(true),
+        } as QuickAction]
+      : []),
+  ];
+
   return (
     <div ref={pullRef} className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 pb-24 overflow-y-auto">
       <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
-      {/* Profile Section — compact single row (iOS-style) */}
-      <div className="px-4 pt-4">
-        <div className="flex items-center gap-3">
-          {/* Pass */}
-          <div className="shrink-0">
-            <LederPass leader={effectiveLeader} periodLabel={activePeriodLabel} />
-          </div>
+      {/* Profile hero — centered avatar, name and chips */}
+      <div className="px-4 pt-3 relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={loadData}
+          aria-label="Oppdater"
+          className="absolute right-3 top-2 h-9 w-9 text-muted-foreground hover:text-foreground"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </Button>
 
+        <div className="flex flex-col items-center text-center">
           <Avatar className={cn(
-            "h-14 w-14 border-2 shadow-sm ring-2 shrink-0",
+            "h-24 w-24 border-2 shadow-sm ring-2",
             (isAdmin || isNurse || hasRead)
               ? "border-green-500 ring-green-500/20"
               : "border-red-500 ring-red-500/20"
           )}>
             <AvatarImage src={effectiveLeader?.profile_image_url || ''} alt={effectiveLeader?.name} />
-            <AvatarFallback className="bg-primary text-primary-foreground font-heading">
+            <AvatarFallback className="bg-primary text-primary-foreground font-heading text-xl">
               {effectiveLeader?.name ? getInitials(effectiveLeader.name) : '?'}
             </AvatarFallback>
           </Avatar>
 
-          {showMurder && (
-            <button
-              type="button"
-              aria-label="Morderleken"
-              onClick={() => navigate('/morder')}
-              className="shrink-0 relative p-2 rounded-full bg-stone-500/15 border border-stone-500/30 transition-colors hover:bg-stone-500/25"
-            >
-              <Skull className="w-5 h-5 text-stone-700 dark:text-stone-300" />
-              {murderState?.incoming_claim_id && (
-                <span className="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-background" />
-              )}
-            </button>
-          )}
+          <h1 className="mt-3 text-xl font-heading font-bold text-foreground">
+            {effectiveLeader?.name}
+          </h1>
 
-          <div className="flex-1 min-w-0 text-right">
-            {effectiveLeader?.ministerpost && (
-              <p className="text-xs text-muted-foreground truncate">{effectiveLeader.ministerpost}</p>
-            )}
-          </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={loadData}
-            aria-label="Oppdater"
-            className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-        </div>
-
-        <div className="flex flex-wrap gap-1.5 mt-2">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
             {leaderCabins.length > 0 ? (
               leaderCabins.map(cabin => (
-                <Badge 
+                <Badge
                   key={cabin.id}
-                  variant="secondary" 
+                  variant="secondary"
                   className="text-xs cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => navigate('/my-cabins')}
                 >
@@ -529,6 +533,9 @@ export default function Home() {
                 {leader.cabin_info}
               </Badge>
             )}
+            {effectiveLeader?.ministerpost && (
+              <Badge variant="outline" className="text-xs">{effectiveLeader.ministerpost}</Badge>
+            )}
             {leader?.team && (
               <Link to={`/team/${leader.team.toLowerCase()}`}>
                 <Badge variant="outline" className="text-xs cursor-pointer hover:opacity-80 transition-opacity">
@@ -537,6 +544,12 @@ export default function Home() {
                 </Badge>
               </Link>
             )}
+          </div>
+        </div>
+
+        {/* Round quick actions */}
+        <div className="mt-5">
+          <HomeQuickActions actions={quickActions} />
         </div>
       </div>
 
@@ -592,18 +605,6 @@ export default function Home() {
             </Card>
           );
         })()}
-
-        {/* Registrer hendelse — kompakt */}
-        <button
-          type="button"
-          onClick={() => navigate('/hendelser')}
-          className="w-full flex items-center gap-2.5 rounded-xl border-2 border-red-500/50 bg-red-50/70 dark:bg-red-950/30 px-3 py-2.5 text-left transition-colors hover:bg-red-50 dark:hover:bg-red-950/50"
-        >
-          <MessageSquareWarning className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
-          <span className="text-sm font-semibold text-red-800 dark:text-red-200">
-            Registrer hendelse
-          </span>
-        </button>
 
         {/* Kjøkkentjeneste i dag */}
         {teamsEnabled && dutyTeamA && dutyTeamB && (
@@ -719,32 +720,6 @@ export default function Home() {
         )}
 
         {/* HERO: Main Activity - Large Display with premium styling */}
-        {overnattingEnabled && (
-          <Card className="border-2 border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-sm">
-            <CardContent className="py-4 sm:py-5">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-indigo-500/15 shrink-0">
-                  <Bed className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wide text-indigo-600/80 dark:text-indigo-400/80 font-medium mb-0.5">
-                    {overnattingTitle}
-                  </p>
-                  <p className="text-sm sm:text-base font-medium text-foreground">{overnattingQuestion}</p>
-                </div>
-                <Switch
-                  checked={overnattingJoining}
-                  onCheckedChange={handleOvernattingToggle}
-                  disabled={overnattingSaving}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                {overnattingJoining ? 'Du er påmeldt ✓' : 'Skyv på for å melde deg på'}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
         {isElementVisible('current_activity') && (() => {
           const activityConfig = getConfigForElement('current_activity');
           return (
@@ -894,7 +869,52 @@ export default function Home() {
           </Card>
         )}
 
+        {/* Morder-leken — liten boks helt nederst */}
+        {showMurder && (
+          <button
+            type="button"
+            onClick={() => navigate('/morder')}
+            className="w-full flex items-center gap-3 rounded-2xl bg-foreground/90 px-4 py-3 text-left shadow-sm active:scale-[0.99] transition-transform"
+          >
+            <span className="relative w-9 h-9 rounded-xl bg-background/15 flex items-center justify-center shrink-0">
+              <Skull className="w-5 h-5 text-background" />
+              {murderState?.incoming_claim_id && (
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-destructive ring-2 ring-foreground" />
+              )}
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-semibold text-background">Morder-leken</span>
+              <span className="block text-[11px] text-background/70">
+                {murderState?.incoming_claim_id ? 'Noen hevder å ha drept deg' : 'Åpne for å se målet ditt'}
+              </span>
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-background/80">Åpne</span>
+          </button>
+        )}
+
       </div>
+
+      {/* Overnatting: tvunget førstegangssvar */}
+      {overnattingEnabled && !overnattingAnswered && (
+        <OvernattingGateDialog
+          open
+          title={overnattingTitle}
+          question={overnattingQuestion}
+          onAnswer={handleOvernattingToggle}
+        />
+      )}
+
+      {/* Overnatting: endre svar */}
+      {overnattingEnabled && (
+        <OvernattingEditDialog
+          open={overnattingEditOpen}
+          onOpenChange={setOvernattingEditOpen}
+          title={overnattingTitle}
+          question={overnattingQuestion}
+          joining={overnattingJoining}
+          onAnswer={handleOvernattingToggle}
+        />
+      )}
     </div>
   );
 }

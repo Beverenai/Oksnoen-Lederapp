@@ -51,6 +51,7 @@ const Gensere = lazy(() => import("@/pages/Gensere"));
 const Hendelser = lazy(() => import("@/pages/Hendelser"));
 const Chat = lazy(() => import("@/pages/Chat"));
 const More = lazy(() => import("@/pages/More"));
+const LederpassPage = lazy(() => import("@/pages/Lederpass"));
 const PeriodArchive = lazy(() => import("@/pages/admin/PeriodArchive"));
 
 const queryClient = new QueryClient({
@@ -230,6 +231,7 @@ function AppRoutes() {
         <Route path="/hendelser" element={<ProtectedRoute><Hendelser /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="/mer" element={<ProtectedRoute><More /></ProtectedRoute>} />
+        <Route path="/lederpass" element={<ProtectedRoute><LederpassPage /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
