@@ -43,8 +43,6 @@ import { Link as LinkIcon } from 'lucide-react';
 import { LederPass } from '@/components/passport/LederPass';
 import { useMyMurderState } from '@/hooks/useMurderGame';
 import { Skull } from 'lucide-react';
-// Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
-const oksnoenHeader = '/oksnoen-header.webp';
 
 type SessionData = { reminder: string; items: string[] };
 type SessionsPayload = { active: 1 | 2 | 3; sessions: Record<'1' | '2' | '3', SessionData> };
