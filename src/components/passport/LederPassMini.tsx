@@ -29,7 +29,7 @@ export function LederPassMini({ leader, periodLabel, to = '/lederpass' }: LederP
         return true;
       })
       .sort((a, b) => b.year - a.year)
-      .slice(0, 3)
+      .slice(0, 2)
       .map((r) => ({ key: `${r.year}-${r.period_code}`, year: r.year, periodCode: String(r.period_code) }));
   }, [servicePeriods]);
 
@@ -102,7 +102,7 @@ export function LederPassMini({ leader, periodLabel, to = '/lederpass' }: LederP
         {previewStamps.length > 0 && (
           <div className="relative flex items-center -space-x-3 pr-1 shrink-0" aria-hidden>
             {previewStamps.map((entry, i) => (
-              <PeriodStamp key={entry.key} entry={entry} size={40} animate={false} delayMs={i * 40} />
+              <PeriodStamp key={entry.key} entry={entry} size={34} animate={false} delayMs={i * 40} />
             ))}
           </div>
         )}
