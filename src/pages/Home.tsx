@@ -558,52 +558,31 @@ export default function Home() {
 
       {/* Content Cards - consistent spacing */}
       <div className="px-4 mt-4 sm:mt-6 space-y-3 sm:space-y-4">
-        {/* Aktiviteter denne økten — viktigst, øverst */}
-        {isElementVisible('session_activities') && sessionsPayload && (() => {
-          const sessionConfig = getConfigForElement('session_activities');
-          const activeKey = String(sessionsPayload.active) as '1' | '2' | '3';
-          const current = sessionsPayload.sessions[activeKey];
-          if (!current || (!current.reminder && !current.items?.length)) return null;
-          const reminder = current.reminder?.trim() || '';
-          const activities = current.items || [];
-          const sessionLabel = `${sessionsPayload.active}. økt`;
+        {/* HERO: Din aktivitet — viktigst, øverst */}
+        {isElementVisible('current_activity') && (() => {
+          const activityConfig = getConfigForElement('current_activity');
           return (
             <Card className={cn(
-              "border-2 border-primary/30 bg-primary/5 dark:bg-primary/10 shadow-md",
-              getCardStyle(sessionConfig)
+              "border-2 border-primary/20 bg-primary/5 dark:bg-primary/10 shadow-lg",
+              getCardStyle(activityConfig)
             )}>
-              <CardContent className="py-4 space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="p-1.5 rounded-full bg-primary/15 shrink-0">
-                      <SessionIcon className="w-4 h-4 text-primary" />
-                    </div>
-                    <p className="text-sm font-semibold text-foreground truncate">
-                      {getElementTitle('session_activities', 'Aktiviteter denne økten')}
+              <CardContent className="py-8 sm:py-10">
+                <div className="flex flex-col items-center text-center gap-4">
+                  <div className="p-3 rounded-full bg-primary/20">
+                    <ActivityIcon className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[10px] uppercase tracking-widest text-primary/70 font-medium mb-2">
+                      {getElementTitle('current_activity', 'Din aktivitet')}
+                    </p>
+                    <p className={cn(
+                      "text-2xl sm:text-3xl font-bold font-heading text-foreground",
+                      activityConfig?.is_italic && "italic"
+                    )}>
+                      {content?.current_activity || 'Ingen aktivitet tildelt'}
                     </p>
                   </div>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/15 text-primary shrink-0">
-                    {sessionLabel}
-                  </span>
                 </div>
-
-                {reminder && (
-                  <div className="rounded-lg border border-amber-200/60 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30 p-2.5 flex gap-2">
-                    <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                    <p className="text-sm text-amber-900 dark:text-amber-100 leading-snug min-w-0">{reminder}</p>
-                  </div>
-                )}
-
-                {activities.length > 0 && (
-                  <ul className="space-y-1.5">
-                    {activities.map((a, i) => (
-                      <li key={i} className="flex items-start gap-2.5">
-                        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                        <span className={cn("text-foreground leading-snug", getTextStyle(sessionConfig))}>{a}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
               </CardContent>
             </Card>
           );
@@ -721,36 +700,6 @@ export default function Home() {
             </CardContent>
           </Card>
         )}
-
-        {/* HERO: Main Activity - Large Display with premium styling */}
-        {isElementVisible('current_activity') && (() => {
-          const activityConfig = getConfigForElement('current_activity');
-          return (
-            <Card className={cn(
-              "border-2 border-primary/20 bg-primary/5 dark:bg-primary/10 shadow-lg",
-              getCardStyle(activityConfig)
-            )}>
-              <CardContent className="py-8 sm:py-10">
-                <div className="flex flex-col items-center text-center gap-4">
-                  <div className="p-3 rounded-full bg-primary/20">
-                    <ActivityIcon className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] uppercase tracking-widest text-primary/70 font-medium mb-2">
-                      {getElementTitle('current_activity', 'Din aktivitet')}
-                    </p>
-                    <p className={cn(
-                      "text-2xl sm:text-3xl font-bold font-heading text-foreground",
-                      activityConfig?.is_italic && "italic"
-                    )}>
-                      {content?.current_activity || 'Ingen aktivitet tildelt'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })()}
 
         {/* OBS Alert Box - Secondary styling */}
         {isElementVisible('obs_message') && content?.obs_message && (() => {
@@ -871,6 +820,57 @@ export default function Home() {
             </CardContent>
           </Card>
         )}
+
+        {/* Aktiviteter denne økten — nederst */}
+        {isElementVisible('session_activities') && sessionsPayload && (() => {
+          const sessionConfig = getConfigForElement('session_activities');
+          const activeKey = String(sessionsPayload.active) as '1' | '2' | '3';
+          const current = sessionsPayload.sessions[activeKey];
+          if (!current || (!current.reminder && !current.items?.length)) return null;
+          const reminder = current.reminder?.trim() || '';
+          const activities = current.items || [];
+          const sessionLabel = `${sessionsPayload.active}. økt`;
+          return (
+            <Card className={cn(
+              "border-2 border-primary/30 bg-primary/5 dark:bg-primary/10 shadow-md",
+              getCardStyle(sessionConfig)
+            )}>
+              <CardContent className="py-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="p-1.5 rounded-full bg-primary/15 shrink-0">
+                      <SessionIcon className="w-4 h-4 text-primary" />
+                    </div>
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {getElementTitle('session_activities', 'Aktiviteter denne økten')}
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/15 text-primary shrink-0">
+                    {sessionLabel}
+                  </span>
+                </div>
+
+                {reminder && (
+                  <div className="rounded-lg border border-amber-200/60 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30 p-2.5 flex gap-2">
+                    <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-900 dark:text-amber-100 leading-snug min-w-0">{reminder}</p>
+                  </div>
+                )}
+
+                {activities.length > 0 && (
+                  <ul className="space-y-1.5">
+                    {activities.map((a, i) => (
+                      <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                        <span className={cn("text-foreground leading-snug", getTextStyle(sessionConfig))}>{a}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Morder-leken — liten boks helt nederst */}
         {showMurder && (
