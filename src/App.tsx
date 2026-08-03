@@ -46,6 +46,7 @@ const Gjenglemt = lazy(() => import("@/pages/Gjenglemt"));
 const PublicGjenglemt = lazy(() => import("@/pages/PublicGjenglemt"));
 const GjenglemtAdmin = lazy(() => import("@/pages/GjenglemtAdmin"));
 const Roulette = lazy(() => import("@/pages/Roulette"));
+const Morder = lazy(() => import("@/pages/Morder"));
 const Gensere = lazy(() => import("@/pages/Gensere"));
 const Hendelser = lazy(() => import("@/pages/Hendelser"));
 const Chat = lazy(() => import("@/pages/Chat"));
@@ -218,6 +219,7 @@ function AppRoutes() {
         <Route path="/gjenglemt-admin" element={<GjenglemtAdmin />} />
         <Route path="/gjenglemt/:slug" element={<PublicGjenglemt />} />
         <Route path="/roulette" element={<ProtectedRoute><Roulette /></ProtectedRoute>} />
+        <Route path="/morder" element={<ProtectedRoute><Morder /></ProtectedRoute>} />
         <Route path="/gensere" element={<ProtectedRoute><Gensere /></ProtectedRoute>} />
         <Route path="/participant-stats" element={<ProtectedRoute><ParticipantStats /></ProtectedRoute>} />
         <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
