@@ -461,67 +461,63 @@ export default function Home() {
   return (
     <div ref={pullRef} className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 pb-24 overflow-y-auto">
       <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
-      {/* Header with background image */}
-      <div className="relative h-44 md:h-52 overflow-hidden">
-        <img 
-          src={oksnoenHeader} 
-          alt="Oksnøen" 
-          className="w-full h-full object-cover"
-          fetchPriority="high"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
-
-        {/* Small 3D lederpass icon — replaces logo, only in active mode */}
-        <div className="absolute top-3 left-3">
-          <LederPass leader={effectiveLeader} periodLabel={activePeriodLabel} />
-        </div>
-
+      {/* Profile Section — top of page (no header image) */}
+      <div className="relative px-4 pt-6">
         {/* Refresh button */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={loadData} 
-          className="absolute top-4 right-14 text-white hover:bg-white/20"
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={loadData}
+          aria-label="Oppdater"
+          className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
         >
           <RefreshCw className="w-5 h-5" />
         </Button>
-
-        {/* Morder-leken button */}
-        {showMurder && (
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Morder-leken"
-            onClick={() => navigate('/morder')}
-            className="absolute top-4 right-4 text-white hover:bg-white/20"
-          >
-            <Skull className="w-5 h-5" />
-            {murderState?.incoming_claim_id && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white/70" />
-            )}
-          </Button>
-        )}
-      </div>
-
-      {/* Profile Section - overlapping header (reduced visual weight) */}
-      <div className="relative px-4 -mt-14">
         <div className="flex flex-col items-center text-center">
           {/* User name at the very top */}
-          <h1 className="text-xl font-heading font-bold text-white mb-3 drop-shadow-lg">
+          <h1 className="text-xl font-heading font-bold text-foreground mb-3">
             Hei, {effectiveLeader?.name?.split(' ')[0]}!
           </h1>
-          
-          <Avatar className={cn(
-            "h-20 w-20 sm:h-24 sm:w-24 border-2 shadow-lg ring-2",
-            (isAdmin || isNurse || hasRead) 
-              ? "border-green-500 ring-green-500/20" 
-              : "border-red-500 ring-red-500/20"
-          )}>
-            <AvatarImage src={effectiveLeader?.profile_image_url || ''} alt={effectiveLeader?.name} />
-            <AvatarFallback className="bg-primary text-primary-foreground font-heading text-xl">
-              {effectiveLeader?.name ? getInitials(effectiveLeader.name) : '?'}
-            </AvatarFallback>
-          </Avatar>
+
+          {/* Pass (left) — Avatar (center) — Morderleken (right) */}
+          <div className="flex items-center justify-center gap-4 sm:gap-6">
+            <div className="w-16 flex justify-center shrink-0">
+              <LederPass leader={effectiveLeader} periodLabel={activePeriodLabel} />
+            </div>
+
+            <Avatar className={cn(
+              "h-20 w-20 sm:h-24 sm:w-24 border-2 shadow-lg ring-2 shrink-0",
+              (isAdmin || isNurse || hasRead)
+                ? "border-green-500 ring-green-500/20"
+                : "border-red-500 ring-red-500/20"
+            )}>
+              <AvatarImage src={effectiveLeader?.profile_image_url || ''} alt={effectiveLeader?.name} />
+              <AvatarFallback className="bg-primary text-primary-foreground font-heading text-xl">
+                {effectiveLeader?.name ? getInitials(effectiveLeader.name) : '?'}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="w-16 flex justify-center shrink-0">
+              {showMurder && (
+                <button
+                  type="button"
+                  aria-label="Morderleken"
+                  onClick={() => navigate('/morder')}
+                  className="flex flex-col items-center gap-1 group"
+                >
+                  <span className="relative p-2.5 rounded-full bg-stone-500/15 border border-stone-500/30 transition-colors group-hover:bg-stone-500/25">
+                    <Skull className="w-6 h-6 text-stone-700 dark:text-stone-300" />
+                    {murderState?.incoming_claim_id && (
+                      <span className="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-background" />
+                    )}
+                  </span>
+                  <span className="text-[9px] uppercase tracking-wide font-medium text-muted-foreground leading-none">
+                    Morderleken
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
           
           <p className="text-base font-medium text-foreground mt-2">
             {effectiveLeader?.name}
@@ -564,6 +560,31 @@ export default function Home() {
 
       {/* Content Cards - consistent spacing */}
       <div className="px-4 mt-4 sm:mt-6 space-y-3 sm:space-y-4">
+        {/* Registrer hendelse — prominent */}
+        <Card
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/hendelser')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/hendelser'); }}
+          className="border-2 border-red-500/50 bg-red-50/70 dark:bg-red-950/30 shadow-md cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
+        >
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-full bg-red-500/20 shrink-0">
+                <MessageSquareWarning className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-base font-semibold text-red-800 dark:text-red-200">
+                  Registrer hendelse
+                </p>
+                <p className="text-xs text-red-700/80 dark:text-red-300/80">
+                  Meld inn noe som har skjedd med en deltaker
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Kjøkkentjeneste i dag */}
         {teamsEnabled && dutyTeamA && dutyTeamB && (
           <Card className="border border-orange-500/30 bg-orange-50/50 dark:bg-orange-950/20 shadow-sm">
