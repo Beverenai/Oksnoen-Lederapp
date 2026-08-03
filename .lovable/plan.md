@@ -1,29 +1,52 @@
-## Mål
-Roligere topp på hjem-siden, tydeligere Hendelse-knapp, og Morderleken + Lederpasset plassert som små ikoner ved profilbildet.
+## 1. Hjemskjerm (retning: «Nordisk med chips»)
 
-## Endringer (kun `src/pages/Home.tsx`)
+Ny struktur på `/` (mobil først):
 
-### 1. Fjern bildebanneret øverst
-- Fjern `oksnoenHeader`-bildet og gradient-overlayet (hele header-blokken med `h-44 md:h-52`).
-- Profilseksjonen flyttes opp som toppen av siden (ingen negativ `-mt-14`-overlapping lenger), med litt luft over.
-- Oppdater-knappen (`RefreshCw`) flyttes til øvre høyre hjørne av den nye toppen, i nøytral/muted stil siden bakgrunnen ikke lenger er mørk.
-- «Hei, {fornavn}!» får vanlig `text-foreground` i stedet for hvit tekst med drop-shadow.
+```text
+[ (refresh, diskret øverst høyre) ]
+        (profilbilde, sentrert, 96px)
+        Fullt navn (sentrert)
+   [ Hytte-chip ] • [ Rolle/minister-chip ]
 
-### 2. Pass til venstre, dødningskalle til høyre for profilbildet
-- Ny rad: `[LederPass-ikon]  [Avatar]  [Morderleken-ikon]`, sentrert, avataren beholder samme størrelse og grønn/rød ring.
-- Venstre: eksisterende `<LederPass leader=... periodLabel=... />` i liten ikon-variant.
-- Høyre: liten vertikal knapp med `Skull`-ikon i sirkel + teksten «Morderleken» under (liten uppercase-label), navigerer til `/morder`. Vises kun når `showMurder` er sann; rød prikk-indikator beholdes ved `incoming_claim_id`.
-- Når Morderleken er av, holdes avataren sentrert (usynlig plassholder på høyre side).
+   ( ! )      ( telt )     ( ... )
+ Hendelser  Overnatting   (flere senere)
 
-### 3. Tydeligere Hendelse-knapp
-- Erstatt den lille sentrerte outline-knappen nederst med et fullbredde, framtredende kort/knapp i rød aksent: ikon i sirkel, tittel «Registrer hendelse» og en liten hjelpetekst, med tydelig kant og skygge — samme visuelle vekt som de andre kortene på siden.
-- Plasseres øverst i kortlisten (rett under profilseksjonen) i tillegg til å beholde samme navigasjon til `/hendelser`.
+ [ Aktiviteter denne økten - hovedkort ]
+ [ Øvrige kort: obs-melding, kjøkkentjeneste osv. ]
+ [ Morder-leken: liten boks helt nederst (kun når aktiv) ]
+```
 
-### 4. Rydding
-- Fjern nå ubrukt import av header-bildet.
-- Morderleken-statuskortet lenger ned beholdes uendret (viser status/bekreftelser).
+- Passet (LederPass) fjernes fra hjemskjermen.
+- Dødningskalle-ikonet ved profilbildet fjernes; Morder-leken blir en liten mørk boks nederst + en knapp på «Mer».
+- Overskriften «Denne økten skal du …» fjernes over aktivitetskortet — aktivitetskortet står alene.
+- Overnatting-kortet med slider fjernes fra feeden; erstattes av rund telt-knapp.
+- Runde knapper bygges som en gjenbrukbar `HomeQuickActions`-rad som tåler 2–5 knapper (wrapper til ny linje).
+
+## 2. Passet som egen feature i «Mer»
+
+- Ny rute `/lederpass` som viser `LederPass` i fullskjerm (samme swipe-rail som i dag).
+- Ny flis «Lederpasset» i `More.tsx` under «Min side».
+- Pass-ikonet fjernes fra hjemskjermen (beholdes i bunnnavigasjonens Passkontroll-ikon, som er noe annet).
+
+## 3. Hendelser
+
+- Rund rød/rose «!»-knapp på hjem → `/hendelser`.
+- Øverst på Hendelser-siden: kort hjelpetekst «Skriv inn her alt — stort og smått som har skjedd».
+- Fjerner den doble tilbakeknappen: `Hendelser.tsx` har egen tilbakeknapp *i tillegg* til layoutens sub-side-tilbakeknapp. Løsning: sidene beholder kun tittelen, og layoutens tilbakeknapp er den ene sanne. Jeg går gjennom sidene som har egen `ArrowLeft`-knapp (Hendelser m.fl.) og fjerner duplikatene.
+
+## 4. Toppmeny på mobil
+
+- Fjerner Øksnøen-logo + ledernavn fra mobil-headeren.
+- iOS trenger ingen egen toppmeny: på hovedfanene (Hjem/Passkontroll/Ledere/Mer) skjules headeren helt, og på undersider vises en tynn header med kun tilbakeknapp + sidetittel. Safe-area-padding beholdes så innholdet ikke havner under statuslinjen.
+
+## 5. Overnatting: tvunget første svar + endre senere
+
+- Rund telt-knapp ved siden av Hendelser vises kun når `overnatting_enabled = true` → åpner et ark der leder kan endre svaret sitt (Ja/Nei).
+- Første gang funksjonen er aktiv får lederen en modal som **ikke** kan lukkes ved sveip/utenfor-klikk — kun to knapper: **Ja** og **Nei**. Etter valg lagres svaret i `overnatting_responses` og modalen forsvinner.
+- Ledere som ikke har svart (ingen rad for aktiv runde) får modalen ved neste appstart.
 
 ## Teknisk
-- Ingen endringer i data, RLS eller edge functions — kun presentasjon i `Home.tsx`.
-- Farger via eksisterende semantiske/tailwind-klasser som brukes i filen i dag.
-- Verifiseres i mobilvisning (393px) med skjermbilde.
+
+- Filer: `src/pages/Home.tsx` (omskriving av topp/feed), ny `src/components/home/HomeQuickActions.tsx`, ny `src/components/home/OvernattingGateDialog.tsx` og `OvernattingSheet.tsx`, ny `src/pages/LederpassPage.tsx` + rute i `src/App.tsx`, `src/pages/More.tsx`, `src/components/layout/AppLayout.tsx` (header), `src/pages/Hendelser.tsx`.
+- Ingen databaseendringer nødvendig: `overnatting_responses` + `app_config`-nøklene finnes. Admin nullstiller allerede svar når funksjonen skrus på, så «første gang»-modalen trigges naturlig av manglende rad.
+- Design bruker eksisterende semantiske tokens (primary/muted/card), ikke hardkodede farger; chips og runde knapper får samme radius/skygge som valgt retning.
