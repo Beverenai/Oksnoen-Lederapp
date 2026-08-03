@@ -517,8 +517,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </button>
         </div>
       )}
-      {/* Mobile Header - collapsible on scroll like Facebook/Instagram */}
-      {!mobileMenuOpen && (
+      {/* Mobile Header — only on sub-pages (back button). Main tabs are header-less (native iOS feel). */}
+      {!mobileMenuOpen && isSubPage && (
         <header 
           className={cn(
             "lg:hidden fixed left-0 right-0 bg-card/95 backdrop-blur-sm border-b border-border z-50 px-4 flex items-end justify-between",
@@ -532,50 +532,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
           }}
         >
           <div className="flex items-center gap-2">
-            {isSubPage ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate(-1)}
-                className="shrink-0 -ml-2"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            ) : (
-              <img src={oksnoenLogo} alt="Oksnøen" className="h-8 w-8 object-contain" />
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {location.pathname === '/mer' ? (
-              <NavLink
-                to="/profile"
-                onClick={() => hapticImpact('light')}
-                aria-label="Min profil"
-                className="shrink-0"
-              >
-                {leader?.profile_image_url ? (
-                  <img
-                    src={leader.profile_image_url}
-                    alt={leader?.name || 'Profil'}
-                    className="w-9 h-9 rounded-full object-cover border border-border"
-                  />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold border border-border">
-                    {(leader?.name || '?')
-                      .split(' ')
-                      .map((n) => n[0])
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .join('')
-                      .toUpperCase()}
-                  </div>
-                )}
-              </NavLink>
-            ) : (
-              <span className="text-sm text-muted-foreground truncate max-w-[140px]">
-                {leader?.name}
-              </span>
-            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              aria-label="Tilbake"
+              className="shrink-0 -ml-2"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
           </div>
         </header>
       )}
@@ -842,7 +807,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {/* Spacer for fixed mobile header */}
         <div
           className="lg:hidden shrink-0"
-          style={{ height: 'calc(56px + var(--safe-top))' }}
+          style={{ height: isSubPage ? 'calc(56px + var(--safe-top))' : 'var(--safe-top)' }}
         />
         <div className="app-page-surface p-4 lg:p-6 min-w-0 w-full">
           <div

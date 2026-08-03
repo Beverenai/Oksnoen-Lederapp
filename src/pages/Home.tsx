@@ -28,7 +28,6 @@ import {
   ChefHat,
   type LucideIcon
 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
@@ -41,8 +40,12 @@ import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
 import { useAppMode } from '@/hooks/useAppMode';
 import { Link as LinkIcon } from 'lucide-react';
 import { LederPass } from '@/components/passport/LederPass';
-// Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
-const oksnoenHeader = '/oksnoen-header.webp';
+import { useMyMurderState } from '@/hooks/useMurderGame';
+import { Skull } from 'lucide-react';
+import { Tent, AlertCircle } from 'lucide-react';
+import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
+import { OvernattingGateDialog, OvernattingEditDialog } from '@/components/home/OvernattingDialogs';
+import { groupMainCabins } from '@/lib/cabinDisplay';
 
 type SessionData = { reminder: string; items: string[] };
 type SessionsPayload = { active: 1 | 2 | 3; sessions: Record<'1' | '2' | '3', SessionData> };
@@ -160,11 +163,15 @@ export default function Home() {
   const [overnattingQuestion, setOvernattingQuestion] = useState('Vil du være med på overnatting?');
   const [overnattingJoining, setOvernattingJoining] = useState(false);
   const [overnattingSaving, setOvernattingSaving] = useState(false);
+  const [overnattingAnswered, setOvernattingAnswered] = useState(true);
+  const [overnattingEditOpen, setOvernattingEditOpen] = useState(false);
   const [rouletteEnabled, setRouletteEnabled] = useState(false);
   const [activePeriodLabel, setActivePeriodLabel] = useState<string | null>(null);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
   const showRoulette = rouletteEnabled && inRoulette;
   const teamsEnabled = useTeamsEnabled();
+  const { data: murderState } = useMyMurderState();
+  const showMurder = !!murderState?.is_active;
   const { teamA: dutyTeamA, teamB: dutyTeamB } = useKitchenDutyToday();
 
   useEffect(() => {
@@ -240,6 +247,7 @@ export default function Home() {
       setOvernattingTitle(cfgMap.get('overnatting_title') || 'Overnatting');
       setOvernattingQuestion(cfgMap.get('overnatting_question') || 'Vil du være med på overnatting?');
       setOvernattingJoining(overRespRes.data?.is_joining ?? false);
+      setOvernattingAnswered(!!overRespRes.data);
       setRouletteEnabled(cfgMap.get('roulette_enabled') === 'true');
 
       setContent(contentRes.data);
@@ -394,9 +402,11 @@ export default function Home() {
         .from('overnatting_responses')
         .upsert({ leader_id: effectiveLeader.id, is_joining: next, updated_at: new Date().toISOString() }, { onConflict: 'leader_id' });
       if (error) throw error;
+      setOvernattingAnswered(true);
     } catch (e) {
       console.error('Overnatting toggle failed', e);
       setOvernattingJoining(!next);
+      throw e;
     } finally {
       setOvernattingSaving(false);
     }
@@ -454,47 +464,47 @@ export default function Home() {
   const ObsIcon = getElementIcon('obs_message', AlertTriangle);
   const SessionIcon = getElementIcon('session_activities', Calendar);
 
+  const mainCabins = groupMainCabins(leaderCabins);
+
+  const quickActions: QuickAction[] = [
+    {
+      key: 'hendelser',
+      icon: AlertCircle,
+      label: 'Hendelser',
+      tone: 'danger',
+      onClick: () => navigate('/hendelser'),
+    },
+    ...(overnattingEnabled
+      ? [{
+          key: 'overnatting',
+          icon: Tent,
+          label: overnattingTitle,
+          active: overnattingJoining,
+          onClick: () => setOvernattingEditOpen(true),
+        } as QuickAction]
+      : []),
+  ];
+
   return (
     <div ref={pullRef} className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 pb-24 overflow-y-auto">
       <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
-      {/* Header with background image */}
-      <div className="relative h-44 md:h-52 overflow-hidden">
-        <img 
-          src={oksnoenHeader} 
-          alt="Oksnøen" 
-          className="w-full h-full object-cover"
-          fetchPriority="high"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
-
-        {/* Small 3D lederpass icon — replaces logo, only in active mode */}
-        <div className="absolute top-3 left-3">
-          <LederPass leader={effectiveLeader} periodLabel={activePeriodLabel} />
-        </div>
-
-        {/* Refresh button */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={loadData} 
-          className="absolute top-4 right-4 text-white hover:bg-white/20"
+      {/* Profile hero — centered avatar, name and chips */}
+      <div className="px-4 pt-3 relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={loadData}
+          aria-label="Oppdater"
+          className="absolute right-3 top-2 h-9 w-9 text-muted-foreground hover:text-foreground"
         >
-          <RefreshCw className="w-5 h-5" />
+          <RefreshCw className="w-4 h-4" />
         </Button>
-      </div>
 
-      {/* Profile Section - overlapping header (reduced visual weight) */}
-      <div className="relative px-4 -mt-14">
         <div className="flex flex-col items-center text-center">
-          {/* User name at the very top */}
-          <h1 className="text-xl font-heading font-bold text-white mb-3 drop-shadow-lg">
-            Hei, {effectiveLeader?.name?.split(' ')[0]}!
-          </h1>
-          
           <Avatar className={cn(
-            "h-20 w-20 sm:h-24 sm:w-24 border-2 shadow-lg ring-2",
-            (isAdmin || isNurse || hasRead) 
-              ? "border-green-500 ring-green-500/20" 
+            "h-24 w-24 border-2 shadow-sm ring-2",
+            (isAdmin || isNurse || hasRead)
+              ? "border-green-500 ring-green-500/20"
               : "border-red-500 ring-red-500/20"
           )}>
             <AvatarImage src={effectiveLeader?.profile_image_url || ''} alt={effectiveLeader?.name} />
@@ -502,21 +512,17 @@ export default function Home() {
               {effectiveLeader?.name ? getInitials(effectiveLeader.name) : '?'}
             </AvatarFallback>
           </Avatar>
-          
-          <p className="text-base font-medium text-foreground mt-2">
-            {effectiveLeader?.name}
-          </p>
 
-          {effectiveLeader?.ministerpost && (
-            <p className="text-sm text-muted-foreground mt-0.5">{effectiveLeader.ministerpost}</p>
-          )}
-          
-          <div className="flex flex-wrap gap-1.5 mt-2 justify-center">
-            {leaderCabins.length > 0 ? (
-              leaderCabins.map(cabin => (
-                <Badge 
-                  key={cabin.id}
-                  variant="secondary" 
+          <h1 className="mt-3 text-xl font-heading font-bold text-foreground">
+            {effectiveLeader?.name}
+          </h1>
+
+          <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
+            {mainCabins.length > 0 ? (
+              mainCabins.map(cabin => (
+                <Badge
+                  key={cabin.key}
+                  variant="secondary"
                   className="text-xs cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => navigate('/my-cabins')}
                 >
@@ -530,6 +536,9 @@ export default function Home() {
                 {leader.cabin_info}
               </Badge>
             )}
+            {effectiveLeader?.ministerpost && (
+              <Badge variant="outline" className="text-xs">{effectiveLeader.ministerpost}</Badge>
+            )}
             {leader?.team && (
               <Link to={`/team/${leader.team.toLowerCase()}`}>
                 <Badge variant="outline" className="text-xs cursor-pointer hover:opacity-80 transition-opacity">
@@ -540,10 +549,45 @@ export default function Home() {
             )}
           </div>
         </div>
+
+        {/* Round quick actions */}
+        <div className="mt-5">
+          <HomeQuickActions actions={quickActions} />
+        </div>
       </div>
 
       {/* Content Cards - consistent spacing */}
       <div className="px-4 mt-4 sm:mt-6 space-y-3 sm:space-y-4">
+        {/* HERO: Din aktivitet — viktigst, øverst */}
+        {isElementVisible('current_activity') && (() => {
+          const activityConfig = getConfigForElement('current_activity');
+          return (
+            <Card className={cn(
+              "border-2 border-primary/20 bg-primary/5 dark:bg-primary/10 shadow-lg",
+              getCardStyle(activityConfig)
+            )}>
+              <CardContent className="py-8 sm:py-10">
+                <div className="flex flex-col items-center text-center gap-4">
+                  <div className="p-3 rounded-full bg-primary/20">
+                    <ActivityIcon className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[10px] uppercase tracking-widest text-primary/70 font-medium mb-2">
+                      {getElementTitle('current_activity', 'Din aktivitet')}
+                    </p>
+                    <p className={cn(
+                      "text-2xl sm:text-3xl font-bold font-heading text-foreground",
+                      activityConfig?.is_italic && "italic"
+                    )}>
+                      {content?.current_activity || 'Ingen aktivitet tildelt'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
         {/* Kjøkkentjeneste i dag */}
         {teamsEnabled && dutyTeamA && dutyTeamB && (
           <Card className="border border-orange-500/30 bg-orange-50/50 dark:bg-orange-950/20 shadow-sm">
@@ -585,7 +629,7 @@ export default function Home() {
           </Card>
         )}
 
-        {/* Oppgave-roulette */}
+        {/* Morder-leken: kun ikonet ved profilbildet (ingen kort her) */}
         {showRoulette && (
         <Card
           className="border border-violet-500/30 bg-violet-50/50 dark:bg-violet-950/20 cursor-pointer hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors shadow-sm"
@@ -656,62 +700,6 @@ export default function Home() {
             </CardContent>
           </Card>
         )}
-
-        {/* HERO: Main Activity - Large Display with premium styling */}
-        {overnattingEnabled && (
-          <Card className="border-2 border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-sm">
-            <CardContent className="py-4 sm:py-5">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-indigo-500/15 shrink-0">
-                  <Bed className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wide text-indigo-600/80 dark:text-indigo-400/80 font-medium mb-0.5">
-                    {overnattingTitle}
-                  </p>
-                  <p className="text-sm sm:text-base font-medium text-foreground">{overnattingQuestion}</p>
-                </div>
-                <Switch
-                  checked={overnattingJoining}
-                  onCheckedChange={handleOvernattingToggle}
-                  disabled={overnattingSaving}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                {overnattingJoining ? 'Du er påmeldt ✓' : 'Skyv på for å melde deg på'}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {isElementVisible('current_activity') && (() => {
-          const activityConfig = getConfigForElement('current_activity');
-          return (
-            <Card className={cn(
-              "border-2 border-primary/20 bg-primary/5 dark:bg-primary/10 shadow-lg",
-              getCardStyle(activityConfig)
-            )}>
-              <CardContent className="py-8 sm:py-10">
-                <div className="flex flex-col items-center text-center gap-4">
-                  <div className="p-3 rounded-full bg-primary/20">
-                    <ActivityIcon className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] uppercase tracking-widest text-primary/70 font-medium mb-2">
-                      {getElementTitle('current_activity', 'Din aktivitet')}
-                    </p>
-                    <p className={cn(
-                      "text-2xl sm:text-3xl font-bold font-heading text-foreground",
-                      activityConfig?.is_italic && "italic"
-                    )}>
-                      {content?.current_activity || 'Ingen aktivitet tildelt'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })()}
 
         {/* OBS Alert Box - Secondary styling */}
         {isElementVisible('obs_message') && content?.obs_message && (() => {
@@ -820,7 +808,20 @@ export default function Home() {
           );
         })}
 
-        {/* Session Activities - structured */}
+        {/* Empty State */}
+        {!hasAnyContent && (
+          <Card className="border border-border/50">
+            <CardContent className="py-10 text-center">
+              <Activity className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <h3 className="text-base font-medium text-foreground">Alt klart!</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Ingen aktiviteter eller beskjeder akkurat nå
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Aktiviteter denne økten — nederst */}
         {isElementVisible('session_activities') && sessionsPayload && (() => {
           const sessionConfig = getConfigForElement('session_activities');
           const activeKey = String(sessionsPayload.active) as '1' | '2' | '3';
@@ -831,20 +832,20 @@ export default function Home() {
           const sessionLabel = `${sessionsPayload.active}. økt`;
           return (
             <Card className={cn(
-              "border border-border/50",
+              "border border-border/60 bg-card shadow-sm",
               getCardStyle(sessionConfig)
             )}>
               <CardContent className="py-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-full bg-primary/10">
-                      <SessionIcon className="w-4 h-4 text-primary" />
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="p-1.5 rounded-full bg-muted shrink-0">
+                      <SessionIcon className="w-4 h-4 text-muted-foreground" />
                     </div>
-                    <p className="text-[10px] uppercase tracking-wide text-primary/80 font-semibold">
+                    <p className="text-sm font-semibold text-muted-foreground truncate">
                       {getElementTitle('session_activities', 'Aktiviteter denne økten')}
                     </p>
                   </div>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
                     {sessionLabel}
                   </span>
                 </div>
@@ -860,7 +861,7 @@ export default function Home() {
                   <ul className="space-y-1.5">
                     {activities.map((a, i) => (
                       <li key={i} className="flex items-start gap-2.5">
-                        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-muted-foreground/60 shrink-0" />
                         <span className={cn("text-foreground leading-snug", getTextStyle(sessionConfig))}>{a}</span>
                       </li>
                     ))}
@@ -871,32 +872,52 @@ export default function Home() {
           );
         })()}
 
-        {/* Empty State */}
-        {!hasAnyContent && (
-          <Card className="border border-border/50">
-            <CardContent className="py-10 text-center">
-              <Activity className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-              <h3 className="text-base font-medium text-foreground">Alt klart!</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Ingen aktiviteter eller beskjeder akkurat nå
-              </p>
-            </CardContent>
-          </Card>
+        {/* Morder-leken — liten boks helt nederst */}
+        {showMurder && (
+          <button
+            type="button"
+            onClick={() => navigate('/morder')}
+            className="w-full flex items-center gap-3 rounded-2xl bg-foreground/90 px-4 py-3 text-left shadow-sm active:scale-[0.99] transition-transform"
+          >
+            <span className="relative w-9 h-9 rounded-xl bg-background/15 flex items-center justify-center shrink-0">
+              <Skull className="w-5 h-5 text-background" />
+              {murderState?.incoming_claim_id && (
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-destructive ring-2 ring-foreground" />
+              )}
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-semibold text-background">Morder-leken</span>
+              <span className="block text-[11px] text-background/70">
+                {murderState?.incoming_claim_id ? 'Noen hevder å ha drept deg' : 'Åpne for å se målet ditt'}
+              </span>
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-background/80">Åpne</span>
+          </button>
         )}
 
-        {/* Register incident - compact button */}
-        <div className="flex justify-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/hendelser')}
-            className="border-red-500/30 bg-red-50/50 dark:bg-red-950/20 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 gap-2"
-          >
-            <MessageSquareWarning className="w-4 h-4" />
-            Hendelse
-          </Button>
-        </div>
       </div>
+
+      {/* Overnatting: tvunget førstegangssvar */}
+      {overnattingEnabled && !overnattingAnswered && (
+        <OvernattingGateDialog
+          open
+          title={overnattingTitle}
+          question={overnattingQuestion}
+          onAnswer={handleOvernattingToggle}
+        />
+      )}
+
+      {/* Overnatting: endre svar */}
+      {overnattingEnabled && (
+        <OvernattingEditDialog
+          open={overnattingEditOpen}
+          onOpenChange={setOvernattingEditOpen}
+          title={overnattingTitle}
+          question={overnattingQuestion}
+          joining={overnattingJoining}
+          onAnswer={handleOvernattingToggle}
+        />
+      )}
     </div>
   );
 }

@@ -52,10 +52,12 @@ const Gjenglemt = lazy(() => import("@/pages/Gjenglemt"));
 const PublicGjenglemt = lazy(() => import("@/pages/PublicGjenglemt"));
 const GjenglemtAdmin = lazy(() => import("@/pages/GjenglemtAdmin"));
 const Roulette = lazy(() => import("@/pages/Roulette"));
+const Morder = lazy(() => import("@/pages/Morder"));
 const Gensere = lazy(() => import("@/pages/Gensere"));
 const Hendelser = lazy(() => import("@/pages/Hendelser"));
 const Chat = lazy(loadChat);
 const More = lazy(loadMore);
+const LederpassPage = lazy(() => import("@/pages/Lederpass"));
 const PeriodArchive = lazy(() => import("@/pages/admin/PeriodArchive"));
 
 const queryClient = new QueryClient({
@@ -228,6 +230,7 @@ function AppRoutes() {
           <Route path="/arkiv" element={<PeriodArchive />} />
           <Route path="/gjenglemt" element={<Gjenglemt />} />
           <Route path="/roulette" element={<Roulette />} />
+          <Route path="/morder" element={<Morder />} />
           <Route path="/gensere" element={<Gensere />} />
           <Route path="/participant-stats" element={<ParticipantStats />} />
           <Route path="/checkout" element={<Checkout />} />
@@ -238,6 +241,7 @@ function AppRoutes() {
           <Route path="/hendelser" element={<Hendelser />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/mer" element={<More />} />
+          <Route path="/lederpass" element={<LederpassPage />} />
         </Route>
 
         {/* Public routes */}

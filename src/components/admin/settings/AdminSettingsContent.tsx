@@ -31,6 +31,7 @@ import { OvernattingTab } from '@/components/admin/OvernattingTab';
 import { GjenglemtSettingsTab } from '@/components/admin/settings/GjenglemtSettingsTab';
 import { NursePeriodsTab } from '@/components/admin/NursePeriodsTab';
 import { RouletteTasksTab } from '@/components/admin/RouletteTasksTab';
+import { MurderGameTab } from '@/components/admin/MurderGameTab';
 import { BookingsTab } from '@/components/admin/BookingsTab';
 import { SweatersTab } from '@/components/admin/SweatersTab';
 const HomeConfigTab = lazy(() => import('@/components/admin/HomeConfigTab'));
@@ -326,6 +327,9 @@ export function AdminSettingsContent({
 
     case 'roulette':
       return <RouletteTasksTab />;
+
+    case 'murder':
+      return <MurderGameTab />;
 
     case 'bookings':
       return <BookingsTab />;

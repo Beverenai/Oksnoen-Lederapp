@@ -86,6 +86,7 @@ export function NurseReportEditor({ participants, onDataChange, onOpenParticipan
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [viewMode, setViewMode] = useState<'recent' | 'name' | 'date'>('recent');
 
   const getParticipant = useCallback((id: string) => participants.find((p) => p.id === id), [participants]);
 
@@ -181,7 +182,7 @@ export function NurseReportEditor({ participants, onDataChange, onOpenParticipan
         text: m.mention_text,
         created_at: m.created_at,
         source: 'mention',
-        source_label: sourceLabels.mention,
+        source_label: m.mention_text?.startsWith('[Hendelse]') ? 'Hendelse (leder)' : sourceLabels.mention,
       });
     });
     healthNotes.forEach((n) => {
@@ -209,23 +210,28 @@ export function NurseReportEditor({ participants, onDataChange, onOpenParticipan
     return out;
   }, [mentions, healthNotes, healthEvents]);
 
-  // Group by participant, sorted by participant name (alphabetical)
+  // Group by participant. Default: most recently written report first.
   const groupedEntries = useMemo(() => {
     const map = new Map<string, ReportEntry[]>();
     allEntries.forEach((e) => {
       if (!map.has(e.participant_id)) map.set(e.participant_id, []);
       map.get(e.participant_id)!.push(e);
     });
+    const latest = (pid: string) =>
+      (map.get(pid) || []).reduce((acc, e) => (e.created_at > acc ? e.created_at : acc), '');
     const order = Array.from(map.keys()).sort((a, b) => {
-      const pa = getParticipant(a)?.name || '';
-      const pb = getParticipant(b)?.name || '';
-      return pa.localeCompare(pb, 'nb');
+      if (viewMode === 'name') {
+        const pa = getParticipant(a)?.name || '';
+        const pb = getParticipant(b)?.name || '';
+        return pa.localeCompare(pb, 'nb');
+      }
+      return latest(b).localeCompare(latest(a));
     });
     order.forEach((pid) => {
       map.get(pid)!.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
     });
     return { map, order };
-  }, [allEntries, getParticipant]);
+  }, [allEntries, getParticipant, viewMode]);
 
   // Search across participants who have any entry
   const filteredOrder = useMemo(() => {
@@ -236,6 +242,27 @@ export function NurseReportEditor({ participants, onDataChange, onOpenParticipan
       return p?.name.toLowerCase().includes(q);
     });
   }, [groupedEntries, searchQuery, getParticipant]);
+
+  // Chronological view: group entries by day (newest day first)
+  const dateGroups = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const entries = allEntries.filter((e) => {
+      if (!q) return true;
+      const p = getParticipant(e.participant_id);
+      return (p?.name.toLowerCase().includes(q) ?? false) || e.text.toLowerCase().includes(q);
+    });
+    const map = new Map<string, ReportEntry[]>();
+    entries.forEach((e) => {
+      const key = e.created_at ? e.created_at.slice(0, 10) : 'ukjent';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(e);
+    });
+    const order = Array.from(map.keys()).sort((a, b) => b.localeCompare(a));
+    order.forEach((k) =>
+      map.get(k)!.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+    );
+    return { map, order };
+  }, [allEntries, searchQuery, getParticipant]);
 
   // Participants available for "add note" dropdown (all)
   const sortedParticipants = useMemo(
@@ -439,7 +466,7 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Søk deltaker..."
+            placeholder={viewMode === 'date' ? 'Søk deltaker eller tekst...' : 'Søk deltaker...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-9 text-sm"
@@ -451,7 +478,126 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
         </Button>
       </div>
 
-      {/* Scrollable list */}
+      {/* View mode */}
+      <div className="flex items-center gap-1 pb-3">
+        <span className="text-[11px] uppercase tracking-wide text-muted-foreground mr-1">Sortering</span>
+        {(['recent', 'name', 'date'] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setViewMode(m)}
+            className={
+              'px-3 py-1 rounded-full text-xs border ' +
+              (viewMode === m
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background border-border text-muted-foreground')
+            }
+          >
+            {m === 'recent' ? 'Sist skrevet' : m === 'name' ? 'Navn' : 'Dato'}
+          </button>
+        ))}
+      </div>
+
+      {viewMode === 'date' ? (
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 p-1 pb-4">
+          {dateGroups.order.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              <Clock className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p>Ingen oppføringer.</p>
+            </div>
+          )}
+          {dateGroups.order.map((day) => (
+            <div key={day} className="rounded-xl border-2 border-primary/20 bg-primary/[0.03] overflow-hidden">
+              <div className="px-4 py-3 bg-primary/[0.06] border-b border-primary/10 flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold capitalize truncate">
+                  {day === 'ukjent' ? 'Ukjent dato' : format(new Date(day), 'EEEE d. MMMM', { locale: nb })}
+                </span>
+                <span className="text-xs text-muted-foreground flex-shrink-0">
+                  {dateGroups.map.get(day)!.length} oppføring{dateGroups.map.get(day)!.length !== 1 ? 'er' : ''}
+                </span>
+              </div>
+              <div className="divide-y divide-border/50">
+                {dateGroups.map.get(day)!.map((entry) => {
+                  const p = getParticipant(entry.participant_id);
+                  return (
+                    <div key={`${entry.source}-${entry.id}`} className="px-4 py-2.5 group">
+                      <div className="flex items-start gap-2">
+                        <button
+                          type="button"
+                          className="flex-shrink-0 mt-0.5"
+                          onClick={() => onOpenParticipant?.(entry.participant_id)}
+                          aria-label={p?.name || 'Deltaker'}
+                        >
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={p?.image_url || undefined} alt={p?.name || ''} />
+                            <AvatarFallback className="text-xs"><User className="w-3 h-3" /></AvatarFallback>
+                          </Avatar>
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                              type="button"
+                              className="font-semibold text-sm truncate hover:text-primary"
+                              onClick={() => onOpenParticipant?.(entry.participant_id)}
+                            >
+                              {p?.name || 'Ukjent deltaker'}
+                            </button>
+                            <span className="text-[11px] text-muted-foreground">
+                              {entry.created_at ? format(new Date(entry.created_at), 'HH:mm') : '—'}
+                            </span>
+                            <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                              {entry.source_label}
+                            </span>
+                          </div>
+                          {editingId === entry.id ? (
+                            <div className="mt-1 space-y-2">
+                              <Textarea
+                                autoFocus
+                                value={editText}
+                                onChange={(e) => setEditText(e.target.value)}
+                                className="min-h-[90px] text-sm"
+                              />
+                              <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>Avbryt</Button>
+                                <Button size="sm" onClick={() => saveEdit(entry)} disabled={savingEdit || !editText.trim()}>
+                                  {savingEdit ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                                  Lagre
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap mt-0.5">{entry.text}</p>
+                          )}
+                        </div>
+                        {entry.source !== 'health_event' && editingId !== entry.id && (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              className="text-muted-foreground hover:text-primary p-1"
+                              onClick={() => startEdit(entry)}
+                              aria-label="Rediger notat"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            {entry.source === 'mention' && (
+                              <button
+                                className="text-muted-foreground hover:text-destructive p-1"
+                                onClick={() => setDeleteTarget({ id: entry.id, participantName: p?.name || '' })}
+                                aria-label="Slett notat"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
       <div className="flex-1 min-h-0 overflow-y-auto space-y-4 p-1 pb-4">
         {filteredOrder.length === 0 && (
           <div className="text-center py-8 text-muted-foreground text-sm">
@@ -489,6 +635,9 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
                       {age ? ` · ${age} år` : ''}
                       {' · '}
                       {pEntries.length} oppføring{pEntries.length !== 1 ? 'er' : ''}
+                      {pEntries.length > 0 && pEntries[pEntries.length - 1].created_at
+                        ? ` · sist ${format(new Date(pEntries[pEntries.length - 1].created_at), 'd. MMM HH:mm', { locale: nb })}`
+                        : ''}
                     </div>
                   </div>
                   {onOpenParticipant && <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
@@ -567,6 +716,7 @@ ${sectionsHtml || '<p style="color:#94a3b8;">Ingen data registrert.</p>'}
           );
         })}
       </div>
+      )}
 
       {/* Add note dialog */}
       <ResponsiveDialog open={!!addNoteFor} onOpenChange={(o) => { if (!o) { setAddNoteFor(null); setNewNoteText(''); } }}>

@@ -1,35 +1,28 @@
-## Mål
+## 1. Hjem: rekkefølge på kortene
 
-Tre endringer i lederpasset (`src/components/passport/LederPass.tsx`).
+I `src/pages/Home.tsx`:
+- Flytt hero-kortet «Denne økten skal du» (`current_activity`, i dag rundt linje 722) opp som **første kort** rett under de runde hurtigknappene.
+- Flytt kortet «Aktiviteter denne økten» (`session_activities`, i dag øverst) helt **nederst**, rett over Morder-leken-boksen. Behold styling, økt-badge og påminnelse, men gjør kortet visuelt roligere (tynn ramme, nøytral bakgrunn) siden det ikke lenger er hovedfokus.
+- Resten (kjøkkentjeneste, fix, tau, OBS, ekstra, notater) beholder rekkefølgen mellom disse to.
 
-### 1. Tjenesteår blir siste side
-Flytt siden `tjenestear` (med `ServiceHistoryEditor`) fra plass 2 til aller siste posisjon i siderekkefølgen. Ny rekkefølge:
+## 2. Hendelser-tekst
 
-```text
-Forside → Legitimasjon → Lederopplysninger → Godkjenninger → Lederløftet → Stempler (1..n) → Tjenesteår
-```
+I `src/pages/Hendelser.tsx` byttes hjelpeteksten til:
+«Her skriver du inn alle små og store hendelser.»
 
-### 2. Snarvei når man ikke har stempler
-Når lederen ikke har huket av noen år/perioder, viser «Stempler»-siden i dag bare en tekst om å bla tilbake. Erstattes med:
-- kort forklarende tekst («Ingen tjenesteår registrert ennå»)
-- en tydelig knapp «Velg år og perioder» som hopper direkte til siste side (Tjenesteår) via sidestaten
-- knappen skjules når passet vises for en annen leder uten redigeringsrettigheter (kun lesetilgang) — da vises bare teksten
+## 3. Hyttenavn: bare hovednavn
 
-### 3. Flere stempler per side + automatisk ny side
-Stempelrutenettet går fra 2 kolonner / 7 stempler til 3 kolonner / 12 stempler per side, med mindre stempelstørrelse (ca. 56 px) og tettere avstand slik at 12 får plass på 2:3-formatet uten scrolling. Overflyt fortsetter automatisk på nye sider (logikken finnes allerede via `chunk`), og teller-etiketten «Stempler 1/3» oppdateres av seg selv. År/periode-etiketten under hvert stempel beholdes i mindre skrift.
+Ledere med flere rom i samme hytte (Seilern Honolulu, Seilern Hawaii, …) skal kun se **Seileren** som én chip.
+- Bruk eksisterende `formatMainCabins` i `src/lib/cabinDisplay.ts` som grunnlag, men legg til en liten navnetabell så hovednavnet blir korrekt norsk visningsform: `Seilern → Seileren`, `Balder → Balder`, osv. (fallback = første ord).
+- I `Home.tsx` grupperes `leaderCabins` på hovednavn før chips rendres: én chip per hovedhytte, klikk fortsatt til `/my-cabins`.
+- Samme hjelpefunksjon brukes der lederens hytter vises som chips/badges (Leaders-oversikt og leder-detaljer bruker allerede `formatMainCabins`, så de får riktig visning automatisk).
 
-Sideindikator-punktene nederst begrenses så de ikke sprenger bredden når mange sider finnes (kompakt visning når antall sider er høyt).
+## 4. Mini-lederpass i «Mer»
 
-### 4. Lederløftet — ny tekst
-Erstatt dagens tekst med:
-
-> «Jeg lover å ta vare på deltakerne, lederene og øya. Å gå foran med varme, oppmerksomhet og godt humør — og å bære Øksnøen-ånden videre.»
+I `src/pages/More.tsx` erstattes den vanlige listeflisen «Lederpasset» med et bredt **mini-pass-kort** øverst i «Min side»:
+- Lite passkort i samme stil som passet (mørk forside, navn, rolle, periode-badge, lite stempel-preview), klikkbart til `/lederpass`.
+- Rendres som en gjenbrukbar `LederPassMini`-komponent (ny fil `src/components/passport/LederPassMini.tsx`) som tar `leader` + `periodLabel`, uten den tunge PassRail-logikken, slik at «Mer» laster raskt.
 
 ## Teknisk
 
-- `STAMPS_PER_PAGE` 7 → 12, `grid-cols-2` → `grid-cols-3`, `PeriodStamp size` 72 → 56.
-- Sidearrayet reorganiseres; en hjelpefunksjon/indeks brukes for «gå til Tjenesteår»-knappen (siste indeks) i stedet for hardkodet tall.
-- Tekst i tom-tilstanden og `canEdit`-sjekken gjenbruker eksisterende `canEdit`.
-- Ingen databaseendringer.
-
-Verifiseres i mobil-preview med testdata for både 0, 7 og 20+ stempler.
+Ingen databaseendringer. Kun frontend: `Home.tsx`, `Hendelser.tsx`, `More.tsx`, `cabinDisplay.ts` og ny `LederPassMini.tsx`.
