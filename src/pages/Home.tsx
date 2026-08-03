@@ -494,9 +494,6 @@ export default function Home() {
           )}
 
           <div className="flex-1 min-w-0 text-right">
-            <p className="text-sm font-semibold text-foreground truncate">
-              {effectiveLeader?.name}
-            </p>
             {effectiveLeader?.ministerpost && (
               <p className="text-xs text-muted-foreground truncate">{effectiveLeader.ministerpost}</p>
             )}
