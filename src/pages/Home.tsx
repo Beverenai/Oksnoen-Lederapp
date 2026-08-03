@@ -832,20 +832,20 @@ export default function Home() {
           const sessionLabel = `${sessionsPayload.active}. økt`;
           return (
             <Card className={cn(
-              "border-2 border-primary/30 bg-primary/5 dark:bg-primary/10 shadow-md",
+              "border border-border/60 bg-card shadow-sm",
               getCardStyle(sessionConfig)
             )}>
               <CardContent className="py-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="p-1.5 rounded-full bg-primary/15 shrink-0">
-                      <SessionIcon className="w-4 h-4 text-primary" />
+                    <div className="p-1.5 rounded-full bg-muted shrink-0">
+                      <SessionIcon className="w-4 h-4 text-muted-foreground" />
                     </div>
-                    <p className="text-sm font-semibold text-foreground truncate">
+                    <p className="text-sm font-semibold text-muted-foreground truncate">
                       {getElementTitle('session_activities', 'Aktiviteter denne økten')}
                     </p>
                   </div>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/15 text-primary shrink-0">
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
                     {sessionLabel}
                   </span>
                 </div>
