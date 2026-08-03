@@ -463,6 +463,25 @@ export default function Home() {
   const ObsIcon = getElementIcon('obs_message', AlertTriangle);
   const SessionIcon = getElementIcon('session_activities', Calendar);
 
+  const quickActions: QuickAction[] = [
+    {
+      key: 'hendelser',
+      icon: AlertCircle,
+      label: 'Hendelser',
+      tone: 'danger',
+      onClick: () => navigate('/hendelser'),
+    },
+    ...(overnattingEnabled
+      ? [{
+          key: 'overnatting',
+          icon: Tent,
+          label: overnattingTitle,
+          active: overnattingJoining,
+          onClick: () => setOvernattingEditOpen(true),
+        } as QuickAction]
+      : []),
+  ];
+
   return (
     <div ref={pullRef} className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 pb-24 overflow-y-auto">
       <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
