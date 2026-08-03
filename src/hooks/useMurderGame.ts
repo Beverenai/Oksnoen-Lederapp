@@ -173,5 +173,13 @@ export function useMurderMutations() {
     onSuccess: invalidate,
   });
 
-  return { claimKill, confirmDeath, startGame, setActive };
+  const announceStart = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('push-murder-start');
+      if (error) throw error;
+      return data as { sent?: number; failed?: number; players?: number };
+    },
+  });
+
+  return { claimKill, confirmDeath, startGame, setActive, announceStart };
 }
