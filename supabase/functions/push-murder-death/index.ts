@@ -192,15 +192,9 @@ serve(async (req) => {
         continue;
       }
 
-      const { data: victim } = await supabaseAdmin
-        .from("leaders")
-        .select("name")
-        .eq("id", claim.victim_leader_id)
-        .maybeSingle();
-
       const title = "☠️ En spiller er drept";
-      // Never reveal the killer or any secret targets.
-      const message = `${victim?.name ?? "En spiller"} er ute av Morder-leken.`;
+      // Never reveal the victim, the killer or any secret targets.
+      const message = "En spiller har blitt drept i Morder-leken.";
       const url = "/morder";
       const payloadData = JSON.stringify({ title, body: message, url });
 
