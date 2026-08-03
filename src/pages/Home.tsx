@@ -869,7 +869,52 @@ export default function Home() {
           </Card>
         )}
 
+        {/* Morder-leken — liten boks helt nederst */}
+        {showMurder && (
+          <button
+            type="button"
+            onClick={() => navigate('/morder')}
+            className="w-full flex items-center gap-3 rounded-2xl bg-foreground/90 px-4 py-3 text-left shadow-sm active:scale-[0.99] transition-transform"
+          >
+            <span className="relative w-9 h-9 rounded-xl bg-background/15 flex items-center justify-center shrink-0">
+              <Skull className="w-5 h-5 text-background" />
+              {murderState?.incoming_claim_id && (
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-destructive ring-2 ring-foreground" />
+              )}
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-semibold text-background">Morder-leken</span>
+              <span className="block text-[11px] text-background/70">
+                {murderState?.incoming_claim_id ? 'Noen hevder å ha drept deg' : 'Åpne for å se målet ditt'}
+              </span>
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-background/80">Åpne</span>
+          </button>
+        )}
+
       </div>
+
+      {/* Overnatting: tvunget førstegangssvar */}
+      {overnattingEnabled && !overnattingAnswered && (
+        <OvernattingGateDialog
+          open
+          title={overnattingTitle}
+          question={overnattingQuestion}
+          onAnswer={handleOvernattingToggle}
+        />
+      )}
+
+      {/* Overnatting: endre svar */}
+      {overnattingEnabled && (
+        <OvernattingEditDialog
+          open={overnattingEditOpen}
+          onOpenChange={setOvernattingEditOpen}
+          title={overnattingTitle}
+          question={overnattingQuestion}
+          joining={overnattingJoining}
+          onAnswer={handleOvernattingToggle}
+        />
+      )}
     </div>
   );
 }
