@@ -401,9 +401,11 @@ export default function Home() {
         .from('overnatting_responses')
         .upsert({ leader_id: effectiveLeader.id, is_joining: next, updated_at: new Date().toISOString() }, { onConflict: 'leader_id' });
       if (error) throw error;
+      setOvernattingAnswered(true);
     } catch (e) {
       console.error('Overnatting toggle failed', e);
       setOvernattingJoining(!next);
+      throw e;
     } finally {
       setOvernattingSaving(false);
     }
