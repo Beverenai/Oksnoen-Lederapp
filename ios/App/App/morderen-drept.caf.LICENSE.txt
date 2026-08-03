@@ -1,5 +1,6 @@
 morderen-drept.caf
-Kilde: Mixkit "Horror impact", SFX 773 — https://mixkit.co/free-sound-effects/horror/
-Lisens: Mixkit Sound Effects Free License
-Konvertert til IMA4 CAF, varighet 2,62 sekunder.
+Kilde: Lydfil levert av appeier (Øksnøen), lastet opp 2026-08-03.
+Lisens/rettigheter: Appeier har bekreftet at han eier rettighetene til lyden.
+Konvertert til IMA4 CAF (44,1 kHz stereo), varighet 25,29 sekunder
+(under APNs-grensen på 30 sekunder).
 Brukes som APNs-lyd kun for varselet "En spiller er drept" i Morder-leken.
