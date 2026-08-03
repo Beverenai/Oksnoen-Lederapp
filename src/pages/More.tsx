@@ -16,7 +16,6 @@ import {
   LogOut,
   Bell,
   Skull,
-  IdCard,
   LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -27,6 +26,7 @@ import { QuickNotificationSheet } from '@/components/admin/QuickNotificationShee
 import { useMyMurderState } from '@/hooks/useMurderGame';
 import { cn } from '@/lib/utils';
 import { hapticImpact } from '@/lib/capacitorHaptics';
+import { LederPassMini } from '@/components/passport/LederPassMini';
 
 type MoreItem = {
   to?: string;
@@ -71,11 +71,25 @@ function Tile({ item }: { item: MoreItem }) {
 }
 
 export default function More() {
-  const { isAdmin, isNurse, logout, leader } = useAuth();
+  const { isAdmin, isNurse, logout, leader, effectiveLeader } = useAuth();
   const sweatersEnabled = useSweatersEnabled();
   const { data: murderState } = useMyMurderState();
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
+  const [periodLabel, setPeriodLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from('periods')
+      .select('name')
+      .eq('is_active', true)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setPeriodLabel(data?.name ?? null);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,7 +126,6 @@ export default function More() {
       label: 'Min side',
       items: [
         { to: '/profile', icon: User, label: 'Min Profil' },
-        { to: '/lederpass', icon: IdCard, label: 'Lederpasset' },
         { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
         { to: '/my-shifts', icon: ClipboardList, label: 'Min vakt' },
       ],
@@ -197,6 +210,8 @@ export default function More() {
           <span className="text-base font-semibold">Admin</span>
         </NavLink>
       )}
+
+      <LederPassMini leader={effectiveLeader ?? leader} periodLabel={periodLabel} />
 
       {sections.map((section) =>
         section.items.length === 0 ? null : (
