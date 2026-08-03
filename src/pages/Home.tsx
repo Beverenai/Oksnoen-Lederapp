@@ -861,7 +861,7 @@ export default function Home() {
                   <ul className="space-y-1.5">
                     {activities.map((a, i) => (
                       <li key={i} className="flex items-start gap-2.5">
-                        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-muted-foreground/60 shrink-0" />
                         <span className={cn("text-foreground leading-snug", getTextStyle(sessionConfig))}>{a}</span>
                       </li>
                     ))}
