@@ -463,8 +463,9 @@ export default function Home() {
   const ObsIcon = getElementIcon('obs_message', AlertTriangle);
   const SessionIcon = getElementIcon('session_activities', Calendar);
 
+  const mainCabins = groupMainCabins(leaderCabins);
+
   const quickActions: QuickAction[] = [
-</dev/null
     {
       key: 'hendelser',
       icon: AlertCircle,
