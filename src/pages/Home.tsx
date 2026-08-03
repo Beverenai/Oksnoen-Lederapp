@@ -466,63 +466,41 @@ export default function Home() {
   return (
     <div ref={pullRef} className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 pb-24 overflow-y-auto">
       <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
-      {/* Profile Section — compact single row (iOS-style) */}
-      <div className="px-4 pt-4">
-        <div className="flex items-center gap-3">
-          {/* Pass */}
-          <div className="shrink-0">
-            <LederPass leader={effectiveLeader} periodLabel={activePeriodLabel} />
-          </div>
+      {/* Profile hero — centered avatar, name and chips */}
+      <div className="px-4 pt-3 relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={loadData}
+          aria-label="Oppdater"
+          className="absolute right-3 top-2 h-9 w-9 text-muted-foreground hover:text-foreground"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </Button>
 
+        <div className="flex flex-col items-center text-center">
           <Avatar className={cn(
-            "h-14 w-14 border-2 shadow-sm ring-2 shrink-0",
+            "h-24 w-24 border-2 shadow-sm ring-2",
             (isAdmin || isNurse || hasRead)
               ? "border-green-500 ring-green-500/20"
               : "border-red-500 ring-red-500/20"
           )}>
             <AvatarImage src={effectiveLeader?.profile_image_url || ''} alt={effectiveLeader?.name} />
-            <AvatarFallback className="bg-primary text-primary-foreground font-heading">
+            <AvatarFallback className="bg-primary text-primary-foreground font-heading text-xl">
               {effectiveLeader?.name ? getInitials(effectiveLeader.name) : '?'}
             </AvatarFallback>
           </Avatar>
 
-          {showMurder && (
-            <button
-              type="button"
-              aria-label="Morderleken"
-              onClick={() => navigate('/morder')}
-              className="shrink-0 relative p-2 rounded-full bg-stone-500/15 border border-stone-500/30 transition-colors hover:bg-stone-500/25"
-            >
-              <Skull className="w-5 h-5 text-stone-700 dark:text-stone-300" />
-              {murderState?.incoming_claim_id && (
-                <span className="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-background" />
-              )}
-            </button>
-          )}
+          <h1 className="mt-3 text-xl font-heading font-bold text-foreground">
+            {effectiveLeader?.name}
+          </h1>
 
-          <div className="flex-1 min-w-0 text-right">
-            {effectiveLeader?.ministerpost && (
-              <p className="text-xs text-muted-foreground truncate">{effectiveLeader.ministerpost}</p>
-            )}
-          </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={loadData}
-            aria-label="Oppdater"
-            className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-        </div>
-
-        <div className="flex flex-wrap gap-1.5 mt-2">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
             {leaderCabins.length > 0 ? (
               leaderCabins.map(cabin => (
-                <Badge 
+                <Badge
                   key={cabin.id}
-                  variant="secondary" 
+                  variant="secondary"
                   className="text-xs cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => navigate('/my-cabins')}
                 >
@@ -536,6 +514,9 @@ export default function Home() {
                 {leader.cabin_info}
               </Badge>
             )}
+            {effectiveLeader?.ministerpost && (
+              <Badge variant="outline" className="text-xs">{effectiveLeader.ministerpost}</Badge>
+            )}
             {leader?.team && (
               <Link to={`/team/${leader.team.toLowerCase()}`}>
                 <Badge variant="outline" className="text-xs cursor-pointer hover:opacity-80 transition-opacity">
@@ -544,6 +525,12 @@ export default function Home() {
                 </Badge>
               </Link>
             )}
+          </div>
+        </div>
+
+        {/* Round quick actions */}
+        <div className="mt-5">
+          <HomeQuickActions actions={quickActions} />
         </div>
       </div>
 
