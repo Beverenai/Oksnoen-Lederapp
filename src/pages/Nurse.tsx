@@ -443,7 +443,7 @@ export default function Nurse() {
       if (existingNote) {
         const { error } = await supabase
           .from('participant_health_notes')
-          .update({ content: newNote, created_by: leader?.id })
+          .update({ content: newNote, created_by: leader?.id, updated_at: new Date().toISOString() })
           .eq('id', existingNote.id);
         if (error) throw error;
         setSelectedParticipant((prev) => prev ? ({
