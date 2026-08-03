@@ -459,73 +459,61 @@ export default function Home() {
   return (
     <div ref={pullRef} className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 pb-24 overflow-y-auto">
       <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
-      {/* Profile Section — top of page (no header image) */}
-      <div className="relative px-4 pt-6">
-        {/* Refresh button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={loadData}
-          aria-label="Oppdater"
-          className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
-        >
-          <RefreshCw className="w-5 h-5" />
-        </Button>
-        <div className="flex flex-col items-center text-center">
-          {/* User name at the very top */}
-          <h1 className="text-xl font-heading font-bold text-foreground mb-3">
-            Hei, {effectiveLeader?.name?.split(' ')[0]}!
-          </h1>
-
-          {/* Pass (left) — Avatar (center) — Morderleken (right) */}
-          <div className="flex items-center justify-center gap-4 sm:gap-6">
-            <div className="w-16 flex justify-center shrink-0">
-              <LederPass leader={effectiveLeader} periodLabel={activePeriodLabel} />
-            </div>
-
-            <Avatar className={cn(
-              "h-20 w-20 sm:h-24 sm:w-24 border-2 shadow-lg ring-2 shrink-0",
-              (isAdmin || isNurse || hasRead)
-                ? "border-green-500 ring-green-500/20"
-                : "border-red-500 ring-red-500/20"
-            )}>
-              <AvatarImage src={effectiveLeader?.profile_image_url || ''} alt={effectiveLeader?.name} />
-              <AvatarFallback className="bg-primary text-primary-foreground font-heading text-xl">
-                {effectiveLeader?.name ? getInitials(effectiveLeader.name) : '?'}
-              </AvatarFallback>
-            </Avatar>
-
-            <div className="w-16 flex justify-center shrink-0">
-              {showMurder && (
-                <button
-                  type="button"
-                  aria-label="Morderleken"
-                  onClick={() => navigate('/morder')}
-                  className="flex flex-col items-center gap-1 group"
-                >
-                  <span className="relative p-2.5 rounded-full bg-stone-500/15 border border-stone-500/30 transition-colors group-hover:bg-stone-500/25">
-                    <Skull className="w-6 h-6 text-stone-700 dark:text-stone-300" />
-                    {murderState?.incoming_claim_id && (
-                      <span className="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-background" />
-                    )}
-                  </span>
-                  <span className="text-[9px] uppercase tracking-wide font-medium text-muted-foreground leading-none">
-                    Morderleken
-                  </span>
-                </button>
-              )}
-            </div>
+      {/* Profile Section — compact single row (iOS-style) */}
+      <div className="px-4 pt-4">
+        <div className="flex items-center gap-3">
+          {/* Pass */}
+          <div className="shrink-0">
+            <LederPass leader={effectiveLeader} periodLabel={activePeriodLabel} />
           </div>
-          
-          <p className="text-base font-medium text-foreground mt-2">
-            {effectiveLeader?.name}
-          </p>
 
-          {effectiveLeader?.ministerpost && (
-            <p className="text-sm text-muted-foreground mt-0.5">{effectiveLeader.ministerpost}</p>
+          <Avatar className={cn(
+            "h-14 w-14 border-2 shadow-sm ring-2 shrink-0",
+            (isAdmin || isNurse || hasRead)
+              ? "border-green-500 ring-green-500/20"
+              : "border-red-500 ring-red-500/20"
+          )}>
+            <AvatarImage src={effectiveLeader?.profile_image_url || ''} alt={effectiveLeader?.name} />
+            <AvatarFallback className="bg-primary text-primary-foreground font-heading">
+              {effectiveLeader?.name ? getInitials(effectiveLeader.name) : '?'}
+            </AvatarFallback>
+          </Avatar>
+
+          {showMurder && (
+            <button
+              type="button"
+              aria-label="Morderleken"
+              onClick={() => navigate('/morder')}
+              className="shrink-0 relative p-2 rounded-full bg-stone-500/15 border border-stone-500/30 transition-colors hover:bg-stone-500/25"
+            >
+              <Skull className="w-5 h-5 text-stone-700 dark:text-stone-300" />
+              {murderState?.incoming_claim_id && (
+                <span className="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-background" />
+              )}
+            </button>
           )}
-          
-          <div className="flex flex-wrap gap-1.5 mt-2 justify-center">
+
+          <div className="flex-1 min-w-0 text-right">
+            <p className="text-sm font-semibold text-foreground truncate">
+              {effectiveLeader?.name}
+            </p>
+            {effectiveLeader?.ministerpost && (
+              <p className="text-xs text-muted-foreground truncate">{effectiveLeader.ministerpost}</p>
+            )}
+          </div>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={loadData}
+            aria-label="Oppdater"
+            className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5 mt-2">
             {leaderCabins.length > 0 ? (
               leaderCabins.map(cabin => (
                 <Badge 
@@ -552,7 +540,6 @@ export default function Home() {
                 </Badge>
               </Link>
             )}
-          </div>
         </div>
       </div>
 
