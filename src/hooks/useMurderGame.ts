@@ -146,6 +146,13 @@ export function useMurderMutations() {
         _claim_id: claimId ?? undefined,
       } as { _claim_id?: string });
       if (error) throw error;
+      // Server-side authorized + idempotent broadcast. Derives the victim
+      // itself; duplicate calls are safe (unique lock per confirmed claim).
+      try {
+        await supabase.functions.invoke('push-murder-death');
+      } catch (e) {
+        console.error('push-murder-death failed', e);
+      }
     },
     onSuccess: invalidate,
   });
