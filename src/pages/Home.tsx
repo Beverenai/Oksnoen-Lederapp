@@ -41,6 +41,8 @@ import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
 import { useAppMode } from '@/hooks/useAppMode';
 import { Link as LinkIcon } from 'lucide-react';
 import { LederPass } from '@/components/passport/LederPass';
+import { useMyMurderState } from '@/hooks/useMurderGame';
+import { Skull } from 'lucide-react';
 // Use public path for LCP optimization - preloaded in index.html (WebP for better compression)
 const oksnoenHeader = '/oksnoen-header.webp';
 
@@ -165,6 +167,8 @@ export default function Home() {
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
   const showRoulette = rouletteEnabled && inRoulette;
   const teamsEnabled = useTeamsEnabled();
+  const { data: murderState } = useMyMurderState();
+  const showMurder = !!murderState?.is_active;
   const { teamA: dutyTeamA, teamB: dutyTeamB } = useKitchenDutyToday();
 
   useEffect(() => {
@@ -477,10 +481,26 @@ export default function Home() {
           variant="ghost" 
           size="icon" 
           onClick={loadData} 
-          className="absolute top-4 right-4 text-white hover:bg-white/20"
+          className="absolute top-4 right-14 text-white hover:bg-white/20"
         >
           <RefreshCw className="w-5 h-5" />
         </Button>
+
+        {/* Morder-leken button */}
+        {showMurder && (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Morder-leken"
+            onClick={() => navigate('/morder')}
+            className="absolute top-4 right-4 text-white hover:bg-white/20"
+          >
+            <Skull className="w-5 h-5" />
+            {murderState?.incoming_claim_id && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white/70" />
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Profile Section - overlapping header (reduced visual weight) */}
