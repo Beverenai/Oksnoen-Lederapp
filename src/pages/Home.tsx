@@ -515,10 +515,10 @@ export default function Home() {
           </h1>
 
           <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
-            {leaderCabins.length > 0 ? (
-              leaderCabins.map(cabin => (
+            {mainCabins.length > 0 ? (
+              mainCabins.map(cabin => (
                 <Badge
-                  key={cabin.id}
+                  key={cabin.key}
                   variant="secondary"
                   className="text-xs cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => navigate('/my-cabins')}
