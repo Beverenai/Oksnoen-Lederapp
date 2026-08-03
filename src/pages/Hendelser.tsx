@@ -7,7 +7,7 @@ export default function Hendelser() {
         <h1 className="text-xl font-heading font-bold">Hendelser</h1>
         <div className="rounded-2xl border border-border/60 bg-muted/40 px-4 py-3">
           <p className="text-sm text-muted-foreground">
-            Skriv inn her alt — stort og smått som har skjedd.
+            Her skriver du inn alle små og store hendelser.
           </p>
         </div>
       </div>
