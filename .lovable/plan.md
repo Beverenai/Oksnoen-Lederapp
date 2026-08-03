@@ -1,43 +1,29 @@
-# Morder-leken
+## Mål
+Roligere topp på hjem-siden, tydeligere Hendelse-knapp, og Morderleken + Lederpasset plassert som små ikoner ved profilbildet.
 
-Et snikmorder-spill for ledere: alle får én leder de skal "drepe". Kjeden går rundt i en ring, og når noen dør arver morderen offerets mål.
+## Endringer (kun `src/pages/Home.tsx`)
 
-## Slik fungerer det for lederen
+### 1. Fjern bildebanneret øverst
+- Fjern `oksnoenHeader`-bildet og gradient-overlayet (hele header-blokken med `h-44 md:h-52`).
+- Profilseksjonen flyttes opp som toppen av siden (ingen negativ `-mt-14`-overlapping lenger), med litt luft over.
+- Oppdater-knappen (`RefreshCw`) flyttes til øvre høyre hjørne av den nye toppen, i nøytral/muted stil siden bakgrunnen ikke lenger er mørk.
+- «Hei, {fornavn}!» får vanlig `text-foreground` i stedet for hvit tekst med drop-shadow.
 
-1. Når spillet er aktivt vises en ny knapp på Hjem-skjermen ("Morder-leken") som går til `/morder`.
-2. På Morder-siden ligger målet skjult bak en **Reveal**-knapp – man må aktivt trykke for å se navnet (og bildet) på den man skal drepe.
-3. Under målet: to knapper
-   - **Jeg har drept personen** → registrerer et drapsforsøk (venter på offerets bekreftelse). Lederen ser "Venter på at [X] bekrefter" og får ikke nytt mål før det.
-   - **Jeg har blitt drept** → bekrefter drapet. Lederen blir markert som død, ser en "Du er ute"-skjerm med hvem som tok deg, og morderen arver offerets mål automatisk.
-4. Alt oppdateres i sanntid, så morderen ser det nye målet (skjult bak Reveal igjen) i samme øyeblikk offeret bekrefter.
-5. Når bare én leder står igjen vises "Vinner"-tilstand.
+### 2. Pass til venstre, dødningskalle til høyre for profilbildet
+- Ny rad: `[LederPass-ikon]  [Avatar]  [Morderleken-ikon]`, sentrert, avataren beholder samme størrelse og grønn/rød ring.
+- Venstre: eksisterende `<LederPass leader=... periodLabel=... />` i liten ikon-variant.
+- Høyre: liten vertikal knapp med `Skull`-ikon i sirkel + teksten «Morderleken» under (liten uppercase-label), navigerer til `/morder`. Vises kun når `showMurder` er sann; rød prikk-indikator beholdes ved `incoming_claim_id`.
+- Når Morderleken er av, holdes avataren sentrert (usynlig plassholder på høyre side).
 
-## Admin
+### 3. Tydeligere Hendelse-knapp
+- Erstatt den lille sentrerte outline-knappen nederst med et fullbredde, framtredende kort/knapp i rød aksent: ikon i sirkel, tittel «Registrer hendelse» og en liten hjelpetekst, med tydelig kant og skygge — samme visuelle vekt som de andre kortene på siden.
+- Plasseres øverst i kortlisten (rett under profilseksjonen) i tillegg til å beholde samme navigasjon til `/hendelser`.
 
-Ny fane i Admin-innstillinger: **Morder-leken**
-- Bryter for å slå spillet av/på (aktiv periode).
-- Deltakerliste: alle aktive ledere er med som standard; admin kan haka av enkeltledere for å ta dem ut før start.
-- **Start / nullstill spill**: trekker en tilfeldig ring av alle deltakere.
-- Oversikt bak en **Reveal**-knapp (siden admin selv spiller):
-  - Kjede-visning: A → B → C → … med grønn (i live) / grå (død) status og tidspunkt.
-  - Graf/ring-visning som viser hele "spindelvevet" og hvem som tok hvem.
-  - Liste over ventende drap som admin kan bekrefte manuelt hvis offeret glemmer å trykke.
-- Statistikk: antall i live, antall drepte, leder med flest drap.
+### 4. Rydding
+- Fjern nå ubrukt import av header-bildet.
+- Morderleken-statuskortet lenger ned beholdes uendret (viser status/bekreftelser).
 
 ## Teknisk
-
-Nye tabeller (per periode, RLS-sikret):
-- `murder_games`: `period_id`, `is_active`, `started_at`, `winner_leader_id`.
-- `murder_players`: `game_id`, `leader_id`, `target_leader_id`, `is_alive`, `killed_by`, `killed_at`, `kills` — unik per (game, leader).
-- `murder_kill_claims`: `game_id`, `killer_leader_id`, `victim_leader_id`, `status` (pending/confirmed/rejected), `confirmed_at`.
-
-Logikk:
-- Start: security-definer-funksjon `start_murder_game(period_id)` trekker deltakerne i tilfeldig rekkefølge og setter target til neste i ringen.
-- Bekreftelse: funksjon `confirm_murder_kill(claim_id)` (kun offeret eller admin) markerer offer som død, setter `killer.target = victim.target`, øker `kills`, og kårer vinner når kun én lever.
-- Policies: ledere ser bare sin egen rad (mål-navn hentes via egen view/funksjon), admin ser alt. GRANT til `authenticated` + `service_role`.
-
-Frontend:
-- `src/hooks/useMurderGame.ts` — spillstate, claims, realtime-abonnement, mutasjoner.
-- `src/pages/Morder.tsx` — reveal-kort, de to knappene, død/vinner-tilstand.
-- `src/components/admin/MurderGameTab.tsx` — bryter, deltakervalg, start/nullstill, reveal-oversikt med kjede + graf.
-- Hjem-knapp i `src/pages/Home.tsx` (samme mønster som Oppgave-roulette), rute i `src/App.tsx`, fane i `AdminSettingsContent.tsx`.
+- Ingen endringer i data, RLS eller edge functions — kun presentasjon i `Home.tsx`.
+- Farger via eksisterende semantiske/tailwind-klasser som brukes i filen i dag.
+- Verifiseres i mobilvisning (393px) med skjermbilde.
