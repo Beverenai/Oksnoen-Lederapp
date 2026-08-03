@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Skull, Play, Eye, EyeOff, Loader2, Crown, ArrowRight, Check } from 'lucide-react';
+import { Skull, Play, Eye, EyeOff, Loader2, Crown, ArrowRight, Check, Bell } from 'lucide-react';
 import { useLeaders } from '@/hooks/useLeaders';
 import {
   useMurderGame, useMurderOverview, useMurderMutations, usePendingMurderClaims,
@@ -17,7 +17,7 @@ export function MurderGameTab() {
   const { showSuccess, showError } = useStatusPopup();
   const { data: leaders = [], isLoading: leadersLoading } = useLeaders();
   const { data: game, isLoading: gameLoading } = useMurderGame();
-  const { startGame, setActive, confirmDeath } = useMurderMutations();
+  const { startGame, setActive, confirmDeath, announceStart } = useMurderMutations();
   const [revealed, setRevealed] = useState(false);
   const { data: overview = [], isLoading: overviewLoading } = useMurderOverview(revealed);
   const { data: pending = [] } = usePendingMurderClaims(true);
@@ -51,6 +51,15 @@ export function MurderGameTab() {
       showSuccess(`Morder-leken startet med ${participants.length} ledere`);
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Kunne ikke starte spillet');
+    }
+  };
+
+  const handleAnnounceStart = async () => {
+    try {
+      const res = await announceStart.mutateAsync();
+      showSuccess(`Startvarsling sendt til ${res?.sent ?? 0} enheter`);
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Kunne ikke sende varsling');
     }
   };
 
@@ -113,6 +122,17 @@ export function MurderGameTab() {
                 {game?.started_at ? 'Nullstill og start på nytt' : 'Start spill'}
               </Button>
             </div>
+            <Button
+              variant="outline"
+              className="w-full border-destructive/40 text-destructive hover:bg-destructive/10"
+              onClick={handleAnnounceStart}
+              disabled={announceStart.isPending || !game?.started_at}
+            >
+              {announceStart.isPending
+                ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                : <Bell className="w-4 h-4 mr-2" />}
+              Send «Morder-leken har startet»-varsling
+            </Button>
             {leadersLoading ? (
               <Skeleton className="h-24 w-full" />
             ) : (
