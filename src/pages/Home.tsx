@@ -649,36 +649,7 @@ export default function Home() {
           </Card>
         )}
 
-        {/* Oppgave-roulette */}
-        {showMurder && (
-        <Card
-          className="border border-stone-500/30 bg-stone-100/60 dark:bg-stone-900/30 cursor-pointer hover:bg-stone-100 dark:hover:bg-stone-900/50 transition-colors shadow-sm"
-          onClick={() => navigate('/morder')}
-        >
-          <CardContent className="py-3 sm:py-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-stone-500/15 shrink-0">
-                <Skull className="w-5 h-5 text-stone-700 dark:text-stone-300" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] uppercase tracking-wide text-stone-600/80 dark:text-stone-300/80 font-medium mb-0.5">
-                  Morder-leken
-                </p>
-                <p className="text-sm sm:text-base font-medium text-foreground">
-                  {murderState?.is_alive === false
-                    ? 'Du er ute av leken'
-                    : murderState?.incoming_claim_id
-                      ? 'Noen har meldt at du er tatt – bekreft'
-                      : murderState?.pending_claim_id
-                        ? 'Venter på bekreftelse fra offeret'
-                        : 'Se hvem du skal drepe'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        )}
-
+        {/* Morder-leken: kun ikonet ved profilbildet (ingen kort her) */}
         {showRoulette && (
         <Card
           className="border border-violet-500/30 bg-violet-50/50 dark:bg-violet-950/20 cursor-pointer hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors shadow-sm"
