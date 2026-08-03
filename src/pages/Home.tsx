@@ -545,30 +545,68 @@ export default function Home() {
 
       {/* Content Cards - consistent spacing */}
       <div className="px-4 mt-4 sm:mt-6 space-y-3 sm:space-y-4">
-        {/* Registrer hendelse — prominent */}
-        <Card
-          role="button"
-          tabIndex={0}
+        {/* Aktiviteter denne økten — viktigst, øverst */}
+        {isElementVisible('session_activities') && sessionsPayload && (() => {
+          const sessionConfig = getConfigForElement('session_activities');
+          const activeKey = String(sessionsPayload.active) as '1' | '2' | '3';
+          const current = sessionsPayload.sessions[activeKey];
+          if (!current || (!current.reminder && !current.items?.length)) return null;
+          const reminder = current.reminder?.trim() || '';
+          const activities = current.items || [];
+          const sessionLabel = `${sessionsPayload.active}. økt`;
+          return (
+            <Card className={cn(
+              "border-2 border-primary/30 bg-primary/5 dark:bg-primary/10 shadow-md",
+              getCardStyle(sessionConfig)
+            )}>
+              <CardContent className="py-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="p-1.5 rounded-full bg-primary/15 shrink-0">
+                      <SessionIcon className="w-4 h-4 text-primary" />
+                    </div>
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {getElementTitle('session_activities', 'Aktiviteter denne økten')}
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/15 text-primary shrink-0">
+                    {sessionLabel}
+                  </span>
+                </div>
+
+                {reminder && (
+                  <div className="rounded-lg border border-amber-200/60 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30 p-2.5 flex gap-2">
+                    <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-900 dark:text-amber-100 leading-snug min-w-0">{reminder}</p>
+                  </div>
+                )}
+
+                {activities.length > 0 && (
+                  <ul className="space-y-1.5">
+                    {activities.map((a, i) => (
+                      <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                        <span className={cn("text-foreground leading-snug", getTextStyle(sessionConfig))}>{a}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
+
+        {/* Registrer hendelse — kompakt */}
+        <button
+          type="button"
           onClick={() => navigate('/hendelser')}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/hendelser'); }}
-          className="border-2 border-red-500/50 bg-red-50/70 dark:bg-red-950/30 shadow-md cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
+          className="w-full flex items-center gap-2.5 rounded-xl border-2 border-red-500/50 bg-red-50/70 dark:bg-red-950/30 px-3 py-2.5 text-left transition-colors hover:bg-red-50 dark:hover:bg-red-950/50"
         >
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-full bg-red-500/20 shrink-0">
-                <MessageSquareWarning className="w-6 h-6 text-red-600 dark:text-red-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-base font-semibold text-red-800 dark:text-red-200">
-                  Registrer hendelse
-                </p>
-                <p className="text-xs text-red-700/80 dark:text-red-300/80">
-                  Meld inn noe som har skjedd med en deltaker
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <MessageSquareWarning className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
+          <span className="text-sm font-semibold text-red-800 dark:text-red-200">
+            Registrer hendelse
+          </span>
+        </button>
 
         {/* Kjøkkentjeneste i dag */}
         {teamsEnabled && dutyTeamA && dutyTeamB && (
