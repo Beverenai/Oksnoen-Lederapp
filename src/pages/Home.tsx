@@ -606,18 +606,6 @@ export default function Home() {
           );
         })()}
 
-        {/* Registrer hendelse — kompakt */}
-        <button
-          type="button"
-          onClick={() => navigate('/hendelser')}
-          className="w-full flex items-center gap-2.5 rounded-xl border-2 border-red-500/50 bg-red-50/70 dark:bg-red-950/30 px-3 py-2.5 text-left transition-colors hover:bg-red-50 dark:hover:bg-red-950/50"
-        >
-          <MessageSquareWarning className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
-          <span className="text-sm font-semibold text-red-800 dark:text-red-200">
-            Registrer hendelse
-          </span>
-        </button>
-
         {/* Kjøkkentjeneste i dag */}
         {teamsEnabled && dutyTeamA && dutyTeamB && (
           <Card className="border border-orange-500/30 bg-orange-50/50 dark:bg-orange-950/20 shadow-sm">
@@ -732,32 +720,6 @@ export default function Home() {
         )}
 
         {/* HERO: Main Activity - Large Display with premium styling */}
-        {overnattingEnabled && (
-          <Card className="border-2 border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-sm">
-            <CardContent className="py-4 sm:py-5">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-indigo-500/15 shrink-0">
-                  <Bed className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wide text-indigo-600/80 dark:text-indigo-400/80 font-medium mb-0.5">
-                    {overnattingTitle}
-                  </p>
-                  <p className="text-sm sm:text-base font-medium text-foreground">{overnattingQuestion}</p>
-                </div>
-                <Switch
-                  checked={overnattingJoining}
-                  onCheckedChange={handleOvernattingToggle}
-                  disabled={overnattingSaving}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                {overnattingJoining ? 'Du er påmeldt ✓' : 'Skyv på for å melde deg på'}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
         {isElementVisible('current_activity') && (() => {
           const activityConfig = getConfigForElement('current_activity');
           return (
