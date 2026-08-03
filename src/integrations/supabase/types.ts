@@ -902,6 +902,187 @@ export type Database = {
         }
         Relationships: []
       }
+      murder_games: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          period_id: string
+          started_at: string | null
+          updated_at: string
+          winner_leader_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          period_id: string
+          started_at?: string | null
+          updated_at?: string
+          winner_leader_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          period_id?: string
+          started_at?: string | null
+          updated_at?: string
+          winner_leader_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "murder_games_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: true
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "murder_games_winner_leader_id_fkey"
+            columns: ["winner_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      murder_kill_claims: {
+        Row: {
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          game_id: string
+          id: string
+          killer_leader_id: string
+          status: string
+          updated_at: string
+          victim_leader_id: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          game_id: string
+          id?: string
+          killer_leader_id: string
+          status?: string
+          updated_at?: string
+          victim_leader_id: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          game_id?: string
+          id?: string
+          killer_leader_id?: string
+          status?: string
+          updated_at?: string
+          victim_leader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "murder_kill_claims_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "murder_kill_claims_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "murder_games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "murder_kill_claims_killer_leader_id_fkey"
+            columns: ["killer_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "murder_kill_claims_victim_leader_id_fkey"
+            columns: ["victim_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      murder_players: {
+        Row: {
+          created_at: string
+          game_id: string
+          id: string
+          is_alive: boolean
+          killed_at: string | null
+          killed_by: string | null
+          kills: number
+          leader_id: string
+          ring_order: number | null
+          target_leader_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          id?: string
+          is_alive?: boolean
+          killed_at?: string | null
+          killed_by?: string | null
+          kills?: number
+          leader_id: string
+          ring_order?: number | null
+          target_leader_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          id?: string
+          is_alive?: boolean
+          killed_at?: string | null
+          killed_by?: string | null
+          kills?: number
+          leader_id?: string
+          ring_order?: number | null
+          target_leader_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "murder_players_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "murder_games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "murder_players_killed_by_fkey"
+            columns: ["killed_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "murder_players_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "murder_players_target_leader_id_fkey"
+            columns: ["target_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nurse_incident_reviews: {
         Row: {
           created_at: string
@@ -2966,6 +3147,8 @@ export type Database = {
       }
     }
     Functions: {
+      claim_murder_kill: { Args: never; Returns: string }
+      confirm_murder_death: { Args: { _claim_id?: string }; Returns: undefined }
       current_leader_id: { Args: never; Returns: string }
       get_active_period_id: { Args: never; Returns: string }
       get_all_leader_roles: {
@@ -2991,6 +3174,39 @@ export type Database = {
           times_attended: number
         }[]
       }
+      get_murder_overview: {
+        Args: never
+        Returns: {
+          is_alive: boolean
+          killed_at: string
+          killed_by: string
+          kills: number
+          leader_id: string
+          leader_name: string
+          ring_order: number
+          target_leader_id: string
+        }[]
+      }
+      get_my_murder_state: {
+        Args: never
+        Returns: {
+          alive_count: number
+          game_id: string
+          incoming_claim_id: string
+          incoming_claim_killer_name: string
+          is_active: boolean
+          is_alive: boolean
+          killed_by_name: string
+          kills: number
+          pending_claim_id: string
+          pending_claim_victim_name: string
+          target_image_url: string
+          target_leader_id: string
+          target_name: string
+          total_count: number
+          winner_leader_id: string
+        }[]
+      }
       get_my_roles: {
         Args: never
         Returns: {
@@ -3007,6 +3223,8 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      set_murder_game_active: { Args: { _active: boolean }; Returns: undefined }
+      start_murder_game: { Args: { _leader_ids: string[] }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "leader" | "nurse" | "superadmin"
