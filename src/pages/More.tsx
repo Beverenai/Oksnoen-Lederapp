@@ -212,6 +212,8 @@ export default function More() {
         </NavLink>
       )}
 
+      <LederPassMini leader={effectiveLeader ?? leader} periodLabel={periodLabel} />
+
       {sections.map((section) =>
         section.items.length === 0 ? null : (
           <section key={section.label} className="space-y-2">
