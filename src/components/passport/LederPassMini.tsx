@@ -100,7 +100,7 @@ export function LederPassMini({ leader, periodLabel, to = '/lederpass' }: LederP
         </div>
 
         {previewStamps.length > 0 && (
-          <div className="relative hidden xs:flex sm:flex items-center -space-x-3 pr-1" aria-hidden>
+          <div className="relative flex items-center -space-x-3 pr-1 shrink-0" aria-hidden>
             {previewStamps.map((entry, i) => (
               <PeriodStamp key={entry.key} entry={entry} size={40} animate={false} delayMs={i * 40} />
             ))}
