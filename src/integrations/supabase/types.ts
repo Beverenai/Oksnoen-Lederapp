@@ -902,6 +902,58 @@ export type Database = {
         }
         Relationships: []
       }
+      murder_death_notifications: {
+        Row: {
+          claim_id: string
+          created_at: string
+          game_id: string
+          id: string
+          sent_count: number
+          updated_at: string
+          victim_leader_id: string
+        }
+        Insert: {
+          claim_id: string
+          created_at?: string
+          game_id: string
+          id?: string
+          sent_count?: number
+          updated_at?: string
+          victim_leader_id: string
+        }
+        Update: {
+          claim_id?: string
+          created_at?: string
+          game_id?: string
+          id?: string
+          sent_count?: number
+          updated_at?: string
+          victim_leader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "murder_death_notifications_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: true
+            referencedRelation: "murder_kill_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "murder_death_notifications_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "murder_games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "murder_death_notifications_victim_leader_id_fkey"
+            columns: ["victim_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       murder_games: {
         Row: {
           created_at: string
