@@ -464,6 +464,7 @@ export default function Home() {
   const SessionIcon = getElementIcon('session_activities', Calendar);
 
   const quickActions: QuickAction[] = [
+</dev/null
     {
       key: 'hendelser',
       icon: AlertCircle,
