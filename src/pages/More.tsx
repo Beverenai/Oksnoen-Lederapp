@@ -16,7 +16,6 @@ import {
   LogOut,
   Bell,
   Skull,
-  IdCard,
   LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
