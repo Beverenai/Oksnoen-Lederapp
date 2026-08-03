@@ -27,6 +27,7 @@ import { QuickNotificationSheet } from '@/components/admin/QuickNotificationShee
 import { useMyMurderState } from '@/hooks/useMurderGame';
 import { cn } from '@/lib/utils';
 import { hapticImpact } from '@/lib/capacitorHaptics';
+import { LederPassMini } from '@/components/passport/LederPassMini';
 
 type MoreItem = {
   to?: string;
@@ -112,7 +113,6 @@ export default function More() {
       label: 'Min side',
       items: [
         { to: '/profile', icon: User, label: 'Min Profil' },
-        { to: '/lederpass', icon: IdCard, label: 'Lederpasset' },
         { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
         { to: '/my-shifts', icon: ClipboardList, label: 'Min vakt' },
       ],
