@@ -28,7 +28,6 @@ import {
   ChefHat,
   type LucideIcon
 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
@@ -43,6 +42,9 @@ import { Link as LinkIcon } from 'lucide-react';
 import { LederPass } from '@/components/passport/LederPass';
 import { useMyMurderState } from '@/hooks/useMurderGame';
 import { Skull } from 'lucide-react';
+import { Tent, AlertCircle } from 'lucide-react';
+import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
+import { OvernattingGateDialog, OvernattingEditDialog } from '@/components/home/OvernattingDialogs';
 
 type SessionData = { reminder: string; items: string[] };
 type SessionsPayload = { active: 1 | 2 | 3; sessions: Record<'1' | '2' | '3', SessionData> };
@@ -160,6 +162,8 @@ export default function Home() {
   const [overnattingQuestion, setOvernattingQuestion] = useState('Vil du være med på overnatting?');
   const [overnattingJoining, setOvernattingJoining] = useState(false);
   const [overnattingSaving, setOvernattingSaving] = useState(false);
+  const [overnattingAnswered, setOvernattingAnswered] = useState(true);
+  const [overnattingEditOpen, setOvernattingEditOpen] = useState(false);
   const [rouletteEnabled, setRouletteEnabled] = useState(false);
   const [activePeriodLabel, setActivePeriodLabel] = useState<string | null>(null);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
@@ -242,6 +246,7 @@ export default function Home() {
       setOvernattingTitle(cfgMap.get('overnatting_title') || 'Overnatting');
       setOvernattingQuestion(cfgMap.get('overnatting_question') || 'Vil du være med på overnatting?');
       setOvernattingJoining(overRespRes.data?.is_joining ?? false);
+      setOvernattingAnswered(!!overRespRes.data);
       setRouletteEnabled(cfgMap.get('roulette_enabled') === 'true');
 
       setContent(contentRes.data);
