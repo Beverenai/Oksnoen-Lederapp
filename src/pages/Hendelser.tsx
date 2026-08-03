@@ -1,17 +1,15 @@
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
 import { MyIncidentsList } from '@/components/incidents/MyIncidentsList';
 
 export default function Hendelser() {
-  const navigate = useNavigate();
   return (
     <div className="animate-fade-in max-w-2xl mx-auto space-y-4">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/')} aria-label="Tilbake">
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
+      <div className="space-y-2">
         <h1 className="text-xl font-heading font-bold">Hendelser</h1>
+        <div className="rounded-2xl border border-border/60 bg-muted/40 px-4 py-3">
+          <p className="text-sm text-muted-foreground">
+            Skriv inn her alt — stort og smått som har skjedd.
+          </p>
+        </div>
       </div>
       <MyIncidentsList />
     </div>
