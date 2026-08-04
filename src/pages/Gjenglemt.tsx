@@ -11,6 +11,7 @@ import { AddItemSheet } from '@/components/admin/gjenglemt/AddItemSheet';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Input } from '@/components/ui/input';
 import { garmentLabel, colorMeta } from '@/lib/gjenglemtConstants';
+import { copyText } from '@/lib/clipboard';
 
 function getPublicBase() {
   if (typeof window === 'undefined') return 'https://app.oksnoen.com';
@@ -58,10 +59,11 @@ export default function Gjenglemt() {
     return <div className="p-6 text-center text-muted-foreground">Du må være innlogget.</div>;
   }
 
-  const copyPublicLink = () => {
+  const copyPublicLink = async () => {
     if (!viewingPeriod) return;
     const url = `${getPublicBase()}/gjenglemt/${viewingPeriod.slug}`;
-    navigator.clipboard.writeText(url).then(() => showInfo('Lenke kopiert'));
+    const ok = await copyText(url);
+    showInfo(ok ? `Lenke kopiert: ${url}` : `Kunne ikke kopiere automatisk. Lenke: ${url}`);
   };
 
   return (
