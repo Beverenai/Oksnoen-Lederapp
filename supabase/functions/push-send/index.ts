@@ -81,7 +81,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { title, message, url, leader_ids, broadcast, sender_leader_id, target_activity, single_leader_id, personalize_activity, target_unread_with_content } = body;
+    const { title, message, url, leader_ids, broadcast, sender_leader_id, target_activity, single_leader_id, personalize_activity, target_unread_with_content, sound } = body;
 
     console.log("Push send request received:", { title, broadcast, sender_leader_id, target_activity, single_leader_id, personalize_activity, target_unread_with_content });
 
@@ -219,7 +219,7 @@ serve(async (req) => {
       for (const sub of subscriptions) {
         if (sub.channel === "apns") {
           if (!apnsCfg) { nativeSkipped++; continue; }
-          const res = await sendApnsAlert(apnsCfg, sub.native_token, { title, body: message, url: url || "/" });
+          const res = await sendApnsAlert(apnsCfg, sub.native_token, { title, body: message, url: url || "/", sound });
           if (res.ok) sent++; else { failed++; if (res.unregistered) await supabaseAdmin.from("push_subscriptions").delete().eq("id", sub.id); }
         } else {
           if (!appServer) { webSkipped++; continue; }
@@ -364,7 +364,7 @@ serve(async (req) => {
 
       if (sub.channel === "apns") {
         if (!apnsCfg) { nativeSkipped++; continue; }
-        const res = await sendApnsAlert(apnsCfg, sub.native_token, { title, body: finalMessage, url: url || "/" });
+        const res = await sendApnsAlert(apnsCfg, sub.native_token, { title, body: finalMessage, url: url || "/", sound });
         if (res.ok) {
           sent++;
         } else {
