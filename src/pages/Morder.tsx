@@ -97,7 +97,6 @@ export default function Morder() {
       ) : (
         <>
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline">{state.alive_count} i live av {state.total_count}</Badge>
             <Badge variant="secondary">{state.kills} drap</Badge>
             {!state.is_alive && <Badge variant="destructive">Du er ute</Badge>}
           </div>
