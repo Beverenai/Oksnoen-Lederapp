@@ -181,5 +181,25 @@ export function useMurderMutations() {
     },
   });
 
-  return { claimKill, confirmDeath, startGame, setActive, announceStart };
+  const reviveAndReshuffle = useMutation({
+    mutationFn: async (count = 4) => {
+      const { data, error } = await supabase.rpc('revive_and_reshuffle_murder', { _count: count });
+      if (error) throw error;
+      const rows = (data ?? []) as unknown as {
+        leader_id: string; leader_name: string; was_revived: boolean;
+      }[];
+      const revivedIds = rows.filter((r) => r.was_revived).map((r) => r.leader_id);
+      try {
+        await supabase.functions.invoke('push-murder-reshuffle', {
+          body: { revived_leader_ids: revivedIds },
+        });
+      } catch (e) {
+        console.error('push-murder-reshuffle failed', e);
+      }
+      return rows;
+    },
+    onSuccess: invalidate,
+  });
+
+  return { claimKill, confirmDeath, startGame, setActive, announceStart, reviveAndReshuffle };
 }
