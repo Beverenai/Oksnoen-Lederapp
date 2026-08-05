@@ -5,7 +5,11 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Skull, Play, Eye, EyeOff, Loader2, Crown, ArrowRight, Check, Bell } from 'lucide-react';
+import { Skull, Play, Eye, EyeOff, Loader2, Crown, ArrowRight, Check, Bell, Sparkles } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useLeaders } from '@/hooks/useLeaders';
 import {
   useMurderGame, useMurderOverview, useMurderMutations, usePendingMurderClaims,
@@ -17,8 +21,10 @@ export function MurderGameTab() {
   const { showSuccess, showError } = useStatusPopup();
   const { data: leaders = [], isLoading: leadersLoading } = useLeaders();
   const { data: game, isLoading: gameLoading } = useMurderGame();
-  const { startGame, setActive, confirmDeath, announceStart } = useMurderMutations();
+  const { startGame, setActive, confirmDeath, announceStart, reviveAndReshuffle } = useMurderMutations();
   const [revealed, setRevealed] = useState(false);
+  const [reviveOpen, setReviveOpen] = useState(false);
+  const [revivedNames, setRevivedNames] = useState<string[]>([]);
   const { data: overview = [], isLoading: overviewLoading } = useMurderOverview(revealed);
   const { data: pending = [] } = usePendingMurderClaims(true);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
@@ -80,6 +86,19 @@ export function MurderGameTab() {
     }
   };
 
+  const handleRevive = async () => {
+    try {
+      const rows = await reviveAndReshuffle.mutateAsync(4);
+      const names = rows.filter((r) => r.was_revived).map((r) => r.leader_name);
+      setRevivedNames(names);
+      showSuccess(`Gjenopplivet ${names.length} – ringen er mikset og alle er varslet`);
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Kunne ikke gjenopplive');
+    } finally {
+      setReviveOpen(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -133,6 +152,22 @@ export function MurderGameTab() {
                 : <Bell className="w-4 h-4 mr-2" />}
               Send «Morder-leken har startet»-varsling
             </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setReviveOpen(true)}
+              disabled={reviveAndReshuffle.isPending || !game?.started_at}
+            >
+              {reviveAndReshuffle.isPending
+                ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                : <Sparkles className="w-4 h-4 mr-2" />}
+              Gjenoppliv 4 tilfeldige og miks ringen
+            </Button>
+            {revivedNames.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Sist gjenopplivet: {revivedNames.join(', ')}
+              </p>
+            )}
             {leadersLoading ? (
               <Skeleton className="h-24 w-full" />
             ) : (
@@ -251,6 +286,23 @@ export function MurderGameTab() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={reviveOpen} onOpenChange={setReviveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Gjenoppliv 4 tilfeldige?</AlertDialogTitle>
+            <AlertDialogDescription>
+              4 tilfeldige drepte spillere hentes tilbake i leken. Alle gjenlevende mikses i en ny
+              ring og får nye mål – drapstall beholdes. Ventende drapsmeldinger forkastes, og alle
+              spillere får varsling.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRevive}>Gjenoppliv og miks</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
