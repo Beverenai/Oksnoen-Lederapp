@@ -3275,6 +3275,14 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      revive_and_reshuffle_murder: {
+        Args: { _count?: number }
+        Returns: {
+          leader_id: string
+          leader_name: string
+          was_revived: boolean
+        }[]
+      }
       set_murder_game_active: { Args: { _active: boolean }; Returns: undefined }
       start_murder_game: { Args: { _leader_ids: string[] }; Returns: string }
     }
