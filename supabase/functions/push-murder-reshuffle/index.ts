@@ -1,5 +1,5 @@
-// Sends the "Morder-leken har startet" broadcast with the custom kill sound.
-// Admin only. Notifies every player in the active period's game.
+// Notifies all living players after a revive + reshuffle. Revived players get a
+// "you're back" message, the rest get a "new target" message. Admin only.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
@@ -129,7 +129,7 @@ serve(async (req) => {
     }
 
     const { data: players } = await supabaseAdmin
-      .from("murder_players").select("leader_id").eq("game_id", game.id);
+      .from("murder_players").select("leader_id").eq("game_id", game.id).eq("is_alive", true);
     const playerIds = (players ?? []).map((p) => p.leader_id);
     if (playerIds.length === 0) {
       return new Response(JSON.stringify({ success: true, sent: 0, reason: "no players" }), {
@@ -137,17 +137,35 @@ serve(async (req) => {
       });
     }
 
+    let revivedIds: string[] = [];
+    try {
+      const body = await req.json();
+      if (Array.isArray(body?.revived_leader_ids)) {
+        revivedIds = body.revived_leader_ids.filter((v: unknown) => typeof v === "string");
+      }
+    } catch (_) { /* no body */ }
+
     const { data: subscriptions } = await supabaseAdmin
       .from("push_subscriptions").select("*").in("leader_id", playerIds);
 
-    const title = "🔪 Morder-leken har startet";
-    const message = "Åpne appen for å se hvem du jakter på. Lykke til.";
     const url = "/morder";
-    const payloadData = JSON.stringify({ title, body: message, url });
+    const revivedSet = new Set(revivedIds);
+    const copyFor = (leaderId: string) =>
+      revivedSet.has(leaderId)
+        ? {
+            title: "🔪 Du er tilbake i Morder-leken",
+            body: "Du er hentet tilbake fra de døde – åpne appen for å se ditt nye mål.",
+          }
+        : {
+            title: "🔪 Ringen er mikset",
+            body: "Du har fått et nytt mål – åpne appen for å se hvem.",
+          };
 
     let sent = 0;
     let failed = 0;
     for (const sub of (subscriptions ?? []) as Array<Record<string, string>>) {
+      const { title, body: message } = copyFor(sub.leader_id);
+      const payloadData = JSON.stringify({ title, body: message, url });
       if (sub.channel === "apns") {
         if (!apnsCfg) continue;
         const res = await sendApnsAlert(apnsCfg, sub.native_token, {
@@ -177,7 +195,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Murder start broadcast: sent=${sent} failed=${failed} players=${playerIds.length}`);
+    console.log(`Murder reshuffle broadcast: sent=${sent} failed=${failed} players=${playerIds.length}`);
     return new Response(JSON.stringify({ success: true, sent, failed, players: playerIds.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
