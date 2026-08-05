@@ -182,8 +182,8 @@ export function useMurderMutations() {
   });
 
   const reviveAndReshuffle = useMutation({
-    mutationFn: async (count = 4) => {
-      const { data, error } = await supabase.rpc('revive_and_reshuffle_murder', { _count: count });
+    mutationFn: async (count?: number) => {
+      const { data, error } = await supabase.rpc('revive_and_reshuffle_murder', { _count: count ?? 4 });
       if (error) throw error;
       const rows = (data ?? []) as unknown as {
         leader_id: string; leader_name: string; was_revived: boolean;
