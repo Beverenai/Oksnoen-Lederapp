@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Skull, Play, Eye, EyeOff, Loader2, Crown, ArrowRight, Check, Bell, Sparkles } from 'lucide-react';
+import { Skull, Play, Eye, EyeOff, Loader2, Crown, ArrowRight, Check, Bell, Sparkles, Archive } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -13,6 +13,7 @@ import {
 import { useLeaders } from '@/hooks/useLeaders';
 import {
   useMurderGame, useMurderOverview, useMurderMutations, usePendingMurderClaims,
+  useMurderRounds, useArchiveMurderRound,
   type MurderOverviewRow,
 } from '@/hooks/useMurderGame';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
@@ -27,6 +28,8 @@ export function MurderGameTab() {
   const [revivedNames, setRevivedNames] = useState<string[]>([]);
   const { data: overview = [], isLoading: overviewLoading } = useMurderOverview(revealed);
   const { data: pending = [] } = usePendingMurderClaims(true);
+  const { data: rounds = [] } = useMurderRounds(true);
+  const archiveRound = useArchiveMurderRound();
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
 
   // Everyone is in by default; admin can opt leaders out before starting.
@@ -99,6 +102,15 @@ export function MurderGameTab() {
     }
   };
 
+  const handleArchive = async () => {
+    try {
+      await archiveRound.mutateAsync();
+      showSuccess('Runden er lagret i arkivet');
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Kunne ikke lagre runden');
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -162,6 +174,17 @@ export function MurderGameTab() {
                 ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 : <Sparkles className="w-4 h-4 mr-2" />}
               Gjenoppliv 4 tilfeldige og miks ringen
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleArchive}
+              disabled={archiveRound.isPending || !game?.started_at}
+            >
+              {archiveRound.isPending
+                ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                : <Archive className="w-4 h-4 mr-2" />}
+              Lagre runden i arkivet
             </Button>
             {revivedNames.length > 0 && (
               <p className="text-xs text-muted-foreground">
