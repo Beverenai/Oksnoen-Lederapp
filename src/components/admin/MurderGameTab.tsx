@@ -242,8 +242,39 @@ export function MurderGameTab() {
         </CardContent>
       </Card>
 
+      {missing.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <UserPlus className="w-4 h-4" /> Ikke med i spillet ({missing.length})
+            </CardTitle>
+            <CardDescription>
+              Sett inn en leder midt i spillet – hun blir målet til en tilfeldig levende spiller og
+              arver den spillerens mål.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {missing.map((l) => (
+              <div key={l.id} className="flex items-center justify-between gap-2 rounded-lg border border-border/50 p-2.5">
+                <span className="text-sm min-w-0 truncate">{l.name}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={addingId === l.id}
+                  onClick={() => handleAddPlayer(l.id, l.name)}
+                >
+                  {addingId === l.id
+                    ? <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    : <UserPlus className="w-4 h-4 mr-1" />}
+                  Legg til
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {pending.length > 0 && (
-*** noop
         <Card className="border-amber-500/40">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Venter på bekreftelse ({pending.length})</CardTitle>
