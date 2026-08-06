@@ -44,6 +44,7 @@ import { useMyMurderState } from '@/hooks/useMurderGame';
 import { Skull } from 'lucide-react';
 import { Tent, AlertCircle } from 'lucide-react';
 import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
+import { SnusBadge } from '@/components/snus/SnusBadge';
 import { OvernattingGateDialog, OvernattingEditDialog } from '@/components/home/OvernattingDialogs';
 import { groupMainCabins } from '@/lib/cabinDisplay';
 
