@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { 
   Activity, 
   Plus, 
@@ -319,13 +320,13 @@ export default function Home() {
       }
       const { data } = await supabase
         .from('leaders')
-        .select('id, name, profile_image_url, image_thumb_url')
+        .select('id, name, profile_image_url')
         .eq('snus_user', true)
         .eq('snus_product_id', productId)
         .eq('is_active', true)
         .neq('id', effectiveLeader.id)
         .order('name');
-      if (!cancelled) setSnusBrothers(data || []);
+      if (!cancelled) setSnusBrothers((data as any) || []);
     };
     loadSnusBrothers();
     return () => { cancelled = true; };
@@ -615,7 +616,7 @@ export default function Home() {
               {snusBrothers.map((b: any) => (
                 <div key={b.id} className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-3 py-2">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={b.image_thumb_url || b.profile_image_url || undefined} alt={b.name} />
+                    <AvatarImage src={b.profile_image_url || undefined} alt={b.name} />
                     <AvatarFallback className="text-xs">{b.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium">{b.name}</span>
