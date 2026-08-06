@@ -574,6 +574,24 @@ export default function Home() {
           </div>
         </div>
 
+        {snusBrothers.length > 0 && (
+          <div className="mt-3 flex justify-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/60 px-3 py-1.5 text-xs font-medium text-foreground">
+              <SnusBadge
+                productId={(effectiveLeader as any)?.snus_product_id}
+                customLabel={(effectiveLeader as any)?.snus_custom_label}
+                compact
+                isBrother
+              />
+              <span>
+                {snusBrothers.length === 1
+                  ? `${snusBrothers[0].name} er din snus brother`
+                  : `${snusBrothers.map((b) => b.name.split(' ')[0]).join(', ')} er dine snus brothers`}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Round quick actions */}
         <div className="mt-5">
           <HomeQuickActions actions={quickActions} />
