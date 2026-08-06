@@ -843,6 +843,9 @@ export type Database = {
           name: string
           phone: string
           profile_image_url: string | null
+          snus_custom_label: string | null
+          snus_product_id: string | null
+          snus_user: boolean
           team: string | null
           updated_at: string | null
         }
@@ -870,6 +873,9 @@ export type Database = {
           name: string
           phone: string
           profile_image_url?: string | null
+          snus_custom_label?: string | null
+          snus_product_id?: string | null
+          snus_user?: boolean
           team?: string | null
           updated_at?: string | null
         }
@@ -897,6 +903,9 @@ export type Database = {
           name?: string
           phone?: string
           profile_image_url?: string | null
+          snus_custom_label?: string | null
+          snus_product_id?: string | null
+          snus_user?: boolean
           team?: string | null
           updated_at?: string | null
         }
