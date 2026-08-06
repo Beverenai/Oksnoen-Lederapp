@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { useNativePushNavigation } from "@/hooks/useNativePushNavigation";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { SplashScreen } from "@/components/SplashScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -150,6 +151,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   const { leader, isProfileComplete } = useAuth();
   const { isInstalled, hasDeclined, isIOS, isAndroid } = usePWAInstall();
+  useNativePushNavigation();
 
   const isMobile = isIOS || isAndroid;
   const shouldShowInstall = isMobile && !isInstalled && !hasDeclined;
