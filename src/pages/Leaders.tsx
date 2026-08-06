@@ -488,6 +488,7 @@ export default function Leaders() {
       {availableTeams.length > 0 && (
         <div className="space-y-2">
           {/* "Alle" button - always visible */}
+          <div className="flex items-center gap-2">
           <button
             onClick={() => {
               if (activeTeamFilter) {
@@ -507,6 +508,17 @@ export default function Leaders() {
           >
             Alle {!activeTeamFilter && (showTeamFilters ? '▲' : '▼')}
           </button>
+          <button
+            onClick={() => setSnusOnly((v) => !v)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
+              snusOnly
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
+            }`}
+          >
+            Snuser
+          </button>
+          </div>
           
           {/* Team chips - conditionally visible */}
           {(showTeamFilters || activeTeamFilter) && (
