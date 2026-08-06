@@ -1,7 +1,7 @@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Mail } from 'lucide-react';
+import { Phone, Mail, X } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Booking = Tables<'participant_bookings'>;
@@ -41,13 +41,13 @@ export function BookingDetailSheet({ booking, participant, onClose }: Props) {
     <Sheet open={!!booking} onOpenChange={open => !open && onClose()}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-lg max-h-[100dvh] overflow-y-auto overscroll-contain p-0"
+        className="w-full sm:max-w-lg max-h-[100dvh] overflow-y-auto overscroll-contain p-0 [&>button]:hidden"
       >
         <SheetHeader
           className="sticky top-0 z-10 space-y-3 bg-background/95 backdrop-blur border-b border-border/40 px-6 pb-3"
           style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 pr-10">
             <Avatar className="h-14 w-14">
               {participant?.image_url ? <AvatarImage src={participant.image_url} /> : null}
               <AvatarFallback>{initials || '?'}</AvatarFallback>
@@ -60,6 +60,14 @@ export function BookingDetailSheet({ booking, participant, onClose }: Props) {
             </div>
           </div>
           {b.status && <Badge variant="outline" className="w-fit">{b.status}</Badge>}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Lukk"
+            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-2 bg-muted/60 text-foreground hover:bg-muted"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </SheetHeader>
 
         <div className="px-6 pt-2" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
