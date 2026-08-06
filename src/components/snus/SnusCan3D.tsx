@@ -81,7 +81,7 @@ export function SnusCan3D({ product, size = 260, interactive = true, className }
             width: size,
             height: canHeight,
             transformStyle: 'preserve-3d',
-            transform: `translate(-50%, -50%) rotateX(${TILT}deg) rotateZ(${spin}deg)`,
+            transform: `translate(-50%, -50%) rotateX(${TILT}deg) rotateY(${spin}deg)`,
           }}
         >
           {/* Side wall */}
