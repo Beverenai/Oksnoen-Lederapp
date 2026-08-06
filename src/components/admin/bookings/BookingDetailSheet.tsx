@@ -44,7 +44,7 @@ export function BookingDetailSheet({ booking, participant, onClose }: Props) {
         className="w-full sm:max-w-lg max-h-[100dvh] overflow-y-auto overscroll-contain p-0 [&>button]:hidden"
       >
         <SheetHeader
-          className="sticky top-0 z-10 space-y-3 bg-background/95 backdrop-blur border-b border-border/40 px-6 pb-3"
+          className="relative sticky top-0 z-10 space-y-3 bg-background/95 backdrop-blur border-b border-border/40 px-6 pb-3"
           style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
         >
           <div className="flex items-center gap-3 pr-10">
