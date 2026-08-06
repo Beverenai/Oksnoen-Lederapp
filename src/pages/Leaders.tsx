@@ -607,6 +607,7 @@ export default function Leaders() {
                         <SnusBadge
                           productId={leader.snus_product_id}
                           customLabel={leader.snus_custom_label}
+                          compact
                           className="shrink-0"
                         />
                       )}
@@ -618,7 +619,7 @@ export default function Leaders() {
                     )}
 
                     {(leader.team || (leader.linkedCabins && leader.linkedCabins.length > 0) || leader.cabin) && (
-                      <div className="flex flex-wrap gap-1 mb-1 line-clamp-1 overflow-hidden">
+                      <div className="flex flex-wrap gap-1 mb-1">
                         {leader.team && (
                           <span
                             className={cn(

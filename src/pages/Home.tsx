@@ -44,6 +44,7 @@ import { useMyMurderState } from '@/hooks/useMurderGame';
 import { Skull } from 'lucide-react';
 import { Tent, AlertCircle } from 'lucide-react';
 import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
+import { SnusBadge } from '@/components/snus/SnusBadge';
 import { OvernattingGateDialog, OvernattingEditDialog } from '@/components/home/OvernattingDialogs';
 import { groupMainCabins } from '@/lib/cabinDisplay';
 
@@ -167,6 +168,7 @@ export default function Home() {
   const [overnattingEditOpen, setOvernattingEditOpen] = useState(false);
   const [rouletteEnabled, setRouletteEnabled] = useState(false);
   const [activePeriodLabel, setActivePeriodLabel] = useState<string | null>(null);
+  const [snusBrothers, setSnusBrothers] = useState<{ id: string; name: string }[]>([]);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
   const showRoulette = rouletteEnabled && inRoulette;
   const teamsEnabled = useTeamsEnabled();
@@ -302,6 +304,29 @@ export default function Home() {
     }, 8000);
     loadData();
     return () => clearTimeout(timeout);
+  }, [effectiveLeader]);
+
+  // Force refresh when navigated from Hajolo with red status
+  useEffect(() => {
+    let cancelled = false;
+    const loadSnusBrothers = async () => {
+      const productId = (effectiveLeader as any)?.snus_product_id;
+      const snusUser = !!(effectiveLeader as any)?.snus_user;
+      if (!effectiveLeader || !snusUser || !productId) {
+        setSnusBrothers([]);
+        return;
+      }
+      const { data } = await supabase
+        .from('leaders')
+        .select('id, name')
+        .eq('snus_user', true)
+        .eq('snus_product_id', productId)
+        .eq('is_active', true)
+        .neq('id', effectiveLeader.id);
+      if (!cancelled) setSnusBrothers(data || []);
+    };
+    loadSnusBrothers();
+    return () => { cancelled = true; };
   }, [effectiveLeader]);
 
   // Force refresh when navigated from Hajolo with red status
@@ -549,6 +574,24 @@ export default function Home() {
             )}
           </div>
         </div>
+
+        {snusBrothers.length > 0 && (
+          <div className="mt-3 flex justify-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/60 px-3 py-1.5 text-xs font-medium text-foreground">
+              <SnusBadge
+                productId={(effectiveLeader as any)?.snus_product_id}
+                customLabel={(effectiveLeader as any)?.snus_custom_label}
+                compact
+                isBrother
+              />
+              <span>
+                {snusBrothers.length === 1
+                  ? `${snusBrothers[0].name} er din snus brother`
+                  : `${snusBrothers.map((b) => b.name.split(' ')[0]).join(', ')} er dine snus brothers`}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Round quick actions */}
         <div className="mt-5">
