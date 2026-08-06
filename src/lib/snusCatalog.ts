@@ -186,3 +186,77 @@ export function customSnusProduct(label: string): SnusProduct {
     strength: 3,
   };
 }
+
+/* ------------------------------------------------------------------ *
+ * Brand look – lid colour, text colour and side-wall colour per brand
+ * ------------------------------------------------------------------ */
+
+export interface SnusTheme {
+  /** Lid background colour */
+  lid: string;
+  /** Slightly darker lid edge used for the radial gradient */
+  lidEdge: string;
+  /** Main text colour on the lid */
+  text: string;
+  /** Secondary/muted text colour on the lid */
+  sub: string;
+  /** Metal/plastic rim colour between lid and side wall */
+  rim: string;
+  /** Colour used for the big number, dots and rim ring */
+  accent: string;
+  /** Text colour on the side wall */
+  sideText: string;
+}
+
+const BRAND_LOOK: Record<string, { lid: string; text: string; sub: string; rim: string }> = {
+  Epok: { lid: '#16325e', text: '#ffffff', sub: '#c3d3ee', rim: '#d9dbdb' },
+  Skruf: { lid: '#eef0f0', text: '#123a33', sub: '#5c6f6a', rim: '#c9cccc' },
+  General: { lid: '#111417', text: '#f3e6c8', sub: '#b7a175', rim: '#d3b878' },
+  Loop: { lid: '#1c2a14', text: '#ffffff', sub: '#c9e4a5', rim: '#4c5c3a' },
+  Odens: { lid: '#0f1c2b', text: '#ffffff', sub: '#a9c4dd', rim: '#c8cccf' },
+  Siberia: { lid: '#12151a', text: '#ffffff', sub: '#e0a9a4', rim: '#8f9296' },
+  Lundgrens: { lid: '#f4efe6', text: '#2a2118', sub: '#7a6b57', rim: '#cfc6b6' },
+  Ettan: { lid: '#f6f1e4', text: '#3a2d16', sub: '#8a7745', rim: '#cabf9f' },
+  Knox: { lid: '#14304d', text: '#ffffff', sub: '#a9c2d9', rim: '#c8cccf' },
+  XR: { lid: '#101f24', text: '#ffffff', sub: '#a9d5d3', rim: '#b9bfc0' },
+  'The Lab': { lid: '#f7f8f9', text: '#132030', sub: '#5b6b7d', rim: '#cdd2d6' },
+};
+
+function shade(hex: string, amount: number): string {
+  const m = hex.replace('#', '');
+  const full = m.length === 3 ? m.split('').map((c) => c + c).join('') : m;
+  const num = parseInt(full, 16);
+  const r = Math.round(Math.min(255, Math.max(0, ((num >> 16) & 255) * amount)));
+  const g = Math.round(Math.min(255, Math.max(0, ((num >> 8) & 255) * amount)));
+  const b = Math.round(Math.min(255, Math.max(0, (num & 255) * amount)));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+export function snusTheme(product: SnusProduct): SnusTheme {
+  const look = BRAND_LOOK[product.brand] ?? {
+    lid: shade(product.accent, 0.32),
+    text: '#ffffff',
+    sub: shade(product.accent, 1.6),
+    rim: '#c8cccf',
+  };
+  const dark = isDark(look.lid);
+  return {
+    lid: look.lid,
+    lidEdge: shade(look.lid, dark ? 0.72 : 0.9),
+    text: look.text,
+    sub: look.sub,
+    rim: look.rim,
+    accent: dark ? shade(product.accent, 1.35) : product.accent,
+    sideText: dark ? look.text : shade(look.text, 1.1),
+  };
+}
+
+function isDark(hex: string): boolean {
+  const m = hex.replace('#', '');
+  const full = m.length === 3 ? m.split('').map((c) => c + c).join('') : m;
+  const num = parseInt(full, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return 0.299 * r + 0.587 * g + 0.114 * b < 140;
+}

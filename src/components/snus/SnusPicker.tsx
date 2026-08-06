@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SnusCan3D } from './SnusCan3D';
-import { SNUS_CATALOG, SNUS_BRANDS, searchSnus, getSnusProduct, customSnusProduct } from '@/lib/snusCatalog';
+import {
+  SNUS_CATALOG,
+  SNUS_BRANDS,
+  searchSnus,
+  getSnusProduct,
+  customSnusProduct,
+  type SnusProduct,
+} from '@/lib/snusCatalog';
+import oksnoenLogo from '@/assets/oksnoen-logo.png';
 
 interface SnusPickerProps {
   open: boolean;
@@ -20,7 +28,7 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
   const [brand, setBrand] = useState<string | null>(null);
   const [customMode, setCustomMode] = useState(false);
   const [customValue, setCustomValue] = useState(customLabel ?? '');
-  const [index, setIndex] = useState(0);
+  const [pickedId, setPickedId] = useState<string | null>(selectedId ?? null);
 
   const list = useMemo(() => {
     const base = searchSnus(query);
@@ -28,57 +36,49 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
     return filtered.length > 0 ? filtered : SNUS_CATALOG;
   }, [query, brand]);
 
-  // Keep the visible can in range, and start on the already selected one
+  // Start on the already selected can each time the sheet opens
   useEffect(() => {
-    const idx = list.findIndex((p) => p.id === selectedId);
-    setIndex(idx >= 0 ? idx : 0);
-  }, [list, selectedId]);
-
-  const safeIndex = Math.min(index, list.length - 1);
-  const current = list[safeIndex];
-
-  const step = (dir: 1 | -1) =>
-    setIndex((i) => (Math.min(i, list.length - 1) + dir + list.length) % list.length);
+    if (open) setPickedId(selectedId ?? null);
+  }, [open, selectedId]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[92dvh] overflow-y-auto rounded-t-3xl px-4 pb-8">
-        <SheetHeader className="pb-2">
-          <SheetTitle className="text-center text-2xl font-heading">Velg snus</SheetTitle>
-        </SheetHeader>
+      <SheetContent
+        side="bottom"
+        className="flex h-[94dvh] flex-col gap-0 rounded-t-3xl p-0 sm:max-w-none"
+      >
+        {/* Sticky top: logo, title, search, brand chips */}
+        <div className="shrink-0 px-4 pb-3 pt-5">
+          <img src={oksnoenLogo} alt="Øksnøen" className="mx-auto h-14 w-14 object-contain" />
+          <h2 className="mt-2 text-center font-heading text-2xl font-bold">Velg snusen din</h2>
 
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Søk merke, nummer, smak eller format…"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setIndex(0);
-            }}
-            className="pl-9"
-          />
+          <div className="relative mt-3">
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Søk merke eller smak"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="h-12 rounded-full pl-11"
+            />
+          </div>
+
+          {!customMode && (
+            <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1">
+              <BrandChip label="Alle" active={!brand} onClick={() => setBrand(null)} />
+              {SNUS_BRANDS.map((g) => (
+                <BrandChip
+                  key={g.brand}
+                  label={g.brand}
+                  active={brand === g.brand}
+                  onClick={() => setBrand(brand === g.brand ? null : g.brand)}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
-        {!customMode && (
-          <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1">
-            <BrandChip label="Alle" active={!brand} onClick={() => setBrand(null)} />
-            {SNUS_BRANDS.map((g) => (
-              <BrandChip
-                key={g.brand}
-                label={g.brand}
-                active={brand === g.brand}
-                onClick={() => {
-                  setBrand(brand === g.brand ? null : g.brand);
-                  setIndex(0);
-                }}
-              />
-            ))}
-          </div>
-        )}
-
         {customMode ? (
-          <div className="space-y-4">
+          <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-6">
             <div className="flex justify-center">
               <SnusCan3D product={customSnusProduct(customValue || 'Egen snus')} size={240} />
             </div>
@@ -105,54 +105,78 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
           </div>
         ) : (
           <>
-            <div className="flex justify-center">
-              <SnusCan3D product={current} size={270} onSwipe={step} />
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
+              <div className="grid grid-cols-2 gap-3">
+                {list.map((p) => (
+                  <CanCard
+                    key={p.id}
+                    product={p}
+                    selected={p.id === pickedId}
+                    onClick={() => setPickedId(p.id)}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={() => setCustomMode(true)}
+                className="mx-auto mt-5 block text-sm text-muted-foreground underline decoration-dotted"
+              >
+                Finner du ikke din snus?
+              </button>
             </div>
 
-            <p className="mt-2 text-center text-base font-semibold">
-              {current.brand} {current.variant}
-            </p>
-
-            <div className="mt-3 max-h-52 overflow-y-auto rounded-2xl border border-border">
-              {list.map((p, i) => (
-                <button
-                  key={p.id}
-                  onClick={() => setIndex(i)}
-                  className={cn(
-                    'flex w-full items-center gap-2 px-3 py-2 text-left text-sm',
-                    i === safeIndex ? 'bg-muted font-semibold' : 'hover:bg-muted/50'
-                  )}
-                >
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: p.accent }} />
-                  <span className="flex-1 truncate">
-                    {p.brand} {p.variant}
-                  </span>
-                  {p.id === selectedId && <Check className="h-4 w-4 shrink-0 text-primary" />}
-                </button>
-              ))}
+            <div className="shrink-0 border-t border-border bg-background px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+              <Button
+                size="lg"
+                className="w-full rounded-full text-base"
+                disabled={!pickedId}
+                onClick={() => {
+                  if (!pickedId) return;
+                  onSelect(pickedId, null);
+                  onOpenChange(false);
+                }}
+              >
+                Velg denne
+              </Button>
             </div>
-
-            <button
-              onClick={() => setCustomMode(true)}
-              className="mx-auto mt-4 block text-sm text-muted-foreground underline decoration-dotted"
-            >
-              Finner du ikke din snus?
-            </button>
-
-            <Button
-              size="lg"
-              className="mt-4 w-full rounded-full"
-              onClick={() => {
-                onSelect(current.id, null);
-                onOpenChange(false);
-              }}
-            >
-              Velg denne
-            </Button>
           </>
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function CanCard({
+  product,
+  selected,
+  onClick,
+}: {
+  product: SnusProduct;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button onClick={onClick} className="flex flex-col items-center pt-2 text-center">
+      <div
+        className={cn(
+          'relative flex w-full items-center justify-center rounded-3xl px-1 py-2 transition-all',
+          selected ? 'ring-2 ring-primary' : 'ring-1 ring-transparent'
+        )}
+      >
+        <SnusCan3D product={product} size={140} interactive={false} spin={-24} />
+        {selected && (
+          <span className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+            <Check className="h-4 w-4" strokeWidth={3} />
+          </span>
+        )}
+      </div>
+      <span className="mt-1 line-clamp-2 text-sm font-semibold leading-tight">
+        {product.brand} {product.variant}
+      </span>
+      <span className="mt-0.5 text-xs text-muted-foreground">
+        {product.flavor} • S{product.strength}
+      </span>
+    </button>
   );
 }
 

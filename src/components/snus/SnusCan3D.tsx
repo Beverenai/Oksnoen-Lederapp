@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import type { SnusProduct } from '@/lib/snusCatalog';
+import { snusTheme, type SnusProduct } from '@/lib/snusCatalog';
 
 interface SnusCan3DProps {
   product: SnusProduct;
@@ -10,15 +10,27 @@ interface SnusCan3DProps {
   className?: string;
   /** Horizontal swipe callback (used to step between cans) */
   onSwipe?: (dir: 1 | -1) => void;
+  /** Fixed rotation used for static (non-interactive) cans */
+  spin?: number;
+  /** Hide the "Dra for å rotere" hint */
+  hideHint?: boolean;
 }
 
 const SEGMENTS = 40;
 const TILT = 62;
 const STRENGTH_DOTS = 7;
 
-export function SnusCan3D({ product, size = 260, interactive = true, className, onSwipe }: SnusCan3DProps) {
+export function SnusCan3D({
+  product,
+  size = 260,
+  interactive = true,
+  className,
+  onSwipe,
+  spin = -22,
+  hideHint = false,
+}: SnusCan3DProps) {
   const canRef = useRef<HTMLDivElement>(null);
-  const spinRef = useRef(-16);
+  const spinRef = useRef(interactive ? -16 : spin);
   const velRef = useRef(0.16);
   const draggingRef = useRef(false);
   const lastXRef = useRef(0);
@@ -27,6 +39,7 @@ export function SnusCan3D({ product, size = 260, interactive = true, className, 
 
   // Animate purely through the DOM – no re-render per frame
   useEffect(() => {
+    if (!interactive) return;
     let raf = 0;
     const tick = () => {
       if (!draggingRef.current) {
@@ -45,7 +58,7 @@ export function SnusCan3D({ product, size = 260, interactive = true, className, 
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [interactive]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (!interactive) return;
@@ -76,7 +89,7 @@ export function SnusCan3D({ product, size = 260, interactive = true, className, 
   const radius = size / 2;
   const canHeight = Math.round(size * 0.3);
   const segWidth = (2 * Math.PI * radius) / SEGMENTS + 1.4;
-  const lidBase = product.white ? '#f8f8f5' : '#eee3d3';
+  const theme = snusTheme(product);
   const brandWord = product.brand.toLowerCase();
   const bigNumber = product.number != null ? `${product.number}` : null;
 
@@ -111,7 +124,7 @@ export function SnusCan3D({ product, size = 260, interactive = true, className, 
             width: size,
             height: canHeight,
             transformStyle: 'preserve-3d',
-            transform: `translate(-50%, -50%) rotateX(${TILT}deg) rotateY(-16deg)`,
+            transform: `translate(-50%, -50%) rotateX(${TILT}deg) rotateY(${interactive ? -16 : spin}deg)`,
           }}
         >
           {/* Bottom disc – keeps the can opaque when rotated */}
@@ -144,10 +157,11 @@ export function SnusCan3D({ product, size = 260, interactive = true, className, 
                   marginTop: -canHeight / 2,
                   transform: `rotateY(${angle}deg) translateZ(${radius}px)`,
                   background: `linear-gradient(to bottom,
-                    rgba(255,255,255,0.55) 0%,
-                    ${product.accent} 6%,
-                    ${product.accent} 58%,
-                    ${lidBase} 58%,
+                    ${theme.rim} 0%,
+                    ${theme.rim} 5%,
+                    ${theme.lid} 7%,
+                    ${theme.lidEdge} 56%,
+                    #f2f0ea 58%,
                     #cfcdc6 100%)`,
                   filter: `brightness(${light.toFixed(3)})`,
                   backfaceVisibility: 'hidden',
@@ -156,7 +170,7 @@ export function SnusCan3D({ product, size = 260, interactive = true, className, 
                 {showText && (
                   <span
                     className="absolute inset-x-0 top-[16%] text-center font-extrabold tracking-tight"
-                    style={{ fontSize: canHeight * 0.28, color: lidBase, lineHeight: 1 }}
+                    style={{ fontSize: canHeight * 0.28, color: theme.sideText, lineHeight: 1 }}
                   >
                     {brandWord}
                   </span>
@@ -174,20 +188,20 @@ export function SnusCan3D({ product, size = 260, interactive = true, className, 
               top: '50%',
               marginTop: -size / 2,
               transform: `rotateX(-90deg) translateZ(${canHeight / 2}px)`,
-              background: `radial-gradient(circle at 30% 22%, #ffffff 0%, ${lidBase} 52%, #dedcd4 88%, #c7c5bd 100%)`,
-              boxShadow: 'inset 0 0 0 2px rgba(0,0,0,0.07), inset 0 0 26px rgba(0,0,0,0.08)',
+              background: `radial-gradient(circle at 30% 22%, ${theme.lid} 0%, ${theme.lid} 46%, ${theme.lidEdge} 92%)`,
+              boxShadow: `inset 0 0 0 ${Math.max(2, size * 0.014)}px ${theme.rim}, inset 0 0 30px rgba(0,0,0,0.25)`,
             }}
           >
             {/* Outer rim ring in brand colour */}
             <div
               className="absolute inset-[2.5%] rounded-full"
-              style={{ border: `${Math.max(2, size * 0.012)}px solid ${product.accent}`, opacity: 0.9 }}
+              style={{ border: `${Math.max(1, size * 0.006)}px solid ${theme.accent}`, opacity: 0.75 }}
             />
 
             <div className="absolute inset-0 flex flex-col items-center justify-center px-[13%] text-center">
               <span
                 className="font-black tracking-tight"
-                style={{ fontSize: size * 0.155, color: '#1f2429', lineHeight: 1 }}
+                style={{ fontSize: size * 0.155, color: theme.text, lineHeight: 1 }}
               >
                 {brandWord}
               </span>
@@ -195,14 +209,14 @@ export function SnusCan3D({ product, size = 260, interactive = true, className, 
               {bigNumber ? (
                 <span
                   className="font-black leading-none"
-                  style={{ fontSize: size * 0.3, color: product.accent, marginTop: size * 0.01 }}
+                  style={{ fontSize: size * 0.26, color: theme.accent, marginTop: size * 0.01 }}
                 >
-                  {bigNumber}
+                  NO{bigNumber}
                 </span>
               ) : (
                 <span
                   className="uppercase tracking-[0.24em]"
-                  style={{ fontSize: size * 0.05, color: '#4a5158', marginTop: size * 0.02 }}
+                  style={{ fontSize: size * 0.05, color: theme.sub, marginTop: size * 0.02 }}
                 >
                   {product.white ? 'white' : 'original'}
                 </span>
@@ -210,14 +224,14 @@ export function SnusCan3D({ product, size = 260, interactive = true, className, 
 
               <span
                 className="font-semibold"
-                style={{ fontSize: size * 0.058, color: '#2b3138', marginTop: size * 0.012 }}
+                style={{ fontSize: size * 0.058, color: theme.text, marginTop: size * 0.012 }}
               >
                 {product.flavor}
               </span>
 
               <span
                 className="uppercase tracking-[0.2em]"
-                style={{ fontSize: size * 0.04, color: '#7a8087', marginTop: size * 0.01 }}
+                style={{ fontSize: size * 0.04, color: theme.sub, marginTop: size * 0.01 }}
               >
                 {product.nicotineFree ? 'nikotinfri' : product.format ?? (product.white ? 'white' : 'original')}
               </span>
@@ -230,8 +244,8 @@ export function SnusCan3D({ product, size = 260, interactive = true, className, 
                     style={{
                       width: size * 0.026,
                       height: size * 0.026,
-                      background: i < product.strength ? product.accent : 'transparent',
-                      border: `1px solid ${product.accent}`,
+                      background: i < product.strength ? theme.accent : 'transparent',
+                      border: `1px solid ${theme.accent}`,
                       opacity: i < product.strength ? 1 : 0.4,
                     }}
                   />
@@ -244,14 +258,14 @@ export function SnusCan3D({ product, size = 260, interactive = true, className, 
               className="pointer-events-none absolute inset-0 rounded-full"
               style={{
                 background:
-                  'linear-gradient(125deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.06) 38%, rgba(255,255,255,0) 58%)',
+                  'linear-gradient(125deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.05) 38%, rgba(255,255,255,0) 58%)',
               }}
             />
           </div>
         </div>
       </div>
 
-      {interactive && <p className="mt-1 text-xs text-muted-foreground">Dra for å rotere</p>}
+      {interactive && !hideHint && <p className="mt-1 text-xs text-muted-foreground">Dra for å rotere</p>}
     </div>
   );
 }
