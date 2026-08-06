@@ -26,6 +26,10 @@ import {
 } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
+import { SnusCan3D } from '@/components/snus/SnusCan3D';
+import { SnusPicker } from '@/components/snus/SnusPicker';
+import { getSnusProduct, customSnusProduct, snusLabel } from '@/lib/snusCatalog';
+import { Switch } from '@/components/ui/switch';
 import type { Tables } from '@/integrations/supabase/types';
 import { compressImage } from '@/lib/imageUtils';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
@@ -52,6 +56,10 @@ export default function Profile() {
   const [canClimbing, setCanClimbing] = useState(false);
   const [canZipline, setCanZipline] = useState(false);
   const [canRopeSetup, setCanRopeSetup] = useState(false);
+  const [snusUser, setSnusUser] = useState(false);
+  const [snusProductId, setSnusProductId] = useState<string | null>(null);
+  const [snusCustomLabel, setSnusCustomLabel] = useState<string | null>(null);
+  const [isSnusPickerOpen, setIsSnusPickerOpen] = useState(false);
 
   useEffect(() => {
     if (!effectiveLeader?.id) return;
@@ -88,6 +96,9 @@ export default function Profile() {
       setCanClimbing(data.can_climbing || false);
       setCanZipline(data.can_zipline || false);
       setCanRopeSetup(data.can_rope_setup || false);
+      setSnusUser(data.snus_user || false);
+      setSnusProductId(data.snus_product_id || null);
+      setSnusCustomLabel(data.snus_custom_label || null);
     } catch (error) {
       console.error('Error loading profile:', error);
       setLoadFailed(true);
@@ -112,6 +123,9 @@ export default function Profile() {
           can_climbing: canClimbing,
           can_zipline: canZipline,
           can_rope_setup: canRopeSetup,
+          snus_user: snusUser,
+          snus_product_id: snusUser ? snusProductId : null,
+          snus_custom_label: snusUser ? snusCustomLabel : null,
         })
         .eq('id', authLeader.id);
 
