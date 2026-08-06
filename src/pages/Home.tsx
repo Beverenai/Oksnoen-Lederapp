@@ -167,6 +167,7 @@ export default function Home() {
   const [overnattingEditOpen, setOvernattingEditOpen] = useState(false);
   const [rouletteEnabled, setRouletteEnabled] = useState(false);
   const [activePeriodLabel, setActivePeriodLabel] = useState<string | null>(null);
+  const [snusBrothers, setSnusBrothers] = useState<{ id: string; name: string }[]>([]);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
   const showRoulette = rouletteEnabled && inRoulette;
   const teamsEnabled = useTeamsEnabled();
