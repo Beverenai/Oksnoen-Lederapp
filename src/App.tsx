@@ -150,6 +150,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   const { leader, isProfileComplete } = useAuth();
   const { isInstalled, hasDeclined, isIOS, isAndroid } = usePWAInstall();
+  useNativePushNavigation();
 
   const isMobile = isIOS || isAndroid;
   const shouldShowInstall = isMobile && !isInstalled && !hasDeclined;
