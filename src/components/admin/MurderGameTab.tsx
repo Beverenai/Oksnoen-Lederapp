@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Skull, Play, Eye, EyeOff, Loader2, Crown, ArrowRight, Check, Bell, Sparkles, Archive } from 'lucide-react';
+import { Skull, Play, Eye, EyeOff, Loader2, Crown, ArrowRight, Check, Bell, Sparkles, Archive, UserPlus } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -22,7 +22,7 @@ export function MurderGameTab() {
   const { showSuccess, showError } = useStatusPopup();
   const { data: leaders = [], isLoading: leadersLoading } = useLeaders();
   const { data: game, isLoading: gameLoading } = useMurderGame();
-  const { startGame, setActive, confirmDeath, announceStart, reviveAndReshuffle } = useMurderMutations();
+  const { startGame, setActive, confirmDeath, announceStart, reviveAndReshuffle, addPlayer } = useMurderMutations();
   const [revealed, setRevealed] = useState(false);
   const [reviveOpen, setReviveOpen] = useState(false);
   const [revivedNames, setRevivedNames] = useState<string[]>([]);
@@ -31,6 +31,7 @@ export function MurderGameTab() {
   const { data: rounds = [] } = useMurderRounds(true);
   const archiveRound = useArchiveMurderRound();
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const [addingId, setAddingId] = useState<string | null>(null);
 
   // Everyone is in by default; admin can opt leaders out before starting.
   useEffect(() => { setExcluded(new Set()); }, [game?.id]);
@@ -53,6 +54,25 @@ export function MurderGameTab() {
     const top = [...overview].sort((a, b) => b.kills - a.kills)[0];
     return { alive, dead, top };
   }, [overview]);
+
+  // Leaders not currently in the running game (needs the overview loaded).
+  const missing = useMemo(() => {
+    if (!game?.started_at || overview.length === 0) return [];
+    const inGame = new Set(overview.map((r) => r.leader_id));
+    return leaders.filter((l) => !inGame.has(l.id));
+  }, [game?.started_at, overview, leaders]);
+
+  const handleAddPlayer = async (id: string, name: string) => {
+    setAddingId(id);
+    try {
+      await addPlayer.mutateAsync(id);
+      showSuccess(`${name} er satt inn i ringen`);
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Kunne ikke legge til spilleren');
+    } finally {
+      setAddingId(null);
+    }
+  };
 
   const handleStart = async () => {
     try {
