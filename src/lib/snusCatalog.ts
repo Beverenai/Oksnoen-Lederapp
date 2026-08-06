@@ -166,11 +166,14 @@ export function snusLabel(productId?: string | null, customLabel?: string | null
 export function searchSnus(query: string): SnusProduct[] {
   const q = query.trim().toLowerCase().replace(/\s+/g, ' ');
   if (!q) return SNUS_CATALOG;
-  const compact = q.replace(/\s/g, '');
+  const tokens = q.split(' ').filter(Boolean);
   return SNUS_CATALOG.filter((p) => {
-    const haystack = `${p.brand} ${p.variant} ${p.flavor} ${p.format ?? ''} ${p.number ? `no${p.number} nr${p.number} ${p.number}` : ''} ${p.white ? 'helhvit white' : 'brun original'} ${p.nicotineFree ? 'nikotinfri zero' : ''} styrke s${p.strength}`
-      .toLowerCase();
-    return haystack.includes(q) || haystack.replace(/\s/g, '').includes(compact);
+    const haystack = `${p.brand} ${p.variant} ${p.flavor} ${p.format ?? ''} ${
+      p.number != null ? `no${p.number} nr${p.number} n${p.number} ${p.number}` : ''
+    } ${p.white ? 'helhvit white' : 'brun original'} ${p.nicotineFree ? 'nikotinfri zero' : ''} styrke s${p.strength}`.toLowerCase();
+    const compactHay = haystack.replace(/\s/g, '');
+    // Every token must match somewhere → "epok 1" and "epok1" both work
+    return tokens.every((t) => haystack.includes(t) || compactHay.includes(t));
   });
 }
 
