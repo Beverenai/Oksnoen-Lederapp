@@ -567,7 +567,7 @@ export default function Leaders() {
             )}
             
             <Card
-              className="cursor-pointer overflow-hidden rounded-[24px] shadow-sm h-[128px]"
+              className="cursor-pointer overflow-hidden rounded-[24px] shadow-sm min-h-[128px]"
               onClick={() => setSelectedLeader(leader)}
             >
               <CardContent className="p-4 h-full flex items-center">
@@ -593,7 +593,7 @@ export default function Leaders() {
                   </Avatar>
 
                   {/* Info */}
-                  <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5 overflow-hidden">
+                  <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5">
                     <div className="flex items-center gap-1.5 mb-0.5">
                       <h3 className="text-[17px] font-bold text-foreground leading-tight truncate">
                         {getFirstName(leader.name)}
