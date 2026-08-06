@@ -312,6 +312,99 @@ export function MurderGameTab() {
 }
 
 /** Spider-web / ring view of the whole chain. */
+/** Chronological kill feed: who took out whom, newest first. */
+function MurderKillLog({ rows, nameById }: { rows: MurderOverviewRow[]; nameById: Map<string, string> }) {
+  const kills = rows
+    .filter((r) => r.killed_by && r.killed_at)
+    .sort((a, b) => new Date(b.killed_at!).getTime() - new Date(a.killed_at!).getTime());
+
+  if (kills.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Drapslogg ({kills.length})
+      </p>
+      <ol className="relative space-y-2 border-l border-destructive/30 pl-4">
+        {kills.map((r) => (
+          <li key={`log-${r.leader_id}`} className="relative">
+            <span className="absolute -left-[21px] top-2 flex h-3 w-3 items-center justify-center rounded-full bg-destructive/80 ring-2 ring-background" />
+            <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-2.5">
+              <p className="text-sm">
+                <span className="font-semibold">
+                  {r.killed_by ? nameById.get(r.killed_by) ?? '—' : '—'}
+                </span>
+                <Skull className="inline w-3.5 h-3.5 mx-1.5 text-destructive" />
+                <span className="font-medium line-through text-muted-foreground">
+                  {nameById.get(r.leader_id) ?? '—'}
+                </span>
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {new Date(r.killed_at!).toLocaleString('nb-NO', {
+                  weekday: 'short', day: '2-digit', month: 'short',
+                  hour: '2-digit', minute: '2-digit',
+                })}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/** Per-killer scoreboard with the victims each leader has taken out. */
+function MurderKillerBoard({ rows, nameById }: { rows: MurderOverviewRow[]; nameById: Map<string, string> }) {
+  const byKiller = new Map<string, MurderOverviewRow[]>();
+  rows.forEach((r) => {
+    if (!r.killed_by) return;
+    const list = byKiller.get(r.killed_by) ?? [];
+    list.push(r);
+    byKiller.set(r.killed_by, list);
+  });
+
+  const killers = [...byKiller.entries()].sort((a, b) => b[1].length - a[1].length);
+  if (killers.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Drapsliste per morder
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {killers.map(([killerId, victims]) => {
+          const killer = rows.find((r) => r.leader_id === killerId);
+          return (
+            <div key={killerId} className="rounded-xl border border-border/60 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className={`text-sm font-semibold truncate ${killer && !killer.is_alive ? 'line-through text-muted-foreground' : ''}`}>
+                  {nameById.get(killerId) ?? '—'}
+                </p>
+                <Badge variant="destructive" className="shrink-0">
+                  {victims.length} drap
+                </Badge>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {victims
+                  .sort((a, b) => new Date(a.killed_at ?? 0).getTime() - new Date(b.killed_at ?? 0).getTime())
+                  .map((v) => (
+                    <span
+                      key={`v-${v.leader_id}`}
+                      className="inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[11px] text-muted-foreground"
+                    >
+                      <Skull className="w-3 h-3 text-destructive" />
+                      {nameById.get(v.leader_id) ?? '—'}
+                    </span>
+                  ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function MurderWeb({ rows, nameById }: { rows: MurderOverviewRow[]; nameById: Map<string, string> }) {
   const size = 320;
   const r = 130;
