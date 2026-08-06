@@ -100,7 +100,7 @@ export function SnusCan3D({
     >
       <div
         className="relative"
-        style={{ width: size, height: Math.round(size * 0.82), perspective: `${size * 3.2}px` }}
+        style={{ width: size, height: Math.round(size * 1.02), perspective: `${size * 3.2}px` }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -265,7 +265,9 @@ export function SnusCan3D({
         </div>
       </div>
 
-      {interactive && !hideHint && <p className="mt-1 text-xs text-muted-foreground">Dra for å rotere</p>}
+      {interactive && !hideHint && (
+        <p className="mt-2 text-xs text-muted-foreground">Dra for å rotere</p>
+      )}
     </div>
   );
 }
