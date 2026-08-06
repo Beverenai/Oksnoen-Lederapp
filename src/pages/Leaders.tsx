@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Users, Phone, Cross, ArrowUpDown, Check, Search, X, Home, Coffee, MessageSquare } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/leaders/LeaderDetailDialog';
 import { LeaderContentSheet } from '@/components/admin/LeaderContentSheet';
+import { SnusBadge } from '@/components/snus/SnusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
@@ -101,6 +102,7 @@ export default function Leaders() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showTeamFilters, setShowTeamFilters] = useState(false);
+  const [snusOnly, setSnusOnly] = useState(false);
 
   // Fetch leaders with React Query for caching
   const { data: leadersData, isLoading } = useQuery({
@@ -264,6 +266,11 @@ export default function Leaders() {
       );
     }
 
+    // Apply snus filter
+    if (snusOnly) {
+      result = result.filter(l => l.snus_user);
+    }
+
     // Apply sorting - Priority roles at top, "Fri" and Kjøkken at the bottom
     result.sort((a, b) => {
       // Priority order helper: Statsminister first, then Visestatsminister/Admin, then Nurse
@@ -322,7 +329,7 @@ export default function Leaders() {
     const friLeaders = result.filter(isLeaderFri);
 
     return [...nonFriLeaders, ...friLeaders];
-  }, [leaders, activeTeamFilter, activeCabinFilter, sortBy, searchQuery]);
+  }, [leaders, activeTeamFilter, activeCabinFilter, sortBy, searchQuery, snusOnly]);
 
   // Find index of first "Fri" leader for separator (now at the very bottom, after Kjøkken)
   const firstFriIndex = useMemo(() => {
@@ -353,7 +360,7 @@ export default function Leaders() {
     setActiveCabinFilter(prev => prev === cabin ? null : cabin);
   };
 
-  const hasActiveFilter = activeTeamFilter || activeCabinFilter || searchQuery.trim();
+  const hasActiveFilter = activeTeamFilter || activeCabinFilter || searchQuery.trim() || snusOnly;
 
   if (isLoading) {
     return (
@@ -583,6 +590,13 @@ export default function Leaders() {
                         <span className="text-red-600 flex items-center shrink-0" title="Sykepleier">
                           <Cross className="w-4 h-4" fill="currentColor" />
                         </span>
+                      )}
+                      {leader.snus_user && (
+                        <SnusBadge
+                          productId={leader.snus_product_id}
+                          customLabel={leader.snus_custom_label}
+                          className="shrink-0"
+                        />
                       )}
                     </div>
                     {leader.ministerpost && (
