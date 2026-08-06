@@ -253,6 +253,10 @@ export function MurderGameTab() {
 
               <MurderWeb rows={overview} nameById={nameById} />
 
+              <MurderKillLog rows={overview} nameById={nameById} />
+
+              <MurderKillerBoard rows={overview} nameById={nameById} />
+
               <div className="space-y-1.5">
                 {overview.map((r) => (
                   <div
