@@ -39,8 +39,14 @@ export function BookingDetailSheet({ booking, participant, onClose }: Props) {
 
   return (
     <Sheet open={!!booking} onOpenChange={open => !open && onClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader className="space-y-3">
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-lg max-h-[100dvh] overflow-y-auto overscroll-contain p-0"
+      >
+        <SheetHeader
+          className="sticky top-0 z-10 space-y-3 bg-background/95 backdrop-blur border-b border-border/40 px-6 pb-3"
+          style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
+        >
           <div className="flex items-center gap-3">
             <Avatar className="h-14 w-14">
               {participant?.image_url ? <AvatarImage src={participant.image_url} /> : null}
@@ -56,7 +62,7 @@ export function BookingDetailSheet({ booking, participant, onClose }: Props) {
           {b.status && <Badge variant="outline" className="w-fit">{b.status}</Badge>}
         </SheetHeader>
 
-        <div className="mt-2">
+        <div className="px-6 pt-2" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
           <Section title="Foresatte">
             <Field label="Navn" value={[b.guardian_first_name, b.guardian_last_name].filter(Boolean).join(' ') || '—'} />
             <Field label="Telefon" value={b.guardian_phone ? (
