@@ -3278,6 +3278,7 @@ export type Database = {
       }
     }
     Functions: {
+      add_murder_player: { Args: { _leader_id: string }; Returns: undefined }
       archive_murder_round: { Args: never; Returns: string }
       claim_murder_kill: { Args: never; Returns: string }
       confirm_murder_death: { Args: { _claim_id?: string }; Returns: undefined }
