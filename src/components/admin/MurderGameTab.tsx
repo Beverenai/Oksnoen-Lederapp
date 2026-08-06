@@ -26,7 +26,7 @@ export function MurderGameTab() {
   const [revealed, setRevealed] = useState(false);
   const [reviveOpen, setReviveOpen] = useState(false);
   const [revivedNames, setRevivedNames] = useState<string[]>([]);
-  const { data: overview = [], isLoading: overviewLoading } = useMurderOverview(revealed);
+  const { data: overview = [], isLoading: overviewLoading } = useMurderOverview(true);
   const { data: pending = [] } = usePendingMurderClaims(true);
   const { data: rounds = [] } = useMurderRounds(true);
   const archiveRound = useArchiveMurderRound();
@@ -243,6 +243,7 @@ export function MurderGameTab() {
       </Card>
 
       {pending.length > 0 && (
+*** noop
         <Card className="border-amber-500/40">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Venter på bekreftelse ({pending.length})</CardTitle>
