@@ -5,10 +5,15 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Skull, Play, Eye, EyeOff, Loader2, Crown, ArrowRight, Check, Bell } from 'lucide-react';
+import { Skull, Play, Eye, EyeOff, Loader2, Crown, ArrowRight, Check, Bell, Sparkles, Archive } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useLeaders } from '@/hooks/useLeaders';
 import {
   useMurderGame, useMurderOverview, useMurderMutations, usePendingMurderClaims,
+  useMurderRounds, useArchiveMurderRound,
   type MurderOverviewRow,
 } from '@/hooks/useMurderGame';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
@@ -17,10 +22,14 @@ export function MurderGameTab() {
   const { showSuccess, showError } = useStatusPopup();
   const { data: leaders = [], isLoading: leadersLoading } = useLeaders();
   const { data: game, isLoading: gameLoading } = useMurderGame();
-  const { startGame, setActive, confirmDeath, announceStart } = useMurderMutations();
+  const { startGame, setActive, confirmDeath, announceStart, reviveAndReshuffle } = useMurderMutations();
   const [revealed, setRevealed] = useState(false);
+  const [reviveOpen, setReviveOpen] = useState(false);
+  const [revivedNames, setRevivedNames] = useState<string[]>([]);
   const { data: overview = [], isLoading: overviewLoading } = useMurderOverview(revealed);
   const { data: pending = [] } = usePendingMurderClaims(true);
+  const { data: rounds = [] } = useMurderRounds(true);
+  const archiveRound = useArchiveMurderRound();
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
 
   // Everyone is in by default; admin can opt leaders out before starting.
@@ -80,6 +89,28 @@ export function MurderGameTab() {
     }
   };
 
+  const handleRevive = async () => {
+    try {
+      const rows = await reviveAndReshuffle.mutateAsync(4);
+      const names = rows.filter((r) => r.was_revived).map((r) => r.leader_name);
+      setRevivedNames(names);
+      showSuccess(`Gjenopplivet ${names.length} – ringen er mikset og alle er varslet`);
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Kunne ikke gjenopplive');
+    } finally {
+      setReviveOpen(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    try {
+      await archiveRound.mutateAsync();
+      showSuccess('Runden er lagret i arkivet');
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Kunne ikke lagre runden');
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -133,6 +164,33 @@ export function MurderGameTab() {
                 : <Bell className="w-4 h-4 mr-2" />}
               Send «Morder-leken har startet»-varsling
             </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setReviveOpen(true)}
+              disabled={reviveAndReshuffle.isPending || !game?.started_at}
+            >
+              {reviveAndReshuffle.isPending
+                ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                : <Sparkles className="w-4 h-4 mr-2" />}
+              Gjenoppliv 4 tilfeldige og miks ringen
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleArchive}
+              disabled={archiveRound.isPending || !game?.started_at}
+            >
+              {archiveRound.isPending
+                ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                : <Archive className="w-4 h-4 mr-2" />}
+              Lagre runden i arkivet
+            </Button>
+            {revivedNames.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Sist gjenopplivet: {revivedNames.join(', ')}
+              </p>
+            )}
             {leadersLoading ? (
               <Skeleton className="h-24 w-full" />
             ) : (
@@ -218,6 +276,10 @@ export function MurderGameTab() {
 
               <MurderWeb rows={overview} nameById={nameById} />
 
+              <MurderKillLog rows={overview} nameById={nameById} />
+
+              <MurderKillerBoard rows={overview} nameById={nameById} />
+
               <div className="space-y-1.5">
                 {overview.map((r) => (
                   <div
@@ -251,11 +313,156 @@ export function MurderGameTab() {
           )}
         </CardContent>
       </Card>
+
+      {rounds.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Archive className="w-4 h-4" /> Lagrede runder ({rounds.length})
+            </CardTitle>
+            <CardDescription>Hele historikken for hver ferdigspilte runde.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {rounds.map((r) => {
+              const top = [...(r.data ?? [])].sort((a, b) => b.kills - a.kills)[0];
+              return (
+                <div key={r.id} className="rounded-xl border border-border/60 p-3 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold">Runde {r.round_number}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {new Date(r.archived_at).toLocaleDateString('nb-NO')}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Badge variant="outline">{r.player_count} spillere</Badge>
+                    <Badge variant="destructive">{r.kill_count} drap</Badge>
+                    {top && top.kills > 0 && (
+                      <Badge variant="secondary">
+                        <Crown className="w-3 h-3 mr-1" /> {top.leader_name} · {top.kills} drap
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      <AlertDialog open={reviveOpen} onOpenChange={setReviveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Gjenoppliv 4 tilfeldige?</AlertDialogTitle>
+            <AlertDialogDescription>
+              4 tilfeldige drepte spillere hentes tilbake i leken. Alle gjenlevende mikses i en ny
+              ring og får nye mål – drapstall beholdes. Ventende drapsmeldinger forkastes, og alle
+              spillere får varsling.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRevive}>Gjenoppliv og miks</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
 /** Spider-web / ring view of the whole chain. */
+/** Chronological kill feed: who took out whom, newest first. */
+function MurderKillLog({ rows, nameById }: { rows: MurderOverviewRow[]; nameById: Map<string, string> }) {
+  const kills = rows
+    .filter((r) => r.killed_by && r.killed_at)
+    .sort((a, b) => new Date(b.killed_at!).getTime() - new Date(a.killed_at!).getTime());
+
+  if (kills.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Drapslogg ({kills.length})
+      </p>
+      <ol className="relative space-y-2 border-l border-destructive/30 pl-4">
+        {kills.map((r) => (
+          <li key={`log-${r.leader_id}`} className="relative">
+            <span className="absolute -left-[21px] top-2 flex h-3 w-3 items-center justify-center rounded-full bg-destructive/80 ring-2 ring-background" />
+            <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-2.5">
+              <p className="text-sm">
+                <span className="font-semibold">
+                  {r.killed_by ? nameById.get(r.killed_by) ?? '—' : '—'}
+                </span>
+                <Skull className="inline w-3.5 h-3.5 mx-1.5 text-destructive" />
+                <span className="font-medium line-through text-muted-foreground">
+                  {nameById.get(r.leader_id) ?? '—'}
+                </span>
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {new Date(r.killed_at!).toLocaleString('nb-NO', {
+                  weekday: 'short', day: '2-digit', month: 'short',
+                  hour: '2-digit', minute: '2-digit',
+                })}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/** Per-killer scoreboard with the victims each leader has taken out. */
+function MurderKillerBoard({ rows, nameById }: { rows: MurderOverviewRow[]; nameById: Map<string, string> }) {
+  const byKiller = new Map<string, MurderOverviewRow[]>();
+  rows.forEach((r) => {
+    if (!r.killed_by) return;
+    const list = byKiller.get(r.killed_by) ?? [];
+    list.push(r);
+    byKiller.set(r.killed_by, list);
+  });
+
+  const killers = [...byKiller.entries()].sort((a, b) => b[1].length - a[1].length);
+  if (killers.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Drapsliste per morder
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {killers.map(([killerId, victims]) => {
+          const killer = rows.find((r) => r.leader_id === killerId);
+          return (
+            <div key={killerId} className="rounded-xl border border-border/60 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className={`text-sm font-semibold truncate ${killer && !killer.is_alive ? 'line-through text-muted-foreground' : ''}`}>
+                  {nameById.get(killerId) ?? '—'}
+                </p>
+                <Badge variant="destructive" className="shrink-0">
+                  {victims.length} drap
+                </Badge>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {victims
+                  .sort((a, b) => new Date(a.killed_at ?? 0).getTime() - new Date(b.killed_at ?? 0).getTime())
+                  .map((v) => (
+                    <span
+                      key={`v-${v.leader_id}`}
+                      className="inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[11px] text-muted-foreground"
+                    >
+                      <Skull className="w-3 h-3 text-destructive" />
+                      {nameById.get(v.leader_id) ?? '—'}
+                    </span>
+                  ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function MurderWeb({ rows, nameById }: { rows: MurderOverviewRow[]; nameById: Map<string, string> }) {
   const size = 320;
   const r = 130;
@@ -309,6 +516,20 @@ function MurderWeb({ rows, nameById }: { rows: MurderOverviewRow[]; nameById: Ma
           );
         })}
       </svg>
+      <div className="flex flex-wrap justify-center gap-3 pt-1 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-0 w-5 border-t border-dashed border-destructive/70" /> drept av
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-0 w-5 border-t border-primary" /> jakter på
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" /> i live
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-muted-foreground/50" /> død
+        </span>
+      </div>
     </div>
   );
 }

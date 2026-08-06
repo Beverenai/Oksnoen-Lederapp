@@ -130,6 +130,7 @@ export function useMurderMutations() {
     qc.invalidateQueries({ queryKey: ['murder-overview'] });
     qc.invalidateQueries({ queryKey: ['murder-game'] });
     qc.invalidateQueries({ queryKey: ['murder-pending-claims'] });
+    qc.invalidateQueries({ queryKey: ['murder-rounds'] });
   };
 
   const claimKill = useMutation({
@@ -181,5 +182,70 @@ export function useMurderMutations() {
     },
   });
 
-  return { claimKill, confirmDeath, startGame, setActive, announceStart };
+  const reviveAndReshuffle = useMutation({
+    mutationFn: async (count?: number) => {
+      const { data, error } = await supabase.rpc('revive_and_reshuffle_murder', { _count: count ?? 4 });
+      if (error) throw error;
+      const rows = (data ?? []) as unknown as {
+        leader_id: string; leader_name: string; was_revived: boolean;
+      }[];
+      const revivedIds = rows.filter((r) => r.was_revived).map((r) => r.leader_id);
+      try {
+        await supabase.functions.invoke('push-murder-reshuffle', {
+          body: { revived_leader_ids: revivedIds },
+        });
+      } catch (e) {
+        console.error('push-murder-reshuffle failed', e);
+      }
+      return rows;
+    },
+    onSuccess: invalidate,
+  });
+
+  return { claimKill, confirmDeath, startGame, setActive, announceStart, reviveAndReshuffle };
+}
+
+export interface MurderRoundSnapshot {
+  id: string;
+  round_number: number;
+  player_count: number;
+  kill_count: number;
+  archived_at: string;
+  winner_leader_id: string | null;
+  data: {
+    leader_name: string; kills: number; is_alive: boolean;
+    killed_by_name: string | null; killed_at: string | null;
+  }[];
+}
+
+/** Archived (saved) murder rounds — admin only. */
+export function useMurderRounds(enabled: boolean) {
+  return useQuery<MurderRoundSnapshot[]>({
+    queryKey: ['murder-rounds'],
+    enabled,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('murder_round_snapshots')
+        .select('id, round_number, player_count, kill_count, archived_at, winner_leader_id, data')
+        .order('round_number', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as MurderRoundSnapshot[];
+    },
+  });
+}
+
+export function useArchiveMurderRound() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc('archive_murder_round');
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['murder-rounds'] });
+      qc.invalidateQueries({ queryKey: ['murder-game'] });
+    },
+  });
 }

@@ -8,6 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import * as icons from "lucide-react";
+import { SnusCan3D } from "@/components/snus/SnusCan3D";
+import { getSnusProduct, customSnusProduct, snusLabel } from "@/lib/snusCatalog";
 
 interface CabinInfo {
   id: string;
@@ -31,6 +33,9 @@ interface LeaderWithContent {
   can_climbing: boolean | null;
   can_zipline: boolean | null;
   can_rope_setup: boolean | null;
+  snus_user?: boolean | null;
+  snus_product_id?: string | null;
+  snus_custom_label?: string | null;
   cabins?: CabinInfo[];
   content?: {
     current_activity: string | null;
@@ -165,9 +170,17 @@ export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailD
 
   const cabinsDisplay = formatCabinsDisplay();
 
+  const snusCan = leader.snus_user
+    ? leader.snus_product_id
+      ? getSnusProduct(leader.snus_product_id)
+      : leader.snus_custom_label?.trim()
+        ? customSnusProduct(leader.snus_custom_label.trim())
+        : null
+    : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm sm:max-w-md rounded-2xl p-0 gap-0 border-0 overflow-hidden">
+      <DialogContent className="max-w-sm sm:max-w-md rounded-2xl p-0 gap-0 border-0 max-h-[85vh] overflow-y-auto overscroll-contain">
         <div className="p-6 pb-4">
           <DialogHeader className="mb-4">
             <div className="flex flex-col items-center gap-3">
@@ -246,6 +259,22 @@ export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailD
           )}
 
           {/* Certifications */}
+          {leader.snus_user && (
+            <div className="bg-muted/50 rounded-xl p-4 mb-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Snus</h4>
+              {snusCan ? (
+                <div className="flex flex-col items-center gap-1">
+                  <SnusCan3D product={snusCan} size={170} />
+                  <p className="text-sm font-semibold">
+                    {snusLabel(leader.snus_product_id, leader.snus_custom_label)}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm">Snuser – har ikke valgt boks</p>
+              )}
+            </div>
+          )}
+
           {certifications.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-4">
               {certifications.map(cert => (

@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { 
   Activity, 
   Plus, 
@@ -44,6 +45,7 @@ import { useMyMurderState } from '@/hooks/useMurderGame';
 import { Skull } from 'lucide-react';
 import { Tent, AlertCircle } from 'lucide-react';
 import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
+import { SnusBadge } from '@/components/snus/SnusBadge';
 import { OvernattingGateDialog, OvernattingEditDialog } from '@/components/home/OvernattingDialogs';
 import { groupMainCabins } from '@/lib/cabinDisplay';
 
@@ -167,6 +169,8 @@ export default function Home() {
   const [overnattingEditOpen, setOvernattingEditOpen] = useState(false);
   const [rouletteEnabled, setRouletteEnabled] = useState(false);
   const [activePeriodLabel, setActivePeriodLabel] = useState<string | null>(null);
+  const [snusBrothers, setSnusBrothers] = useState<{ id: string; name: string }[]>([]);
+  const [snusBrothersOpen, setSnusBrothersOpen] = useState(false);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
   const showRoulette = rouletteEnabled && inRoulette;
   const teamsEnabled = useTeamsEnabled();
@@ -302,6 +306,30 @@ export default function Home() {
     }, 8000);
     loadData();
     return () => clearTimeout(timeout);
+  }, [effectiveLeader]);
+
+  // Force refresh when navigated from Hajolo with red status
+  useEffect(() => {
+    let cancelled = false;
+    const loadSnusBrothers = async () => {
+      const productId = (effectiveLeader as any)?.snus_product_id;
+      const snusUser = !!(effectiveLeader as any)?.snus_user;
+      if (!effectiveLeader || !snusUser || !productId) {
+        setSnusBrothers([]);
+        return;
+      }
+      const { data } = await supabase
+        .from('leaders')
+        .select('id, name, profile_image_url')
+        .eq('snus_user', true)
+        .eq('snus_product_id', productId)
+        .eq('is_active', true)
+        .neq('id', effectiveLeader.id)
+        .order('name');
+      if (!cancelled) setSnusBrothers((data as any) || []);
+    };
+    loadSnusBrothers();
+    return () => { cancelled = true; };
   }, [effectiveLeader]);
 
   // Force refresh when navigated from Hajolo with red status
@@ -549,6 +577,54 @@ export default function Home() {
             )}
           </div>
         </div>
+
+        {snusBrothers.length > 0 && (
+          <div className="mt-3 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setSnusBrothersOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground active:scale-95 transition-transform"
+            >
+              <SnusBadge
+                productId={(effectiveLeader as any)?.snus_product_id}
+                customLabel={(effectiveLeader as any)?.snus_custom_label}
+                compact
+                isBrother
+              />
+              <span>Snus brothers</span>
+              <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                {snusBrothers.length}
+              </span>
+            </button>
+          </div>
+        )}
+
+        <Sheet open={snusBrothersOpen} onOpenChange={setSnusBrothersOpen}>
+          <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2">
+                <SnusBadge
+                  productId={(effectiveLeader as any)?.snus_product_id}
+                  customLabel={(effectiveLeader as any)?.snus_custom_label}
+                  compact
+                  isBrother
+                />
+                Snus brothers ({snusBrothers.length})
+              </SheetTitle>
+            </SheetHeader>
+            <div className="mt-4 space-y-2">
+              {snusBrothers.map((b: any) => (
+                <div key={b.id} className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-3 py-2">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={b.profile_image_url || undefined} alt={b.name} />
+                    <AvatarFallback className="text-xs">{b.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium">{b.name}</span>
+                </div>
+              ))}
+            </div>
+          </SheetContent>
+        </Sheet>
 
         {/* Round quick actions */}
         <div className="mt-5">

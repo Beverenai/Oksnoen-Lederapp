@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Users, Phone, Cross, ArrowUpDown, Check, Search, X, Home, Coffee, MessageSquare } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/leaders/LeaderDetailDialog';
 import { LeaderContentSheet } from '@/components/admin/LeaderContentSheet';
+import { SnusBadge } from '@/components/snus/SnusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
@@ -101,6 +102,7 @@ export default function Leaders() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showTeamFilters, setShowTeamFilters] = useState(false);
+  const [snusOnly, setSnusOnly] = useState(false);
 
   // Fetch leaders with React Query for caching
   const { data: leadersData, isLoading } = useQuery({
@@ -264,6 +266,11 @@ export default function Leaders() {
       );
     }
 
+    // Apply snus filter
+    if (snusOnly) {
+      result = result.filter(l => l.snus_user);
+    }
+
     // Apply sorting - Priority roles at top, "Fri" and Kjøkken at the bottom
     result.sort((a, b) => {
       // Priority order helper: Statsminister first, then Visestatsminister/Admin, then Nurse
@@ -322,7 +329,7 @@ export default function Leaders() {
     const friLeaders = result.filter(isLeaderFri);
 
     return [...nonFriLeaders, ...friLeaders];
-  }, [leaders, activeTeamFilter, activeCabinFilter, sortBy, searchQuery]);
+  }, [leaders, activeTeamFilter, activeCabinFilter, sortBy, searchQuery, snusOnly]);
 
   // Find index of first "Fri" leader for separator (now at the very bottom, after Kjøkken)
   const firstFriIndex = useMemo(() => {
@@ -353,7 +360,7 @@ export default function Leaders() {
     setActiveCabinFilter(prev => prev === cabin ? null : cabin);
   };
 
-  const hasActiveFilter = activeTeamFilter || activeCabinFilter || searchQuery.trim();
+  const hasActiveFilter = activeTeamFilter || activeCabinFilter || searchQuery.trim() || snusOnly;
 
   if (isLoading) {
     return (
@@ -481,6 +488,7 @@ export default function Leaders() {
       {availableTeams.length > 0 && (
         <div className="space-y-2">
           {/* "Alle" button - always visible */}
+          <div className="flex items-center gap-2">
           <button
             onClick={() => {
               if (activeTeamFilter) {
@@ -500,6 +508,17 @@ export default function Leaders() {
           >
             Alle {!activeTeamFilter && (showTeamFilters ? '▲' : '▼')}
           </button>
+          <button
+            onClick={() => setSnusOnly((v) => !v)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
+              snusOnly
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
+            }`}
+          >
+            Snuser
+          </button>
+          </div>
           
           {/* Team chips - conditionally visible */}
           {(showTeamFilters || activeTeamFilter) && (
@@ -548,7 +567,7 @@ export default function Leaders() {
             )}
             
             <Card
-              className="cursor-pointer overflow-hidden rounded-[24px] shadow-sm h-[128px]"
+              className="cursor-pointer overflow-hidden rounded-[24px] shadow-sm min-h-[128px]"
               onClick={() => setSelectedLeader(leader)}
             >
               <CardContent className="p-4 h-full flex items-center">
@@ -574,7 +593,7 @@ export default function Leaders() {
                   </Avatar>
 
                   {/* Info */}
-                  <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5 overflow-hidden">
+                  <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5">
                     <div className="flex items-center gap-1.5 mb-0.5">
                       <h3 className="text-[17px] font-bold text-foreground leading-tight truncate">
                         {getFirstName(leader.name)}
@@ -584,6 +603,14 @@ export default function Leaders() {
                           <Cross className="w-4 h-4" fill="currentColor" />
                         </span>
                       )}
+                      {leader.snus_user && (
+                        <SnusBadge
+                          productId={leader.snus_product_id}
+                          customLabel={leader.snus_custom_label}
+                          compact
+                          className="shrink-0"
+                        />
+                      )}
                     </div>
                     {leader.ministerpost && (
                       <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider truncate mb-1">
@@ -592,7 +619,7 @@ export default function Leaders() {
                     )}
 
                     {(leader.team || (leader.linkedCabins && leader.linkedCabins.length > 0) || leader.cabin) && (
-                      <div className="flex flex-wrap gap-1 mb-1 line-clamp-1 overflow-hidden">
+                      <div className="flex flex-wrap gap-1 mb-1">
                         {leader.team && (
                           <span
                             className={cn(

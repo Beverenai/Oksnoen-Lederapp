@@ -843,6 +843,9 @@ export type Database = {
           name: string
           phone: string
           profile_image_url: string | null
+          snus_custom_label: string | null
+          snus_product_id: string | null
+          snus_user: boolean
           team: string | null
           updated_at: string | null
         }
@@ -870,6 +873,9 @@ export type Database = {
           name: string
           phone: string
           profile_image_url?: string | null
+          snus_custom_label?: string | null
+          snus_product_id?: string | null
+          snus_user?: boolean
           team?: string | null
           updated_at?: string | null
         }
@@ -897,6 +903,9 @@ export type Database = {
           name?: string
           phone?: string
           profile_image_url?: string | null
+          snus_custom_label?: string | null
+          snus_product_id?: string | null
+          snus_user?: boolean
           team?: string | null
           updated_at?: string | null
         }
@@ -960,6 +969,7 @@ export type Database = {
           id: string
           is_active: boolean
           period_id: string
+          round_number: number
           started_at: string | null
           updated_at: string
           winner_leader_id: string | null
@@ -969,6 +979,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           period_id: string
+          round_number?: number
           started_at?: string | null
           updated_at?: string
           winner_leader_id?: string | null
@@ -978,6 +989,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           period_id?: string
+          round_number?: number
           started_at?: string | null
           updated_at?: string
           winner_leader_id?: string | null
@@ -1129,6 +1141,73 @@ export type Database = {
           {
             foreignKeyName: "murder_players_target_leader_id_fkey"
             columns: ["target_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      murder_round_snapshots: {
+        Row: {
+          archived_at: string
+          archived_by: string | null
+          created_at: string
+          data: Json
+          game_id: string | null
+          id: string
+          kill_count: number
+          period_id: string | null
+          player_count: number
+          round_number: number
+          updated_at: string
+          winner_leader_id: string | null
+        }
+        Insert: {
+          archived_at?: string
+          archived_by?: string | null
+          created_at?: string
+          data?: Json
+          game_id?: string | null
+          id?: string
+          kill_count?: number
+          period_id?: string | null
+          player_count?: number
+          round_number?: number
+          updated_at?: string
+          winner_leader_id?: string | null
+        }
+        Update: {
+          archived_at?: string
+          archived_by?: string | null
+          created_at?: string
+          data?: Json
+          game_id?: string | null
+          id?: string
+          kill_count?: number
+          period_id?: string | null
+          player_count?: number
+          round_number?: number
+          updated_at?: string
+          winner_leader_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "murder_round_snapshots_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "murder_round_snapshots_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "murder_round_snapshots_winner_leader_id_fkey"
+            columns: ["winner_leader_id"]
             isOneToOne: false
             referencedRelation: "leaders"
             referencedColumns: ["id"]
@@ -3199,6 +3278,7 @@ export type Database = {
       }
     }
     Functions: {
+      archive_murder_round: { Args: never; Returns: string }
       claim_murder_kill: { Args: never; Returns: string }
       confirm_murder_death: { Args: { _claim_id?: string }; Returns: undefined }
       current_leader_id: { Args: never; Returns: string }
@@ -3275,6 +3355,14 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      revive_and_reshuffle_murder: {
+        Args: { _count?: number }
+        Returns: {
+          leader_id: string
+          leader_name: string
+          was_revived: boolean
+        }[]
+      }
       set_murder_game_active: { Args: { _active: boolean }; Returns: undefined }
       start_murder_game: { Args: { _leader_ids: string[] }; Returns: string }
     }

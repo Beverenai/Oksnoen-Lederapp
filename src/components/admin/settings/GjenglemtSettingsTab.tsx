@@ -14,6 +14,7 @@ import {
 } from '@/hooks/useGjenglemt';
 import { slugify } from '@/lib/gjenglemtConstants';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { copyText } from '@/lib/clipboard';
 
 export function GjenglemtSettingsTab() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
@@ -56,9 +57,10 @@ export function GjenglemtSettingsTab() {
     catch (e: any) { showError(e?.message ?? 'Kunne ikke slette'); }
   };
 
-  const copyLink = (p: GjenglemtPeriod) => {
+  const copyLink = async (p: GjenglemtPeriod) => {
     const url = `https://app.oksnoen.com/gjenglemt/${p.slug}`;
-    navigator.clipboard.writeText(url).then(() => showInfo('Lenke kopiert'));
+    const ok = await copyText(url);
+    showInfo(ok ? `Lenke kopiert: ${url}` : `Kunne ikke kopiere automatisk. Lenke: ${url}`);
   };
 
   return (
