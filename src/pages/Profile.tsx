@@ -403,6 +403,75 @@ export default function Profile() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
+            <Circle className="w-5 h-5" />
+            Snus
+          </CardTitle>
+          <CardDescription>
+            Si om du snuser – da ser andre ledere hvem de kan bomme av
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <Label htmlFor="snusUser" className="text-base">Snuser du?</Label>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">{snusUser ? 'Ja' : 'Nei'}</span>
+              <Switch
+                id="snusUser"
+                checked={snusUser}
+                onCheckedChange={(checked) => {
+                  setSnusUser(checked);
+                  if (!checked) {
+                    setSnusProductId(null);
+                    setSnusCustomLabel(null);
+                    saveSnus({ snus_user: false, snus_product_id: null, snus_custom_label: null });
+                  } else {
+                    saveSnus({ snus_user: true });
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          {snusUser && (
+            <div className="space-y-3">
+              {snusCan ? (
+                <>
+                  <div className="flex justify-center rounded-2xl bg-muted/40 py-4">
+                    <SnusCan3D product={snusCan} size={220} />
+                  </div>
+                  <p className="text-center text-sm font-semibold">
+                    {snusLabel(snusProductId, snusCustomLabel)}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Velg hvilken boks du snuser.
+                </p>
+              )}
+              <Button variant="outline" className="w-full" onClick={() => setIsSnusPickerOpen(true)}>
+                {snusCan ? 'Bytt snusboks' : 'Velg snusboks'}
+              </Button>
+            </div>
+          )}
+
+          <SnusPicker
+            open={isSnusPickerOpen}
+            onOpenChange={setIsSnusPickerOpen}
+            selectedId={snusProductId}
+            customLabel={snusCustomLabel}
+            onSelect={(productId, custom) => {
+              setSnusProductId(productId);
+              setSnusCustomLabel(custom);
+              saveSnus({ snus_user: true, snus_product_id: productId, snus_custom_label: custom });
+            }}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Notifications */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <Bell className="w-5 h-5" />
             Varsler
           </CardTitle>
