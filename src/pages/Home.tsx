@@ -307,6 +307,29 @@ export default function Home() {
 
   // Force refresh when navigated from Hajolo with red status
   useEffect(() => {
+    let cancelled = false;
+    const loadSnusBrothers = async () => {
+      const productId = (effectiveLeader as any)?.snus_product_id;
+      const snusUser = !!(effectiveLeader as any)?.snus_user;
+      if (!effectiveLeader || !snusUser || !productId) {
+        setSnusBrothers([]);
+        return;
+      }
+      const { data } = await supabase
+        .from('leaders')
+        .select('id, name')
+        .eq('snus_user', true)
+        .eq('snus_product_id', productId)
+        .eq('is_active', true)
+        .neq('id', effectiveLeader.id);
+      if (!cancelled) setSnusBrothers(data || []);
+    };
+    loadSnusBrothers();
+    return () => { cancelled = true; };
+  }, [effectiveLeader]);
+
+  // Force refresh when navigated from Hajolo with red status
+  useEffect(() => {
     if (location.state?.forceRefresh) {
       console.log('Force refreshing home screen from Hajolo navigation');
       loadData();
