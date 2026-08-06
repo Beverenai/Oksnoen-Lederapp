@@ -458,6 +458,20 @@ function MurderWeb({ rows, nameById }: { rows: MurderOverviewRow[]; nameById: Ma
           );
         })}
       </svg>
+      <div className="flex flex-wrap justify-center gap-3 pt-1 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-0 w-5 border-t border-dashed border-destructive/70" /> drept av
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-0 w-5 border-t border-primary" /> jakter på
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" /> i live
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-muted-foreground/50" /> død
+        </span>
+      </div>
     </div>
   );
 }
