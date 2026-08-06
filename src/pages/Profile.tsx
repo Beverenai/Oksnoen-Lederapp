@@ -22,7 +22,8 @@ import {
   Wrench,
   Bell,
   Palette,
-  RefreshCw
+  RefreshCw,
+  Circle
 } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
@@ -60,6 +61,25 @@ export default function Profile() {
   const [snusProductId, setSnusProductId] = useState<string | null>(null);
   const [snusCustomLabel, setSnusCustomLabel] = useState<string | null>(null);
   const [isSnusPickerOpen, setIsSnusPickerOpen] = useState(false);
+
+  const snusCan = snusProductId
+    ? getSnusProduct(snusProductId)
+    : snusCustomLabel?.trim()
+      ? customSnusProduct(snusCustomLabel.trim())
+      : null;
+
+  const saveSnus = async (patch: {
+    snus_user?: boolean;
+    snus_product_id?: string | null;
+    snus_custom_label?: string | null;
+  }) => {
+    if (!authLeader?.id) return;
+    const { error } = await supabase.from('leaders').update(patch).eq('id', authLeader.id);
+    if (error) {
+      console.error('Error saving snus:', error);
+      showError('Kunne ikke lagre snus-valg');
+    }
+  };
 
   useEffect(() => {
     if (!effectiveLeader?.id) return;
