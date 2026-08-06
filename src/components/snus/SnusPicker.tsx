@@ -13,7 +13,7 @@ import {
   customSnusProduct,
   type SnusProduct,
 } from '@/lib/snusCatalog';
-import logoAsset from '@/assets/oksnoen-header.png.asset.json';
+import oksnoenLogo from '@/assets/oksnoen-logo.png';
 
 interface SnusPickerProps {
   open: boolean;
@@ -49,12 +49,7 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
       >
         {/* Sticky top: logo, title, search, brand chips */}
         <div className="shrink-0 px-4 pb-3 pt-5">
-          <img
-            src={logoAsset.url}
-            alt="Øksnøen"
-            className="mx-auto h-14 w-14 object-contain"
-            loading="lazy"
-          />
+          <img src={oksnoenLogo} alt="Øksnøen" className="mx-auto h-14 w-14 object-contain" />
           <h2 className="mt-2 text-center font-heading text-2xl font-bold">Velg snusen din</h2>
 
           <div className="relative mt-3">
