@@ -27,17 +27,20 @@ export function KioskParticipantPicker({ open, onOpenChange, participants, balan
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="flex h-[92dvh] flex-col gap-0 rounded-t-3xl p-0">
+      <SheetContent
+        side="bottom"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="flex h-[92dvh] flex-col gap-0 rounded-t-3xl p-0"
+      >
         <SheetHeader className="shrink-0 px-4 pb-3 pt-5">
           <SheetTitle className="text-center">Velg deltager</SheetTitle>
           <div className="relative mt-3">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              autoFocus
               placeholder="Søk etter navn"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-12 rounded-full pl-11"
+              className="h-12 rounded-full pl-11 text-base"
             />
           </div>
         </SheetHeader>
@@ -54,16 +57,16 @@ export function KioskParticipantPicker({ open, onOpenChange, participants, balan
                     onOpenChange(false);
                     setQuery('');
                   }}
-                  className="flex w-full items-center gap-3 py-2.5 text-left active:bg-muted/50"
+                  className="flex w-full items-center gap-3 py-3 text-left active:bg-muted/50"
                 >
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="h-11 w-11 shrink-0">
                     <AvatarImage src={getParticipantThumb(p)} alt={p.name} />
                     <AvatarFallback className="text-xs">
                       {p.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{p.name}</p>
+                    <p className="truncate text-base font-semibold leading-tight">{p.name}</p>
                     <p className="truncate text-xs text-muted-foreground">
                       {formatFullRoom(p.cabins?.name, p.room) || 'Ingen hytte'}
                     </p>
