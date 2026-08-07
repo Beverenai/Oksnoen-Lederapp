@@ -87,6 +87,20 @@ const Kiosk = () => {
   }, [products, categories, activeCategory, search]);
 
   const total = lines.reduce((sum, l) => sum + l.product.price * l.quantity, 0);
+
+  /** Products grouped into category sections, in category order. */
+  const productGroups = useMemo(() => {
+    const groups: Array<{ id: string; name: string; items: typeof visibleProducts }> = [];
+    for (const p of visibleProducts) {
+      const id = p.category_id ?? 'annet';
+      const name = categories.find((c) => c.id === p.category_id)?.name ?? 'Annet';
+      const last = groups[groups.length - 1];
+      if (last && last.id === id) last.items.push(p);
+      else groups.push({ id, name, items: [p] });
+    }
+    return groups;
+  }, [visibleProducts, categories]);
+
   const balance = participant ? balances?.get(participant.id)?.balance ?? 0 : null;
   const remaining = balance === null ? null : balance - total;
 
