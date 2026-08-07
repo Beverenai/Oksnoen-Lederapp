@@ -23,6 +23,7 @@ import {
   Search,
   ChevronRight,
   Pencil,
+  History,
 } from 'lucide-react';
 import { cn, formatFullRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
@@ -401,6 +402,14 @@ const Kiosk = () => {
               className="h-8 w-8 shrink-0"
               onClick={(e) => {
                 e.stopPropagation();
+                setParticipant(null);
+              }}
+              aria-label="Fjern deltager"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
                 setParticipant(null);
               }}
               aria-label="Fjern deltager"
