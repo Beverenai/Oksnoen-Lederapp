@@ -134,6 +134,7 @@ export default function More() {
       label: 'Ledelse',
       items: [
         { to: '/rope-control', icon: Anchor, label: 'Tau Kontroll' },
+        { to: '/kiosk', icon: ShoppingBasket, label: 'Kiosken' },
         { to: '/gjenglemt', icon: Shirt, label: 'Gjenglemt' },
         ...(sweatersEnabled
           ? [{ to: '/gensere', icon: Shirt, label: 'Gensere' } as MoreItem]
