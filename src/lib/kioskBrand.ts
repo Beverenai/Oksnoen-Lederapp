@@ -16,7 +16,8 @@ export interface BrandMark {
 
 const RULES: Array<{ test: RegExp; mark: BrandMark }> = [
   // Brus
-  { test: /cola zero|pepsi/i, mark: { mark: 'P', bg: '#0a2a6b', fg: '#ffffff' } },
+  { test: /pepsi/i, mark: { mark: 'P', bg: '#0a2a6b', fg: '#ffffff' } },
+  { test: /cola zero/i, mark: { mark: 'CZ', bg: '#111111', fg: '#ff4b3e' } },
   { test: /cola/i, mark: { mark: 'C', bg: '#e2231a', fg: '#ffffff' } },
   { test: /fanta/i, mark: { mark: 'F', bg: '#ff7a00', fg: '#ffffff' } },
   { test: /solo/i, mark: { mark: 'S', bg: '#f5a623', fg: '#3b2200' } },
