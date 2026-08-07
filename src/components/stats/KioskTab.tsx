@@ -4,24 +4,68 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, Plus, Minus, Undo2 } from 'lucide-react';
+import { Loader2, Search, Plus, Minus, Undo2, FileSpreadsheet, Receipt } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useParticipants } from '@/hooks/useParticipants';
 import {
   useAddKioskDeposit,
   useKioskBalances,
+  useKioskDeposits,
   useKioskSales,
   useVoidKioskSale,
 } from '@/hooks/useKiosk';
+import {
+  balancesCsv,
+  dailyCsv,
+  depositsCsv,
+  downloadCsv,
+  productsCsv,
+  salesCsv,
+} from '@/lib/kioskExport';
+import { KioskReceiptSheet } from '@/components/kiosk/KioskReceiptSheet';
+import { receiptLabel, type ReceiptData } from '@/lib/kioskReceipt';
 
 export function KioskTab() {
   const { data: participants = [], isLoading } = useParticipants();
   const { data: balances } = useKioskBalances();
   const { data: sales = [] } = useKioskSales();
+  const { data: deposits = [] } = useKioskDeposits();
   const addDeposit = useAddKioskDeposit();
   const voidSale = useVoidKioskSale();
   const [search, setSearch] = useState('');
   const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+
+  const nameOf = (id: string) => participants.find((p) => p.id === id)?.name ?? 'Ukjent';
+  const stamp = new Date().toISOString().slice(0, 10);
+
+  const exports = [
+    { label: 'Alle kjøp (linjer)', file: `gomla-kjop-${stamp}.csv`, make: () => salesCsv(sales, nameOf) },
+    { label: 'Varesalg', file: `gomla-varesalg-${stamp}.csv`, make: () => productsCsv(sales) },
+    { label: 'Dagsrapport', file: `gomla-dagsrapport-${stamp}.csv`, make: () => dailyCsv(sales) },
+    { label: 'Saldo per deltager', file: `gomla-saldo-${stamp}.csv`, make: () => balancesCsv(participants, balances) },
+    { label: 'Innskudd og justeringer', file: `gomla-innskudd-${stamp}.csv`, make: () => depositsCsv(deposits, nameOf) },
+  ];
+
+  const openReceipt = (saleId: string) => {
+    const sale = sales.find((s) => s.id === saleId);
+    if (!sale) return;
+    const p = participants.find((x) => x.id === sale.participant_id);
+    setReceipt({
+      saleId: sale.id,
+      saleNumber: sale.sale_number,
+      createdAt: sale.created_at,
+      participantName: p?.name ?? 'Ukjent deltager',
+      participantRoom: p?.cabins?.name ?? null,
+      soldByName: sale.sold_by_name,
+      items: sale.items,
+      total: sale.total,
+      balanceAfter: balances?.get(sale.participant_id)?.balance ?? null,
+      voidedAt: sale.voided_at,
+    });
+    setReceiptOpen(true);
+  };
 
   const totals = useMemo(() => {
     const active = sales.filter((s) => !s.voided_at);
@@ -103,6 +147,31 @@ export function KioskTab() {
           {totals.top.length === 0 && (
             <p className="py-4 text-center text-sm text-muted-foreground">Ingen salg ennå</p>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FileSpreadsheet className="h-4 w-4" />
+            Rapporter
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-2 sm:grid-cols-2">
+          {exports.map((e) => (
+            <Button
+              key={e.file}
+              variant="outline"
+              className="justify-start gap-2"
+              onClick={() => downloadCsv(e.file, e.make())}
+            >
+              <FileSpreadsheet className="h-4 w-4 shrink-0" />
+              {e.label}
+            </Button>
+          ))}
+          <p className="col-span-full text-xs text-muted-foreground">
+            CSV med semikolon — åpnes direkte i Excel og Google Sheets.
+          </p>
         </CardContent>
       </Card>
 
@@ -190,12 +259,26 @@ export function KioskTab() {
                 className={cn('flex items-start gap-2 border-b border-border pb-2 last:border-0', s.voided_at && 'opacity-50')}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{p?.name || 'Ukjent'}</p>
+                  <p className="truncate text-sm font-medium">
+                    {p?.name || 'Ukjent'}{' '}
+                    <span className="font-normal text-muted-foreground">
+                      {receiptLabel({ saleNumber: s.sale_number, saleId: s.id })}
+                    </span>
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {s.items.map((i) => `${i.quantity}× ${i.product_name}`).join(', ')}
                   </p>
                 </div>
                 <span className="shrink-0 text-sm font-bold tabular-nums">{s.total} kr</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 px-2 text-xs"
+                  onClick={() => openReceipt(s.id)}
+                >
+                  <Receipt className="h-3.5 w-3.5" />
+                  Kvittering
+                </Button>
                 {s.voided_at ? (
                   <Badge variant="outline">Annullert</Badge>
                 ) : (
@@ -217,6 +300,8 @@ export function KioskTab() {
           )}
         </CardContent>
       </Card>
+
+      <KioskReceiptSheet receipt={receipt} open={receiptOpen} onOpenChange={setReceiptOpen} />
     </div>
   );
 }
