@@ -34,6 +34,7 @@ import { RouletteTasksTab } from '@/components/admin/RouletteTasksTab';
 import { MurderGameTab } from '@/components/admin/MurderGameTab';
 import { BookingsTab } from '@/components/admin/BookingsTab';
 import { SweatersTab } from '@/components/admin/SweatersTab';
+import { KioskProductsTab } from '@/components/admin/KioskProductsTab';
 const HomeConfigTab = lazy(() => import('@/components/admin/HomeConfigTab'));
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -336,6 +337,9 @@ export function AdminSettingsContent({
 
     case 'sweaters':
       return <SweatersTab />;
+
+    case 'kiosk':
+      return <KioskProductsTab />;
 
     case 'home-config':
       return (

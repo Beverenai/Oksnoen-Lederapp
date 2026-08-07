@@ -43,7 +43,7 @@ import { Link as LinkIcon } from 'lucide-react';
 import { LederPass } from '@/components/passport/LederPass';
 import { useMyMurderState } from '@/hooks/useMurderGame';
 import { Skull } from 'lucide-react';
-import { Tent, AlertCircle } from 'lucide-react';
+import { Tent, AlertCircle, ShoppingBasket } from 'lucide-react';
 import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
 import { SnusBadge } from '@/components/snus/SnusBadge';
 import { OvernattingGateDialog, OvernattingEditDialog } from '@/components/home/OvernattingDialogs';
@@ -511,6 +511,12 @@ export default function Home() {
       label: 'Hendelser',
       tone: 'danger',
       onClick: () => navigate('/hendelser'),
+    },
+    {
+      key: 'kiosk',
+      icon: ShoppingBasket,
+      label: 'Kiosken',
+      onClick: () => navigate('/kiosk'),
     },
     ...(overnattingEnabled
       ? [{
