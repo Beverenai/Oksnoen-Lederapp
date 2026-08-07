@@ -40,7 +40,7 @@ const navItems = [
   { key: "teams", label: "Lag", desc: "Del deltakere i 10 lag", icon: Users2, color: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400" },
   { key: "secret-words", label: "Hemmelige Ord", desc: "Gi hver deltaker et hemmelig ord", icon: KeyRound, color: "bg-rose-500/15 text-rose-700 dark:text-rose-400" },
   { key: "incidents", label: "Hendelser", desc: "Logg fra ledere om deltagere", icon: MessageSquareWarning, color: "bg-red-500/15 text-red-700 dark:text-red-400" },
-  { key: "kiosk", label: "Kiosken", desc: "Saldo, omsetning og kjøp", icon: ShoppingBasket, color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" },
+  { key: "kiosk", label: "Gomla", desc: "Saldo, omsetning og kjøp", icon: ShoppingBasket, color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" },
 ];
 
 const tabComponents: Record<string, React.FC> = {
@@ -70,7 +70,7 @@ const tabLabels: Record<string, string> = {
   "teams": "Lag",
   "secret-words": "Hemmelige Ord",
   "incidents": "Hendelser",
-  "kiosk": "Kiosken",
+  "kiosk": "Gomla",
 };
 
 const ParticipantStats = () => {

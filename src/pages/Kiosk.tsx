@@ -124,7 +124,7 @@ const Kiosk = () => {
       {/* Header */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
-          <h1 className="font-heading text-2xl font-bold">Kiosken</h1>
+          <h1 className="font-heading text-2xl font-bold">Gomla</h1>
           <p className="text-xs text-muted-foreground">Registrer kjøp på deltagerens konto</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)} className="gap-1.5">

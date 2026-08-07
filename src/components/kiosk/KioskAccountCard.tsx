@@ -16,7 +16,7 @@ export function KioskAccountCard({ participantId }: { participantId: string }) {
     <div className="space-y-1.5">
       <div className="flex items-center gap-2 text-sm font-medium">
         <ShoppingBasket className="h-4 w-4 text-emerald-600" />
-        <span>Kiosken</span>
+        <span>Gomla</span>
         <span
           className={cn(
             'ml-auto rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums',
