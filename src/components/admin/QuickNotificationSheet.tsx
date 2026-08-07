@@ -11,6 +11,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PUSH_DESTINATIONS } from '@/lib/pushDestinations';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -102,6 +104,7 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
   const [customMode, setCustomMode] = useState(false);
   const [customTitle, setCustomTitle] = useState('');
   const [customMessage, setCustomMessage] = useState('');
+  const [customUrl, setCustomUrl] = useState('/');
 
   const handleSendNotification = async (notification: QuickNotification) => {
     if (!leader) return;
@@ -148,7 +151,7 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
         body: {
           title,
           message,
-          url: '/',
+          url: customUrl || '/',
           broadcast: true,
           sender_leader_id: leader.id,
         },
@@ -157,6 +160,7 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
       showSuccess(`Varsling sendt til ${data.sent} mottakere`);
       setCustomTitle('');
       setCustomMessage('');
+      setCustomUrl('/');
       setCustomMode(false);
       onOpenChange(false);
     } catch (err) {
@@ -213,6 +217,19 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
               <div className="text-xs text-muted-foreground text-right">
                 {customMessage.length}/300
               </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Åpne side ved trykk</label>
+              <Select value={customUrl} onValueChange={setCustomUrl}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Velg side" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PUSH_DESTINATIONS.map((d) => (
+                    <SelectItem key={d.url} value={d.url}>{d.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button
               className="w-full h-12"

@@ -202,7 +202,15 @@ export function useMurderMutations() {
     onSuccess: invalidate,
   });
 
-  return { claimKill, confirmDeath, startGame, setActive, announceStart, reviveAndReshuffle };
+  const addPlayer = useMutation({
+    mutationFn: async (leaderId: string) => {
+      const { error } = await supabase.rpc('add_murder_player', { _leader_id: leaderId });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  return { claimKill, confirmDeath, startGame, setActive, announceStart, reviveAndReshuffle, addPlayer };
 }
 
 export interface MurderRoundSnapshot {

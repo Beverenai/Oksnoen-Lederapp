@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PUSH_DESTINATIONS } from '@/lib/pushDestinations';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Bell, Send, Users, Key, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
@@ -29,6 +31,7 @@ export function PushNotificationsTab() {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [url, setUrl] = useState('');
+  const [destination, setDestination] = useState('/');
 
   useEffect(() => {
     loadData();
@@ -305,16 +308,36 @@ export function PushNotificationsTab() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="push-url">URL (valgfritt)</Label>
-            <Input
-              id="push-url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="/schedule"
+            <Label htmlFor="push-destination">Åpne side ved trykk</Label>
+            <Select
+              value={destination}
+              onValueChange={(v) => {
+                setDestination(v);
+                setUrl(v === 'custom' ? '' : v);
+              }}
               disabled={!isConfigured || isSending}
-            />
+            >
+              <SelectTrigger id="push-destination">
+                <SelectValue placeholder="Velg side" />
+              </SelectTrigger>
+              <SelectContent>
+                {PUSH_DESTINATIONS.map((d) => (
+                  <SelectItem key={d.url} value={d.url}>{d.label}</SelectItem>
+                ))}
+                <SelectItem value="custom">Egen URL…</SelectItem>
+              </SelectContent>
+            </Select>
+            {destination === 'custom' && (
+              <Input
+                id="push-url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="/schedule"
+                disabled={!isConfigured || isSending}
+              />
+            )}
             <p className="text-xs text-muted-foreground">
-              Side som åpnes når brukeren trykker på varselet
+              Siden som åpnes i appen når brukeren trykker på varselet
             </p>
           </div>
           <Button

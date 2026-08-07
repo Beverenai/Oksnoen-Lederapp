@@ -1,5 +1,6 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,6 +62,17 @@ export default function Profile() {
   const [snusProductId, setSnusProductId] = useState<string | null>(null);
   const [snusCustomLabel, setSnusCustomLabel] = useState<string | null>(null);
   const [isSnusPickerOpen, setIsSnusPickerOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Åpne snusvelgeren direkte via ?snus=1 (brukes av push-varsler)
+  useEffect(() => {
+    if (searchParams.get('snus')) {
+      setIsSnusPickerOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('snus');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const snusCan = snusProductId
     ? getSnusProduct(snusProductId)

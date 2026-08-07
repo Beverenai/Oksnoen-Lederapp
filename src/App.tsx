@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { useNativePushNavigation } from "@/hooks/useNativePushNavigation";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { SplashScreen } from "@/components/SplashScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -58,6 +59,7 @@ const Hendelser = lazy(() => import("@/pages/Hendelser"));
 const Chat = lazy(loadChat);
 const More = lazy(loadMore);
 const LederpassPage = lazy(() => import("@/pages/Lederpass"));
+const Kiosk = lazy(() => import("@/pages/Kiosk"));
 const PeriodArchive = lazy(() => import("@/pages/admin/PeriodArchive"));
 
 const queryClient = new QueryClient({
@@ -161,6 +163,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   const { leader, isProfileComplete } = useAuth();
   const { isInstalled, hasDeclined, isIOS, isAndroid } = usePWAInstall();
+  useNativePushNavigation();
 
   const isMobile = isIOS || isAndroid;
   const shouldShowInstall = isMobile && !isInstalled && !hasDeclined;
@@ -242,6 +245,7 @@ function AppRoutes() {
           <Route path="/chat" element={<Chat />} />
           <Route path="/mer" element={<More />} />
           <Route path="/lederpass" element={<LederpassPage />} />
+          <Route path="/kiosk" element={<Kiosk />} />
         </Route>
 
         {/* Public routes */}

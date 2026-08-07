@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { formatFullRoom } from '@/lib/utils';
+import { KioskAccountCard } from '@/components/kiosk/KioskAccountCard';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -869,6 +870,8 @@ export const ParticipantDetailDialog = ({
                     Booking info
                   </Button>
                 )}
+
+                <KioskAccountCard participantId={participant.id} />
 
                 {/* Pass written toggle - only visible when checkout is enabled */}
                 {checkoutEnabled && (

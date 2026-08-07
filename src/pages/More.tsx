@@ -16,6 +16,7 @@ import {
   LogOut,
   Bell,
   Skull,
+  ShoppingBasket,
   LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -134,6 +135,7 @@ export default function More() {
       label: 'Ledelse',
       items: [
         { to: '/rope-control', icon: Anchor, label: 'Tau Kontroll' },
+        { to: '/kiosk', icon: ShoppingBasket, label: 'Gomla' },
         { to: '/gjenglemt', icon: Shirt, label: 'Gjenglemt' },
         ...(sweatersEnabled
           ? [{ to: '/gensere', icon: Shirt, label: 'Gensere' } as MoreItem]

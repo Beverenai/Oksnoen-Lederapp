@@ -236,6 +236,13 @@ export type Database = {
             foreignKeyName: "dynga_cards_participant_id_fkey"
             columns: ["participant_id"]
             isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "dynga_cards_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
             referencedRelation: "participants"
             referencedColumns: ["id"]
           },
@@ -557,6 +564,265 @@ export type Database = {
           title?: string | null
         }
         Relationships: []
+      }
+      kiosk_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      kiosk_deposits: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          note: string | null
+          participant_id: string
+          period_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          note?: string | null
+          participant_id: string
+          period_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          note?: string | null
+          participant_id?: string
+          period_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kiosk_deposits_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiosk_deposits_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "kiosk_deposits_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiosk_deposits_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kiosk_products: {
+        Row: {
+          category_id: string | null
+          color: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kiosk_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kiosk_sale_items: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string | null
+          product_name: string
+          quantity: number
+          sale_id: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          product_name: string
+          quantity?: number
+          sale_id: string
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          sale_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kiosk_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiosk_sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kiosk_sales: {
+        Row: {
+          created_at: string
+          id: string
+          participant_id: string
+          period_id: string | null
+          sale_number: number | null
+          sold_by: string | null
+          total: number
+          updated_at: string
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          participant_id: string
+          period_id?: string | null
+          sale_number?: number | null
+          sold_by?: string | null
+          total?: number
+          updated_at?: string
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          participant_id?: string
+          period_id?: string | null
+          sale_number?: number | null
+          sold_by?: string | null
+          total?: number
+          updated_at?: string
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kiosk_sales_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "kiosk_sales_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiosk_sales_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiosk_sales_sold_by_fkey"
+            columns: ["sold_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiosk_sales_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leader_availability: {
         Row: {
@@ -1388,6 +1654,13 @@ export type Database = {
             foreignKeyName: "participant_activities_participant_id_fkey"
             columns: ["participant_id"]
             isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "participant_activities_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
             referencedRelation: "participants"
             referencedColumns: ["id"]
           },
@@ -1451,6 +1724,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "leaders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_bonus_points_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
           },
           {
             foreignKeyName: "participant_bonus_points_participant_id_fkey"
@@ -1592,6 +1872,13 @@ export type Database = {
             foreignKeyName: "participant_bookings_participant_id_fkey"
             columns: ["participant_id"]
             isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "participant_bookings_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
             referencedRelation: "participants"
             referencedColumns: ["id"]
           },
@@ -1647,6 +1934,13 @@ export type Database = {
             foreignKeyName: "participant_health_events_participant_id_fkey"
             columns: ["participant_id"]
             isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "participant_health_events_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
             referencedRelation: "participants"
             referencedColumns: ["id"]
           },
@@ -1685,6 +1979,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "participant_health_info_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: true
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
+          },
           {
             foreignKeyName: "participant_health_info_participant_id_fkey"
             columns: ["participant_id"]
@@ -1741,6 +2042,13 @@ export type Database = {
             foreignKeyName: "participant_health_notes_participant_id_fkey"
             columns: ["participant_id"]
             isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "participant_health_notes_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
             referencedRelation: "participants"
             referencedColumns: ["id"]
           },
@@ -1776,6 +2084,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "participant_incidents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_incident_participants_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
           },
           {
             foreignKeyName: "participant_incident_participants_participant_id_fkey"
@@ -1881,6 +2196,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "participant_sweaters_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
+          },
           {
             foreignKeyName: "participant_sweaters_participant_id_fkey"
             columns: ["participant_id"]
@@ -2266,6 +2588,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cabins"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_swaps_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
           },
           {
             foreignKeyName: "room_swaps_participant_id_fkey"
@@ -2692,6 +3021,13 @@ export type Database = {
             foreignKeyName: "secret_word_assignments_participant_id_fkey"
             columns: ["participant_id"]
             isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "secret_word_assignments_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
             referencedRelation: "participants"
             referencedColumns: ["id"]
           },
@@ -2751,8 +3087,22 @@ export type Database = {
             foreignKeyName: "secret_word_matches_participant_a_id_fkey"
             columns: ["participant_a_id"]
             isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "secret_word_matches_participant_a_id_fkey"
+            columns: ["participant_a_id"]
+            isOneToOne: false
             referencedRelation: "participants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secret_word_matches_participant_b_id_fkey"
+            columns: ["participant_b_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
           },
           {
             foreignKeyName: "secret_word_matches_participant_b_id_fkey"
@@ -3247,6 +3597,24 @@ export type Database = {
           },
         ]
       }
+      kiosk_balances: {
+        Row: {
+          balance: number | null
+          deposited: number | null
+          participant_id: string | null
+          period_id: string | null
+          spent: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participants_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leader_activities_public: {
         Row: {
           current_activity: string | null
@@ -3278,6 +3646,7 @@ export type Database = {
       }
     }
     Functions: {
+      add_murder_player: { Args: { _leader_id: string }; Returns: undefined }
       archive_murder_round: { Args: never; Returns: string }
       claim_murder_kill: { Args: never; Returns: string }
       confirm_murder_death: { Args: { _claim_id?: string }; Returns: undefined }
@@ -3355,6 +3724,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      record_kiosk_sale: {
+        Args: { _items: Json; _participant_id: string }
+        Returns: string
+      }
       revive_and_reshuffle_murder: {
         Args: { _count?: number }
         Returns: {
@@ -3365,6 +3738,7 @@ export type Database = {
       }
       set_murder_game_active: { Args: { _active: boolean }; Returns: undefined }
       start_murder_game: { Args: { _leader_ids: string[] }; Returns: string }
+      void_kiosk_sale: { Args: { _sale_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "leader" | "nurse" | "superadmin"
