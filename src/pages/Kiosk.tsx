@@ -87,6 +87,20 @@ const Kiosk = () => {
   }, [products, categories, activeCategory, search]);
 
   const total = lines.reduce((sum, l) => sum + l.product.price * l.quantity, 0);
+
+  /** Products grouped into category sections, in category order. */
+  const productGroups = useMemo(() => {
+    const groups: Array<{ id: string; name: string; items: typeof visibleProducts }> = [];
+    for (const p of visibleProducts) {
+      const id = p.category_id ?? 'annet';
+      const name = categories.find((c) => c.id === p.category_id)?.name ?? 'Annet';
+      const last = groups[groups.length - 1];
+      if (last && last.id === id) last.items.push(p);
+      else groups.push({ id, name, items: [p] });
+    }
+    return groups;
+  }, [visibleProducts, categories]);
+
   const balance = participant ? balances?.get(participant.id)?.balance ?? 0 : null;
   const remaining = balance === null ? null : balance - total;
 
@@ -324,9 +338,21 @@ const Kiosk = () => {
         )}
       </Card>
 
-      {/* Product grid */}
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-        {visibleProducts.map((p) => {
+      {/* Product grid, grouped by category */}
+      <div className="space-y-5">
+        {productGroups.map((group) => (
+          <section key={group.id}>
+            <div className="mb-2 flex items-center gap-2">
+              <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                {group.name}
+              </h2>
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">
+                {group.items.length}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+              {group.items.map((p) => {
           const inCart = lines.find((l) => l.product.id === p.id)?.quantity ?? 0;
           const categoryName = categories.find((c) => c.id === p.category_id)?.name ?? null;
           const tile = getTileStyle(p.name, categoryName);
@@ -379,9 +405,12 @@ const Kiosk = () => {
               )}
             </button>
           );
-        })}
+              })}
+            </div>
+          </section>
+        ))}
         {visibleProducts.length === 0 && (
-          <p className="col-span-full py-10 text-center text-sm text-muted-foreground">
+          <p className="py-10 text-center text-sm text-muted-foreground">
             {search ? `Ingen treff på «${search}»` : 'Ingen varer i denne kategorien'}
           </p>
         )}
