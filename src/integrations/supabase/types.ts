@@ -3651,6 +3651,10 @@ export type Database = {
       claim_murder_kill: { Args: never; Returns: string }
       confirm_murder_death: { Args: { _claim_id?: string }; Returns: undefined }
       current_leader_id: { Args: never; Returns: string }
+      edit_kiosk_sale: {
+        Args: { _items: Json; _sale_id: string }
+        Returns: undefined
+      }
       get_active_period_id: { Args: never; Returns: string }
       get_all_leader_roles: {
         Args: never
