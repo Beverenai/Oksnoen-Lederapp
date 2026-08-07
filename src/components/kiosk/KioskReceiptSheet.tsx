@@ -122,6 +122,16 @@ export function KioskReceiptSheet({ receipt, open, onOpenChange, onVoid, justCom
             </Button>
           )}
         </div>
+
+        <Button className="mt-2 w-full" onClick={() => onOpenChange(false)}>
+          Ferdig
+        </Button>
+        {!receipt.voidedAt && (
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            Kjøpet er lagret. Lukker du kvitteringen står kjøpet fortsatt registrert – bruk
+            «Annuller» hvis det er feil.
+          </p>
+        )}
       </SheetContent>
     </Sheet>
   );
