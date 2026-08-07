@@ -36,6 +36,7 @@ import {
   type KioskProduct,
   type KioskSale,
 } from '@/hooks/useKiosk';
+import { supabase } from '@/integrations/supabase/client';
 import { KioskParticipantPicker } from '@/components/kiosk/KioskParticipantPicker';
 import { KioskReceiptSheet } from '@/components/kiosk/KioskReceiptSheet';
 import { receiptLabel, type ReceiptData } from '@/lib/kioskReceipt';
@@ -77,6 +78,8 @@ const Kiosk = () => {
   const balance = participant ? balances?.get(participant.id)?.balance ?? 0 : null;
   const remaining = balance === null ? null : balance - total;
 
+  const saleLabel = (s: KioskSale) => receiptLabel({ saleNumber: s.sale_number, saleId: s.id });
+
   const participantName = (id: string) =>
     participants.find((p) => p.id === id)?.name ?? 'Ukjent deltager';
 
@@ -97,7 +100,7 @@ const Kiosk = () => {
     return recentSales.filter(
       (s) =>
         participantName(s.participant_id).toLowerCase().includes(q) ||
-        receiptLabel(s).toLowerCase().includes(q)
+        saleLabel(s).toLowerCase().includes(q)
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recentSales, historySearch, participants]);
@@ -447,7 +450,7 @@ const Kiosk = () => {
                       {participantName(sale.participant_id)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {receiptLabel(sale)} ·{' '}
+                      {saleLabel(sale)} ·{' '}
                       {new Date(sale.created_at).toLocaleString('nb-NO', {
                         day: '2-digit',
                         month: '2-digit',
