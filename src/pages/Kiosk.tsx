@@ -372,6 +372,7 @@ const Kiosk = () => {
         className="mb-3 cursor-pointer p-3 active:scale-[0.99] transition-transform"
       >
         {participant ? (
+          <>
           <div className="flex items-center gap-3">
             <Avatar className="h-11 w-11">
               <AvatarImage src={getParticipantThumb(participant)} alt={participant.name} />
@@ -409,6 +410,20 @@ const Kiosk = () => {
               <X className="h-4 w-4" />
             </Button>
           </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="mt-2 w-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              setHistorySearch(participant.name);
+              setHistoryOpen(true);
+            }}
+          >
+            <History className="mr-2 h-4 w-4" />
+            Historikk for {participant.name.split(' ')[0]}
+          </Button>
+          </>
         ) : (
           <div className="flex items-center gap-3 text-muted-foreground">
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted">
