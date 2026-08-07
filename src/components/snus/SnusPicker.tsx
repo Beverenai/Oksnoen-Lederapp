@@ -45,6 +45,7 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
+        onOpenAutoFocus={(e) => e.preventDefault()}
         className="flex h-[94dvh] flex-col gap-0 rounded-t-3xl p-0 sm:max-w-none"
       >
         {/* Sticky top: logo, title, search, brand chips */}
@@ -58,7 +59,7 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
               placeholder="Søk merke eller smak"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-12 rounded-full pl-11"
+              className="h-12 rounded-full pl-11 text-base"
             />
           </div>
 
