@@ -3,9 +3,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatFullRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
-import { formatFullRoom } from '@/lib/cabinDisplay';
 import type { ParticipantWithCabin } from '@/hooks/useParticipants';
 import type { KioskBalance } from '@/hooks/useKiosk';
 
