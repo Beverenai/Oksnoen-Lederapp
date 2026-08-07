@@ -16,6 +16,7 @@ import {
   LogOut,
   Bell,
   Skull,
+  ShoppingBasket,
   LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
