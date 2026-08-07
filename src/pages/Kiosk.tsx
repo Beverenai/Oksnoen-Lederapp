@@ -40,6 +40,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { KioskParticipantPicker } from '@/components/kiosk/KioskParticipantPicker';
 import { KioskReceiptSheet } from '@/components/kiosk/KioskReceiptSheet';
 import { receiptLabel, type ReceiptData } from '@/lib/kioskReceipt';
+import { getBrandMark } from '@/lib/kioskBrand';
 
 const Kiosk = () => {
   const { data: participants = [], isLoading: participantsLoading } = useParticipants();
@@ -54,6 +55,8 @@ const Kiosk = () => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [lines, setLines] = useState<CartLine[]>([]);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
@@ -64,7 +67,16 @@ const Kiosk = () => {
 
   const visibleProducts = useMemo(() => {
     const order = new Map(categories.map((c, i) => [c.id, i]));
-    const list = activeCategory ? products.filter((p) => p.category_id === activeCategory) : [...products];
+    const q = search.trim().toLowerCase();
+    let list = activeCategory && !q
+      ? products.filter((p) => p.category_id === activeCategory)
+      : [...products];
+    if (q) {
+      list = list.filter((p) => {
+        const cat = categories.find((c) => c.id === p.category_id)?.name ?? '';
+        return p.name.toLowerCase().includes(q) || cat.toLowerCase().includes(q);
+      });
+    }
     return list.sort((a, b) => {
       const ca = order.get(a.category_id ?? '') ?? 99;
       const cb = order.get(b.category_id ?? '') ?? 99;
@@ -72,7 +84,7 @@ const Kiosk = () => {
       if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
       return a.name.localeCompare(b.name, 'nb');
     });
-  }, [products, categories, activeCategory]);
+  }, [products, categories, activeCategory, search]);
 
   const total = lines.reduce((sum, l) => sum + l.product.price * l.quantity, 0);
   const balance = participant ? balances?.get(participant.id)?.balance ?? 0 : null;
