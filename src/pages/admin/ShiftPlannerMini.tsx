@@ -395,7 +395,7 @@ export default function ShiftPlannerMini() {
     <div className="space-y-4 animate-fade-in pb-24">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <Link to="/admin">
+          <Link to="/admin" className="hidden lg:block">
             <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4" /></Button>
           </Link>
           <div className="min-w-0">

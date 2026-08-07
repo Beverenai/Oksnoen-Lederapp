@@ -60,7 +60,7 @@ export default function Morder() {
   return (
     <div className="mx-auto w-full max-w-lg space-y-4 pb-8">
       <div className="flex items-center gap-2 pt-1">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="-ml-2">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="-ml-2 hidden lg:inline-flex">
           <ArrowLeft className="w-4 h-4 mr-1" /> Hjem
         </Button>
       </div>

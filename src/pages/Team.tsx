@@ -131,7 +131,7 @@ export default function Team() {
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
-            className="shrink-0"
+            className="shrink-0 hidden lg:inline-flex"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>

@@ -70,7 +70,7 @@ export default function Stories() {
   if (stories.length === 0) {
     return (
       <div className="space-y-6 animate-fade-in">
-        <Button variant="ghost" onClick={() => navigate('/')} className="mb-2">
+        <Button variant="ghost" onClick={() => navigate('/')} className="mb-2 hidden lg:inline-flex">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Tilbake
         </Button>
@@ -86,7 +86,7 @@ export default function Stories() {
   return (
     <div ref={pullRef} className="space-y-6 animate-fade-in overflow-y-auto">
       <PullIndicator isPulling={isPulling} isRefreshing={isRefreshing} pullProgress={pullProgress} />
-      <Button variant="ghost" onClick={() => navigate('/')} className="mb-2">
+      <Button variant="ghost" onClick={() => navigate('/')} className="mb-2 hidden lg:inline-flex">
         <ArrowLeft className="w-4 h-4 mr-2" />
         Tilbake
       </Button>

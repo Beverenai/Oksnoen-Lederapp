@@ -39,7 +39,7 @@ export default function PassportActivity() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <Button variant="ghost" onClick={handleClose} className="mb-2">
+      <Button variant="ghost" onClick={handleClose} className="mb-2 hidden lg:inline-flex">
         <ArrowLeft className="w-4 h-4 mr-2" />
         Tilbake til passkontroll
       </Button>

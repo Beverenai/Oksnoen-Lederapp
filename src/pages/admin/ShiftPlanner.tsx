@@ -433,7 +433,7 @@ export default function ShiftPlanner() {
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 flex items-center gap-2">
-          <Link to="/admin"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
+          <Link to="/admin" className="hidden lg:block"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
           <div>
             <h1 className="text-lg sm:text-2xl font-heading font-bold flex items-center gap-2">
               <CalendarDays className="w-5 h-5" />
