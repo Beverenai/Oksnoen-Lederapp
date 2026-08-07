@@ -27,6 +27,7 @@ import {
   Dices,
   Skull,
   ClipboardList,
+  ShoppingBasket,
   Archive,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
