@@ -40,7 +40,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { KioskParticipantPicker } from '@/components/kiosk/KioskParticipantPicker';
 import { KioskReceiptSheet } from '@/components/kiosk/KioskReceiptSheet';
 import { receiptLabel, type ReceiptData } from '@/lib/kioskReceipt';
-import { getBrandMark } from '@/lib/kioskBrand';
+import { getTileStyle } from '@/lib/kioskBrand';
 
 const Kiosk = () => {
   const { data: participants = [], isLoading: participantsLoading } = useParticipants();
