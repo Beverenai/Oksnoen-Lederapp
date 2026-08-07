@@ -41,6 +41,7 @@ import { KioskParticipantPicker } from '@/components/kiosk/KioskParticipantPicke
 import { KioskReceiptSheet } from '@/components/kiosk/KioskReceiptSheet';
 import { receiptLabel, type ReceiptData } from '@/lib/kioskReceipt';
 import { getTileStyle } from '@/lib/kioskBrand';
+import { getKioskProductImage } from '@/lib/kioskProductImage';
 
 const Kiosk = () => {
   const { data: participants = [], isLoading: participantsLoading } = useParticipants();
@@ -356,6 +357,7 @@ const Kiosk = () => {
           const inCart = lines.find((l) => l.product.id === p.id)?.quantity ?? 0;
           const categoryName = categories.find((c) => c.id === p.category_id)?.name ?? null;
           const tile = getTileStyle(p.name, categoryName);
+          const productImage = getKioskProductImage(p.name);
           return (
             <button
               key={p.id}
@@ -366,15 +368,27 @@ const Kiosk = () => {
               )}
               style={{ background: tile.background }}
             >
-              <span
-                aria-hidden
-                className={cn(
-                  'absolute inset-0 flex items-center justify-center pb-6 text-3xl font-black leading-none tracking-tighter sm:text-4xl',
-                  tile.isLight ? 'text-black/25' : 'text-white/30'
-                )}
-              >
-                {tile.mark}
-              </span>
+              {productImage ? (
+                <span aria-hidden className="absolute inset-x-1 bottom-8 top-1 flex items-center justify-center">
+                  <img
+                    src={productImage}
+                    alt=""
+                    loading="lazy"
+                    draggable={false}
+                    className="h-full w-full select-none object-contain drop-shadow-[0_5px_5px_rgba(15,23,42,0.3)] transition-transform duration-150 group-active:scale-95"
+                  />
+                </span>
+              ) : (
+                <span
+                  aria-hidden
+                  className={cn(
+                    'absolute inset-0 flex items-center justify-center pb-6 text-3xl font-black leading-none tracking-tighter sm:text-4xl',
+                    tile.isLight ? 'text-black/25' : 'text-white/30'
+                  )}
+                >
+                  {tile.mark}
+                </span>
+              )}
               <div
                 className={cn(
                   'absolute inset-x-0 bottom-0 p-1.5 backdrop-blur-sm',
