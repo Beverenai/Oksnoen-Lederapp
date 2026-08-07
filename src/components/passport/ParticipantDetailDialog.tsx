@@ -870,6 +870,8 @@ export const ParticipantDetailDialog = ({
                   </Button>
                 )}
 
+                <KioskAccountCard participantId={participant.id} />
+
                 {/* Pass written toggle - only visible when checkout is enabled */}
                 {checkoutEnabled && (
                 <div className="space-y-1.5">
