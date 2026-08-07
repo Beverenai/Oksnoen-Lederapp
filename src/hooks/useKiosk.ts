@@ -211,6 +211,22 @@ export function useVoidKioskSale() {
   });
 }
 
+/** Replaces the items on an existing sale (used to correct mistakes). */
+export function useEditKioskSale() {
+  const invalidate = useInvalidateKiosk();
+
+  return useMutation({
+    mutationFn: async ({ saleId, lines }: { saleId: string; lines: CartLine[] }) => {
+      const { error } = await (supabase.rpc as any)('edit_kiosk_sale', {
+        _sale_id: saleId,
+        _items: lines.map((l) => ({ product_id: l.product.id, quantity: l.quantity })),
+      });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+}
+
 /** Adds money (or a correction) to a participant's kiosk account. */
 export function useAddKioskDeposit() {
   const invalidate = useInvalidateKiosk();
