@@ -22,7 +22,7 @@ export const ACTIVITY_NAME_MAPPING: Record<string, string[]> = {
   'tretten meter': ['tretten', '13 meter', '13m', 'trettenmeteren'],
   'åtte meter': ['åtte', '8 meter', '8m', 'åttemeteren'],
   'ti meter': ['ti', '10 meter', '10m', 'timeteren'],
-  'skrikeren begge veier': ['svømming begge veier', 'begge veier', 'svømming til skrikeren begge veier'],
+  'skrikeren begge veier': ['svømming begge veier', 'begge veier', 'svømming til skrikeren begge veier', 'skrikern', 'skrikeren'],
   'skrikeren en vei': ['svømming en vei', 'en vei', 'svømming til skrikeren en vei'],
   'klatring': ['klatre', 'klatrevegg'],
   'rappis': ['rappelering', 'rappell', 'rappelling'],
