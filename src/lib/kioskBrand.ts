@@ -103,7 +103,7 @@ export function getTileStyle(productName: string, categoryName?: string | null):
   const gradient = TILE_GRADIENTS.find((g) => g.test.test(productName));
   return {
     background: gradient?.background ?? brand.bg,
-    mark: brand.emoji ?? brand.mark || productName.trim().charAt(0).toUpperCase(),
+    mark: brand.emoji ?? (brand.mark || productName.trim().charAt(0).toUpperCase()),
     isLight: relativeLuminance(brand.bg) > 0.55,
   };
 }
