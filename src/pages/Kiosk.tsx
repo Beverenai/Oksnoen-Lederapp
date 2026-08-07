@@ -40,7 +40,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { KioskParticipantPicker } from '@/components/kiosk/KioskParticipantPicker';
 import { KioskReceiptSheet } from '@/components/kiosk/KioskReceiptSheet';
 import { receiptLabel, type ReceiptData } from '@/lib/kioskReceipt';
-import { getBrandMark } from '@/lib/kioskBrand';
+import { getTileStyle } from '@/lib/kioskBrand';
 
 const Kiosk = () => {
   const { data: participants = [], isLoading: participantsLoading } = useParticipants();
@@ -325,33 +325,55 @@ const Kiosk = () => {
       </Card>
 
       {/* Product grid */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
         {visibleProducts.map((p) => {
           const inCart = lines.find((l) => l.product.id === p.id)?.quantity ?? 0;
           const categoryName = categories.find((c) => c.id === p.category_id)?.name ?? null;
-          const brand = getBrandMark(p.name, categoryName);
+          const tile = getTileStyle(p.name, categoryName);
           return (
             <button
               key={p.id}
               onClick={() => addLine(p)}
               className={cn(
-                'relative flex min-h-[104px] flex-col gap-1.5 overflow-hidden rounded-2xl border border-border/60 bg-card p-2.5 text-left shadow-sm transition-transform active:scale-[0.97]',
-                inCart > 0 && 'ring-2 ring-primary'
+                'group relative aspect-square overflow-hidden rounded-2xl text-left shadow-sm transition-transform duration-100 active:scale-[0.94]',
+                inCart > 0 && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
               )}
+              style={{ background: tile.background }}
             >
               <span
                 aria-hidden
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[13px] font-black leading-none shadow-sm"
-                style={{ backgroundColor: brand.bg, color: brand.fg }}
+                className={cn(
+                  'absolute inset-0 flex items-center justify-center pb-6 text-3xl font-black leading-none tracking-tighter sm:text-4xl',
+                  tile.isLight ? 'text-black/25' : 'text-white/30'
+                )}
               >
-                {brand.emoji ?? brand.mark}
+                {tile.mark}
               </span>
-              <span className="line-clamp-2 flex-1 pr-6 text-[13px] font-semibold leading-tight">
-                {p.name}
-              </span>
-              <span className="text-sm font-bold tabular-nums text-muted-foreground">{p.price} kr</span>
+              <div
+                className={cn(
+                  'absolute inset-x-0 bottom-0 p-1.5 backdrop-blur-sm',
+                  tile.isLight ? 'bg-white/25' : 'bg-black/25'
+                )}
+              >
+                <p
+                  className={cn(
+                    'truncate text-[10px] font-bold uppercase leading-tight',
+                    tile.isLight ? 'text-black' : 'text-white'
+                  )}
+                >
+                  {p.name}
+                </p>
+                <p
+                  className={cn(
+                    'text-[10px] font-bold tabular-nums',
+                    tile.isLight ? 'text-black/70' : 'text-white/80'
+                  )}
+                >
+                  {p.price} kr
+                </p>
+              </div>
               {inCart > 0 && (
-                <span className="absolute right-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold text-primary-foreground">
+                <span className="absolute right-1.5 top-1.5 flex h-6 min-w-6 animate-in zoom-in items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold text-primary-foreground shadow">
                   {inCart}
                 </span>
               )}
