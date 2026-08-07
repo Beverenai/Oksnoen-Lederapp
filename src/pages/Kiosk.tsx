@@ -338,9 +338,21 @@ const Kiosk = () => {
         )}
       </Card>
 
-      {/* Product grid */}
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-        {visibleProducts.map((p) => {
+      {/* Product grid, grouped by category */}
+      <div className="space-y-5">
+        {productGroups.map((group) => (
+          <section key={group.id}>
+            <div className="mb-2 flex items-center gap-2">
+              <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                {group.name}
+              </h2>
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">
+                {group.items.length}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+              {group.items.map((p) => {
           const inCart = lines.find((l) => l.product.id === p.id)?.quantity ?? 0;
           const categoryName = categories.find((c) => c.id === p.category_id)?.name ?? null;
           const tile = getTileStyle(p.name, categoryName);
@@ -393,9 +405,12 @@ const Kiosk = () => {
               )}
             </button>
           );
-        })}
+              })}
+            </div>
+          </section>
+        ))}
         {visibleProducts.length === 0 && (
-          <p className="col-span-full py-10 text-center text-sm text-muted-foreground">
+          <p className="py-10 text-center text-sm text-muted-foreground">
             {search ? `Ingen treff på «${search}»` : 'Ingen varer i denne kategorien'}
           </p>
         )}
