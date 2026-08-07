@@ -40,6 +40,7 @@ import {
 } from '@/hooks/useKiosk';
 import { KioskParticipantPicker } from '@/components/kiosk/KioskParticipantPicker';
 import { KioskReceiptSheet } from '@/components/kiosk/KioskReceiptSheet';
+import { KioskSuccessDialog, type KioskSuccessData } from '@/components/kiosk/KioskSuccessDialog';
 import { receiptLabel, type ReceiptData } from '@/lib/kioskReceipt';
 import { getTileStyle } from '@/lib/kioskBrand';
 import { getKioskProductImage } from '@/lib/kioskProductImage';
@@ -64,6 +65,8 @@ const Kiosk = () => {
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptIsNew, setReceiptIsNew] = useState(false);
+  const [success, setSuccess] = useState<KioskSuccessData | null>(null);
+  const [successOpen, setSuccessOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<KioskSale | null>(null);
   const [editLines, setEditLines] = useState<CartLine[]>([]);
   const [editSearch, setEditSearch] = useState('');
@@ -180,35 +183,56 @@ const Kiosk = () => {
       setLines([]);
       setParticipant(null);
       const saleId = await recordSale.mutateAsync({ participantId: buyer.id, lines: soldLines });
-      toast.success(`${buyer.name} · ${soldTotal} kr registrert`, {
-        action: {
-          label: 'Kvittering',
-          onClick: () => {
-            setReceipt({
-              saleId,
-              saleNumber: null,
-              createdAt: new Date().toISOString(),
-              participantName: buyer.name,
-              participantRoom: formatFullRoom(buyer.cabins?.name, buyer.room),
-              soldByName: null,
-              items: soldLines.map((l) => ({
-                product_name: l.product.name,
-                unit_price: l.product.price,
-                quantity: l.quantity,
-              })),
-              total: soldTotal,
-              balanceAfter: soldRemaining,
-            });
-            setReceiptIsNew(true);
-            setReceiptOpen(true);
-          },
-        },
+      setSuccess({
+        saleId,
+        participantName: buyer.name,
+        participantRoom: formatFullRoom(buyer.cabins?.name, buyer.room),
+        participantImage: getParticipantThumb(buyer),
+        items: soldLines.map((l) => ({
+          product_name: l.product.name,
+          unit_price: l.product.price,
+          quantity: l.quantity,
+        })),
+        total: soldTotal,
+        remaining: soldRemaining,
       });
+      setSuccessOpen(true);
     } catch (err: any) {
       toast.error('Kunne ikke registrere kjøp', { description: err?.message });
       setParticipant(buyer);
       setLines(soldLines);
     }
+  };
+
+  /** Voids the sale shown in the success dialog. */
+  const undoSuccess = async () => {
+    if (!success) return;
+    try {
+      await voidSale.mutateAsync(success.saleId);
+      toast.success('Kjøpet er angret');
+      setSuccessOpen(false);
+    } catch (err: any) {
+      toast.error('Kunne ikke angre kjøpet', { description: err?.message });
+    }
+  };
+
+  /** Opens the full receipt for the sale shown in the success dialog. */
+  const showSuccessReceipt = () => {
+    if (!success) return;
+    setReceipt({
+      saleId: success.saleId,
+      saleNumber: null,
+      createdAt: new Date().toISOString(),
+      participantName: success.participantName,
+      participantRoom: success.participantRoom,
+      soldByName: null,
+      items: success.items,
+      total: success.total,
+      balanceAfter: success.remaining,
+    });
+    setReceiptIsNew(true);
+    setSuccessOpen(false);
+    setReceiptOpen(true);
   };
 
   /** Opens the edit sheet for an existing sale, mapping its items back to products. */
@@ -648,6 +672,15 @@ const Kiosk = () => {
         onOpenChange={setReceiptOpen}
         onVoid={handleVoid}
         justCompleted={receiptIsNew}
+      />
+
+      <KioskSuccessDialog
+        data={success}
+        open={successOpen}
+        onOpenChange={setSuccessOpen}
+        onUndo={undoSuccess}
+        onShowReceipt={showSuccessReceipt}
+        undoing={voidSale.isPending}
       />
 
       {/* Edit an existing sale */}
