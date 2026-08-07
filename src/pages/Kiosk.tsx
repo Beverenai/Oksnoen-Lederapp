@@ -590,18 +590,14 @@ const Kiosk = () => {
           </div>
           <div className="mt-3 flex-1 space-y-2 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]">
             {filteredSales.map((sale) => (
-              <button
+              <Card
                 key={sale.id}
-                onClick={() => openReceipt(sale)}
-                className="w-full text-left"
-              >
-                <Card
                   className={cn(
                     'flex items-center gap-2 p-3 transition-transform active:scale-[0.99]',
                     sale.voided_at && 'opacity-50'
                   )}
                 >
-                  <div className="min-w-0 flex-1">
+                  <button onClick={() => openReceipt(sale)} className="min-w-0 flex-1 text-left">
                     <p className="truncate text-sm font-semibold">
                       {participantName(sale.participant_id)}
                     </p>
@@ -617,14 +613,25 @@ const Kiosk = () => {
                     <p className="mt-1 truncate text-xs text-muted-foreground">
                       {sale.items.map((i) => `${i.quantity}× ${i.product_name}`).join(', ')}
                     </p>
-                  </div>
+                  </button>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <span className="text-sm font-bold tabular-nums">{sale.total} kr</span>
                     {sale.voided_at && <Badge variant="outline">Annullert</Badge>}
                   </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  {!sale.voided_at ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => startEdit(sale)}
+                      aria-label="Endre kjøp"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
                 </Card>
-              </button>
             ))}
             {filteredSales.length === 0 && (
               <p className="py-10 text-center text-sm text-muted-foreground">
@@ -642,6 +649,107 @@ const Kiosk = () => {
         onVoid={handleVoid}
         justCompleted={receiptIsNew}
       />
+
+      {/* Edit an existing sale */}
+      <Sheet open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+        <SheetContent side="bottom" className="flex h-[88dvh] flex-col gap-0 rounded-t-3xl">
+          <SheetHeader className="shrink-0">
+            <SheetTitle>
+              Endre kjøp
+              {editTarget && (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  {participantName(editTarget.participant_id)}
+                </span>
+              )}
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="mt-3 shrink-0 space-y-1.5 rounded-2xl border border-border p-3">
+            {editLines.map((l) => (
+              <div key={l.product.id} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-sm">{l.product.name}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-full"
+                  onClick={() => changeEditQuantity(l.product.id, -1)}
+                  aria-label="Færre"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </Button>
+                <span className="w-5 text-center text-sm font-bold tabular-nums">{l.quantity}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-full"
+                  onClick={() => changeEditQuantity(l.product.id, 1)}
+                  aria-label="Flere"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+                <span className="w-16 text-right text-sm font-semibold tabular-nums">
+                  {l.product.price * l.quantity} kr
+                </span>
+              </div>
+            ))}
+            {editLines.length === 0 && (
+              <p className="py-2 text-center text-sm text-muted-foreground">
+                Ingen varer — legg til minst én
+              </p>
+            )}
+          </div>
+
+          <div className="relative mt-3 shrink-0">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Legg til vare…"
+              value={editSearch}
+              onChange={(e) => setEditSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          <div className="mt-2 flex-1 divide-y divide-border overflow-y-auto">
+            {products
+              .filter((p) =>
+                editSearch.trim()
+                  ? p.name.toLowerCase().includes(editSearch.trim().toLowerCase())
+                  : true
+              )
+              .slice(0, 60)
+              .map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => addEditLine(p)}
+                  className="flex w-full items-center gap-2 py-2.5 text-left active:bg-muted/50"
+                >
+                  <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
+                  <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+                    {p.price} kr
+                  </span>
+                  <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </button>
+              ))}
+          </div>
+
+          <div className="shrink-0 border-t border-border pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+            <div className="flex items-center gap-2">
+              <p className="flex-1 text-lg font-bold tabular-nums">{editTotal} kr</p>
+              <Button variant="outline" onClick={() => setEditTarget(null)}>
+                Avbryt
+              </Button>
+              <Button
+                disabled={editLines.length === 0 || editSale.isPending}
+                onClick={saveEdit}
+                className="gap-2"
+              >
+                {editSale.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Lagre
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
