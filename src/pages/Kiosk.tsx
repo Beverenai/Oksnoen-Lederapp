@@ -674,6 +674,15 @@ const Kiosk = () => {
         justCompleted={receiptIsNew}
       />
 
+      <KioskSuccessDialog
+        data={success}
+        open={successOpen}
+        onOpenChange={setSuccessOpen}
+        onUndo={undoSuccess}
+        onShowReceipt={showSuccessReceipt}
+        undoing={voidSale.isPending}
+      />
+
       {/* Edit an existing sale */}
       <Sheet open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
         <SheetContent side="bottom" className="flex h-[88dvh] flex-col gap-0 rounded-t-3xl">
