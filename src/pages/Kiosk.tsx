@@ -22,6 +22,7 @@ import {
   Receipt,
   Search,
   ChevronRight,
+  Pencil,
 } from 'lucide-react';
 import { cn, formatFullRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
@@ -32,11 +33,11 @@ import {
   useKioskSales,
   useRecordKioskSale,
   useVoidKioskSale,
+  useEditKioskSale,
   type CartLine,
   type KioskProduct,
   type KioskSale,
 } from '@/hooks/useKiosk';
-import { supabase } from '@/integrations/supabase/client';
 import { KioskParticipantPicker } from '@/components/kiosk/KioskParticipantPicker';
 import { KioskReceiptSheet } from '@/components/kiosk/KioskReceiptSheet';
 import { receiptLabel, type ReceiptData } from '@/lib/kioskReceipt';
@@ -50,6 +51,7 @@ const Kiosk = () => {
   const { data: recentSales = [] } = useKioskSales();
   const recordSale = useRecordKioskSale();
   const voidSale = useVoidKioskSale();
+  const editSale = useEditKioskSale();
 
   const [participant, setParticipant] = useState<ParticipantWithCabin | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -62,6 +64,9 @@ const Kiosk = () => {
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptIsNew, setReceiptIsNew] = useState(false);
+  const [editTarget, setEditTarget] = useState<KioskSale | null>(null);
+  const [editLines, setEditLines] = useState<CartLine[]>([]);
+  const [editSearch, setEditSearch] = useState('');
 
   const categories = catalog?.categories ?? [];
   const products = catalog?.products ?? [];
@@ -167,34 +172,87 @@ const Kiosk = () => {
       return;
     }
     if (lines.length === 0) return;
+    const buyer = participant;
+    const soldLines = lines;
+    const soldTotal = total;
+    const soldRemaining = remaining;
     try {
-      const saleId = await recordSale.mutateAsync({ participantId: participant.id, lines });
-      const { data } = await supabase
-        .from('kiosk_sales')
-        .select('sale_number, created_at, leaders!kiosk_sales_sold_by_fkey(name)')
-        .eq('id', saleId)
-        .maybeSingle();
-      setReceipt({
-        saleId,
-        saleNumber: (data as any)?.sale_number ?? null,
-        createdAt: (data as any)?.created_at ?? new Date().toISOString(),
-        participantName: participant.name,
-        participantRoom: formatFullRoom(participant.cabins?.name, participant.room),
-        soldByName: (data as any)?.leaders?.name ?? null,
-        items: lines.map((l) => ({
-          product_name: l.product.name,
-          unit_price: l.product.price,
-          quantity: l.quantity,
-        })),
-        total,
-        balanceAfter: remaining,
-      });
-      setReceiptIsNew(true);
-      setReceiptOpen(true);
       setLines([]);
       setParticipant(null);
+      const saleId = await recordSale.mutateAsync({ participantId: buyer.id, lines: soldLines });
+      toast.success(`${buyer.name} · ${soldTotal} kr registrert`, {
+        action: {
+          label: 'Kvittering',
+          onClick: () => {
+            setReceipt({
+              saleId,
+              saleNumber: null,
+              createdAt: new Date().toISOString(),
+              participantName: buyer.name,
+              participantRoom: formatFullRoom(buyer.cabins?.name, buyer.room),
+              soldByName: null,
+              items: soldLines.map((l) => ({
+                product_name: l.product.name,
+                unit_price: l.product.price,
+                quantity: l.quantity,
+              })),
+              total: soldTotal,
+              balanceAfter: soldRemaining,
+            });
+            setReceiptIsNew(true);
+            setReceiptOpen(true);
+          },
+        },
+      });
     } catch (err: any) {
       toast.error('Kunne ikke registrere kjøp', { description: err?.message });
+      setParticipant(buyer);
+      setLines(soldLines);
+    }
+  };
+
+  /** Opens the edit sheet for an existing sale, mapping its items back to products. */
+  const startEdit = (sale: KioskSale) => {
+    const mapped: CartLine[] = [];
+    sale.items.forEach((i) => {
+      const product = products.find((p) => p.name === i.product_name);
+      if (product) mapped.push({ product, quantity: i.quantity });
+    });
+    setEditLines(mapped);
+    setEditSearch('');
+    setEditTarget(sale);
+  };
+
+  const changeEditQuantity = (productId: string, delta: number) => {
+    setEditLines((prev) =>
+      prev
+        .map((l) => (l.product.id === productId ? { ...l, quantity: l.quantity + delta } : l))
+        .filter((l) => l.quantity > 0)
+    );
+  };
+
+  const addEditLine = (product: KioskProduct) => {
+    setEditLines((prev) => {
+      const existing = prev.find((l) => l.product.id === product.id);
+      if (existing) {
+        return prev.map((l) =>
+          l.product.id === product.id ? { ...l, quantity: l.quantity + 1 } : l
+        );
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
+  };
+
+  const editTotal = editLines.reduce((sum, l) => sum + l.product.price * l.quantity, 0);
+
+  const saveEdit = async () => {
+    if (!editTarget || editLines.length === 0) return;
+    try {
+      await editSale.mutateAsync({ saleId: editTarget.id, lines: editLines });
+      toast.success('Kjøpet er oppdatert');
+      setEditTarget(null);
+    } catch (err: any) {
+      toast.error('Kunne ikke endre kjøpet', { description: err?.message });
     }
   };
 
