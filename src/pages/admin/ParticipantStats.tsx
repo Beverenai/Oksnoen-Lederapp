@@ -16,7 +16,7 @@ import { ExportDataSheet } from "@/components/stats/ExportDataSheet";
 import { IncidentsTab } from "@/components/admin/IncidentsTab";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity, ArrowLeft, LayoutDashboard, Trophy, Award, Users2, KeyRound, MessageSquareWarning, Building2 } from "lucide-react";
+import { ArrowLeftRight, Home, Download, Sparkles, UserCheck, Activity, ArrowLeft, LayoutDashboard, Trophy, Award, Users2, KeyRound, MessageSquareWarning, Building2, ShoppingBasket } from "lucide-react";
 
 
 const dyngaNavItem = {

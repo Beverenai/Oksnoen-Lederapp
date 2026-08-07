@@ -64,6 +64,7 @@ const navItems = [
   { key: 'murder', label: 'Morder-leken', desc: 'Start spillet og se hele kjeden', icon: Skull, color: 'bg-stone-500/15 text-stone-600 dark:text-stone-300' },
   { key: 'bookings', label: 'Booking-info', desc: 'Importer booking-data per periode', icon: ClipboardList, color: 'bg-sky-500/15 text-sky-600 dark:text-sky-400' },
   { key: 'sweaters', label: 'Gensere', desc: 'Hentet / kjøpt genser dag 1', icon: Shirt, color: 'bg-lime-500/15 text-lime-600 dark:text-lime-400' },
+  { key: 'kiosk', label: 'Kiosken', desc: 'Varer og priser i kiosken', icon: ShoppingBasket, color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
   { key: 'archive', label: 'Periodearkiv', desc: 'Se data fra alle perioder', icon: Archive, color: 'bg-slate-500/15 text-slate-600 dark:text-slate-300', path: '/arkiv' },
 ];
 
