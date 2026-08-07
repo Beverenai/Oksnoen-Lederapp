@@ -40,6 +40,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { KioskParticipantPicker } from '@/components/kiosk/KioskParticipantPicker';
 import { KioskReceiptSheet } from '@/components/kiosk/KioskReceiptSheet';
 import { receiptLabel, type ReceiptData } from '@/lib/kioskReceipt';
+import { getBrandMark } from '@/lib/kioskBrand';
 
 const Kiosk = () => {
   const { data: participants = [], isLoading: participantsLoading } = useParticipants();
@@ -54,6 +55,8 @@ const Kiosk = () => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [lines, setLines] = useState<CartLine[]>([]);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
@@ -64,7 +67,16 @@ const Kiosk = () => {
 
   const visibleProducts = useMemo(() => {
     const order = new Map(categories.map((c, i) => [c.id, i]));
-    const list = activeCategory ? products.filter((p) => p.category_id === activeCategory) : [...products];
+    const q = search.trim().toLowerCase();
+    let list = activeCategory && !q
+      ? products.filter((p) => p.category_id === activeCategory)
+      : [...products];
+    if (q) {
+      list = list.filter((p) => {
+        const cat = categories.find((c) => c.id === p.category_id)?.name ?? '';
+        return p.name.toLowerCase().includes(q) || cat.toLowerCase().includes(q);
+      });
+    }
     return list.sort((a, b) => {
       const ca = order.get(a.category_id ?? '') ?? 99;
       const cb = order.get(b.category_id ?? '') ?? 99;
@@ -72,7 +84,7 @@ const Kiosk = () => {
       if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
       return a.name.localeCompare(b.name, 'nb');
     });
-  }, [products, categories, activeCategory]);
+  }, [products, categories, activeCategory, search]);
 
   const total = lines.reduce((sum, l) => sum + l.product.price * l.quantity, 0);
   const balance = participant ? balances?.get(participant.id)?.balance ?? 0 : null;
@@ -191,23 +203,69 @@ const Kiosk = () => {
 
   return (
     <div className="animate-fade-in pb-40">
-      {/* Header */}
-      <div className="mb-3 overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-card p-4 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="font-heading text-2xl font-bold leading-tight">Gomla</h1>
-            <p className="text-xs text-muted-foreground">Kioskkasse · alt får kvittering</p>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setHistoryOpen(true)}
-            className="shrink-0 gap-1.5 rounded-full"
-          >
-            <Receipt className="h-4 w-4" />
-            Kvitteringer
-          </Button>
+      {/* Sticky toolbar — uses the top of the screen, also on iPhone */}
+      <div className="sticky top-[calc(56px+var(--safe-top))] z-30 -mx-4 -mt-4 mb-3 border-b border-border/60 bg-background/85 px-4 pb-2 pt-3 backdrop-blur-xl lg:-mx-6 lg:-mt-6 lg:top-0 lg:px-6">
+        <div className="flex items-center gap-2">
+          {searchOpen ? (
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                autoFocus
+                placeholder="Søk vare…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-9 rounded-full pl-9 pr-9"
+              />
+              <button
+                onClick={() => {
+                  setSearch('');
+                  setSearchOpen(false);
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground"
+                aria-label="Lukk søk"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <h1 className="flex-1 font-heading text-xl font-bold leading-none">Gomla</h1>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-9 w-9 shrink-0 rounded-full"
+                onClick={() => setSearchOpen(true)}
+                aria-label="Søk vare"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-9 w-9 shrink-0 rounded-full"
+                onClick={() => setHistoryOpen(true)}
+                aria-label="Kvitteringer"
+              >
+                <Receipt className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
+
+        {/* Category chips */}
+        {!search && (
+          <div className="-mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 pb-0.5 lg:-mx-6 lg:px-6">
+            <CategoryChip label="Alle" active={!activeCategory} onClick={() => setActiveCategory(null)} />
+            {categories.map((c) => (
+              <CategoryChip
+                key={c.id}
+                label={c.name}
+                active={activeCategory === c.id}
+                onClick={() => setActiveCategory(activeCategory === c.id ? null : c.id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Selected participant */}
@@ -266,38 +324,34 @@ const Kiosk = () => {
         )}
       </Card>
 
-      {/* Category chips */}
-      <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1 lg:-mx-8 lg:px-8">
-        <CategoryChip label="Alle" active={!activeCategory} onClick={() => setActiveCategory(null)} />
-        {categories.map((c) => (
-          <CategoryChip
-            key={c.id}
-            label={c.name}
-            active={activeCategory === c.id}
-            onClick={() => setActiveCategory(activeCategory === c.id ? null : c.id)}
-          />
-        ))}
-      </div>
-
       {/* Product grid */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {visibleProducts.map((p) => {
           const inCart = lines.find((l) => l.product.id === p.id)?.quantity ?? 0;
-          const color = p.color || categories.find((c) => c.id === p.category_id)?.color;
+          const categoryName = categories.find((c) => c.id === p.category_id)?.name ?? null;
+          const brand = getBrandMark(p.name, categoryName);
           return (
             <button
               key={p.id}
               onClick={() => addLine(p)}
-              style={color ? { backgroundColor: color } : undefined}
               className={cn(
-                'relative flex min-h-[92px] flex-col justify-between rounded-2xl border border-border/60 p-3 text-left shadow-sm transition-transform active:scale-[0.97]',
-                !color && 'bg-card'
+                'relative flex min-h-[104px] flex-col gap-1.5 overflow-hidden rounded-2xl border border-border/60 bg-card p-2.5 text-left shadow-sm transition-transform active:scale-[0.97]',
+                inCart > 0 && 'ring-2 ring-primary'
               )}
             >
-              <span className="pr-6 text-sm font-semibold leading-tight text-neutral-900">{p.name}</span>
-              <span className="text-base font-bold tabular-nums text-neutral-900/80">{p.price} kr</span>
+              <span
+                aria-hidden
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[13px] font-black leading-none shadow-sm"
+                style={{ backgroundColor: brand.bg, color: brand.fg }}
+              >
+                {brand.emoji ?? brand.mark}
+              </span>
+              <span className="line-clamp-2 flex-1 pr-6 text-[13px] font-semibold leading-tight">
+                {p.name}
+              </span>
+              <span className="text-sm font-bold tabular-nums text-muted-foreground">{p.price} kr</span>
               {inCart > 0 && (
-                <span className="absolute right-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-foreground px-1.5 text-xs font-bold text-background">
+                <span className="absolute right-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold text-primary-foreground">
                   {inCart}
                 </span>
               )}
@@ -306,7 +360,7 @@ const Kiosk = () => {
         })}
         {visibleProducts.length === 0 && (
           <p className="col-span-full py-10 text-center text-sm text-muted-foreground">
-            Ingen varer i denne kategorien
+            {search ? `Ingen treff på «${search}»` : 'Ingen varer i denne kategorien'}
           </p>
         )}
       </div>
