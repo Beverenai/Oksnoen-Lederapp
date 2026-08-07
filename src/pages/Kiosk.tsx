@@ -341,7 +341,10 @@ const Kiosk = () => {
                 variant="secondary"
                 size="icon"
                 className="h-9 w-9 shrink-0 rounded-full"
-                onClick={() => setHistoryOpen(true)}
+                onClick={() => {
+                  setHistorySearch('');
+                  setHistoryOpen(true);
+                }}
                 aria-label="Kvitteringer"
               >
                 <Receipt className="h-4 w-4" />
