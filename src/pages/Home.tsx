@@ -512,12 +512,6 @@ export default function Home() {
       tone: 'danger',
       onClick: () => navigate('/hendelser'),
     },
-    {
-      key: 'kiosk',
-      icon: ShoppingBasket,
-      label: 'Gomla',
-      onClick: () => navigate('/kiosk'),
-    },
     ...(overnattingEnabled
       ? [{
           key: 'overnatting',
