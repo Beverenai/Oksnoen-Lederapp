@@ -52,10 +52,17 @@ const Kiosk = () => {
   const categories = catalog?.categories ?? [];
   const products = catalog?.products ?? [];
 
-  const visibleProducts = useMemo(
-    () => (activeCategory ? products.filter((p) => p.category_id === activeCategory) : products),
-    [products, activeCategory]
-  );
+  const visibleProducts = useMemo(() => {
+    const order = new Map(categories.map((c, i) => [c.id, i]));
+    const list = activeCategory ? products.filter((p) => p.category_id === activeCategory) : [...products];
+    return list.sort((a, b) => {
+      const ca = order.get(a.category_id ?? '') ?? 99;
+      const cb = order.get(b.category_id ?? '') ?? 99;
+      if (ca !== cb) return ca - cb;
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+      return a.name.localeCompare(b.name, 'nb');
+    });
+  }, [products, categories, activeCategory]);
 
   const total = lines.reduce((sum, l) => sum + l.product.price * l.quantity, 0);
   const balance = participant ? balances?.get(participant.id)?.balance ?? 0 : null;
