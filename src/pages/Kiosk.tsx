@@ -83,17 +83,6 @@ const Kiosk = () => {
   const participantName = (id: string) =>
     participants.find((p) => p.id === id)?.name ?? 'Ukjent deltager';
 
-  const todayTotals = useMemo(() => {
-    const today = new Date().toDateString();
-    const active = recentSales.filter(
-      (s) => !s.voided_at && new Date(s.created_at).toDateString() === today
-    );
-    return {
-      revenue: active.reduce((sum, s) => sum + s.total, 0),
-      count: active.length,
-    };
-  }, [recentSales]);
-
   const filteredSales = useMemo(() => {
     const q = historySearch.trim().toLowerCase();
     if (!q) return recentSales;
@@ -218,16 +207,6 @@ const Kiosk = () => {
             <Receipt className="h-4 w-4" />
             Kvitteringer
           </Button>
-        </div>
-        <div className="mt-3 flex gap-2">
-          <div className="flex-1 rounded-2xl bg-background/60 px-3 py-2">
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">I dag</p>
-            <p className="text-lg font-bold tabular-nums leading-tight">{todayTotals.revenue} kr</p>
-          </div>
-          <div className="flex-1 rounded-2xl bg-background/60 px-3 py-2">
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Kjøp i dag</p>
-            <p className="text-lg font-bold tabular-nums leading-tight">{todayTotals.count}</p>
-          </div>
         </div>
       </div>
 
