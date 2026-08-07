@@ -755,6 +755,7 @@ export type Database = {
           id: string
           participant_id: string
           period_id: string | null
+          sale_number: number | null
           sold_by: string | null
           total: number
           updated_at: string
@@ -766,6 +767,7 @@ export type Database = {
           id?: string
           participant_id: string
           period_id?: string | null
+          sale_number?: number | null
           sold_by?: string | null
           total?: number
           updated_at?: string
@@ -777,6 +779,7 @@ export type Database = {
           id?: string
           participant_id?: string
           period_id?: string | null
+          sale_number?: number | null
           sold_by?: string | null
           total?: number
           updated_at?: string

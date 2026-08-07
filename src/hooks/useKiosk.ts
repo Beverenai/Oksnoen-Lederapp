@@ -34,12 +34,24 @@ export interface CartLine {
 
 export interface KioskSale {
   id: string;
+  sale_number: number | null;
   participant_id: string;
   total: number;
   created_at: string;
   voided_at: string | null;
   sold_by: string | null;
+  sold_by_name: string | null;
   items: { product_name: string; unit_price: number; quantity: number }[];
+}
+
+export interface KioskDeposit {
+  id: string;
+  participant_id: string;
+  amount: number;
+  kind: string;
+  note: string | null;
+  created_at: string;
+  created_by_name: string | null;
 }
 
 /** Categories + products for the kiosk POS. */
@@ -103,21 +115,25 @@ export function useKioskSales(participantId?: string) {
     queryFn: async (): Promise<KioskSale[]> => {
       let query = supabase
         .from('kiosk_sales')
-        .select('*, kiosk_sale_items(product_name, unit_price, quantity)')
+        .select(
+          '*, kiosk_sale_items(product_name, unit_price, quantity), leaders!kiosk_sales_sold_by_fkey(name)'
+        )
         .eq('period_id', periodId!)
         .order('created_at', { ascending: false });
       if (participantId) query = query.eq('participant_id', participantId);
-      else query = query.limit(100);
+      else query = query.limit(500);
 
       const { data, error } = await query;
       if (error) throw error;
       return (data || []).map((s: any) => ({
         id: s.id,
+        sale_number: s.sale_number ?? null,
         participant_id: s.participant_id,
         total: Number(s.total ?? 0),
         created_at: s.created_at,
         voided_at: s.voided_at,
         sold_by: s.sold_by,
+        sold_by_name: s.leaders?.name ?? null,
         items: (s.kiosk_sale_items || []).map((i: any) => ({
           product_name: i.product_name,
           unit_price: Number(i.unit_price ?? 0),
@@ -129,11 +145,40 @@ export function useKioskSales(participantId?: string) {
   });
 }
 
+/** All deposits/corrections for the active period — used in reports. */
+export function useKioskDeposits() {
+  const { data: periodId } = useActivePeriodId();
+
+  return useQuery({
+    queryKey: ['kiosk-deposits', periodId ?? 'none'],
+    enabled: !!periodId,
+    queryFn: async (): Promise<KioskDeposit[]> => {
+      const { data, error } = await supabase
+        .from('kiosk_deposits')
+        .select('*, leaders!kiosk_deposits_created_by_fkey(name)')
+        .eq('period_id', periodId!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map((d: any) => ({
+        id: d.id,
+        participant_id: d.participant_id,
+        amount: Number(d.amount ?? 0),
+        kind: d.kind,
+        note: d.note ?? null,
+        created_at: d.created_at,
+        created_by_name: d.leaders?.name ?? null,
+      }));
+    },
+    staleTime: 30_000,
+  });
+}
+
 function useInvalidateKiosk() {
   const qc = useQueryClient();
   return () => {
     qc.invalidateQueries({ queryKey: ['kiosk-balances'] });
     qc.invalidateQueries({ queryKey: ['kiosk-sales'] });
+    qc.invalidateQueries({ queryKey: ['kiosk-deposits'] });
   };
 }
 

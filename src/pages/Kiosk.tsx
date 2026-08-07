@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Sheet,
   SheetContent,
@@ -19,7 +20,8 @@ import {
   UserRound,
   X,
   Receipt,
-  Undo2,
+  Search,
+  ChevronRight,
 } from 'lucide-react';
 import { cn, formatFullRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
@@ -32,8 +34,12 @@ import {
   useVoidKioskSale,
   type CartLine,
   type KioskProduct,
+  type KioskSale,
 } from '@/hooks/useKiosk';
+import { supabase } from '@/integrations/supabase/client';
 import { KioskParticipantPicker } from '@/components/kiosk/KioskParticipantPicker';
+import { KioskReceiptSheet } from '@/components/kiosk/KioskReceiptSheet';
+import { receiptLabel, type ReceiptData } from '@/lib/kioskReceipt';
 
 const Kiosk = () => {
   const { data: participants = [], isLoading: participantsLoading } = useParticipants();
@@ -46,8 +52,12 @@ const Kiosk = () => {
   const [participant, setParticipant] = useState<ParticipantWithCabin | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [lines, setLines] = useState<CartLine[]>([]);
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receiptIsNew, setReceiptIsNew] = useState(false);
 
   const categories = catalog?.categories ?? [];
   const products = catalog?.products ?? [];
@@ -67,6 +77,55 @@ const Kiosk = () => {
   const total = lines.reduce((sum, l) => sum + l.product.price * l.quantity, 0);
   const balance = participant ? balances?.get(participant.id)?.balance ?? 0 : null;
   const remaining = balance === null ? null : balance - total;
+
+  const saleLabel = (s: KioskSale) => receiptLabel({ saleNumber: s.sale_number, saleId: s.id });
+
+  const participantName = (id: string) =>
+    participants.find((p) => p.id === id)?.name ?? 'Ukjent deltager';
+
+  const todayTotals = useMemo(() => {
+    const today = new Date().toDateString();
+    const active = recentSales.filter(
+      (s) => !s.voided_at && new Date(s.created_at).toDateString() === today
+    );
+    return {
+      revenue: active.reduce((sum, s) => sum + s.total, 0),
+      count: active.length,
+    };
+  }, [recentSales]);
+
+  const filteredSales = useMemo(() => {
+    const q = historySearch.trim().toLowerCase();
+    if (!q) return recentSales;
+    return recentSales.filter(
+      (s) =>
+        participantName(s.participant_id).toLowerCase().includes(q) ||
+        saleLabel(s).toLowerCase().includes(q)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recentSales, historySearch, participants]);
+
+  const toReceipt = (sale: KioskSale): ReceiptData => {
+    const p = participants.find((x) => x.id === sale.participant_id);
+    return {
+      saleId: sale.id,
+      saleNumber: sale.sale_number,
+      createdAt: sale.created_at,
+      participantName: p?.name ?? 'Ukjent deltager',
+      participantRoom: p ? formatFullRoom(p.cabins?.name, p.room) : null,
+      soldByName: sale.sold_by_name,
+      items: sale.items,
+      total: sale.total,
+      balanceAfter: balances?.get(sale.participant_id)?.balance ?? null,
+      voidedAt: sale.voided_at,
+    };
+  };
+
+  const openReceipt = (sale: KioskSale) => {
+    setReceipt(toReceipt(sale));
+    setReceiptIsNew(false);
+    setReceiptOpen(true);
+  };
 
   const addLine = (product: KioskProduct) => {
     setLines((prev) => {
@@ -93,8 +152,29 @@ const Kiosk = () => {
     }
     if (lines.length === 0) return;
     try {
-      await recordSale.mutateAsync({ participantId: participant.id, lines });
-      toast.success(`${total} kr registrert på ${participant.name}`);
+      const saleId = await recordSale.mutateAsync({ participantId: participant.id, lines });
+      const { data } = await supabase
+        .from('kiosk_sales')
+        .select('sale_number, created_at, leaders!kiosk_sales_sold_by_fkey(name)')
+        .eq('id', saleId)
+        .maybeSingle();
+      setReceipt({
+        saleId,
+        saleNumber: (data as any)?.sale_number ?? null,
+        createdAt: (data as any)?.created_at ?? new Date().toISOString(),
+        participantName: participant.name,
+        participantRoom: formatFullRoom(participant.cabins?.name, participant.room),
+        soldByName: (data as any)?.leaders?.name ?? null,
+        items: lines.map((l) => ({
+          product_name: l.product.name,
+          unit_price: l.product.price,
+          quantity: l.quantity,
+        })),
+        total,
+        balanceAfter: remaining,
+      });
+      setReceiptIsNew(true);
+      setReceiptOpen(true);
       setLines([]);
       setParticipant(null);
     } catch (err: any) {
@@ -106,6 +186,7 @@ const Kiosk = () => {
     try {
       await voidSale.mutateAsync(saleId);
       toast.success('Salget er annullert');
+      setReceiptOpen(false);
     } catch (err: any) {
       toast.error('Kunne ikke annullere', { description: err?.message });
     }
@@ -122,15 +203,32 @@ const Kiosk = () => {
   return (
     <div className="animate-fade-in pb-40">
       {/* Header */}
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div>
-          <h1 className="font-heading text-2xl font-bold">Gomla</h1>
-          <p className="text-xs text-muted-foreground">Registrer kjøp på deltagerens konto</p>
+      <div className="mb-3 overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-card p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="font-heading text-2xl font-bold leading-tight">Gomla</h1>
+            <p className="text-xs text-muted-foreground">Kioskkasse · alt får kvittering</p>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setHistoryOpen(true)}
+            className="shrink-0 gap-1.5 rounded-full"
+          >
+            <Receipt className="h-4 w-4" />
+            Kvitteringer
+          </Button>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)} className="gap-1.5">
-          <Receipt className="h-4 w-4" />
-          Kvitteringer
-        </Button>
+        <div className="mt-3 flex gap-2">
+          <div className="flex-1 rounded-2xl bg-background/60 px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">I dag</p>
+            <p className="text-lg font-bold tabular-nums leading-tight">{todayTotals.revenue} kr</p>
+          </div>
+          <div className="flex-1 rounded-2xl bg-background/60 px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Kjøp i dag</p>
+            <p className="text-lg font-bold tabular-nums leading-tight">{todayTotals.count}</p>
+          </div>
+        </div>
       </div>
 
       {/* Selected participant */}
@@ -321,56 +419,73 @@ const Kiosk = () => {
 
       {/* Receipts */}
       <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
-        <SheetContent side="bottom" className="flex h-[85dvh] flex-col gap-0 rounded-t-3xl">
+        <SheetContent side="bottom" className="flex h-[88dvh] flex-col gap-0 rounded-t-3xl">
           <SheetHeader>
-            <SheetTitle>Siste kjøp</SheetTitle>
+            <SheetTitle>Kvitteringer</SheetTitle>
           </SheetHeader>
+          <div className="relative mt-3 shrink-0">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Søk navn eller kvitteringsnr."
+              value={historySearch}
+              onChange={(e) => setHistorySearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           <div className="mt-3 flex-1 space-y-2 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {recentSales.map((sale) => {
-              const p = participants.find((x) => x.id === sale.participant_id);
-              return (
-                <Card key={sale.id} className={cn('p-3', sale.voided_at && 'opacity-50')}>
-                  <div className="flex items-start gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{p?.name || 'Ukjent deltager'}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(sale.created_at).toLocaleString('nb-NO', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {sale.items.map((i) => `${i.quantity}× ${i.product_name}`).join(', ')}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="text-sm font-bold tabular-nums">{sale.total} kr</span>
-                      {sale.voided_at ? (
-                        <Badge variant="outline">Annullert</Badge>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 gap-1 px-2 text-xs text-destructive"
-                          onClick={() => handleVoid(sale.id)}
-                        >
-                          <Undo2 className="h-3.5 w-3.5" />
-                          Annuller
-                        </Button>
-                      )}
-                    </div>
+            {filteredSales.map((sale) => (
+              <button
+                key={sale.id}
+                onClick={() => openReceipt(sale)}
+                className="w-full text-left"
+              >
+                <Card
+                  className={cn(
+                    'flex items-center gap-2 p-3 transition-transform active:scale-[0.99]',
+                    sale.voided_at && 'opacity-50'
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">
+                      {participantName(sale.participant_id)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {saleLabel(sale)} ·{' '}
+                      {new Date(sale.created_at).toLocaleString('nb-NO', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                      {sale.items.map((i) => `${i.quantity}× ${i.product_name}`).join(', ')}
+                    </p>
                   </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="text-sm font-bold tabular-nums">{sale.total} kr</span>
+                    {sale.voided_at && <Badge variant="outline">Annullert</Badge>}
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                 </Card>
-              );
-            })}
-            {recentSales.length === 0 && (
-              <p className="py-10 text-center text-sm text-muted-foreground">Ingen kjøp registrert ennå</p>
+              </button>
+            ))}
+            {filteredSales.length === 0 && (
+              <p className="py-10 text-center text-sm text-muted-foreground">
+                {historySearch ? 'Ingen treff' : 'Ingen kjøp registrert ennå'}
+              </p>
             )}
           </div>
         </SheetContent>
       </Sheet>
+
+      <KioskReceiptSheet
+        receipt={receipt}
+        open={receiptOpen}
+        onOpenChange={setReceiptOpen}
+        onVoid={handleVoid}
+        justCompleted={receiptIsNew}
+      />
     </div>
   );
 };
