@@ -162,7 +162,7 @@ export default function MyShifts() {
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" className="hidden lg:inline-flex" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="min-w-0">

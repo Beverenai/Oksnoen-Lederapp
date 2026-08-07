@@ -70,7 +70,7 @@ export default function Gjenglemt() {
     <div className="flex flex-col animate-fade-in min-h-[calc(100dvh-140px)] gap-3">
       <div className="flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="sm" className="hidden lg:inline-flex" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="min-w-0">

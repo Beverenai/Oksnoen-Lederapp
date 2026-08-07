@@ -85,7 +85,7 @@ const ParticipantStats = () => {
     return (
       <div className="container mx-auto py-6 px-4 max-w-4xl">
         <div className="flex items-center gap-3 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => setSearchParams({})}>
+          <Button variant="ghost" size="icon" className="hidden lg:inline-flex" onClick={() => setSearchParams({})}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-2xl font-bold">{tabLabels[currentTab] || "Deltakerstatistikk"}</h1>

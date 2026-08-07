@@ -331,7 +331,7 @@ export default function AdminSettings() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Link to="/admin">
+          <Link to="/admin" className="hidden lg:block">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
             </Button>
