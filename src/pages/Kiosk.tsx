@@ -410,14 +410,6 @@ const Kiosk = () => {
             </Button>
           </div>
         ) : (
-                setParticipant(null);
-              }}
-              aria-label="Fjern deltager"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : (
           <div className="flex items-center gap-3 text-muted-foreground">
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted">
               <UserRound className="h-5 w-5" />
