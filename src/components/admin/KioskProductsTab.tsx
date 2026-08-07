@@ -176,7 +176,7 @@ export function KioskProductsTab() {
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
             <ShoppingBasket className="h-8 w-8" />
-            <p className="text-sm">Ingen varer i kiosken ennå</p>
+            <p className="text-sm">Ingen varer i Gomla ennå</p>
           </CardContent>
         </Card>
       )}

@@ -515,7 +515,7 @@ export default function Home() {
     {
       key: 'kiosk',
       icon: ShoppingBasket,
-      label: 'Kiosken',
+      label: 'Gomla',
       onClick: () => navigate('/kiosk'),
     },
     ...(overnattingEnabled
