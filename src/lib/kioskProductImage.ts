@@ -8,6 +8,7 @@ import gottBlandat from '@/assets/kiosk/gott-blandat.webp';
 import gullchips from '@/assets/kiosk/gullchips.webp';
 import japp from '@/assets/kiosk/japp.webp';
 import kimsPaprika from '@/assets/kiosk/kims-paprika.webp';
+import kimsSaltCrunchAsset from '@/assets/kiosk/kims-salt-crunch.webp.asset.json';
 import kimsSourcream from '@/assets/kiosk/kims-sourcream.webp';
 import kinderBueno from '@/assets/kiosk/kinder-bueno.webp';
 import kinderMaxi from '@/assets/kiosk/kinder-maxi.webp';
@@ -40,6 +41,7 @@ const PRODUCT_IMAGES: Array<{ test: RegExp; src: string }> = [
   { test: /urge/i, src: urge },
   { test: /villa/i, src: villa },
   { test: /cheez|doodle/i, src: cheezDoodles },
+  { test: /salt\s*crunch|havsalt/i, src: kimsSaltCrunchAsset.url },
   { test: /kims.*(?:sour|cream)|(?:sour|cream).*kims/i, src: kimsSourcream },
   { test: /kims.*paprika|paprika.*kims/i, src: kimsPaprika },
   { test: /gullchips|petters/i, src: gullchips },
