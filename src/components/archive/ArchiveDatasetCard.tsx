@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { User } from 'lucide-react';
 import { Download, Loader2, Search } from 'lucide-react';
 import type { ArchiveDataset } from '@/lib/archiveDatasets';
 import { downloadCsv } from '@/lib/archiveExport';
@@ -25,7 +27,9 @@ export function ArchiveDatasetCard({ dataset, periodId, periodName }: Props) {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return rows;
-    return rows.filter((r) => Object.values(r).some((v) => String(v ?? '').toLowerCase().includes(q)));
+    return rows.filter((r) =>
+      Object.entries(r).some(([k, v]) => k !== 'Bilde' && String(v ?? '').toLowerCase().includes(q)),
+    );
   }, [rows, search]);
 
   const headers = rows.length ? Object.keys(rows[0]) : [];
@@ -87,7 +91,16 @@ export function ArchiveDatasetCard({ dataset, periodId, periodName }: Props) {
                   <tr key={i} className="align-top">
                     {headers.map((h) => (
                       <td key={h} className="py-2 pr-3 max-w-[320px] break-words">
-                        {String(r[h] ?? '')}
+                        {h === 'Bilde' ? (
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={String(r[h] ?? '') || undefined} loading="lazy" decoding="async" />
+                            <AvatarFallback className="bg-muted text-muted-foreground">
+                              <User className="h-4 w-4" />
+                            </AvatarFallback>
+                          </Avatar>
+                        ) : (
+                          String(r[h] ?? '')
+                        )}
                       </td>
                     ))}
                   </tr>
