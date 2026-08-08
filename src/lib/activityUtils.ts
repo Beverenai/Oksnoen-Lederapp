@@ -146,12 +146,15 @@ function hasAnyOf(completedActivities: string[], alternatives: string[]): boolea
 }
 
 export function hasStoreStyrkprove(completedActivities: string[]): boolean {
+  // Direkte registrert som fullført styrkeprøve
+  if (hasDirectAward(completedActivities, 'store')) return true;
   return STORE_STYRKEPROVE_REQUIREMENTS.every((req) =>
     matchesRequirement(completedActivities, req)
   );
 }
 
 export function hasLilleStyrkprove(completedActivities: string[]): boolean {
+  if (hasDirectAward(completedActivities, 'lille') || hasDirectAward(completedActivities, 'store')) return true;
   // All fixed requirements must be met
   const hasAllFixed = LILLE_STYRKEPROVE_FIXED_REQUIREMENTS.every((req) =>
     matchesRequirement(completedActivities, req)
