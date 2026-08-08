@@ -81,6 +81,7 @@ export const archiveDatasets: ArchiveDataset[] = [
         })(),
       ]);
       return list.map((p) => ({
+        Bilde: p.image_thumb_url || p.image_url || '',
         Navn: p.name,
         Fødselsdato: d(p.birth_date),
         Hytte: cabins[p.cabin_id] ?? '',
