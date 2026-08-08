@@ -3670,6 +3670,8 @@ export type Database = {
           cabin_id: string
           has_arrived: boolean
           id: string
+          image_thumb_url: string
+          image_url: string
           insj_points: number
           name: string
           notes: string
