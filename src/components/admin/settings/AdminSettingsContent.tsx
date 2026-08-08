@@ -35,6 +35,7 @@ import { MurderGameTab } from '@/components/admin/MurderGameTab';
 import { BookingsTab } from '@/components/admin/BookingsTab';
 import { SweatersTab } from '@/components/admin/SweatersTab';
 import { KioskProductsTab } from '@/components/admin/KioskProductsTab';
+import { SeasonViewTab } from '@/components/admin/settings/SeasonViewTab';
 const HomeConfigTab = lazy(() => import('@/components/admin/HomeConfigTab'));
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -340,6 +341,9 @@ export function AdminSettingsContent({
 
     case 'kiosk':
       return <KioskProductsTab />;
+
+    case 'season-view':
+      return <SeasonViewTab />;
 
     case 'home-config':
       return (

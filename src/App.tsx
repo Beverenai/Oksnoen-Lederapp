@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { SeasonViewProvider } from "@/contexts/SeasonViewContext";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { useNativePushNavigation } from "@/hooks/useNativePushNavigation";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
@@ -259,7 +260,9 @@ const App = () => (
             <OfflineIndicator />
             <BrowserRouter>
               <AuthProvider>
-                <AppRoutes />
+                <SeasonViewProvider>
+                  <AppRoutes />
+                </SeasonViewProvider>
               </AuthProvider>
             </BrowserRouter>
           </StatusPopupProvider>

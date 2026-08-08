@@ -3718,6 +3718,33 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }[]
       }
+      get_season_participants: {
+        Args: never
+        Returns: {
+          activity_notes: string
+          birth_date: string
+          cabin_id: string
+          created_at: string
+          first_name: string
+          has_arrived: boolean
+          id: string
+          image_thumb_url: string
+          image_url: string
+          insj_points: number
+          last_name: string
+          name: string
+          notes: string
+          pass_suggestion: string
+          pass_text: string
+          pass_written: boolean
+          period_id: string
+          period_name: string
+          room: string
+          team_id: string
+          times_attended: number
+          updated_at: string
+        }[]
+      }
       has_role: {
         Args: {
           _leader_id: string

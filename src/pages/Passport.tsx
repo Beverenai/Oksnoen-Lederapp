@@ -26,6 +26,8 @@ import { hapticImpact } from '@/lib/capacitorHaptics';
 import { useParticipantTeams } from '@/hooks/useParticipantTeams';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useSeasonView } from '@/contexts/SeasonViewContext';
+import { fetchSeasonParticipants } from '@/hooks/useSeasonParticipants';
 import { Badge } from '@/components/ui/badge';
 
 type Cabin = Tables<'cabins'>;
@@ -51,6 +53,8 @@ interface ParticipantWithCabin {
   created_at: string | null;
   updated_at: string | null;
   team_id: string | null;
+  period_id?: string | null;
+  period_name?: string | null;
   cabins: Cabin | null;
 }
 
@@ -133,6 +137,7 @@ export default function Passport() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { leader, effectiveLeader } = useAuth();
+  const { seasonView } = useSeasonView();
   const [searchParams, setSearchParams] = useSearchParams();
   const cabinFilterFromUrl = searchParams.get('cabin');
   const teamsParamFromUrl = searchParams.get('teams');
@@ -142,6 +147,7 @@ export default function Passport() {
   const [searchQuery, setSearchQuery] = useState('');
   const [myCabinsFilter, setMyCabinsFilter] = useState(false);
   const [teamFilter, setTeamFilter] = useState<string>('all');
+  const [periodFilter, setPeriodFilter] = useState<string>('all');
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [secretWordsOpen, setSecretWordsOpen] = useState(false);
@@ -150,8 +156,11 @@ export default function Passport() {
 
   // React Query for cached data fetching
   const { data: participants = [], isLoading: isLoadingParticipants, refetch: refetchParticipants } = useQuery({
-    queryKey: ['participants-with-cabins'],
-    queryFn: fetchParticipants,
+    queryKey: ['participants-with-cabins', seasonView ? 'season' : 'active'],
+    queryFn: async () =>
+      seasonView
+        ? ((await fetchSeasonParticipants()) as unknown as ParticipantWithCabin[])
+        : fetchParticipants(),
     staleTime: 0,
     gcTime: 24 * 60 * 60 * 1000,
     refetchOnMount: 'always',
@@ -281,6 +290,15 @@ export default function Passport() {
     return activitiesMap.get(participantId) || [];
   };
 
+  // Period options — only relevant while the season view is on.
+  const periodOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    participants.forEach((p) => {
+      if (p.period_id) seen.set(p.period_id, p.period_name || 'Ukjent periode');
+    });
+    return [...seen.entries()].map(([id, name]) => ({ id, name }));
+  }, [participants]);
+
   const filteredParticipants = useMemo(() => {
     return participants.filter((p) => {
       const query = searchQuery.toLowerCase();
@@ -310,9 +328,14 @@ export default function Passport() {
         ? !!p.team_id && multiTeamIds.includes(p.team_id)
         : true;
 
-      return matchesSearch && matchesCabin && matchesUrlCabin && matchesTeam && matchesMultiTeam;
+      const matchesPeriod =
+        periodFilter === 'all' ? true : p.period_id === periodFilter;
+
+      return (
+        matchesSearch && matchesCabin && matchesUrlCabin && matchesTeam && matchesMultiTeam && matchesPeriod
+      );
     });
-  }, [participants, searchQuery, myCabinsFilter, myCabinIds, cabinFilterFromUrl, teamFilter, teamsParamFromUrl]);
+  }, [participants, searchQuery, myCabinsFilter, myCabinIds, cabinFilterFromUrl, teamFilter, teamsParamFromUrl, periodFilter]);
 
   // Group participants by cabin
   const cabinGroups = useMemo((): CabinGroup[] => {
@@ -457,15 +480,17 @@ export default function Passport() {
 
         {/* Action buttons in a row */}
         <div className="flex gap-2 flex-wrap">
-          <Button
-            variant="default"
-            size="default"
-            onClick={() => navigate('/passport/activity')}
-            className="font-semibold"
-          >
-            <Users className="w-5 h-5 mr-2" />
-            Aktivitet
-          </Button>
+          {!seasonView && (
+            <Button
+              variant="default"
+              size="default"
+              onClick={() => navigate('/passport/activity')}
+              className="font-semibold"
+            >
+              <Users className="w-5 h-5 mr-2" />
+              Aktivitet
+            </Button>
+          )}
           
           <Button
             variant="outline"
@@ -476,14 +501,16 @@ export default function Passport() {
             Viktig Info
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSecretWordsOpen(true)}
-          >
-            <KeyRound className="w-4 h-4 mr-1.5" />
-            Ord
-          </Button>
+          {!seasonView && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSecretWordsOpen(true)}
+            >
+              <KeyRound className="w-4 h-4 mr-1.5" />
+              Ord
+            </Button>
+          )}
           
           {/* My cabin filter button - only show if leader has assigned cabins */}
           {myCabinIds.length > 0 && (
@@ -550,6 +577,28 @@ export default function Passport() {
               {g.cabin.name}: {g.participants.length}
             </Badge>
           ))}
+        </div>
+      )}
+
+      {/* Period filter — season view only */}
+      {seasonView && periodOptions.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Select value={periodFilter} onValueChange={setPeriodFilter}>
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="Alle perioder" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle perioder ({participants.length})</SelectItem>
+              {periodOptions.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Badge variant="secondary" className="shrink-0 text-xs">
+            {filteredParticipants.length} vises
+          </Badge>
         </div>
       )}
 
