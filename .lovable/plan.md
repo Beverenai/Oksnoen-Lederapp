@@ -1,25 +1,39 @@
-# Hjem-skjerm i "ambient glass"-stil
+# Sesongvisning: se alle perioder samlet
 
-Referansen (Glebich-videoen) har fire tydelige grep vi kan låne, uten å endre noe funksjonalitet:
+Admin får en bryter «Hele sesongen» som slår av periode-filteret i appen for **sin egen** økt. Da vises deltagere, statistikk, Gomla og nurse-data fra alle perioder samtidig, i **kun lesing**-modus.
 
-1. **Myk ambient bakgrunn** – en rolig, uskarp fargesky (aurora/gradient) bak hele hjem-skjermen, i stedet for flat bakgrunn. Skalerer i lys og mørk modus via design-tokens.
-2. **Kompakt topp-rad med små pill-widgets** – i stedet for stor sentrert avatar: en rad øverst med små runde/pill-elementer (profilbilde til høyre, hytte-pill og status-pill til venstre), akkurat som «28°»-pillen og avataren i referansen.
-3. **Stor, luftig hilsen som hovedanker** – «God morgen, Nils» med dato over i liten grå tekst, venstrejustert med mye luft. Dette blir det første øyet møter.
-4. **Glass-kort med tydelig hierarki** – «Denne økten skal du» blir ett stort, avrundet glass-kort (translucent bakgrunn, myk skygge, delt i to soner: tittel/innhold øverst, detaljer i en litt mørkere fot-stripe). Resten av kortene (kjøkkentjeneste, morderleken, fix, OBS, aktiviteter) får samme glass-språk i mindre format.
+## Slik oppleves det
 
-Runde hurtigknapper (Hendelser / Overnatting) beholdes, men blir mer glassaktige og legges rett under hilsenen.
-
-## Hva som IKKE endres
-- All logikk: admin-styrt `home_screen_config`, rekkefølge, synlighet, farger, tekststørrelser, snus brothers, overnatting-dialog, pull-to-refresh.
-- Ingen sider eller navigasjon flyttes.
+- I Admin → Innstillinger kommer et kort «Hele sesongen (arkivmodus)» med en bryter.
+- Når den er på: en tydelig topp-stripe «Arkivmodus – alle perioder, kun lesing» vises over hele appen, så ingen tror de jobber i en aktiv periode.
+- Passkontroll: alle deltagere fra alle perioder i samme liste, hver med et periodemerke (f.eks. «P6»), og filter for periode i tillegg til dagens filtre. Ingen registrering av aktiviteter, poeng eller pass mens modus er på.
+- Deltagerstats: aktiviteter, styrkeprøver, lag, hendelser og ambassadører regnes på tvers av alle perioder, med periodekolonne i eksportene.
+- Gomla: salg, saldo og rapporter for alle perioder, med periodemerke per salg. Nytt salg, innskudd, annullering og redigering er deaktivert.
+- Nurse: rapporter, notater og hendelser fra alle perioder, sortert på dato med periodemerke. Redigering låst.
+- Bryteren gjelder bare den innloggede adminen (lagret lokalt på enheten), og påvirker ikke ledere.
 
 ## Teknisk
-- `src/index.css`: nye tokens for ambient-bakgrunn (`--ambient-1..3`) og glass-overflate (`--glass-bg`, `--glass-border`, `--shadow-glass`) + en `.ambient-bg` og `.glass-card`-utility. Alt i HSL, både lys og mørk modus.
-- Ny `src/components/home/HomeAmbientBackground.tsx`: fixed, pointer-events-none lag med tre uskarpe fargeflater.
-- Ny `src/components/home/HomeGreeting.tsx`: dato + tidsbasert hilsen (God morgen/God dag/God kveld) + fornavn.
-- Ny `src/components/home/HomeTopBar.tsx`: liten topp-rad med hytte-pill, evt. team-pill, refresh og avatar (avatar beholder grønn/rød ring for lest-status og åpner profil).
-- `src/pages/Home.tsx`: bytter dagens sentrerte hero mot TopBar + Greeting + quick actions; kortene får `glass-card`-klassen. Ingen endring i data-henting.
-- `src/components/home/HomeQuickActions.tsx`: glass-variant på knappene (behold størrelse og haptics).
 
-## Rekkefølge på hjem etter endringen
-Topp-rad → hilsen → hurtigknapper → «Denne økten skal du» (stort glass-kort) → kjøkkentjeneste/varsler → notater/OBS → aktiviteter denne økten nederst → morderleken-boks nederst.
+**Tilgang**
+- I dag er `participants` begrenset av en lese-regel til aktiv periode (`period_id = get_active_period_id() OR period_id IS NULL`). Regelen utvides med `OR is_admin()` slik at admin kan lese alle perioder. Ingen andre roller endres.
+- Før implementering: gå gjennom lese-reglene for kiosk-, nurse- og hendelsestabellene og bekreft hvilke som er periodebegrenset i database vs. bare i frontend-koden; kun de som faktisk er begrenset trenger regelendring.
+
+**Frontend**
+- Ny `SeasonViewContext` (`src/contexts/`) med `seasonView: boolean` + `readOnly`, persistert i `localStorage`, kun tilgjengelig for admin/superadmin (`is_admin`).
+- `useActivePeriodId` får en variant/wrapper som returnerer `null` når `seasonView` er på; alle `.eq('period_id', ...)`-kall bytter til «hopp over filter hvis null». Query keys inkluderer `seasonView` så cache ikke blandes.
+- Perioder hentes én gang (`periods`-tabellen) for å vise navn i periodemerker og periodefilter.
+- Ny `PeriodBadge`-komponent brukes i Passkontroll, Gomla-historikk og nurse-lister.
+- Skrivehandlinger (aktivitetsregistrering, bonuspoeng, pass, kiosk-salg/innskudd/annuller, nurse-notater, hendelser) skjules eller disables når `readOnly` er på — samme mønster som eksisterende feature-toggles.
+- Topp-stripe legges i `AppLayout` og respekterer safe-area, i tråd med dagens layout.
+
+**Berørte filer (hovedsakelig)**
+- `src/contexts/SeasonViewContext.tsx` (ny), `src/components/layout/AppLayout.tsx`
+- `src/pages/Passport.tsx`, `src/components/passport/*`
+- `src/pages/admin/ParticipantStats.tsx`, `src/components/stats/*`
+- `src/pages/Kiosk.tsx`, `src/hooks/useKiosk.ts`, `src/components/stats/KioskTab.tsx`
+- `src/pages/Nurse.tsx`, `src/components/nurse/*`
+- `src/components/admin/settings/` (nytt bryter-kort)
+
+**Utenfor omfang**
+- Periodearkiv (`/arkiv`) beholdes som i dag.
+- Ingen endring for ledere/nurse-rollen, ingen designendringer utover periodemerker og arkiv-stripen.
