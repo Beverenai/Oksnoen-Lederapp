@@ -145,6 +145,14 @@ function hasAnyOf(completedActivities: string[], alternatives: string[]): boolea
   return alternatives.some(alt => matchesRequirement(completedActivities, alt));
 }
 
+// Aktivitet registrert direkte som «Store/Lille styrkeprøve(n)»
+function hasDirectAward(completedActivities: string[], kind: 'store' | 'lille'): boolean {
+  return completedActivities.some((a) => {
+    const n = a.toLowerCase().trim();
+    return n.startsWith(kind) && n.includes('styrkeprøve');
+  });
+}
+
 export function hasStoreStyrkprove(completedActivities: string[]): boolean {
   // Direkte registrert som fullført styrkeprøve
   if (hasDirectAward(completedActivities, 'store')) return true;
