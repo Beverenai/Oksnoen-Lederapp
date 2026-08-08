@@ -327,6 +327,40 @@ export function BookingImportCard({ periodId, onImported }: Props) {
             </Button>
           </TabsContent>
         </Tabs>
+
+        <div className="mt-6 border-t pt-4 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => runSync()} disabled={isSyncing || !periodId}>
+              {isSyncing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              Synk kioskpenger og gensere fra booking
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Overfører Kioskpenger til Gomla-saldo og Genser til forhåndsbestilte størrelser. Kan kjøres flere ganger –
+            manuelle innskudd og «hentet»-status berøres ikke.
+          </p>
+
+          {syncResult && (
+            <div className="rounded-lg border bg-muted/40 p-3 text-sm space-y-2">
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                <span>Matchet deltagere: <strong>{syncResult.matched}</strong></span>
+                <span>Nye innskudd: <strong>{syncResult.depositsCreated}</strong></span>
+                <span>Oppdaterte innskudd: <strong>{syncResult.depositsUpdated}</strong></span>
+                <span>Genserstørrelser: <strong>{syncResult.sweatersSet}</strong></span>
+              </div>
+              {syncResult.unmatched.length > 0 && (
+                <div>
+                  <p className="font-medium text-destructive">
+                    Fant ingen deltager for {syncResult.unmatched.length} bookinger:
+                  </p>
+                  <ul className="mt-1 max-h-40 overflow-y-auto text-xs text-muted-foreground space-y-0.5">
+                    {syncResult.unmatched.map(n => <li key={n}>{n}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
