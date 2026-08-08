@@ -66,6 +66,7 @@ const navItems = [
   { key: 'bookings', label: 'Booking-info', desc: 'Importer booking-data per periode', icon: ClipboardList, color: 'bg-sky-500/15 text-sky-600 dark:text-sky-400' },
   { key: 'sweaters', label: 'Gensere', desc: 'Hentet / kjøpt genser dag 1', icon: Shirt, color: 'bg-lime-500/15 text-lime-600 dark:text-lime-400' },
   { key: 'kiosk', label: 'Gomla', desc: 'Varer og priser i Gomla', icon: ShoppingBasket, color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
+  { key: 'season-view', label: 'Hele sesongen', desc: 'Se alle perioder samlet (kun lesing)', icon: Archive, color: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300' },
   { key: 'archive', label: 'Periodearkiv', desc: 'Se data fra alle perioder', icon: Archive, color: 'bg-slate-500/15 text-slate-600 dark:text-slate-300', path: '/arkiv' },
 ];
 
@@ -81,6 +82,7 @@ const sectionLabels: Record<string, string> = {
   murder: 'Morder-leken',
   bookings: 'Booking-info',
   sweaters: 'Gensere',
+  'season-view': 'Hele sesongen',
 };
 
 export default function AdminSettings() {

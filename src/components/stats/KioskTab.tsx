@@ -24,6 +24,7 @@ import {
 } from '@/lib/kioskExport';
 import { KioskReceiptSheet } from '@/components/kiosk/KioskReceiptSheet';
 import { receiptLabel, type ReceiptData } from '@/lib/kioskReceipt';
+import { useSeasonView } from '@/contexts/SeasonViewContext';
 
 export function KioskTab() {
   const { data: participants = [], isLoading } = useParticipants();
@@ -32,6 +33,7 @@ export function KioskTab() {
   const { data: deposits = [] } = useKioskDeposits();
   const addDeposit = useAddKioskDeposit();
   const voidSale = useVoidKioskSale();
+  const { readOnly } = useSeasonView();
   const [search, setSearch] = useState('');
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
@@ -224,6 +226,7 @@ export function KioskTab() {
                       size="icon"
                       variant="outline"
                       className="h-8 w-8"
+                      disabled={readOnly}
                       onClick={() => adjust(p.id, 1)}
                       aria-label="Legg til penger"
                     >
@@ -233,6 +236,7 @@ export function KioskTab() {
                       size="icon"
                       variant="outline"
                       className="h-8 w-8"
+                      disabled={readOnly}
                       onClick={() => adjust(p.id, -1)}
                       aria-label="Trekk fra penger"
                     >
@@ -279,8 +283,8 @@ export function KioskTab() {
                   <Receipt className="h-3.5 w-3.5" />
                   Kvittering
                 </Button>
-                {s.voided_at ? (
-                  <Badge variant="outline">Annullert</Badge>
+                {s.voided_at || readOnly ? (
+                  s.voided_at ? <Badge variant="outline">Annullert</Badge> : null
                 ) : (
                   <Button
                     variant="ghost"

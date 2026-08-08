@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { NurseReportEditor } from '@/components/nurse/NurseReportEditor';
 import { IncidentInboxTab } from '@/components/nurse/IncidentInboxTab';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSeasonView } from '@/contexts/SeasonViewContext';
+import { fetchSeasonParticipants } from '@/hooks/useSeasonParticipants';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,6 +119,7 @@ const severityLevels = [
 export default function Nurse() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader, isAdmin, isNurse } = useAuth();
+  const { seasonView, readOnly } = useSeasonView();
   const [participants, setParticipants] = useState<ParticipantWithHealth[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -180,12 +183,17 @@ export default function Nurse() {
 
   const loadParticipants = async () => {
     try {
-      const { data: participantsData, error } = await supabase
-        .from('participants')
-        .select('*, cabins(name)')
-        .order('name');
-
-      if (error) throw error;
+      let participantsData: any[] | null = null;
+      if (seasonView) {
+        participantsData = (await fetchSeasonParticipants()) as any[];
+      } else {
+        const { data, error } = await supabase
+          .from('participants')
+          .select('*, cabins(name)')
+          .order('name');
+        if (error) throw error;
+        participantsData = data;
+      }
 
       // Load health notes, events, and health info for all participants
       const participantIds = participantsData?.map(p => p.id) || [];
@@ -245,7 +253,7 @@ export default function Nurse() {
   // ---- Auto-save (debounced) for notes fields ----
   const autoSaveHealthNote = (value: string) => {
     const participant = selectedParticipant;
-    if (!participant) return Promise.resolve();
+    if (!participant || readOnly) return Promise.resolve();
 
     const noteHint = participant.healthNotes[0];
     if ((noteHint?.content ?? '') === value) return Promise.resolve();
@@ -430,6 +438,8 @@ export default function Nurse() {
   };
 
   const saveHealthNote = async () => {
+    if (readOnly) return;
+
     if (!selectedParticipant || !newNote.trim()) {
       showError('Skriv inn et notat');
       return;
@@ -479,6 +489,8 @@ export default function Nurse() {
   };
 
   const savePublicHealthNote = async () => {
+    if (readOnly) return;
+
     if (!selectedParticipant) return;
 
     setIsSaving(true);
@@ -521,6 +533,8 @@ export default function Nurse() {
   };
 
   const saveLeaderNotes = async () => {
+    if (readOnly) return;
+
     if (!selectedParticipant) return;
     setIsSavingLeaderNotes(true);
     try {
@@ -612,6 +626,8 @@ export default function Nurse() {
   };
 
   const saveEditedEvent = async () => {
+    if (readOnly) return;
+
     if (!selectedParticipant || !editingEventId || !editEventDescription.trim()) {
       showError('Skriv inn en beskrivelse');
       return;

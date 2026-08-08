@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActivePeriodId } from './useActivePeriodId';
+import { useSeasonView } from '@/contexts/SeasonViewContext';
 
 export interface KioskCategory {
   id: string;
@@ -79,24 +80,27 @@ export function useKioskCatalog(includeInactive = false) {
 /** Balance per participant for the active period. */
 export function useKioskBalances() {
   const { data: periodId } = useActivePeriodId();
+  const { seasonView } = useSeasonView();
 
   return useQuery({
-    queryKey: ['kiosk-balances', periodId ?? 'none'],
-    enabled: !!periodId,
+    queryKey: ['kiosk-balances', seasonView ? 'season' : periodId ?? 'none'],
+    enabled: seasonView || !!periodId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('kiosk_balances')
-        .select('*')
-        .eq('period_id', periodId!);
+      let balanceQuery = supabase.from('kiosk_balances').select('*');
+      if (!seasonView) balanceQuery = balanceQuery.eq('period_id', periodId!);
+      const { data, error } = await balanceQuery;
       if (error) throw error;
       const map = new Map<string, KioskBalance>();
       (data || []).forEach((row: any) => {
         if (!row.participant_id) return;
+        const prev = map.get(row.participant_id);
+        const deposited = Number(row.deposited ?? 0) + (prev?.deposited ?? 0);
+        const spent = Number(row.spent ?? 0) + (prev?.spent ?? 0);
         map.set(row.participant_id, {
           participant_id: row.participant_id,
-          deposited: Number(row.deposited ?? 0),
-          spent: Number(row.spent ?? 0),
-          balance: Number(row.balance ?? 0),
+          deposited,
+          spent,
+          balance: deposited - spent,
         });
       });
       return map;
@@ -108,18 +112,19 @@ export function useKioskBalances() {
 /** Sales list — all recent sales, or all sales for one participant. */
 export function useKioskSales(participantId?: string) {
   const { data: periodId } = useActivePeriodId();
+  const { seasonView } = useSeasonView();
 
   return useQuery({
-    queryKey: ['kiosk-sales', periodId ?? 'none', participantId ?? 'all'],
-    enabled: !!periodId,
+    queryKey: ['kiosk-sales', seasonView ? 'season' : periodId ?? 'none', participantId ?? 'all'],
+    enabled: seasonView || !!periodId,
     queryFn: async (): Promise<KioskSale[]> => {
       let query = supabase
         .from('kiosk_sales')
         .select(
           '*, kiosk_sale_items(product_name, unit_price, quantity), leaders!kiosk_sales_sold_by_fkey(name)'
         )
-        .eq('period_id', periodId!)
         .order('created_at', { ascending: false });
+      if (!seasonView) query = query.eq('period_id', periodId!);
       if (participantId) query = query.eq('participant_id', participantId);
       else query = query.limit(500);
 
@@ -148,16 +153,18 @@ export function useKioskSales(participantId?: string) {
 /** All deposits/corrections for the active period — used in reports. */
 export function useKioskDeposits() {
   const { data: periodId } = useActivePeriodId();
+  const { seasonView } = useSeasonView();
 
   return useQuery({
-    queryKey: ['kiosk-deposits', periodId ?? 'none'],
-    enabled: !!periodId,
+    queryKey: ['kiosk-deposits', seasonView ? 'season' : periodId ?? 'none'],
+    enabled: seasonView || !!periodId,
     queryFn: async (): Promise<KioskDeposit[]> => {
-      const { data, error } = await supabase
+      let depositQuery = supabase
         .from('kiosk_deposits')
         .select('*, leaders!kiosk_deposits_created_by_fkey(name)')
-        .eq('period_id', periodId!)
         .order('created_at', { ascending: false });
+      if (!seasonView) depositQuery = depositQuery.eq('period_id', periodId!);
+      const { data, error } = await depositQuery;
       if (error) throw error;
       return (data || []).map((d: any) => ({
         id: d.id,

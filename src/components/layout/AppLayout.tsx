@@ -25,6 +25,7 @@ import {
   ClipboardList,
   Shirt,
   LayoutGrid,
+  Archive,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -37,6 +38,7 @@ import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
 import { useCheckoutEnabled } from '@/hooks/useCheckoutEnabled';
 import { useSweatersEnabled } from '@/hooks/useSweatersEnabled';
 import { useAppMode } from '@/hooks/useAppMode';
+import { useSeasonView } from '@/contexts/SeasonViewContext';
 import { MessageCircle } from 'lucide-react';
 import {
   Collapsible,
@@ -160,6 +162,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const checkoutEnabled = useCheckoutEnabled();
   const sweatersEnabled = useSweatersEnabled();
   const { mode: appMode } = useAppMode();
+  const { seasonView, setSeasonView } = useSeasonView();
   const inactiveForUser = appMode === 'inactive' && !isSuperAdmin;
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -748,6 +751,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
           style={{ height: isSubPage ? 'calc(56px + var(--safe-top))' : 'var(--safe-top)' }}
         />
         <div className="p-4 lg:p-6 min-w-0 w-full">
+          {seasonView && (
+            <div className="mb-4 flex items-center gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
+              <Archive className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span className="min-w-0 flex-1 text-amber-700 dark:text-amber-300">
+                Arkivmodus – alle perioder, kun lesing
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 shrink-0 px-2 text-xs"
+                onClick={() => setSeasonView(false)}
+              >
+                Avslutt
+              </Button>
+            </div>
+          )}
           {children}
         </div>
       </main>

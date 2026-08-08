@@ -40,6 +40,7 @@ import {
   type KioskSale,
 } from '@/hooks/useKiosk';
 import { KioskParticipantPicker } from '@/components/kiosk/KioskParticipantPicker';
+import { useSeasonView } from '@/contexts/SeasonViewContext';
 import { KioskReceiptSheet } from '@/components/kiosk/KioskReceiptSheet';
 import { KioskSuccessDialog, type KioskSuccessData } from '@/components/kiosk/KioskSuccessDialog';
 import { receiptLabel, type ReceiptData } from '@/lib/kioskReceipt';
@@ -52,6 +53,7 @@ const Kiosk = () => {
   const { data: balances } = useKioskBalances();
   const { data: recentSales = [] } = useKioskSales();
   const recordSale = useRecordKioskSale();
+  const { readOnly } = useSeasonView();
   const voidSale = useVoidKioskSale();
   const editSale = useEditKioskSale();
 
@@ -593,7 +595,7 @@ const Kiosk = () => {
               <Button
                 size="lg"
                 className="shrink-0 gap-2 rounded-full"
-                disabled={recordSale.isPending}
+                disabled={recordSale.isPending || readOnly}
                 onClick={handleCheckout}
               >
                 {recordSale.isPending ? (
@@ -661,7 +663,7 @@ const Kiosk = () => {
                     <span className="text-sm font-bold tabular-nums">{sale.total} kr</span>
                     {sale.voided_at && <Badge variant="outline">Annullert</Badge>}
                   </div>
-                  {!sale.voided_at ? (
+                  {!sale.voided_at && !readOnly ? (
                     <Button
                       variant="ghost"
                       size="icon"
