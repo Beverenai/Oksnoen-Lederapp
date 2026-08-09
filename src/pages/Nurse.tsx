@@ -731,10 +731,12 @@ export default function Nurse() {
   // NOTE: We only consider health-related data, NOT activity_notes
   const participantsWithHealthInfo = filteredParticipants
     .filter(p => p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info)
-    .sort((a, b) => infoScore(b) - infoScore(a) || a.name.localeCompare(b.name, 'nb'));
-  const participantsWithoutHealthInfo = filteredParticipants.filter(p => 
-    p.healthNotes.length === 0 && p.healthEvents.length === 0 && !p.healthInfo?.info
-  );
+    .sort((a, b) => sortMode === 'alpha'
+      ? a.name.localeCompare(b.name, 'nb')
+      : (infoScore(b) - infoScore(a) || a.name.localeCompare(b.name, 'nb')));
+  const participantsWithoutHealthInfo = filteredParticipants
+    .filter(p => p.healthNotes.length === 0 && p.healthEvents.length === 0 && !p.healthInfo?.info)
+    .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 
   const getSeverityText = (severity: string | null) => {
     switch (severity) {
