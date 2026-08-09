@@ -925,6 +925,135 @@ export type Database = {
           },
         ]
       }
+      kitchen_item_checks: {
+        Row: {
+          checked_at: string
+          checked_by: string | null
+          created_at: string
+          id: string
+          item_id: string
+          period_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          checked_at?: string
+          checked_by?: string | null
+          created_at?: string
+          id?: string
+          item_id: string
+          period_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          checked_at?: string
+          checked_by?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string
+          period_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_item_checks_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kitchen_item_checks_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "kitchen_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kitchen_item_checks_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kitchen_items: {
+        Row: {
+          created_at: string
+          hint: string | null
+          id: string
+          label: string
+          section_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hint?: string | null
+          id?: string
+          label: string
+          section_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hint?: string | null
+          id?: string
+          label?: string
+          section_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "kitchen_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kitchen_sections: {
+        Row: {
+          body: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          kind: string
+          slug: string
+          sort_order: number
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          kind?: string
+          slug: string
+          sort_order?: number
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          kind?: string
+          slug?: string
+          sort_order?: number
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leader_availability: {
         Row: {
           available: boolean
@@ -3856,6 +3985,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_kitchen: { Args: never; Returns: boolean }
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
       record_kiosk_sale: {
@@ -3875,7 +4005,7 @@ export type Database = {
       void_kiosk_sale: { Args: { _sale_id: string }; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "leader" | "nurse" | "superadmin"
+      app_role: "admin" | "leader" | "nurse" | "superadmin" | "kitchen"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4003,7 +4133,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "leader", "nurse", "superadmin"],
+      app_role: ["admin", "leader", "nurse", "superadmin", "kitchen"],
     },
   },
 } as const

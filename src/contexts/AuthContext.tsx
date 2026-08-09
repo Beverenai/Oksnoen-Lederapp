@@ -4,7 +4,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import type { Session } from '@supabase/supabase-js';
 
 type Leader = Tables<'leaders'>;
-type AppRole = 'superadmin' | 'admin' | 'leader' | 'nurse';
+type AppRole = 'superadmin' | 'admin' | 'leader' | 'nurse' | 'kitchen';
 
 interface AuthContextType {
   leader: Leader | null;
@@ -14,6 +14,7 @@ interface AuthContextType {
   isSuperAdmin: boolean;
   isAdmin: boolean;
   isNurse: boolean;
+  isKitchen: boolean;
   isLoading: boolean;
   isInitialized: boolean;
   isProfileComplete: boolean;
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isNurse, setIsNurse] = useState(false);
+  const [isKitchen, setIsKitchen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [deactivatedMessage, setDeactivatedMessage] = useState<string | null>(null);
@@ -205,6 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const isSA = roles.includes('superadmin');
       const isAdm = isSA || roles.includes('admin');
       const isNrs = roles.includes('nurse');
+      const isKtc = roles.includes('kitchen');
 
       // 3. Check active status
       if (leaderData.is_active === false && !isSA) {
@@ -222,6 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsSuperAdmin(isSA);
       setIsAdmin(isAdm);
       setIsNurse(isNrs);
+      setIsKitchen(isKtc);
       lastResolvedUserId.current = authUserId;
       localStorage.setItem('leaderName', leaderData.name);
       console.log('[Auth] ✓ Auth ready — leader:', leaderData.name, 'roles:', roles);
@@ -331,12 +335,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsSuperAdmin(false);
     setIsAdmin(false);
     setIsNurse(false);
+    setIsKitchen(false);
   };
 
   return (
     <AuthContext.Provider value={{
       leader, viewAsLeader, effectiveLeader, setViewAsLeader,
-      isSuperAdmin, isAdmin, isNurse,
+      isSuperAdmin, isAdmin, isNurse, isKitchen,
       isLoading,
       isInitialized,
       isProfileComplete, authError, deactivatedMessage,
