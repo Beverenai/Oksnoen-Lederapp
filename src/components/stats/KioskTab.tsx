@@ -499,6 +499,81 @@ export function KioskTab() {
       </Tabs>
 
       <KioskReceiptSheet receipt={receipt} open={receiptOpen} onOpenChange={setReceiptOpen} />
+
+      <Dialog open={!!detailId} onOpenChange={(o) => !o && setDetailId(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          {detail && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={getParticipantThumb(detail.participant)} alt={detail.participant.name} />
+                    <AvatarFallback className="text-[10px]">{initials(detail.participant.name)}</AvatarFallback>
+                  </Avatar>
+                  <span className="min-w-0 truncate">{detail.participant.name}</span>
+                </DialogTitle>
+                <DialogDescription className="tabular-nums">
+                  {detail.visits} besøk i Gomla · brukt {detail.spent} kr · saldo{' '}
+                  {balances?.get(detail.participant.id)?.balance ?? 0} kr
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="mb-2 text-sm font-semibold">Mest kjøpt</p>
+                  <div className="divide-y divide-border rounded-lg border">
+                    {detail.products.map((pr) => (
+                      <div key={pr.name} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                        <span className="min-w-0 truncate">{pr.name}</span>
+                        <span className="shrink-0 tabular-nums text-muted-foreground">
+                          {pr.quantity} stk · {pr.revenue} kr
+                        </span>
+                      </div>
+                    ))}
+                    {detail.products.length === 0 && (
+                      <p className="px-3 py-3 text-sm text-muted-foreground">Ingen kjøp ennå</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-sm font-semibold">Kjøpshistorikk ({detail.sales.length})</p>
+                  <div className="space-y-2">
+                    {detail.sales.map((s) => (
+                      <div key={s.id} className="rounded-lg border p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(s.created_at).toLocaleString('nb-NO', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}{' '}
+                            · {receiptLabel({ saleNumber: s.sale_number, saleId: s.id })}
+                          </span>
+                          <span className="shrink-0 text-sm font-bold tabular-nums">{s.total} kr</span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {s.items.map((i) => `${i.quantity}× ${i.product_name}`).join(', ')}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-1 h-7 gap-1 px-2 text-xs"
+                          onClick={() => openReceipt(s.id)}
+                        >
+                          <Receipt className="h-3.5 w-3.5" />
+                          Kvittering
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
