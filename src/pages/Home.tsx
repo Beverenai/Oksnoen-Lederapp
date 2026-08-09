@@ -41,6 +41,7 @@ import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
 import { useAppMode } from '@/hooks/useAppMode';
 import { Link as LinkIcon } from 'lucide-react';
 import { LederPass } from '@/components/passport/LederPass';
+import { OffSeasonHome } from '@/components/home/OffSeasonHome';
 import { useMyMurderState } from '@/hooks/useMurderGame';
 import { Skull } from 'lucide-react';
 import { Tent, AlertCircle } from 'lucide-react';
@@ -493,8 +494,8 @@ export default function Home() {
   // Superadmin keeps the full home to manage the app.
   if ((appMode === 'inactive' || isLimitedAccess) && !isSuperAdmin) {
     return (
-      <div className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 h-[calc(100dvh-4rem)]">
-        <LederPass leader={effectiveLeader} fill periodLabel={activePeriodLabel} />
+      <div className="mx-auto w-full max-w-2xl">
+        <OffSeasonHome leader={effectiveLeader} periodLabel={activePeriodLabel} />
       </div>
     );
   }
