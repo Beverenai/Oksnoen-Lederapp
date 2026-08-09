@@ -126,6 +126,7 @@ export default function Nurse() {
   const [cabinFilter, setCabinFilter] = useState<string>('all');
   const [infoFilter, setInfoFilter] = useState<'all' | 'with' | 'important' | 'without'>('all');
   const [searchMode, setSearchMode] = useState<'name' | 'report'>('name');
+  const [sortMode, setSortMode] = useState<'alpha' | 'info'>('alpha');
   const [selectedParticipant, setSelectedParticipant] = useState<ParticipantWithHealth | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isImageOpen, setIsImageOpen] = useState(false);
