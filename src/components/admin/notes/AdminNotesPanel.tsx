@@ -20,24 +20,42 @@ export function AdminNotesPanel() {
   const { notes, isLoading, activeId, setActiveId, createNote, patchNote, deleteNote } =
     useAdminNotes(open);
   const [saving, setSaving] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savingRef = useRef(false);
+  const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [titleDraft, setTitleDraft] = useState('');
 
   const active = useMemo(() => notes.find((n) => n.id === activeId) ?? null, [notes, activeId]);
 
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+  useEffect(() => {
+    setTitleDraft(active?.title ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId]);
+
+  useEffect(() => () => {
+    Object.values(timersRef.current).forEach(clearTimeout);
+  }, []);
+
+  const setSavingFlag = (v: boolean) => {
+    if (savingRef.current === v) return;
+    savingRef.current = v;
+    setSaving(v);
+  };
 
   const queueSave = (id: string, patch: Record<string, unknown>) => {
-    setSaving(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
+    const field = Object.keys(patch)[0] ?? 'x';
+    const key = `${id}:${field}`;
+    setSavingFlag(true);
+    if (timersRef.current[key]) clearTimeout(timersRef.current[key]);
+    timersRef.current[key] = setTimeout(async () => {
+      delete timersRef.current[key];
       try {
         await patchNote(id, patch as never);
       } catch {
         showError('Kunne ikke lagre notatet');
       } finally {
-        setSaving(false);
+        if (Object.keys(timersRef.current).length === 0) setSavingFlag(false);
       }
-    }, 700);
+    }, 800);
   };
 
   const handleCreate = async (kind: 'doc' | 'board') => {
@@ -122,10 +140,10 @@ export function AdminNotesPanel() {
             <div className="flex flex-col flex-1 min-h-0 gap-2">
               <div className="flex items-center gap-2">
                 <Input
-                  value={active.title}
+                  value={titleDraft}
                   onChange={(e) => {
                     const title = e.target.value;
-                    patchNote(active.id, { title } as never).catch(() => {});
+                    setTitleDraft(title);
                     queueSave(active.id, { title });
                   }}
                   className="h-9 font-medium"
