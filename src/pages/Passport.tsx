@@ -20,6 +20,7 @@ import {
 import type { Tables } from '@/integrations/supabase/types';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 import { SecretWordsSheet } from '@/components/passport/SecretWordsSheet';
+import { useSecretWordsActive } from '@/hooks/useSecretWordsActive';
 import { useAuth } from '@/contexts/AuthContext';
 import { VirtualizedParticipantList } from '@/components/passport/VirtualizedParticipantList';
 import { hapticImpact } from '@/lib/capacitorHaptics';
