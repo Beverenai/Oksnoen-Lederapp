@@ -254,7 +254,7 @@ export default function Chat() {
   return (
     <div className="flex flex-col h-[calc(100dvh-140px)] gap-3 animate-fade-in">
       <div className="shrink-0">
-        <h1 className="text-2xl font-heading font-bold">Ledersnakk</h1>
+        <h1 className="text-2xl font-heading font-bold">Lederhuset</h1>
         <p className="text-sm text-muted-foreground">
           {channel === 'period'
             ? `Periodechat${periodLabel ? ` · ${periodLabel}` : ''} — for ledere som jobber nå`

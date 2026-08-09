@@ -74,7 +74,7 @@ export function OffSeasonHome({
     {
       key: 'chat',
       icon: MessageCircle,
-      label: 'Ledersnakk',
+      label: 'Lederhuset',
       onClick: () => navigate('/chat'),
     },
   ];

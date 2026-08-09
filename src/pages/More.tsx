@@ -146,7 +146,7 @@ export default function More() {
       label: 'Min side',
       items: [
         { to: '/profile', icon: User, label: 'Min Profil' },
-        { to: '/chat', icon: MessageCircle, label: 'Ledersnakk' },
+        { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
         { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
         { to: '/my-shifts', icon: ClipboardList, label: 'Min vakt' },
       ],
@@ -245,7 +245,7 @@ export default function More() {
           badge: incomingHookups,
         },
         { to: '/snus', icon: Circle, label: 'Snus' },
-        { to: '/chat', icon: MessageCircle, label: 'Ledersnakk' },
+        { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
         { to: '/profile', icon: User, label: 'Min Profil' },
       ],
     },

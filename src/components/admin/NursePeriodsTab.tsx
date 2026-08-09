@@ -72,7 +72,7 @@ export function NursePeriodsTab() {
   const toggleAppMode = async () => {
     const next = appMode === 'inactive' ? 'active' : 'inactive';
     const confirmMsg = next === 'inactive'
-      ? 'Sette appen til INAKTIV? Alle ledere blir aktivert og ser kun Hjem + Ledersnakk. Superadmin beholder full tilgang.'
+      ? 'Sette appen til INAKTIV? Alle ledere blir aktivert og ser kun Hjem + Lederhuset. Superadmin beholder full tilgang.'
       : 'Skru på AKTIV-modus igjen? Alle funksjoner blir tilgjengelig for alle.';
     if (!confirm(confirmMsg)) return;
     setChangingMode(true);
@@ -114,7 +114,7 @@ export function NursePeriodsTab() {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {appMode === 'inactive'
-                    ? 'Alle ledere ser kun Ledersnakk-chatten.'
+                    ? 'Alle ledere ser kun Lederhuset-chatten.'
                     : 'Alle funksjoner er tilgjengelig.'}
                 </p>
               </div>
