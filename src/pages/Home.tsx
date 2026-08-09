@@ -174,6 +174,7 @@ export default function Home() {
   const [activePeriodLabel, setActivePeriodLabel] = useState<string | null>(null);
   const [snusBrothers, setSnusBrothers] = useState<{ id: string; name: string }[]>([]);
   const [snusBrothersOpen, setSnusBrothersOpen] = useState(false);
+  const [mySnus, setMySnus] = useState<{ productId: string | null; customLabel: string | null } | null>(null);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
   const showRoulette = rouletteEnabled && inRoulette;
   const teamsEnabled = useTeamsEnabled();
