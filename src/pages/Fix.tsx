@@ -369,16 +369,13 @@ export default function Fix() {
 
   const handleMarkAsFixed = async (taskId: string) => {
     try {
-      const { error } = await supabase
-        .from('fix_tasks')
-        .update({
-          status: 'fixed',
-          fixed_at: new Date().toISOString(),
-          fixed_by: leader?.id
-        })
-        .eq('id', taskId);
-
+      const { error } = await supabase.rpc('mark_fix_task_fixed', { _task_id: taskId });
       if (error) throw error;
+
+      // Optimistic local update
+      setTasks((prev) => prev.map((t) => (t.id === taskId
+        ? { ...t, status: 'fixed', fixed_at: new Date().toISOString(), fixed_by: leader?.id ?? null }
+        : t)));
 
       showSuccess('Markert som fikset!');
       setSelectedTask(null);
