@@ -172,6 +172,7 @@ export function KioskTab() {
   }, [sales, balances]);
 
   const exports = [
+
     { label: 'Innkjøpsliste', desc: 'Salg per vare + anbefalt påfyll', file: `gomla-innkjop-${stamp}.csv`, make: () => purchasingCsv(sales, stats.dayCount) },
     { label: 'Varesalg', desc: 'Antall og omsetning per vare', file: `gomla-varesalg-${stamp}.csv`, make: () => productsCsv(sales) },
     { label: 'Alle kjøp (linjer)', desc: 'Full logg med varelinjer', file: `gomla-kjop-${stamp}.csv`, make: () => salesCsv(sales, nameOf) },
