@@ -318,16 +318,22 @@ export default function Home() {
     const loadSnusBrothers = async () => {
       if (!effectiveLeader) {
         setSnusBrothers([]);
+        setMySnus(null);
         return;
       }
       // Hent egen snus-status ferskt fra basen (auth-context kan være utdatert)
       const { data: me } = await supabase
         .from('leaders')
-        .select('snus_user, snus_product_id')
+        .select('snus_user, snus_product_id, snus_custom_label')
         .eq('id', effectiveLeader.id)
         .maybeSingle();
       const productId = (me as any)?.snus_product_id;
       const snusUser = !!(me as any)?.snus_user;
+      if (!cancelled) {
+        setMySnus(snusUser
+          ? { productId: productId ?? null, customLabel: (me as any)?.snus_custom_label ?? null }
+          : null);
+      }
       if (!snusUser || !productId) {
         setSnusBrothers([]);
         return;
