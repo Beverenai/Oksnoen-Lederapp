@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { snusTheme, type SnusProduct } from '@/lib/snusCatalog';
+import { snusTheme, snusFullName, type SnusProduct } from '@/lib/snusCatalog';
 
 interface SnusCan3DProps {
   product: SnusProduct;
@@ -30,6 +30,7 @@ export function SnusCan3D({
   hideHint = false,
 }: SnusCan3DProps) {
   const canRef = useRef<HTMLDivElement>(null);
+  const packRef = useRef<HTMLDivElement>(null);
   const spinRef = useRef(interactive ? -16 : spin);
   const velRef = useRef(0.16);
   const draggingRef = useRef(false);
@@ -39,7 +40,7 @@ export function SnusCan3D({
 
   // Animate purely through the DOM – no re-render per frame
   useEffect(() => {
-    if (!interactive) return;
+    if (!interactive || product.image) return;
     let raf = 0;
     const tick = () => {
       if (!draggingRef.current) {
@@ -58,7 +59,26 @@ export function SnusCan3D({
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [interactive]);
+  }, [interactive, product.image]);
+
+  /** Very subtle 3D tilt/scale for the real packshot in the large profile view */
+  useEffect(() => {
+    if (!interactive || !product.image) return;
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = (now - start) / 1000;
+      if (packRef.current) {
+        const ry = Math.sin(t * 0.7) * 5;
+        const rx = Math.sin(t * 0.5) * 2.2;
+        const sc = 1 + Math.sin(t * 0.7) * 0.012;
+        packRef.current.style.transform = `perspective(900px) rotateY(${ry.toFixed(2)}deg) rotateX(${rx.toFixed(2)}deg) scale(${sc.toFixed(3)})`;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [interactive, product.image]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (!interactive) return;
@@ -92,6 +112,51 @@ export function SnusCan3D({
   const theme = snusTheme(product);
   const brandWord = product.brand.toLowerCase();
   const bigNumber = product.number != null ? `${product.number}` : null;
+  const fullName = snusFullName(product);
+
+  // ---- Real packshot ----------------------------------------------------
+  if (product.image) {
+    return (
+      <div
+        className={cn('flex flex-col items-center select-none', className)}
+        style={{ touchAction: interactive ? 'pan-y' : undefined }}
+      >
+        <div
+          className="relative"
+          style={{ width: size, height: Math.round(size * 1.02) }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        >
+          {/* Soft contact shadow */}
+          <div
+            className="absolute left-1/2 -translate-x-1/2 rounded-[50%] blur-md"
+            style={{
+              width: size * 0.7,
+              height: size * 0.1,
+              bottom: size * 0.05,
+              background: 'rgba(0,0,0,0.26)',
+            }}
+          />
+          <div
+            ref={packRef}
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ willChange: interactive ? 'transform' : undefined }}
+          >
+            <img
+              src={product.image}
+              alt={fullName}
+              loading="lazy"
+              decoding="async"
+              draggable={false}
+              className="h-full w-full object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.22)]"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
