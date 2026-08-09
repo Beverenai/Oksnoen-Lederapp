@@ -84,6 +84,7 @@ export default function More() {
   const { isAdmin, isNurse, isKitchen, logout, leader, effectiveLeader } = useAuth();
   const sweatersEnabled = useSweatersEnabled();
   const { data: murderState } = useMyMurderState();
+  const { data: mailboxUnread } = useMailboxUnreadCount(!!isAdmin);
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
@@ -159,6 +160,12 @@ export default function More() {
       items: [
         { to: '/important-info', icon: AlertTriangle, label: 'Viktig info' },
         { to: '/fix', icon: Wrench, label: 'FIX' },
+        {
+          to: '/postkasse',
+          icon: Mail,
+          label: 'Postkasse',
+          ...(isAdmin ? { badge: mailboxUnread ?? 0 } : {}),
+        },
         ...(isAdmin
           ? [
               { to: '/skjaer', icon: Map, label: 'Skjær' } as MoreItem,
