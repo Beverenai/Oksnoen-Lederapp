@@ -24,6 +24,7 @@ import { SecretWordsSheet } from '@/components/passport/SecretWordsSheet';
 import { useSecretWordsActive } from '@/hooks/useSecretWordsActive';
 import { useAuth } from '@/contexts/AuthContext';
 import { VirtualizedParticipantList } from '@/components/passport/VirtualizedParticipantList';
+import { PhotoWallView } from '@/components/passport/PhotoWallView';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { useParticipantTeams } from '@/hooks/useParticipantTeams';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
