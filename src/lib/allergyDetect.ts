@@ -69,7 +69,7 @@ export const ALLERGY_CATEGORIES: AllergyCategory[] = [
     key: 'other',
     label: 'Annen matallergi / diett',
     hint: 'Les notatet — avklar med sykepleier ved tvil.',
-    patterns: [/matal+ergi/i, /matvarea?l+ergi/i, /spesialkost/i, /di[eé]tt/i, /intoleran/i, /t[åa]ler ikke\s+\w+/i],
+    patterns: [/matal+ergi/i, /matvarea?l+ergi/i, /spesialkost/i, /di[eé]tt/i, /intoleran/i, /t[åa]ler ikke\s+\w+/i, /epipen+/i, /anafylak/i, /kan ikke spise/i, /spiser ikke\s+\w+/i],
   },
 ];
 
