@@ -25,7 +25,7 @@ import {
   Pencil,
   History,
 } from 'lucide-react';
-import { cn, formatFullRoom } from '@/lib/utils';
+import { cn, formatCabinRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
 import { useParticipants, type ParticipantWithCabin } from '@/hooks/useParticipants';
 import {
@@ -158,7 +158,7 @@ const Kiosk = () => {
       saleNumber: sale.sale_number,
       createdAt: sale.created_at,
       participantName: p?.name ?? 'Ukjent deltager',
-      participantRoom: p ? formatFullRoom(p.cabins?.name, p.room) : null,
+      participantRoom: p ? formatCabinRoom(p.cabins?.name, p.room) : null,
       soldByName: sale.sold_by_name,
       items: sale.items,
       total: sale.total,
@@ -218,7 +218,7 @@ const Kiosk = () => {
       setSuccess({
         saleId,
         participantName: buyer.name,
-        participantRoom: formatFullRoom(buyer.cabins?.name, buyer.room),
+        participantRoom: formatCabinRoom(buyer.cabins?.name, buyer.room),
         participantImage: getParticipantThumb(buyer),
         items: soldLines.map((l) => ({
           product_name: l.product.name,
@@ -426,7 +426,7 @@ const Kiosk = () => {
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{participant.name}</p>
               <p className="truncate text-xs text-muted-foreground">
-                {formatFullRoom(participant.cabins?.name, participant.room) || 'Ingen hytte'}
+                {formatCabinRoom(participant.cabins?.name, participant.room) || 'Ingen hytte'}
               </p>
             </div>
             <div className="text-right">
