@@ -29,8 +29,9 @@ import {
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { PushNotificationStatus } from '@/components/PushNotificationStatus';
 import { SnusCan3D } from '@/components/snus/SnusCan3D';
+import { SnusCanRotator, snusProductsFrom } from '@/components/snus/SnusCanRotator';
 import { SnusPicker } from '@/components/snus/SnusPicker';
-import { getSnusProduct, customSnusProduct, snusLabel } from '@/lib/snusCatalog';
+import { getSnusProduct, customSnusProduct, snusLabel, snusFullName } from '@/lib/snusCatalog';
 import { Switch } from '@/components/ui/switch';
 import type { Tables } from '@/integrations/supabase/types';
 import { compressImage } from '@/lib/imageUtils';
