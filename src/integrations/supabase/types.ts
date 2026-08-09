@@ -38,6 +38,60 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_pinned: boolean
+          kind: string
+          strokes: Json
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_pinned?: boolean
+          kind?: string
+          strokes?: Json
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_pinned?: boolean
+          kind?: string
+          strokes?: Json
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_notes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           content: string | null
@@ -96,6 +150,53 @@ export type Database = {
           value?: string | null
         }
         Relationships: []
+      }
+      booking_edit_log: {
+        Row: {
+          booking_id: string
+          changed_by: string | null
+          changed_by_name: string | null
+          created_at: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          participant_name: string | null
+          period_id: string | null
+        }
+        Insert: {
+          booking_id: string
+          changed_by?: string | null
+          changed_by_name?: string | null
+          created_at?: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          participant_name?: string | null
+          period_id?: string | null
+        }
+        Update: {
+          booking_id?: string
+          changed_by?: string | null
+          changed_by_name?: string | null
+          created_at?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          participant_name?: string | null
+          period_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_edit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cabin_reports: {
         Row: {
@@ -170,21 +271,27 @@ export type Database = {
       chat_messages: {
         Row: {
           body: string
+          channel: string
           created_at: string
           id: string
           leader_id: string
+          period_id: string | null
         }
         Insert: {
           body: string
+          channel?: string
           created_at?: string
           id?: string
           leader_id: string
+          period_id?: string | null
         }
         Update: {
           body?: string
+          channel?: string
           created_at?: string
           id?: string
           leader_id?: string
+          period_id?: string | null
         }
         Relationships: [
           {
@@ -192,6 +299,13 @@ export type Database = {
             columns: ["leader_id"]
             isOneToOne: false
             referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
         ]
@@ -751,6 +865,7 @@ export type Database = {
       }
       kiosk_sales: {
         Row: {
+          client_ref: string | null
           created_at: string
           id: string
           participant_id: string
@@ -763,6 +878,7 @@ export type Database = {
           voided_by: string | null
         }
         Insert: {
+          client_ref?: string | null
           created_at?: string
           id?: string
           participant_id: string
@@ -775,6 +891,7 @@ export type Database = {
           voided_by?: string | null
         }
         Update: {
+          client_ref?: string | null
           created_at?: string
           id?: string
           participant_id?: string
@@ -823,6 +940,135 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      kitchen_item_checks: {
+        Row: {
+          checked_at: string
+          checked_by: string | null
+          created_at: string
+          id: string
+          item_id: string
+          period_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          checked_at?: string
+          checked_by?: string | null
+          created_at?: string
+          id?: string
+          item_id: string
+          period_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          checked_at?: string
+          checked_by?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string
+          period_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_item_checks_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kitchen_item_checks_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "kitchen_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kitchen_item_checks_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kitchen_items: {
+        Row: {
+          created_at: string
+          hint: string | null
+          id: string
+          label: string
+          section_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hint?: string | null
+          id?: string
+          label: string
+          section_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hint?: string | null
+          id?: string
+          label?: string
+          section_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "kitchen_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kitchen_sections: {
+        Row: {
+          body: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          kind: string
+          slug: string
+          sort_order: number
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          kind?: string
+          slug: string
+          sort_order?: number
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          kind?: string
+          slug?: string
+          sort_order?: number
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       leader_availability: {
         Row: {
@@ -972,6 +1218,71 @@ export type Database = {
           },
         ]
       }
+      leader_hookups: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          leader_a_id: string
+          leader_b_id: string
+          period_id: string | null
+          requested_by: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          leader_a_id: string
+          leader_b_id: string
+          period_id?: string | null
+          requested_by: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          leader_a_id?: string
+          leader_b_id?: string
+          period_id?: string | null
+          requested_by?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_hookups_leader_a_id_fkey"
+            columns: ["leader_a_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_hookups_leader_b_id_fkey"
+            columns: ["leader_b_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_hookups_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_hookups_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leader_period_history: {
         Row: {
           created_at: string
@@ -1111,6 +1422,7 @@ export type Database = {
           profile_image_url: string | null
           snus_custom_label: string | null
           snus_product_id: string | null
+          snus_product_ids: string[]
           snus_user: boolean
           team: string | null
           updated_at: string | null
@@ -1141,6 +1453,7 @@ export type Database = {
           profile_image_url?: string | null
           snus_custom_label?: string | null
           snus_product_id?: string | null
+          snus_product_ids?: string[]
           snus_user?: boolean
           team?: string | null
           updated_at?: string | null
@@ -1171,11 +1484,82 @@ export type Database = {
           profile_image_url?: string | null
           snus_custom_label?: string | null
           snus_product_id?: string | null
+          snus_product_ids?: string[]
           snus_user?: boolean
           team?: string | null
           updated_at?: string | null
         }
         Relationships: []
+      }
+      mailbox_messages: {
+        Row: {
+          admin_reply: string | null
+          category: string
+          content: string
+          created_at: string
+          id: string
+          is_anonymous: boolean
+          period_id: string | null
+          read_at: string | null
+          replied_at: string | null
+          replied_by: string | null
+          sender_leader_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_reply?: string | null
+          category?: string
+          content: string
+          created_at?: string
+          id?: string
+          is_anonymous?: boolean
+          period_id?: string | null
+          read_at?: string | null
+          replied_at?: string | null
+          replied_by?: string | null
+          sender_leader_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_reply?: string | null
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_anonymous?: boolean
+          period_id?: string | null
+          read_at?: string | null
+          replied_at?: string | null
+          replied_by?: string | null
+          sender_leader_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mailbox_messages_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mailbox_messages_replied_by_fkey"
+            columns: ["replied_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mailbox_messages_sender_leader_id_fkey"
+            columns: ["sender_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       murder_death_notifications: {
         Row: {
@@ -3651,6 +4035,10 @@ export type Database = {
       claim_murder_kill: { Args: never; Returns: string }
       confirm_murder_death: { Args: { _claim_id?: string }; Returns: undefined }
       current_leader_id: { Args: never; Returns: string }
+      edit_kiosk_sale: {
+        Args: { _items: Json; _sale_id: string }
+        Returns: undefined
+      }
       get_active_period_id: { Args: never; Returns: string }
       get_all_leader_roles: {
         Args: never
@@ -3666,6 +4054,8 @@ export type Database = {
           cabin_id: string
           has_arrived: boolean
           id: string
+          image_thumb_url: string
+          image_url: string
           insj_points: number
           name: string
           notes: string
@@ -3673,6 +4063,18 @@ export type Database = {
           room: string
           team_id: string
           times_attended: number
+        }[]
+      }
+      get_kitchen_allergy_notes: {
+        Args: never
+        Returns: {
+          booking_notes: string
+          cabin_name: string
+          health_info: string
+          name: string
+          participant_id: string
+          participant_notes: string
+          room: string
         }[]
       }
       get_murder_overview: {
@@ -3714,6 +4116,33 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }[]
       }
+      get_season_participants: {
+        Args: never
+        Returns: {
+          activity_notes: string
+          birth_date: string
+          cabin_id: string
+          created_at: string
+          first_name: string
+          has_arrived: boolean
+          id: string
+          image_thumb_url: string
+          image_url: string
+          insj_points: number
+          last_name: string
+          name: string
+          notes: string
+          pass_suggestion: string
+          pass_text: string
+          pass_written: boolean
+          period_id: string
+          period_name: string
+          room: string
+          team_id: string
+          times_attended: number
+          updated_at: string
+        }[]
+      }
       has_role: {
         Args: {
           _leader_id: string
@@ -3722,10 +4151,12 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_kitchen: { Args: never; Returns: boolean }
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      mark_fix_task_fixed: { Args: { _task_id: string }; Returns: undefined }
       record_kiosk_sale: {
-        Args: { _items: Json; _participant_id: string }
+        Args: { _client_ref?: string; _items: Json; _participant_id: string }
         Returns: string
       }
       revive_and_reshuffle_murder: {
@@ -3741,7 +4172,7 @@ export type Database = {
       void_kiosk_sale: { Args: { _sale_id: string }; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "leader" | "nurse" | "superadmin"
+      app_role: "admin" | "leader" | "nurse" | "superadmin" | "kitchen"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3869,7 +4300,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "leader", "nurse", "superadmin"],
+      app_role: ["admin", "leader", "nurse", "superadmin", "kitchen"],
     },
   },
 } as const

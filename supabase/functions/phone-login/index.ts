@@ -83,12 +83,10 @@ serve(async (req) => {
     // Superadmin (August) can ALWAYS log in, even if accidentally deactivated
     const isSuperadminPhone = normalizedPhone === '90076299';
 
+    // Inactive leaders are allowed to sign in — the app restricts them to the
+    // off-season features (Hjem, Ledersnakk, profil/snus, Klineliste, Lederpass).
     if (leader.is_active === false && !isSuperadminPhone) {
-      console.log('Leader is not active');
-      return new Response(
-        JSON.stringify({ success: false, error: 'INACTIVE_LEADER', message: 'Du jobber ikke denne perioden.' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log('Leader is not active — granting limited access');
     }
 
     // Generate deterministic email and password for this leader

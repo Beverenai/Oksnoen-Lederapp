@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { NurseReportEditor } from '@/components/nurse/NurseReportEditor';
 import { IncidentInboxTab } from '@/components/nurse/IncidentInboxTab';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSeasonView } from '@/contexts/SeasonViewContext';
+import { fetchSeasonParticipants } from '@/hooks/useSeasonParticipants';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,12 +119,14 @@ const severityLevels = [
 export default function Nurse() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader, isAdmin, isNurse } = useAuth();
+  const { seasonView, readOnly } = useSeasonView();
   const [participants, setParticipants] = useState<ParticipantWithHealth[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [cabinFilter, setCabinFilter] = useState<string>('all');
   const [infoFilter, setInfoFilter] = useState<'all' | 'with' | 'important' | 'without'>('all');
   const [searchMode, setSearchMode] = useState<'name' | 'report'>('name');
+  const [sortMode, setSortMode] = useState<'alpha' | 'info'>('alpha');
   const [selectedParticipant, setSelectedParticipant] = useState<ParticipantWithHealth | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isImageOpen, setIsImageOpen] = useState(false);
@@ -180,12 +184,17 @@ export default function Nurse() {
 
   const loadParticipants = async () => {
     try {
-      const { data: participantsData, error } = await supabase
-        .from('participants')
-        .select('*, cabins(name)')
-        .order('name');
-
-      if (error) throw error;
+      let participantsData: any[] | null = null;
+      if (seasonView) {
+        participantsData = (await fetchSeasonParticipants()) as any[];
+      } else {
+        const { data, error } = await supabase
+          .from('participants')
+          .select('*, cabins(name)')
+          .order('name');
+        if (error) throw error;
+        participantsData = data;
+      }
 
       // Load health notes, events, and health info for all participants
       const participantIds = participantsData?.map(p => p.id) || [];
@@ -245,7 +254,7 @@ export default function Nurse() {
   // ---- Auto-save (debounced) for notes fields ----
   const autoSaveHealthNote = (value: string) => {
     const participant = selectedParticipant;
-    if (!participant) return Promise.resolve();
+    if (!participant || readOnly) return Promise.resolve();
 
     const noteHint = participant.healthNotes[0];
     if ((noteHint?.content ?? '') === value) return Promise.resolve();
@@ -430,6 +439,8 @@ export default function Nurse() {
   };
 
   const saveHealthNote = async () => {
+    if (readOnly) return;
+
     if (!selectedParticipant || !newNote.trim()) {
       showError('Skriv inn et notat');
       return;
@@ -479,6 +490,8 @@ export default function Nurse() {
   };
 
   const savePublicHealthNote = async () => {
+    if (readOnly) return;
+
     if (!selectedParticipant) return;
 
     setIsSaving(true);
@@ -521,6 +534,8 @@ export default function Nurse() {
   };
 
   const saveLeaderNotes = async () => {
+    if (readOnly) return;
+
     if (!selectedParticipant) return;
     setIsSavingLeaderNotes(true);
     try {
@@ -612,6 +627,8 @@ export default function Nurse() {
   };
 
   const saveEditedEvent = async () => {
+    if (readOnly) return;
+
     if (!selectedParticipant || !editingEventId || !editEventDescription.trim()) {
       showError('Skriv inn en beskrivelse');
       return;
@@ -714,10 +731,12 @@ export default function Nurse() {
   // NOTE: We only consider health-related data, NOT activity_notes
   const participantsWithHealthInfo = filteredParticipants
     .filter(p => p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info)
-    .sort((a, b) => infoScore(b) - infoScore(a) || a.name.localeCompare(b.name, 'nb'));
-  const participantsWithoutHealthInfo = filteredParticipants.filter(p => 
-    p.healthNotes.length === 0 && p.healthEvents.length === 0 && !p.healthInfo?.info
-  );
+    .sort((a, b) => sortMode === 'alpha'
+      ? a.name.localeCompare(b.name, 'nb')
+      : (infoScore(b) - infoScore(a) || a.name.localeCompare(b.name, 'nb')));
+  const participantsWithoutHealthInfo = filteredParticipants
+    .filter(p => p.healthNotes.length === 0 && p.healthEvents.length === 0 && !p.healthInfo?.info)
+    .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 
   const getSeverityText = (severity: string | null) => {
     switch (severity) {
@@ -1212,6 +1231,15 @@ export default function Nurse() {
                 <SelectItem value="with">Kun med info</SelectItem>
                 <SelectItem value="important">Kun viktig info</SelectItem>
                 <SelectItem value="without">Uten info</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortMode} onValueChange={(v) => setSortMode(v as typeof sortMode)}>
+              <SelectTrigger className="w-full sm:w-[190px]">
+                <SelectValue placeholder="Sortering" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alpha">Alfabetisk (A–Å)</SelectItem>
+                <SelectItem value="info">Mest info først</SelectItem>
               </SelectContent>
             </Select>
           </div>

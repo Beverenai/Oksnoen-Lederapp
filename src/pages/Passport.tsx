@@ -16,16 +16,21 @@ import {
   AlertTriangle,
   X,
   KeyRound,
+  LayoutGrid,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 import { SecretWordsSheet } from '@/components/passport/SecretWordsSheet';
+import { useSecretWordsActive } from '@/hooks/useSecretWordsActive';
 import { useAuth } from '@/contexts/AuthContext';
 import { VirtualizedParticipantList } from '@/components/passport/VirtualizedParticipantList';
+import { PhotoWallView } from '@/components/passport/PhotoWallView';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { useParticipantTeams } from '@/hooks/useParticipantTeams';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useSeasonView } from '@/contexts/SeasonViewContext';
+import { fetchSeasonParticipants } from '@/hooks/useSeasonParticipants';
 import { Badge } from '@/components/ui/badge';
 
 type Cabin = Tables<'cabins'>;
@@ -51,6 +56,8 @@ interface ParticipantWithCabin {
   created_at: string | null;
   updated_at: string | null;
   team_id: string | null;
+  period_id?: string | null;
+  period_name?: string | null;
   cabins: Cabin | null;
 }
 
@@ -133,6 +140,7 @@ export default function Passport() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { leader, effectiveLeader } = useAuth();
+  const { seasonView } = useSeasonView();
   const [searchParams, setSearchParams] = useSearchParams();
   const cabinFilterFromUrl = searchParams.get('cabin');
   const teamsParamFromUrl = searchParams.get('teams');
@@ -142,16 +150,22 @@ export default function Passport() {
   const [searchQuery, setSearchQuery] = useState('');
   const [myCabinsFilter, setMyCabinsFilter] = useState(false);
   const [teamFilter, setTeamFilter] = useState<string>('all');
+  const [periodFilter, setPeriodFilter] = useState<string>('all');
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [secretWordsOpen, setSecretWordsOpen] = useState(false);
+  const secretWordsActive = useSecretWordsActive();
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
+  const [photoWall, setPhotoWall] = useState(false);
   // (bulk activity registration moved to dedicated route /passport/activity)
 
   // React Query for cached data fetching
   const { data: participants = [], isLoading: isLoadingParticipants, refetch: refetchParticipants } = useQuery({
-    queryKey: ['participants-with-cabins'],
-    queryFn: fetchParticipants,
+    queryKey: ['participants-with-cabins', seasonView ? 'season' : 'active'],
+    queryFn: async () =>
+      seasonView
+        ? ((await fetchSeasonParticipants()) as unknown as ParticipantWithCabin[])
+        : fetchParticipants(),
     staleTime: 0,
     gcTime: 24 * 60 * 60 * 1000,
     refetchOnMount: 'always',
@@ -281,6 +295,15 @@ export default function Passport() {
     return activitiesMap.get(participantId) || [];
   };
 
+  // Period options — only relevant while the season view is on.
+  const periodOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    participants.forEach((p) => {
+      if (p.period_id) seen.set(p.period_id, p.period_name || 'Ukjent periode');
+    });
+    return [...seen.entries()].map(([id, name]) => ({ id, name }));
+  }, [participants]);
+
   const filteredParticipants = useMemo(() => {
     return participants.filter((p) => {
       const query = searchQuery.toLowerCase();
@@ -310,9 +333,14 @@ export default function Passport() {
         ? !!p.team_id && multiTeamIds.includes(p.team_id)
         : true;
 
-      return matchesSearch && matchesCabin && matchesUrlCabin && matchesTeam && matchesMultiTeam;
+      const matchesPeriod =
+        periodFilter === 'all' ? true : p.period_id === periodFilter;
+
+      return (
+        matchesSearch && matchesCabin && matchesUrlCabin && matchesTeam && matchesMultiTeam && matchesPeriod
+      );
     });
-  }, [participants, searchQuery, myCabinsFilter, myCabinIds, cabinFilterFromUrl, teamFilter, teamsParamFromUrl]);
+  }, [participants, searchQuery, myCabinsFilter, myCabinIds, cabinFilterFromUrl, teamFilter, teamsParamFromUrl, periodFilter]);
 
   // Group participants by cabin
   const cabinGroups = useMemo((): CabinGroup[] => {
@@ -455,48 +483,81 @@ export default function Passport() {
           )}
         </div>
 
-        {/* Action buttons in a row */}
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            variant="default"
-            size="default"
-            onClick={() => navigate('/passport/activity')}
-            className="font-semibold"
-          >
-            <Users className="w-5 h-5 mr-2" />
-            Aktivitet
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/important-info')}
-          >
-            <AlertTriangle className="w-4 h-4 mr-1.5" />
-            Viktig Info
-          </Button>
+        {/* Primary actions as big floating tiles */}
+        <div className="flex flex-col gap-2 sm:min-w-[19rem]">
+          <div className="grid grid-cols-2 gap-2">
+            {!seasonView && (
+              <button
+                type="button"
+                onClick={() => navigate('/passport/activity')}
+                className="ios-surface flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-transform active:scale-[0.97]"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Users className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-semibold leading-tight text-foreground">Aktivitet</span>
+                  <span className="block text-[11px] text-muted-foreground">Registrer</span>
+                </span>
+              </button>
+            )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSecretWordsOpen(true)}
-          >
-            <KeyRound className="w-4 h-4 mr-1.5" />
-            Ord
-          </Button>
-          
-          {/* My cabin filter button - only show if leader has assigned cabins */}
-          {myCabinIds.length > 0 && (
-            <Button
-              variant={myCabinsFilter ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setMyCabinsFilter(!myCabinsFilter)}
-              className="gap-1.5"
+            <button
+              type="button"
+              onClick={() => navigate('/important-info')}
+              className="ios-surface flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-transform active:scale-[0.97]"
             >
-              <Home className="w-4 h-4" />
-              {myCabinsFilter ? 'Alle hytter' : 'Min hytte'}
-            </Button>
-          )}
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[15px] font-semibold leading-tight text-foreground">Viktig info</span>
+                <span className="block text-[11px] text-muted-foreground">Husk dette</span>
+              </span>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                hapticImpact('light');
+                setPhotoWall((v) => !v);
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-medium transition-transform active:scale-95 ${
+                photoWall
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'ios-chip text-foreground'
+              }`}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              {photoWall ? 'Vanlig liste' : 'Bildevisning'}
+            </button>
+              {!seasonView && secretWordsActive && (
+                <button
+                  type="button"
+                  onClick={() => setSecretWordsOpen(true)}
+                  className="ios-chip inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-medium text-foreground active:scale-95 transition-transform"
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  Ord
+                </button>
+              )}
+              {myCabinIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setMyCabinsFilter(!myCabinsFilter)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-medium transition-transform active:scale-95 ${
+                    myCabinsFilter
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'ios-chip text-foreground'
+                  }`}
+                >
+                  <Home className="h-3.5 w-3.5" />
+                  {myCabinsFilter ? 'Alle hytter' : 'Min hytte'}
+                </button>
+              )}
+          </div>
         </div>
       </div>
 
@@ -550,6 +611,28 @@ export default function Passport() {
               {g.cabin.name}: {g.participants.length}
             </Badge>
           ))}
+        </div>
+      )}
+
+      {/* Period filter — season view only */}
+      {seasonView && periodOptions.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Select value={periodFilter} onValueChange={setPeriodFilter}>
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="Alle perioder" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle perioder ({participants.length})</SelectItem>
+              {periodOptions.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Badge variant="secondary" className="shrink-0 text-xs">
+            {filteredParticipants.length} vises
+          </Badge>
         </div>
       )}
 
@@ -658,16 +741,26 @@ export default function Passport() {
         </Button>
       )}
 
-      {/* Virtualized Participant List */}
-      <VirtualizedParticipantList
-        cabinGroups={cabinGroups}
-        activitiesMap={activitiesMap}
-        expandedCabins={expandedCabins}
-        onToggleCabin={toggleCabinExpanded}
-        onFilterByCabin={handleFilterByCabin}
-        onParticipantClick={handleParticipantClick}
-        onPrefetchParticipant={prefetchParticipant}
-      />
+      {/* Participant list — photo wall or virtualized list */}
+      {photoWall ? (
+        <PhotoWallView
+          cabinGroups={cabinGroups}
+          onParticipantClick={handleParticipantClick}
+          onPrefetchParticipant={prefetchParticipant}
+        />
+      ) : (
+        <div className="w-full max-w-2xl mx-auto">
+          <VirtualizedParticipantList
+            cabinGroups={cabinGroups}
+            activitiesMap={activitiesMap}
+            expandedCabins={expandedCabins}
+            onToggleCabin={toggleCabinExpanded}
+            onFilterByCabin={handleFilterByCabin}
+            onParticipantClick={handleParticipantClick}
+            onPrefetchParticipant={prefetchParticipant}
+          />
+        </div>
+      )}
 
       {/* Participant Detail Dialog */}
       <ParticipantDetailDialog

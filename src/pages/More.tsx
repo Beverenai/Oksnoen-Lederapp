@@ -17,6 +17,9 @@ import {
   Bell,
   Skull,
   ShoppingBasket,
+  ChefHat,
+  Mail,
+  HeartHandshake,
   LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -28,12 +31,18 @@ import { useMyMurderState } from '@/hooks/useMurderGame';
 import { cn } from '@/lib/utils';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { LederPassMini } from '@/components/passport/LederPassMini';
+import { useMailboxUnreadCount } from '@/hooks/useMailbox';
+import { useHookupsEnabled, useIncomingHookupCount } from '@/hooks/useHookups';
+import { useAppMode } from '@/hooks/useAppMode';
+import { isLimitedAccessRoute } from '@/lib/limitedAccess';
+import { IdCard, MessageCircle, Circle } from 'lucide-react';
 
 type MoreItem = {
   to?: string;
   icon: LucideIcon;
   label: string;
   onClick?: () => void;
+  badge?: number;
 };
 
 type MoreSection = {
@@ -43,7 +52,12 @@ type MoreSection = {
 
 function Tile({ item }: { item: MoreItem }) {
   const content = (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-border/60 bg-card/70 backdrop-blur px-3 py-5 text-center shadow-sm hover:bg-card transition-colors active:scale-[0.98]">
+    <div className="relative flex flex-col items-center justify-center gap-2 rounded-2xl border border-border/60 bg-card/70 backdrop-blur px-3 py-5 text-center shadow-sm hover:bg-card transition-colors active:scale-[0.98]">
+      {!!item.badge && item.badge > 0 && (
+        <span className="absolute right-2 top-2 min-w-[1.25rem] rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-bold leading-none text-destructive-foreground">
+          {item.badge > 99 ? '99+' : item.badge}
+        </span>
+      )}
       <item.icon className="w-6 h-6 text-primary" strokeWidth={1.8} />
       <span className="text-xs font-medium text-foreground leading-tight">
         {item.label}
@@ -72,9 +86,14 @@ function Tile({ item }: { item: MoreItem }) {
 }
 
 export default function More() {
-  const { isAdmin, isNurse, logout, leader, effectiveLeader } = useAuth();
+  const { isAdmin, isNurse, isKitchen, isSuperAdmin, isLimitedAccess, logout, leader, effectiveLeader } = useAuth();
+  const { mode: appMode } = useAppMode();
+  const limited = (appMode === 'inactive' || isLimitedAccess) && !isSuperAdmin;
   const sweatersEnabled = useSweatersEnabled();
   const { data: murderState } = useMyMurderState();
+  const { data: mailboxUnread } = useMailboxUnreadCount(!!isAdmin);
+  const hookupsEnabled = useHookupsEnabled();
+  const incomingHookups = useIncomingHookupCount();
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
@@ -122,11 +141,12 @@ export default function More() {
     };
   }, []);
 
-  const sections: MoreSection[] = [
+  const fullSections: MoreSection[] = [
     {
       label: 'Min side',
       items: [
         { to: '/profile', icon: User, label: 'Min Profil' },
+        { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
         { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
         { to: '/my-shifts', icon: ClipboardList, label: 'Min vakt' },
       ],
@@ -150,6 +170,12 @@ export default function More() {
       items: [
         { to: '/important-info', icon: AlertTriangle, label: 'Viktig info' },
         { to: '/fix', icon: Wrench, label: 'FIX' },
+        {
+          to: '/postkasse',
+          icon: Mail,
+          label: 'Postkasse',
+          ...(isAdmin ? { badge: mailboxUnread ?? 0 } : {}),
+        },
         ...(isAdmin
           ? [
               { to: '/skjaer', icon: Map, label: 'Skjær' } as MoreItem,
@@ -167,9 +193,22 @@ export default function More() {
         ...(isNurse || isAdmin
           ? [{ to: '/nurse', icon: Heart, label: 'Nurse' } as MoreItem]
           : []),
+        ...(isKitchen || isAdmin
+          ? [{ to: '/kjokken', icon: ChefHat, label: 'Kjøkken' } as MoreItem]
+          : []),
         ...(isAdmin
           ? [
               { to: '/participant-stats', icon: BarChart2, label: 'Deltagere' } as MoreItem,
+            ]
+          : []),
+        ...(hookupsEnabled || isAdmin
+          ? [
+              {
+                to: '/klineliste',
+                icon: HeartHandshake,
+                label: 'Klineliste',
+                badge: incomingHookups,
+              } as MoreItem,
             ]
           : []),
       ],
@@ -193,6 +232,36 @@ export default function More() {
 
   const firstName = (leader?.name || '').split(' ')[0] || '';
 
+  // Off-season / inactive leaders: only the allowed surfaces.
+  const limitedSections: MoreSection[] = [
+    {
+      label: 'Off-season',
+      items: [
+        { to: '/lederpass', icon: IdCard, label: 'Lederpass' },
+        {
+          to: '/klineliste',
+          icon: HeartHandshake,
+          label: 'Klineliste',
+          badge: incomingHookups,
+        },
+        { to: '/snus', icon: Circle, label: 'Snus' },
+        { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
+        { to: '/profile', icon: User, label: 'Min Profil' },
+      ],
+    },
+    {
+      label: 'Konto',
+      items: [{ icon: LogOut, label: 'Logg ut', onClick: () => logout() }],
+    },
+  ];
+
+  const sections: MoreSection[] = limited
+    ? limitedSections.map((s) => ({
+        ...s,
+        items: s.items.filter((i) => !i.to || isLimitedAccessRoute(i.to)),
+      }))
+    : fullSections;
+
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 pb-6">
       <header className="pt-1">
@@ -202,7 +271,7 @@ export default function More() {
         <p className="text-sm text-muted-foreground">Alle sider og funksjoner</p>
       </header>
 
-      {isAdmin && (
+      {isAdmin && !limited && (
         <NavLink
           to="/admin"
           onClick={() => hapticImpact('medium')}
@@ -223,7 +292,7 @@ export default function More() {
             )}>
               {section.label}
             </div>
-            <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+            <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">
               {section.items.map((item, i) => (
                 <Tile key={`${section.label}-${i}`} item={item} />
               ))}

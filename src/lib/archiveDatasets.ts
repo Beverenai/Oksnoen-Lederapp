@@ -81,6 +81,7 @@ export const archiveDatasets: ArchiveDataset[] = [
         })(),
       ]);
       return list.map((p) => ({
+        Bilde: p.image_thumb_url || p.image_url || '',
         Navn: p.name,
         Fødselsdato: d(p.birth_date),
         Hytte: cabins[p.cabin_id] ?? '',
@@ -114,19 +115,83 @@ export const archiveDatasets: ArchiveDataset[] = [
   },
   {
     key: 'nurse-reports',
-    label: 'Nurse-rapporter',
+    label: 'Nurse-rapport',
     group: 'nurse',
+    description: 'Alle rapportoppføringer: nurse-tekst, nurse-notater og hendelser samlet, som i Nurse-rapporten',
     fetch: async (periodId) => {
-      const [list, leaders] = await Promise.all([
-        rows('nurse_reports', 'content,created_at,updated_at,created_by', periodId, 'created_at'),
+      const [reports, parts, cabins, leaders, notes, events] = await Promise.all([
+        rows('nurse_reports', 'id,content,created_at,created_by', periodId, 'created_at'),
+        archiveParticipants(periodId),
+        nameMap('cabins'),
         nameMap('leaders'),
+        rows('participant_health_notes', 'participant_id,content,created_at,created_by', periodId, 'created_at'),
+        rows(
+          'participant_health_events',
+          'participant_id,event_type,description,created_at,created_by',
+          periodId,
+          'created_at',
+        ),
       ]);
-      return list.map((r) => ({
-        Opprettet: dt(r.created_at),
-        Oppdatert: dt(r.updated_at),
-        Av: r.created_by ? leaders[r.created_by] ?? '' : '',
-        Rapport: r.content ?? '',
-      }));
+
+      const pById: Record<string, any> = {};
+      parts.forEach((p: any) => { pById[p.id] = p; });
+      const reportIds = reports.map((r: any) => r.id);
+
+      let mentions: any[] = [];
+      if (reportIds.length) {
+        const { data, error } = await sb
+          .from('nurse_report_mentions')
+          .select('participant_id,mention_text,created_at')
+          .in('report_id', reportIds)
+          .order('created_at', { ascending: true });
+        if (error) throw error;
+        mentions = data || [];
+      }
+
+      const entries: { pid: string; kilde: string; tekst: string; when: string; by?: string | null }[] = [
+        ...mentions
+          .filter((m) => (m.mention_text || '').trim())
+          .map((m) => ({ pid: m.participant_id, kilde: 'Nurse', tekst: m.mention_text, when: m.created_at, by: null })),
+        ...notes
+          .filter((n: any) => (n.content || '').trim())
+          .map((n: any) => ({ pid: n.participant_id, kilde: 'Nurse-notat', tekst: n.content, when: n.created_at, by: n.created_by })),
+        ...events.map((e: any) => ({
+          pid: e.participant_id,
+          kilde: 'Hendelse',
+          tekst: [e.event_type, e.description].filter(Boolean).join(': '),
+          when: e.created_at,
+          by: e.created_by,
+        })),
+      ].sort((a, b) => (a.when < b.when ? 1 : -1));
+
+      // Free-text report body (rarely used) kept as its own row at the end.
+      const body = reports
+        .filter((r: any) => (r.content || '').trim())
+        .map((r: any) => ({
+          Dato: dt(r.created_at),
+          Bilde: '',
+          Deltaker: '(hele rapporten)',
+          Hytte: '',
+          Kilde: 'Rapporttekst',
+          Tekst: r.content,
+          Av: r.created_by ? leaders[r.created_by] ?? '' : '',
+        }));
+
+      return [
+        ...entries.map((e) => {
+          const p = pById[e.pid];
+          return {
+            Dato: dt(e.when),
+            Bilde: p ? p.image_thumb_url || p.image_url || '' : '',
+            Deltaker: p?.name ?? '',
+            Hytte: p?.cabin_id ? cabins[p.cabin_id] ?? '' : '',
+            Kilde: e.kilde,
+            Tekst: e.tekst ?? '',
+            Av: e.by ? leaders[e.by] ?? '' : '',
+          };
+        }),
+        ...body,
+      ];
     },
   },
   {

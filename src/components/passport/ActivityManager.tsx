@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Plus, Minus, Loader2, ChevronDown, X } from 'lucide-react';
+import { Check, Plus, Minus, Loader2, X } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useActivities } from '@/hooks/useActivities';
 
@@ -115,35 +115,41 @@ export const ActivityManager = ({
   // Native scroll content. Kept outside Vaul/Popover so wheel/touch scrolling
   // is not captured by the parent participant dialog.
   const activityListContent = (
-    <div className="space-y-1 pr-1">
+    <div className="space-y-1.5 pr-1">
       {activities.map((activity) => {
         const count = getCount(activity.title);
         const isCurrentlyLoading = isLoading === activity.title;
 
         return (
-          <Button
+          <button
             key={activity.id}
-            variant="ghost"
-            className="w-full justify-start text-left h-auto py-2"
+            type="button"
+            className={`w-full flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all active:scale-[0.99] ${
+              count > 0 ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/40 hover:bg-muted/70'
+            }`}
             onClick={() => addActivity(activity.title)}
             disabled={isCurrentlyLoading}
           >
-            <div className="flex items-center gap-2 w-full">
+            <span
+              className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                count > 0 ? 'bg-primary text-primary-foreground' : 'bg-background/80 text-muted-foreground'
+              }`}
+            >
               {isCurrentlyLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : count > 0 ? (
-                <Check className="h-4 w-4 text-green-600" />
+                <Check className="h-4 w-4" />
               ) : (
-                <Plus className="h-4 w-4 text-muted-foreground" />
+                <Plus className="h-4 w-4" />
               )}
-              <span className="flex-1 text-sm">{activity.title}</span>
-              {count > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {count}
-                </Badge>
-              )}
-            </div>
-          </Button>
+            </span>
+            <span className="flex-1 text-sm font-medium">{activity.title}</span>
+            {count > 0 && (
+              <Badge variant="secondary" className="rounded-full text-xs">
+                x{count}
+              </Badge>
+            )}
+          </button>
         );
       })}
     </div>
@@ -160,22 +166,24 @@ export const ActivityManager = ({
             return (
               <div
                 key={activity.id}
-                className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
+                className="flex items-center justify-between gap-2 p-2 pl-3 rounded-2xl bg-muted/50 ring-1 ring-border/40"
               >
                 <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
-                  <span className="text-sm">{activity.activity}</span>
+                  <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">
+                    <Check className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="text-sm font-medium">{activity.activity}</span>
                   {count > 1 && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="rounded-full text-xs">
                       x{count}
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 rounded-full bg-background/70 p-0.5">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="h-8 w-8 rounded-full"
                     onClick={() => removeOneActivity(activity.activity)}
                     disabled={isCurrentlyLoading}
                   >
@@ -188,7 +196,7 @@ export const ActivityManager = ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="h-8 w-8 rounded-full"
                     onClick={() => addActivity(activity.activity)}
                     disabled={isCurrentlyLoading}
                   >
@@ -204,15 +212,16 @@ export const ActivityManager = ({
           })}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Ingen aktiviteter registrert ennå</p>
+        <p className="text-sm text-muted-foreground text-center py-3 rounded-2xl bg-muted/30">
+          Ingen aktiviteter registrert ennå
+        </p>
       )}
 
       <DialogPrimitive.Root open={isOpen} onOpenChange={setIsOpen}>
         <DialogPrimitive.Trigger asChild>
-          <Button variant="outline" className="w-full">
+          <Button className="w-full h-12 rounded-full text-base font-semibold shadow-lg shadow-primary/25">
             <Plus className="h-4 w-4 mr-2" />
             Legg til aktivitet
-            <ChevronDown className="h-4 w-4 ml-auto" />
           </Button>
         </DialogPrimitive.Trigger>
 

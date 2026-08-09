@@ -26,6 +26,9 @@ import {
   Shirt,
   LayoutGrid,
   LoaderCircle,
+  HeartHandshake,
+  Archive,
+  ChefHat,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -38,6 +41,7 @@ import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
 import { useCheckoutEnabled } from '@/hooks/useCheckoutEnabled';
 import { useSweatersEnabled } from '@/hooks/useSweatersEnabled';
 import { useAppMode } from '@/hooks/useAppMode';
+import { useSeasonView } from '@/contexts/SeasonViewContext';
 import { MessageCircle } from 'lucide-react';
 import {
   Collapsible,
@@ -82,6 +86,8 @@ const storiesNavItem: NavItem = { to: '/stories', icon: BookOpen, label: 'Histor
 
 // Special access items
 const nurseNavItem: NavItem = { to: '/nurse', icon: Heart, label: 'Nurse' };
+const kitchenNavItem: NavItem = { to: '/kjokken', icon: ChefHat, label: 'Kjøkken' };
+const merNavItem: NavItem = { to: '/mer', icon: LayoutGrid, label: 'Mer' };
 const participantsNavItem: NavItem = { to: '/participant-stats', icon: BarChart2, label: 'Deltagere' };
 const adminNavItem: NavItem = { to: '/admin', icon: Settings, label: 'Admin' };
 
@@ -182,11 +188,12 @@ const NavGroup = ({
 };
 
 export default function AppLayout({ children }: AppLayoutProps) {
-  const { leader, isAdmin, isNurse, isSuperAdmin, logout, viewAsLeader, setViewAsLeader } = useAuth();
+  const { leader, isAdmin, isNurse, isKitchen, isSuperAdmin, isLimitedAccess, logout, viewAsLeader, setViewAsLeader } = useAuth();
   const checkoutEnabled = useCheckoutEnabled();
   const sweatersEnabled = useSweatersEnabled();
   const { mode: appMode } = useAppMode();
-  const inactiveForUser = appMode === 'inactive' && !isSuperAdmin;
+  const { seasonView, setSeasonView } = useSeasonView();
+  const inactiveForUser = (appMode === 'inactive' || isLimitedAccess) && !isSuperAdmin;
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
@@ -219,7 +226,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const bottomNavItems: BottomNavItem[] = inactiveForUser
     ? [
         { to: '/', icon: Home, label: 'Hjem' },
-        { to: '/chat', icon: MessageCircle, label: 'Ledersnakk' },
+        { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
+        { to: '/leaders', icon: Users, label: 'Ledere' },
+        { to: '/mer', icon: LayoutGrid, label: 'Mer' },
       ]
     : getBottomNavItems();
   const mainTabRoutes = bottomNavItems.map(item => item.to);
@@ -248,8 +257,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
     fixNavItem,
   ], [hasScheduleImage, isAdmin]);
 
-  // Build special access items based on role (only for nurse, not admin)
-  const specialAccessItems = isNurse && !isAdmin ? [nurseNavItem] : [];
+  // Build special access items based on role (only for non-admins)
+  const specialAccessItems = [
+    ...(isNurse && !isAdmin ? [nurseNavItem] : []),
+    ...(isKitchen && !isAdmin ? [kitchenNavItem] : []),
+  ];
 
   // Leader nav items for hamburger menu - filter items already in bottom nav
   const mobileLeaderNavItems = visibleLeaderNavItems.filter(item =>
@@ -560,7 +572,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {inactiveForUser ? (
             <div className="space-y-1">
               <NavLinkItem item={{ to: '/', icon: Home, label: 'Hjem' }} />
-              <NavLinkItem item={{ to: '/chat', icon: MessageCircle, label: 'Ledersnakk' }} />
+              <NavLinkItem item={{ to: '/chat', icon: MessageCircle, label: 'Lederhuset' }} />
+              <NavLinkItem item={{ to: '/lederpass', icon: PassIcon as LucideIcon, label: 'Lederpass' }} />
+              <NavLinkItem item={{ to: '/klineliste', icon: HeartHandshake, label: 'Klineliste' }} />
               <NavLinkItem item={{ to: '/profile', icon: User, label: 'Min Profil' }} />
             </div>
           ) : (<>
@@ -587,8 +601,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
             onOpenChange={(open) => setOpenGroups(prev => ({ ...prev, content: open }))}
           />
 
-          {/* Special access for nurse only (not admin) - collapsible */}
-          {isNurse && !isAdmin && (
+          {/* Special access for nurse/kitchen (not admin) - collapsible */}
+          {specialAccessItems.length > 0 && (
             <NavGroup
               label="Spesielle tilganger"
               items={specialAccessItems}
@@ -604,10 +618,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 Admin
               </div>
               <NavLinkItem item={nurseNavItem} />
+              <NavLinkItem item={kitchenNavItem} />
               <NavLinkItem item={participantsNavItem} />
               <NavLinkItem item={adminNavItem} />
             </div>
           )}
+
+          {/* Alle sider — samme rutenett som på mobil */}
+          <div className="pt-2 space-y-1">
+            <NavLinkItem item={merNavItem} />
+          </div>
           </>)}
         </nav>
 
@@ -701,8 +721,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </div>
             )}
 
-            {/* Special access for nurse only (not admin) - collapsible */}
-            {isNurse && !isAdmin && (
+            {/* Special access for nurse/kitchen (not admin) - collapsible */}
+            {specialAccessItems.length > 0 && (
               <NavGroup
                 label="Spesielle tilganger"
                 items={specialAccessItems}
@@ -719,6 +739,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   Admin
                 </div>
                 <NavLinkItem item={nurseNavItem} onClick={closeMobileMenu} />
+                <NavLinkItem item={kitchenNavItem} onClick={closeMobileMenu} />
                 <NavLinkItem item={participantsNavItem} onClick={closeMobileMenu} />
                 <NavLinkItem item={adminNavItem} onClick={closeMobileMenu} />
               </div>
@@ -810,6 +831,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
           style={{ height: isSubPage ? 'calc(56px + var(--safe-top))' : 'var(--safe-top)' }}
         />
         <div className="app-page-surface p-4 lg:p-6 min-w-0 w-full">
+          {seasonView && (
+            <div className="mb-4 flex items-center gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
+              <Archive className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span className="min-w-0 flex-1 text-amber-700 dark:text-amber-300">
+                Arkivmodus – alle perioder, kun lesing
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 shrink-0 px-2 text-xs"
+                onClick={() => setSeasonView(false)}
+              >
+                Avslutt
+              </Button>
+            </div>
+          )}
           <div
             key={location.key}
             className={cn('app-page-route', !supportsViewTransitions && 'app-page-fallback-enter')}

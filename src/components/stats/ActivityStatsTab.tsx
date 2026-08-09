@@ -1,3 +1,5 @@
+import { useSeasonView } from '@/contexts/SeasonViewContext';
+import { fetchSeasonParticipants } from '@/hooks/useSeasonParticipants';
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,16 +26,18 @@ export function ActivityStatsTab() {
     name: string;
   } | null>(null);
   const { data: activePeriodId } = useActivePeriodId();
+  const { seasonView } = useSeasonView();
+  const scope = seasonView ? 'season' : activePeriodId;
+  const scopeReady = seasonView || !!activePeriodId;
 
   // Fetch all activity registrations
   const { data: activityData, isLoading: loadingActivities } = useQuery({
-    queryKey: ["activity-stats", activePeriodId],
-    enabled: !!activePeriodId,
+    queryKey: ["activity-stats", scope],
+    enabled: scopeReady,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("participant_activities")
-        .select("activity, participant_id")
-        .eq("period_id", activePeriodId!);
+      let q = supabase.from("participant_activities").select("activity, participant_id");
+      if (!seasonView) q = q.eq("period_id", activePeriodId!);
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
@@ -41,9 +45,10 @@ export function ActivityStatsTab() {
 
   // Fetch participants with cabin info and name
   const { data: participants, isLoading: loadingParticipants } = useQuery({
-    queryKey: ["participants-for-stats", activePeriodId],
-    enabled: !!activePeriodId,
+    queryKey: ["participants-for-stats", scope],
+    enabled: scopeReady,
     queryFn: async () => {
+      if (seasonView) return (await fetchSeasonParticipants()) as any[];
       const { data, error } = await supabase
         .from("participants")
         .select("id, cabin_id, name, first_name, last_name, insj_points")

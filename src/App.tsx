@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { SeasonViewProvider } from "@/contexts/SeasonViewContext";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { useNativePushNavigation } from "@/hooks/useNativePushNavigation";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
@@ -13,6 +14,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AppLayout from "@/components/layout/AppLayout";
 import { useStatusBarTheme } from "@/hooks/useStatusBarTheme";
 import { useAppMode } from "@/hooks/useAppMode";
+import { isLimitedAccessRoute } from "@/lib/limitedAccess";
 
 // Critical path - load immediately
 import Login from "@/pages/Login";
@@ -29,6 +31,7 @@ const loadChat = () => import("@/pages/Chat");
 const loadMore = () => import("@/pages/More");
 
 const Profile = lazy(loadProfile);
+const SnusPage = lazy(() => import("@/pages/SnusPage"));
 const Leaders = lazy(loadLeaders);
 const Team = lazy(() => import("@/pages/Team"));
 const Passport = lazy(loadPassport);
@@ -41,6 +44,7 @@ const Admin = lazy(() => import("@/pages/admin/Admin"));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 const Nurse = lazy(() => import("@/pages/Nurse"));
 const Fix = lazy(() => import("@/pages/Fix"));
+const Mailbox = lazy(() => import("@/pages/Mailbox"));
 const RopeControl = lazy(() => import("@/pages/RopeControl"));
 const ImportantInfo = lazy(() => import("@/pages/ImportantInfo"));
 const ParticipantStats = lazy(() => import("@/pages/admin/ParticipantStats"));
@@ -60,6 +64,8 @@ const Chat = lazy(loadChat);
 const More = lazy(loadMore);
 const LederpassPage = lazy(() => import("@/pages/Lederpass"));
 const Kiosk = lazy(() => import("@/pages/Kiosk"));
+const Kjokken = lazy(() => import("@/pages/Kjokken"));
+const Klineliste = lazy(() => import("@/pages/Klineliste"));
 const PeriodArchive = lazy(() => import("@/pages/admin/PeriodArchive"));
 
 const queryClient = new QueryClient({
@@ -101,7 +107,7 @@ function PageLoader() {
 }
 
 function ProtectedRoute() {
-  const { leader, isLoading, isInitialized, isProfileComplete, authError, deactivatedMessage, retryAuth, isSuperAdmin } = useAuth();
+  const { leader, isLoading, isInitialized, isProfileComplete, authError, deactivatedMessage, retryAuth, isSuperAdmin, isLimitedAccess } = useAuth();
   const { mode } = useAppMode();
   const location = useLocation();
 
@@ -131,10 +137,10 @@ function ProtectedRoute() {
     return <Navigate to="/onboarding" replace />;
   }
 
-  // Inactive mode: hide all features for non-superadmins, only chat + profile allowed.
-  if (mode === 'inactive' && !isSuperAdmin) {
-    const allowed = ['/', '/chat', '/profile'];
-    if (!allowed.includes(location.pathname)) {
+  // Limited access: app-wide inactive mode, or a leader who is not active this
+  // period. Only the off-season surfaces are reachable for non-superadmins.
+  if ((mode === 'inactive' || isLimitedAccess) && !isSuperAdmin) {
+    if (!isLimitedAccessRoute(location.pathname)) {
       return <Navigate to="/" replace />;
     }
   }
@@ -246,6 +252,11 @@ function AppRoutes() {
           <Route path="/mer" element={<More />} />
           <Route path="/lederpass" element={<LederpassPage />} />
           <Route path="/kiosk" element={<Kiosk />} />
+          <Route path="/kjokken" element={<Kjokken />} />
+          <Route path="/postkasse" element={<Mailbox />} />
+          <Route path="/klineliste" element={<Klineliste />} />
+          <Route path="/snus" element={<SnusPage />} />
+          <Route path="/liggeliste" element={<Navigate to="/klineliste" replace />} />
         </Route>
 
         {/* Public routes */}
@@ -274,7 +285,9 @@ const App = () => (
             <OfflineIndicator />
             <BrowserRouter>
               <AuthProvider>
-                <AppRoutes />
+                <SeasonViewProvider>
+                  <AppRoutes />
+                </SeasonViewProvider>
               </AuthProvider>
             </BrowserRouter>
           </StatusPopupProvider>

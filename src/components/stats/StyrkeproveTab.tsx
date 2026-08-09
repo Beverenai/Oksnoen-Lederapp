@@ -1,3 +1,5 @@
+import { useSeasonView } from '@/contexts/SeasonViewContext';
+import { fetchSeasonParticipants } from '@/hooks/useSeasonParticipants';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActivePeriodId } from "@/hooks/useActivePeriodId";
@@ -60,14 +62,25 @@ export function StyrkeproveTab() {
     setDialogOpen(true);
   };
   const { data: activePeriodId } = useActivePeriodId();
+  const { seasonView } = useSeasonView();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["styrkeprove-stats", activePeriodId],
-    enabled: !!activePeriodId,
+    queryKey: ["styrkeprove-stats", seasonView ? 'season' : activePeriodId],
+    enabled: seasonView || !!activePeriodId,
     queryFn: async () => {
+      let participantQuery: any = supabase
+        .from("participants")
+        .select("id, name, first_name, last_name, cabin_id, image_url");
+      let activityQuery: any = supabase.from("participant_activities").select("participant_id, activity");
+      if (!seasonView) {
+        participantQuery = participantQuery.eq("period_id", activePeriodId!);
+        activityQuery = activityQuery.eq("period_id", activePeriodId!);
+      }
       const [participantsRes, activitiesRes, cabinsRes] = await Promise.all([
-        supabase.from("participants").select("id, name, first_name, last_name, cabin_id, image_url").eq("period_id", activePeriodId!),
-        supabase.from("participant_activities").select("participant_id, activity").eq("period_id", activePeriodId!),
+        seasonView
+          ? fetchSeasonParticipants().then((rows) => ({ data: rows as any[], error: null }))
+          : participantQuery,
+        activityQuery,
         supabase.from("cabins").select("id, name"),
       ]);
       if (participantsRes.error) throw participantsRes.error;

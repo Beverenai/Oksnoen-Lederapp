@@ -60,7 +60,7 @@ export default function Schedule() {
   if (!imageUrl) {
     return (
       <div className="space-y-6 animate-fade-in">
-        <Button variant="ghost" onClick={() => navigate('/')} className="mb-2">
+        <Button variant="ghost" onClick={() => navigate('/')} className="mb-2 hidden lg:inline-flex">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Tilbake
         </Button>
@@ -75,7 +75,7 @@ export default function Schedule() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <Button variant="ghost" onClick={() => navigate('/')} className="mb-2">
+      <Button variant="ghost" onClick={() => navigate('/')} className="mb-2 hidden lg:inline-flex">
         <ArrowLeft className="w-4 h-4 mr-2" />
         Tilbake
       </Button>

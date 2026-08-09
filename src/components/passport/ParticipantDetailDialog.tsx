@@ -14,6 +14,8 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useSeasonView } from '@/contexts/SeasonViewContext';
+import { fetchSeasonParticipants } from '@/hooks/useSeasonParticipants';
 import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X } from 'lucide-react';
@@ -76,11 +78,28 @@ interface ParticipantDetailDialogProps {
 }
 
 // Fetch participant detail directly from Supabase
-async function fetchParticipantDetail(participantId: string): Promise<{
+async function fetchParticipantDetail(participantId: string, seasonView = false): Promise<{
   participant: ParticipantWithCabin;
   healthInfo: HealthInfo | null;
   activities: ParticipantActivity[];
 }> {
+  // In season view the participant may belong to an older period, which RLS hides
+  // from a direct select — read it through the read-only season function instead.
+  if (seasonView) {
+    const [all, activitiesSeason, healthSeason] = await Promise.all([
+      fetchSeasonParticipants(),
+      supabase.from('participant_activities').select('*').eq('participant_id', participantId),
+      supabase.from('participant_health_info').select('*').eq('participant_id', participantId).maybeSingle(),
+    ]);
+    const row: any = all.find((p) => p.id === participantId);
+    if (!row) throw new Error('Deltager ikke funnet');
+    return {
+      participant: { ...row, cabin: row.cabins ?? null } as ParticipantWithCabin,
+      healthInfo: healthSeason.data as HealthInfo | null,
+      activities: (activitiesSeason.data || []) as ParticipantActivity[],
+    };
+  }
+
   const [participantRes, activitiesRes, healthRes] = await Promise.all([
     supabase.from('participants').select('*, cabins:cabin_id(id, name)').eq('id', participantId).single(),
     supabase.from('participant_activities').select('*').eq('participant_id', participantId),
@@ -171,6 +190,7 @@ function BonusPointsSection({
   currentLeaderId: string | null;
 }) {
   const { data: rows = [], addBonus, removeBonus } = useParticipantBonusPoints(participantId);
+  const { readOnly } = useSeasonView();
   const { showSuccess, showError } = useStatusPopup();
   const total = rows.reduce((sum, r) => sum + r.points, 0);
   const [open, setOpen] = useState(false);
@@ -232,7 +252,7 @@ function BonusPointsSection({
                   variant="outline"
                   className="h-9 px-3 shrink-0"
                   onClick={() => handleAdd(a.key, `${a.label} — ${a.extra}`)}
-                  disabled={addBonus.isPending}
+                  disabled={addBonus.isPending || readOnly}
                 >
                   +2
                 </Button>
@@ -243,7 +263,7 @@ function BonusPointsSection({
             <div className="space-y-1 pt-1">
               <p className="text-xs text-muted-foreground">Tildelt</p>
               {rows.map((r) => {
-                const canDelete = isAdmin || (currentLeaderId && r.awarded_by === currentLeaderId);
+                const canDelete = !readOnly && (isAdmin || (currentLeaderId && r.awarded_by === currentLeaderId));
                 return (
                   <div key={r.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-muted/40">
                     <Badge variant="default" className="tabular-nums">+{r.points}</Badge>
@@ -297,10 +317,12 @@ export const ParticipantDetailDialog = ({
   const savedSnapshotRef = useRef<string>('');
   const isEditingNotesRef = useRef(false);
 
+  const { readOnly, seasonView } = useSeasonView();
+
   // Fetch participant detail with caching
   const { data, isLoading, refetch: refetchParticipant } = useQuery({
-    queryKey: ['participant-detail-v2', participantId],
-    queryFn: () => fetchParticipantDetail(participantId!),
+    queryKey: ['participant-detail-v2', participantId, seasonView ? 'season' : 'active'],
+    queryFn: () => fetchParticipantDetail(participantId!, seasonView),
     enabled: open && !!participantId,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
@@ -579,7 +601,7 @@ export const ParticipantDetailDialog = ({
                   size="icon"
                   className="absolute bottom-0 right-0 rounded-full h-8 w-8 shadow-lg"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploadingImage}
+                  disabled={isUploadingImage || readOnly}
                 >
                   {isUploadingImage ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -783,6 +805,7 @@ export const ParticipantDetailDialog = ({
                       void saveActivityNotes(participant, activityNotes);
                     }}
                     placeholder="F.eks. '1. plass i svømming'..."
+                    readOnly={readOnly}
                     rows={2}
                     className="text-sm"
                   />
@@ -793,7 +816,7 @@ export const ParticipantDetailDialog = ({
                   variant={participant.has_arrived ? 'outline' : 'default'}
                   className="w-full"
                   onClick={toggleArrival}
-                  disabled={isTogglingArrival}
+                  disabled={isTogglingArrival || readOnly}
                 >
                   {isTogglingArrival ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -806,7 +829,7 @@ export const ParticipantDetailDialog = ({
                 </Button>
 
                 {/* Register incident */}
-                <Button variant="outline" className="w-full" onClick={() => setIncidentOpen(true)}>
+                <Button variant="outline" className="w-full" disabled={readOnly} onClick={() => setIncidentOpen(true)}>
                   <MessageSquareWarning className="h-4 w-4 mr-2 text-red-600" />
                   Registrer hendelse
                 </Button>
@@ -901,7 +924,7 @@ export const ParticipantDetailDialog = ({
                     variant={participant.pass_written ? 'outline' : 'default'}
                     className="w-full"
                     onClick={togglePassWritten}
-                    disabled={isTogglingPass}
+                    disabled={isTogglingPass || readOnly}
                   >
                     {isTogglingPass ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />

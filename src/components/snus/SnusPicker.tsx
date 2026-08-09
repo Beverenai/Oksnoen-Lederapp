@@ -11,6 +11,7 @@ import {
   searchSnus,
   getSnusProduct,
   customSnusProduct,
+  snusFullName,
   type SnusProduct,
 } from '@/lib/snusCatalog';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
@@ -21,14 +22,28 @@ interface SnusPickerProps {
   selectedId?: string | null;
   customLabel?: string | null;
   onSelect: (productId: string | null, customLabel: string | null) => void;
+  /** Tillat flere bokser (roterer i profilen) */
+  multi?: boolean;
+  selectedIds?: string[] | null;
+  onSelectMany?: (productIds: string[], customLabel: string | null) => void;
 }
 
-export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSelect }: SnusPickerProps) {
+export function SnusPicker({
+  open,
+  onOpenChange,
+  selectedId,
+  customLabel,
+  onSelect,
+  multi = false,
+  selectedIds,
+  onSelectMany,
+}: SnusPickerProps) {
   const [query, setQuery] = useState('');
   const [brand, setBrand] = useState<string | null>(null);
   const [customMode, setCustomMode] = useState(false);
   const [customValue, setCustomValue] = useState(customLabel ?? '');
   const [pickedId, setPickedId] = useState<string | null>(selectedId ?? null);
+  const [pickedIds, setPickedIds] = useState<string[]>(selectedIds ?? []);
 
   const list = useMemo(() => {
     const base = searchSnus(query);
@@ -38,19 +53,31 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
 
   // Start on the already selected can each time the sheet opens
   useEffect(() => {
-    if (open) setPickedId(selectedId ?? null);
-  }, [open, selectedId]);
+    if (!open) return;
+    setPickedId(selectedId ?? null);
+    setPickedIds(selectedIds ?? (selectedId ? [selectedId] : []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const toggle = (id: string) =>
+    setPickedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
+        onOpenAutoFocus={(e) => e.preventDefault()}
         className="flex h-[94dvh] flex-col gap-0 rounded-t-3xl p-0 sm:max-w-none"
       >
         {/* Sticky top: logo, title, search, brand chips */}
         <div className="shrink-0 px-4 pb-3 pt-5">
           <img src={oksnoenLogo} alt="Øksnøen" className="mx-auto h-14 w-14 object-contain" />
           <h2 className="mt-2 text-center font-heading text-2xl font-bold">Velg snusen din</h2>
+          {multi && !customMode && (
+            <p className="mt-1 text-center text-xs text-muted-foreground">
+              Velg så mange du vil – de roterer i profilen din
+            </p>
+          )}
 
           <div className="relative mt-3">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -58,7 +85,7 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
               placeholder="Søk merke eller smak"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-12 rounded-full pl-11"
+              className="h-12 rounded-full pl-11 text-base"
             />
           </div>
 
@@ -95,7 +122,8 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
                 className="flex-1"
                 disabled={!customValue.trim()}
                 onClick={() => {
-                  onSelect(null, customValue.trim());
+                  if (multi) onSelectMany?.([], customValue.trim());
+                  else onSelect(null, customValue.trim());
                   onOpenChange(false);
                 }}
               >
@@ -111,8 +139,8 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
                   <CanCard
                     key={p.id}
                     product={p}
-                    selected={p.id === pickedId}
-                    onClick={() => setPickedId(p.id)}
+                    selected={multi ? pickedIds.includes(p.id) : p.id === pickedId}
+                    onClick={() => (multi ? toggle(p.id) : setPickedId(p.id))}
                   />
                 ))}
               </div>
@@ -129,14 +157,24 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
               <Button
                 size="lg"
                 className="w-full rounded-full text-base"
-                disabled={!pickedId}
+                disabled={multi ? pickedIds.length === 0 : !pickedId}
                 onClick={() => {
+                  if (multi) {
+                    if (pickedIds.length === 0) return;
+                    onSelectMany?.(pickedIds, null);
+                    onOpenChange(false);
+                    return;
+                  }
                   if (!pickedId) return;
                   onSelect(pickedId, null);
                   onOpenChange(false);
                 }}
               >
-                Velg denne
+                {multi
+                  ? pickedIds.length > 1
+                    ? `Velg disse (${pickedIds.length})`
+                    : 'Velg denne'
+                  : 'Velg denne'}
               </Button>
             </div>
           </>
@@ -170,8 +208,8 @@ function CanCard({
           </span>
         )}
       </div>
-      <span className="mt-1 line-clamp-2 text-sm font-semibold leading-tight">
-        {product.brand} {product.variant}
+      <span className="mt-1 line-clamp-3 break-words text-sm font-semibold leading-tight">
+        {snusFullName(product)}
       </span>
       <span className="mt-0.5 text-xs text-muted-foreground">
         {product.flavor} • S{product.strength}

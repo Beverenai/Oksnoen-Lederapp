@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search } from 'lucide-react';
-import { cn, formatFullRoom } from '@/lib/utils';
+import { Search, ShoppingBag } from 'lucide-react';
+import { cn, formatCabinRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
 import type { ParticipantWithCabin } from '@/hooks/useParticipants';
 import type { KioskBalance } from '@/hooks/useKiosk';
@@ -13,11 +13,18 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   participants: ParticipantWithCabin[];
   balances?: Map<string, KioskBalance>;
+  visitCounts?: Map<string, number>;
   onSelect: (participant: ParticipantWithCabin) => void;
 }
 
-export function KioskParticipantPicker({ open, onOpenChange, participants, balances, onSelect }: Props) {
+export function KioskParticipantPicker({ open, onOpenChange, participants, balances, visitCounts, onSelect }: Props) {
   const [query, setQuery] = useState('');
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // New search resets only this list's scroll, never the page behind the sheet.
+  useEffect(() => {
+    if (listRef.current) listRef.current.scrollTop = 0;
+  }, [query]);
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -27,25 +34,32 @@ export function KioskParticipantPicker({ open, onOpenChange, participants, balan
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="flex h-[92dvh] flex-col gap-0 rounded-t-3xl p-0">
+      <SheetContent
+        side="bottom"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="flex h-[92dvh] flex-col gap-0 rounded-t-3xl p-0"
+      >
         <SheetHeader className="shrink-0 px-4 pb-3 pt-5">
           <SheetTitle className="text-center">Velg deltager</SheetTitle>
           <div className="relative mt-3">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              autoFocus
               placeholder="Søk etter navn"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-12 rounded-full pl-11"
+              className="h-12 rounded-full pl-11 text-base"
             />
           </div>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div
+          ref={listRef}
+          className="flex-1 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        >
           <div className="divide-y divide-border">
             {list.map((p) => {
               const balance = balances?.get(p.id)?.balance ?? 0;
+              const visits = visitCounts?.get(p.id) ?? 0;
               return (
                 <button
                   key={p.id}
@@ -54,19 +68,30 @@ export function KioskParticipantPicker({ open, onOpenChange, participants, balan
                     onOpenChange(false);
                     setQuery('');
                   }}
-                  className="flex w-full items-center gap-3 py-2.5 text-left active:bg-muted/50"
+                  className="flex w-full items-center gap-3 py-3 text-left active:bg-muted/50"
                 >
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="h-11 w-11 shrink-0">
                     <AvatarImage src={getParticipantThumb(p)} alt={p.name} />
                     <AvatarFallback className="text-xs">
                       {p.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{p.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {formatFullRoom(p.cabins?.name, p.room) || 'Ingen hytte'}
-                    </p>
+                    <p className="truncate text-base font-semibold leading-tight">{p.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="truncate text-xs text-muted-foreground">
+                        {formatCabinRoom(p.cabins?.name, p.room) || 'Ingen hytte'}
+                      </p>
+                      {visits > 0 && (
+                        <span
+                          className="flex shrink-0 items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground"
+                          title={`${visits} kjøp i Gomla`}
+                        >
+                          <ShoppingBag className="h-2.5 w-2.5" />
+                          {visits}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <span
                     className={cn(

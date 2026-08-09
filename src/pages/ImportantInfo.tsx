@@ -157,7 +157,7 @@ export default function ImportantInfo() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <Button variant="ghost" onClick={() => navigate('/passport')} className="mb-2">
+      <Button variant="ghost" onClick={() => navigate('/passport')} className="mb-2 hidden lg:inline-flex">
         <ArrowLeft className="w-4 h-4 mr-2" />
         Tilbake til passkontroll
       </Button>

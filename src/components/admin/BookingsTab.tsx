@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Phone, Mail, Loader2, Trash2 } from 'lucide-react';
 import { BookingImportCard } from '@/components/admin/bookings/BookingImportCard';
+import { MissingBookingInfoCard } from '@/components/admin/bookings/MissingBookingInfoCard';
 import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailSheet';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -128,6 +129,8 @@ export function BookingsTab() {
 
       <BookingImportCard periodId={periodId || null} onImported={() => qc.invalidateQueries({ queryKey: ['participant-bookings', periodId] })} />
 
+      <MissingBookingInfoCard periodId={periodId || null} />
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-2">
@@ -176,6 +179,12 @@ export function BookingsTab() {
         booking={selected}
         participant={selected ? participantByKey.get(`${(selected.first_name || '').toLowerCase().trim()}|${(selected.last_name || '').toLowerCase().trim()}|${selected.birth_date || ''}`) || null : null}
         onClose={() => setSelected(null)}
+        editable
+        onSaved={() => {
+          qc.invalidateQueries({ queryKey: ['participant-bookings'] });
+          qc.invalidateQueries({ queryKey: ['kiosk-deposits'] });
+          qc.invalidateQueries({ queryKey: ['participant-sweaters'] });
+        }}
       />
     </div>
   );

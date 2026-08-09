@@ -11,12 +11,17 @@ export function KioskAccountCard({ participantId }: { participantId: string }) {
   if (!b && sales.length === 0) return null;
 
   const balance = b?.balance ?? 0;
+  // Number of actual visits: completed (non-voided) purchases.
+  const visits = sales.filter((s) => !s.voided_at).length;
 
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2 text-sm font-medium">
         <ShoppingBasket className="h-4 w-4 text-emerald-600" />
         <span>Gomla</span>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
+          {visits} besøk
+        </span>
         <span
           className={cn(
             'ml-auto rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums',

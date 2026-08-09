@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
@@ -52,6 +53,7 @@ interface FixTask {
 interface Leader {
   id: string;
   name: string;
+  profile_image_url?: string | null;
 }
 
 export default function Fix() {
@@ -105,7 +107,7 @@ export default function Fix() {
         tasksQuery,
         supabase
           .from('leaders')
-          .select('id, name')
+          .select('id, name, profile_image_url')
           .eq('is_active', true)
           .order('name')
       ]);
@@ -367,16 +369,13 @@ export default function Fix() {
 
   const handleMarkAsFixed = async (taskId: string) => {
     try {
-      const { error } = await supabase
-        .from('fix_tasks')
-        .update({
-          status: 'fixed',
-          fixed_at: new Date().toISOString(),
-          fixed_by: leader?.id
-        })
-        .eq('id', taskId);
-
+      const { error } = await supabase.rpc('mark_fix_task_fixed', { _task_id: taskId });
       if (error) throw error;
+
+      // Optimistic local update
+      setTasks((prev) => prev.map((t) => (t.id === taskId
+        ? { ...t, status: 'fixed', fixed_at: new Date().toISOString(), fixed_by: leader?.id ?? null }
+        : t)));
 
       showSuccess('Markert som fikset!');
       setSelectedTask(null);
@@ -715,7 +714,15 @@ export default function Fix() {
                       <SelectContent>
                         {leaders.map((l) => (
                           <SelectItem key={l.id} value={l.id}>
-                            {l.name}
+                            <span className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6 shrink-0">
+                                {l.profile_image_url && (
+                                  <AvatarImage src={l.profile_image_url} alt="" loading="lazy" className="object-cover" />
+                                )}
+                                <AvatarFallback className="text-[10px]">{l.name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <span className="truncate">{l.name}</span>
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>

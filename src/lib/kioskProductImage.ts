@@ -8,6 +8,7 @@ import gottBlandat from '@/assets/kiosk/gott-blandat.webp';
 import gullchips from '@/assets/kiosk/gullchips.webp';
 import japp from '@/assets/kiosk/japp.webp';
 import kimsPaprika from '@/assets/kiosk/kims-paprika.webp';
+import kimsSaltCrunch from '@/assets/kiosk/kims-salt-crunch.webp';
 import kimsSourcream from '@/assets/kiosk/kims-sourcream.webp';
 import kinderBueno from '@/assets/kiosk/kinder-bueno.webp';
 import kinderMaxi from '@/assets/kiosk/kinder-maxi.webp';
@@ -18,6 +19,7 @@ import lollipop from '@/assets/kiosk/lollipop.webp';
 import loveHearts from '@/assets/kiosk/love-hearts.webp';
 import maoam from '@/assets/kiosk/maoam.webp';
 import melkerull from '@/assets/kiosk/melkerull.webp';
+import minimix from '@/assets/kiosk/minimix.webp';
 import pepsiMax from '@/assets/kiosk/pepsi-max.webp';
 import roulette from '@/assets/kiosk/roulette.webp';
 import smil from '@/assets/kiosk/smil.webp';
@@ -40,11 +42,13 @@ const PRODUCT_IMAGES: Array<{ test: RegExp; src: string }> = [
   { test: /urge/i, src: urge },
   { test: /villa/i, src: villa },
   { test: /cheez|doodle/i, src: cheezDoodles },
+  { test: /salt\s*crunch|havsalt/i, src: kimsSaltCrunch },
   { test: /kims.*(?:sour|cream)|(?:sour|cream).*kims/i, src: kimsSourcream },
   { test: /kims.*paprika|paprika.*kims/i, src: kimsPaprika },
   { test: /gullchips|petters/i, src: gullchips },
   { test: /gott\s*(?:&|og)?\s*blandat/i, src: gottBlandat },
   { test: /knatt(?:ar|er)/i, src: knattar },
+  { test: /mini\s*mix/i, src: minimix },
   { test: /bubs/i, src: bubs },
   { test: /fizzy/i, src: fizzypop },
   { test: /haribo|roulette/i, src: roulette },

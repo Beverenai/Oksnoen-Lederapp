@@ -16,7 +16,7 @@ import {
   type IncidentCategory,
   type IncidentSeverity,
 } from '@/hooks/useParticipantIncidents';
-import { cn } from '@/lib/utils';
+import { cn, formatCabinRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -62,7 +62,10 @@ export function IncidentSheet({ open, onOpenChange, incident, prefillParticipant
     const q = search.trim().toLowerCase();
     if (!q) return participants.slice(0, 30);
     return participants
-      .filter((p) => p.name.toLowerCase().includes(q))
+      .filter((p) => {
+        const loc = formatCabinRoom(p.cabins?.name, p.room)?.toLowerCase() ?? '';
+        return p.name.toLowerCase().includes(q) || loc.includes(q);
+      })
       .slice(0, 50);
   }, [participants, search]);
 
@@ -127,15 +130,15 @@ export function IncidentSheet({ open, onOpenChange, incident, prefillParticipant
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-md w-full overflow-y-auto">
-        <SheetHeader>
+      <SheetContent className="sm:max-w-md w-full flex flex-col p-0 gap-0 h-[100dvh]">
+        <SheetHeader className="px-6 pt-6 pb-3 shrink-0">
           <SheetTitle>{incident ? 'Rediger hendelse' : 'Ny hendelse'}</SheetTitle>
           <SheetDescription>
             Logg en hendelse knyttet til én eller flere deltagere. Kun du og admin ser den.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-5 mt-5 pb-8">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-6 space-y-5">
           <div>
             <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tittel</label>
             <Input
@@ -249,7 +252,14 @@ export function IncidentSheet({ open, onOpenChange, incident, prefillParticipant
                       <AvatarImage src={getParticipantThumb(p as any)} alt="" loading="lazy" decoding="async" />
                       <AvatarFallback className="text-xs">{p.name.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <span className="flex-1 truncate">{p.name}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{p.name}</span>
+                      {formatCabinRoom(p.cabins?.name, p.room) && (
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {formatCabinRoom(p.cabins?.name, p.room)}
+                        </span>
+                      )}
+                    </span>
                     {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
                   </button>
                 );
@@ -260,6 +270,12 @@ export function IncidentSheet({ open, onOpenChange, incident, prefillParticipant
             </div>
           </div>
 
+        </div>
+
+        <div
+          className="shrink-0 border-t bg-background px-6 py-3"
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+        >
           <div className="flex gap-2">
             <Button onClick={save} disabled={!canSave || isSaving} className="flex-1">
               {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}

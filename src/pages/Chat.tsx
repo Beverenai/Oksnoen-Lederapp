@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, Trash2 } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { cn } from '@/lib/utils';
 
@@ -13,6 +13,8 @@ interface ChatMessage {
   leader_id: string;
   body: string;
   created_at: string;
+  channel?: string | null;
+  period_id?: string | null;
 }
 
 interface LeaderLite {
@@ -22,6 +24,29 @@ interface LeaderLite {
 }
 
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
+
+/** Stable per-sender name color, WhatsApp-style. */
+const NAME_COLORS = [
+  'text-primary',
+  'text-emerald-500',
+  'text-sky-500',
+  'text-violet-500',
+  'text-amber-500',
+  'text-rose-500',
+  'text-teal-500',
+  'text-indigo-500',
+];
+function nameColor(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 997;
+  return NAME_COLORS[h % NAME_COLORS.length];
+}
+
+function initials(name?: string) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '??';
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+}
 
 function sameDay(a: Date, b: Date) {
   return (
@@ -47,8 +72,13 @@ function timeLabel(iso: string) {
 }
 
 export default function Chat() {
-  const { leader, isSuperAdmin } = useAuth();
+  const { leader, isLimitedAccess } = useAuth();
   const { showError } = useStatusPopup();
+  const canUsePeriodChat = !isLimitedAccess && leader?.is_active !== false;
+  const [channel, setChannel] = useState<'period' | 'offseason'>(
+    canUsePeriodChat ? 'period' : 'offseason',
+  );
+  const [periodLabel, setPeriodLabel] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [leaders, setLeaders] = useState<Record<string, LeaderLite>>({});
   const [input, setInput] = useState('');
@@ -81,12 +111,28 @@ export default function Chat() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      setMessages([]);
+      let periodId: string | null = null;
+      if (channel === 'period') {
+        const { data: period } = await supabase
+          .from('periods')
+          .select('id,name')
+          .eq('is_active', true)
+          .maybeSingle();
+        periodId = period?.id ?? null;
+        if (!cancelled) setPeriodLabel(period?.name ?? null);
+      }
+
+      let query = supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('channel', channel)
+        .order('created_at', { ascending: true })
+        .limit(500);
+      if (channel === 'period' && periodId) query = query.eq('period_id', periodId);
+
       const [{ data: msgs }, { data: lds }] = await Promise.all([
-        supabase
-          .from('chat_messages')
-          .select('*')
-          .order('created_at', { ascending: true })
-          .limit(500),
+        query,
         supabase.from('leaders').select('id,name,profile_image_url'),
       ]);
       if (cancelled) return;
@@ -97,13 +143,14 @@ export default function Chat() {
       scrollToBottom(true);
     })();
 
-    const channel = supabase
-      .channel('chat-messages')
+    const rt = supabase
+      .channel(`chat-messages-${channel}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages' },
         (payload) => {
           const incoming = payload.new as ChatMessage;
+          if ((incoming.channel ?? 'period') !== channel) return;
           setMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
           scrollToBottom();
         },
@@ -119,9 +166,9 @@ export default function Chat() {
 
     return () => {
       cancelled = true;
-      supabase.removeChannel(channel);
+      supabase.removeChannel(rt);
     };
-  }, []);
+  }, [channel]);
 
   const send = async () => {
     const body = input.trim();
@@ -131,22 +178,21 @@ export default function Chat() {
     const { error } = await supabase.from('chat_messages').insert({
       leader_id: leader.id,
       body,
+      channel,
     });
     setSending(false);
     if (error) {
-      showError('Kunne ikke sende melding');
+      showError(
+        channel === 'period'
+          ? 'Kunne ikke sende melding. Bare ledere som er aktive denne perioden kan skrive i periodechatten.'
+          : 'Kunne ikke sende melding',
+      );
       return;
     }
     setInput('');
     // Reset textarea auto-grow
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     scrollToBottom(true);
-  };
-
-  const del = async (m: ChatMessage) => {
-    if (!confirm('Slette denne meldingen?')) return;
-    const { error } = await supabase.from('chat_messages').delete().eq('id', m.id);
-    if (error) showError('Kunne ikke slette');
   };
 
   // Build render items with day separators + sender grouping.
@@ -176,18 +222,12 @@ export default function Chat() {
         prevSender = null;
       }
       const sameGroup = prevSender === m.leader_id && ts - prevTs < GROUP_WINDOW_MS;
-      const next = messages[i + 1];
-      const nextSameGroup =
-        next &&
-        next.leader_id === m.leader_id &&
-        sameDay(new Date(next.created_at), d) &&
-        new Date(next.created_at).getTime() - ts < GROUP_WINDOW_MS;
       out.push({
         kind: 'msg',
         key: m.id,
         msg: m,
         showHeader: !sameGroup,
-        showAvatar: !nextSameGroup,
+        showAvatar: !sameGroup,
         isMe,
       });
       prevDate = d;
@@ -214,10 +254,38 @@ export default function Chat() {
   return (
     <div className="flex flex-col h-[calc(100dvh-140px)] gap-3 animate-fade-in">
       <div className="shrink-0">
-        <h1 className="text-2xl font-heading font-bold">Øksnøen Chat</h1>
+        <h1 className="text-2xl font-heading font-bold">Lederhuset</h1>
         <p className="text-sm text-muted-foreground">
-          Meldinger mellom alle Øksnøen-ledere
+          {channel === 'period'
+            ? `Periodechat${periodLabel ? ` · ${periodLabel}` : ''} — for ledere som jobber nå`
+            : 'Off season — åpen for alle ledere, hele året'}
         </p>
+        <div className="mt-3 flex gap-1 rounded-full border bg-card/60 p-1 backdrop-blur">
+          <button
+            type="button"
+            onClick={() => setChannel('period')}
+            className={cn(
+              'flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+              channel === 'period'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            Periode
+          </button>
+          <button
+            type="button"
+            onClick={() => setChannel('offseason')}
+            className={cn(
+              'flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+              channel === 'offseason'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            Off season
+          </button>
+        </div>
       </div>
 
       <div
@@ -243,62 +311,70 @@ export default function Chat() {
           }
           const { msg, showHeader, showAvatar, isMe } = it;
           const author = leaders[msg.leader_id];
-          const canDelete = isMe || isSuperAdmin;
           return (
             <div
               key={it.key}
               className={cn(
-                'flex gap-2 items-end group',
+                'flex gap-2 items-start group',
                 isMe && 'flex-row-reverse',
                 showHeader ? 'mt-3' : 'mt-0.5',
               )}
             >
-              <div className="w-8 shrink-0">
-                {showAvatar && !isMe && (
-                  <Avatar className="w-8 h-8">
+              <div className="w-9 shrink-0">
+                {showAvatar && (
+                  <Avatar className="w-9 h-9 ring-1 ring-border/60">
                     <AvatarImage src={author?.profile_image_url || undefined} />
-                    <AvatarFallback className="text-xs">
-                      {author?.name?.slice(0, 2).toUpperCase() || '??'}
+                    <AvatarFallback className="text-[11px] font-semibold">
+                      {initials(author?.name)}
                     </AvatarFallback>
                   </Avatar>
                 )}
               </div>
               <div className={cn('max-w-[75%] flex flex-col', isMe && 'items-end')}>
-                {showHeader && !isMe && (
-                  <div className="text-[11px] text-muted-foreground px-1 mb-0.5">
-                    {author?.name || 'Ukjent'} · {timeLabel(msg.created_at)}
+                {showHeader && (
+                  <div className="flex items-center gap-1.5 px-1 mb-0.5">
+                    <span
+                      className={cn(
+                        'text-[12px] font-semibold',
+                        isMe ? 'text-muted-foreground' : nameColor(msg.leader_id),
+                      )}
+                    >
+                      {isMe ? 'Deg' : author?.name || 'Ukjent'}
+                    </span>
                   </div>
                 )}
                 <div
                   title={new Date(msg.created_at).toLocaleString('nb-NO')}
                   className={cn(
-                    'rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words shadow-sm',
+                    'rounded-2xl px-3 py-2 pb-1.5 text-sm whitespace-pre-wrap break-words shadow-sm',
                     isMe
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted text-foreground',
                     isMe && showHeader && 'rounded-tr-md',
-                    isMe && !showAvatar && 'rounded-br-md',
                     !isMe && showHeader && 'rounded-tl-md',
-                    !isMe && !showAvatar && 'rounded-bl-md',
                   )}
                 >
                   {msg.body}
+                  <span
+                    className={cn(
+                      'block text-[10px] leading-none mt-1',
+                      isMe ? 'text-primary-foreground/70 text-right' : 'text-muted-foreground',
+                    )}
+                  >
+                    {timeLabel(msg.created_at)}
+                  </span>
                 </div>
               </div>
-              {canDelete && (
-                <button
-                  onClick={() => del(msg)}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity self-center"
-                  aria-label="Slett melding"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
             </div>
           );
         })}
       </div>
 
+      {channel === 'period' && !canUsePeriodChat ? (
+        <p className="shrink-0 rounded-2xl border bg-card/40 px-3 py-2.5 text-center text-sm text-muted-foreground">
+          Du er ikke aktiv leder denne perioden — du kan lese her, men skrive i off season-chatten.
+        </p>
+      ) : (
       <form
         onSubmit={(e) => { e.preventDefault(); send(); }}
         className="shrink-0 flex gap-2 items-end"
@@ -318,6 +394,7 @@ export default function Chat() {
           <Send className="w-4 h-4" />
         </Button>
       </form>
+      )}
     </div>
   );
 }

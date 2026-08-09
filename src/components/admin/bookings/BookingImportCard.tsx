@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, Loader2, FileSpreadsheet } from 'lucide-react';
+import { Upload, Loader2, FileSpreadsheet, RefreshCw } from 'lucide-react';
+import { syncBookingExtras, type BookingSyncResult } from '@/lib/syncBookingExtras';
 
 interface Props {
   periodId: string | null;
@@ -186,6 +187,29 @@ export function BookingImportCard({ periodId, onImported }: Props) {
   const [pasteText, setPasteText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [replaceExisting, setReplaceExisting] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<BookingSyncResult | null>(null);
+
+  const runSync = async (silent = false) => {
+    if (!periodId) {
+      if (!silent) showError('Ingen aktiv periode');
+      return;
+    }
+    setIsSyncing(true);
+    try {
+      const res = await syncBookingExtras(periodId);
+      setSyncResult(res);
+      showSuccess(
+        `${res.depositsCreated + res.depositsUpdated} kioskinnskudd, ${res.sweatersSet} genserstørrelser`,
+        res.unmatched.length ? `${res.unmatched.length} bookinger uten matchende deltager` : undefined,
+      );
+    } catch (e: any) {
+      console.error('Booking sync failed:', e);
+      showError('Synk feilet', e?.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const upsert = async (mapped: Record<string, unknown>[]) => {
     if (!periodId) {
@@ -226,6 +250,7 @@ export function BookingImportCard({ periodId, onImported }: Props) {
     if (firstError) showError(`${saved} lagret. Feil: ${firstError}`);
     else showSuccess(`${saved} rader importert`);
     onImported();
+    await runSync(true);
   };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -302,6 +327,40 @@ export function BookingImportCard({ periodId, onImported }: Props) {
             </Button>
           </TabsContent>
         </Tabs>
+
+        <div className="mt-6 border-t pt-4 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => runSync()} disabled={isSyncing || !periodId}>
+              {isSyncing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              Synk kioskpenger og gensere fra booking
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Overfører Kioskpenger til Gomla-saldo og Genser til forhåndsbestilte størrelser. Kan kjøres flere ganger –
+            manuelle innskudd og «hentet»-status berøres ikke.
+          </p>
+
+          {syncResult && (
+            <div className="rounded-lg border bg-muted/40 p-3 text-sm space-y-2">
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                <span>Matchet deltagere: <strong>{syncResult.matched}</strong></span>
+                <span>Nye innskudd: <strong>{syncResult.depositsCreated}</strong></span>
+                <span>Oppdaterte innskudd: <strong>{syncResult.depositsUpdated}</strong></span>
+                <span>Genserstørrelser: <strong>{syncResult.sweatersSet}</strong></span>
+              </div>
+              {syncResult.unmatched.length > 0 && (
+                <div>
+                  <p className="font-medium text-destructive">
+                    Fant ingen deltager for {syncResult.unmatched.length} bookinger:
+                  </p>
+                  <ul className="mt-1 max-h-40 overflow-y-auto text-xs text-muted-foreground space-y-0.5">
+                    {syncResult.unmatched.map(n => <li key={n}>{n}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

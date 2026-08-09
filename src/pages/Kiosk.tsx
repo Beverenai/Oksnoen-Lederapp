@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -22,23 +22,28 @@ import {
   Receipt,
   Search,
   ChevronRight,
+  Pencil,
+  History,
 } from 'lucide-react';
-import { cn, formatFullRoom } from '@/lib/utils';
+import { cn, formatCabinRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
 import { useParticipants, type ParticipantWithCabin } from '@/hooks/useParticipants';
 import {
   useKioskBalances,
+  useKioskVisitCounts,
   useKioskCatalog,
   useKioskSales,
   useRecordKioskSale,
   useVoidKioskSale,
+  useEditKioskSale,
   type CartLine,
   type KioskProduct,
   type KioskSale,
 } from '@/hooks/useKiosk';
-import { supabase } from '@/integrations/supabase/client';
 import { KioskParticipantPicker } from '@/components/kiosk/KioskParticipantPicker';
+import { useSeasonView } from '@/contexts/SeasonViewContext';
 import { KioskReceiptSheet } from '@/components/kiosk/KioskReceiptSheet';
+import { KioskSuccessDialog, type KioskSuccessData } from '@/components/kiosk/KioskSuccessDialog';
 import { receiptLabel, type ReceiptData } from '@/lib/kioskReceipt';
 import { getTileStyle } from '@/lib/kioskBrand';
 import { getKioskProductImage } from '@/lib/kioskProductImage';
@@ -47,9 +52,12 @@ const Kiosk = () => {
   const { data: participants = [], isLoading: participantsLoading } = useParticipants();
   const { data: catalog, isLoading: catalogLoading } = useKioskCatalog();
   const { data: balances } = useKioskBalances();
+  const { data: visitCounts } = useKioskVisitCounts();
   const { data: recentSales = [] } = useKioskSales();
   const recordSale = useRecordKioskSale();
+  const { readOnly } = useSeasonView();
   const voidSale = useVoidKioskSale();
+  const editSale = useEditKioskSale();
 
   const [participant, setParticipant] = useState<ParticipantWithCabin | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -62,6 +70,30 @@ const Kiosk = () => {
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptIsNew, setReceiptIsNew] = useState(false);
+  const [success, setSuccess] = useState<KioskSuccessData | null>(null);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<KioskSale | null>(null);
+  const [editLines, setEditLines] = useState<CartLine[]>([]);
+  const [editSearch, setEditSearch] = useState('');
+  const submittingRef = useRef(false);
+  const clientRefRef = useRef<string | null>(null);
+
+  /** Stable idempotency key for the current cart — reused across retries. */
+  const cartRef = () => {
+    if (!clientRefRef.current) {
+      clientRefRef.current =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`;
+    }
+    return clientRefRef.current;
+  };
+
+  /** Opens a sheet without letting iOS pop the keyboard from an autofocused field. */
+  const blurActive = () => {
+    const el = document.activeElement as HTMLElement | null;
+    el?.blur?.();
+  };
 
   const categories = catalog?.categories ?? [];
   const products = catalog?.products ?? [];
@@ -128,7 +160,7 @@ const Kiosk = () => {
       saleNumber: sale.sale_number,
       createdAt: sale.created_at,
       participantName: p?.name ?? 'Ukjent deltager',
-      participantRoom: p ? formatFullRoom(p.cabins?.name, p.room) : null,
+      participantRoom: p ? formatCabinRoom(p.cabins?.name, p.room) : null,
       soldByName: sale.sold_by_name,
       items: sale.items,
       total: sale.total,
@@ -163,38 +195,124 @@ const Kiosk = () => {
 
   const handleCheckout = async () => {
     if (!participant) {
+      blurActive();
       setPickerOpen(true);
       return;
     }
     if (lines.length === 0) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    blurActive();
+    const buyer = participant;
+    const soldLines = lines;
+    const soldTotal = total;
+    const soldRemaining = remaining;
+    const ref = cartRef();
     try {
-      const saleId = await recordSale.mutateAsync({ participantId: participant.id, lines });
-      const { data } = await supabase
-        .from('kiosk_sales')
-        .select('sale_number, created_at, leaders!kiosk_sales_sold_by_fkey(name)')
-        .eq('id', saleId)
-        .maybeSingle();
-      setReceipt({
+      setLines([]);
+      setParticipant(null);
+      const saleId = await recordSale.mutateAsync({
+        participantId: buyer.id,
+        lines: soldLines,
+        clientRef: ref,
+      });
+      clientRefRef.current = null;
+      setSuccess({
         saleId,
-        saleNumber: (data as any)?.sale_number ?? null,
-        createdAt: (data as any)?.created_at ?? new Date().toISOString(),
-        participantName: participant.name,
-        participantRoom: formatFullRoom(participant.cabins?.name, participant.room),
-        soldByName: (data as any)?.leaders?.name ?? null,
-        items: lines.map((l) => ({
+        participantName: buyer.name,
+        participantRoom: formatCabinRoom(buyer.cabins?.name, buyer.room),
+        participantImage: getParticipantThumb(buyer),
+        items: soldLines.map((l) => ({
           product_name: l.product.name,
           unit_price: l.product.price,
           quantity: l.quantity,
         })),
-        total,
-        balanceAfter: remaining,
+        total: soldTotal,
+        remaining: soldRemaining,
       });
-      setReceiptIsNew(true);
-      setReceiptOpen(true);
-      setLines([]);
-      setParticipant(null);
+      setSuccessOpen(true);
     } catch (err: any) {
       toast.error('Kunne ikke registrere kjøp', { description: err?.message });
+      setParticipant(buyer);
+      setLines(soldLines);
+    } finally {
+      submittingRef.current = false;
+    }
+  };
+
+  /** Voids the sale shown in the success dialog. */
+  const undoSuccess = async () => {
+    if (!success) return;
+    try {
+      await voidSale.mutateAsync(success.saleId);
+      toast.success('Kjøpet er angret');
+      setSuccessOpen(false);
+    } catch (err: any) {
+      toast.error('Kunne ikke angre kjøpet', { description: err?.message });
+    }
+  };
+
+  /** Opens the full receipt for the sale shown in the success dialog. */
+  const showSuccessReceipt = () => {
+    if (!success) return;
+    setReceipt({
+      saleId: success.saleId,
+      saleNumber: null,
+      createdAt: new Date().toISOString(),
+      participantName: success.participantName,
+      participantRoom: success.participantRoom,
+      soldByName: null,
+      items: success.items,
+      total: success.total,
+      balanceAfter: success.remaining,
+    });
+    setReceiptIsNew(true);
+    setSuccessOpen(false);
+    setReceiptOpen(true);
+  };
+
+  /** Opens the edit sheet for an existing sale, mapping its items back to products. */
+  const startEdit = (sale: KioskSale) => {
+    const mapped: CartLine[] = [];
+    sale.items.forEach((i) => {
+      const product = products.find((p) => p.name === i.product_name);
+      if (product) mapped.push({ product, quantity: i.quantity });
+    });
+    setEditLines(mapped);
+    setEditSearch('');
+    setEditTarget(sale);
+  };
+
+  const changeEditQuantity = (productId: string, delta: number) => {
+    setEditLines((prev) =>
+      prev
+        .map((l) => (l.product.id === productId ? { ...l, quantity: l.quantity + delta } : l))
+        .filter((l) => l.quantity > 0)
+    );
+  };
+
+  const addEditLine = (product: KioskProduct) => {
+    setEditLines((prev) => {
+      const existing = prev.find((l) => l.product.id === product.id);
+      if (existing) {
+        return prev.map((l) =>
+          l.product.id === product.id ? { ...l, quantity: l.quantity + 1 } : l
+        );
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
+  };
+
+  const editTotal = editLines.reduce((sum, l) => sum + l.product.price * l.quantity, 0);
+
+  const saveEdit = async () => {
+    if (!editTarget || editLines.length === 0) return;
+    try {
+      await editSale.mutateAsync({ saleId: editTarget.id, lines: editLines });
+      toast.success('Kjøpet er oppdatert');
+      setEditTarget(null);
+    } catch (err: any) {
+      toast.error('Kunne ikke endre kjøpet', { description: err?.message });
     }
   };
 
@@ -258,7 +376,10 @@ const Kiosk = () => {
                 variant="secondary"
                 size="icon"
                 className="h-9 w-9 shrink-0 rounded-full"
-                onClick={() => setHistoryOpen(true)}
+                onClick={() => {
+                  setHistorySearch('');
+                  setHistoryOpen(true);
+                }}
                 aria-label="Kvitteringer"
               >
                 <Receipt className="h-4 w-4" />
@@ -267,28 +388,36 @@ const Kiosk = () => {
           )}
         </div>
 
-        {/* Category chips */}
-        {!search && (
-          <div className="-mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 pb-0.5 lg:-mx-6 lg:px-6">
-            <CategoryChip label="Alle" active={!activeCategory} onClick={() => setActiveCategory(null)} />
-            {categories.map((c) => (
-              <CategoryChip
-                key={c.id}
-                label={c.name}
-                active={activeCategory === c.id}
-                onClick={() => setActiveCategory(activeCategory === c.id ? null : c.id)}
-              />
-            ))}
-          </div>
-        )}
+        {/* Category chips — always rendered so the toolbar keeps a constant height while searching */}
+        <div
+          className={cn(
+            '-mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 pb-0.5 lg:-mx-6 lg:px-6',
+            search && 'pointer-events-none opacity-40'
+          )}
+          aria-hidden={!!search}
+        >
+          <CategoryChip label="Alle" active={!activeCategory} onClick={() => setActiveCategory(null)} />
+          {categories.map((c) => (
+            <CategoryChip
+              key={c.id}
+              label={c.name}
+              active={activeCategory === c.id}
+              onClick={() => setActiveCategory(activeCategory === c.id ? null : c.id)}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Selected participant */}
       <Card
-        onClick={() => setPickerOpen(true)}
+        onClick={() => {
+          blurActive();
+          setPickerOpen(true);
+        }}
         className="mb-3 cursor-pointer p-3 active:scale-[0.99] transition-transform"
       >
         {participant ? (
+          <>
           <div className="flex items-center gap-3">
             <Avatar className="h-11 w-11">
               <AvatarImage src={getParticipantThumb(participant)} alt={participant.name} />
@@ -299,7 +428,7 @@ const Kiosk = () => {
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{participant.name}</p>
               <p className="truncate text-xs text-muted-foreground">
-                {formatFullRoom(participant.cabins?.name, participant.room) || 'Ingen hytte'}
+                {formatCabinRoom(participant.cabins?.name, participant.room) || 'Ingen hytte'}
               </p>
             </div>
             <div className="text-right">
@@ -326,6 +455,20 @@ const Kiosk = () => {
               <X className="h-4 w-4" />
             </Button>
           </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="mt-2 w-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              setHistorySearch(participant.name);
+              setHistoryOpen(true);
+            }}
+          >
+            <History className="mr-2 h-4 w-4" />
+            Historikk for {participant.name.split(' ')[0]}
+          </Button>
+          </>
         ) : (
           <div className="flex items-center gap-3 text-muted-foreground">
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted">
@@ -339,8 +482,8 @@ const Kiosk = () => {
         )}
       </Card>
 
-      {/* Product grid, grouped by category */}
-      <div className="space-y-5">
+      {/* Product grid, grouped by category — min height keeps the page from collapsing (and jumping) while searching */}
+      <div className="min-h-[70vh] space-y-5">
         {productGroups.map((group) => (
           <section key={group.id}>
             <div className="mb-2 flex items-center gap-2">
@@ -433,7 +576,12 @@ const Kiosk = () => {
       {/* Cart bar */}
       {lines.length > 0 && (
         <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 px-4 lg:px-8">
-          <div className="mx-auto max-w-2xl rounded-3xl border border-border/60 bg-background/85 p-3 shadow-lg backdrop-blur-xl">
+          <div
+            className={cn(
+              'mx-auto max-w-2xl rounded-3xl border border-border/60 bg-background/85 p-3 shadow-lg backdrop-blur-xl transition-opacity',
+              recordSale.isPending && 'pointer-events-none opacity-70'
+            )}
+          >
             <div className="max-h-40 space-y-1.5 overflow-y-auto">
               {lines.map((l) => (
                 <div key={l.product.id} className="flex items-center gap-2">
@@ -444,6 +592,7 @@ const Kiosk = () => {
                       size="icon"
                       className="h-7 w-7 rounded-full"
                       onClick={() => changeQuantity(l.product.id, -1)}
+                      disabled={recordSale.isPending}
                       aria-label="Færre"
                     >
                       <Minus className="h-3.5 w-3.5" />
@@ -454,6 +603,7 @@ const Kiosk = () => {
                       size="icon"
                       className="h-7 w-7 rounded-full"
                       onClick={() => changeQuantity(l.product.id, 1)}
+                      disabled={recordSale.isPending}
                       aria-label="Flere"
                     >
                       <Plus className="h-3.5 w-3.5" />
@@ -472,6 +622,7 @@ const Kiosk = () => {
                 size="icon"
                 className="h-10 w-10 shrink-0 text-muted-foreground"
                 onClick={() => setLines([])}
+                disabled={recordSale.isPending}
                 aria-label="Tøm handlekurv"
               >
                 <Trash2 className="h-4 w-4" />
@@ -492,7 +643,7 @@ const Kiosk = () => {
               <Button
                 size="lg"
                 className="shrink-0 gap-2 rounded-full"
-                disabled={recordSale.isPending}
+                disabled={recordSale.isPending || readOnly}
                 onClick={handleCheckout}
               >
                 {recordSale.isPending ? (
@@ -500,7 +651,7 @@ const Kiosk = () => {
                 ) : (
                   <ShoppingBasket className="h-4 w-4" />
                 )}
-                {participant ? 'Registrer' : 'Velg deltager'}
+                {recordSale.isPending ? 'Registrerer…' : participant ? 'Registrer' : 'Velg deltager'}
               </Button>
             </div>
           </div>
@@ -512,12 +663,17 @@ const Kiosk = () => {
         onOpenChange={setPickerOpen}
         participants={participants}
         balances={balances}
+        visitCounts={visitCounts}
         onSelect={setParticipant}
       />
 
       {/* Receipts */}
       <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
-        <SheetContent side="bottom" className="flex h-[88dvh] flex-col gap-0 rounded-t-3xl">
+        <SheetContent
+          side="bottom"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="flex h-[88dvh] flex-col gap-0 rounded-t-3xl"
+        >
           <SheetHeader>
             <SheetTitle>Kvitteringer</SheetTitle>
           </SheetHeader>
@@ -532,18 +688,14 @@ const Kiosk = () => {
           </div>
           <div className="mt-3 flex-1 space-y-2 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]">
             {filteredSales.map((sale) => (
-              <button
+              <Card
                 key={sale.id}
-                onClick={() => openReceipt(sale)}
-                className="w-full text-left"
-              >
-                <Card
                   className={cn(
                     'flex items-center gap-2 p-3 transition-transform active:scale-[0.99]',
                     sale.voided_at && 'opacity-50'
                   )}
                 >
-                  <div className="min-w-0 flex-1">
+                  <button onClick={() => openReceipt(sale)} className="min-w-0 flex-1 text-left">
                     <p className="truncate text-sm font-semibold">
                       {participantName(sale.participant_id)}
                     </p>
@@ -559,14 +711,25 @@ const Kiosk = () => {
                     <p className="mt-1 truncate text-xs text-muted-foreground">
                       {sale.items.map((i) => `${i.quantity}× ${i.product_name}`).join(', ')}
                     </p>
-                  </div>
+                  </button>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <span className="text-sm font-bold tabular-nums">{sale.total} kr</span>
                     {sale.voided_at && <Badge variant="outline">Annullert</Badge>}
                   </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  {!sale.voided_at && !readOnly ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => startEdit(sale)}
+                      aria-label="Endre kjøp"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
                 </Card>
-              </button>
             ))}
             {filteredSales.length === 0 && (
               <p className="py-10 text-center text-sm text-muted-foreground">
@@ -584,6 +747,116 @@ const Kiosk = () => {
         onVoid={handleVoid}
         justCompleted={receiptIsNew}
       />
+
+      <KioskSuccessDialog
+        data={success}
+        open={successOpen}
+        onOpenChange={setSuccessOpen}
+        onUndo={undoSuccess}
+        onShowReceipt={showSuccessReceipt}
+        undoing={voidSale.isPending}
+      />
+
+      {/* Edit an existing sale */}
+      <Sheet open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+        <SheetContent side="bottom" className="flex h-[88dvh] flex-col gap-0 rounded-t-3xl">
+          <SheetHeader className="shrink-0">
+            <SheetTitle>
+              Endre kjøp
+              {editTarget && (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  {participantName(editTarget.participant_id)}
+                </span>
+              )}
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="mt-3 shrink-0 space-y-1.5 rounded-2xl border border-border p-3">
+            {editLines.map((l) => (
+              <div key={l.product.id} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-sm">{l.product.name}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-full"
+                  onClick={() => changeEditQuantity(l.product.id, -1)}
+                  aria-label="Færre"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </Button>
+                <span className="w-5 text-center text-sm font-bold tabular-nums">{l.quantity}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-full"
+                  onClick={() => changeEditQuantity(l.product.id, 1)}
+                  aria-label="Flere"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+                <span className="w-16 text-right text-sm font-semibold tabular-nums">
+                  {l.product.price * l.quantity} kr
+                </span>
+              </div>
+            ))}
+            {editLines.length === 0 && (
+              <p className="py-2 text-center text-sm text-muted-foreground">
+                Ingen varer — legg til minst én
+              </p>
+            )}
+          </div>
+
+          <div className="relative mt-3 shrink-0">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Legg til vare…"
+              value={editSearch}
+              onChange={(e) => setEditSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          <div className="mt-2 flex-1 divide-y divide-border overflow-y-auto">
+            {products
+              .filter((p) =>
+                editSearch.trim()
+                  ? p.name.toLowerCase().includes(editSearch.trim().toLowerCase())
+                  : true
+              )
+              .slice(0, 60)
+              .map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => addEditLine(p)}
+                  className="flex w-full items-center gap-2 py-2.5 text-left active:bg-muted/50"
+                >
+                  <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
+                  <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+                    {p.price} kr
+                  </span>
+                  <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </button>
+              ))}
+          </div>
+
+          <div className="shrink-0 border-t border-border pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+            <div className="flex items-center gap-2">
+              <p className="flex-1 text-lg font-bold tabular-nums">{editTotal} kr</p>
+              <Button variant="outline" onClick={() => setEditTarget(null)}>
+                Avbryt
+              </Button>
+              <Button
+                disabled={editLines.length === 0 || editSale.isPending}
+                onClick={saveEdit}
+                className="gap-2"
+              >
+                {editSale.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Lagre
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

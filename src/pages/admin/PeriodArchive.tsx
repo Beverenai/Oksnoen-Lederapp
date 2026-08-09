@@ -82,7 +82,7 @@ export default function PeriodArchive() {
     <div className="min-h-full pb-24">
       <div className="p-4 space-y-4">
         <div className="flex items-center gap-2 print:hidden">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" className="hidden lg:inline-flex" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-bold flex items-center gap-2">

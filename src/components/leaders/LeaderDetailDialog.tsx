@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import * as icons from "lucide-react";
 import { SnusCan3D } from "@/components/snus/SnusCan3D";
+import { SnusCanRotator, snusProductsFrom } from "@/components/snus/SnusCanRotator";
 import { getSnusProduct, customSnusProduct, snusLabel } from "@/lib/snusCatalog";
 
 interface CabinInfo {
@@ -35,6 +36,7 @@ interface LeaderWithContent {
   can_rope_setup: boolean | null;
   snus_user?: boolean | null;
   snus_product_id?: string | null;
+  snus_product_ids?: string[] | null;
   snus_custom_label?: string | null;
   cabins?: CabinInfo[];
   content?: {
@@ -170,13 +172,13 @@ export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailD
 
   const cabinsDisplay = formatCabinsDisplay();
 
-  const snusCan = leader.snus_user
-    ? leader.snus_product_id
-      ? getSnusProduct(leader.snus_product_id)
-      : leader.snus_custom_label?.trim()
-        ? customSnusProduct(leader.snus_custom_label.trim())
-        : null
-    : null;
+  const snusCans = leader.snus_user
+    ? snusProductsFrom(
+        leader.snus_product_ids?.length ? leader.snus_product_ids : [leader.snus_product_id],
+        leader.snus_custom_label
+      )
+    : [];
+  const snusCan = snusCans[0] ?? null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -264,10 +266,16 @@ export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailD
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Snus</h4>
               {snusCan ? (
                 <div className="flex flex-col items-center gap-1">
-                  <SnusCan3D product={snusCan} size={170} />
-                  <p className="text-sm font-semibold">
-                    {snusLabel(leader.snus_product_id, leader.snus_custom_label)}
-                  </p>
+                  {snusCans.length > 1 ? (
+                    <SnusCanRotator productIds={leader.snus_product_ids} size={170} showLabel />
+                  ) : (
+                    <>
+                      <SnusCan3D product={snusCan} size={170} />
+                      <p className="text-sm font-semibold">
+                        {snusLabel(leader.snus_product_id, leader.snus_custom_label)}
+                      </p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <p className="text-sm">Snuser – har ikke valgt boks</p>
