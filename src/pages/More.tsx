@@ -234,19 +234,18 @@ export default function More() {
   // Off-season / inactive leaders: only the allowed surfaces.
   const limitedSections: MoreSection[] = [
     {
-      label: 'Min side',
+      label: 'Off-season',
       items: [
-        { to: '/profile', icon: User, label: 'Min Profil' },
         { to: '/lederpass', icon: IdCard, label: 'Lederpass' },
+        {
+          to: '/klineliste',
+          icon: HeartHandshake,
+          label: 'Klineliste',
+          badge: incomingHookups,
+        },
+        { to: '/snus', icon: Circle, label: 'Snus' },
         { to: '/chat', icon: MessageCircle, label: 'Ledersnakk' },
-        ...(hookupsEnabled
-          ? [{
-              to: '/klineliste',
-              icon: HeartHandshake,
-              label: 'Klineliste',
-              badge: incomingHookups,
-            } as MoreItem]
-          : []),
+        { to: '/profile', icon: User, label: 'Min Profil' },
       ],
     },
     {
