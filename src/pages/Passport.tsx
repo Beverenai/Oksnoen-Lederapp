@@ -480,51 +480,67 @@ export default function Passport() {
           )}
         </div>
 
-        {/* Action buttons in a row */}
-        <div className="flex gap-2 flex-wrap">
-          {!seasonView && (
-            <Button
-              variant="default"
-              size="default"
-              onClick={() => navigate('/passport/activity')}
-              className="font-semibold"
-            >
-              <Users className="w-5 h-5 mr-2" />
-              Aktivitet
-            </Button>
-          )}
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/important-info')}
-          >
-            <AlertTriangle className="w-4 h-4 mr-1.5" />
-            Viktig Info
-          </Button>
+        {/* Primary actions as big floating tiles */}
+        <div className="flex flex-col gap-2 sm:min-w-[19rem]">
+          <div className="grid grid-cols-2 gap-2">
+            {!seasonView && (
+              <button
+                type="button"
+                onClick={() => navigate('/passport/activity')}
+                className="ios-surface flex items-center gap-3 rounded-2xl bg-primary px-4 py-3.5 text-left text-primary-foreground shadow-lg transition-transform active:scale-[0.97]"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20">
+                  <Users className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-semibold leading-tight">Aktivitet</span>
+                  <span className="block text-[11px] opacity-80">Registrer</span>
+                </span>
+              </button>
+            )}
 
-          {!seasonView && secretWordsActive && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSecretWordsOpen(true)}
+            <button
+              type="button"
+              onClick={() => navigate('/important-info')}
+              className="ios-surface flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-transform active:scale-[0.97]"
             >
-              <KeyRound className="w-4 h-4 mr-1.5" />
-              Ord
-            </Button>
-          )}
-          
-          {/* My cabin filter button - only show if leader has assigned cabins */}
-          {myCabinIds.length > 0 && (
-            <Button
-              variant={myCabinsFilter ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setMyCabinsFilter(!myCabinsFilter)}
-              className="gap-1.5"
-            >
-              <Home className="w-4 h-4" />
-              {myCabinsFilter ? 'Alle hytter' : 'Min hytte'}
-            </Button>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[15px] font-semibold leading-tight text-foreground">Viktig info</span>
+                <span className="block text-[11px] text-muted-foreground">Husk dette</span>
+              </span>
+            </button>
+          </div>
+
+          {(myCabinIds.length > 0 || (!seasonView && secretWordsActive)) && (
+            <div className="flex flex-wrap gap-2">
+              {!seasonView && secretWordsActive && (
+                <button
+                  type="button"
+                  onClick={() => setSecretWordsOpen(true)}
+                  className="ios-chip inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-medium text-foreground active:scale-95 transition-transform"
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  Ord
+                </button>
+              )}
+              {myCabinIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setMyCabinsFilter(!myCabinsFilter)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-medium transition-transform active:scale-95 ${
+                    myCabinsFilter
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'ios-chip text-foreground'
+                  }`}
+                >
+                  <Home className="h-3.5 w-3.5" />
+                  {myCabinsFilter ? 'Alle hytter' : 'Min hytte'}
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
