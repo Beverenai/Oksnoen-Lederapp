@@ -268,6 +268,29 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_mention_notifications: {
+        Row: {
+          created_at: string
+          message_id: string
+        }
+        Insert: {
+          created_at?: string
+          message_id: string
+        }
+        Update: {
+          created_at?: string
+          message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_mention_notifications_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           body: string
@@ -275,6 +298,7 @@ export type Database = {
           created_at: string
           id: string
           leader_id: string
+          mentions: string[]
           period_id: string | null
         }
         Insert: {
@@ -283,6 +307,7 @@ export type Database = {
           created_at?: string
           id?: string
           leader_id: string
+          mentions?: string[]
           period_id?: string | null
         }
         Update: {
@@ -291,6 +316,7 @@ export type Database = {
           created_at?: string
           id?: string
           leader_id?: string
+          mentions?: string[]
           period_id?: string | null
         }
         Relationships: [
