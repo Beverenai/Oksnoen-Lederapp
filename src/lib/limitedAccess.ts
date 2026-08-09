@@ -10,6 +10,7 @@ export const LIMITED_ACCESS_ROUTES = [
   '/mer',
   '/lederpass',
   '/klineliste',
+  '/snus',
 ] as const;
 
 export function isLimitedAccessRoute(path: string): boolean {

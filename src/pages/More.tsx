@@ -35,7 +35,7 @@ import { useMailboxUnreadCount } from '@/hooks/useMailbox';
 import { useHookupsEnabled, useIncomingHookupCount } from '@/hooks/useHookups';
 import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute } from '@/lib/limitedAccess';
-import { IdCard, MessageCircle } from 'lucide-react';
+import { IdCard, MessageCircle, Circle } from 'lucide-react';
 
 type MoreItem = {
   to?: string;
@@ -234,19 +234,18 @@ export default function More() {
   // Off-season / inactive leaders: only the allowed surfaces.
   const limitedSections: MoreSection[] = [
     {
-      label: 'Min side',
+      label: 'Off-season',
       items: [
-        { to: '/profile', icon: User, label: 'Min Profil' },
         { to: '/lederpass', icon: IdCard, label: 'Lederpass' },
+        {
+          to: '/klineliste',
+          icon: HeartHandshake,
+          label: 'Klineliste',
+          badge: incomingHookups,
+        },
+        { to: '/snus', icon: Circle, label: 'Snus' },
         { to: '/chat', icon: MessageCircle, label: 'Ledersnakk' },
-        ...(hookupsEnabled
-          ? [{
-              to: '/klineliste',
-              icon: HeartHandshake,
-              label: 'Klineliste',
-              badge: incomingHookups,
-            } as MoreItem]
-          : []),
+        { to: '/profile', icon: User, label: 'Min Profil' },
       ],
     },
     {
