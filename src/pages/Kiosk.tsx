@@ -30,6 +30,7 @@ import { getParticipantThumb } from '@/lib/participantImage';
 import { useParticipants, type ParticipantWithCabin } from '@/hooks/useParticipants';
 import {
   useKioskBalances,
+  useKioskVisitCounts,
   useKioskCatalog,
   useKioskSales,
   useRecordKioskSale,
@@ -51,6 +52,7 @@ const Kiosk = () => {
   const { data: participants = [], isLoading: participantsLoading } = useParticipants();
   const { data: catalog, isLoading: catalogLoading } = useKioskCatalog();
   const { data: balances } = useKioskBalances();
+  const { data: visitCounts } = useKioskVisitCounts();
   const { data: recentSales = [] } = useKioskSales();
   const recordSale = useRecordKioskSale();
   const { readOnly } = useSeasonView();
@@ -661,6 +663,7 @@ const Kiosk = () => {
         onOpenChange={setPickerOpen}
         participants={participants}
         balances={balances}
+        visitCounts={visitCounts}
         onSelect={setParticipant}
       />
 
