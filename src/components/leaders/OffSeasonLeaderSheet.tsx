@@ -44,7 +44,6 @@ export function OffSeasonLeaderSheet({ leaderId, onOpenChange }: OffSeasonLeader
       <SheetContent
         side="bottom"
         className="h-[92dvh] rounded-t-[28px] p-0"
-        hideCloseButton
       >
         <div className="flex h-full min-h-0 flex-col">
           <div className="flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-2">
