@@ -15,6 +15,16 @@ export function useAdminNotes(enabled: boolean) {
   // Local edits that are not confirmed saved yet. Used so realtime/refetch
   // never overwrites text the user just typed.
   const pendingRef = useRef<Record<string, Partial<AdminNote>>>({});
+  // Cached leader id so every save doesn't pay for an extra RPC roundtrip
+  const leaderIdRef = useRef<string | null>(null);
+  const getLeaderId = useCallback(async () => {
+    if (leaderIdRef.current) return leaderIdRef.current;
+    const { data } = await supabase.rpc('current_leader_id');
+    leaderIdRef.current = (data as string) ?? null;
+    return leaderIdRef.current;
+  }, []);
+  // Ignore realtime echoes of our own writes (they'd trigger a slow refetch)
+  const selfWriteRef = useRef(0);
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -39,6 +49,7 @@ export function useAdminNotes(enabled: boolean) {
 
   useEffect(() => {
     if (!enabled) return;
+    void getLeaderId();
     supabase
       .from('leaders')
       .select('id, name')
@@ -47,17 +58,21 @@ export function useAdminNotes(enabled: boolean) {
         (data || []).forEach((l) => { map[l.id] = l.name; });
         setLeaderNames(map);
       });
-  }, [enabled]);
+  }, [enabled, getLeaderId]);
 
   useEffect(() => {
     if (!enabled) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     const channel = supabase
       .channel('admin-notes-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_notes' }, () => {
-        load();
+        if (Date.now() - selfWriteRef.current < 1500) return;
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => { void load(); }, 250);
       })
       .subscribe();
     return () => {
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, [enabled, load]);
@@ -66,15 +81,16 @@ export function useAdminNotes(enabled: boolean) {
     kind: NoteKind,
     opts?: { title?: string; content?: string },
   ) => {
-    const { data: leaderId } = await supabase.rpc('current_leader_id');
+    const leaderId = await getLeaderId();
+    selfWriteRef.current = Date.now();
     const { data, error } = await supabase
       .from('admin_notes')
       .insert({
         kind,
         title: opts?.title ?? (kind === 'board' ? 'Nytt whiteboard' : 'Nytt notat'),
         content: opts?.content ?? '',
-        created_by: (leaderId as string) ?? null,
-        updated_by: (leaderId as string) ?? null,
+        created_by: leaderId,
+        updated_by: leaderId,
       })
       .select()
       .single();
@@ -82,15 +98,17 @@ export function useAdminNotes(enabled: boolean) {
     setNotes((prev) => [data, ...prev]);
     setActiveId(data.id);
     return data;
-  }, []);
+  }, [getLeaderId]);
 
   const patchNote = useCallback(async (id: string, patch: Partial<AdminNote>) => {
-    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...patch } as AdminNote : n)));
+    const now = new Date().toISOString();
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...patch, updated_at: now } as AdminNote : n)));
     pendingRef.current[id] = { ...(pendingRef.current[id] || {}), ...patch };
-    const { data: leaderId } = await supabase.rpc('current_leader_id');
+    const leaderId = await getLeaderId();
+    selfWriteRef.current = Date.now();
     const { error } = await supabase
       .from('admin_notes')
-      .update({ ...patch, updated_by: (leaderId as string) ?? null })
+      .update({ ...patch, updated_by: leaderId })
       .eq('id', id);
     if (error) throw error;
     // Drop only the fields we just persisted (newer edits may have queued since)
@@ -103,10 +121,11 @@ export function useAdminNotes(enabled: boolean) {
       });
       if (Object.keys(still).length === 0) delete pendingRef.current[id];
     }
-  }, []);
+  }, [getLeaderId]);
 
   const duplicateNote = useCallback(async (note: AdminNote) => {
-    const { data: leaderId } = await supabase.rpc('current_leader_id');
+    const leaderId = await getLeaderId();
+    selfWriteRef.current = Date.now();
     const { data, error } = await supabase
       .from('admin_notes')
       .insert({
@@ -114,8 +133,8 @@ export function useAdminNotes(enabled: boolean) {
         title: `${note.title} (kopi)`,
         content: note.content,
         strokes: note.strokes,
-        created_by: (leaderId as string) ?? null,
-        updated_by: (leaderId as string) ?? null,
+        created_by: leaderId,
+        updated_by: leaderId,
       })
       .select()
       .single();
@@ -123,9 +142,10 @@ export function useAdminNotes(enabled: boolean) {
     setNotes((prev) => [data, ...prev]);
     setActiveId(data.id);
     return data;
-  }, []);
+  }, [getLeaderId]);
 
   const deleteNote = useCallback(async (id: string) => {
+    selfWriteRef.current = Date.now();
     const { error } = await supabase.from('admin_notes').delete().eq('id', id);
     if (error) throw error;
     delete pendingRef.current[id];
