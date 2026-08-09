@@ -1,3 +1,4 @@
+import HookupDemo from "./pages/__HookupDemo";
 import { Suspense, lazy } from "react";
 import { StatusPopupProvider } from "@/hooks/useStatusPopup";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -242,6 +243,7 @@ function AppRoutes() {
         <Route path="/kiosk" element={<ProtectedRoute><Kiosk /></ProtectedRoute>} />
         <Route path="/kjokken" element={<ProtectedRoute><Kjokken /></ProtectedRoute>} />
         <Route path="/postkasse" element={<ProtectedRoute><Mailbox /></ProtectedRoute>} />
+        <Route path="/hookup-demo" element={<HookupDemo />} />
         <Route path="/liggeliste" element={<ProtectedRoute><Liggeliste /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
