@@ -1233,6 +1233,15 @@ export default function Nurse() {
                 <SelectItem value="without">Uten info</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={sortMode} onValueChange={(v) => setSortMode(v as typeof sortMode)}>
+              <SelectTrigger className="w-full sm:w-[190px]">
+                <SelectValue placeholder="Sortering" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alpha">Alfabetisk (A–Å)</SelectItem>
+                <SelectItem value="info">Mest info først</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Participants with health info */}
