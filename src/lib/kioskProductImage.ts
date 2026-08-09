@@ -19,6 +19,7 @@ import lollipop from '@/assets/kiosk/lollipop.webp';
 import loveHearts from '@/assets/kiosk/love-hearts.webp';
 import maoam from '@/assets/kiosk/maoam.webp';
 import melkerull from '@/assets/kiosk/melkerull.webp';
+import minimix from '@/assets/kiosk/minimix.webp';
 import pepsiMax from '@/assets/kiosk/pepsi-max.webp';
 import roulette from '@/assets/kiosk/roulette.webp';
 import smil from '@/assets/kiosk/smil.webp';
