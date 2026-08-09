@@ -33,6 +33,9 @@ import { hapticImpact } from '@/lib/capacitorHaptics';
 import { LederPassMini } from '@/components/passport/LederPassMini';
 import { useMailboxUnreadCount } from '@/hooks/useMailbox';
 import { useHookupsEnabled, useIncomingHookupCount } from '@/hooks/useHookups';
+import { useAppMode } from '@/hooks/useAppMode';
+import { isLimitedAccessRoute } from '@/lib/limitedAccess';
+import { IdCard, MessageCircle } from 'lucide-react';
 
 type MoreItem = {
   to?: string;
@@ -83,7 +86,9 @@ function Tile({ item }: { item: MoreItem }) {
 }
 
 export default function More() {
-  const { isAdmin, isNurse, isKitchen, logout, leader, effectiveLeader } = useAuth();
+  const { isAdmin, isNurse, isKitchen, isSuperAdmin, isLimitedAccess, logout, leader, effectiveLeader } = useAuth();
+  const { mode: appMode } = useAppMode();
+  const limited = (appMode === 'inactive' || isLimitedAccess) && !isSuperAdmin;
   const sweatersEnabled = useSweatersEnabled();
   const { data: murderState } = useMyMurderState();
   const { data: mailboxUnread } = useMailboxUnreadCount(!!isAdmin);
@@ -136,7 +141,7 @@ export default function More() {
     };
   }, []);
 
-  const sections: MoreSection[] = [
+  const fullSections: MoreSection[] = [
     {
       label: 'Min side',
       items: [
@@ -225,6 +230,37 @@ export default function More() {
   ];
 
   const firstName = (leader?.name || '').split(' ')[0] || '';
+
+  // Off-season / inactive leaders: only the allowed surfaces.
+  const limitedSections: MoreSection[] = [
+    {
+      label: 'Min side',
+      items: [
+        { to: '/profile', icon: User, label: 'Min Profil' },
+        { to: '/lederpass', icon: IdCard, label: 'Lederpass' },
+        { to: '/chat', icon: MessageCircle, label: 'Ledersnakk' },
+        ...(hookupsEnabled
+          ? [{
+              to: '/klineliste',
+              icon: HeartHandshake,
+              label: 'Klineliste',
+              badge: incomingHookups,
+            } as MoreItem]
+          : []),
+      ],
+    },
+    {
+      label: 'Konto',
+      items: [{ icon: LogOut, label: 'Logg ut', onClick: () => logout() }],
+    },
+  ];
+
+  const sections: MoreSection[] = limited
+    ? limitedSections.map((s) => ({
+        ...s,
+        items: s.items.filter((i) => !i.to || isLimitedAccessRoute(i.to)),
+      }))
+    : fullSections;
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 pb-6">
