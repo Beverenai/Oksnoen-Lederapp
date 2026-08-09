@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Circle, Users } from 'lucide-react';
 import { SnusCan3D } from '@/components/snus/SnusCan3D';
+import { SnusCanRotator, snusProductsFrom } from '@/components/snus/SnusCanRotator';
 import { SnusPicker } from '@/components/snus/SnusPicker';
-import { getSnusProduct, customSnusProduct, snusLabel } from '@/lib/snusCatalog';
+import { getSnusProduct, customSnusProduct, snusLabel, snusFullName } from '@/lib/snusCatalog';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 
 type Brother = { id: string; name: string; profile_image_url: string | null };
@@ -25,25 +26,24 @@ export default function SnusPage() {
 
   const [snusUser, setSnusUser] = useState(false);
   const [productId, setProductId] = useState<string | null>(null);
+  const [productIds, setProductIds] = useState<string[]>([]);
   const [customLabel, setCustomLabel] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [brothers, setBrothers] = useState<Brother[]>([]);
 
-  const can = productId
-    ? getSnusProduct(productId)
-    : customLabel?.trim()
-      ? customSnusProduct(customLabel.trim())
-      : null;
+  const cans = snusProductsFrom(productIds.length ? productIds : [productId], customLabel);
+  const can = cans[0] ?? null;
 
   const load = async () => {
     if (!me?.id) return;
     const { data } = await supabase
       .from('leaders')
-      .select('snus_user, snus_product_id, snus_custom_label')
+      .select('snus_user, snus_product_id, snus_product_ids, snus_custom_label')
       .eq('id', me.id)
       .maybeSingle();
     setSnusUser(!!data?.snus_user);
     setProductId(data?.snus_product_id ?? null);
+    setProductIds(((data as any)?.snus_product_ids as string[] | null) ?? []);
     setCustomLabel(data?.snus_custom_label ?? null);
   };
 
@@ -70,10 +70,11 @@ export default function SnusPage() {
   const save = async (patch: {
     snus_user?: boolean;
     snus_product_id?: string | null;
+    snus_product_ids?: string[];
     snus_custom_label?: string | null;
   }) => {
     if (!leader?.id) return;
-    const { error } = await supabase.from('leaders').update(patch).eq('id', leader.id);
+    const { error } = await supabase.from('leaders').update(patch as never).eq('id', leader.id);
     if (error) showError('Kunne ikke lagre snus-valg', error.message);
   };
 
@@ -92,7 +93,7 @@ export default function SnusPage() {
             <Circle className="w-5 h-5" />
             Min boks
           </CardTitle>
-          <CardDescription>Du kan bytte boks når du vil</CardDescription>
+          <CardDescription>Velg gjerne flere bokser – de roterer automatisk</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between gap-4">
@@ -106,8 +107,9 @@ export default function SnusPage() {
                   setSnusUser(checked);
                   if (!checked) {
                     setProductId(null);
+                    setProductIds([]);
                     setCustomLabel(null);
-                    save({ snus_user: false, snus_product_id: null, snus_custom_label: null });
+                    save({ snus_user: false, snus_product_id: null, snus_product_ids: [], snus_custom_label: null });
                   } else {
                     save({ snus_user: true });
                   }
@@ -121,17 +123,23 @@ export default function SnusPage() {
               {can ? (
                 <>
                   <div className="flex justify-center rounded-2xl bg-muted/40 py-4">
-                    <SnusCan3D product={can} size={220} />
+                    {cans.length > 1 ? (
+                      <SnusCanRotator productIds={productIds} size={220} />
+                    ) : (
+                      <SnusCan3D product={can} size={220} />
+                    )}
                   </div>
                   <p className="text-center text-sm font-semibold">
-                    {snusLabel(productId, customLabel)}
+                    {cans.length > 1
+                      ? cans.map(snusFullName).join(' • ')
+                      : snusLabel(productId, customLabel)}
                   </p>
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">Velg hvilken boks du snuser.</p>
               )}
               <Button variant="outline" className="w-full" onClick={() => setPickerOpen(true)}>
-                {can ? 'Bytt snusboks' : 'Velg snusboks'}
+                {can ? 'Endre snusbokser' : 'Velg snusboks'}
               </Button>
             </div>
           )}
@@ -139,12 +147,26 @@ export default function SnusPage() {
           <SnusPicker
             open={pickerOpen}
             onOpenChange={setPickerOpen}
+            multi
             selectedId={productId}
+            selectedIds={productIds.length ? productIds : productId ? [productId] : []}
             customLabel={customLabel}
+            onSelectMany={(ids, custom) => {
+              setProductIds(ids);
+              setProductId(ids[0] ?? null);
+              setCustomLabel(custom);
+              save({
+                snus_user: true,
+                snus_product_id: ids[0] ?? null,
+                snus_product_ids: ids,
+                snus_custom_label: custom,
+              });
+            }}
             onSelect={(id, custom) => {
               setProductId(id);
+              setProductIds(id ? [id] : []);
               setCustomLabel(custom);
-              save({ snus_user: true, snus_product_id: id, snus_custom_label: custom });
+              save({ snus_user: true, snus_product_id: id, snus_product_ids: id ? [id] : [], snus_custom_label: custom });
             }}
           />
         </CardContent>

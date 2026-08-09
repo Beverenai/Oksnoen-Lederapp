@@ -22,14 +22,28 @@ interface SnusPickerProps {
   selectedId?: string | null;
   customLabel?: string | null;
   onSelect: (productId: string | null, customLabel: string | null) => void;
+  /** Tillat flere bokser (roterer i profilen) */
+  multi?: boolean;
+  selectedIds?: string[] | null;
+  onSelectMany?: (productIds: string[], customLabel: string | null) => void;
 }
 
-export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSelect }: SnusPickerProps) {
+export function SnusPicker({
+  open,
+  onOpenChange,
+  selectedId,
+  customLabel,
+  onSelect,
+  multi = false,
+  selectedIds,
+  onSelectMany,
+}: SnusPickerProps) {
   const [query, setQuery] = useState('');
   const [brand, setBrand] = useState<string | null>(null);
   const [customMode, setCustomMode] = useState(false);
   const [customValue, setCustomValue] = useState(customLabel ?? '');
   const [pickedId, setPickedId] = useState<string | null>(selectedId ?? null);
+  const [pickedIds, setPickedIds] = useState<string[]>(selectedIds ?? []);
 
   const list = useMemo(() => {
     const base = searchSnus(query);
@@ -39,8 +53,14 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
 
   // Start on the already selected can each time the sheet opens
   useEffect(() => {
-    if (open) setPickedId(selectedId ?? null);
-  }, [open, selectedId]);
+    if (!open) return;
+    setPickedId(selectedId ?? null);
+    setPickedIds(selectedIds ?? (selectedId ? [selectedId] : []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const toggle = (id: string) =>
+    setPickedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -53,6 +73,11 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
         <div className="shrink-0 px-4 pb-3 pt-5">
           <img src={oksnoenLogo} alt="Øksnøen" className="mx-auto h-14 w-14 object-contain" />
           <h2 className="mt-2 text-center font-heading text-2xl font-bold">Velg snusen din</h2>
+          {multi && !customMode && (
+            <p className="mt-1 text-center text-xs text-muted-foreground">
+              Velg så mange du vil – de roterer i profilen din
+            </p>
+          )}
 
           <div className="relative mt-3">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -97,7 +122,8 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
                 className="flex-1"
                 disabled={!customValue.trim()}
                 onClick={() => {
-                  onSelect(null, customValue.trim());
+                  if (multi) onSelectMany?.([], customValue.trim());
+                  else onSelect(null, customValue.trim());
                   onOpenChange(false);
                 }}
               >
@@ -113,8 +139,8 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
                   <CanCard
                     key={p.id}
                     product={p}
-                    selected={p.id === pickedId}
-                    onClick={() => setPickedId(p.id)}
+                    selected={multi ? pickedIds.includes(p.id) : p.id === pickedId}
+                    onClick={() => (multi ? toggle(p.id) : setPickedId(p.id))}
                   />
                 ))}
               </div>
@@ -131,14 +157,24 @@ export function SnusPicker({ open, onOpenChange, selectedId, customLabel, onSele
               <Button
                 size="lg"
                 className="w-full rounded-full text-base"
-                disabled={!pickedId}
+                disabled={multi ? pickedIds.length === 0 : !pickedId}
                 onClick={() => {
+                  if (multi) {
+                    if (pickedIds.length === 0) return;
+                    onSelectMany?.(pickedIds, null);
+                    onOpenChange(false);
+                    return;
+                  }
                   if (!pickedId) return;
                   onSelect(pickedId, null);
                   onOpenChange(false);
                 }}
               >
-                Velg denne
+                {multi
+                  ? pickedIds.length > 1
+                    ? `Velg disse (${pickedIds.length})`
+                    : 'Velg denne'
+                  : 'Velg denne'}
               </Button>
             </div>
           </>

@@ -1,0 +1,2 @@
+ALTER TABLE public.leaders ADD COLUMN IF NOT EXISTS snus_product_ids text[] NOT NULL DEFAULT '{}';
+UPDATE public.leaders SET snus_product_ids = ARRAY[snus_product_id] WHERE snus_product_id IS NOT NULL AND (snus_product_ids IS NULL OR array_length(snus_product_ids,1) IS NULL);
