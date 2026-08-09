@@ -11,6 +11,7 @@ import {
   searchSnus,
   getSnusProduct,
   customSnusProduct,
+  snusFullName,
   type SnusProduct,
 } from '@/lib/snusCatalog';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
@@ -171,8 +172,8 @@ function CanCard({
           </span>
         )}
       </div>
-      <span className="mt-1 line-clamp-2 text-sm font-semibold leading-tight">
-        {product.brand} {product.variant}
+      <span className="mt-1 line-clamp-3 break-words text-sm font-semibold leading-tight">
+        {snusFullName(product)}
       </span>
       <span className="mt-0.5 text-xs text-muted-foreground">
         {product.flavor} • S{product.strength}

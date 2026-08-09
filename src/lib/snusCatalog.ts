@@ -1,10 +1,12 @@
 export type SnusStrength = 1 | 2 | 3 | 4 | 5 | 6 | 7;
-export type SnusFormat = 'slim' | 'mini' | 'porsjon' | 'løs';
+export type SnusFormat = 'slim' | 'superslim' | 'mini' | 'porsjon' | 'løs';
 
 export interface SnusProduct {
   id: string;
   brand: string;
   variant: string;
+  /** Full official product name – always used in labels when present */
+  name?: string;
   flavor: string;
   /** Accent colour used on the lid arc and side band */
   accent: string;
@@ -15,6 +17,8 @@ export interface SnusProduct {
   /** Epok "No" number shown big on the lid */
   number?: number;
   nicotineFree?: boolean;
+  /** Local packshot (transparent webp) under /snus/packshots/ */
+  image?: string;
 }
 
 export interface SnusBrandGroup {
@@ -82,14 +86,27 @@ const EPOK: SnusProduct[] = [
   epok('epok-zero-mango', null, 'Breezy Mango ZERO', 'Mango – nikotinfri', '#e8a02a', 1, 'slim', true),
 ];
 
+const PACK = (file: string) => `/snus/packshots/${file}.webp`;
+
 const OTHERS: SnusProduct[] = [
-  // ---- General ----
-  { id: 'general-white-portion', brand: 'General', variant: 'White Portion', flavor: 'Klassisk tobakk', accent: '#1f4e79', white: true, strength: 2, format: 'porsjon' },
-  { id: 'general-original-portion', brand: 'General', variant: 'Original Portion', flavor: 'Klassisk tobakk', accent: '#123a5c', white: false, strength: 2, format: 'porsjon' },
-  { id: 'general-mint-white', brand: 'General', variant: 'Mint White', flavor: 'Mint', accent: '#1f8a6d', white: true, strength: 2, format: 'porsjon' },
-  { id: 'general-extra-strong', brand: 'General', variant: 'Extra Strong White', flavor: 'Klassisk tobakk', accent: '#0b2740', white: true, strength: 4, format: 'porsjon' },
-  { id: 'general-g3', brand: 'General', variant: 'G.3 Slim', flavor: 'Bergamott & einer', accent: '#2f5f8f', white: true, strength: 3, format: 'slim' },
-  { id: 'general-snus-nordic-mint', brand: 'General', variant: 'Nordic Mint Slim', flavor: 'Mint', accent: '#0f7a6a', white: true, strength: 3, format: 'slim' },
+  // ---- General (Classic-serien, norske navn) ----
+  { id: 'general-classic-no1', brand: 'General', variant: 'Classic No1 Løs', name: 'General Classic No1 Løs', flavor: 'Tradisjonell', accent: '#d3b878', white: false, strength: 2, format: 'løs', number: 1, image: PACK('general-classic-no1') },
+  { id: 'general-classic-no2', brand: 'General', variant: 'Classic No2 Løs Extra Strong', name: 'General Classic No2 Løs Extra Strong', flavor: 'Tradisjonell', accent: '#b8863a', white: false, strength: 4, format: 'løs', number: 2, image: PACK('general-classic-no2') },
+  { id: 'general-classic-no3', brand: 'General', variant: 'Classic No3 Portion', name: 'General Classic No3 Portion', flavor: 'Tradisjonell', accent: '#1f4e79', white: false, strength: 2, format: 'porsjon', number: 3, image: PACK('general-classic-no3') },
+  { id: 'general-classic-no4', brand: 'General', variant: 'Classic No4 Portion Extra Strong', name: 'General Classic No4 Portion Extra Strong', flavor: 'Tradisjonell', accent: '#0b2740', white: false, strength: 4, format: 'porsjon', number: 4, image: PACK('general-classic-no4') },
+  { id: 'general-classic-no5', brand: 'General', variant: 'Classic No5 White', name: 'General Classic No5 White', flavor: 'Tradisjonell', accent: '#2f6fa8', white: true, strength: 2, format: 'porsjon', number: 5, image: PACK('general-classic-no5') },
+  { id: 'general-classic-no6', brand: 'General', variant: 'Classic No6 White Strong', name: 'General Classic No6 White Strong', flavor: 'Tradisjonell', accent: '#123a5c', white: true, strength: 3, format: 'porsjon', number: 6, image: PACK('general-classic-no6') },
+
+  // ---- G.3 ----
+  { id: 'g3-no1', brand: 'G.3', variant: 'No1 Extra Strong', name: 'G3 No1 Extra Strong', flavor: 'Tradisjonell', accent: '#2f5f8f', white: false, strength: 4, format: 'slim', number: 1, image: PACK('g3-no1') },
+  { id: 'g3-no2', brand: 'G.3', variant: 'No2 White Extra Strong', name: 'G3 No2 White Extra Strong', flavor: 'Tradisjonell', accent: '#3f7fb0', white: true, strength: 4, format: 'slim', number: 2, image: PACK('g3-no2') },
+  { id: 'g3-no6', brand: 'G.3', variant: 'No6 Wink Super Slim Mint 3', name: 'G3 No6 Wink Super Slim Mint 3', flavor: 'Mint', accent: '#2f9c8a', white: true, strength: 3, format: 'superslim', number: 6, image: PACK('g3-no6') },
+  { id: 'g3-no7', brand: 'G.3', variant: 'No7 Super Slim Strong', name: 'G3 No7 Super Slim Strong', flavor: 'Tradisjonell', accent: '#4a6b8a', white: true, strength: 3, format: 'superslim', number: 7, image: PACK('g3-no7') },
+  { id: 'g3-no8', brand: 'G.3', variant: 'No8 Volt Super Strong', name: 'G3 No8 Volt Super Strong', flavor: 'Tradisjonell & peppermynte', accent: '#1f7ad0', white: true, strength: 5, format: 'slim', number: 8, image: PACK('g3-no8') },
+  { id: 'g3-no9', brand: 'G.3', variant: 'No9 Wire Super Strong', name: 'G3 No9 Wire Super Strong', flavor: 'Tropisk frukt & bær', accent: '#d6417e', white: true, strength: 5, format: 'slim', number: 9, image: PACK('g3-no9') },
+  { id: 'g3-no10', brand: 'G.3', variant: 'No10 Load Super Strong', name: 'G3 No10 Load Super Strong', flavor: 'Lakris & eukalyptus', accent: '#3a3f4a', white: true, strength: 5, format: 'slim', number: 10, image: PACK('g3-no10') },
+  { id: 'g3-no13', brand: 'G.3', variant: 'No13 Volt X Ultra Strong', name: 'G3 No13 Volt X Ultra Strong', flavor: 'Tradisjonell & peppermynte', accent: '#0f4f9c', white: true, strength: 6, format: 'slim', number: 13 },
+  { id: 'g3-no14', brand: 'G.3', variant: 'No14 Frost Blue 2', name: 'G3 No14 Frost Blue 2', flavor: 'Mint', accent: '#4c93e0', white: true, strength: 2, format: 'slim', number: 14, image: PACK('g3-no14') },
 
   // ---- Skruf ----
   { id: 'skruf-super-white-no53', brand: 'Skruf', variant: 'Super White No53', flavor: 'Fresh Mint', accent: '#1f7a4c', white: true, strength: 3, format: 'slim', number: 53 },
@@ -99,13 +116,11 @@ const OTHERS: SnusProduct[] = [
   { id: 'skruf-slim-fresh', brand: 'Skruf', variant: 'Slim Fresh White', flavor: 'Mint & sitrus', accent: '#2f8f7d', white: true, strength: 2, format: 'slim' },
   { id: 'skruf-original-portion', brand: 'Skruf', variant: 'Original Portion', flavor: 'Tobakk & bergamott', accent: '#123f2d', white: false, strength: 2, format: 'porsjon' },
 
-  // ---- The Lab ----
-  { id: 'thelab-1', brand: 'The Lab', variant: 'No 1', flavor: 'Mint', accent: '#3f9ad6', white: true, strength: 1, format: 'slim', number: 1 },
-  { id: 'thelab-2', brand: 'The Lab', variant: 'No 2', flavor: 'Mint & eukalyptus', accent: '#2f7fbd', white: true, strength: 2, format: 'slim', number: 2 },
-  { id: 'thelab-3', brand: 'The Lab', variant: 'No 3', flavor: 'Kraftig mint', accent: '#1f5f9c', white: true, strength: 3, format: 'slim', number: 3 },
-  { id: 'thelab-4', brand: 'The Lab', variant: 'No 4', flavor: 'Mint & lakris', accent: '#173f75', white: true, strength: 4, format: 'slim', number: 4 },
-  { id: 'thelab-5', brand: 'The Lab', variant: 'No 5', flavor: 'Ekstra sterk mint', accent: '#10294f', white: true, strength: 5, format: 'slim', number: 5 },
-  { id: 'thelab-6', brand: 'The Lab', variant: 'No 6', flavor: 'Ekstrem mint', accent: '#0a1a33', white: true, strength: 6, format: 'slim', number: 6 },
+  // ---- The Lab (faktisk norsk serie) ----
+  { id: 'the-lab-02', brand: 'The Lab', variant: '02 Strong', name: 'The Lab 02 Strong', flavor: 'Tradisjonell', accent: '#2f7fbd', white: false, strength: 3, format: 'slim', number: 2, image: PACK('the-lab-02') },
+  { id: 'the-lab-05', brand: 'The Lab', variant: '05 White Strong', name: 'The Lab 05 White Strong', flavor: 'Krydret tobakk', accent: '#1f5f9c', white: true, strength: 3, format: 'slim', number: 5, image: PACK('the-lab-05') },
+  { id: 'the-lab-06', brand: 'The Lab', variant: '06 Extra Strong', name: 'The Lab 06 Extra Strong', flavor: 'Tobakk, urter, eik & sedertre', accent: '#173f75', white: false, strength: 4, format: 'slim', number: 6, image: PACK('the-lab-06') },
+  { id: 'the-lab-07', brand: 'The Lab', variant: '07 White Extra Strong', name: 'The Lab 07 White Extra Strong', flavor: 'Tradisjonell', accent: '#10294f', white: true, strength: 4, format: 'slim', number: 7, image: PACK('the-lab-07') },
 
   // ---- Siberia ----
   { id: 'siberia-red-white', brand: 'Siberia', variant: '-80 White Dry', flavor: 'Ekstrem mint', accent: '#b3261e', white: true, strength: 7, format: 'porsjon' },
@@ -128,9 +143,7 @@ const OTHERS: SnusProduct[] = [
   { id: 'lundgrens-jarva', brand: 'Lundgrens', variant: 'Järva White', flavor: 'Bær & mint', accent: '#3a6f2f', white: true, strength: 2, format: 'porsjon' },
 
   // ---- Ettan ----
-  { id: 'ettan-portion', brand: 'Ettan', variant: 'Original Portion', flavor: 'Klassisk tobakk', accent: '#8a6a2f', white: false, strength: 2, format: 'porsjon' },
-  { id: 'ettan-white', brand: 'Ettan', variant: 'White Portion', flavor: 'Klassisk tobakk', accent: '#a1802f', white: true, strength: 2, format: 'porsjon' },
-  { id: 'ettan-los', brand: 'Ettan', variant: 'Løs', flavor: 'Klassisk tobakk', accent: '#6f5324', white: false, strength: 2, format: 'løs' },
+  { id: 'ettan-no1', brand: 'Ettan', variant: 'No1 Løs', name: 'Ettan No1 Løs', flavor: 'Tradisjonell', accent: '#8a6a2f', white: false, strength: 2, format: 'løs', number: 1, image: PACK('ettan-no1') },
 
   // ---- Knox ----
   { id: 'knox-white-large', brand: 'Knox', variant: 'White Large', flavor: 'Tobakk & mint', accent: '#2f5b8a', white: true, strength: 3, format: 'porsjon' },
@@ -151,26 +164,70 @@ export const SNUS_BRANDS: SnusBrandGroup[] = SNUS_CATALOG.reduce<SnusBrandGroup[
   return acc;
 }, []);
 
+/**
+ * Gamle IDs som er lagret på profiler fra før katalogen ble rettet opp.
+ * Peker til nærmeste produkt i dagens katalog, slik at ingen profil blir blank.
+ */
+export const LEGACY_SNUS_IDS: Record<string, string> = {
+  // General
+  'general-white-portion': 'general-classic-no5',
+  'general-original-portion': 'general-classic-no3',
+  'general-mint-white': 'general-classic-no5',
+  'general-extra-strong': 'general-classic-no4',
+  'general-snus-nordic-mint': 'general-classic-no5',
+  'general-g3': 'g3-no1',
+  // The Lab
+  'thelab-1': 'the-lab-02',
+  'thelab-2': 'the-lab-02',
+  'thelab-3': 'the-lab-05',
+  'thelab-4': 'the-lab-06',
+  'thelab-5': 'the-lab-07',
+  'thelab-6': 'the-lab-07',
+  // Ettan
+  'ettan-portion': 'ettan-no1',
+  'ettan-white': 'ettan-no1',
+  'ettan-los': 'ettan-no1',
+};
+
 export function getSnusProduct(id?: string | null): SnusProduct | null {
   if (!id) return null;
-  return SNUS_CATALOG.find((p) => p.id === id) ?? null;
+  const direct = SNUS_CATALOG.find((p) => p.id === id);
+  if (direct) return direct;
+  const alias = LEGACY_SNUS_IDS[id];
+  if (alias) return SNUS_CATALOG.find((p) => p.id === alias) ?? null;
+  return null;
+}
+
+/** Fullt produktnavn – brukes i labels og som alt-tekst */
+export function snusFullName(product: SnusProduct): string {
+  return product.name ?? `${product.brand} ${product.variant}`;
 }
 
 export function snusLabel(productId?: string | null, customLabel?: string | null): string | null {
   const product = getSnusProduct(productId);
-  if (product) return `${product.brand} ${product.variant}`;
+  if (product) return snusFullName(product);
   if (customLabel?.trim()) return customLabel.trim();
   return null;
 }
 
 export function searchSnus(query: string): SnusProduct[] {
-  const q = query.trim().toLowerCase().replace(/\s+/g, ' ');
+  const q = query.trim().toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ');
   if (!q) return SNUS_CATALOG;
   const tokens = q.split(' ').filter(Boolean);
   return SNUS_CATALOG.filter((p) => {
-    const haystack = `${p.brand} ${p.variant} ${p.flavor} ${p.format ?? ''} ${
-      p.number != null ? `no${p.number} nr${p.number} n${p.number} ${p.number}` : ''
-    } ${p.white ? 'helhvit white' : 'brun original'} ${p.nicotineFree ? 'nikotinfri zero' : ''} styrke s${p.strength}`.toLowerCase();
+    const n = p.number;
+    const padded = n != null && n < 10 ? `0${n}` : '';
+    const numberWords =
+      n != null
+        ? `no${n} no ${n} nr${n} n${n} ${n} ${padded} no${padded} no ${padded}`
+        : '';
+    const haystack = `${p.brand} ${p.variant} ${p.name ?? ''} ${p.flavor} ${p.format ?? ''} ${
+      p.format === 'superslim' ? 'super slim' : ''
+    } ${numberWords} ${p.brand === 'G.3' ? 'g3 general g3 generell g3' : ''} ${
+      p.brand === 'The Lab' ? 'lab thelab' : ''
+    } ${p.white ? 'helhvit white' : 'brun original'} ${p.nicotineFree ? 'nikotinfri zero' : ''} styrke s${p.strength}`
+      .toLowerCase()
+      .replace(/\./g, '');
     const compactHay = haystack.replace(/\s/g, '');
     // Every token must match somewhere → "epok 1" and "epok1" both work
     return tokens.every((t) => haystack.includes(t) || compactHay.includes(t));
@@ -223,6 +280,7 @@ const BRAND_LOOK: Record<string, { lid: string; text: string; sub: string; rim: 
   Knox: { lid: '#14304d', text: '#ffffff', sub: '#a9c2d9', rim: '#c8cccf' },
   XR: { lid: '#101f24', text: '#ffffff', sub: '#a9d5d3', rim: '#b9bfc0' },
   'The Lab': { lid: '#f7f8f9', text: '#132030', sub: '#5b6b7d', rim: '#cdd2d6' },
+  'G.3': { lid: '#101a24', text: '#ffffff', sub: '#a9bfd5', rim: '#c8cccf' },
 };
 
 function shade(hex: string, amount: number): string {
