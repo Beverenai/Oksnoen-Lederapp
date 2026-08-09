@@ -25,7 +25,7 @@ import {
   Pencil,
   History,
 } from 'lucide-react';
-import { cn, formatFullRoom } from '@/lib/utils';
+import { cn, formatCabinRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
 import { useParticipants, type ParticipantWithCabin } from '@/hooks/useParticipants';
 import {
