@@ -13,6 +13,8 @@ interface ChatMessage {
   leader_id: string;
   body: string;
   created_at: string;
+  channel?: string | null;
+  period_id?: string | null;
 }
 
 interface LeaderLite {
@@ -47,8 +49,13 @@ function timeLabel(iso: string) {
 }
 
 export default function Chat() {
-  const { leader, isSuperAdmin } = useAuth();
+  const { leader, isSuperAdmin, isLimitedAccess } = useAuth();
   const { showError } = useStatusPopup();
+  const canUsePeriodChat = !isLimitedAccess && leader?.is_active !== false;
+  const [channel, setChannel] = useState<'period' | 'offseason'>(
+    canUsePeriodChat ? 'period' : 'offseason',
+  );
+  const [periodLabel, setPeriodLabel] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [leaders, setLeaders] = useState<Record<string, LeaderLite>>({});
   const [input, setInput] = useState('');
@@ -81,12 +88,28 @@ export default function Chat() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      setMessages([]);
+      let periodId: string | null = null;
+      if (channel === 'period') {
+        const { data: period } = await supabase
+          .from('periods')
+          .select('id,name')
+          .eq('is_active', true)
+          .maybeSingle();
+        periodId = period?.id ?? null;
+        if (!cancelled) setPeriodLabel(period?.name ?? null);
+      }
+
+      let query = supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('channel', channel)
+        .order('created_at', { ascending: true })
+        .limit(500);
+      if (channel === 'period' && periodId) query = query.eq('period_id', periodId);
+
       const [{ data: msgs }, { data: lds }] = await Promise.all([
-        supabase
-          .from('chat_messages')
-          .select('*')
-          .order('created_at', { ascending: true })
-          .limit(500),
+        query,
         supabase.from('leaders').select('id,name,profile_image_url'),
       ]);
       if (cancelled) return;
@@ -97,13 +120,14 @@ export default function Chat() {
       scrollToBottom(true);
     })();
 
-    const channel = supabase
-      .channel('chat-messages')
+    const rt = supabase
+      .channel(`chat-messages-${channel}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages' },
         (payload) => {
           const incoming = payload.new as ChatMessage;
+          if ((incoming.channel ?? 'period') !== channel) return;
           setMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
           scrollToBottom();
         },
@@ -119,9 +143,9 @@ export default function Chat() {
 
     return () => {
       cancelled = true;
-      supabase.removeChannel(channel);
+      supabase.removeChannel(rt);
     };
-  }, []);
+  }, [channel]);
 
   const send = async () => {
     const body = input.trim();
@@ -131,10 +155,15 @@ export default function Chat() {
     const { error } = await supabase.from('chat_messages').insert({
       leader_id: leader.id,
       body,
+      channel,
     });
     setSending(false);
     if (error) {
-      showError('Kunne ikke sende melding');
+      showError(
+        channel === 'period'
+          ? 'Kunne ikke sende melding. Bare ledere som er aktive denne perioden kan skrive i periodechatten.'
+          : 'Kunne ikke sende melding',
+      );
       return;
     }
     setInput('');
@@ -214,10 +243,38 @@ export default function Chat() {
   return (
     <div className="flex flex-col h-[calc(100dvh-140px)] gap-3 animate-fade-in">
       <div className="shrink-0">
-        <h1 className="text-2xl font-heading font-bold">Øksnøen Chat</h1>
+        <h1 className="text-2xl font-heading font-bold">Ledersnakk</h1>
         <p className="text-sm text-muted-foreground">
-          Meldinger mellom alle Øksnøen-ledere
+          {channel === 'period'
+            ? `Periodechat${periodLabel ? ` · ${periodLabel}` : ''} — for ledere som jobber nå`
+            : 'Off season — åpen for alle ledere, hele året'}
         </p>
+        <div className="mt-3 flex gap-1 rounded-full border bg-card/60 p-1 backdrop-blur">
+          <button
+            type="button"
+            onClick={() => setChannel('period')}
+            className={cn(
+              'flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+              channel === 'period'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            Periode
+          </button>
+          <button
+            type="button"
+            onClick={() => setChannel('offseason')}
+            className={cn(
+              'flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+              channel === 'offseason'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            Off season
+          </button>
+        </div>
       </div>
 
       <div
@@ -299,6 +356,11 @@ export default function Chat() {
         })}
       </div>
 
+      {channel === 'period' && !canUsePeriodChat ? (
+        <p className="shrink-0 rounded-2xl border bg-card/40 px-3 py-2.5 text-center text-sm text-muted-foreground">
+          Du er ikke aktiv leder denne perioden — du kan lese her, men skrive i off season-chatten.
+        </p>
+      ) : (
       <form
         onSubmit={(e) => { e.preventDefault(); send(); }}
         className="shrink-0 flex gap-2 items-end"
@@ -318,6 +380,7 @@ export default function Chat() {
           <Send className="w-4 h-4" />
         </Button>
       </form>
+      )}
     </div>
   );
 }

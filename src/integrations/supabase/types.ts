@@ -271,21 +271,27 @@ export type Database = {
       chat_messages: {
         Row: {
           body: string
+          channel: string
           created_at: string
           id: string
           leader_id: string
+          period_id: string | null
         }
         Insert: {
           body: string
+          channel?: string
           created_at?: string
           id?: string
           leader_id: string
+          period_id?: string | null
         }
         Update: {
           body?: string
+          channel?: string
           created_at?: string
           id?: string
           leader_id?: string
+          period_id?: string | null
         }
         Relationships: [
           {
@@ -293,6 +299,13 @@ export type Database = {
             columns: ["leader_id"]
             isOneToOne: false
             referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
             referencedColumns: ["id"]
           },
         ]
