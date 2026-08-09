@@ -217,7 +217,7 @@ export function BulkActivityRegistration({
       <div className="ios-surface px-4 py-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-            <Users className="w-4.5 h-4.5 text-primary" />
+            <Users className="w-4 h-4 text-primary" />
           </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold truncate">Registrer aktivitet</p>
