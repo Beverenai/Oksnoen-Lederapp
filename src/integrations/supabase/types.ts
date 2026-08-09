@@ -865,6 +865,7 @@ export type Database = {
       }
       kiosk_sales: {
         Row: {
+          client_ref: string | null
           created_at: string
           id: string
           participant_id: string
@@ -877,6 +878,7 @@ export type Database = {
           voided_by: string | null
         }
         Insert: {
+          client_ref?: string | null
           created_at?: string
           id?: string
           participant_id: string
@@ -889,6 +891,7 @@ export type Database = {
           voided_by?: string | null
         }
         Update: {
+          client_ref?: string | null
           created_at?: string
           id?: string
           participant_id?: string
@@ -4150,7 +4153,7 @@ export type Database = {
       is_superadmin: { Args: never; Returns: boolean }
       mark_fix_task_fixed: { Args: { _task_id: string }; Returns: undefined }
       record_kiosk_sale: {
-        Args: { _items: Json; _participant_id: string }
+        Args: { _client_ref?: string; _items: Json; _participant_id: string }
         Returns: string
       }
       revive_and_reshuffle_murder: {

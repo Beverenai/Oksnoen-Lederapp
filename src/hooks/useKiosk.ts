@@ -194,10 +194,24 @@ export function useRecordKioskSale() {
   const invalidate = useInvalidateKiosk();
 
   return useMutation({
-    mutationFn: async ({ participantId, lines }: { participantId: string; lines: CartLine[] }) => {
-      const { data, error } = await supabase.rpc('record_kiosk_sale', {
+    mutationFn: async ({
+      participantId,
+      lines,
+      clientRef,
+    }: {
+      participantId: string;
+      lines: CartLine[];
+      clientRef?: string;
+    }) => {
+      const ref =
+        clientRef ??
+        (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`);
+      const { data, error } = await (supabase.rpc as any)('record_kiosk_sale', {
         _participant_id: participantId,
         _items: lines.map((l) => ({ product_id: l.product.id, quantity: l.quantity })),
+        _client_ref: ref,
       });
       if (error) throw error;
       return data as string;

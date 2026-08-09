@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -73,6 +73,25 @@ const Kiosk = () => {
   const [editTarget, setEditTarget] = useState<KioskSale | null>(null);
   const [editLines, setEditLines] = useState<CartLine[]>([]);
   const [editSearch, setEditSearch] = useState('');
+  const submittingRef = useRef(false);
+  const clientRefRef = useRef<string | null>(null);
+
+  /** Stable idempotency key for the current cart — reused across retries. */
+  const cartRef = () => {
+    if (!clientRefRef.current) {
+      clientRefRef.current =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`;
+    }
+    return clientRefRef.current;
+  };
+
+  /** Opens a sheet without letting iOS pop the keyboard from an autofocused field. */
+  const blurActive = () => {
+    const el = document.activeElement as HTMLElement | null;
+    el?.blur?.();
+  };
 
   const categories = catalog?.categories ?? [];
   const products = catalog?.products ?? [];
@@ -174,18 +193,28 @@ const Kiosk = () => {
 
   const handleCheckout = async () => {
     if (!participant) {
+      blurActive();
       setPickerOpen(true);
       return;
     }
     if (lines.length === 0) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    blurActive();
     const buyer = participant;
     const soldLines = lines;
     const soldTotal = total;
     const soldRemaining = remaining;
+    const ref = cartRef();
     try {
       setLines([]);
       setParticipant(null);
-      const saleId = await recordSale.mutateAsync({ participantId: buyer.id, lines: soldLines });
+      const saleId = await recordSale.mutateAsync({
+        participantId: buyer.id,
+        lines: soldLines,
+        clientRef: ref,
+      });
+      clientRefRef.current = null;
       setSuccess({
         saleId,
         participantName: buyer.name,
@@ -204,6 +233,8 @@ const Kiosk = () => {
       toast.error('Kunne ikke registrere kjøp', { description: err?.message });
       setParticipant(buyer);
       setLines(soldLines);
+    } finally {
+      submittingRef.current = false;
     }
   };
 
@@ -355,25 +386,32 @@ const Kiosk = () => {
           )}
         </div>
 
-        {/* Category chips */}
-        {!search && (
-          <div className="-mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 pb-0.5 lg:-mx-6 lg:px-6">
-            <CategoryChip label="Alle" active={!activeCategory} onClick={() => setActiveCategory(null)} />
-            {categories.map((c) => (
-              <CategoryChip
-                key={c.id}
-                label={c.name}
-                active={activeCategory === c.id}
-                onClick={() => setActiveCategory(activeCategory === c.id ? null : c.id)}
-              />
-            ))}
-          </div>
-        )}
+        {/* Category chips — always rendered so the toolbar keeps a constant height while searching */}
+        <div
+          className={cn(
+            '-mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 pb-0.5 lg:-mx-6 lg:px-6',
+            search && 'pointer-events-none opacity-40'
+          )}
+          aria-hidden={!!search}
+        >
+          <CategoryChip label="Alle" active={!activeCategory} onClick={() => setActiveCategory(null)} />
+          {categories.map((c) => (
+            <CategoryChip
+              key={c.id}
+              label={c.name}
+              active={activeCategory === c.id}
+              onClick={() => setActiveCategory(activeCategory === c.id ? null : c.id)}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Selected participant */}
       <Card
-        onClick={() => setPickerOpen(true)}
+        onClick={() => {
+          blurActive();
+          setPickerOpen(true);
+        }}
         className="mb-3 cursor-pointer p-3 active:scale-[0.99] transition-transform"
       >
         {participant ? (
@@ -442,8 +480,8 @@ const Kiosk = () => {
         )}
       </Card>
 
-      {/* Product grid, grouped by category */}
-      <div className="space-y-5">
+      {/* Product grid, grouped by category — min height keeps the page from collapsing (and jumping) while searching */}
+      <div className="min-h-[70vh] space-y-5">
         {productGroups.map((group) => (
           <section key={group.id}>
             <div className="mb-2 flex items-center gap-2">
@@ -536,7 +574,12 @@ const Kiosk = () => {
       {/* Cart bar */}
       {lines.length > 0 && (
         <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 px-4 lg:px-8">
-          <div className="mx-auto max-w-2xl rounded-3xl border border-border/60 bg-background/85 p-3 shadow-lg backdrop-blur-xl">
+          <div
+            className={cn(
+              'mx-auto max-w-2xl rounded-3xl border border-border/60 bg-background/85 p-3 shadow-lg backdrop-blur-xl transition-opacity',
+              recordSale.isPending && 'pointer-events-none opacity-70'
+            )}
+          >
             <div className="max-h-40 space-y-1.5 overflow-y-auto">
               {lines.map((l) => (
                 <div key={l.product.id} className="flex items-center gap-2">
@@ -547,6 +590,7 @@ const Kiosk = () => {
                       size="icon"
                       className="h-7 w-7 rounded-full"
                       onClick={() => changeQuantity(l.product.id, -1)}
+                      disabled={recordSale.isPending}
                       aria-label="Færre"
                     >
                       <Minus className="h-3.5 w-3.5" />
@@ -557,6 +601,7 @@ const Kiosk = () => {
                       size="icon"
                       className="h-7 w-7 rounded-full"
                       onClick={() => changeQuantity(l.product.id, 1)}
+                      disabled={recordSale.isPending}
                       aria-label="Flere"
                     >
                       <Plus className="h-3.5 w-3.5" />
@@ -575,6 +620,7 @@ const Kiosk = () => {
                 size="icon"
                 className="h-10 w-10 shrink-0 text-muted-foreground"
                 onClick={() => setLines([])}
+                disabled={recordSale.isPending}
                 aria-label="Tøm handlekurv"
               >
                 <Trash2 className="h-4 w-4" />
@@ -603,7 +649,7 @@ const Kiosk = () => {
                 ) : (
                   <ShoppingBasket className="h-4 w-4" />
                 )}
-                {participant ? 'Registrer' : 'Velg deltager'}
+                {recordSale.isPending ? 'Registrerer…' : participant ? 'Registrer' : 'Velg deltager'}
               </Button>
             </div>
           </div>
@@ -620,7 +666,11 @@ const Kiosk = () => {
 
       {/* Receipts */}
       <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
-        <SheetContent side="bottom" className="flex h-[88dvh] flex-col gap-0 rounded-t-3xl">
+        <SheetContent
+          side="bottom"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="flex h-[88dvh] flex-col gap-0 rounded-t-3xl"
+        >
           <SheetHeader>
             <SheetTitle>Kvitteringer</SheetTitle>
           </SheetHeader>

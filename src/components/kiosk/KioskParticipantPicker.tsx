@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,6 +18,12 @@ interface Props {
 
 export function KioskParticipantPicker({ open, onOpenChange, participants, balances, onSelect }: Props) {
   const [query, setQuery] = useState('');
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // New search resets only this list's scroll, never the page behind the sheet.
+  useEffect(() => {
+    if (listRef.current) listRef.current.scrollTop = 0;
+  }, [query]);
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -45,7 +51,10 @@ export function KioskParticipantPicker({ open, onOpenChange, participants, balan
           </div>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div
+          ref={listRef}
+          className="flex-1 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        >
           <div className="divide-y divide-border">
             {list.map((p) => {
               const balance = balances?.get(p.id)?.balance ?? 0;

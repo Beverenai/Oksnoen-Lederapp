@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.record_kiosk_sale(uuid, jsonb);
