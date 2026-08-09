@@ -24,7 +24,6 @@ export function NewMessageSheet({
   const [anonymous, setAnonymous] = useState(true);
   const send = useSendMailboxMessage();
   const { showError } = useStatusPopup();
-  const { isAdmin } = useAuth();
 
   const submit = async () => {
     if (content.trim().length < 3) {
