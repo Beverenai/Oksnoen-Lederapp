@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
   Loader2,
   Search,
@@ -84,6 +85,33 @@ export function KioskTab() {
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
+
+  const detail = useMemo(() => {
+    if (!detailId) return null;
+    const p = participants.find((x) => x.id === detailId);
+    if (!p) return null;
+    const mySales = sales.filter((s) => s.participant_id === detailId && !s.voided_at);
+    const productMap = new Map<string, { quantity: number; revenue: number }>();
+    mySales.forEach((s) =>
+      s.items.forEach((i) => {
+        const cur = productMap.get(i.product_name) || { quantity: 0, revenue: 0 };
+        cur.quantity += i.quantity;
+        cur.revenue += i.quantity * i.unit_price;
+        productMap.set(i.product_name, cur);
+      })
+    );
+    const products = [...productMap.entries()]
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.quantity - a.quantity);
+    return {
+      participant: p,
+      sales: mySales,
+      products,
+      visits: mySales.length,
+      spent: mySales.reduce((sum, s) => sum + s.total, 0),
+    };
+  }, [detailId, participants, sales]);
 
   const nameOf = (id: string) => participants.find((p) => p.id === id)?.name ?? 'Ukjent';
   const stamp = new Date().toISOString().slice(0, 10);
