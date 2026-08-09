@@ -163,6 +163,7 @@ const NavGroup = ({
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const { leader, isAdmin, isNurse, isKitchen, isSuperAdmin, isLimitedAccess, logout, viewAsLeader, setViewAsLeader } = useAuth();
+  useAppBadge();
   const checkoutEnabled = useCheckoutEnabled();
   const sweatersEnabled = useSweatersEnabled();
   const { mode: appMode } = useAppMode();

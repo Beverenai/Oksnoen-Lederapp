@@ -1,10 +1,24 @@
+import { useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { categoryEmoji, categoryLabel, MailboxMessage, statusLabel } from '@/hooks/useMailbox';
+import { supabase } from '@/integrations/supabase/client';
 
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString('nb-NO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 export function MyMessagesList({ messages }: { messages: MailboxMessage[] }) {
+  // Seeing your own replies clears them from the app icon badge.
+  useEffect(() => {
+    const unseen = messages.filter((m) => m.admin_reply).map((m) => m.id);
+    if (unseen.length === 0) return;
+    supabase
+      .from('mailbox_messages')
+      .update({ reply_seen_at: new Date().toISOString() })
+      .in('id', unseen)
+      .is('reply_seen_at', null)
+      .then(() => undefined);
+  }, [messages]);
+
   if (messages.length === 0) {
     return (
       <p className="rounded-2xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
