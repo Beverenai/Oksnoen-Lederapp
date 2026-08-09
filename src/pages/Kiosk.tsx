@@ -480,8 +480,8 @@ const Kiosk = () => {
         )}
       </Card>
 
-      {/* Product grid, grouped by category */}
-      <div className="space-y-5">
+      {/* Product grid, grouped by category — min height keeps the page from collapsing (and jumping) while searching */}
+      <div className="min-h-[70vh] space-y-5">
         {productGroups.map((group) => (
           <section key={group.id}>
             <div className="mb-2 flex items-center gap-2">
