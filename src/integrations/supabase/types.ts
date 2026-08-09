@@ -4152,16 +4152,10 @@ export type Database = {
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
       mark_fix_task_fixed: { Args: { _task_id: string }; Returns: undefined }
-      record_kiosk_sale:
-        | { Args: { _items: Json; _participant_id: string }; Returns: string }
-        | {
-            Args: {
-              _client_ref?: string
-              _items: Json
-              _participant_id: string
-            }
-            Returns: string
-          }
+      record_kiosk_sale: {
+        Args: { _client_ref?: string; _items: Json; _participant_id: string }
+        Returns: string
+      }
       revive_and_reshuffle_murder: {
         Args: { _count?: number }
         Returns: {
