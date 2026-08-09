@@ -1,6 +1,6 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Check, X, Users, Home, Sparkles, Clock } from 'lucide-react';
+import { Search, Check, Users, Home, Sparkles, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
