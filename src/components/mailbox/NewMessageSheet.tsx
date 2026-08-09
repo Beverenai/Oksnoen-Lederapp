@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { MAILBOX_CATEGORIES, MailboxCategory, useSendMailboxMessage } from '@/hooks/useMailbox';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function NewMessageSheet({
   open,
@@ -23,6 +24,7 @@ export function NewMessageSheet({
   const [anonymous, setAnonymous] = useState(true);
   const send = useSendMailboxMessage();
   const { showError } = useStatusPopup();
+  const { isAdmin } = useAuth();
 
   const submit = async () => {
     if (content.trim().length < 3) {
