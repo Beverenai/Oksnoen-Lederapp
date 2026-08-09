@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   X,
   KeyRound,
+  LayoutGrid,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
@@ -23,6 +24,7 @@ import { SecretWordsSheet } from '@/components/passport/SecretWordsSheet';
 import { useSecretWordsActive } from '@/hooks/useSecretWordsActive';
 import { useAuth } from '@/contexts/AuthContext';
 import { VirtualizedParticipantList } from '@/components/passport/VirtualizedParticipantList';
+import { PhotoWallView } from '@/components/passport/PhotoWallView';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { useParticipantTeams } from '@/hooks/useParticipantTeams';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
@@ -154,6 +156,7 @@ export default function Passport() {
   const [secretWordsOpen, setSecretWordsOpen] = useState(false);
   const secretWordsActive = useSecretWordsActive();
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
+  const [photoWall, setPhotoWall] = useState(false);
   // (bulk activity registration moved to dedicated route /passport/activity)
 
   // React Query for cached data fetching
@@ -514,8 +517,22 @@ export default function Passport() {
             </button>
           </div>
 
-          {(myCabinIds.length > 0 || (!seasonView && secretWordsActive)) && (
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                hapticImpact('light');
+                setPhotoWall((v) => !v);
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-medium transition-transform active:scale-95 ${
+                photoWall
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'ios-chip text-foreground'
+              }`}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              {photoWall ? 'Vanlig liste' : 'Bildevisning'}
+            </button>
               {!seasonView && secretWordsActive && (
                 <button
                   type="button"
@@ -540,8 +557,7 @@ export default function Passport() {
                   {myCabinsFilter ? 'Alle hytter' : 'Min hytte'}
                 </button>
               )}
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -725,16 +741,24 @@ export default function Passport() {
         </Button>
       )}
 
-      {/* Virtualized Participant List */}
-      <VirtualizedParticipantList
-        cabinGroups={cabinGroups}
-        activitiesMap={activitiesMap}
-        expandedCabins={expandedCabins}
-        onToggleCabin={toggleCabinExpanded}
-        onFilterByCabin={handleFilterByCabin}
-        onParticipantClick={handleParticipantClick}
-        onPrefetchParticipant={prefetchParticipant}
-      />
+      {/* Participant list — photo wall or virtualized list */}
+      {photoWall ? (
+        <PhotoWallView
+          cabinGroups={cabinGroups}
+          onParticipantClick={handleParticipantClick}
+          onPrefetchParticipant={prefetchParticipant}
+        />
+      ) : (
+        <VirtualizedParticipantList
+          cabinGroups={cabinGroups}
+          activitiesMap={activitiesMap}
+          expandedCabins={expandedCabins}
+          onToggleCabin={toggleCabinExpanded}
+          onFilterByCabin={handleFilterByCabin}
+          onParticipantClick={handleParticipantClick}
+          onPrefetchParticipant={prefetchParticipant}
+        />
+      )}
 
       {/* Participant Detail Dialog */}
       <ParticipantDetailDialog
