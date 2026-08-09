@@ -3911,6 +3911,18 @@ export type Database = {
           times_attended: number
         }[]
       }
+      get_kitchen_allergy_notes: {
+        Args: never
+        Returns: {
+          booking_notes: string
+          cabin_name: string
+          health_info: string
+          name: string
+          participant_id: string
+          participant_notes: string
+          room: string
+        }[]
+      }
       get_murder_overview: {
         Args: never
         Returns: {
