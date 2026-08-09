@@ -213,24 +213,6 @@ export function BulkActivityRegistration({
 
   return (
     <div className="space-y-3 pb-28">
-      {/* Header */}
-      <div className="ios-surface px-4 py-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-            <Users className="w-4 h-4 text-primary" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold truncate">Registrer aktivitet</p>
-            <p className="text-[11px] text-muted-foreground truncate">
-              {selectedActivity ? `${remaining} gjenstår på ${selectedActivity}` : 'Velg aktivitet under'}
-            </p>
-          </div>
-        </div>
-        <Button variant="ghost" size="icon" className="rounded-full shrink-0" onClick={onClose}>
-          <X className="w-4 h-4" />
-        </Button>
-      </div>
-
       {/* Activity picker — floating chips */}
       <div className="ios-surface p-3 space-y-3">
         <div className="relative">
