@@ -60,6 +60,7 @@ export default function Profile() {
   const [canRopeSetup, setCanRopeSetup] = useState(false);
   const [snusUser, setSnusUser] = useState(false);
   const [snusProductId, setSnusProductId] = useState<string | null>(null);
+  const [snusProductIds, setSnusProductIds] = useState<string[]>([]);
   const [snusCustomLabel, setSnusCustomLabel] = useState<string | null>(null);
   const [isSnusPickerOpen, setIsSnusPickerOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -74,19 +75,20 @@ export default function Profile() {
     }
   }, [searchParams, setSearchParams]);
 
-  const snusCan = snusProductId
-    ? getSnusProduct(snusProductId)
-    : snusCustomLabel?.trim()
-      ? customSnusProduct(snusCustomLabel.trim())
-      : null;
+  const snusCans = snusProductsFrom(
+    snusProductIds.length ? snusProductIds : [snusProductId],
+    snusCustomLabel
+  );
+  const snusCan = snusCans[0] ?? null;
 
   const saveSnus = async (patch: {
     snus_user?: boolean;
     snus_product_id?: string | null;
+    snus_product_ids?: string[];
     snus_custom_label?: string | null;
   }) => {
     if (!authLeader?.id) return;
-    const { error } = await supabase.from('leaders').update(patch).eq('id', authLeader.id);
+    const { error } = await supabase.from('leaders').update(patch as never).eq('id', authLeader.id);
     if (error) {
       console.error('Error saving snus:', error);
       showError('Kunne ikke lagre snus-valg');
@@ -130,6 +132,7 @@ export default function Profile() {
       setCanRopeSetup(data.can_rope_setup || false);
       setSnusUser(data.snus_user || false);
       setSnusProductId(data.snus_product_id || null);
+      setSnusProductIds(((data as any).snus_product_ids as string[] | null) || []);
       setSnusCustomLabel(data.snus_custom_label || null);
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -157,8 +160,9 @@ export default function Profile() {
           can_rope_setup: canRopeSetup,
           snus_user: snusUser,
           snus_product_id: snusUser ? snusProductId : null,
+          snus_product_ids: snusUser ? snusProductIds : [],
           snus_custom_label: snusUser ? snusCustomLabel : null,
-        })
+        } as never)
         .eq('id', authLeader.id);
 
       if (error) throw error;
@@ -439,7 +443,7 @@ export default function Profile() {
             Snus
           </CardTitle>
           <CardDescription>
-            Si om du snuser – da ser andre ledere hvem de kan bomme av
+            Si om du snuser – velg gjerne flere bokser, de roterer i profilen din
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -454,8 +458,9 @@ export default function Profile() {
                   setSnusUser(checked);
                   if (!checked) {
                     setSnusProductId(null);
+                    setSnusProductIds([]);
                     setSnusCustomLabel(null);
-                    saveSnus({ snus_user: false, snus_product_id: null, snus_custom_label: null });
+                    saveSnus({ snus_user: false, snus_product_id: null, snus_product_ids: [], snus_custom_label: null });
                   } else {
                     saveSnus({ snus_user: true });
                   }
@@ -469,10 +474,16 @@ export default function Profile() {
               {snusCan ? (
                 <>
                   <div className="flex justify-center rounded-2xl bg-muted/40 py-4">
-                    <SnusCan3D product={snusCan} size={220} />
+                    {snusCans.length > 1 ? (
+                      <SnusCanRotator productIds={snusProductIds} size={220} />
+                    ) : (
+                      <SnusCan3D product={snusCan} size={220} />
+                    )}
                   </div>
                   <p className="text-center text-sm font-semibold">
-                    {snusLabel(snusProductId, snusCustomLabel)}
+                    {snusCans.length > 1
+                      ? snusCans.map(snusFullName).join(' • ')
+                      : snusLabel(snusProductId, snusCustomLabel)}
                   </p>
                 </>
               ) : (
@@ -481,7 +492,7 @@ export default function Profile() {
                 </p>
               )}
               <Button variant="outline" className="w-full" onClick={() => setIsSnusPickerOpen(true)}>
-                {snusCan ? 'Bytt snusboks' : 'Velg snusboks'}
+                {snusCan ? 'Endre snusbokser' : 'Velg snusboks'}
               </Button>
             </div>
           )}
@@ -489,12 +500,31 @@ export default function Profile() {
           <SnusPicker
             open={isSnusPickerOpen}
             onOpenChange={setIsSnusPickerOpen}
+            multi
             selectedId={snusProductId}
+            selectedIds={snusProductIds.length ? snusProductIds : snusProductId ? [snusProductId] : []}
             customLabel={snusCustomLabel}
+            onSelectMany={(ids, custom) => {
+              setSnusProductIds(ids);
+              setSnusProductId(ids[0] ?? null);
+              setSnusCustomLabel(custom);
+              saveSnus({
+                snus_user: true,
+                snus_product_id: ids[0] ?? null,
+                snus_product_ids: ids,
+                snus_custom_label: custom,
+              });
+            }}
             onSelect={(productId, custom) => {
               setSnusProductId(productId);
+              setSnusProductIds(productId ? [productId] : []);
               setSnusCustomLabel(custom);
-              saveSnus({ snus_user: true, snus_product_id: productId, snus_custom_label: custom });
+              saveSnus({
+                snus_user: true,
+                snus_product_id: productId,
+                snus_product_ids: productId ? [productId] : [],
+                snus_custom_label: custom,
+              });
             }}
           />
         </CardContent>
