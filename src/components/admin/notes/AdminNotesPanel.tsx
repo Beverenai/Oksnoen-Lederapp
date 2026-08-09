@@ -6,25 +6,59 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   NotebookPen, Plus, PenLine, Pin, PinOff, Trash2, FileText, Presentation, Check, Loader2,
+  Search, Copy, Maximize2, Minimize2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAdminNotes } from '@/hooks/useAdminNotes';
+import { useAdminNotes, type AdminNote } from '@/hooks/useAdminNotes';
 import { RichNoteEditor } from './RichNoteEditor';
 import { NotesWhiteboard, type Stroke } from './NotesWhiteboard';
+import { NOTE_TEMPLATES } from './NoteTemplates';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 
+function relTime(iso: string | null) {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.round(diff / 60000);
+  if (min < 1) return 'nå';
+  if (min < 60) return `${min} min siden`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `${h} t siden`;
+  return `${Math.round(h / 24)} d siden`;
+}
+
+function stripHtml(html: string) {
+  const el = document.createElement('div');
+  el.innerHTML = html || '';
+  return (el.textContent || '').replace(/\u00a0/g, ' ').trim();
+}
+
 export function AdminNotesPanel() {
   const [open, setOpen] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [query, setQuery] = useState('');
   const { showError } = useStatusPopup();
-  const { notes, isLoading, activeId, setActiveId, createNote, patchNote, deleteNote } =
-    useAdminNotes(open);
+  const {
+    notes, isLoading, activeId, setActiveId, createNote, patchNote, deleteNote,
+    duplicateNote, leaderNames,
+  } = useAdminNotes(open);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [titleDraft, setTitleDraft] = useState('');
 
   const active = useMemo(() => notes.find((n) => n.id === activeId) ?? null, [notes, activeId]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return notes;
+    return notes.filter(
+      (n) => n.title.toLowerCase().includes(q) || stripHtml(n.content || '').toLowerCase().includes(q),
+    );
+  }, [notes, query]);
+
+  const pinned = filtered.filter((n) => n.is_pinned);
+  const rest = filtered.filter((n) => !n.is_pinned);
 
   useEffect(() => {
     setTitleDraft(active?.title ?? '');
@@ -67,6 +101,52 @@ export function AdminNotesPanel() {
     }
   };
 
+  const handleTemplate = async (key: string) => {
+    const tpl = NOTE_TEMPLATES.find((t) => t.key === key);
+    if (!tpl) return;
+    try {
+      hapticImpact('light');
+      await createNote('doc', { title: tpl.title, content: tpl.content });
+    } catch {
+      showError('Kunne ikke opprette notat');
+    }
+  };
+
+  // Auto-title from first line while the note still has its default name
+  const maybeAutoTitle = (note: AdminNote, html: string) => {
+    if (note.title !== 'Nytt notat') return;
+    const first = stripHtml(html).split('\n')[0]?.slice(0, 60).trim();
+    if (!first) return;
+    setTitleDraft(first);
+    queueSave(note.id, { title: first });
+  };
+
+  const NoteRow = ({ n, compact }: { n: AdminNote; compact?: boolean }) => (
+    <button
+      type="button"
+      onClick={() => setActiveId(n.id)}
+      className={cn(
+        'flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors',
+        compact ? 'shrink-0 rounded-full py-1.5 text-xs' : 'w-full',
+        n.id === activeId
+          ? 'border-primary bg-primary/10 text-foreground'
+          : 'border-border/60 bg-card/60 text-muted-foreground hover:bg-card',
+      )}
+    >
+      {n.kind === 'board' ? <Presentation className="h-3.5 w-3.5 shrink-0" /> : <FileText className="h-3.5 w-3.5 shrink-0" />}
+      <span className={cn('min-w-0 flex-1', compact && 'max-w-[140px]')}>
+        <span className="block truncate text-[13px] font-medium text-foreground">{n.title}</span>
+        {!compact && (
+          <span className="block truncate text-[11px] text-muted-foreground">
+            {relTime(n.updated_at)}
+            {n.updated_by && leaderNames[n.updated_by] ? ` · ${leaderNames[n.updated_by]}` : ''}
+          </span>
+        )}
+      </span>
+      {n.is_pinned && <Pin className="h-3 w-3 shrink-0 text-primary" />}
+    </button>
+  );
+
   return (
     <>
       <Button
@@ -82,13 +162,16 @@ export function AdminNotesPanel() {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="right"
-          className="w-full sm:max-w-3xl flex flex-col gap-3 p-4 pt-5"
+          className={cn(
+            'flex flex-col gap-3 p-4 pt-5',
+            fullscreen ? 'w-screen sm:max-w-none' : 'w-full sm:max-w-5xl',
+          )}
         >
           <SheetHeader className="space-y-0 pr-8">
             <SheetTitle className="flex items-center gap-2 text-base">
               <NotebookPen className="h-4 w-4" />
               Notater
-              <span className="text-xs font-normal text-muted-foreground">delt med alle admins</span>
+              <span className="hidden sm:inline text-xs font-normal text-muted-foreground">delt med alle admins</span>
               <span className="ml-auto text-xs font-normal text-muted-foreground flex items-center gap-1">
                 {saving ? (
                   <><Loader2 className="h-3 w-3 animate-spin" /> lagrer…</>
@@ -96,48 +179,89 @@ export function AdminNotesPanel() {
                   <><Check className="h-3 w-3" /> lagret</>
                 )}
               </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                title={fullscreen ? 'Avslutt fullskjerm' : 'Fullskjerm'}
+                onClick={() => setFullscreen((v) => !v)}
+              >
+                {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
             </SheetTitle>
           </SheetHeader>
 
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => handleCreate('doc')}>
-              <Plus className="h-4 w-4 mr-1" /> Notat
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => handleCreate('board')}>
-              <PenLine className="h-4 w-4 mr-1" /> Whiteboard
-            </Button>
-          </div>
-
-          <ScrollArea className="shrink-0">
-            <div className="flex gap-2 pb-2">
-              {isLoading && <span className="text-sm text-muted-foreground">Laster…</span>}
-              {!isLoading && notes.length === 0 && (
-                <span className="text-sm text-muted-foreground">
-                  Ingen notater ennå – lag ditt første.
-                </span>
-              )}
-              {notes.map((n) => (
-                <button
-                  key={n.id}
-                  type="button"
-                  onClick={() => setActiveId(n.id)}
-                  className={cn(
-                    'flex items-center gap-1.5 shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors',
-                    n.id === activeId
-                      ? 'border-primary bg-primary/10 text-foreground'
-                      : 'border-border/60 bg-card/60 text-muted-foreground hover:bg-card',
+          <div className="flex flex-1 min-h-0 gap-3">
+            {/* Sidebar (desktop) */}
+            <aside className="hidden lg:flex w-[240px] shrink-0 flex-col gap-2 border-r border-border/60 pr-3">
+              <div className="flex gap-1.5">
+                <Button size="sm" variant="outline" className="flex-1" onClick={() => handleCreate('doc')}>
+                  <Plus className="h-4 w-4 mr-1" /> Notat
+                </Button>
+                <Button size="sm" variant="outline" className="flex-1" onClick={() => handleCreate('board')}>
+                  <PenLine className="h-4 w-4 mr-1" /> Board
+                </Button>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Søk i notater"
+                  className="h-9 pl-8 text-sm"
+                />
+              </div>
+              <ScrollArea className="flex-1 -mr-2 pr-2">
+                <div className="flex flex-col gap-1.5 pb-2">
+                  {isLoading && <span className="text-sm text-muted-foreground">Laster…</span>}
+                  {!isLoading && filtered.length === 0 && (
+                    <span className="text-sm text-muted-foreground">Ingen treff</span>
                   )}
-                >
-                  {n.kind === 'board' ? <Presentation className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
-                  <span className="max-w-[140px] truncate">{n.title}</span>
-                  {n.is_pinned && <Pin className="h-3 w-3 text-primary" />}
-                </button>
-              ))}
-            </div>
-          </ScrollArea>
+                  {pinned.length > 0 && (
+                    <>
+                      <span className="px-1 pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Festet</span>
+                      {pinned.map((n) => <NoteRow key={n.id} n={n} />)}
+                    </>
+                  )}
+                  {rest.length > 0 && pinned.length > 0 && (
+                    <span className="px-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Alle</span>
+                  )}
+                  {rest.map((n) => <NoteRow key={n.id} n={n} />)}
+                </div>
+              </ScrollArea>
+            </aside>
 
-          {active ? (
-            <div className="flex flex-col flex-1 min-h-0 gap-2">
+            <div className="flex flex-1 min-w-0 flex-col gap-2">
+              {/* Mobile controls */}
+              <div className="lg:hidden flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => handleCreate('doc')}>
+                    <Plus className="h-4 w-4 mr-1" /> Notat
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleCreate('board')}>
+                    <PenLine className="h-4 w-4 mr-1" /> Whiteboard
+                  </Button>
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Søk"
+                      className="h-9 pl-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <ScrollArea className="shrink-0">
+                  <div className="flex gap-2 pb-2">
+                    {isLoading && <span className="text-sm text-muted-foreground">Laster…</span>}
+                    {filtered.map((n) => <NoteRow key={n.id} n={n} compact />)}
+                  </div>
+                </ScrollArea>
+              </div>
+
+              {active ? (
+                <div className="flex flex-col flex-1 min-h-0 gap-2">
               <div className="flex items-center gap-2">
                 <Input
                   value={titleDraft}
@@ -149,7 +273,7 @@ export function AdminNotesPanel() {
                   className="h-9 font-medium"
                   placeholder="Tittel"
                 />
-                <Badge variant="secondary" className="shrink-0">
+                <Badge variant="secondary" className="shrink-0 hidden sm:inline-flex">
                   {active.kind === 'board' ? 'Whiteboard' : 'Notat'}
                 </Badge>
                 <Button
@@ -164,6 +288,17 @@ export function AdminNotesPanel() {
                 <Button
                   size="sm"
                   variant="ghost"
+                  className="h-9 w-9 p-0 shrink-0"
+                  title="Dupliser"
+                  onClick={async () => {
+                    try { await duplicateNote(active); } catch { showError('Kunne ikke duplisere'); }
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
                   className="h-9 w-9 p-0 shrink-0 text-destructive"
                   title="Slett"
                   onClick={async () => {
@@ -174,6 +309,10 @@ export function AdminNotesPanel() {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
+              <p className="text-[11px] text-muted-foreground -mt-1">
+                Sist endret {relTime(active.updated_at)}
+                {active.updated_by && leaderNames[active.updated_by] ? ` av ${leaderNames[active.updated_by]}` : ''}
+              </p>
 
               {active.kind === 'board' ? (
                 <NotesWhiteboard
@@ -185,15 +324,33 @@ export function AdminNotesPanel() {
                 <RichNoteEditor
                   noteId={active.id}
                   initialContent={active.content}
-                  onChange={(html) => queueSave(active.id, { content: html })}
+                  onChange={(html) => {
+                    queueSave(active.id, { content: html });
+                    maybeAutoTitle(active, html);
+                  }}
                 />
               )}
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
+                  <div>
+                    <p className="text-sm font-medium">Ingen notat valgt</p>
+                    <p className="text-sm text-muted-foreground">Start fra en mal, eller lag et tomt notat.</p>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {NOTE_TEMPLATES.map((t) => (
+                      <Button key={t.key} size="sm" variant="outline" onClick={() => handleTemplate(t.key)}>
+                        <FileText className="h-4 w-4 mr-1" /> {t.label}
+                      </Button>
+                    ))}
+                    <Button size="sm" variant="outline" onClick={() => handleCreate('board')}>
+                      <PenLine className="h-4 w-4 mr-1" /> Whiteboard
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-              Velg eller lag et notat
-            </div>
-          )}
+          </div>
         </SheetContent>
       </Sheet>
     </>
