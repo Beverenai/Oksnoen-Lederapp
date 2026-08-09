@@ -515,8 +515,22 @@ export default function Passport() {
             </button>
           </div>
 
-          {(myCabinIds.length > 0 || (!seasonView && secretWordsActive)) && (
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                hapticImpact('light');
+                setPhotoWall((v) => !v);
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-medium transition-transform active:scale-95 ${
+                photoWall
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'ios-chip text-foreground'
+              }`}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              {photoWall ? 'Vanlig liste' : 'Bildevisning'}
+            </button>
               {!seasonView && secretWordsActive && (
                 <button
                   type="button"
@@ -541,8 +555,7 @@ export default function Passport() {
                   {myCabinsFilter ? 'Alle hytter' : 'Min hytte'}
                 </button>
               )}
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
