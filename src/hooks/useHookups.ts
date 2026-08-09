@@ -17,7 +17,7 @@ export interface Hookup {
   created_at: string;
 }
 
-/** Whether the "Liggeliste" module is enabled globally (realtime synced). */
+/** Whether the "Klineliste" module is enabled globally (realtime synced). */
 export function useHookupsEnabled() {
   const queryClient = useQueryClient();
 
