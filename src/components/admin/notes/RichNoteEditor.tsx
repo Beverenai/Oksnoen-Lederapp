@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useParticipants } from '@/hooks/useParticipants';
+import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 
 interface RichNoteEditorProps {
   noteId: string;
@@ -33,6 +34,7 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
   const applying = useRef(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [openParticipantId, setOpenParticipantId] = useState<string | null>(null);
 
   const syncFlags = () => {
     setCanUndo(pointer.current > 0);
@@ -139,7 +141,7 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
     setMention((prev) => ({ query: m[1], index: prev?.query === m[1] ? prev.index : 0, left, top }));
   };
 
-  const insertMention = (name: string, imageUrl?: string | null) => {
+  const insertMention = (name: string, imageUrl?: string | null, participantId?: string) => {
     if (!ref.current) return;
     const before = textBeforeCaret();
     if (before == null) return;
@@ -152,7 +154,11 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
     const img = imageUrl
       ? `<img class="note-mention-img" src="${imageUrl.replace(/"/g, '&quot;')}" alt="" />`
       : '';
-    exec('insertHTML', `<span class="note-mention" data-mention="${safeName}">${img}@${name}</span>&nbsp;`);
+    exec(
+      'insertHTML',
+      `<span class="note-mention" contenteditable="false" data-mention="${safeName}"` +
+        `${participantId ? ` data-participant-id="${participantId}"` : ''}>${img}@${name}</span>&nbsp;`,
+    );
     setMention(null);
     if (ref.current) onChange(ref.current.innerHTML);
     pushSnapshot(true);
@@ -219,7 +225,7 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
       if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault();
         const p = matches[mention.index];
-        insertMention(p?.name ?? '', p?.image_thumb_url || p?.image_url);
+        insertMention(p?.name ?? '', p?.image_thumb_url || p?.image_url, p?.id);
         return;
       }
       if (e.key === 'Escape') { e.preventDefault(); setMention(null); return; }
@@ -318,7 +324,7 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
               <button
                 key={p.id}
                 type="button"
-                onMouseDown={(e) => { e.preventDefault(); insertMention(p.name, src); }}
+                onMouseDown={(e) => { e.preventDefault(); insertMention(p.name, src, p.id); }}
                 className={cn(
                   'w-full flex items-center gap-2 text-left px-2 py-1.5 rounded-lg text-sm',
                   i === mention.index ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/60',
@@ -352,6 +358,20 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
         onKeyDown={handleKeyDown}
         onClick={(e) => {
           const target = e.target as HTMLElement;
+          const mentionEl = target.closest?.('.note-mention') as HTMLElement | null;
+          if (mentionEl) {
+            e.preventDefault();
+            const id = mentionEl.dataset.participantId
+              || participants.find(
+                (p) => (p.name || '').toLowerCase()
+                  === (mentionEl.dataset.mention || '').toLowerCase(),
+              )?.id;
+            if (id) {
+              if (!mentionEl.dataset.participantId) mentionEl.dataset.participantId = id;
+              setOpenParticipantId(id);
+            }
+            return;
+          }
           const text = target.textContent || '';
           if (target.isContentEditable === false) return;
           if (/^\s*[☐☑]/.test(text) && target !== ref.current) {
@@ -373,12 +393,18 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
           '[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5',
           '[&_.note-mention]:rounded-md [&_.note-mention]:bg-primary/15 [&_.note-mention]:text-primary [&_.note-mention]:px-1 [&_.note-mention]:py-0.5 [&_.note-mention]:font-medium',
           '[&_.note-mention]:inline-flex [&_.note-mention]:items-center [&_.note-mention]:gap-1 [&_.note-mention]:align-middle',
+          '[&_.note-mention]:cursor-pointer [&_.note-mention:hover]:bg-primary/25',
           '[&_.note-mention-img]:h-5 [&_.note-mention-img]:w-5 [&_.note-mention-img]:rounded-full [&_.note-mention-img]:object-cover [&_.note-mention-img]:inline-block',
           'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground',
         )}
       />
       </div>
       </div>
+      <ParticipantDetailDialog
+        participantId={openParticipantId}
+        open={!!openParticipantId}
+        onOpenChange={(v) => { if (!v) setOpenParticipantId(null); }}
+      />
     </div>
   );
 }
