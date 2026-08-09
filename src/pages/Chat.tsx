@@ -393,11 +393,9 @@ export default function Chat() {
 
   return (
     <div
+      ref={shellRef}
       className="-mx-4 -my-4 flex flex-col gap-2 px-3 pt-2 pb-1 animate-fade-in lg:mx-0 lg:my-0 lg:px-0 lg:pt-0"
-      style={{
-        height:
-          'calc(100svh - var(--safe-top, 0px) - var(--nav-actual-h, 64px) - 12px)',
-      }}
+      style={shellHeight ? { height: shellHeight } : { height: '70svh' }}
     >
       {/* Kompakt topplinje: tittel + kanalvelger på én rad (mindre skroll på iPhone) */}
       <div className="shrink-0 flex items-center gap-2">
