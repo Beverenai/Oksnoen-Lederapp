@@ -35,7 +35,7 @@ import { useMailboxUnreadCount } from '@/hooks/useMailbox';
 import { useHookupsEnabled, useIncomingHookupCount } from '@/hooks/useHookups';
 import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute } from '@/lib/limitedAccess';
-import { IdCard, MessageCircle } from 'lucide-react';
+import { IdCard, MessageCircle, Circle } from 'lucide-react';
 
 type MoreItem = {
   to?: string;
