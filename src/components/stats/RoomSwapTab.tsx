@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, Plus, Check, X, ArrowRight, ArrowLeftRight, Loader2, Users, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -17,11 +18,17 @@ interface Participant {
   name: string;
   cabin_id: string | null;
   room: string | null;
+  image_url?: string | null;
+  image_thumb_url?: string | null;
 }
 
 interface Cabin {
   id: string;
   name: string;
+}
+
+function initials(name: string) {
+  return name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('');
 }
 
 interface RoomCapacity {
@@ -76,7 +83,7 @@ export function RoomSwapTab() {
       setActivePeriodId(periodId);
       const swapsQuery = supabase.from('room_swaps').select('*').order('created_at', { ascending: false });
       if (periodId) swapsQuery.eq('period_id', periodId);
-      const participantsQuery = supabase.from('participants').select('id, name, cabin_id, room');
+      const participantsQuery = supabase.from('participants').select('id, name, cabin_id, room, image_url, image_thumb_url');
       if (periodId) participantsQuery.eq('period_id', periodId);
       const [participantsRes, cabinsRes, capacityRes, swapsRes] = await Promise.all([
         participantsQuery,
@@ -348,8 +355,14 @@ export function RoomSwapTab() {
             {filteredParticipants.length > 0 && (
               <div className="border rounded-md divide-y bg-background shadow-sm max-h-48 overflow-y-auto">
                 {filteredParticipants.map((p) => (
-                  <button key={p.id} onClick={() => handleSelectParticipant(p)} className="w-full px-3 py-2 text-left hover:bg-muted/50 text-sm flex justify-between items-center">
-                    <span>{p.name}</span>
+                  <button key={p.id} onClick={() => handleSelectParticipant(p)} className="w-full px-3 py-2 text-left hover:bg-muted/50 text-sm flex justify-between items-center gap-3">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={p.image_thumb_url || p.image_url || undefined} alt={p.name} loading="lazy" className="object-cover" />
+                        <AvatarFallback className="text-[10px]">{initials(p.name)}</AvatarFallback>
+                      </Avatar>
+                      <span className="truncate">{p.name}</span>
+                    </span>
                     <span className="text-muted-foreground text-xs">{getCabinName(p.cabin_id)} {p.room || ''}</span>
                   </button>
                 ))}
@@ -363,6 +376,10 @@ export function RoomSwapTab() {
               <div className="flex flex-wrap gap-2">
                 {selectedParticipants.map((p) => (
                   <Badge key={p.id} variant="secondary" className="flex items-center gap-1 pr-1">
+                    <Avatar className="h-5 w-5">
+                      <AvatarImage src={p.image_thumb_url || p.image_url || undefined} alt={p.name} loading="lazy" className="object-cover" />
+                      <AvatarFallback className="text-[8px]">{initials(p.name)}</AvatarFallback>
+                    </Avatar>
                     <span>{p.name}</span>
                     <span className="text-muted-foreground text-[10px]">({getCabinName(p.cabin_id)} {p.room || ''})</span>
                     <button onClick={() => handleRemoveParticipant(p.id)} className="ml-1 rounded-full hover:bg-muted p-0.5"><X className="h-3 w-3" /></button>
@@ -406,7 +423,13 @@ export function RoomSwapTab() {
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {targetResidents.map((r) => (
-                    <Badge key={r.id} variant="outline" className="text-xs font-normal">{r.name}</Badge>
+                    <Badge key={r.id} variant="outline" className="text-xs font-normal flex items-center gap-1 pl-0.5">
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={r.image_thumb_url || r.image_url || undefined} alt={r.name} loading="lazy" className="object-cover" />
+                        <AvatarFallback className="text-[8px]">{initials(r.name)}</AvatarFallback>
+                      </Avatar>
+                      {r.name}
+                    </Badge>
                   ))}
                 </div>
               )}
