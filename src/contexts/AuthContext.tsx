@@ -20,6 +20,8 @@ interface AuthContextType {
   isProfileComplete: boolean;
   authError: string | null;
   deactivatedMessage: string | null;
+  /** Leader is not active this period — only off-season features available. */
+  isLimitedAccess: boolean;
   login: (phone: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   logout: () => void;
   refreshLeader: () => Promise<void>;
@@ -41,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isNurse, setIsNurse] = useState(false);
   const [isKitchen, setIsKitchen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLimitedAccess, setIsLimitedAccess] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [deactivatedMessage, setDeactivatedMessage] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -209,14 +212,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const isNrs = roles.includes('nurse');
       const isKtc = roles.includes('kitchen');
 
-      // 3. Check active status
-      if (leaderData.is_active === false && !isSA) {
-        console.warn('[Auth] Inactive leader detected — signing out');
-        setDeactivatedMessage('Kontoen din ble deaktivert. Kontakt leirledelsen.');
-        await supabase.auth.signOut();
-        localStorage.removeItem('leaderName');
-        return;
-      }
+      // 3. Inactive leaders keep access, but only to the off-season features.
+      setIsLimitedAccess(leaderData.is_active === false && !isSA);
 
       // 4. Apply state
       setDeactivatedMessage(null);
@@ -251,8 +248,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!error && leaderData) {
       setLeader(leaderData);
+      setIsLimitedAccess(leaderData.is_active === false && !isSuperAdmin);
     }
-  }, [leader?.id]);
+  }, [leader?.id, isSuperAdmin]);
 
   const retryAuth = useCallback(() => {
     setIsLoading(true);
@@ -336,6 +334,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdmin(false);
     setIsNurse(false);
     setIsKitchen(false);
+    setIsLimitedAccess(false);
   };
 
   return (
@@ -344,7 +343,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isSuperAdmin, isAdmin, isNurse, isKitchen,
       isLoading,
       isInitialized,
-      isProfileComplete, authError, deactivatedMessage,
+      isProfileComplete, authError, deactivatedMessage, isLimitedAccess,
       login, logout, refreshLeader, retryAuth
     }}>
       {children}
