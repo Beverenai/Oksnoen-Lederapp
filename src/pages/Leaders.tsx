@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Users, Phone, Cross, ArrowUpDown, Check, Search, X, Home, Coffee, MessageSquare } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/leaders/LeaderDetailDialog';
+import { OffSeasonLeaderList } from '@/components/leaders/OffSeasonLeaderList';
 import { LeaderContentSheet } from '@/components/admin/LeaderContentSheet';
 import { SnusBadge } from '@/components/snus/SnusBadge';
 import { useAuth } from '@/contexts/AuthContext';
@@ -733,4 +734,13 @@ function LeadersFull() {
       />
     </div>
   );
+}
+
+/**
+ * Off season (inaktiv app) viser en enkel lederliste uten periodedata.
+ */
+export default function Leaders() {
+  const { isLimitedAccess } = useAuth();
+  if (isLimitedAccess) return <OffSeasonLeaderList />;
+  return <LeadersFull />;
 }
