@@ -635,6 +635,21 @@ export default function Home() {
             {effectiveLeader?.ministerpost && (
               <Badge variant="outline" className="text-xs">{effectiveLeader.ministerpost}</Badge>
             )}
+            {(() => {
+              // "Rommet du skal bo på" (extra_1) vises som en pill sammen med
+              // ministerpost/lag i stedet for et eget kort lenger ned.
+              const roomConfig = config.find((c) => c.element_key === 'extra_1');
+              const roomValue = getExtraFieldValue('extra_1');
+              if (!roomConfig || !roomValue) return null;
+              const RoomIcon =
+                roomConfig.icon && iconMap[roomConfig.icon] ? iconMap[roomConfig.icon] : Info;
+              return (
+                <Badge variant="outline" className="text-xs">
+                  <RoomIcon className="w-3 h-3 mr-1" />
+                  {roomValue}
+                </Badge>
+              );
+            })()}
             {leader?.team && (
               <Link to={`/team/${leader.team.toLowerCase()}`}>
                 <Badge variant="outline" className="text-xs cursor-pointer hover:opacity-80 transition-opacity">
@@ -900,7 +915,8 @@ export default function Home() {
         })()}
 
         {/* Extra Fields - Secondary styling */}
-        {['extra_1', 'extra_2', 'extra_3', 'extra_4', 'extra_5'].map((fieldKey) => {
+        {/* extra_1 vises som pill i profilheaderen, ikke som kort */}
+        {['extra_2', 'extra_3', 'extra_4', 'extra_5'].map((fieldKey) => {
           const fieldConfig = config.find(c => c.element_key === fieldKey);
           if (!fieldConfig) return null;
           
