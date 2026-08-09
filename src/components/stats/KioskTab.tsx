@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Package,
   Users,
+  Trophy,
 } from 'lucide-react';
 import { cn, formatCabinRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
