@@ -6,6 +6,7 @@
 export const LIMITED_ACCESS_ROUTES = [
   '/',
   '/chat',
+  '/leaders',
   '/profile',
   '/mer',
   '/lederpass',
