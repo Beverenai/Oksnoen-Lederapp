@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Package,
   Users,
+  Trophy,
 } from 'lucide-react';
 import { cn, formatCabinRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
@@ -170,6 +171,21 @@ export function KioskTab() {
     };
   }, [sales, balances]);
 
+  const sellers = useMemo(() => {
+    const map = new Map<string, { name: string; sales: number; revenue: number; units: number }>();
+    sales
+      .filter((s) => !s.voided_at)
+      .forEach((s) => {
+        const name = s.sold_by_name || 'Ukjent leder';
+        const cur = map.get(name) || { name, sales: 0, revenue: 0, units: 0 };
+        cur.sales += 1;
+        cur.revenue += s.total;
+        cur.units += s.items.reduce((sum, i) => sum + i.quantity, 0);
+        map.set(name, cur);
+      });
+    return [...map.values()].sort((a, b) => b.revenue - a.revenue || b.sales - a.sales);
+  }, [sales]);
+
   const exports = [
     { label: 'Innkjøpsliste', desc: 'Salg per vare + anbefalt påfyll', file: `gomla-innkjop-${stamp}.csv`, make: () => purchasingCsv(sales, stats.dayCount) },
     { label: 'Varesalg', desc: 'Antall og omsetning per vare', file: `gomla-varesalg-${stamp}.csv`, make: () => productsCsv(sales) },
@@ -245,8 +261,47 @@ export function KioskTab() {
           <TabsTrigger value="varer">Varesalg</TabsTrigger>
           <TabsTrigger value="saldo">Saldo</TabsTrigger>
           <TabsTrigger value="kjop">Kjøp</TabsTrigger>
+          <TabsTrigger value="ledere">Ledere</TabsTrigger>
           <TabsTrigger value="rapporter">Rapporter</TabsTrigger>
         </TabsList>
+
+        {/* Ledere - hvem selger mest */}
+        <TabsContent value="ledere" className="mt-4 space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Trophy className="h-4 w-4" /> Toppselgere i Gomla
+              </CardTitle>
+              <CardDescription>Omsetning per leder (annullerte kjøp er ikke med).</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {sellers.length === 0 && (
+                <p className="text-sm text-muted-foreground">Ingen salg registrert ennå.</p>
+              )}
+              {sellers.map((s, i) => (
+                <div key={s.name} className="space-y-1.5">
+                  <div className="flex items-baseline justify-between gap-2 text-sm">
+                    <span className="min-w-0 truncate font-medium">
+                      {i + 1}. {s.name}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-muted-foreground">
+                      {s.revenue} kr · {s.sales} kjøp
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{
+                        width: `${Math.max(4, (s.revenue / (sellers[0]?.revenue || 1)) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">{s.units} varer solgt</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Varesalg / innkjøp */}
         <TabsContent value="varer" className="mt-4 space-y-4">
