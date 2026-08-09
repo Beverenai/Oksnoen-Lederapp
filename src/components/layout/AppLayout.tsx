@@ -26,6 +26,7 @@ import {
   Shirt,
   LayoutGrid,
   Archive,
+  ChefHat,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -83,6 +84,8 @@ const storiesNavItem: NavItem = { to: '/stories', icon: BookOpen, label: 'Histor
 
 // Special access items
 const nurseNavItem: NavItem = { to: '/nurse', icon: Heart, label: 'Nurse' };
+const kitchenNavItem: NavItem = { to: '/kjokken', icon: ChefHat, label: 'Kjøkken' };
+const merNavItem: NavItem = { to: '/mer', icon: LayoutGrid, label: 'Mer' };
 const participantsNavItem: NavItem = { to: '/participant-stats', icon: BarChart2, label: 'Deltagere' };
 const adminNavItem: NavItem = { to: '/admin', icon: Settings, label: 'Admin' };
 
@@ -158,7 +161,7 @@ const NavGroup = ({
 };
 
 export default function AppLayout({ children }: AppLayoutProps) {
-  const { leader, isAdmin, isNurse, isSuperAdmin, logout, viewAsLeader, setViewAsLeader } = useAuth();
+  const { leader, isAdmin, isNurse, isKitchen, isSuperAdmin, logout, viewAsLeader, setViewAsLeader } = useAuth();
   const checkoutEnabled = useCheckoutEnabled();
   const sweatersEnabled = useSweatersEnabled();
   const { mode: appMode } = useAppMode();
@@ -214,8 +217,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
     fixNavItem,
   ];
 
-  // Build special access items based on role (only for nurse, not admin)
-  const specialAccessItems = isNurse && !isAdmin ? [nurseNavItem] : [];
+  // Build special access items based on role (only for non-admins)
+  const specialAccessItems = [
+    ...(isNurse && !isAdmin ? [nurseNavItem] : []),
+    ...(isKitchen && !isAdmin ? [kitchenNavItem] : []),
+  ];
 
   // Leader nav items for hamburger menu - filter items already in bottom nav
   const mobileLeaderNavItems = visibleLeaderNavItems.filter(item =>
@@ -533,8 +539,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
             onOpenChange={(open) => setOpenGroups(prev => ({ ...prev, content: open }))}
           />
 
-          {/* Special access for nurse only (not admin) - collapsible */}
-          {isNurse && !isAdmin && (
+          {/* Special access for nurse/kitchen (not admin) - collapsible */}
+          {specialAccessItems.length > 0 && (
             <NavGroup
               label="Spesielle tilganger"
               items={specialAccessItems}
@@ -550,10 +556,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 Admin
               </div>
               <NavLinkItem item={nurseNavItem} />
+              <NavLinkItem item={kitchenNavItem} />
               <NavLinkItem item={participantsNavItem} />
               <NavLinkItem item={adminNavItem} />
             </div>
           )}
+
+          {/* Alle sider — samme rutenett som på mobil */}
+          <div className="pt-2 space-y-1">
+            <NavLinkItem item={merNavItem} />
+          </div>
           </>)}
         </nav>
 
@@ -647,8 +659,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </div>
             )}
 
-            {/* Special access for nurse only (not admin) - collapsible */}
-            {isNurse && !isAdmin && (
+            {/* Special access for nurse/kitchen (not admin) - collapsible */}
+            {specialAccessItems.length > 0 && (
               <NavGroup
                 label="Spesielle tilganger"
                 items={specialAccessItems}
@@ -665,6 +677,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   Admin
                 </div>
                 <NavLinkItem item={nurseNavItem} onClick={closeMobileMenu} />
+                <NavLinkItem item={kitchenNavItem} onClick={closeMobileMenu} />
                 <NavLinkItem item={participantsNavItem} onClick={closeMobileMenu} />
                 <NavLinkItem item={adminNavItem} onClick={closeMobileMenu} />
               </div>

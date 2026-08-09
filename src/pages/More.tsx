@@ -17,6 +17,7 @@ import {
   Bell,
   Skull,
   ShoppingBasket,
+  ChefHat,
   LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -72,7 +73,7 @@ function Tile({ item }: { item: MoreItem }) {
 }
 
 export default function More() {
-  const { isAdmin, isNurse, logout, leader, effectiveLeader } = useAuth();
+  const { isAdmin, isNurse, isKitchen, logout, leader, effectiveLeader } = useAuth();
   const sweatersEnabled = useSweatersEnabled();
   const { data: murderState } = useMyMurderState();
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
@@ -167,6 +168,9 @@ export default function More() {
         ...(isNurse || isAdmin
           ? [{ to: '/nurse', icon: Heart, label: 'Nurse' } as MoreItem]
           : []),
+        ...(isKitchen || isAdmin
+          ? [{ to: '/kjokken', icon: ChefHat, label: 'Kjøkken' } as MoreItem]
+          : []),
         ...(isAdmin
           ? [
               { to: '/participant-stats', icon: BarChart2, label: 'Deltagere' } as MoreItem,
@@ -223,7 +227,7 @@ export default function More() {
             )}>
               {section.label}
             </div>
-            <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+            <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">
               {section.items.map((item, i) => (
                 <Tile key={`${section.label}-${i}`} item={item} />
               ))}
