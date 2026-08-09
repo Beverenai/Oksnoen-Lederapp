@@ -280,6 +280,7 @@ const BRAND_LOOK: Record<string, { lid: string; text: string; sub: string; rim: 
   Knox: { lid: '#14304d', text: '#ffffff', sub: '#a9c2d9', rim: '#c8cccf' },
   XR: { lid: '#101f24', text: '#ffffff', sub: '#a9d5d3', rim: '#b9bfc0' },
   'The Lab': { lid: '#f7f8f9', text: '#132030', sub: '#5b6b7d', rim: '#cdd2d6' },
+  'G.3': { lid: '#101a24', text: '#ffffff', sub: '#a9bfd5', rim: '#c8cccf' },
 };
 
 function shade(hex: string, amount: number): string {
