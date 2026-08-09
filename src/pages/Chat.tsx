@@ -356,6 +356,11 @@ export default function Chat() {
         })}
       </div>
 
+      {channel === 'period' && !canUsePeriodChat ? (
+        <p className="shrink-0 rounded-2xl border bg-card/40 px-3 py-2.5 text-center text-sm text-muted-foreground">
+          Du er ikke aktiv leder denne perioden — du kan lese her, men skrive i off season-chatten.
+        </p>
+      ) : (
       <form
         onSubmit={(e) => { e.preventDefault(); send(); }}
         className="shrink-0 flex gap-2 items-end"
@@ -375,6 +380,7 @@ export default function Chat() {
           <Send className="w-4 h-4" />
         </Button>
       </form>
+      )}
     </div>
   );
 }
