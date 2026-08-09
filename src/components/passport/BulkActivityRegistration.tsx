@@ -182,203 +182,255 @@ export function BulkActivityRegistration({
     }
   };
 
+  const doneCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    participants.forEach((p) => {
+      const seen = new Set<string>();
+      (p.participant_activities || []).forEach((a) => {
+        const k = a.activity.toLowerCase();
+        if (seen.has(k)) return;
+        seen.add(k);
+        map.set(k, (map.get(k) || 0) + 1);
+      });
+    });
+    return map;
+  }, [participants]);
+
+  const visibleActivities = useMemo(() => {
+    const q = activitySearch.trim().toLowerCase();
+    const list = q ? activities.filter((a) => a.title.toLowerCase().includes(q)) : activities;
+    const recentSet = new Set(recentActivities.map((r) => r.toLowerCase()));
+    return [...list].sort((a, b) => {
+      const ra = recentSet.has(a.title.toLowerCase()) ? 0 : 1;
+      const rb = recentSet.has(b.title.toLowerCase()) ? 0 : 1;
+      if (ra !== rb) return ra - rb;
+      return a.title.localeCompare(b.title, 'nb');
+    });
+  }, [activities, activitySearch, recentActivities]);
+
+  const remaining = activityTotals.total - activityTotals.done;
+  const progress = activityTotals.total ? Math.round((activityTotals.done / activityTotals.total) * 100) : 0;
+
   return (
-    <Card>
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Masseregistrering av aktivitet
-          </CardTitle>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4 pb-24">
-        {/* Activity Selection – searchable */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">1. Velg aktivitet</label>
-          <Popover open={activityPickerOpen} onOpenChange={setActivityPickerOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                className="w-full justify-between h-11"
-              >
-                <span className={cn('truncate', !selectedActivity && 'text-muted-foreground')}>
-                  {isCustom
-                    ? (customName || 'Egendefinert aktivitet…')
-                    : (selectedActivity || 'Velg en aktivitet…')}
-                </span>
-                <ChevronDown className="w-4 h-4 opacity-60 shrink-0 ml-2" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-w-none" align="start">
-              <Command>
-                <CommandInput placeholder="Søk etter aktivitet…" />
-                <CommandList className="max-h-72">
-                  <CommandEmpty>Ingen treff</CommandEmpty>
-                  {recentActivities.length > 0 && (
-                    <CommandGroup heading="Nylig brukt">
-                      {recentActivities.map((name) => (
-                        <CommandItem key={`recent-${name}`} value={`recent ${name}`} onSelect={() => pickActivity(name)}>
-                          <Clock className="w-3.5 h-3.5 mr-2 opacity-60" />
-                          {name}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  )}
-                  <CommandGroup heading="Alle aktiviteter">
-                    {activities.map((activity) => (
-                      <CommandItem
-                        key={activity.id}
-                        value={activity.title}
-                        onSelect={() => pickActivity(activity.title)}
-                      >
-                        {activity.title}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                  <CommandGroup>
-                    <CommandItem value="__custom__ egendefinert" onSelect={pickCustom}>
-                      <Sparkles className="w-3.5 h-3.5 mr-2" />
-                      Egendefinert aktivitet…
-                    </CommandItem>
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-          {isCustom && (
-            <Input
-              autoFocus
-              placeholder="Skriv aktivitetsnavn…"
-              maxLength={60}
-              value={customName}
-              onChange={(e) => {
-                setCustomName(e.target.value);
-                setSelectedActivity(e.target.value.trim());
-              }}
-            />
-          )}
-          {selectedActivity && !isCustom && (
-            <p className="text-xs text-muted-foreground">
-              {activityTotals.done} av {activityTotals.total} har allerede gjort denne •{' '}
-              <span className="font-medium text-foreground">{activityTotals.total - activityTotals.done} gjenstår</span>
+    <div className="space-y-3 pb-28">
+      {/* Header */}
+      <div className="ios-surface px-4 py-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Users className="w-4.5 h-4.5 text-primary" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold truncate">Registrer aktivitet</p>
+            <p className="text-[11px] text-muted-foreground truncate">
+              {selectedActivity ? `${remaining} gjenstår på ${selectedActivity}` : 'Velg aktivitet under'}
             </p>
+          </div>
+        </div>
+        <Button variant="ghost" size="icon" className="rounded-full shrink-0" onClick={onClose}>
+          <X className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* Activity picker — floating chips */}
+      <div className="ios-surface p-3 space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Søk aktivitet…"
+            value={activitySearch}
+            onChange={(e) => setActivitySearch(e.target.value)}
+            className="pl-10 h-11 rounded-2xl bg-muted/50 border-0"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2 max-h-56 overflow-y-auto overscroll-contain">
+          {visibleActivities.map((activity) => {
+            const active = !isCustom && selectedActivity.toLowerCase() === activity.title.toLowerCase();
+            const done = doneCounts.get(activity.title.toLowerCase()) || 0;
+            const isRecent = recentActivities.some((r) => r.toLowerCase() === activity.title.toLowerCase());
+            return (
+              <button
+                key={activity.id}
+                type="button"
+                onClick={() => pickActivity(activity.title)}
+                className={cn(
+                  'ios-chip flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium border',
+                  active
+                    ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25'
+                    : 'bg-muted/50 text-foreground border-border/50'
+                )}
+              >
+                {active ? (
+                  <Check className="w-3.5 h-3.5" />
+                ) : isRecent ? (
+                  <Clock className="w-3.5 h-3.5 opacity-60" />
+                ) : null}
+                <span className="truncate max-w-[10rem]">{activity.title}</span>
+                {done > 0 && (
+                  <span
+                    className={cn(
+                      'text-[10px] font-semibold rounded-full px-1.5 py-0.5',
+                      active ? 'bg-primary-foreground/20' : 'bg-background/70 text-muted-foreground'
+                    )}
+                  >
+                    {done}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={pickCustom}
+            className={cn(
+              'ios-chip flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium border border-dashed',
+              isCustom ? 'bg-primary/10 border-primary text-primary' : 'border-border text-muted-foreground'
+            )}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Egendefinert
+          </button>
+
+          {visibleActivities.length === 0 && !isCustom && (
+            <p className="text-sm text-muted-foreground py-2 px-1">Ingen treff</p>
           )}
         </div>
 
-        {selectedActivity && (
-          <>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">2. Huk av deltakere</label>
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Søk etter deltaker…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-11"
-                />
-              </div>
+        {isCustom && (
+          <Input
+            autoFocus
+            placeholder="Skriv aktivitetsnavn…"
+            maxLength={60}
+            value={customName}
+            onChange={(e) => handleCustomNameChange(e.target.value)}
+            className="h-11 rounded-2xl bg-muted/50 border-0"
+          />
+        )}
 
-              {/* Filters row */}
-              <div className="grid grid-cols-2 gap-2">
-                <Select value={cabinFilter} onValueChange={setCabinFilter}>
-                  <SelectTrigger className="h-10">
-                    <Home className="w-3.5 h-3.5 mr-1 opacity-60" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Alle hytter</SelectItem>
-                    {availableCabins.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                    <SelectItem value="none">Uten hytte</SelectItem>
-                  </SelectContent>
-                </Select>
-                {teamsEnabled && teams.length > 0 ? (
-                  <Select value={teamFilter} onValueChange={setTeamFilter}>
-                    <SelectTrigger className="h-10">
-                      <Users className="w-3.5 h-3.5 mr-1 opacity-60" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Alle lag</SelectItem>
-                      {teams.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                      ))}
-                      <SelectItem value="none">Uten lag</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : <div />}
-              </div>
-
-              {/* Master toggle */}
-              <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border bg-muted/40">
-                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-                  <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={(v) => (v ? selectAll() : deselectAll())}
-                  />
-                  Velg alle ({filteredParticipants.length})
-                </label>
-                <Badge variant="secondary">{selectedParticipants.size} valgt</Badge>
-              </div>
+        {selectedActivity && !isCustom && (
+          <div className="space-y-1.5">
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
             </div>
+            <p className="text-[11px] text-muted-foreground">
+              {activityTotals.done} av {activityTotals.total} har gjort denne •{' '}
+              <span className="font-semibold text-foreground">{remaining} gjenstår</span>
+            </p>
+          </div>
+        )}
+      </div>
 
-            {/* Participant List */}
-            <div className="max-h-[50vh] overflow-y-auto space-y-1 border rounded-lg p-2">
-              {filteredParticipants.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  {searchQuery
-                    ? 'Ingen deltakere funnet'
-                    : 'Alle deltakere har allerede gjort denne aktiviteten'}
-                </p>
-              ) : (
-                filteredParticipants.map((participant) => (
-                  <div
+      {selectedActivity && (
+        <div className="ios-surface p-3 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Søk deltaker…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-11 rounded-2xl bg-muted/50 border-0"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={cabinFilter} onValueChange={setCabinFilter}>
+              <SelectTrigger className="h-10 rounded-2xl bg-muted/50 border-0">
+                <Home className="w-3.5 h-3.5 mr-1 opacity-60" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle hytter</SelectItem>
+                {availableCabins.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+                <SelectItem value="none">Uten hytte</SelectItem>
+              </SelectContent>
+            </Select>
+            {teamsEnabled && teams.length > 0 ? (
+              <Select value={teamFilter} onValueChange={setTeamFilter}>
+                <SelectTrigger className="h-10 rounded-2xl bg-muted/50 border-0">
+                  <Users className="w-3.5 h-3.5 mr-1 opacity-60" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle lag</SelectItem>
+                  {teams.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                  <SelectItem value="none">Uten lag</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : <div />}
+          </div>
+
+          <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-2xl bg-muted/40">
+            <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+              <Checkbox
+                checked={allSelected}
+                onCheckedChange={(v) => (v ? selectAll() : deselectAll())}
+              />
+              Velg alle ({filteredParticipants.length})
+            </label>
+            <Badge variant="secondary" className="rounded-full">{selectedParticipants.size} valgt</Badge>
+          </div>
+
+          <div className="max-h-[52vh] overflow-y-auto overscroll-contain space-y-1.5">
+            {filteredParticipants.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                {searchQuery ? 'Ingen deltakere funnet' : 'Alle har allerede gjort denne aktiviteten'}
+              </p>
+            ) : (
+              filteredParticipants.map((participant) => {
+                const checked = selectedParticipants.has(participant.id);
+                return (
+                  <button
                     key={participant.id}
-                    className={cn(
-                      'flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors',
-                      selectedParticipants.has(participant.id) ? 'bg-primary/10' : 'hover:bg-muted/50'
-                    )}
+                    type="button"
                     onClick={() => toggleParticipant(participant.id)}
+                    className={cn(
+                      'w-full flex items-center gap-3 p-2 pr-3 rounded-2xl text-left transition-all active:scale-[0.99]',
+                      checked
+                        ? 'bg-primary/10 ring-1 ring-primary/40'
+                        : 'bg-muted/30 hover:bg-muted/60'
+                    )}
                   >
-                    <Checkbox
-                      checked={selectedParticipants.has(participant.id)}
-                      onCheckedChange={() => toggleParticipant(participant.id)}
-                    />
-                    <Avatar className="w-8 h-8">
+                    <Avatar className="w-9 h-9">
                       <AvatarImage src={participant.image_url || undefined} />
-                      <AvatarFallback className="text-xs">
-                        {participant.name.charAt(0)}
-                      </AvatarFallback>
+                      <AvatarFallback className="text-xs">{participant.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{participant.name}</p>
                       {participant.cabins && (
-                        <p className="text-xs text-muted-foreground">{participant.cabins.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{participant.cabins.name}</p>
                       )}
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </>
-        )}
-      </CardContent>
+                    <span
+                      className={cn(
+                        'w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-colors',
+                        checked ? 'bg-primary text-primary-foreground' : 'border border-border/70'
+                      )}
+                    >
+                      {checked && <Check className="w-3.5 h-3.5" />}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
 
-      {/* Sticky submit bar */}
+      {/* Floating submit pill */}
       {selectedActivity && (
-        <div className="sticky bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] rounded-b-lg">
+        <div className="fixed left-0 right-0 bottom-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] pointer-events-none">
           <Button
             onClick={handleSubmit}
             disabled={selectedParticipants.size === 0 || isSubmitting}
-            className="w-full h-12 text-base"
+            className="pointer-events-auto w-full max-w-xl mx-auto h-14 rounded-full text-base font-semibold shadow-xl shadow-primary/30"
           >
             {isSubmitting ? (
               <span className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -389,6 +441,6 @@ export function BulkActivityRegistration({
           </Button>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
