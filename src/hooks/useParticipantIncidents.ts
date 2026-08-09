@@ -10,6 +10,7 @@ export interface IncidentParticipant {
   name: string;
 }
 
+
 export interface Incident {
   id: string;
   title: string;
