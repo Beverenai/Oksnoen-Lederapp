@@ -329,7 +329,7 @@ export default function Home() {
       // Hent egen snus-status ferskt fra basen (auth-context kan være utdatert)
       const { data: me } = await supabase
         .from('leaders')
-        .select('snus_user, snus_product_id, snus_product_ids, snus_custom_label')
+        .select('snus_user, snus_product_id, snus_product_ids, snus_custom_label, is_active')
         .eq('id', effectiveLeader.id)
         .maybeSingle();
       const productId = (me as any)?.snus_product_id;
@@ -348,13 +348,16 @@ export default function Home() {
         setSnusBrothers([]);
         return;
       }
-      const { data } = await supabase
+      // Aktive ledere ser kun andre aktive snusere.
+      // Inaktive ledere (off season) ser alle.
+      const iAmActive = (me as any)?.is_active !== false;
+      let query = supabase
         .from('leaders')
         .select('id, name, profile_image_url, snus_product_id, snus_product_ids')
         .eq('snus_user', true)
-        .eq('is_active', true)
-        .neq('id', effectiveLeader.id)
-        .order('name');
+        .neq('id', effectiveLeader.id);
+      if (iAmActive) query = query.eq('is_active', true);
+      const { data } = await query.order('name');
       // Deles man minst én boks, er man snus brothers
       const matches = ((data as any[]) || []).filter((l) => {
         const ids: string[] = (l.snus_product_ids as string[] | null)?.length
