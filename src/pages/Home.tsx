@@ -151,7 +151,7 @@ const formatTeamDisplay = (team: string | null): string => {
 };
 
 export default function Home() {
-  const { leader, effectiveLeader, isAdmin, isNurse, isSuperAdmin } = useAuth();
+  const { leader, effectiveLeader, isAdmin, isNurse, isSuperAdmin, isLimitedAccess } = useAuth();
   const { mode: appMode } = useAppMode();
   const navigate = useNavigate();
   const location = useLocation();
@@ -491,7 +491,7 @@ export default function Home() {
   // App-wide inactive mode (off-season): the real interactive 3D lederpass
   // fills the entire home surface. Chat remains reachable via bottom nav.
   // Superadmin keeps the full home to manage the app.
-  if (appMode === 'inactive' && !isSuperAdmin) {
+  if ((appMode === 'inactive' || isLimitedAccess) && !isSuperAdmin) {
     return (
       <div className="animate-fade-in -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 h-[calc(100dvh-4rem)]">
         <LederPass leader={effectiveLeader} fill periodLabel={activePeriodLabel} />

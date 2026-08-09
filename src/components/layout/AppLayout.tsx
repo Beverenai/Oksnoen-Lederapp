@@ -25,6 +25,7 @@ import {
   ClipboardList,
   Shirt,
   LayoutGrid,
+  HeartHandshake,
   Archive,
   ChefHat,
 } from 'lucide-react';
@@ -161,12 +162,12 @@ const NavGroup = ({
 };
 
 export default function AppLayout({ children }: AppLayoutProps) {
-  const { leader, isAdmin, isNurse, isKitchen, isSuperAdmin, logout, viewAsLeader, setViewAsLeader } = useAuth();
+  const { leader, isAdmin, isNurse, isKitchen, isSuperAdmin, isLimitedAccess, logout, viewAsLeader, setViewAsLeader } = useAuth();
   const checkoutEnabled = useCheckoutEnabled();
   const sweatersEnabled = useSweatersEnabled();
   const { mode: appMode } = useAppMode();
   const { seasonView, setSeasonView } = useSeasonView();
-  const inactiveForUser = appMode === 'inactive' && !isSuperAdmin;
+  const inactiveForUser = (appMode === 'inactive' || isLimitedAccess) && !isSuperAdmin;
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
@@ -198,6 +199,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     ? [
         { to: '/', icon: Home, label: 'Hjem' },
         { to: '/chat', icon: MessageCircle, label: 'Ledersnakk' },
+        { to: '/mer', icon: LayoutGrid, label: 'Mer' },
       ]
     : getBottomNavItems();
   const mainTabRoutes = bottomNavItems.map(item => item.to);
@@ -513,6 +515,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <div className="space-y-1">
               <NavLinkItem item={{ to: '/', icon: Home, label: 'Hjem' }} />
               <NavLinkItem item={{ to: '/chat', icon: MessageCircle, label: 'Ledersnakk' }} />
+              <NavLinkItem item={{ to: '/lederpass', icon: PassIcon as LucideIcon, label: 'Lederpass' }} />
+              <NavLinkItem item={{ to: '/klineliste', icon: HeartHandshake, label: 'Klineliste' }} />
               <NavLinkItem item={{ to: '/profile', icon: User, label: 'Min Profil' }} />
             </div>
           ) : (<>

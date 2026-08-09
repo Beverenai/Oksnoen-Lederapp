@@ -14,6 +14,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AppLayout from "@/components/layout/AppLayout";
 import { useStatusBarTheme } from "@/hooks/useStatusBarTheme";
 import { useAppMode } from "@/hooks/useAppMode";
+import { isLimitedAccessRoute } from "@/lib/limitedAccess";
 
 // Critical path - load immediately
 import Login from "@/pages/Login";
@@ -57,7 +58,7 @@ const More = lazy(() => import("@/pages/More"));
 const LederpassPage = lazy(() => import("@/pages/Lederpass"));
 const Kiosk = lazy(() => import("@/pages/Kiosk"));
 const Kjokken = lazy(() => import("@/pages/Kjokken"));
-const Liggeliste = lazy(() => import("@/pages/Liggeliste"));
+const Klineliste = lazy(() => import("@/pages/Klineliste"));
 const PeriodArchive = lazy(() => import("@/pages/admin/PeriodArchive"));
 
 const queryClient = new QueryClient({
@@ -94,7 +95,7 @@ function PageLoader() {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { leader, isLoading, isInitialized, isProfileComplete, authError, deactivatedMessage, retryAuth, isSuperAdmin } = useAuth();
+  const { leader, isLoading, isInitialized, isProfileComplete, authError, deactivatedMessage, retryAuth, isSuperAdmin, isLimitedAccess } = useAuth();
   const { mode } = useAppMode();
 
   // Only show full-page loader during initial app load, never between page navigations
@@ -123,11 +124,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/onboarding" replace />;
   }
 
-  // Inactive mode: hide all features for non-superadmins, only chat + profile allowed.
-  if (mode === 'inactive' && !isSuperAdmin) {
-    const path = window.location.pathname;
-    const allowed = ['/', '/chat', '/profile'];
-    if (!allowed.includes(path)) {
+  // Limited access: app-wide inactive mode, or a leader who is not active this
+  // period. Only the off-season surfaces are reachable for non-superadmins.
+  if ((mode === 'inactive' || isLimitedAccess) && !isSuperAdmin) {
+    if (!isLimitedAccessRoute(window.location.pathname)) {
       return <Navigate to="/" replace />;
     }
   }
@@ -242,7 +242,8 @@ function AppRoutes() {
         <Route path="/kiosk" element={<ProtectedRoute><Kiosk /></ProtectedRoute>} />
         <Route path="/kjokken" element={<ProtectedRoute><Kjokken /></ProtectedRoute>} />
         <Route path="/postkasse" element={<ProtectedRoute><Mailbox /></ProtectedRoute>} />
-        <Route path="/liggeliste" element={<ProtectedRoute><Liggeliste /></ProtectedRoute>} />
+        <Route path="/klineliste" element={<ProtectedRoute><Klineliste /></ProtectedRoute>} />
+        <Route path="/liggeliste" element={<Navigate to="/klineliste" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

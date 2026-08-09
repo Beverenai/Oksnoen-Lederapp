@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Plus, Check, X, Trash2, HeartHandshake } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLeaders } from '@/hooks/useLeaders';
+import { useAllLeaders } from '@/hooks/useLeaders';
 import {
   useHookupsEnabled,
   useSetHookupsEnabled,
@@ -15,19 +15,19 @@ import {
   useDeleteHookup,
   type Hookup,
 } from '@/hooks/useHookups';
-import { HookupGraph } from '@/components/liggeliste/HookupGraph';
-import { AddHookupSheet } from '@/components/liggeliste/AddHookupSheet';
+import { HookupGraph } from '@/components/klineliste/HookupGraph';
+import { AddHookupSheet } from '@/components/klineliste/AddHookupSheet';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 
 function initials(name: string) {
   return name.split(' ').map((p) => p[0]).slice(0, 2).join('');
 }
 
-export default function Liggeliste() {
+export default function Klineliste() {
   const { leader, isAdmin } = useAuth();
   const enabled = useHookupsEnabled();
   const setEnabled = useSetHookupsEnabled();
-  const { data: leaders = [] } = useLeaders();
+  const { data: leaders = [] } = useAllLeaders();
   const { confirmed, myConfirmed, incoming, outgoing, isLoading } = useMyHookups();
   const respond = useRespondToHookup();
   const remove = useDeleteHookup();
@@ -63,7 +63,7 @@ export default function Liggeliste() {
     return (
       <div className="mx-auto w-full max-w-2xl py-16 text-center">
         <HeartHandshake className="mx-auto h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
-        <p className="mt-3 text-sm text-muted-foreground">Liggelista er ikke aktiv nå.</p>
+        <p className="mt-3 text-sm text-muted-foreground">Klinelista er ikke aktiv nå.</p>
       </div>
     );
   }
@@ -71,7 +71,7 @@ export default function Liggeliste() {
   return (
     <div className="mx-auto w-full max-w-2xl space-y-5 pb-6">
       <header className="pt-1">
-        <h1 className="text-2xl font-heading font-bold text-foreground">Liggeliste</h1>
+        <h1 className="text-2xl font-heading font-bold text-foreground">Klineliste</h1>
         <p className="text-sm text-muted-foreground">
           Kun ledere. En kobling vises for andre først når begge har bekreftet den.
         </p>
@@ -87,7 +87,7 @@ export default function Liggeliste() {
             checked={enabled}
             disabled={setEnabled.isPending}
             onCheckedChange={(v) =>
-              act(() => setEnabled.mutateAsync(v), v ? 'Liggeliste aktivert' : 'Liggeliste deaktivert')
+              act(() => setEnabled.mutateAsync(v), v ? 'Klineliste aktivert' : 'Klineliste deaktivert')
             }
           />
         </div>
