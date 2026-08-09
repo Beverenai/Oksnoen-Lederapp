@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hapticImpact } from '@/lib/capacitorHaptics';
@@ -7,6 +8,10 @@ export type QuickAction = {
   icon: LucideIcon;
   label: string;
   onClick: () => void;
+  /** Custom visual replacing the icon (e.g. snus puck, 3D mailbox) */
+  visual?: ReactNode;
+  /** Numeric counter shown in the corner */
+  count?: number;
   /** Visually highlight the button (filled with primary) */
   active?: boolean;
   /** Small dot in the corner */
@@ -40,8 +45,12 @@ export function HomeQuickActions({ actions }: { actions: QuickAction[] }) {
                   : 'bg-card text-foreground border-border/60',
             )}
           >
-            <a.icon className="w-6 h-6" strokeWidth={2.2} />
-            {a.badge && (
+            {a.visual ?? <a.icon className="w-6 h-6" strokeWidth={2.2} />}
+            {a.count ? (
+              <span className="absolute -top-1 -right-1 min-w-[1.15rem] h-[1.15rem] px-1 rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground flex items-center justify-center ring-2 ring-background">
+                {a.count > 99 ? '99+' : a.count}
+              </span>
+            ) : a.badge && (
               <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-destructive ring-2 ring-background" />
             )}
           </button>
