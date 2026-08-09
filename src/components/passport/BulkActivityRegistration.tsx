@@ -1,16 +1,13 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Check, X, Users, Home, Sparkles, ChevronDown, Clock } from 'lucide-react';
+import { Search, Check, X, Users, Home, Sparkles, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { supabase } from '@/integrations/supabase/client';
 import { useActivities } from '@/hooks/useActivities';
 import { useParticipantTeams } from '@/hooks/useParticipantTeams';
@@ -52,7 +49,7 @@ export function BulkActivityRegistration({
   const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activityPickerOpen, setActivityPickerOpen] = useState(false);
+  const [activitySearch, setActivitySearch] = useState('');
 
   // Recent activities: unique names most recently registered across all participants
   const recentActivities = useMemo(() => {
@@ -114,15 +111,13 @@ export function BulkActivityRegistration({
   const pickActivity = (name: string) => {
     setIsCustom(false);
     setCustomName('');
-    setSelectedActivity(name);
+    setSelectedActivity((prev) => (prev.toLowerCase() === name.toLowerCase() ? '' : name));
     setSelectedParticipants(new Set());
-    setActivityPickerOpen(false);
   };
 
   const pickCustom = () => {
     setIsCustom(true);
     setSelectedActivity(customName.trim());
-    setActivityPickerOpen(false);
   };
 
   const handleCustomNameChange = (value: string) => {
