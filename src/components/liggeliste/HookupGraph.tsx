@@ -80,8 +80,11 @@ export function HookupGraph({
   }
 
   const selectedLeader = selected ? leaders.find((l) => l.id === selected) : null;
-  // Node size scales with popularity, and shrinks as the circle gets crowded.
-  const base = nodes.length > 20 ? 40 : nodes.length > 12 ? 48 : 56;
+  // Sizes are in % of the container so the map scales from phone to desktop.
+  // Spacing along the circle decides how big a photo can be without overlap.
+  const spacing = (2 * Math.PI * 39) / nodes.length;
+  const basePct = Math.min(15, Math.max(6, spacing * 0.78));
+  const showLabels = nodes.length <= 14;
 
   return (
     <div className="space-y-3">
@@ -130,7 +133,7 @@ export function HookupGraph({
         {nodes.map(({ leader, x, y, deg }) => {
           const dimmed = !!selected && selected !== leader.id && !partnersOfSelected.has(leader.id);
           const isMe = leader.id === myLeaderId;
-          const size = Math.round(base * (0.82 + 0.28 * (deg / maxDeg)));
+          const sizePct = basePct * (0.85 + 0.3 * (deg / maxDeg));
           const hot = deg === maxDeg && maxDeg > 1;
           return (
             <button
@@ -144,14 +147,14 @@ export function HookupGraph({
               )}
               style={{ left: `${x}%`, top: `${y}%` }}
             >
-              <span className="relative">
+              <span className="relative flex items-center justify-center" style={{ width: `${basePct * 1.2}cqw` }}>
                 <Avatar
                   className={cn(
-                    'shadow-lg ring-2 ring-offset-2 ring-offset-background',
+                    'aspect-square shadow-lg ring-2 ring-offset-2 ring-offset-background',
                     isMe ? 'ring-primary' : 'ring-border',
                     selected === leader.id && 'ring-primary',
                   )}
-                  style={{ height: size, width: size }}
+                  style={{ height: `${sizePct}%`, width: `${sizePct}%` }}
                 >
                   <AvatarImage
                     src={leader.profile_image_url ?? undefined}
@@ -160,14 +163,16 @@ export function HookupGraph({
                   />
                   <AvatarFallback className="text-xs font-semibold">{initials(leader.name)}</AvatarFallback>
                 </Avatar>
-                <span className="absolute -bottom-1 -right-1 flex min-w-[18px] items-center justify-center gap-0.5 rounded-full bg-primary px-1 py-0.5 text-[10px] font-bold leading-none text-primary-foreground shadow">
+                <span className="absolute -bottom-0.5 -right-0.5 flex min-w-[16px] items-center justify-center gap-0.5 rounded-full bg-primary px-1 py-0.5 text-[10px] font-bold leading-none text-primary-foreground shadow">
                   {hot ? <Flame className="h-2.5 w-2.5" /> : null}
                   {deg}
                 </span>
               </span>
-              <span className="mt-1.5 max-w-[72px] truncate text-[10px] font-medium text-foreground/80">
-                {firstName(leader.name)}
-              </span>
+              {(showLabels || selected === leader.id) && (
+                <span className="mt-1 max-w-[80px] truncate rounded-full bg-background/70 px-1.5 text-[10px] font-medium text-foreground/80 backdrop-blur">
+                  {firstName(leader.name)}
+                </span>
+              )}
             </button>
           );
         })}
