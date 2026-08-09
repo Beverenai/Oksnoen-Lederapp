@@ -199,6 +199,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     ? [
         { to: '/', icon: Home, label: 'Hjem' },
         { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
+        { to: '/leaders', icon: Users, label: 'Ledere' },
         { to: '/mer', icon: LayoutGrid, label: 'Mer' },
       ]
     : getBottomNavItems();
