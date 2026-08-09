@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   X,
   KeyRound,
+  LayoutGrid,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
