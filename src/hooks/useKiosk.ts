@@ -110,6 +110,32 @@ export function useKioskBalances() {
 }
 
 /** Sales list — all recent sales, or all sales for one participant. */
+export function useKioskVisitCounts() {
+  const { data: periodId } = useActivePeriodId();
+  const { seasonView } = useSeasonView();
+
+  return useQuery({
+    queryKey: ['kiosk-visit-counts', seasonView ? 'season' : periodId ?? 'none'],
+    enabled: seasonView || !!periodId,
+    queryFn: async () => {
+      let q = supabase
+        .from('kiosk_sales')
+        .select('participant_id')
+        .is('voided_at', null);
+      if (!seasonView) q = q.eq('period_id', periodId!);
+      const { data, error } = await q;
+      if (error) throw error;
+      const map = new Map<string, number>();
+      (data || []).forEach((row: any) => {
+        if (!row.participant_id) return;
+        map.set(row.participant_id, (map.get(row.participant_id) ?? 0) + 1);
+      });
+      return map;
+    },
+    staleTime: 15_000,
+  });
+}
+
 export function useKioskSales(participantId?: string) {
   const { data: periodId } = useActivePeriodId();
   const { seasonView } = useSeasonView();

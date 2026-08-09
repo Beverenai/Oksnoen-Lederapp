@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search } from 'lucide-react';
+import { Search, ShoppingBag } from 'lucide-react';
 import { cn, formatCabinRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
 import type { ParticipantWithCabin } from '@/hooks/useParticipants';
@@ -13,10 +13,11 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   participants: ParticipantWithCabin[];
   balances?: Map<string, KioskBalance>;
+  visitCounts?: Map<string, number>;
   onSelect: (participant: ParticipantWithCabin) => void;
 }
 
-export function KioskParticipantPicker({ open, onOpenChange, participants, balances, onSelect }: Props) {
+export function KioskParticipantPicker({ open, onOpenChange, participants, balances, visitCounts, onSelect }: Props) {
   const [query, setQuery] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -58,6 +59,7 @@ export function KioskParticipantPicker({ open, onOpenChange, participants, balan
           <div className="divide-y divide-border">
             {list.map((p) => {
               const balance = balances?.get(p.id)?.balance ?? 0;
+              const visits = visitCounts?.get(p.id) ?? 0;
               return (
                 <button
                   key={p.id}
@@ -76,9 +78,20 @@ export function KioskParticipantPicker({ open, onOpenChange, participants, balan
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-base font-semibold leading-tight">{p.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {formatCabinRoom(p.cabins?.name, p.room) || 'Ingen hytte'}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="truncate text-xs text-muted-foreground">
+                        {formatCabinRoom(p.cabins?.name, p.room) || 'Ingen hytte'}
+                      </p>
+                      {visits > 0 && (
+                        <span
+                          className="flex shrink-0 items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground"
+                          title={`${visits} kjøp i Gomla`}
+                        >
+                          <ShoppingBag className="h-2.5 w-2.5" />
+                          {visits}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <span
                     className={cn(
