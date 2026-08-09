@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 import { MAILBOX_CATEGORIES, MailboxCategory, useSendMailboxMessage } from '@/hooks/useMailbox';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
 
 export function NewMessageSheet({
   open,
