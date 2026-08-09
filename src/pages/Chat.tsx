@@ -95,8 +95,33 @@ export default function Chat() {
   const [showJump, setShowJump] = useState(false);
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+  const [shellHeight, setShellHeight] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const nearBottomRef = useRef(true);
+
+  /**
+   * Chatten skal fylle nøyaktig den ledige høyden mellom topplinjen og
+   * bunnmenyen — da slipper vi unødvendig skrolling på iPhone.
+   */
+  useEffect(() => {
+    const measure = () => {
+      const el = shellRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      const navVar = getComputedStyle(document.documentElement).getPropertyValue('--nav-actual-h');
+      const navH = parseFloat(navVar) || 64;
+      const vh = window.visualViewport?.height ?? window.innerHeight;
+      setShellHeight(Math.max(320, vh - top - navH - 12));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.visualViewport?.removeEventListener('resize', measure);
+    };
+  }, []);
 
   const scrollToBottom = (force = false) => {
     if (!force && !nearBottomRef.current) return;
@@ -367,20 +392,29 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-140px)] gap-3 animate-fade-in">
-      <div className="shrink-0">
-        <h1 className="text-2xl font-heading font-bold">Lederhuset</h1>
-        <p className="text-sm text-muted-foreground">
-          {channel === 'period'
-            ? `Periodechat${periodLabel ? ` · ${periodLabel}` : ''} — for ledere som jobber nå`
-            : 'Off season — åpen for alle ledere, hele året'}
-        </p>
-        <div className="mt-3 flex gap-1 rounded-full border bg-card/60 p-1 backdrop-blur">
+    <div
+      ref={shellRef}
+      className="-mx-4 -my-4 flex flex-col gap-2 px-3 pt-2 pb-1 animate-fade-in lg:mx-0 lg:my-0 lg:px-0 lg:pt-0"
+      style={shellHeight ? { height: shellHeight } : { height: '70svh' }}
+    >
+      {/* Kompakt topplinje: tittel + kanalvelger på én rad (mindre skroll på iPhone) */}
+      <div className="shrink-0 flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-lg font-heading font-bold leading-tight lg:text-2xl">
+            Lederhuset
+          </h1>
+          <p className="truncate text-[11px] text-muted-foreground">
+            {channel === 'period'
+              ? `Periodechat${periodLabel ? ` · ${periodLabel}` : ''}`
+              : 'Off season — hele året'}
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-1 rounded-full border bg-card/60 p-0.5 backdrop-blur">
           <button
             type="button"
             onClick={() => setChannel('period')}
             className={cn(
-              'flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+              'rounded-full px-3 py-1 text-xs font-medium transition-colors',
               channel === 'period'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground',
@@ -392,7 +426,7 @@ export default function Chat() {
             type="button"
             onClick={() => setChannel('offseason')}
             className={cn(
-              'flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+              'rounded-full px-3 py-1 text-xs font-medium transition-colors',
               channel === 'offseason'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground',
@@ -406,12 +440,14 @@ export default function Chat() {
       <div className="relative flex-1 min-h-0">
         <div
           ref={listRef}
-          className="h-full overflow-y-auto overscroll-contain rounded-2xl border bg-card/40 backdrop-blur px-3 py-4"
+          className="h-full overflow-y-auto overscroll-contain rounded-2xl border bg-card/40 px-2.5 py-3 lg:px-3 lg:py-4"
         >
           {messages.length === 0 && (
-            <p className="text-center text-sm text-muted-foreground py-8">
-              Ingen meldinger enda. Start samtalen!
-            </p>
+            <div className="flex h-full items-center justify-center">
+              <p className="text-center text-sm text-muted-foreground">
+                Ingen meldinger enda. Start samtalen!
+              </p>
+            </div>
           )}
           {items.map((it) => {
             if (it.kind === 'day') {
