@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Bold, Italic, Underline, List, ListOrdered, Heading1, Heading2,
   CheckSquare, Undo2, Redo2, Highlighter, RemoveFormatting,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useParticipants } from '@/hooks/useParticipants';
 
 interface RichNoteEditorProps {
   noteId: string;
@@ -20,6 +21,47 @@ type ToolGroup = { key: string; tools: { icon: typeof Bold; label: string; run: 
 
 export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const { data: participants = [] } = useParticipants();
+  const [mention, setMention] = useState<{ query: string; index: number } | null>(null);
+
+  const matches = useMemo(() => {
+    if (!mention) return [];
+    const q = mention.query.toLowerCase().trim();
+    const list = q
+      ? participants.filter((p) => (p.name || '').toLowerCase().includes(q))
+      : participants;
+    return list.slice(0, 8);
+  }, [mention, participants]);
+
+  // Detect the "@query" the caret currently sits after
+  const detectMention = () => {
+    const sel = window.getSelection();
+    const node = sel?.anchorNode;
+    if (!node || node.nodeType !== Node.TEXT_NODE) { setMention(null); return; }
+    const before = (node.textContent ?? '').slice(0, sel!.anchorOffset);
+    const m = before.match(/@([\p{L}\p{N}\s'-]{0,30})$/u);
+    if (!m) { setMention(null); return; }
+    setMention({ query: m[1], index: 0 });
+  };
+
+  const insertMention = (name: string) => {
+    const sel = window.getSelection();
+    const node = sel?.anchorNode;
+    if (!node || node.nodeType !== Node.TEXT_NODE) return;
+    const offset = sel!.anchorOffset;
+    const before = (node.textContent ?? '').slice(0, offset);
+    const m = before.match(/@([\p{L}\p{N}\s'-]{0,30})$/u);
+    if (!m) return;
+    const start = offset - m[0].length;
+    const range = document.createRange();
+    range.setStart(node, start);
+    range.setEnd(node, offset);
+    sel!.removeAllRanges();
+    sel!.addRange(range);
+    exec('insertHTML', `<span class="note-mention" data-mention="${name.replace(/"/g, '&quot;')}">@${name}</span>&nbsp;`);
+    setMention(null);
+    if (ref.current) onChange(ref.current.innerHTML);
+  };
 
   // Load content when switching notes (never while typing in the same note)
   useEffect(() => {
@@ -59,6 +101,22 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const mod = e.metaKey || e.ctrlKey;
+    if (mention && matches.length > 0) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setMention((m) => m && ({
+          ...m,
+          index: (m.index + (e.key === 'ArrowDown' ? 1 : matches.length - 1)) % matches.length,
+        }));
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        insertMention(matches[mention.index]?.name ?? '');
+        return;
+      }
+      if (e.key === 'Escape') { e.preventDefault(); setMention(null); return; }
+    }
     if (mod && ['b', 'i', 'u'].includes(e.key.toLowerCase())) {
       e.preventDefault();
       exec(e.key.toLowerCase() === 'b' ? 'bold' : e.key.toLowerCase() === 'i' ? 'italic' : 'underline');
@@ -113,12 +171,31 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
         ))}
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto rounded-2xl border border-border/60 bg-background/60">
+      <div className="relative">
+      {mention && matches.length > 0 && (
+        <div className="absolute left-4 top-2 z-20 w-64 max-h-64 overflow-y-auto rounded-xl border border-border/60 bg-popover/95 backdrop-blur shadow-lg p-1">
+          {matches.map((p, i) => (
+            <button
+              key={p.id}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); insertMention(p.name); }}
+              className={cn(
+                'w-full text-left px-3 py-2 rounded-lg text-sm truncate',
+                i === mention.index ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/60',
+              )}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+      )}
       <div
         ref={ref}
         contentEditable
         suppressContentEditableWarning
-        onInput={() => onChange(ref.current?.innerHTML ?? '')}
-        onBlur={() => onChange(ref.current?.innerHTML ?? '')}
+        onInput={() => { onChange(ref.current?.innerHTML ?? ''); detectMention(); }}
+        onKeyUp={detectMention}
+        onBlur={() => { onChange(ref.current?.innerHTML ?? ''); setTimeout(() => setMention(null), 100); }}
         onKeyDown={handleKeyDown}
         onClick={(e) => {
           const target = e.target as HTMLElement;
@@ -140,9 +217,11 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
           '[&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2',
           '[&_h3]:text-base [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1',
           '[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5',
+          '[&_.note-mention]:rounded-md [&_.note-mention]:bg-primary/15 [&_.note-mention]:text-primary [&_.note-mention]:px-1 [&_.note-mention]:py-0.5 [&_.note-mention]:font-medium',
           'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground',
         )}
       />
+      </div>
       </div>
     </div>
   );
