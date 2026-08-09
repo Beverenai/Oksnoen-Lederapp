@@ -46,7 +46,8 @@ import { Skull } from 'lucide-react';
 import { Tent, AlertCircle } from 'lucide-react';
 import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
 import { SnusBadge } from '@/components/snus/SnusBadge';
-import { SnusPuck } from '@/components/snus/SnusPuck';
+import { SnusCan3D } from '@/components/snus/SnusCan3D';
+import { getSnusProduct, customSnusProduct } from '@/lib/snusCatalog';
 import { MailboxIcon3D } from '@/components/mailbox/MailboxIcon3D';
 import { useMailboxUnreadCount, useMyMailboxMessages } from '@/hooks/useMailbox';
 import { OvernattingGateDialog, OvernattingEditDialog } from '@/components/home/OvernattingDialogs';
@@ -530,7 +531,15 @@ export default function Home() {
           key: 'snus',
           icon: AlertCircle,
           label: snusBrothers.length > 0 ? 'Snus brothers' : 'Snus',
-          visual: <SnusPuck productId={mySnus.productId} customLabel={mySnus.customLabel} size={34} />,
+          visual: (
+            <SnusCan3D
+              product={getSnusProduct(mySnus.productId) ?? customSnusProduct(mySnus.customLabel || 'Snus')}
+              size={36}
+              interactive={false}
+              spin={-22}
+              hideHint
+            />
+          ),
           count: snusBrothers.length || undefined,
           onClick: () => {
             if (snusBrothers.length > 0) setSnusBrothersOpen(true);
@@ -542,7 +551,7 @@ export default function Home() {
       key: 'postkasse',
       icon: AlertCircle,
       label: 'Postkasse',
-      visual: <MailboxIcon3D size={32} />,
+      visual: <MailboxIcon3D size={38} />,
       count: isAdmin ? (mailboxUnread || undefined) : undefined,
       badge: !isAdmin && hasNewReply,
       onClick: () => navigate('/postkasse'),

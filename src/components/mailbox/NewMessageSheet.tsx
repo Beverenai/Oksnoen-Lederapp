@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { MAILBOX_CATEGORIES, MailboxCategory, useSendMailboxMessage } from '@/hooks/useMailbox';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function NewMessageSheet({
   open,
@@ -23,6 +24,7 @@ export function NewMessageSheet({
   const [anonymous, setAnonymous] = useState(true);
   const send = useSendMailboxMessage();
   const { showError } = useStatusPopup();
+  const { isAdmin } = useAuth();
 
   const submit = async () => {
     if (content.trim().length < 3) {
@@ -89,7 +91,8 @@ export function NewMessageSheet({
             <div className="space-y-1">
               <Label htmlFor="mailbox-anon" className="text-sm">Send anonymt</Label>
               <p className="text-xs text-muted-foreground">
-                Navnet ditt vises ikke for andre ledere. Admin kan alltid se hvem som har sendt inn.
+                Navnet ditt vises ikke for andre ledere.
+                {!isAdmin && ' Admin kan alltid se hvem som har sendt inn.'}
               </p>
             </div>
             <Switch id="mailbox-anon" checked={anonymous} onCheckedChange={setAnonymous} />
