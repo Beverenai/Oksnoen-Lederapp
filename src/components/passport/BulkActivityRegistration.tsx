@@ -225,7 +225,12 @@ export function BulkActivityRegistration({
           />
         </div>
 
-        <div className="flex flex-wrap gap-2 max-h-56 overflow-y-auto overscroll-contain">
+        <div
+          className={cn(
+            'flex flex-wrap gap-2 overflow-y-auto overscroll-contain content-start',
+            selectedActivity ? 'max-h-56' : 'min-h-[calc(100dvh-16rem)] max-h-[calc(100dvh-16rem)]'
+          )}
+        >
           {visibleActivities.map((activity) => {
             const active = !isCustom && selectedActivity.toLowerCase() === activity.title.toLowerCase();
             const done = doneCounts.get(activity.title.toLowerCase()) || 0;
