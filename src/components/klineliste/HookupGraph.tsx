@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Heart, Flame, Minus, Plus, Crosshair, Search, X, UserRound } from 'lucide-react';
+import { Heart, Minus, Plus, Crosshair, Search, X, UserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Leader } from '@/types/database';
 import type { Hookup } from '@/hooks/useHookups';

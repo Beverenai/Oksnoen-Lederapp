@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search } from 'lucide-react';
+import { Search, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAllLeaders } from '@/hooks/useLeaders';
+import { useKlinelisteLeaders } from '@/hooks/useLeaders';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRequestHookup, useMyHookups } from '@/hooks/useHookups';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
@@ -18,7 +18,7 @@ export function AddHookupSheet({
 }) {
   const [search, setSearch] = useState('');
   const { leader } = useAuth();
-  const { data: leaders = [] } = useAllLeaders();
+  const { data: leaders = [] } = useKlinelisteLeaders();
   const { partnerIds } = useMyHookups();
   const request = useRequestHookup();
   const { showError } = useStatusPopup();
@@ -85,6 +85,11 @@ export function AddHookupSheet({
                 </AvatarFallback>
               </Avatar>
               <span className="text-sm font-medium text-foreground">{l.name}</span>
+              {l.is_external && (
+                <span className="ml-auto flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                  <UserRound className="h-2.5 w-2.5" /> manuelt
+                </span>
+              )}
             </button>
           ))}
         </div>
