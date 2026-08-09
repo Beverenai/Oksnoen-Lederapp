@@ -103,7 +103,7 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
     setMention({ query: m[1], index: 0 });
   };
 
-  const insertMention = (name: string) => {
+  const insertMention = (name: string, imageUrl?: string | null) => {
     const sel = window.getSelection();
     const node = sel?.anchorNode;
     if (!node || node.nodeType !== Node.TEXT_NODE) return;
@@ -117,7 +117,11 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
     range.setEnd(node, offset);
     sel!.removeAllRanges();
     sel!.addRange(range);
-    exec('insertHTML', `<span class="note-mention" data-mention="${name.replace(/"/g, '&quot;')}">@${name}</span>&nbsp;`);
+    const safeName = name.replace(/"/g, '&quot;');
+    const img = imageUrl
+      ? `<img class="note-mention-img" src="${imageUrl.replace(/"/g, '&quot;')}" alt="" />`
+      : '';
+    exec('insertHTML', `<span class="note-mention" data-mention="${safeName}">${img}@${name}</span>&nbsp;`);
     setMention(null);
     if (ref.current) onChange(ref.current.innerHTML);
     pushSnapshot(true);
@@ -183,7 +187,8 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
       }
       if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault();
-        insertMention(matches[mention.index]?.name ?? '');
+        const p = matches[mention.index];
+        insertMention(p?.name ?? '', p?.image_thumb_url || p?.image_url);
         return;
       }
       if (e.key === 'Escape') { e.preventDefault(); setMention(null); return; }
@@ -273,19 +278,34 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
       <div className="relative">
       {mention && matches.length > 0 && (
         <div className="absolute left-4 top-2 z-20 w-64 max-h-64 overflow-y-auto rounded-xl border border-border/60 bg-popover/95 backdrop-blur shadow-lg p-1">
-          {matches.map((p, i) => (
-            <button
-              key={p.id}
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); insertMention(p.name); }}
-              className={cn(
-                'w-full text-left px-3 py-2 rounded-lg text-sm truncate',
-                i === mention.index ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/60',
-              )}
-            >
-              {p.name}
-            </button>
-          ))}
+          {matches.map((p, i) => {
+            const src = p.image_thumb_url || p.image_url;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); insertMention(p.name, src); }}
+                className={cn(
+                  'w-full flex items-center gap-2 text-left px-2 py-1.5 rounded-lg text-sm',
+                  i === mention.index ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/60',
+                )}
+              >
+                {src ? (
+                  <img
+                    src={src}
+                    alt=""
+                    loading="lazy"
+                    className="h-7 w-7 shrink-0 rounded-full object-cover border border-border/60"
+                  />
+                ) : (
+                  <span className="h-7 w-7 shrink-0 rounded-full bg-muted text-muted-foreground grid place-items-center text-[11px] font-medium">
+                    {(p.name || '?').trim().charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <span className="truncate">{p.name}</span>
+              </button>
+            );
+          })}
         </div>
       )}
       <div
@@ -318,6 +338,8 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
           '[&_h3]:text-base [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1',
           '[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5',
           '[&_.note-mention]:rounded-md [&_.note-mention]:bg-primary/15 [&_.note-mention]:text-primary [&_.note-mention]:px-1 [&_.note-mention]:py-0.5 [&_.note-mention]:font-medium',
+          '[&_.note-mention]:inline-flex [&_.note-mention]:items-center [&_.note-mention]:gap-1 [&_.note-mention]:align-middle',
+          '[&_.note-mention-img]:h-5 [&_.note-mention-img]:w-5 [&_.note-mention-img]:rounded-full [&_.note-mention-img]:object-cover [&_.note-mention-img]:inline-block',
           'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground',
         )}
       />
