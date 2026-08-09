@@ -24,6 +24,65 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
   const { data: participants = [] } = useParticipants();
   const [mention, setMention] = useState<{ query: string; index: number } | null>(null);
 
+  // ---- Undo / redo history (own stack — execCommand's stack breaks on our DOM edits)
+  const history = useRef<string[]>([]);
+  const pointer = useRef(-1);
+  const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const applying = useRef(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const syncFlags = () => {
+    setCanUndo(pointer.current > 0);
+    setCanRedo(pointer.current < history.current.length - 1);
+  };
+
+  const resetHistory = (html: string) => {
+    history.current = [html];
+    pointer.current = 0;
+    syncFlags();
+  };
+
+  const commitHistory = (html: string) => {
+    if (applying.current) return;
+    if (history.current[pointer.current] === html) return;
+    history.current = history.current.slice(0, pointer.current + 1);
+    history.current.push(html);
+    if (history.current.length > 100) history.current.shift();
+    pointer.current = history.current.length - 1;
+    syncFlags();
+  };
+
+  const pushSnapshot = (immediate = false) => {
+    const html = ref.current?.innerHTML ?? '';
+    if (pushTimer.current) clearTimeout(pushTimer.current);
+    if (immediate) { commitHistory(html); return; }
+    pushTimer.current = setTimeout(() => commitHistory(ref.current?.innerHTML ?? ''), 500);
+  };
+
+  const applyHistory = (dir: -1 | 1) => {
+    if (pushTimer.current) { clearTimeout(pushTimer.current); pushTimer.current = null; }
+    commitHistory(ref.current?.innerHTML ?? '');
+    const next = pointer.current + dir;
+    if (next < 0 || next >= history.current.length) { syncFlags(); return; }
+    pointer.current = next;
+    applying.current = true;
+    if (ref.current) {
+      ref.current.innerHTML = history.current[next];
+      // put caret at the end of the restored content
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(ref.current);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      onChange(ref.current.innerHTML);
+    }
+    applying.current = false;
+    setMention(null);
+    syncFlags();
+  };
+
   const matches = useMemo(() => {
     if (!mention) return [];
     const q = mention.query.toLowerCase().trim();
@@ -61,13 +120,17 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
     exec('insertHTML', `<span class="note-mention" data-mention="${name.replace(/"/g, '&quot;')}">@${name}</span>&nbsp;`);
     setMention(null);
     if (ref.current) onChange(ref.current.innerHTML);
+    pushSnapshot(true);
   };
 
   // Load content when switching notes (never while typing in the same note)
   useEffect(() => {
     if (ref.current) ref.current.innerHTML = initialContent || '';
+    resetHistory(initialContent || '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId]);
+
+  useEffect(() => () => { if (pushTimer.current) clearTimeout(pushTimer.current); }, []);
 
   const groups: ToolGroup[] = [
     {
@@ -93,14 +156,22 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
       key: 'history',
       tools: [
         { icon: RemoveFormatting, label: 'Fjern format', run: () => exec('removeFormat') },
-        { icon: Undo2, label: 'Angre', run: () => exec('undo') },
-        { icon: Redo2, label: 'Gjør om', run: () => exec('redo') },
       ],
     },
   ];
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const mod = e.metaKey || e.ctrlKey;
+    if (mod && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      applyHistory(e.shiftKey ? 1 : -1);
+      return;
+    }
+    if (mod && e.key.toLowerCase() === 'y') {
+      e.preventDefault();
+      applyHistory(1);
+      return;
+    }
     if (mention && matches.length > 0) {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
@@ -121,6 +192,7 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
       e.preventDefault();
       exec(e.key.toLowerCase() === 'b' ? 'bold' : e.key.toLowerCase() === 'i' ? 'italic' : 'underline');
       onChange(ref.current?.innerHTML ?? '');
+      pushSnapshot(true);
       return;
     }
     if (e.key === ' ') {
@@ -138,6 +210,7 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
           sel!.removeAllRanges();
           sel!.addRange(range);
           onChange(ref.current?.innerHTML ?? '');
+          pushSnapshot(true);
         }
       }
     }
@@ -162,6 +235,7 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
                   ref.current?.focus();
                   t.run();
                   if (ref.current) onChange(ref.current.innerHTML);
+                  pushSnapshot(true);
                 }}
               >
                 <t.icon className="h-4 w-4" />
@@ -169,6 +243,31 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
             ))}
           </div>
         ))}
+        <span className="mx-1 h-5 w-px bg-border/70" aria-hidden />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          title="Angre (⌘Z)"
+          disabled={!canUndo}
+          className="h-8 w-8 p-0"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => { ref.current?.focus(); applyHistory(-1); }}
+        >
+          <Undo2 className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          title="Gjør om (⇧⌘Z)"
+          disabled={!canRedo}
+          className="h-8 w-8 p-0"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => { ref.current?.focus(); applyHistory(1); }}
+        >
+          <Redo2 className="h-4 w-4" />
+        </Button>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto rounded-2xl border border-border/60 bg-background/60">
       <div className="relative">
@@ -193,9 +292,9 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
         ref={ref}
         contentEditable
         suppressContentEditableWarning
-        onInput={() => { onChange(ref.current?.innerHTML ?? ''); detectMention(); }}
+        onInput={() => { onChange(ref.current?.innerHTML ?? ''); detectMention(); pushSnapshot(); }}
         onKeyUp={detectMention}
-        onBlur={() => { onChange(ref.current?.innerHTML ?? ''); setTimeout(() => setMention(null), 100); }}
+        onBlur={() => { onChange(ref.current?.innerHTML ?? ''); pushSnapshot(true); setTimeout(() => setMention(null), 100); }}
         onKeyDown={handleKeyDown}
         onClick={(e) => {
           const target = e.target as HTMLElement;
@@ -208,6 +307,7 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
             target.style.textDecoration = text.startsWith('☐') ? 'line-through' : 'none';
             target.style.opacity = text.startsWith('☐') ? '0.6' : '1';
             onChange(ref.current?.innerHTML ?? '');
+            pushSnapshot(true);
           }
         }}
         data-placeholder="Skriv notatet her…"
