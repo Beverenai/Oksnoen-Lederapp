@@ -1,10 +1,12 @@
 export type SnusStrength = 1 | 2 | 3 | 4 | 5 | 6 | 7;
-export type SnusFormat = 'slim' | 'mini' | 'porsjon' | 'løs';
+export type SnusFormat = 'slim' | 'superslim' | 'mini' | 'porsjon' | 'løs';
 
 export interface SnusProduct {
   id: string;
   brand: string;
   variant: string;
+  /** Full official product name – always used in labels when present */
+  name?: string;
   flavor: string;
   /** Accent colour used on the lid arc and side band */
   accent: string;
@@ -15,6 +17,8 @@ export interface SnusProduct {
   /** Epok "No" number shown big on the lid */
   number?: number;
   nicotineFree?: boolean;
+  /** Local packshot (transparent webp) under /snus/packshots/ */
+  image?: string;
 }
 
 export interface SnusBrandGroup {
