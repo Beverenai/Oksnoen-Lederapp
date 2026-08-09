@@ -198,7 +198,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const bottomNavItems: BottomNavItem[] = inactiveForUser
     ? [
         { to: '/', icon: Home, label: 'Hjem' },
-        { to: '/chat', icon: MessageCircle, label: 'Ledersnakk' },
+        { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
         { to: '/mer', icon: LayoutGrid, label: 'Mer' },
       ]
     : getBottomNavItems();
@@ -514,7 +514,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {inactiveForUser ? (
             <div className="space-y-1">
               <NavLinkItem item={{ to: '/', icon: Home, label: 'Hjem' }} />
-              <NavLinkItem item={{ to: '/chat', icon: MessageCircle, label: 'Ledersnakk' }} />
+              <NavLinkItem item={{ to: '/chat', icon: MessageCircle, label: 'Lederhuset' }} />
               <NavLinkItem item={{ to: '/lederpass', icon: PassIcon as LucideIcon, label: 'Lederpass' }} />
               <NavLinkItem item={{ to: '/klineliste', icon: HeartHandshake, label: 'Klineliste' }} />
               <NavLinkItem item={{ to: '/profile', icon: User, label: 'Min Profil' }} />
