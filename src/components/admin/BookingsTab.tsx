@@ -179,6 +179,12 @@ export function BookingsTab() {
         booking={selected}
         participant={selected ? participantByKey.get(`${(selected.first_name || '').toLowerCase().trim()}|${(selected.last_name || '').toLowerCase().trim()}|${selected.birth_date || ''}`) || null : null}
         onClose={() => setSelected(null)}
+        editable
+        onSaved={() => {
+          qc.invalidateQueries({ queryKey: ['participant-bookings'] });
+          qc.invalidateQueries({ queryKey: ['kiosk-deposits'] });
+          qc.invalidateQueries({ queryKey: ['participant-sweaters'] });
+        }}
       />
     </div>
   );
