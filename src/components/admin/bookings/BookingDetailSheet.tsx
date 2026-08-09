@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -94,6 +95,7 @@ const NUMERIC_FIELDS = new Set(['times_attended', 'kiosk_money', 'price', 'disco
 
 export function BookingDetailSheet({ booking, participant, onClose, editable = false, onSaved }: Props) {
   const { showSuccess, showError } = useStatusPopup();
+  const qc = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [draft, setDraft] = useState<Draft>({});
@@ -284,6 +286,10 @@ export function BookingDetailSheet({ booking, participant, onClose, editable = f
             <Field label="Periode" value={v(b.period_label)} />
             <Field label="Bookingstidspunkt" value={v(b.booking_time)} />
             <Field label="Plass bekreftet" value={v(b.seat_confirmed)} />
+          </Section>
+
+          <Section title="Endringslogg">
+            <BookingEditLog bookingId={b.id} />
           </Section>
           </>
           )}
