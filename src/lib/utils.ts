@@ -16,6 +16,17 @@ export function formatFullRoom(cabinName: string | null | undefined, room: strin
 }
 
 /**
+ * Cabin + room label that falls back to the cabin name alone when the
+ * participant has no room/side set (matching how Passkontroll groups by cabin).
+ */
+export function formatCabinRoom(
+  cabinName: string | null | undefined,
+  room: string | null | undefined
+): string | null {
+  return formatFullRoom(cabinName, room) ?? cabinName ?? null;
+}
+
+/**
  * Normalize a Norwegian phone number for storage:
  * strips whitespace/dashes and the +47/0047/47 country prefix (when
  * followed by 8 digits), so numbers persist as bare 8-digit strings.
