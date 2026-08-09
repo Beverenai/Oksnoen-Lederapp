@@ -243,10 +243,38 @@ export default function Chat() {
   return (
     <div className="flex flex-col h-[calc(100dvh-140px)] gap-3 animate-fade-in">
       <div className="shrink-0">
-        <h1 className="text-2xl font-heading font-bold">Øksnøen Chat</h1>
+        <h1 className="text-2xl font-heading font-bold">Ledersnakk</h1>
         <p className="text-sm text-muted-foreground">
-          Meldinger mellom alle Øksnøen-ledere
+          {channel === 'period'
+            ? `Periodechat${periodLabel ? ` · ${periodLabel}` : ''} — for ledere som jobber nå`
+            : 'Off season — åpen for alle ledere, hele året'}
         </p>
+        <div className="mt-3 flex gap-1 rounded-full border bg-card/60 p-1 backdrop-blur">
+          <button
+            type="button"
+            onClick={() => setChannel('period')}
+            className={cn(
+              'flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+              channel === 'period'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            Periode
+          </button>
+          <button
+            type="button"
+            onClick={() => setChannel('offseason')}
+            className={cn(
+              'flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+              channel === 'offseason'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            Off season
+          </button>
+        </div>
       </div>
 
       <div
