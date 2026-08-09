@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Phone, Mail, Loader2, Trash2 } from 'lucide-react';
 import { BookingImportCard } from '@/components/admin/bookings/BookingImportCard';
+import { MissingBookingInfoCard } from '@/components/admin/bookings/MissingBookingInfoCard';
 import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailSheet';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -127,6 +128,8 @@ export function BookingsTab() {
       </Card>
 
       <BookingImportCard periodId={periodId || null} onImported={() => qc.invalidateQueries({ queryKey: ['participant-bookings', periodId] })} />
+
+      <MissingBookingInfoCard periodId={periodId || null} />
 
       <Card>
         <CardHeader>
