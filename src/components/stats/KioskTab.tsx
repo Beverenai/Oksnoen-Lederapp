@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
   Loader2,
   Search,
@@ -84,6 +85,33 @@ export function KioskTab() {
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
+
+  const detail = useMemo(() => {
+    if (!detailId) return null;
+    const p = participants.find((x) => x.id === detailId);
+    if (!p) return null;
+    const mySales = sales.filter((s) => s.participant_id === detailId && !s.voided_at);
+    const productMap = new Map<string, { quantity: number; revenue: number }>();
+    mySales.forEach((s) =>
+      s.items.forEach((i) => {
+        const cur = productMap.get(i.product_name) || { quantity: 0, revenue: 0 };
+        cur.quantity += i.quantity;
+        cur.revenue += i.quantity * i.unit_price;
+        productMap.set(i.product_name, cur);
+      })
+    );
+    const products = [...productMap.entries()]
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.quantity - a.quantity);
+    return {
+      participant: p,
+      sales: mySales,
+      products,
+      visits: mySales.length,
+      spent: mySales.reduce((sum, s) => sum + s.total, 0),
+    };
+  }, [detailId, participants, sales]);
 
   const nameOf = (id: string) => participants.find((p) => p.id === id)?.name ?? 'Ukjent';
   const stamp = new Date().toISOString().slice(0, 10);
@@ -305,12 +333,16 @@ export function KioskTab() {
                         <AvatarImage src={getParticipantThumb(p)} alt={p.name} loading="lazy" />
                         <AvatarFallback className="text-[10px]">{initials(p.name)}</AvatarFallback>
                       </Avatar>
-                      <div className="min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => setDetailId(p.id)}
+                        className="min-w-0 flex-1 rounded-lg px-1 py-0.5 text-left transition-colors hover:bg-muted"
+                      >
                         <p className="truncate text-sm font-medium">{p.name}</p>
                         <p className="truncate text-xs text-muted-foreground tabular-nums">
                           Inn {b?.deposited ?? 0} kr · brukt {b?.spent ?? 0} kr · {visits} besøk
                         </p>
-                      </div>
+                      </button>
                       <span
                         className={cn(
                           'shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums',
@@ -467,6 +499,81 @@ export function KioskTab() {
       </Tabs>
 
       <KioskReceiptSheet receipt={receipt} open={receiptOpen} onOpenChange={setReceiptOpen} />
+
+      <Dialog open={!!detailId} onOpenChange={(o) => !o && setDetailId(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          {detail && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={getParticipantThumb(detail.participant)} alt={detail.participant.name} />
+                    <AvatarFallback className="text-[10px]">{initials(detail.participant.name)}</AvatarFallback>
+                  </Avatar>
+                  <span className="min-w-0 truncate">{detail.participant.name}</span>
+                </DialogTitle>
+                <DialogDescription className="tabular-nums">
+                  {detail.visits} besøk i Gomla · brukt {detail.spent} kr · saldo{' '}
+                  {balances?.get(detail.participant.id)?.balance ?? 0} kr
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="mb-2 text-sm font-semibold">Mest kjøpt</p>
+                  <div className="divide-y divide-border rounded-lg border">
+                    {detail.products.map((pr) => (
+                      <div key={pr.name} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                        <span className="min-w-0 truncate">{pr.name}</span>
+                        <span className="shrink-0 tabular-nums text-muted-foreground">
+                          {pr.quantity} stk · {pr.revenue} kr
+                        </span>
+                      </div>
+                    ))}
+                    {detail.products.length === 0 && (
+                      <p className="px-3 py-3 text-sm text-muted-foreground">Ingen kjøp ennå</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-sm font-semibold">Kjøpshistorikk ({detail.sales.length})</p>
+                  <div className="space-y-2">
+                    {detail.sales.map((s) => (
+                      <div key={s.id} className="rounded-lg border p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(s.created_at).toLocaleString('nb-NO', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}{' '}
+                            · {receiptLabel({ saleNumber: s.sale_number, saleId: s.id })}
+                          </span>
+                          <span className="shrink-0 text-sm font-bold tabular-nums">{s.total} kr</span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {s.items.map((i) => `${i.quantity}× ${i.product_name}`).join(', ')}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-1 h-7 gap-1 px-2 text-xs"
+                          onClick={() => openReceipt(s.id)}
+                        >
+                          <Receipt className="h-3.5 w-3.5" />
+                          Kvittering
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
