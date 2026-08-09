@@ -20,6 +20,7 @@ import {
 import type { Tables } from '@/integrations/supabase/types';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 import { SecretWordsSheet } from '@/components/passport/SecretWordsSheet';
+import { useSecretWordsActive } from '@/hooks/useSecretWordsActive';
 import { useAuth } from '@/contexts/AuthContext';
 import { VirtualizedParticipantList } from '@/components/passport/VirtualizedParticipantList';
 import { hapticImpact } from '@/lib/capacitorHaptics';
@@ -151,6 +152,7 @@ export default function Passport() {
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [secretWordsOpen, setSecretWordsOpen] = useState(false);
+  const secretWordsActive = useSecretWordsActive();
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
   // (bulk activity registration moved to dedicated route /passport/activity)
 
@@ -501,7 +503,7 @@ export default function Passport() {
             Viktig Info
           </Button>
 
-          {!seasonView && (
+          {!seasonView && secretWordsActive && (
             <Button
               variant="outline"
               size="sm"
