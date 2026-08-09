@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, Plus, Check, X, ArrowRight, ArrowLeftRight, Loader2, Users, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
+import { getParticipantThumb } from '@/lib/participantImage';
 
 interface Participant {
   id: string;
@@ -564,7 +565,9 @@ function SwapGroupCard({
           <MiniRoomCard label={getRoomLabel(swapA.to_cabin_id, swapA.to_room)} residents={getResidents(swapA.to_cabin_id, swapA.to_room)} highlight={pB?.name} colorClass="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900/30" />
         </div>
         <p className="text-xs text-muted-foreground text-center">
-          {pA?.name} ⇄ {pB?.name}
+          <span className="inline-flex items-center justify-center gap-1.5">
+            <PersonChip p={pA} /> ⇄ <PersonChip p={pB} />
+          </span>
         </p>
       </div>
     );
@@ -581,7 +584,13 @@ function SwapGroupCard({
           <Checkbox checked={selectedSwapIds.includes(swap.id)} onCheckedChange={() => toggleSwapSelection(swap.id)} />
         )}
         {variant === 'approved' && <Check className="h-4 w-4 text-green-600 shrink-0" />}
-        <span className="font-medium text-sm truncate">{participant?.name || 'Ukjent'}</span>
+        <span className="flex items-center gap-2 min-w-0">
+          <Avatar className="h-7 w-7 shrink-0">
+            <AvatarImage src={participant ? getParticipantThumb(participant) : undefined} alt={participant?.name || ''} />
+            <AvatarFallback className="text-[10px]">{initials(participant?.name || '?')}</AvatarFallback>
+          </Avatar>
+          <span className="font-medium text-sm truncate">{participant?.name || 'Ukjent'}</span>
+        </span>
         {swap.reason && <span className="text-xs text-muted-foreground italic ml-auto">"{swap.reason}"</span>}
         {variant === 'approved' && swap.approved_at && (
           <span className="text-xs text-muted-foreground ml-auto">
@@ -624,11 +633,17 @@ function MiniRoomCard({
     <div className={`rounded-md border p-2 ${colorClass} space-y-1`}>
       <p className="text-xs font-medium truncate">{label}</p>
       {residents.length > 0 ? (
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           {residents.slice(0, 6).map((r) => (
-            <p key={r.id} className={`text-[11px] truncate ${r.name === highlight ? 'font-semibold' : 'text-muted-foreground'}`}>
-              {r.name}
-            </p>
+            <div key={r.id} className="flex items-center gap-1.5 min-w-0">
+              <Avatar className="h-5 w-5 shrink-0">
+                <AvatarImage src={getParticipantThumb(r)} alt={r.name} />
+                <AvatarFallback className="text-[8px]">{initials(r.name)}</AvatarFallback>
+              </Avatar>
+              <p className={`text-[11px] truncate ${r.name === highlight ? 'font-semibold' : 'text-muted-foreground'}`}>
+                {r.name}
+              </p>
+            </div>
           ))}
           {residents.length > 6 && (
             <p className="text-[10px] text-muted-foreground">+{residents.length - 6} til</p>
@@ -638,5 +653,17 @@ function MiniRoomCard({
         <p className="text-[11px] text-muted-foreground italic">Tomt</p>
       )}
     </div>
+  );
+}
+
+function PersonChip({ p }: { p: Participant | undefined }) {
+  return (
+    <span className="inline-flex items-center gap-1 align-middle">
+      <Avatar className="h-5 w-5">
+        <AvatarImage src={p ? getParticipantThumb(p) : undefined} alt={p?.name || ''} />
+        <AvatarFallback className="text-[8px]">{initials(p?.name || '?')}</AvatarFallback>
+      </Avatar>
+      <span>{p?.name || 'Ukjent'}</span>
+    </span>
   );
 }
