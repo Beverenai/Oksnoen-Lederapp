@@ -6,6 +6,21 @@ import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 
 export type HookupStatus = 'pending' | 'confirmed' | 'declined';
 
+/**
+ * Server-side push for a hookup event. The edge function derives both parties
+ * from the row, so no one can send a notification in someone else's name.
+ * Failures are swallowed — a missing push must never fail the action itself.
+ */
+async function notifyHookup(hookupId: string, kind: 'requested' | 'confirmed') {
+  try {
+    await supabase.functions.invoke('push-hookup', {
+      body: { hookup_id: hookupId, kind },
+    });
+  } catch (e) {
+    console.warn('push-hookup failed', e);
+  }
+}
+
 export interface Hookup {
   id: string;
   period_id: string | null;
