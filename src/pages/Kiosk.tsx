@@ -574,7 +574,12 @@ const Kiosk = () => {
       {/* Cart bar */}
       {lines.length > 0 && (
         <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 px-4 lg:px-8">
-          <div className="mx-auto max-w-2xl rounded-3xl border border-border/60 bg-background/85 p-3 shadow-lg backdrop-blur-xl">
+          <div
+            className={cn(
+              'mx-auto max-w-2xl rounded-3xl border border-border/60 bg-background/85 p-3 shadow-lg backdrop-blur-xl transition-opacity',
+              recordSale.isPending && 'pointer-events-none opacity-70'
+            )}
+          >
             <div className="max-h-40 space-y-1.5 overflow-y-auto">
               {lines.map((l) => (
                 <div key={l.product.id} className="flex items-center gap-2">
@@ -585,6 +590,7 @@ const Kiosk = () => {
                       size="icon"
                       className="h-7 w-7 rounded-full"
                       onClick={() => changeQuantity(l.product.id, -1)}
+                      disabled={recordSale.isPending}
                       aria-label="Færre"
                     >
                       <Minus className="h-3.5 w-3.5" />
@@ -595,6 +601,7 @@ const Kiosk = () => {
                       size="icon"
                       className="h-7 w-7 rounded-full"
                       onClick={() => changeQuantity(l.product.id, 1)}
+                      disabled={recordSale.isPending}
                       aria-label="Flere"
                     >
                       <Plus className="h-3.5 w-3.5" />
@@ -613,6 +620,7 @@ const Kiosk = () => {
                 size="icon"
                 className="h-10 w-10 shrink-0 text-muted-foreground"
                 onClick={() => setLines([])}
+                disabled={recordSale.isPending}
                 aria-label="Tøm handlekurv"
               >
                 <Trash2 className="h-4 w-4" />
@@ -641,7 +649,7 @@ const Kiosk = () => {
                 ) : (
                   <ShoppingBasket className="h-4 w-4" />
                 )}
-                {participant ? 'Registrer' : 'Velg deltager'}
+                {recordSale.isPending ? 'Registrerer…' : participant ? 'Registrer' : 'Velg deltager'}
               </Button>
             </div>
           </div>
@@ -658,7 +666,11 @@ const Kiosk = () => {
 
       {/* Receipts */}
       <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
-        <SheetContent side="bottom" className="flex h-[88dvh] flex-col gap-0 rounded-t-3xl">
+        <SheetContent
+          side="bottom"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="flex h-[88dvh] flex-col gap-0 rounded-t-3xl"
+        >
           <SheetHeader>
             <SheetTitle>Kvitteringer</SheetTitle>
           </SheetHeader>
