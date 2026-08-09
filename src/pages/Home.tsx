@@ -151,7 +151,7 @@ const formatTeamDisplay = (team: string | null): string => {
 };
 
 export default function Home() {
-  const { leader, effectiveLeader, isAdmin, isNurse, isSuperAdmin } = useAuth();
+  const { leader, effectiveLeader, isAdmin, isNurse, isSuperAdmin, isLimitedAccess } = useAuth();
   const { mode: appMode } = useAppMode();
   const navigate = useNavigate();
   const location = useLocation();
