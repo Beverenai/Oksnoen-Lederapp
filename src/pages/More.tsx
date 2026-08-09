@@ -18,6 +18,7 @@ import {
   Skull,
   ShoppingBasket,
   ChefHat,
+  Mail,
   LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -29,12 +30,14 @@ import { useMyMurderState } from '@/hooks/useMurderGame';
 import { cn } from '@/lib/utils';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { LederPassMini } from '@/components/passport/LederPassMini';
+import { useMailboxUnreadCount } from '@/hooks/useMailbox';
 
 type MoreItem = {
   to?: string;
   icon: LucideIcon;
   label: string;
   onClick?: () => void;
+  badge?: number;
 };
 
 type MoreSection = {
@@ -44,7 +47,12 @@ type MoreSection = {
 
 function Tile({ item }: { item: MoreItem }) {
   const content = (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-border/60 bg-card/70 backdrop-blur px-3 py-5 text-center shadow-sm hover:bg-card transition-colors active:scale-[0.98]">
+    <div className="relative flex flex-col items-center justify-center gap-2 rounded-2xl border border-border/60 bg-card/70 backdrop-blur px-3 py-5 text-center shadow-sm hover:bg-card transition-colors active:scale-[0.98]">
+      {!!item.badge && item.badge > 0 && (
+        <span className="absolute right-2 top-2 min-w-[1.25rem] rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-bold leading-none text-destructive-foreground">
+          {item.badge > 99 ? '99+' : item.badge}
+        </span>
+      )}
       <item.icon className="w-6 h-6 text-primary" strokeWidth={1.8} />
       <span className="text-xs font-medium text-foreground leading-tight">
         {item.label}
