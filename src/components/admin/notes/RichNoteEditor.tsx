@@ -308,7 +308,10 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
       <div className="flex-1 min-h-0 overflow-y-auto rounded-2xl border border-border/60 bg-background/60">
       <div className="relative">
       {mention && matches.length > 0 && (
-        <div className="absolute left-4 top-2 z-20 w-64 max-h-64 overflow-y-auto rounded-xl border border-border/60 bg-popover/95 backdrop-blur shadow-lg p-1">
+        <div
+          style={{ left: mention.left, top: mention.top }}
+          className="fixed z-[60] w-64 max-h-64 overflow-y-auto rounded-xl border border-border/60 bg-popover/95 backdrop-blur shadow-lg p-1"
+        >
           {matches.map((p, i) => {
             const src = p.image_thumb_url || p.image_url;
             return (
