@@ -333,12 +333,16 @@ export function KioskTab() {
                         <AvatarImage src={getParticipantThumb(p)} alt={p.name} loading="lazy" />
                         <AvatarFallback className="text-[10px]">{initials(p.name)}</AvatarFallback>
                       </Avatar>
-                      <div className="min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => setDetailId(p.id)}
+                        className="min-w-0 flex-1 rounded-lg px-1 py-0.5 text-left transition-colors hover:bg-muted"
+                      >
                         <p className="truncate text-sm font-medium">{p.name}</p>
                         <p className="truncate text-xs text-muted-foreground tabular-nums">
                           Inn {b?.deposited ?? 0} kr · brukt {b?.spent ?? 0} kr · {visits} besøk
                         </p>
-                      </div>
+                      </button>
                       <span
                         className={cn(
                           'shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums',
