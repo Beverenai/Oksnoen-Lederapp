@@ -17,6 +17,8 @@ interface Participant {
   name: string;
   cabin_id: string | null;
   room: string | null;
+  image_url?: string | null;
+  image_thumb_url?: string | null;
 }
 
 interface Cabin {
@@ -76,7 +78,7 @@ export function RoomSwapTab() {
       setActivePeriodId(periodId);
       const swapsQuery = supabase.from('room_swaps').select('*').order('created_at', { ascending: false });
       if (periodId) swapsQuery.eq('period_id', periodId);
-      const participantsQuery = supabase.from('participants').select('id, name, cabin_id, room');
+      const participantsQuery = supabase.from('participants').select('id, name, cabin_id, room, image_url, image_thumb_url');
       if (periodId) participantsQuery.eq('period_id', periodId);
       const [participantsRes, cabinsRes, capacityRes, swapsRes] = await Promise.all([
         participantsQuery,
