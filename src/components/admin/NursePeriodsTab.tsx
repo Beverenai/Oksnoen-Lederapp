@@ -53,6 +53,7 @@ export function NursePeriodsTab() {
         'teams_enabled',
         'sweaters_enabled',
         'roulette_enabled',
+        'hookups_enabled',
       ];
       await supabase
         .from('app_config')
