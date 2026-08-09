@@ -19,6 +19,7 @@ import {
   ShoppingBasket,
   ChefHat,
   Mail,
+  HeartHandshake,
   LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -31,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { LederPassMini } from '@/components/passport/LederPassMini';
 import { useMailboxUnreadCount } from '@/hooks/useMailbox';
+import { useHookupsEnabled, useIncomingHookupCount } from '@/hooks/useHookups';
 
 type MoreItem = {
   to?: string;
@@ -85,6 +87,8 @@ export default function More() {
   const sweatersEnabled = useSweatersEnabled();
   const { data: murderState } = useMyMurderState();
   const { data: mailboxUnread } = useMailboxUnreadCount(!!isAdmin);
+  const hookupsEnabled = useHookupsEnabled();
+  const incomingHookups = useIncomingHookupCount();
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
@@ -189,6 +193,16 @@ export default function More() {
         ...(isAdmin
           ? [
               { to: '/participant-stats', icon: BarChart2, label: 'Deltagere' } as MoreItem,
+            ]
+          : []),
+        ...(hookupsEnabled || isAdmin
+          ? [
+              {
+                to: '/liggeliste',
+                icon: HeartHandshake,
+                label: 'Liggeliste',
+                badge: incomingHookups,
+              } as MoreItem,
             ]
           : []),
       ],
