@@ -147,14 +147,13 @@ export function HookupGraph({
               )}
               style={{ left: `${x}%`, top: `${y}%` }}
             >
-              <span className="relative flex items-center justify-center" style={{ width: `${basePct * 1.2}cqw` }}>
+              <span className="relative block" style={{ width: `${sizePct}%` }}>
                 <Avatar
                   className={cn(
-                    'aspect-square shadow-lg ring-2 ring-offset-2 ring-offset-background',
+                    'h-full w-full shadow-lg ring-2 ring-offset-2 ring-offset-background',
                     isMe ? 'ring-primary' : 'ring-border',
                     selected === leader.id && 'ring-primary',
                   )}
-                  style={{ height: `${sizePct}%`, width: `${sizePct}%` }}
                 >
                   <AvatarImage
                     src={leader.profile_image_url ?? undefined}
