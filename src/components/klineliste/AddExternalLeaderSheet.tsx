@@ -60,7 +60,6 @@ export function AddExternalLeaderSheet({
 
         <div className="mt-3 flex gap-1.5">
           {([
-            { key: null, label: 'Ukjent' },
             { key: 'male', label: 'Gutt' },
             { key: 'female', label: 'Jente' },
           ] as const).map((opt) => (
@@ -82,7 +81,7 @@ export function AddExternalLeaderSheet({
 
         <Button
           className="mt-5 w-full"
-          disabled={add.isPending || name.trim().split(' ').filter(Boolean).length < 2}
+          disabled={add.isPending || !gender || name.trim().split(' ').filter(Boolean).length < 2}
           onClick={submit}
         >
           Legg inn
