@@ -261,8 +261,47 @@ export function KioskTab() {
           <TabsTrigger value="varer">Varesalg</TabsTrigger>
           <TabsTrigger value="saldo">Saldo</TabsTrigger>
           <TabsTrigger value="kjop">Kjøp</TabsTrigger>
+          <TabsTrigger value="ledere">Ledere</TabsTrigger>
           <TabsTrigger value="rapporter">Rapporter</TabsTrigger>
         </TabsList>
+
+        {/* Ledere - hvem selger mest */}
+        <TabsContent value="ledere" className="mt-4 space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Trophy className="h-4 w-4" /> Toppselgere i Gomla
+              </CardTitle>
+              <CardDescription>Omsetning per leder (annullerte kjøp er ikke med).</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {sellers.length === 0 && (
+                <p className="text-sm text-muted-foreground">Ingen salg registrert ennå.</p>
+              )}
+              {sellers.map((s, i) => (
+                <div key={s.name} className="space-y-1.5">
+                  <div className="flex items-baseline justify-between gap-2 text-sm">
+                    <span className="min-w-0 truncate font-medium">
+                      {i + 1}. {s.name}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-muted-foreground">
+                      {s.revenue} kr · {s.sales} kjøp
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{
+                        width: `${Math.max(4, (s.revenue / (sellers[0]?.revenue || 1)) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">{s.units} varer solgt</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Varesalg / innkjøp */}
         <TabsContent value="varer" className="mt-4 space-y-4">
