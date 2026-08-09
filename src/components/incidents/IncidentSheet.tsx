@@ -16,7 +16,7 @@ import {
   type IncidentCategory,
   type IncidentSeverity,
 } from '@/hooks/useParticipantIncidents';
-import { cn } from '@/lib/utils';
+import { cn, formatCabinRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -62,7 +62,10 @@ export function IncidentSheet({ open, onOpenChange, incident, prefillParticipant
     const q = search.trim().toLowerCase();
     if (!q) return participants.slice(0, 30);
     return participants
-      .filter((p) => p.name.toLowerCase().includes(q))
+      .filter((p) => {
+        const loc = formatCabinRoom(p.cabins?.name, p.room)?.toLowerCase() ?? '';
+        return p.name.toLowerCase().includes(q) || loc.includes(q);
+      })
       .slice(0, 50);
   }, [participants, search]);
 
@@ -249,7 +252,14 @@ export function IncidentSheet({ open, onOpenChange, incident, prefillParticipant
                       <AvatarImage src={getParticipantThumb(p as any)} alt="" loading="lazy" decoding="async" />
                       <AvatarFallback className="text-xs">{p.name.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <span className="flex-1 truncate">{p.name}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{p.name}</span>
+                      {formatCabinRoom(p.cabins?.name, p.room) && (
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {formatCabinRoom(p.cabins?.name, p.room)}
+                        </span>
+                      )}
+                    </span>
                     {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
                   </button>
                 );
