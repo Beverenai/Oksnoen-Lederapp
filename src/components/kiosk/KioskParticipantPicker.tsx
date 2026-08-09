@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search } from 'lucide-react';
-import { cn, formatFullRoom } from '@/lib/utils';
+import { cn, formatCabinRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
 import type { ParticipantWithCabin } from '@/hooks/useParticipants';
 import type { KioskBalance } from '@/hooks/useKiosk';
@@ -77,7 +77,7 @@ export function KioskParticipantPicker({ open, onOpenChange, participants, balan
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-base font-semibold leading-tight">{p.name}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {formatFullRoom(p.cabins?.name, p.room) || 'Ingen hytte'}
+                      {formatCabinRoom(p.cabins?.name, p.room) || 'Ingen hytte'}
                     </p>
                   </div>
                   <span
