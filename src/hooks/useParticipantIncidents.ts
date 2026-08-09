@@ -8,8 +8,9 @@ export type IncidentSeverity = 'low' | 'medium' | 'high';
 export interface IncidentParticipant {
   id: string;
   name: string;
+  image_url?: string | null;
+  image_thumb_url?: string | null;
 }
-
 
 export interface Incident {
   id: string;
@@ -66,7 +67,7 @@ async function fetchIncidents(periodId: string | null, opts: UseIncidentsOptions
       id, title, description, category, severity, leader_id, period_id, created_at, updated_at,
       leader:leaders(id, name),
       participant_incident_participants(
-        participants(id, name)
+        participants(id, name, image_url, image_thumb_url)
       )
     `)
     .eq('period_id', periodId)
