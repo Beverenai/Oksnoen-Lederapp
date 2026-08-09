@@ -25,6 +25,29 @@ interface LeaderLite {
 
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
 
+/** Stable per-sender name color, WhatsApp-style. */
+const NAME_COLORS = [
+  'text-primary',
+  'text-emerald-500',
+  'text-sky-500',
+  'text-violet-500',
+  'text-amber-500',
+  'text-rose-500',
+  'text-teal-500',
+  'text-indigo-500',
+];
+function nameColor(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 997;
+  return NAME_COLORS[h % NAME_COLORS.length];
+}
+
+function initials(name?: string) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '??';
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+}
+
 function sameDay(a: Date, b: Date) {
   return (
     a.getFullYear() === b.getFullYear() &&
@@ -205,18 +228,12 @@ export default function Chat() {
         prevSender = null;
       }
       const sameGroup = prevSender === m.leader_id && ts - prevTs < GROUP_WINDOW_MS;
-      const next = messages[i + 1];
-      const nextSameGroup =
-        next &&
-        next.leader_id === m.leader_id &&
-        sameDay(new Date(next.created_at), d) &&
-        new Date(next.created_at).getTime() - ts < GROUP_WINDOW_MS;
       out.push({
         kind: 'msg',
         key: m.id,
         msg: m,
         showHeader: !sameGroup,
-        showAvatar: !nextSameGroup,
+        showAvatar: !sameGroup,
         isMe,
       });
       prevDate = d;
@@ -305,41 +322,54 @@ export default function Chat() {
             <div
               key={it.key}
               className={cn(
-                'flex gap-2 items-end group',
+                'flex gap-2 items-start group',
                 isMe && 'flex-row-reverse',
                 showHeader ? 'mt-3' : 'mt-0.5',
               )}
             >
-              <div className="w-8 shrink-0">
-                {showAvatar && !isMe && (
-                  <Avatar className="w-8 h-8">
+              <div className="w-9 shrink-0">
+                {showAvatar && (
+                  <Avatar className="w-9 h-9 ring-1 ring-border/60">
                     <AvatarImage src={author?.profile_image_url || undefined} />
-                    <AvatarFallback className="text-xs">
-                      {author?.name?.slice(0, 2).toUpperCase() || '??'}
+                    <AvatarFallback className="text-[11px] font-semibold">
+                      {initials(author?.name)}
                     </AvatarFallback>
                   </Avatar>
                 )}
               </div>
               <div className={cn('max-w-[75%] flex flex-col', isMe && 'items-end')}>
-                {showHeader && !isMe && (
-                  <div className="text-[11px] text-muted-foreground px-1 mb-0.5">
-                    {author?.name || 'Ukjent'} · {timeLabel(msg.created_at)}
+                {showHeader && (
+                  <div className="flex items-center gap-1.5 px-1 mb-0.5">
+                    <span
+                      className={cn(
+                        'text-[12px] font-semibold',
+                        isMe ? 'text-muted-foreground' : nameColor(msg.leader_id),
+                      )}
+                    >
+                      {isMe ? 'Deg' : author?.name || 'Ukjent'}
+                    </span>
                   </div>
                 )}
                 <div
                   title={new Date(msg.created_at).toLocaleString('nb-NO')}
                   className={cn(
-                    'rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words shadow-sm',
+                    'rounded-2xl px-3 py-2 pb-1.5 text-sm whitespace-pre-wrap break-words shadow-sm',
                     isMe
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted text-foreground',
                     isMe && showHeader && 'rounded-tr-md',
-                    isMe && !showAvatar && 'rounded-br-md',
                     !isMe && showHeader && 'rounded-tl-md',
-                    !isMe && !showAvatar && 'rounded-bl-md',
                   )}
                 >
                   {msg.body}
+                  <span
+                    className={cn(
+                      'block text-[10px] leading-none mt-1',
+                      isMe ? 'text-primary-foreground/70 text-right' : 'text-muted-foreground',
+                    )}
+                  >
+                    {timeLabel(msg.created_at)}
+                  </span>
                 </div>
               </div>
               {canDelete && (
