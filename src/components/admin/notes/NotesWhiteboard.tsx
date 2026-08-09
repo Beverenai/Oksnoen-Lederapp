@@ -39,7 +39,10 @@ export function NotesWhiteboard({ noteId, initialStrokes, onChange }: NotesWhite
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, W, H);
+    const v = viewRef.current;
+    ctx.setTransform(v.zoom, 0, 0, v.zoom, v.x, v.y);
     const all = [...strokesRef.current, ...(drawingRef.current ? [drawingRef.current] : [])];
     for (const s of all) {
       if (s.points.length === 0) continue;
@@ -64,6 +67,8 @@ export function NotesWhiteboard({ noteId, initialStrokes, onChange }: NotesWhite
     }
     ctx.globalCompositeOperation = 'source-over';
   };
+
+  useEffect(() => { redraw(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [view]);
 
   useEffect(() => {
     strokesRef.current = Array.isArray(initialStrokes) ? initialStrokes : [];
