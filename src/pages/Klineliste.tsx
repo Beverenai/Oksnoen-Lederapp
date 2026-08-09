@@ -24,7 +24,7 @@ function initials(name: string) {
 }
 
 export default function Klineliste() {
-  const { leader, isAdmin } = useAuth();
+  const { leader, isAdmin, isLimitedAccess } = useAuth();
   const enabled = useHookupsEnabled();
   const setEnabled = useSetHookupsEnabled();
   const { data: leaders = [] } = useAllLeaders();
@@ -59,7 +59,8 @@ export default function Klineliste() {
     }
   };
 
-  if (!enabled && !isAdmin) {
+  // Off-season / inaktive ledere har alltid tilgang – bryteren styrer bare sesongen.
+  if (!enabled && !isAdmin && !isLimitedAccess) {
     return (
       <div className="mx-auto w-full max-w-2xl py-16 text-center">
         <HeartHandshake className="mx-auto h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
