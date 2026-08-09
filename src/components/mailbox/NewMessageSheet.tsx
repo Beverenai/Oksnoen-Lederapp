@@ -92,7 +92,6 @@ export function NewMessageSheet({
               <Label htmlFor="mailbox-anon" className="text-sm">Send anonymt</Label>
               <p className="text-xs text-muted-foreground">
                 Navnet ditt vises ikke for andre ledere.
-                {!isAdmin && ' Admin kan alltid se hvem som har sendt inn.'}
               </p>
             </div>
             <Switch id="mailbox-anon" checked={anonymous} onCheckedChange={setAnonymous} />
