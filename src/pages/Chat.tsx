@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, Trash2 } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { cn } from '@/lib/utils';
 
@@ -72,7 +72,7 @@ function timeLabel(iso: string) {
 }
 
 export default function Chat() {
-  const { leader, isSuperAdmin, isLimitedAccess } = useAuth();
+  const { leader, isLimitedAccess } = useAuth();
   const { showError } = useStatusPopup();
   const canUsePeriodChat = !isLimitedAccess && leader?.is_active !== false;
   const [channel, setChannel] = useState<'period' | 'offseason'>(
@@ -195,12 +195,6 @@ export default function Chat() {
     scrollToBottom(true);
   };
 
-  const del = async (m: ChatMessage) => {
-    if (!confirm('Slette denne meldingen?')) return;
-    const { error } = await supabase.from('chat_messages').delete().eq('id', m.id);
-    if (error) showError('Kunne ikke slette');
-  };
-
   // Build render items with day separators + sender grouping.
   type RenderItem =
     | { kind: 'day'; key: string; label: string }
@@ -317,7 +311,6 @@ export default function Chat() {
           }
           const { msg, showHeader, showAvatar, isMe } = it;
           const author = leaders[msg.leader_id];
-          const canDelete = isMe || isSuperAdmin;
           return (
             <div
               key={it.key}
@@ -372,15 +365,6 @@ export default function Chat() {
                   </span>
                 </div>
               </div>
-              {canDelete && (
-                <button
-                  onClick={() => del(msg)}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity self-center"
-                  aria-label="Slett melding"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
             </div>
           );
         })}
