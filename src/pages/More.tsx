@@ -271,7 +271,7 @@ export default function More() {
         <p className="text-sm text-muted-foreground">Alle sider og funksjoner</p>
       </header>
 
-      {isAdmin && (
+      {isAdmin && !limited && (
         <NavLink
           to="/admin"
           onClick={() => hapticImpact('medium')}

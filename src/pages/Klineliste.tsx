@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Plus, Check, X, Trash2, HeartHandshake } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLeaders } from '@/hooks/useLeaders';
+import { useAllLeaders } from '@/hooks/useLeaders';
 import {
   useHookupsEnabled,
   useSetHookupsEnabled,
@@ -27,7 +27,7 @@ export default function Klineliste() {
   const { leader, isAdmin } = useAuth();
   const enabled = useHookupsEnabled();
   const setEnabled = useSetHookupsEnabled();
-  const { data: leaders = [] } = useLeaders();
+  const { data: leaders = [] } = useAllLeaders();
   const { confirmed, myConfirmed, incoming, outgoing, isLoading } = useMyHookups();
   const respond = useRespondToHookup();
   const remove = useDeleteHookup();

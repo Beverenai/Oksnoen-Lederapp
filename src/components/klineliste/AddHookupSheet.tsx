@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { useLeaders } from '@/hooks/useLeaders';
+import { useAllLeaders } from '@/hooks/useLeaders';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRequestHookup, useMyHookups } from '@/hooks/useHookups';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
@@ -18,7 +18,7 @@ export function AddHookupSheet({
 }) {
   const [search, setSearch] = useState('');
   const { leader } = useAuth();
-  const { data: leaders = [] } = useLeaders();
+  const { data: leaders = [] } = useAllLeaders();
   const { partnerIds } = useMyHookups();
   const request = useRequestHookup();
   const { showError } = useStatusPopup();
