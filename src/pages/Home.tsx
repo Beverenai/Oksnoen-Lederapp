@@ -175,6 +175,9 @@ export default function Home() {
   const [snusBrothers, setSnusBrothers] = useState<{ id: string; name: string }[]>([]);
   const [snusBrothersOpen, setSnusBrothersOpen] = useState(false);
   const [mySnus, setMySnus] = useState<{ productId: string | null; customLabel: string | null } | null>(null);
+  const { data: mailboxUnread = 0 } = useMailboxUnreadCount(!!isAdmin);
+  const { data: myMailboxMessages = [] } = useMyMailboxMessages();
+  const hasNewReply = !isAdmin && myMailboxMessages.some((m) => !!m.admin_reply);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
   const showRoulette = rouletteEnabled && inRoulette;
   const teamsEnabled = useTeamsEnabled();
