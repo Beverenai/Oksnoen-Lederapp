@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Plus, Minus, Loader2, ChevronDown, X } from 'lucide-react';
+import { Check, Plus, Minus, Loader2, X } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useActivities } from '@/hooks/useActivities';
 
