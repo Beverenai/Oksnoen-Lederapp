@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +10,7 @@ import { Phone, Mail, X, Pencil, Save, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { syncBookingExtras } from '@/lib/syncBookingExtras';
+import { BookingEditLog } from '@/components/admin/bookings/BookingEditLog';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Booking = Tables<'participant_bookings'>;
@@ -93,6 +95,7 @@ const NUMERIC_FIELDS = new Set(['times_attended', 'kiosk_money', 'price', 'disco
 
 export function BookingDetailSheet({ booking, participant, onClose, editable = false, onSaved }: Props) {
   const { showSuccess, showError } = useStatusPopup();
+  const qc = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [draft, setDraft] = useState<Draft>({});
@@ -128,6 +131,7 @@ export function BookingDetailSheet({ booking, participant, onClose, editable = f
       });
       const { error } = await supabase.from('participant_bookings').update(payload).eq('id', b.id);
       if (error) throw error;
+      qc.invalidateQueries({ queryKey: ['booking-edit-log', b.id] });
       if (b.period_id) {
         try {
           await syncBookingExtras(b.period_id);
@@ -282,6 +286,10 @@ export function BookingDetailSheet({ booking, participant, onClose, editable = f
             <Field label="Periode" value={v(b.period_label)} />
             <Field label="Bookingstidspunkt" value={v(b.booking_time)} />
             <Field label="Plass bekreftet" value={v(b.seat_confirmed)} />
+          </Section>
+
+          <Section title="Endringslogg">
+            <BookingEditLog bookingId={b.id} />
           </Section>
           </>
           )}

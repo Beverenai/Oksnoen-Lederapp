@@ -151,6 +151,53 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_edit_log: {
+        Row: {
+          booking_id: string
+          changed_by: string | null
+          changed_by_name: string | null
+          created_at: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          participant_name: string | null
+          period_id: string | null
+        }
+        Insert: {
+          booking_id: string
+          changed_by?: string | null
+          changed_by_name?: string | null
+          created_at?: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          participant_name?: string | null
+          period_id?: string | null
+        }
+        Update: {
+          booking_id?: string
+          changed_by?: string | null
+          changed_by_name?: string | null
+          created_at?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          participant_name?: string | null
+          period_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_edit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cabin_reports: {
         Row: {
           cabin_id: string
