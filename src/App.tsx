@@ -240,6 +240,7 @@ function AppRoutes() {
         <Route path="/lederpass" element={<ProtectedRoute><LederpassPage /></ProtectedRoute>} />
         <Route path="/kiosk" element={<ProtectedRoute><Kiosk /></ProtectedRoute>} />
         <Route path="/kjokken" element={<ProtectedRoute><Kjokken /></ProtectedRoute>} />
+        <Route path="/postkasse" element={<ProtectedRoute><Mailbox /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

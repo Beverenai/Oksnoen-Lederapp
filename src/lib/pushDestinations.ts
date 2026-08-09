@@ -20,6 +20,7 @@ export const PUSH_DESTINATIONS: PushDestination[] = [
   { label: 'Gensere', url: '/gensere' },
   { label: 'Nurse', url: '/nurse' },
   { label: 'Chat', url: '/chat' },
+  { label: 'Postkasse', url: '/postkasse' },
   { label: 'Lederpass', url: '/lederpass' },
   { label: 'Snusvalg', url: '/profile?snus=1' },
   { label: 'Mer', url: '/mer' },
