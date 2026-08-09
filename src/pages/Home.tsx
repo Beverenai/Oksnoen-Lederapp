@@ -534,7 +534,7 @@ export default function Home() {
           visual: (
             <SnusCan3D
               product={getSnusProduct(mySnus.productId) ?? customSnusProduct(mySnus.customLabel || 'Snus')}
-              size={40}
+              size={36}
               interactive={false}
               spin={-22}
               hideHint
@@ -551,7 +551,7 @@ export default function Home() {
       key: 'postkasse',
       icon: AlertCircle,
       label: 'Postkasse',
-      visual: <MailboxIcon3D size={32} />,
+      visual: <MailboxIcon3D size={38} />,
       count: isAdmin ? (mailboxUnread || undefined) : undefined,
       badge: !isAdmin && hasNewReply,
       onClick: () => navigate('/postkasse'),
