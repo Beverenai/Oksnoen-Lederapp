@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -73,6 +73,25 @@ const Kiosk = () => {
   const [editTarget, setEditTarget] = useState<KioskSale | null>(null);
   const [editLines, setEditLines] = useState<CartLine[]>([]);
   const [editSearch, setEditSearch] = useState('');
+  const submittingRef = useRef(false);
+  const clientRefRef = useRef<string | null>(null);
+
+  /** Stable idempotency key for the current cart — reused across retries. */
+  const cartRef = () => {
+    if (!clientRefRef.current) {
+      clientRefRef.current =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`;
+    }
+    return clientRefRef.current;
+  };
+
+  /** Opens a sheet without letting iOS pop the keyboard from an autofocused field. */
+  const blurActive = () => {
+    const el = document.activeElement as HTMLElement | null;
+    el?.blur?.();
+  };
 
   const categories = catalog?.categories ?? [];
   const products = catalog?.products ?? [];
@@ -174,18 +193,28 @@ const Kiosk = () => {
 
   const handleCheckout = async () => {
     if (!participant) {
+      blurActive();
       setPickerOpen(true);
       return;
     }
     if (lines.length === 0) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    blurActive();
     const buyer = participant;
     const soldLines = lines;
     const soldTotal = total;
     const soldRemaining = remaining;
+    const ref = cartRef();
     try {
       setLines([]);
       setParticipant(null);
-      const saleId = await recordSale.mutateAsync({ participantId: buyer.id, lines: soldLines });
+      const saleId = await recordSale.mutateAsync({
+        participantId: buyer.id,
+        lines: soldLines,
+        clientRef: ref,
+      });
+      clientRefRef.current = null;
       setSuccess({
         saleId,
         participantName: buyer.name,
@@ -204,6 +233,8 @@ const Kiosk = () => {
       toast.error('Kunne ikke registrere kjøp', { description: err?.message });
       setParticipant(buyer);
       setLines(soldLines);
+    } finally {
+      submittingRef.current = false;
     }
   };
 
