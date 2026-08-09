@@ -127,15 +127,15 @@ export function IncidentSheet({ open, onOpenChange, incident, prefillParticipant
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-md w-full overflow-y-auto">
-        <SheetHeader>
+      <SheetContent className="sm:max-w-md w-full flex flex-col p-0 gap-0 h-[100dvh]">
+        <SheetHeader className="px-6 pt-6 pb-3 shrink-0">
           <SheetTitle>{incident ? 'Rediger hendelse' : 'Ny hendelse'}</SheetTitle>
           <SheetDescription>
             Logg en hendelse knyttet til én eller flere deltagere. Kun du og admin ser den.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-5 mt-5 pb-8">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-6 space-y-5">
           <div>
             <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tittel</label>
             <Input
@@ -260,6 +260,12 @@ export function IncidentSheet({ open, onOpenChange, incident, prefillParticipant
             </div>
           </div>
 
+        </div>
+
+        <div
+          className="shrink-0 border-t bg-background px-6 py-3"
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+        >
           <div className="flex gap-2">
             <Button onClick={save} disabled={!canSave || isSaving} className="flex-1">
               {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
