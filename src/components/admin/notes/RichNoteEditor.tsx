@@ -103,7 +103,7 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
     setMention({ query: m[1], index: 0 });
   };
 
-  const insertMention = (name: string) => {
+  const insertMention = (name: string, imageUrl?: string | null) => {
     const sel = window.getSelection();
     const node = sel?.anchorNode;
     if (!node || node.nodeType !== Node.TEXT_NODE) return;
@@ -117,7 +117,11 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
     range.setEnd(node, offset);
     sel!.removeAllRanges();
     sel!.addRange(range);
-    exec('insertHTML', `<span class="note-mention" data-mention="${name.replace(/"/g, '&quot;')}">@${name}</span>&nbsp;`);
+    const safeName = name.replace(/"/g, '&quot;');
+    const img = imageUrl
+      ? `<img class="note-mention-img" src="${imageUrl.replace(/"/g, '&quot;')}" alt="" />`
+      : '';
+    exec('insertHTML', `<span class="note-mention" data-mention="${safeName}">${img}@${name}</span>&nbsp;`);
     setMention(null);
     if (ref.current) onChange(ref.current.innerHTML);
     pushSnapshot(true);
