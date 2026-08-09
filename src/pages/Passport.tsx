@@ -749,15 +749,17 @@ export default function Passport() {
           onPrefetchParticipant={prefetchParticipant}
         />
       ) : (
-        <VirtualizedParticipantList
-          cabinGroups={cabinGroups}
-          activitiesMap={activitiesMap}
-          expandedCabins={expandedCabins}
-          onToggleCabin={toggleCabinExpanded}
-          onFilterByCabin={handleFilterByCabin}
-          onParticipantClick={handleParticipantClick}
-          onPrefetchParticipant={prefetchParticipant}
-        />
+        <div className="w-full max-w-2xl mx-auto">
+          <VirtualizedParticipantList
+            cabinGroups={cabinGroups}
+            activitiesMap={activitiesMap}
+            expandedCabins={expandedCabins}
+            onToggleCabin={toggleCabinExpanded}
+            onFilterByCabin={handleFilterByCabin}
+            onParticipantClick={handleParticipantClick}
+            onPrefetchParticipant={prefetchParticipant}
+          />
+        </div>
       )}
 
       {/* Participant Detail Dialog */}
