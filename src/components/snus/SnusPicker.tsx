@@ -122,7 +122,8 @@ export function SnusPicker({
                 className="flex-1"
                 disabled={!customValue.trim()}
                 onClick={() => {
-                  onSelect(null, customValue.trim());
+                  if (multi) onSelectMany?.([], customValue.trim());
+                  else onSelect(null, customValue.trim());
                   onOpenChange(false);
                 }}
               >
