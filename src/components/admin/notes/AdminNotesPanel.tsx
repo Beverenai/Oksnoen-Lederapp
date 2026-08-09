@@ -126,7 +126,7 @@ export function AdminNotesPanel() {
       } finally {
         if (Object.keys(timersRef.current).length === 0) setSavingFlag(false);
       }
-    }, 600);
+    }, 250);
   };
 
   const handleCreate = async (kind: 'doc' | 'board') => {
