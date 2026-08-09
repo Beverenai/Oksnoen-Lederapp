@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
@@ -716,7 +717,15 @@ export default function Fix() {
                       <SelectContent>
                         {leaders.map((l) => (
                           <SelectItem key={l.id} value={l.id}>
-                            {l.name}
+                            <span className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6 shrink-0">
+                                {l.profile_image_url && (
+                                  <AvatarImage src={l.profile_image_url} alt="" loading="lazy" className="object-cover" />
+                                )}
+                                <AvatarFallback className="text-[10px]">{l.name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <span className="truncate">{l.name}</span>
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
