@@ -443,9 +443,11 @@ export default function Chat() {
           className="h-full overflow-y-auto overscroll-contain rounded-2xl border bg-card/40 px-2.5 py-3 lg:px-3 lg:py-4"
         >
           {messages.length === 0 && (
-            <p className="text-center text-sm text-muted-foreground py-8">
-              Ingen meldinger enda. Start samtalen!
-            </p>
+            <div className="flex h-full items-center justify-center">
+              <p className="text-center text-sm text-muted-foreground">
+                Ingen meldinger enda. Start samtalen!
+              </p>
+            </div>
           )}
           {items.map((it) => {
             if (it.kind === 'day') {
