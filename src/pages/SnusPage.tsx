@@ -35,6 +35,7 @@ export default function SnusPage() {
   const [customLabel, setCustomLabel] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [brothers, setBrothers] = useState<Brother[]>([]);
+  const [iAmActive, setIAmActive] = useState(true);
 
   const cans = snusProductsFrom(productIds.length ? productIds : [productId], customLabel);
   const can = cans[0] ?? null;
@@ -43,10 +44,11 @@ export default function SnusPage() {
     if (!me?.id) return;
     const { data } = await supabase
       .from('leaders')
-      .select('snus_user, snus_product_id, snus_product_ids, snus_custom_label')
+      .select('snus_user, snus_product_id, snus_product_ids, snus_custom_label, is_active')
       .eq('id', me.id)
       .maybeSingle();
     setSnusUser(!!data?.snus_user);
+    setIAmActive((data as any)?.is_active !== false);
     setProductId(data?.snus_product_id ?? null);
     setProductIds(((data as any)?.snus_product_ids as string[] | null) ?? []);
     setCustomLabel(data?.snus_custom_label ?? null);
@@ -60,12 +62,14 @@ export default function SnusPage() {
     const run = async () => {
       const myIds = productIds.length ? productIds : productId ? [productId] : [];
       if (!me?.id || !snusUser || myIds.length === 0) { setBrothers([]); return; }
-      const { data } = await supabase
+      // Aktive ledere ser kun aktive snus brothers; inaktive ser alle
+      let query = supabase
         .from('leaders')
         .select('id, name, profile_image_url, snus_product_id, snus_product_ids')
         .eq('snus_user', true)
-        .neq('id', me.id)
-        .order('name');
+        .neq('id', me.id);
+      if (iAmActive) query = query.eq('is_active', true);
+      const { data } = await query.order('name');
       // Man er snus brothers om man deler minst én boks
       const matches = ((data as any[]) ?? []).flatMap((l) => {
         const ids: string[] = (l.snus_product_ids as string[] | null)?.length
@@ -86,7 +90,7 @@ export default function SnusPage() {
     };
     run();
     return () => { cancelled = true; };
-  }, [me?.id, snusUser, productId, productIds]);
+  }, [me?.id, snusUser, productId, productIds, iAmActive]);
 
   const save = async (patch: {
     snus_user?: boolean;

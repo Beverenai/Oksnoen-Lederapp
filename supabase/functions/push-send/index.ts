@@ -81,7 +81,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { title, message, url, leader_ids, broadcast, sender_leader_id, target_activity, single_leader_id, personalize_activity, target_unread_with_content, sound } = body;
+    const { title, message, url, leader_ids, broadcast, sender_leader_id, target_activity, single_leader_id, personalize_activity, target_unread_with_content, sound, include_inactive } = body;
 
     console.log("Push send request received:", { title, broadcast, sender_leader_id, target_activity, single_leader_id, personalize_activity, target_unread_with_content });
 
@@ -104,7 +104,7 @@ serve(async (req) => {
       .select("value")
       .eq("key", "app_mode")
       .maybeSingle();
-    const isAppInactive = (appModeRow?.value ?? "active") === "inactive";
+    const isAppInactive = (appModeRow?.value ?? "active") === "inactive" || include_inactive === true;
     console.log(`App mode: ${isAppInactive ? "inactive (skip is_active filter)" : "active"}`);
 
     if (!sender_leader_id) {
