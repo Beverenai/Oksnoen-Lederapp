@@ -367,20 +367,31 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-140px)] gap-3 animate-fade-in">
-      <div className="shrink-0">
-        <h1 className="text-2xl font-heading font-bold">Lederhuset</h1>
-        <p className="text-sm text-muted-foreground">
-          {channel === 'period'
-            ? `Periodechat${periodLabel ? ` · ${periodLabel}` : ''} — for ledere som jobber nå`
-            : 'Off season — åpen for alle ledere, hele året'}
-        </p>
-        <div className="mt-3 flex gap-1 rounded-full border bg-card/60 p-1 backdrop-blur">
+    <div
+      className="-mx-4 -my-4 flex flex-col gap-2 px-3 pt-2 pb-1 animate-fade-in lg:mx-0 lg:my-0 lg:px-0 lg:pt-0"
+      style={{
+        height:
+          'calc(100svh - var(--safe-top, 0px) - var(--nav-actual-h, 64px) - 12px)',
+      }}
+    >
+      {/* Kompakt topplinje: tittel + kanalvelger på én rad (mindre skroll på iPhone) */}
+      <div className="shrink-0 flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-lg font-heading font-bold leading-tight lg:text-2xl">
+            Lederhuset
+          </h1>
+          <p className="truncate text-[11px] text-muted-foreground">
+            {channel === 'period'
+              ? `Periodechat${periodLabel ? ` · ${periodLabel}` : ''}`
+              : 'Off season — hele året'}
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-1 rounded-full border bg-card/60 p-0.5 backdrop-blur">
           <button
             type="button"
             onClick={() => setChannel('period')}
             className={cn(
-              'flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+              'rounded-full px-3 py-1 text-xs font-medium transition-colors',
               channel === 'period'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground',
@@ -392,7 +403,7 @@ export default function Chat() {
             type="button"
             onClick={() => setChannel('offseason')}
             className={cn(
-              'flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+              'rounded-full px-3 py-1 text-xs font-medium transition-colors',
               channel === 'offseason'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground',
@@ -406,7 +417,7 @@ export default function Chat() {
       <div className="relative flex-1 min-h-0">
         <div
           ref={listRef}
-          className="h-full overflow-y-auto overscroll-contain rounded-2xl border bg-card/40 backdrop-blur px-3 py-4"
+          className="h-full overflow-y-auto overscroll-contain rounded-2xl border bg-card/40 px-2.5 py-3 lg:px-3 lg:py-4"
         >
           {messages.length === 0 && (
             <p className="text-center text-sm text-muted-foreground py-8">
