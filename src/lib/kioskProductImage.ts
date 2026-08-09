@@ -19,6 +19,7 @@ import lollipop from '@/assets/kiosk/lollipop.webp';
 import loveHearts from '@/assets/kiosk/love-hearts.webp';
 import maoam from '@/assets/kiosk/maoam.webp';
 import melkerull from '@/assets/kiosk/melkerull.webp';
+import minimix from '@/assets/kiosk/minimix.webp';
 import pepsiMax from '@/assets/kiosk/pepsi-max.webp';
 import roulette from '@/assets/kiosk/roulette.webp';
 import smil from '@/assets/kiosk/smil.webp';
@@ -47,6 +48,7 @@ const PRODUCT_IMAGES: Array<{ test: RegExp; src: string }> = [
   { test: /gullchips|petters/i, src: gullchips },
   { test: /gott\s*(?:&|og)?\s*blandat/i, src: gottBlandat },
   { test: /knatt(?:ar|er)/i, src: knattar },
+  { test: /mini\s*mix/i, src: minimix },
   { test: /bubs/i, src: bubs },
   { test: /fizzy/i, src: fizzypop },
   { test: /haribo|roulette/i, src: roulette },
