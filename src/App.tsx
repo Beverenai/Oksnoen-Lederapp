@@ -36,6 +36,7 @@ const Admin = lazy(() => import("@/pages/admin/Admin"));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 const Nurse = lazy(() => import("@/pages/Nurse"));
 const Fix = lazy(() => import("@/pages/Fix"));
+const Mailbox = lazy(() => import("@/pages/Mailbox"));
 const RopeControl = lazy(() => import("@/pages/RopeControl"));
 const ImportantInfo = lazy(() => import("@/pages/ImportantInfo"));
 const ParticipantStats = lazy(() => import("@/pages/admin/ParticipantStats"));
@@ -239,6 +240,7 @@ function AppRoutes() {
         <Route path="/lederpass" element={<ProtectedRoute><LederpassPage /></ProtectedRoute>} />
         <Route path="/kiosk" element={<ProtectedRoute><Kiosk /></ProtectedRoute>} />
         <Route path="/kjokken" element={<ProtectedRoute><Kjokken /></ProtectedRoute>} />
+        <Route path="/postkasse" element={<ProtectedRoute><Mailbox /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

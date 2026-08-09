@@ -1407,6 +1407,76 @@ export type Database = {
         }
         Relationships: []
       }
+      mailbox_messages: {
+        Row: {
+          admin_reply: string | null
+          category: string
+          content: string
+          created_at: string
+          id: string
+          is_anonymous: boolean
+          period_id: string | null
+          read_at: string | null
+          replied_at: string | null
+          replied_by: string | null
+          sender_leader_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_reply?: string | null
+          category?: string
+          content: string
+          created_at?: string
+          id?: string
+          is_anonymous?: boolean
+          period_id?: string | null
+          read_at?: string | null
+          replied_at?: string | null
+          replied_by?: string | null
+          sender_leader_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_reply?: string | null
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_anonymous?: boolean
+          period_id?: string | null
+          read_at?: string | null
+          replied_at?: string | null
+          replied_by?: string | null
+          sender_leader_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mailbox_messages_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mailbox_messages_replied_by_fkey"
+            columns: ["replied_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mailbox_messages_sender_leader_id_fkey"
+            columns: ["sender_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       murder_death_notifications: {
         Row: {
           claim_id: string
