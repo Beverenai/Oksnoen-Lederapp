@@ -38,6 +38,7 @@ import { PassIcon } from '@/components/icons/PassIcon';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
 import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
 import { useCheckoutEnabled } from '@/hooks/useCheckoutEnabled';
+import { useAppBadge } from '@/hooks/useAppBadge';
 import { useSweatersEnabled } from '@/hooks/useSweatersEnabled';
 import { useAppMode } from '@/hooks/useAppMode';
 import { useSeasonView } from '@/contexts/SeasonViewContext';
