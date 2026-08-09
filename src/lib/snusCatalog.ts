@@ -164,26 +164,70 @@ export const SNUS_BRANDS: SnusBrandGroup[] = SNUS_CATALOG.reduce<SnusBrandGroup[
   return acc;
 }, []);
 
+/**
+ * Gamle IDs som er lagret på profiler fra før katalogen ble rettet opp.
+ * Peker til nærmeste produkt i dagens katalog, slik at ingen profil blir blank.
+ */
+export const LEGACY_SNUS_IDS: Record<string, string> = {
+  // General
+  'general-white-portion': 'general-classic-no5',
+  'general-original-portion': 'general-classic-no3',
+  'general-mint-white': 'general-classic-no5',
+  'general-extra-strong': 'general-classic-no4',
+  'general-snus-nordic-mint': 'general-classic-no5',
+  'general-g3': 'g3-no1',
+  // The Lab
+  'thelab-1': 'the-lab-02',
+  'thelab-2': 'the-lab-02',
+  'thelab-3': 'the-lab-05',
+  'thelab-4': 'the-lab-06',
+  'thelab-5': 'the-lab-07',
+  'thelab-6': 'the-lab-07',
+  // Ettan
+  'ettan-portion': 'ettan-no1',
+  'ettan-white': 'ettan-no1',
+  'ettan-los': 'ettan-no1',
+};
+
 export function getSnusProduct(id?: string | null): SnusProduct | null {
   if (!id) return null;
-  return SNUS_CATALOG.find((p) => p.id === id) ?? null;
+  const direct = SNUS_CATALOG.find((p) => p.id === id);
+  if (direct) return direct;
+  const alias = LEGACY_SNUS_IDS[id];
+  if (alias) return SNUS_CATALOG.find((p) => p.id === alias) ?? null;
+  return null;
+}
+
+/** Fullt produktnavn – brukes i labels og som alt-tekst */
+export function snusFullName(product: SnusProduct): string {
+  return product.name ?? `${product.brand} ${product.variant}`;
 }
 
 export function snusLabel(productId?: string | null, customLabel?: string | null): string | null {
   const product = getSnusProduct(productId);
-  if (product) return `${product.brand} ${product.variant}`;
+  if (product) return snusFullName(product);
   if (customLabel?.trim()) return customLabel.trim();
   return null;
 }
 
 export function searchSnus(query: string): SnusProduct[] {
-  const q = query.trim().toLowerCase().replace(/\s+/g, ' ');
+  const q = query.trim().toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ');
   if (!q) return SNUS_CATALOG;
   const tokens = q.split(' ').filter(Boolean);
   return SNUS_CATALOG.filter((p) => {
-    const haystack = `${p.brand} ${p.variant} ${p.flavor} ${p.format ?? ''} ${
-      p.number != null ? `no${p.number} nr${p.number} n${p.number} ${p.number}` : ''
-    } ${p.white ? 'helhvit white' : 'brun original'} ${p.nicotineFree ? 'nikotinfri zero' : ''} styrke s${p.strength}`.toLowerCase();
+    const n = p.number;
+    const padded = n != null && n < 10 ? `0${n}` : '';
+    const numberWords =
+      n != null
+        ? `no${n} no ${n} nr${n} n${n} ${n} ${padded} no${padded} no ${padded}`
+        : '';
+    const haystack = `${p.brand} ${p.variant} ${p.name ?? ''} ${p.flavor} ${p.format ?? ''} ${
+      p.format === 'superslim' ? 'super slim' : ''
+    } ${numberWords} ${p.brand === 'G.3' ? 'g3 general g3 generell g3' : ''} ${
+      p.brand === 'The Lab' ? 'lab thelab' : ''
+    } ${p.white ? 'helhvit white' : 'brun original'} ${p.nicotineFree ? 'nikotinfri zero' : ''} styrke s${p.strength}`
+      .toLowerCase()
+      .replace(/\./g, '');
     const compactHay = haystack.replace(/\s/g, '');
     // Every token must match somewhere → "epok 1" and "epok1" both work
     return tokens.every((t) => haystack.includes(t) || compactHay.includes(t));
