@@ -623,27 +623,6 @@ export default function Home() {
           </div>
         </div>
 
-        {snusBrothers.length > 0 && (
-          <div className="mt-3 flex justify-center">
-            <button
-              type="button"
-              onClick={() => setSnusBrothersOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground active:scale-95 transition-transform"
-            >
-              <SnusBadge
-                productId={(effectiveLeader as any)?.snus_product_id}
-                customLabel={(effectiveLeader as any)?.snus_custom_label}
-                compact
-                isBrother
-              />
-              <span>Snus brothers</span>
-              <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                {snusBrothers.length}
-              </span>
-            </button>
-          </div>
-        )}
-
         <Sheet open={snusBrothersOpen} onOpenChange={setSnusBrothersOpen}>
           <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto">
             <SheetHeader>
