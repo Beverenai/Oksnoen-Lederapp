@@ -941,44 +941,49 @@ export default function Home() {
           const activities = current.items || [];
           const sessionLabel = `${sessionsPayload.active}. økt`;
           return (
-            <Card className={cn(
-              "border border-border/60 bg-card shadow-sm",
-              getCardStyle(sessionConfig)
-            )}>
-              <CardContent className="py-4 space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="p-1.5 rounded-full bg-muted shrink-0">
-                      <SessionIcon className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                    <p className="text-sm font-semibold text-muted-foreground truncate">
-                      {getElementTitle('session_activities', 'Aktiviteter denne økten')}
-                    </p>
+            <div className={cn("ios-surface p-4 space-y-3", getCardStyle(sessionConfig))}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <SessionIcon className="w-4 h-4 text-primary" />
                   </div>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
-                    {sessionLabel}
-                  </span>
+                  <p className="text-sm font-semibold truncate">
+                    {getElementTitle('session_activities', 'Aktiviteter denne økten')}
+                  </p>
                 </div>
+                <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-muted/70 text-muted-foreground shrink-0">
+                  {sessionLabel}
+                </span>
+              </div>
 
-                {reminder && (
-                  <div className="rounded-lg border border-amber-200/60 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30 p-2.5 flex gap-2">
-                    <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                    <p className="text-sm text-amber-900 dark:text-amber-100 leading-snug min-w-0">{reminder}</p>
+              {reminder && (
+                <div className="rounded-2xl bg-amber-50/80 dark:bg-amber-500/10 ring-1 ring-amber-300/40 dark:ring-amber-500/25 p-3 flex gap-2.5 items-start">
+                  <span className="w-7 h-7 rounded-full bg-amber-400/25 flex items-center justify-center shrink-0">
+                    <Bell className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700/80 dark:text-amber-300/80">
+                      Viktig
+                    </p>
+                    <p className="text-sm text-amber-900 dark:text-amber-100 leading-snug">{reminder}</p>
                   </div>
-                )}
+                </div>
+              )}
 
-                {activities.length > 0 && (
-                  <ul className="space-y-1.5">
-                    {activities.map((a, i) => (
-                      <li key={i} className="flex items-start gap-2.5">
-                        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-muted-foreground/60 shrink-0" />
-                        <span className={cn("text-foreground leading-snug", getTextStyle(sessionConfig))}>{a}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
+              {activities.length > 0 && (
+                <ul className="space-y-1.5">
+                  {activities.map((a, i) => (
+                    <li
+                      key={i}
+                      className="flex items-start gap-2.5 rounded-2xl bg-muted/40 px-3 py-2.5"
+                    >
+                      <span className="mt-1.5 h-2 w-2 rounded-full bg-primary/70 shrink-0" />
+                      <span className={cn("text-foreground leading-snug", getTextStyle(sessionConfig))}>{a}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           );
         })()}
 

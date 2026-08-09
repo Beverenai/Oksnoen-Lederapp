@@ -408,6 +408,26 @@ header, nav {
   border-color: hsl(var(--border) / 0.4);
 }
 
+/* iOS-inspirert flytende overflate */
+.ios-surface {
+  border-radius: 1.5rem;
+  background: hsl(var(--card) / 0.75);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 0.5px solid hsl(var(--border) / 0.6);
+  box-shadow: 0 10px 30px -14px hsl(var(--foreground) / 0.25);
+}
+
+.ios-chip {
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.ios-chip:active {
+  transform: scale(0.96);
+}
+
   /* App scroll container - smooth iOS momentum scroll */
   .app-scroll {
     overflow-y: auto;
