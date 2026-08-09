@@ -522,6 +522,28 @@ export default function Home() {
       tone: 'danger',
       onClick: () => navigate('/hendelser'),
     },
+    ...(mySnus
+      ? [{
+          key: 'snus',
+          icon: AlertCircle,
+          label: snusBrothers.length > 0 ? 'Snus brothers' : 'Snus',
+          visual: <SnusPuck productId={mySnus.productId} customLabel={mySnus.customLabel} size={34} />,
+          count: snusBrothers.length || undefined,
+          onClick: () => {
+            if (snusBrothers.length > 0) setSnusBrothersOpen(true);
+            else navigate('/profile');
+          },
+        } as QuickAction]
+      : []),
+    {
+      key: 'postkasse',
+      icon: AlertCircle,
+      label: 'Postkasse',
+      visual: <MailboxIcon3D size={32} />,
+      count: isAdmin ? (mailboxUnread || undefined) : undefined,
+      badge: !isAdmin && hasNewReply,
+      onClick: () => navigate('/postkasse'),
+    },
     ...(overnattingEnabled
       ? [{
           key: 'overnatting',
