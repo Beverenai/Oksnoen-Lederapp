@@ -740,16 +740,24 @@ export default function Passport() {
         </Button>
       )}
 
-      {/* Virtualized Participant List */}
-      <VirtualizedParticipantList
-        cabinGroups={cabinGroups}
-        activitiesMap={activitiesMap}
-        expandedCabins={expandedCabins}
-        onToggleCabin={toggleCabinExpanded}
-        onFilterByCabin={handleFilterByCabin}
-        onParticipantClick={handleParticipantClick}
-        onPrefetchParticipant={prefetchParticipant}
-      />
+      {/* Participant list — photo wall or virtualized list */}
+      {photoWall ? (
+        <PhotoWallView
+          cabinGroups={cabinGroups}
+          onParticipantClick={handleParticipantClick}
+          onPrefetchParticipant={prefetchParticipant}
+        />
+      ) : (
+        <VirtualizedParticipantList
+          cabinGroups={cabinGroups}
+          activitiesMap={activitiesMap}
+          expandedCabins={expandedCabins}
+          onToggleCabin={toggleCabinExpanded}
+          onFilterByCabin={handleFilterByCabin}
+          onParticipantClick={handleParticipantClick}
+          onPrefetchParticipant={prefetchParticipant}
+        />
+      )}
 
       {/* Participant Detail Dialog */}
       <ParticipantDetailDialog
