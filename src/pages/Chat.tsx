@@ -228,18 +228,12 @@ export default function Chat() {
         prevSender = null;
       }
       const sameGroup = prevSender === m.leader_id && ts - prevTs < GROUP_WINDOW_MS;
-      const next = messages[i + 1];
-      const nextSameGroup =
-        next &&
-        next.leader_id === m.leader_id &&
-        sameDay(new Date(next.created_at), d) &&
-        new Date(next.created_at).getTime() - ts < GROUP_WINDOW_MS;
       out.push({
         kind: 'msg',
         key: m.id,
         msg: m,
         showHeader: !sameGroup,
-        showAvatar: !nextSameGroup,
+        showAvatar: !sameGroup,
         isMe,
       });
       prevDate = d;
