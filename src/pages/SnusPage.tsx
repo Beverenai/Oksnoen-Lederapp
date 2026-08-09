@@ -13,7 +13,12 @@ import { SnusPicker } from '@/components/snus/SnusPicker';
 import { getSnusProduct, customSnusProduct, snusLabel, snusFullName } from '@/lib/snusCatalog';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 
-type Brother = { id: string; name: string; profile_image_url: string | null };
+type Brother = {
+  id: string;
+  name: string;
+  profile_image_url: string | null;
+  sharedIds: string[];
+};
 
 /**
  * Egen snus-side. Tilgjengelig også off-season / for inaktive ledere,
@@ -53,19 +58,35 @@ export default function SnusPage() {
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (!me?.id || !snusUser || !productId) { setBrothers([]); return; }
+      const myIds = productIds.length ? productIds : productId ? [productId] : [];
+      if (!me?.id || !snusUser || myIds.length === 0) { setBrothers([]); return; }
       const { data } = await supabase
         .from('leaders')
-        .select('id, name, profile_image_url')
+        .select('id, name, profile_image_url, snus_product_id, snus_product_ids')
         .eq('snus_user', true)
-        .eq('snus_product_id', productId)
         .neq('id', me.id)
         .order('name');
-      if (!cancelled) setBrothers((data as Brother[]) ?? []);
+      // Man er snus brothers om man deler minst én boks
+      const matches = ((data as any[]) ?? []).flatMap((l) => {
+        const ids: string[] = (l.snus_product_ids as string[] | null)?.length
+          ? (l.snus_product_ids as string[])
+          : l.snus_product_id
+            ? [l.snus_product_id]
+            : [];
+        const shared = ids.filter((id) => myIds.includes(id));
+        if (shared.length === 0) return [];
+        return [{
+          id: l.id,
+          name: l.name,
+          profile_image_url: l.profile_image_url,
+          sharedIds: shared,
+        } as Brother];
+      });
+      if (!cancelled) setBrothers(matches);
     };
     run();
     return () => { cancelled = true; };
-  }, [me?.id, snusUser, productId]);
+  }, [me?.id, snusUser, productId, productIds]);
 
   const save = async (patch: {
     snus_user?: boolean;
@@ -179,7 +200,7 @@ export default function SnusPage() {
               <Users className="w-5 h-5" />
               Snus brothers ({brothers.length})
             </CardTitle>
-            <CardDescription>Ledere som snuser samme boks som deg</CardDescription>
+          <CardDescription>Ledere som deler minst én boks med deg</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {brothers.length === 0 ? (
@@ -198,7 +219,16 @@ export default function SnusPage() {
                       {b.name?.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium">{b.name}</span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{b.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {b.sharedIds
+                        .map((id) => getSnusProduct(id))
+                        .filter(Boolean)
+                        .map((p) => snusFullName(p!))
+                        .join(' • ')}
+                    </p>
+                  </div>
                 </div>
               ))
             )}

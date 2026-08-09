@@ -329,29 +329,42 @@ export default function Home() {
       // Hent egen snus-status ferskt fra basen (auth-context kan være utdatert)
       const { data: me } = await supabase
         .from('leaders')
-        .select('snus_user, snus_product_id, snus_custom_label')
+        .select('snus_user, snus_product_id, snus_product_ids, snus_custom_label')
         .eq('id', effectiveLeader.id)
         .maybeSingle();
       const productId = (me as any)?.snus_product_id;
       const snusUser = !!(me as any)?.snus_user;
+      const myIds: string[] = (((me as any)?.snus_product_ids as string[] | null) ?? []).length
+        ? ((me as any).snus_product_ids as string[])
+        : productId
+          ? [productId]
+          : [];
       if (!cancelled) {
         setMySnus(snusUser
           ? { productId: productId ?? null, customLabel: (me as any)?.snus_custom_label ?? null }
           : null);
       }
-      if (!snusUser || !productId) {
+      if (!snusUser || myIds.length === 0) {
         setSnusBrothers([]);
         return;
       }
       const { data } = await supabase
         .from('leaders')
-        .select('id, name, profile_image_url')
+        .select('id, name, profile_image_url, snus_product_id, snus_product_ids')
         .eq('snus_user', true)
-        .eq('snus_product_id', productId)
         .eq('is_active', true)
         .neq('id', effectiveLeader.id)
         .order('name');
-      if (!cancelled) setSnusBrothers((data as any) || []);
+      // Deles man minst én boks, er man snus brothers
+      const matches = ((data as any[]) || []).filter((l) => {
+        const ids: string[] = (l.snus_product_ids as string[] | null)?.length
+          ? (l.snus_product_ids as string[])
+          : l.snus_product_id
+            ? [l.snus_product_id]
+            : [];
+        return ids.some((id) => myIds.includes(id));
+      });
+      if (!cancelled) setSnusBrothers(matches as any);
     };
     loadSnusBrothers();
     return () => { cancelled = true; };
