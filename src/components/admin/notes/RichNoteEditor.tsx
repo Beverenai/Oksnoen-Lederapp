@@ -22,7 +22,9 @@ type ToolGroup = { key: string; tools: { icon: typeof Bold; label: string; run: 
 export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { data: participants = [] } = useParticipants();
-  const [mention, setMention] = useState<{ query: string; index: number } | null>(null);
+  const [mention, setMention] = useState<
+    { query: string; index: number; left: number; top: number } | null
+  >(null);
 
   // ---- Undo / redo history (own stack — execCommand's stack breaks on our DOM edits)
   const history = useRef<string[]>([]);
@@ -87,36 +89,65 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
     if (!mention) return [];
     const q = mention.query.toLowerCase().trim();
     const list = q
-      ? participants.filter((p) => (p.name || '').toLowerCase().includes(q))
+      ? participants.filter((p) => {
+          const name = (p.name || '').toLowerCase();
+          if (name.includes(q)) return true;
+          // match on any name part ("and" -> "Nils Andersen")
+          return name.split(/\s+/).some((part) => part.startsWith(q));
+        })
       : participants;
     return list.slice(0, 8);
   }, [mention, participants]);
 
+  const MENTION_RE = /@([\p{L}\p{N}'-]*(?:\s[\p{L}\p{N}'-]+)?)$/u;
+
+  /** Text inside the editor from its start up to the caret. Works for text and element anchors. */
+  const textBeforeCaret = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || !ref.current) return null;
+    const range = sel.getRangeAt(0);
+    if (!ref.current.contains(range.startContainer)) return null;
+    const probe = document.createRange();
+    probe.selectNodeContents(ref.current);
+    probe.setEnd(range.startContainer, range.startOffset);
+    return probe.toString();
+  };
+
+  const caretRect = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return null;
+    const r = sel.getRangeAt(0).cloneRange();
+    r.collapse(true);
+    const rect = r.getClientRects()[0] || r.getBoundingClientRect();
+    if (!rect || (rect.top === 0 && rect.left === 0)) {
+      const el = (sel.anchorNode as HTMLElement | null)?.parentElement;
+      const b = el?.getBoundingClientRect();
+      return b ? { left: b.left, top: b.top, bottom: b.bottom } : null;
+    }
+    return { left: rect.left, top: rect.top, bottom: rect.bottom };
+  };
+
   // Detect the "@query" the caret currently sits after
   const detectMention = () => {
-    const sel = window.getSelection();
-    const node = sel?.anchorNode;
-    if (!node || node.nodeType !== Node.TEXT_NODE) { setMention(null); return; }
-    const before = (node.textContent ?? '').slice(0, sel!.anchorOffset);
-    const m = before.match(/@([\p{L}\p{N}\s'-]{0,30})$/u);
+    const before = textBeforeCaret();
+    if (before == null) { setMention(null); return; }
+    const m = before.replace(/\u00a0/g, ' ').match(MENTION_RE);
     if (!m) { setMention(null); return; }
-    setMention({ query: m[1], index: 0 });
+    const rect = caretRect();
+    const top = rect ? Math.min(rect.bottom + 6, window.innerHeight - 280) : 80;
+    const left = rect ? Math.min(rect.left, window.innerWidth - 280) : 40;
+    setMention((prev) => ({ query: m[1], index: prev?.query === m[1] ? prev.index : 0, left, top }));
   };
 
   const insertMention = (name: string, imageUrl?: string | null) => {
-    const sel = window.getSelection();
-    const node = sel?.anchorNode;
-    if (!node || node.nodeType !== Node.TEXT_NODE) return;
-    const offset = sel!.anchorOffset;
-    const before = (node.textContent ?? '').slice(0, offset);
-    const m = before.match(/@([\p{L}\p{N}\s'-]{0,30})$/u);
+    if (!ref.current) return;
+    const before = textBeforeCaret();
+    if (before == null) return;
+    const m = before.replace(/\u00a0/g, ' ').match(MENTION_RE);
     if (!m) return;
-    const start = offset - m[0].length;
-    const range = document.createRange();
-    range.setStart(node, start);
-    range.setEnd(node, offset);
-    sel!.removeAllRanges();
-    sel!.addRange(range);
+    ref.current.focus();
+    // Remove the typed "@query" (works regardless of node boundaries)
+    for (let i = 0; i < m[0].length; i += 1) exec('delete');
     const safeName = name.replace(/"/g, '&quot;');
     const img = imageUrl
       ? `<img class="note-mention-img" src="${imageUrl.replace(/"/g, '&quot;')}" alt="" />`
