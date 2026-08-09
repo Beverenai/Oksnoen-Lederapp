@@ -95,6 +95,11 @@ export default function Chat() {
   const [showJump, setShowJump] = useState(false);
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  // Inaktive ledere har kun tilgang til off season-chatten
+  useEffect(() => {
+    if (!canUsePeriodChat) setChannel('offseason');
+  }, [canUsePeriodChat]);
   const shellRef = useRef<HTMLDivElement>(null);
   const [shellHeight, setShellHeight] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
