@@ -126,6 +126,7 @@ export default function Nurse() {
   const [cabinFilter, setCabinFilter] = useState<string>('all');
   const [infoFilter, setInfoFilter] = useState<'all' | 'with' | 'important' | 'without'>('all');
   const [searchMode, setSearchMode] = useState<'name' | 'report'>('name');
+  const [sortMode, setSortMode] = useState<'alpha' | 'info'>('alpha');
   const [selectedParticipant, setSelectedParticipant] = useState<ParticipantWithHealth | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isImageOpen, setIsImageOpen] = useState(false);
@@ -730,10 +731,12 @@ export default function Nurse() {
   // NOTE: We only consider health-related data, NOT activity_notes
   const participantsWithHealthInfo = filteredParticipants
     .filter(p => p.healthNotes.length > 0 || p.healthEvents.length > 0 || !!p.healthInfo?.info)
-    .sort((a, b) => infoScore(b) - infoScore(a) || a.name.localeCompare(b.name, 'nb'));
-  const participantsWithoutHealthInfo = filteredParticipants.filter(p => 
-    p.healthNotes.length === 0 && p.healthEvents.length === 0 && !p.healthInfo?.info
-  );
+    .sort((a, b) => sortMode === 'alpha'
+      ? a.name.localeCompare(b.name, 'nb')
+      : (infoScore(b) - infoScore(a) || a.name.localeCompare(b.name, 'nb')));
+  const participantsWithoutHealthInfo = filteredParticipants
+    .filter(p => p.healthNotes.length === 0 && p.healthEvents.length === 0 && !p.healthInfo?.info)
+    .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 
   const getSeverityText = (severity: string | null) => {
     switch (severity) {
@@ -1228,6 +1231,15 @@ export default function Nurse() {
                 <SelectItem value="with">Kun med info</SelectItem>
                 <SelectItem value="important">Kun viktig info</SelectItem>
                 <SelectItem value="without">Uten info</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortMode} onValueChange={(v) => setSortMode(v as typeof sortMode)}>
+              <SelectTrigger className="w-full sm:w-[190px]">
+                <SelectValue placeholder="Sortering" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alpha">Alfabetisk (A–Å)</SelectItem>
+                <SelectItem value="info">Mest info først</SelectItem>
               </SelectContent>
             </Select>
           </div>
