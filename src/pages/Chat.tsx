@@ -409,6 +409,7 @@ export default function Chat() {
               : 'Off season — hele året'}
           </p>
         </div>
+        {canUsePeriodChat && (
         <div className="flex shrink-0 gap-1 rounded-full border bg-card/60 p-0.5 backdrop-blur">
           <button
             type="button"
@@ -435,6 +436,7 @@ export default function Chat() {
             Off season
           </button>
         </div>
+        )}
       </div>
 
       <div className="relative flex-1 min-h-0">
