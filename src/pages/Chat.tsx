@@ -95,8 +95,33 @@ export default function Chat() {
   const [showJump, setShowJump] = useState(false);
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+  const [shellHeight, setShellHeight] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const nearBottomRef = useRef(true);
+
+  /**
+   * Chatten skal fylle nøyaktig den ledige høyden mellom topplinjen og
+   * bunnmenyen — da slipper vi unødvendig skrolling på iPhone.
+   */
+  useEffect(() => {
+    const measure = () => {
+      const el = shellRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      const navVar = getComputedStyle(document.documentElement).getPropertyValue('--nav-actual-h');
+      const navH = parseFloat(navVar) || 64;
+      const vh = window.visualViewport?.height ?? window.innerHeight;
+      setShellHeight(Math.max(320, vh - top - navH - 12));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.visualViewport?.removeEventListener('resize', measure);
+    };
+  }, []);
 
   const scrollToBottom = (force = false) => {
     if (!force && !nearBottomRef.current) return;
