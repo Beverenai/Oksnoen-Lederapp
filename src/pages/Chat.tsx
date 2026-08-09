@@ -25,6 +25,29 @@ interface LeaderLite {
 
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
 
+/** Stable per-sender name color, WhatsApp-style. */
+const NAME_COLORS = [
+  'text-primary',
+  'text-emerald-500',
+  'text-sky-500',
+  'text-violet-500',
+  'text-amber-500',
+  'text-rose-500',
+  'text-teal-500',
+  'text-indigo-500',
+];
+function nameColor(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 997;
+  return NAME_COLORS[h % NAME_COLORS.length];
+}
+
+function initials(name?: string) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '??';
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+}
+
 function sameDay(a: Date, b: Date) {
   return (
     a.getFullYear() === b.getFullYear() &&
