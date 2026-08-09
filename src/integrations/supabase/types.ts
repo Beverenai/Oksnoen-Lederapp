@@ -1202,6 +1202,71 @@ export type Database = {
           },
         ]
       }
+      leader_hookups: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          leader_a_id: string
+          leader_b_id: string
+          period_id: string | null
+          requested_by: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          leader_a_id: string
+          leader_b_id: string
+          period_id?: string | null
+          requested_by: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          leader_a_id?: string
+          leader_b_id?: string
+          period_id?: string | null
+          requested_by?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_hookups_leader_a_id_fkey"
+            columns: ["leader_a_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_hookups_leader_b_id_fkey"
+            columns: ["leader_b_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_hookups_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_hookups_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leader_period_history: {
         Row: {
           created_at: string
