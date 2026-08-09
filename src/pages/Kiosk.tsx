@@ -386,25 +386,32 @@ const Kiosk = () => {
           )}
         </div>
 
-        {/* Category chips */}
-        {!search && (
-          <div className="-mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 pb-0.5 lg:-mx-6 lg:px-6">
-            <CategoryChip label="Alle" active={!activeCategory} onClick={() => setActiveCategory(null)} />
-            {categories.map((c) => (
-              <CategoryChip
-                key={c.id}
-                label={c.name}
-                active={activeCategory === c.id}
-                onClick={() => setActiveCategory(activeCategory === c.id ? null : c.id)}
-              />
-            ))}
-          </div>
-        )}
+        {/* Category chips — always rendered so the toolbar keeps a constant height while searching */}
+        <div
+          className={cn(
+            '-mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 pb-0.5 lg:-mx-6 lg:px-6',
+            search && 'pointer-events-none opacity-40'
+          )}
+          aria-hidden={!!search}
+        >
+          <CategoryChip label="Alle" active={!activeCategory} onClick={() => setActiveCategory(null)} />
+          {categories.map((c) => (
+            <CategoryChip
+              key={c.id}
+              label={c.name}
+              active={activeCategory === c.id}
+              onClick={() => setActiveCategory(activeCategory === c.id ? null : c.id)}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Selected participant */}
       <Card
-        onClick={() => setPickerOpen(true)}
+        onClick={() => {
+          blurActive();
+          setPickerOpen(true);
+        }}
         className="mb-3 cursor-pointer p-3 active:scale-[0.99] transition-transform"
       >
         {participant ? (
