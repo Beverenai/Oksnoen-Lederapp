@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import * as Icons from 'lucide-react';
-import { ChefHat, Plus, Loader2, Pencil, Check, X } from 'lucide-react';
+import { ChefHat, Plus, Loader2, Pencil, Check, X, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { KitchenChecklist } from '@/components/kitchen/KitchenChecklist';
 import { KitchenGuide } from '@/components/kitchen/KitchenGuide';
+import { KitchenAllergies } from '@/components/kitchen/KitchenAllergies';
 import {
   useKitchenAdmin,
   useKitchenChecks,
@@ -63,9 +64,12 @@ export default function Kjokken() {
   }, [items]);
 
   const active = useMemo(() => {
+    if (activeSlug === 'allergier') return null;
     if (!sections?.length) return null;
     return sections.find((s) => s.slug === activeSlug) ?? sections[0];
   }, [sections, activeSlug]);
+
+  const allergiesActive = activeSlug === 'allergier';
 
   if (!isAdmin && !isKitchen) {
     return (
@@ -123,6 +127,19 @@ export default function Kjokken() {
 
       {/* Section chips */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+        <button
+          type="button"
+          onClick={() => { hapticImpact('light'); setActiveSlug('allergier'); setEditingHeader(false); }}
+          className={cn(
+            'shrink-0 flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium transition-colors',
+            allergiesActive
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'border-border/60 bg-card/70 text-foreground hover:bg-card',
+          )}
+        >
+          <AlertTriangle className="w-4 h-4" />
+          <span>Allergier</span>
+        </button>
         {(sections || []).map((s) => {
           const secItems = itemsBySection[s.id] ?? [];
           const done = secItems.filter((i) => checkMap[i.id]).length;
@@ -175,7 +192,21 @@ export default function Kjokken() {
         )}
       </div>
 
-      {active && (
+      {allergiesActive && (
+        <Card className="border-border/60">
+          <CardContent className="p-4 space-y-4">
+            <div>
+              <h2 className="text-lg font-heading font-bold text-foreground">Allergier</h2>
+              <p className="text-xs text-muted-foreground">
+                Matallergier og spesialkost for deltagerne denne perioden
+              </p>
+            </div>
+            <KitchenAllergies />
+          </CardContent>
+        </Card>
+      )}
+
+      {!allergiesActive && active && (
         <Card className="border-border/60">
           <CardContent className="p-4 space-y-4">
             {/* Section header */}
