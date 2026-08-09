@@ -556,15 +556,29 @@ export function KioskTab() {
                         <p className="mt-1 text-xs text-muted-foreground">
                           {s.items.map((i) => `${i.quantity}× ${i.product_name}`).join(', ')}
                         </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="mt-1 h-7 gap-1 px-2 text-xs"
-                          onClick={() => openReceipt(s.id)}
-                        >
-                          <Receipt className="h-3.5 w-3.5" />
-                          Kvittering
-                        </Button>
+                        <div className="mt-1 flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 gap-1 px-2 text-xs"
+                            onClick={() => openReceipt(s.id)}
+                          >
+                            <Receipt className="h-3.5 w-3.5" />
+                            Kvittering
+                          </Button>
+                          {!readOnly && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 gap-1 px-2 text-xs text-destructive"
+                              disabled={voidSale.isPending}
+                              onClick={() => voidSale.mutate(s.id)}
+                            >
+                              <Undo2 className="h-3.5 w-3.5" />
+                              Annuller
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
