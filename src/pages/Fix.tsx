@@ -52,6 +52,7 @@ interface FixTask {
 interface Leader {
   id: string;
   name: string;
+  profile_image_url?: string | null;
 }
 
 export default function Fix() {
@@ -105,7 +106,7 @@ export default function Fix() {
         tasksQuery,
         supabase
           .from('leaders')
-          .select('id, name')
+          .select('id, name, profile_image_url')
           .eq('is_active', true)
           .order('name')
       ]);
