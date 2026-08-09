@@ -154,6 +154,7 @@ export default function Passport() {
   const [secretWordsOpen, setSecretWordsOpen] = useState(false);
   const secretWordsActive = useSecretWordsActive();
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
+  const [photoWall, setPhotoWall] = useState(false);
   // (bulk activity registration moved to dedicated route /passport/activity)
 
   // React Query for cached data fetching
