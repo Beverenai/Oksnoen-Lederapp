@@ -154,7 +154,7 @@ export function HookupGraph({
                   style={{ height: size, width: size }}
                 >
                   <AvatarImage
-                    src={leader.image_thumb_url ?? leader.profile_image_url ?? undefined}
+                    src={leader.profile_image_url ?? undefined}
                     alt={leader.name}
                     className="object-cover"
                   />
@@ -178,7 +178,7 @@ export function HookupGraph({
           <div className="flex items-center gap-3">
             <Avatar className="h-11 w-11 ring-2 ring-primary ring-offset-2 ring-offset-background">
               <AvatarImage
-                src={selectedLeader.image_thumb_url ?? selectedLeader.profile_image_url ?? undefined}
+                src={selectedLeader.profile_image_url ?? undefined}
                 alt={selectedLeader.name}
                 className="object-cover"
               />
@@ -204,7 +204,7 @@ export function HookupGraph({
                 >
                   <Avatar className="h-5 w-5">
                     <AvatarImage
-                      src={l.image_thumb_url ?? l.profile_image_url ?? undefined}
+                      src={l.profile_image_url ?? undefined}
                       alt={l.name}
                       className="object-cover"
                     />
