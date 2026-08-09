@@ -20,6 +20,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
 import { LeaderListView } from '@/components/admin/LeaderListView';
 import { SessionActivitiesSheet } from '@/components/admin/SessionActivitiesSheet';
+import { AdminNotesPanel } from '@/components/admin/notes/AdminNotesPanel';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
@@ -241,6 +242,9 @@ export default function Admin() {
 
       {/* Activities Sheet */}
       <SessionActivitiesSheet open={isActivitiesSheetOpen} onOpenChange={setIsActivitiesSheetOpen} />
+
+      {/* Delte notater / whiteboard */}
+      <AdminNotesPanel />
     </div>
   );
 }
