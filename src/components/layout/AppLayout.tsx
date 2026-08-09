@@ -25,6 +25,7 @@ import {
   ClipboardList,
   Shirt,
   LayoutGrid,
+  HeartHandshake,
   Archive,
   ChefHat,
 } from 'lucide-react';
