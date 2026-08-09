@@ -12,6 +12,9 @@ export function useAdminNotes(enabled: boolean) {
   const [leaderNames, setLeaderNames] = useState<Record<string, string>>({});
   const activeIdRef = useRef<string | null>(null);
   activeIdRef.current = activeId;
+  // Local edits that are not confirmed saved yet. Used so realtime/refetch
+  // never overwrites text the user just typed.
+  const pendingRef = useRef<Record<string, Partial<AdminNote>>>({});
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -19,9 +22,12 @@ export function useAdminNotes(enabled: boolean) {
       .select('*')
       .order('is_pinned', { ascending: false })
       .order('updated_at', { ascending: false });
-    setNotes(data || []);
+    const rows = (data || []).map((n) =>
+      pendingRef.current[n.id] ? ({ ...n, ...pendingRef.current[n.id] } as AdminNote) : n,
+    );
+    setNotes(rows);
     setIsLoading(false);
-    return data || [];
+    return rows;
   }, []);
 
   useEffect(() => {
@@ -80,12 +86,23 @@ export function useAdminNotes(enabled: boolean) {
 
   const patchNote = useCallback(async (id: string, patch: Partial<AdminNote>) => {
     setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...patch } as AdminNote : n)));
+    pendingRef.current[id] = { ...(pendingRef.current[id] || {}), ...patch };
     const { data: leaderId } = await supabase.rpc('current_leader_id');
     const { error } = await supabase
       .from('admin_notes')
       .update({ ...patch, updated_by: (leaderId as string) ?? null })
       .eq('id', id);
     if (error) throw error;
+    // Drop only the fields we just persisted (newer edits may have queued since)
+    const still = pendingRef.current[id];
+    if (still) {
+      Object.keys(patch).forEach((k) => {
+        if (still[k as keyof AdminNote] === patch[k as keyof AdminNote]) {
+          delete still[k as keyof AdminNote];
+        }
+      });
+      if (Object.keys(still).length === 0) delete pendingRef.current[id];
+    }
   }, []);
 
   const duplicateNote = useCallback(async (note: AdminNote) => {
@@ -111,6 +128,7 @@ export function useAdminNotes(enabled: boolean) {
   const deleteNote = useCallback(async (id: string) => {
     const { error } = await supabase.from('admin_notes').delete().eq('id', id);
     if (error) throw error;
+    delete pendingRef.current[id];
     setNotes((prev) => {
       const next = prev.filter((n) => n.id !== id);
       if (activeIdRef.current === id) setActiveId(next[0]?.id ?? null);

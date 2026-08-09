@@ -45,6 +45,7 @@ export function AdminNotesPanel() {
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const pendingRef = useRef<Record<string, { id: string; patch: Record<string, unknown> }>>({});
   const [titleDraft, setTitleDraft] = useState('');
 
   const active = useMemo(() => notes.find((n) => n.id === activeId) ?? null, [notes, activeId]);
@@ -60,28 +61,64 @@ export function AdminNotesPanel() {
   const pinned = filtered.filter((n) => n.is_pinned);
   const rest = filtered.filter((n) => !n.is_pinned);
 
-  useEffect(() => {
-    setTitleDraft(active?.title ?? '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeId]);
-
-  useEffect(() => () => {
-    Object.values(timersRef.current).forEach(clearTimeout);
-  }, []);
-
   const setSavingFlag = (v: boolean) => {
     if (savingRef.current === v) return;
     savingRef.current = v;
     setSaving(v);
   };
 
+  // Persist every queued edit right away (note switch, close, tab hidden, unmount)
+  const flushPending = useRef<() => Promise<void>>(async () => {});
+  flushPending.current = async () => {
+    const entries = Object.entries(pendingRef.current);
+    if (entries.length === 0) return;
+    Object.values(timersRef.current).forEach(clearTimeout);
+    timersRef.current = {};
+    pendingRef.current = {};
+    try {
+      await Promise.all(entries.map(([, e]) => patchNote(e.id, e.patch as never)));
+    } catch {
+      showError('Kunne ikke lagre notatet');
+    } finally {
+      setSavingFlag(false);
+    }
+  };
+
+  // Flush before switching note or closing the panel
+  const prevActive = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevActive.current && prevActive.current !== activeId) {
+      void flushPending.current();
+    }
+    prevActive.current = activeId;
+    setTitleDraft(active?.title ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId]);
+
+  useEffect(() => {
+    if (!open) void flushPending.current();
+  }, [open]);
+
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === 'hidden') void flushPending.current(); };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', onHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', onHide);
+      void flushPending.current();
+    };
+  }, []);
+
   const queueSave = (id: string, patch: Record<string, unknown>) => {
     const field = Object.keys(patch)[0] ?? 'x';
     const key = `${id}:${field}`;
     setSavingFlag(true);
+    pendingRef.current[key] = { id, patch };
     if (timersRef.current[key]) clearTimeout(timersRef.current[key]);
     timersRef.current[key] = setTimeout(async () => {
       delete timersRef.current[key];
+      delete pendingRef.current[key];
       try {
         await patchNote(id, patch as never);
       } catch {
@@ -89,7 +126,7 @@ export function AdminNotesPanel() {
       } finally {
         if (Object.keys(timersRef.current).length === 0) setSavingFlag(false);
       }
-    }, 800);
+    }, 600);
   };
 
   const handleCreate = async (kind: 'doc' | 'board') => {
