@@ -38,6 +38,7 @@ import { PassIcon } from '@/components/icons/PassIcon';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
 import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
 import { useCheckoutEnabled } from '@/hooks/useCheckoutEnabled';
+import { useAppBadge } from '@/hooks/useAppBadge';
 import { useSweatersEnabled } from '@/hooks/useSweatersEnabled';
 import { useAppMode } from '@/hooks/useAppMode';
 import { useSeasonView } from '@/contexts/SeasonViewContext';
@@ -163,6 +164,7 @@ const NavGroup = ({
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const { leader, isAdmin, isNurse, isKitchen, isSuperAdmin, isLimitedAccess, logout, viewAsLeader, setViewAsLeader } = useAuth();
+  useAppBadge();
   const checkoutEnabled = useCheckoutEnabled();
   const sweatersEnabled = useSweatersEnabled();
   const { mode: appMode } = useAppMode();

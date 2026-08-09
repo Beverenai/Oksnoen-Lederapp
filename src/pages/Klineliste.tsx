@@ -3,44 +3,67 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Plus, Check, X, Trash2, HeartHandshake } from 'lucide-react';
+import { Plus, Check, X, Trash2, HeartHandshake, UserRound, Map as MapIcon, List } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAllLeaders } from '@/hooks/useLeaders';
+import { useKlinelisteLeaders } from '@/hooks/useLeaders';
 import {
   useHookupsEnabled,
   useSetHookupsEnabled,
   useMyHookups,
   useRespondToHookup,
   useDeleteHookup,
+  useDeleteExternalLeader,
   type Hookup,
 } from '@/hooks/useHookups';
 import { HookupGraph } from '@/components/klineliste/HookupGraph';
+import { HookupList } from '@/components/klineliste/HookupList';
 import { AddHookupSheet } from '@/components/klineliste/AddHookupSheet';
+import { AddExternalLeaderSheet } from '@/components/klineliste/AddExternalLeaderSheet';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { cn } from '@/lib/utils';
 
 function initials(name: string) {
   return name.split(' ').map((p) => p[0]).slice(0, 2).join('');
 }
 
+type GenderFilter = 'all' | 'male' | 'female';
+
 export default function Klineliste() {
   const { leader, isAdmin, isLimitedAccess } = useAuth();
   const enabled = useHookupsEnabled();
   const setEnabled = useSetHookupsEnabled();
-  const { data: leaders = [] } = useAllLeaders();
+  const { data: leaders = [] } = useKlinelisteLeaders();
   const { confirmed, myConfirmed, incoming, outgoing, isLoading } = useMyHookups();
   const respond = useRespondToHookup();
   const remove = useDeleteHookup();
+  const removeExternal = useDeleteExternalLeader();
   const { showError } = useStatusPopup();
   const [addOpen, setAddOpen] = useState(false);
+  const [addExternalOpen, setAddExternalOpen] = useState(false);
+  const [gender, setGender] = useState<GenderFilter>('all');
+  const [mapView, setMapView] = useState<'map' | 'list'>('map');
 
   const leaderById = useMemo(() => new Map(leaders.map((l) => [l.id, l])), [leaders]);
   const nameOf = (id: string) => leaderById.get(id)?.name ?? 'Ukjent leder';
   const otherOf = (h: Hookup) => (h.leader_a_id === leader?.id ? h.leader_b_id : h.leader_a_id);
 
+  // Gender filter keeps only connections where both parties match, so the map
+  // never shows half a link.
+  const matchesGender = (id: string) =>
+    gender === 'all' ? true : leaderById.get(id)?.gender === gender;
+
+  const filteredConfirmed = useMemo(
+    () => confirmed.filter((h) => matchesGender(h.leader_a_id) && matchesGender(h.leader_b_id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [confirmed, gender, leaderById],
+  );
+
+  const externalLeaders = useMemo(() => leaders.filter((l) => l.is_external), [leaders]);
+
   const leaderboard = useMemo(() => {
     const counts = new Map<string, number>();
-    confirmed.forEach((h) => {
+    filteredConfirmed.forEach((h) => {
       counts.set(h.leader_a_id, (counts.get(h.leader_a_id) ?? 0) + 1);
       counts.set(h.leader_b_id, (counts.get(h.leader_b_id) ?? 0) + 1);
     });
@@ -48,7 +71,7 @@ export default function Klineliste() {
       .map(([id, count]) => ({ id, count, name: nameOf(id), leader: leaderById.get(id) }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'nb'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [confirmed, leaderById]);
+  }, [filteredConfirmed, leaderById]);
 
   const act = async (fn: () => Promise<unknown>, ok: string) => {
     try {
@@ -109,17 +132,67 @@ export default function Klineliste() {
         </TabsList>
 
         <TabsContent value="map" className="mt-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex gap-1.5">
+              {([
+                { key: 'all', label: 'Alle' },
+                { key: 'male', label: 'Gutter' },
+                { key: 'female', label: 'Jenter' },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setGender(opt.key)}
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                    gender === opt.key
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground',
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex overflow-hidden rounded-full bg-muted p-0.5">
+              {([
+                { key: 'map', icon: MapIcon, label: 'Kart' },
+                { key: 'list', icon: List, label: 'Liste' },
+              ] as const).map(({ key, icon: Icon, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-label={label}
+                  onClick={() => setMapView(key)}
+                  className={cn(
+                    'rounded-full p-1.5 transition-colors',
+                    mapView === key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground',
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                </button>
+              ))}
+            </div>
+          </div>
+
           {isLoading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Laster...</p>
+          ) : mapView === 'map' ? (
+            <HookupGraph leaders={leaders} hookups={filteredConfirmed} myLeaderId={leader?.id} />
           ) : (
-            <HookupGraph leaders={leaders} hookups={confirmed} myLeaderId={leader?.id} />
+            <HookupList leaders={leaders} hookups={filteredConfirmed} myLeaderId={leader?.id} />
           )}
         </TabsContent>
 
         <TabsContent value="mine" className="mt-4 space-y-5">
-          <Button onClick={() => setAddOpen(true)} className="w-full">
-            <Plus className="mr-2 h-4 w-4" /> Ny kobling
-          </Button>
+          <div className="space-y-2">
+            <Button onClick={() => setAddOpen(true)} className="w-full">
+              <Plus className="mr-2 h-4 w-4" /> Ny kobling
+            </Button>
+            <Button variant="outline" onClick={() => setAddExternalOpen(true)} className="w-full">
+              <UserRound className="mr-2 h-4 w-4" /> Legg til leder manuelt
+            </Button>
+          </div>
 
           {incoming.length > 0 && (
             <section className="space-y-2">
@@ -214,6 +287,27 @@ export default function Klineliste() {
         </TabsContent>
 
         <TabsContent value="top" className="mt-4 space-y-2">
+          <div className="flex gap-1.5 pb-1">
+            {([
+              { key: 'all', label: 'Alle' },
+              { key: 'male', label: 'Gutter' },
+              { key: 'female', label: 'Jenter' },
+            ] as const).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setGender(opt.key)}
+                className={cn(
+                  'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  gender === opt.key
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground',
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
           {leaderboard.length === 0 ? (
             <p className="px-1 text-sm text-muted-foreground">Ingen bekreftede koblinger ennå.</p>
           ) : (
@@ -227,7 +321,10 @@ export default function Klineliste() {
                   <AvatarImage src={row.leader?.profile_image_url ?? undefined} />
                   <AvatarFallback className="text-[11px]">{initials(row.name)}</AvatarFallback>
                 </Avatar>
-                <span className="flex-1 text-sm font-medium text-foreground">{row.name}</span>
+                <span className="flex flex-1 items-center gap-1.5 text-sm font-medium text-foreground">
+                  {row.name}
+                  {row.leader?.is_external && <UserRound className="h-3 w-3 text-muted-foreground" />}
+                </span>
                 <span className="text-sm font-semibold text-primary">{row.count}</span>
               </div>
             ))
@@ -235,7 +332,35 @@ export default function Klineliste() {
         </TabsContent>
       </Tabs>
 
+      {isAdmin && externalLeaders.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Manuelt lagt inn ({externalLeaders.length})
+          </h2>
+          {externalLeaders.map((l) => (
+            <div
+              key={l.id}
+              className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/70 px-3 py-2.5"
+            >
+              <UserRound className="h-4 w-4 text-muted-foreground" />
+              <span className="flex-1 text-sm text-foreground">{l.name}</span>
+              <Button
+                size="icon"
+                variant="ghost"
+                disabled={removeExternal.isPending}
+                onClick={() =>
+                  act(() => removeExternal.mutateAsync(l.id), `${l.name} slettet`)
+                }
+              >
+                <Trash2 className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </div>
+          ))}
+        </section>
+      )}
+
       <AddHookupSheet open={addOpen} onOpenChange={setAddOpen} />
+      <AddExternalLeaderSheet open={addExternalOpen} onOpenChange={setAddExternalOpen} />
     </div>
   );
 }

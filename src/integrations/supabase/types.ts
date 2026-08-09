@@ -679,6 +679,35 @@ export type Database = {
         }
         Relationships: []
       }
+      hookup_notifications: {
+        Row: {
+          created_at: string
+          hookup_id: string
+          id: string
+          kind: string
+        }
+        Insert: {
+          created_at?: string
+          hookup_id: string
+          id?: string
+          kind: string
+        }
+        Update: {
+          created_at?: string
+          hookup_id?: string
+          id?: string
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hookup_notifications_hookup_id_fkey"
+            columns: ["hookup_id"]
+            isOneToOne: false
+            referencedRelation: "leader_hookups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kiosk_categories: {
         Row: {
           color: string
@@ -1407,6 +1436,7 @@ export type Database = {
           can_zipline: boolean | null
           created_at: string | null
           email: string | null
+          gender: string | null
           has_boat_license: boolean | null
           has_car: boolean | null
           has_drivers_license: boolean | null
@@ -1414,6 +1444,7 @@ export type Database = {
           id: string
           in_roulette: boolean
           is_active: boolean | null
+          is_external: boolean
           last_app_edit_at: string
           last_synced_at: string | null
           ministerpost: string | null
@@ -1438,6 +1469,7 @@ export type Database = {
           can_zipline?: boolean | null
           created_at?: string | null
           email?: string | null
+          gender?: string | null
           has_boat_license?: boolean | null
           has_car?: boolean | null
           has_drivers_license?: boolean | null
@@ -1445,6 +1477,7 @@ export type Database = {
           id?: string
           in_roulette?: boolean
           is_active?: boolean | null
+          is_external?: boolean
           last_app_edit_at?: string
           last_synced_at?: string | null
           ministerpost?: string | null
@@ -1469,6 +1502,7 @@ export type Database = {
           can_zipline?: boolean | null
           created_at?: string | null
           email?: string | null
+          gender?: string | null
           has_boat_license?: boolean | null
           has_car?: boolean | null
           has_drivers_license?: boolean | null
@@ -1476,6 +1510,7 @@ export type Database = {
           id?: string
           in_roulette?: boolean
           is_active?: boolean | null
+          is_external?: boolean
           last_app_edit_at?: string
           last_synced_at?: string | null
           ministerpost?: string | null
@@ -1503,6 +1538,7 @@ export type Database = {
           read_at: string | null
           replied_at: string | null
           replied_by: string | null
+          reply_seen_at: string | null
           sender_leader_id: string
           status: string
           updated_at: string
@@ -1518,6 +1554,7 @@ export type Database = {
           read_at?: string | null
           replied_at?: string | null
           replied_by?: string | null
+          reply_seen_at?: string | null
           sender_leader_id: string
           status?: string
           updated_at?: string
@@ -1533,6 +1570,7 @@ export type Database = {
           read_at?: string | null
           replied_at?: string | null
           replied_by?: string | null
+          reply_seen_at?: string | null
           sender_leader_id?: string
           status?: string
           updated_at?: string
@@ -4030,6 +4068,10 @@ export type Database = {
       }
     }
     Functions: {
+      add_external_leader: {
+        Args: { _gender?: string; _name: string }
+        Returns: string
+      }
       add_murder_player: { Args: { _leader_id: string }; Returns: undefined }
       archive_murder_round: { Args: never; Returns: string }
       claim_murder_kill: { Args: never; Returns: string }
@@ -4116,6 +4158,7 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }[]
       }
+      get_my_unread_badge: { Args: { _leader_id?: string }; Returns: number }
       get_season_participants: {
         Args: never
         Returns: {
