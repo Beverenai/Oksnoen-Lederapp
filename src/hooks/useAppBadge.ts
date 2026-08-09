@@ -19,7 +19,10 @@ async function applyBadge(count: number) {
   try {
     const { Capacitor } = await import('@capacitor/core');
     if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Badge')) {
-      const mod: any = await import('@capawesome/capacitor-badge');
+      // Optional native plugin: resolved at runtime so the web build never
+      // requires it to be installed.
+      const specifier = '@capawesome/capacitor-badge';
+      const mod: any = await import(/* @vite-ignore */ specifier);
       if (count > 0) await mod.Badge.set({ count });
       else await mod.Badge.clear();
     }
