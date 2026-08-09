@@ -145,9 +145,9 @@ export function HookupGraph({
                 dimmed ? 'scale-90 opacity-25' : 'opacity-100',
                 selected === leader.id && 'scale-110',
               )}
-              style={{ left: `${x}%`, top: `${y}%` }}
+              style={{ left: `${x}%`, top: `${y}%`, width: `${sizePct}%` }}
             >
-              <span className="relative block" style={{ width: `${sizePct}%` }}>
+              <span className="relative block aspect-square w-full">
                 <Avatar
                   className={cn(
                     'h-full w-full shadow-lg ring-2 ring-offset-2 ring-offset-background',
