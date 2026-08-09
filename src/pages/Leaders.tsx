@@ -92,7 +92,7 @@ const formatTeamDisplay = (team: string | null): string => {
 };
 
 function LeadersFull() {
-  const { isAdmin, isSuperAdmin, isLimitedAccess } = useAuth();
+  const { isAdmin, isSuperAdmin } = useAuth();
   const canEdit = isAdmin || isSuperAdmin;
   const [selectedLeader, setSelectedLeader] = useState<LeaderWithContent | null>(null);
   
