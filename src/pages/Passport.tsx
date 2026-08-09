@@ -151,6 +151,7 @@ export default function Passport() {
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [secretWordsOpen, setSecretWordsOpen] = useState(false);
+  const secretWordsActive = useSecretWordsActive();
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
   // (bulk activity registration moved to dedicated route /passport/activity)
 
@@ -501,7 +502,7 @@ export default function Passport() {
             Viktig Info
           </Button>
 
-          {!seasonView && (
+          {!seasonView && secretWordsActive && (
             <Button
               variant="outline"
               size="sm"
