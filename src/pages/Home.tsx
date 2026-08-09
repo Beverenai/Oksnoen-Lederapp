@@ -46,6 +46,9 @@ import { Skull } from 'lucide-react';
 import { Tent, AlertCircle } from 'lucide-react';
 import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
 import { SnusBadge } from '@/components/snus/SnusBadge';
+import { SnusPuck } from '@/components/snus/SnusPuck';
+import { MailboxIcon3D } from '@/components/mailbox/MailboxIcon3D';
+import { useMailboxUnreadCount, useMyMailboxMessages } from '@/hooks/useMailbox';
 import { OvernattingGateDialog, OvernattingEditDialog } from '@/components/home/OvernattingDialogs';
 import { groupMainCabins } from '@/lib/cabinDisplay';
 
@@ -171,6 +174,10 @@ export default function Home() {
   const [activePeriodLabel, setActivePeriodLabel] = useState<string | null>(null);
   const [snusBrothers, setSnusBrothers] = useState<{ id: string; name: string }[]>([]);
   const [snusBrothersOpen, setSnusBrothersOpen] = useState(false);
+  const [mySnus, setMySnus] = useState<{ productId: string | null; customLabel: string | null } | null>(null);
+  const { data: mailboxUnread = 0 } = useMailboxUnreadCount(!!isAdmin);
+  const { data: myMailboxMessages = [] } = useMyMailboxMessages();
+  const hasNewReply = !isAdmin && myMailboxMessages.some((m) => !!m.admin_reply);
   const inRoulette = !!(effectiveLeader as any)?.in_roulette;
   const showRoulette = rouletteEnabled && inRoulette;
   const teamsEnabled = useTeamsEnabled();
@@ -314,16 +321,22 @@ export default function Home() {
     const loadSnusBrothers = async () => {
       if (!effectiveLeader) {
         setSnusBrothers([]);
+        setMySnus(null);
         return;
       }
       // Hent egen snus-status ferskt fra basen (auth-context kan være utdatert)
       const { data: me } = await supabase
         .from('leaders')
-        .select('snus_user, snus_product_id')
+        .select('snus_user, snus_product_id, snus_custom_label')
         .eq('id', effectiveLeader.id)
         .maybeSingle();
       const productId = (me as any)?.snus_product_id;
       const snusUser = !!(me as any)?.snus_user;
+      if (!cancelled) {
+        setMySnus(snusUser
+          ? { productId: productId ?? null, customLabel: (me as any)?.snus_custom_label ?? null }
+          : null);
+      }
       if (!snusUser || !productId) {
         setSnusBrothers([]);
         return;
@@ -512,6 +525,28 @@ export default function Home() {
       tone: 'danger',
       onClick: () => navigate('/hendelser'),
     },
+    ...(mySnus
+      ? [{
+          key: 'snus',
+          icon: AlertCircle,
+          label: snusBrothers.length > 0 ? 'Snus brothers' : 'Snus',
+          visual: <SnusPuck productId={mySnus.productId} customLabel={mySnus.customLabel} size={34} />,
+          count: snusBrothers.length || undefined,
+          onClick: () => {
+            if (snusBrothers.length > 0) setSnusBrothersOpen(true);
+            else navigate('/profile');
+          },
+        } as QuickAction]
+      : []),
+    {
+      key: 'postkasse',
+      icon: AlertCircle,
+      label: 'Postkasse',
+      visual: <MailboxIcon3D size={32} />,
+      count: isAdmin ? (mailboxUnread || undefined) : undefined,
+      badge: !isAdmin && hasNewReply,
+      onClick: () => navigate('/postkasse'),
+    },
     ...(overnattingEnabled
       ? [{
           key: 'overnatting',
@@ -587,27 +622,6 @@ export default function Home() {
             )}
           </div>
         </div>
-
-        {snusBrothers.length > 0 && (
-          <div className="mt-3 flex justify-center">
-            <button
-              type="button"
-              onClick={() => setSnusBrothersOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground active:scale-95 transition-transform"
-            >
-              <SnusBadge
-                productId={(effectiveLeader as any)?.snus_product_id}
-                customLabel={(effectiveLeader as any)?.snus_custom_label}
-                compact
-                isBrother
-              />
-              <span>Snus brothers</span>
-              <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                {snusBrothers.length}
-              </span>
-            </button>
-          </div>
-        )}
 
         <Sheet open={snusBrothersOpen} onOpenChange={setSnusBrothersOpen}>
           <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto">
