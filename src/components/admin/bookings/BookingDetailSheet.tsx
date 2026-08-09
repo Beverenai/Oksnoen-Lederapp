@@ -9,6 +9,7 @@ import { Phone, Mail, X, Pencil, Save, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { syncBookingExtras } from '@/lib/syncBookingExtras';
+import { BookingEditLog } from '@/components/admin/bookings/BookingEditLog';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Booking = Tables<'participant_bookings'>;
@@ -128,6 +129,7 @@ export function BookingDetailSheet({ booking, participant, onClose, editable = f
       });
       const { error } = await supabase.from('participant_bookings').update(payload).eq('id', b.id);
       if (error) throw error;
+      qc.invalidateQueries({ queryKey: ['booking-edit-log', b.id] });
       if (b.period_id) {
         try {
           await syncBookingExtras(b.period_id);
