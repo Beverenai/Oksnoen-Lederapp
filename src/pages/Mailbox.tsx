@@ -29,7 +29,7 @@ export default function Mailbox() {
       <p className="text-center text-sm text-muted-foreground">
         Spørsmål, forslag eller noe du vil si fra om? Legg det i postkassen.
         <br />
-        Navnet ditt vises ikke for andre – kun admin ser hvem som sendte inn.
+        Navnet ditt vises ikke for andre.
       </p>
       <Button
         className="w-full"
