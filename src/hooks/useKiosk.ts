@@ -152,7 +152,7 @@ export function useKioskSales(participantId?: string) {
         .order('created_at', { ascending: false });
       if (!seasonView) query = query.eq('period_id', periodId!);
       if (participantId) query = query.eq('participant_id', participantId);
-      else query = query.limit(500);
+      else query = query.limit(5000);
 
       const { data, error } = await query;
       if (error) throw error;
