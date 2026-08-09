@@ -487,14 +487,14 @@ export default function Passport() {
               <button
                 type="button"
                 onClick={() => navigate('/passport/activity')}
-                className="ios-surface flex items-center gap-3 rounded-2xl bg-primary px-4 py-3.5 text-left text-primary-foreground shadow-lg transition-transform active:scale-[0.97]"
+                className="ios-surface flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-transform active:scale-[0.97]"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <Users className="h-5 w-5" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-[15px] font-semibold leading-tight">Aktivitet</span>
-                  <span className="block text-[11px] opacity-80">Registrer</span>
+                  <span className="block text-[15px] font-semibold leading-tight text-foreground">Aktivitet</span>
+                  <span className="block text-[11px] text-muted-foreground">Registrer</span>
                 </span>
               </button>
             )}
