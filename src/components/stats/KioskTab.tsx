@@ -171,8 +171,22 @@ export function KioskTab() {
     };
   }, [sales, balances]);
 
-  const exports = [
+  const sellers = useMemo(() => {
+    const map = new Map<string, { name: string; sales: number; revenue: number; units: number }>();
+    sales
+      .filter((s) => !s.voided_at)
+      .forEach((s) => {
+        const name = s.sold_by_name || 'Ukjent leder';
+        const cur = map.get(name) || { name, sales: 0, revenue: 0, units: 0 };
+        cur.sales += 1;
+        cur.revenue += s.total;
+        cur.units += s.items.reduce((sum, i) => sum + i.quantity, 0);
+        map.set(name, cur);
+      });
+    return [...map.values()].sort((a, b) => b.revenue - a.revenue || b.sales - a.sales);
+  }, [sales]);
 
+  const exports = [
     { label: 'Innkjøpsliste', desc: 'Salg per vare + anbefalt påfyll', file: `gomla-innkjop-${stamp}.csv`, make: () => purchasingCsv(sales, stats.dayCount) },
     { label: 'Varesalg', desc: 'Antall og omsetning per vare', file: `gomla-varesalg-${stamp}.csv`, make: () => productsCsv(sales) },
     { label: 'Alle kjøp (linjer)', desc: 'Full logg med varelinjer', file: `gomla-kjop-${stamp}.csv`, make: () => salesCsv(sales, nameOf) },
