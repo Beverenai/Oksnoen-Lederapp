@@ -3988,6 +3988,7 @@ export type Database = {
       is_kitchen: { Args: never; Returns: boolean }
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      mark_fix_task_fixed: { Args: { _task_id: string }; Returns: undefined }
       record_kiosk_sale: {
         Args: { _items: Json; _participant_id: string }
         Returns: string
