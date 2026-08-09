@@ -20,7 +20,7 @@ export function KioskAccountCard({ participantId }: { participantId: string }) {
         <ShoppingBasket className="h-4 w-4 text-emerald-600" />
         <span>Gomla</span>
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
-          {visits} {visits === 1 ? 'besøk' : 'besøk'}
+          {visits} besøk
         </span>
         <span
           className={cn(
