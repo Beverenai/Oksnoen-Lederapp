@@ -56,13 +56,17 @@ export function useAdminNotes(enabled: boolean) {
     };
   }, [enabled, load]);
 
-  const createNote = useCallback(async (kind: NoteKind) => {
+  const createNote = useCallback(async (
+    kind: NoteKind,
+    opts?: { title?: string; content?: string },
+  ) => {
     const { data: leaderId } = await supabase.rpc('current_leader_id');
     const { data, error } = await supabase
       .from('admin_notes')
       .insert({
         kind,
-        title: kind === 'board' ? 'Nytt whiteboard' : 'Nytt notat',
+        title: opts?.title ?? (kind === 'board' ? 'Nytt whiteboard' : 'Nytt notat'),
+        content: opts?.content ?? '',
         created_by: (leaderId as string) ?? null,
         updated_by: (leaderId as string) ?? null,
       })
