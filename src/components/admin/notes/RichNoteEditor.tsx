@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useParticipants } from '@/hooks/useParticipants';
+import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 
 interface RichNoteEditorProps {
   noteId: string;
@@ -33,6 +34,7 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
   const applying = useRef(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [openParticipantId, setOpenParticipantId] = useState<string | null>(null);
 
   const syncFlags = () => {
     setCanUndo(pointer.current > 0);
@@ -139,7 +141,7 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
     setMention((prev) => ({ query: m[1], index: prev?.query === m[1] ? prev.index : 0, left, top }));
   };
 
-  const insertMention = (name: string, imageUrl?: string | null) => {
+  const insertMention = (name: string, imageUrl?: string | null, participantId?: string) => {
     if (!ref.current) return;
     const before = textBeforeCaret();
     if (before == null) return;
@@ -152,7 +154,11 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
     const img = imageUrl
       ? `<img class="note-mention-img" src="${imageUrl.replace(/"/g, '&quot;')}" alt="" />`
       : '';
-    exec('insertHTML', `<span class="note-mention" data-mention="${safeName}">${img}@${name}</span>&nbsp;`);
+    exec(
+      'insertHTML',
+      `<span class="note-mention" contenteditable="false" data-mention="${safeName}"` +
+        `${participantId ? ` data-participant-id="${participantId}"` : ''}>${img}@${name}</span>&nbsp;`,
+    );
     setMention(null);
     if (ref.current) onChange(ref.current.innerHTML);
     pushSnapshot(true);
