@@ -198,9 +198,9 @@ export default function More() {
         ...(hookupsEnabled || isAdmin
           ? [
               {
-                to: '/liggeliste',
+                to: '/klineliste',
                 icon: HeartHandshake,
-                label: 'Liggeliste',
+                label: 'Klineliste',
                 badge: incomingHookups,
               } as MoreItem,
             ]
