@@ -9,6 +9,7 @@ export function useAdminNotes(enabled: boolean) {
   const [notes, setNotes] = useState<AdminNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [leaderNames, setLeaderNames] = useState<Record<string, string>>({});
   const activeIdRef = useRef<string | null>(null);
   activeIdRef.current = activeId;
 
@@ -29,6 +30,18 @@ export function useAdminNotes(enabled: boolean) {
       if (!activeIdRef.current && rows.length) setActiveId(rows[0].id);
     });
   }, [enabled, load]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    supabase
+      .from('leaders')
+      .select('id, name')
+      .then(({ data }) => {
+        const map: Record<string, string> = {};
+        (data || []).forEach((l) => { map[l.id] = l.name; });
+        setLeaderNames(map);
+      });
+  }, [enabled]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -63,8 +76,32 @@ export function useAdminNotes(enabled: boolean) {
 
   const patchNote = useCallback(async (id: string, patch: Partial<AdminNote>) => {
     setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...patch } as AdminNote : n)));
-    const { error } = await supabase.from('admin_notes').update(patch).eq('id', id);
+    const { data: leaderId } = await supabase.rpc('current_leader_id');
+    const { error } = await supabase
+      .from('admin_notes')
+      .update({ ...patch, updated_by: (leaderId as string) ?? null })
+      .eq('id', id);
     if (error) throw error;
+  }, []);
+
+  const duplicateNote = useCallback(async (note: AdminNote) => {
+    const { data: leaderId } = await supabase.rpc('current_leader_id');
+    const { data, error } = await supabase
+      .from('admin_notes')
+      .insert({
+        kind: note.kind,
+        title: `${note.title} (kopi)`,
+        content: note.content,
+        strokes: note.strokes,
+        created_by: (leaderId as string) ?? null,
+        updated_by: (leaderId as string) ?? null,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    setNotes((prev) => [data, ...prev]);
+    setActiveId(data.id);
+    return data;
   }, []);
 
   const deleteNote = useCallback(async (id: string) => {
@@ -77,5 +114,8 @@ export function useAdminNotes(enabled: boolean) {
     });
   }, []);
 
-  return { notes, isLoading, activeId, setActiveId, createNote, patchNote, deleteNote, reload: load };
+  return {
+    notes, isLoading, activeId, setActiveId, createNote, patchNote, deleteNote,
+    duplicateNote, leaderNames, reload: load,
+  };
 }
