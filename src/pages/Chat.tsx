@@ -95,6 +95,11 @@ export default function Chat() {
   const [showJump, setShowJump] = useState(false);
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  // Inaktive ledere har kun tilgang til off season-chatten
+  useEffect(() => {
+    if (!canUsePeriodChat) setChannel('offseason');
+  }, [canUsePeriodChat]);
   const shellRef = useRef<HTMLDivElement>(null);
   const [shellHeight, setShellHeight] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -409,6 +414,7 @@ export default function Chat() {
               : 'Off season — hele året'}
           </p>
         </div>
+        {canUsePeriodChat && (
         <div className="flex shrink-0 gap-1 rounded-full border bg-card/60 p-0.5 backdrop-blur">
           <button
             type="button"
@@ -435,6 +441,7 @@ export default function Chat() {
             Off season
           </button>
         </div>
+        )}
       </div>
 
       <div className="relative flex-1 min-h-0">
