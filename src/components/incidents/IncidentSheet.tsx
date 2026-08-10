@@ -19,6 +19,7 @@ import {
 import { cn, formatCabinRoom } from '@/lib/utils';
 import { getParticipantThumb } from '@/lib/participantImage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { VoiceDictateButton } from '@/components/incidents/VoiceDictateButton';
 
 interface IncidentSheetProps {
   open: boolean;
@@ -150,7 +151,14 @@ export function IncidentSheet({ open, onOpenChange, incident, prefillParticipant
           </div>
 
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Beskrivelse</label>
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Beskrivelse</label>
+              <VoiceDictateButton
+                onTranscript={(text) =>
+                  setDescription((prev) => (prev.trim() ? `${prev.replace(/\s+$/, '')} ${text}` : text))
+                }
+              />
+            </div>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
