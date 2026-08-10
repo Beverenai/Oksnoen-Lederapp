@@ -63,6 +63,7 @@ import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { useWentHomeParticipants } from '@/hooks/useWentHomeParticipants';
 
 type Participant = Tables<'participants'>;
 
