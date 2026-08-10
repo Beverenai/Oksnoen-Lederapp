@@ -61,21 +61,21 @@ export function MyIncidentsList() {
               <CardContent className="py-3 space-y-1.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    {i.participants.length > 0 && (
-                      <div className="flex -space-x-2 shrink-0">
-                        {i.participants.slice(0, 3).map((p) => (
-                          <Avatar key={p.id} className="h-7 w-7 ring-2 ring-background">
-                            <AvatarImage src={getParticipantThumb(p as any)} alt={p.name} loading="lazy" decoding="async" />
-                            <AvatarFallback className="text-[10px]">{p.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                        ))}
-                        {i.participants.length > 3 && (
-                          <div className="h-7 w-7 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[10px] font-medium">
-                            +{i.participants.length - 3}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                     {i.participants.length > 0 && (
+                       <div className="flex -space-x-2.5 shrink-0">
+                         {i.participants.slice(0, 3).map((p) => (
+                           <Avatar key={p.id} className="h-11 w-11 ring-2 ring-background">
+                             <AvatarImage src={getParticipantThumb(p as any)} alt={p.name} loading="lazy" decoding="async" />
+                             <AvatarFallback className="text-xs">{p.name.charAt(0)}</AvatarFallback>
+                           </Avatar>
+                         ))}
+                         {i.participants.length > 3 && (
+                           <div className="h-11 w-11 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-xs font-medium">
+                             +{i.participants.length - 3}
+                           </div>
+                         )}
+                       </div>
+                     )}
                     <p className="font-medium text-sm truncate">{i.title}</p>
                   </div>
                   <span className="text-[10px] text-muted-foreground shrink-0">
@@ -89,11 +89,11 @@ export function MyIncidentsList() {
                   <Badge variant="outline" className={cn('text-[10px]', SEVERITY_COLORS[i.severity])}>
                     {SEVERITY_LABELS[i.severity]}
                   </Badge>
-                  {i.participants.map((p) => (
-                    <Badge key={p.id} variant="secondary" className="text-[10px]">
-                      {p.name}
-                    </Badge>
-                  ))}
+                   {i.participants.map((p) => (
+                     <Badge key={p.id} variant="secondary" className="text-xs px-2 py-0.5">
+                       {p.name}
+                     </Badge>
+                   ))}
                 </div>
                 {i.description && (
                   <p className="text-xs text-muted-foreground line-clamp-2">{i.description}</p>
