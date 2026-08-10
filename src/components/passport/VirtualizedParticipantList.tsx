@@ -291,6 +291,7 @@ export function VirtualizedParticipantList({
   onParticipantClick,
   onPrefetchParticipant,
   incidentCounts,
+  wentHomeIds,
 }: VirtualizedParticipantListProps) {
   // Flatten the data structure for rendering
   const flattenedItems = useMemo((): VirtualizedItem[] => {
@@ -393,6 +394,7 @@ export function VirtualizedParticipantList({
               participant={item.participant}
               completedActivities={completedActivities}
               incidents={incidentCounts?.get(item.participant.id)}
+              wentHome={wentHomeIds?.has(item.participant.id)}
               onClick={() => onParticipantClick(item.participant.id)}
               onPrefetch={() => onPrefetchParticipant(item.participant.id)}
             />
