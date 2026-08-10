@@ -228,7 +228,7 @@ function BonusPointsSection({
           <Badge variant="secondary" className="tabular-nums">{total} p</Badge>
         </Button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+      <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Star className="h-4 w-4 text-amber-500" />

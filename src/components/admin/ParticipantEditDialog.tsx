@@ -175,7 +175,7 @@ export function ParticipantEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] p-0 flex flex-col">
+      <DialogContent className="max-w-md max-h-[90dvh] p-0 flex flex-col">
         <DialogHeader className="p-4 sm:p-6 pb-0">
           <DialogTitle>{participant ? 'Rediger deltaker' : 'Ny deltaker'}</DialogTitle>
         </DialogHeader>

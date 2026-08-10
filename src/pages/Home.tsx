@@ -665,7 +665,7 @@ export default function Home() {
         </div>
 
         <Sheet open={snusBrothersOpen} onOpenChange={setSnusBrothersOpen}>
-          <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto">
+          <SheetContent side="bottom" className="max-h-[80dvh] overflow-y-auto">
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2">
                 <SnusBadge

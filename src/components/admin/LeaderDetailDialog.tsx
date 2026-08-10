@@ -382,7 +382,7 @@ export function LeaderDetailDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] p-0 flex flex-col">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90dvh] p-0 flex flex-col">
           <DialogHeader className="p-4 sm:p-6 pb-0">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-lg sm:text-xl">Rediger leder</DialogTitle>

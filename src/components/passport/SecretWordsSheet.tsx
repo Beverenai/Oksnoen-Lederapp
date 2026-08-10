@@ -110,7 +110,7 @@ export function SecretWordsSheet({ open, onOpenChange }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) reset(); }}>
-      <SheetContent side="bottom" className="max-h-[95vh] overflow-y-auto">
+      <SheetContent side="bottom" className="max-h-[95dvh] overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2"><KeyRound className="w-5 h-5" /> Hemmelige Ord</SheetTitle>
         </SheetHeader>
