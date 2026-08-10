@@ -68,6 +68,7 @@ interface VirtualizedParticipantListProps {
   onParticipantClick: (participantId: string) => void;
   onPrefetchParticipant: (participantId: string) => void;
   incidentCounts?: Map<string, IncidentCount>;
+  wentHomeIds?: Set<string>;
 }
 
 const calculateAge = (birthDate: string): number => {
@@ -81,12 +82,14 @@ const ParticipantCard = memo(({
   onClick, 
   onPrefetch,
   incidents,
+  wentHome,
 }: { 
   participant: ParticipantWithCabin; 
   completedActivities: string[];
   onClick: () => void;
   onPrefetch: () => void;
   incidents?: IncidentCount;
+  wentHome?: boolean;
 }) => {
   const handleClick = () => {
     hapticImpact('light');
@@ -96,7 +99,11 @@ const ParticipantCard = memo(({
   return (
     <div
       className={`mx-4 p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-        participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
+        wentHome
+          ? 'border-purple-500/40 bg-purple-500/5 opacity-80'
+          : participant.has_arrived
+          ? 'border-success/50 bg-success/5'
+          : 'bg-card'
       }`}
       onClick={handleClick}
       onMouseEnter={onPrefetch}
@@ -118,6 +125,14 @@ const ParticipantCard = memo(({
             <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
           ) : (
             <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
+          )}
+          {wentHome && (
+            <Badge
+              variant="outline"
+              className="shrink-0 px-1.5 py-0 text-[10px] bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30"
+            >
+              Dratt hjem
+            </Badge>
           )}
           {incidents && incidents.count > 0 && (
             <Badge
