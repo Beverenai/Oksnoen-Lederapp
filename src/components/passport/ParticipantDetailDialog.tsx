@@ -318,6 +318,7 @@ export const ParticipantDetailDialog = ({
   const [incidentOpen, setIncidentOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingData, setBookingData] = useState<Tables<'participant_bookings'> | null>(null);
+  const [showNurseInfo, setShowNurseInfo] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
