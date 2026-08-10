@@ -27,6 +27,14 @@ import { CachedImage } from '@/components/ui/cached-image';
 import { TeamBadge } from '@/components/participants/TeamBadge';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { IncidentSheet } from '@/components/incidents/IncidentSheet';
+import {
+  CATEGORY_LABELS,
+  CATEGORY_COLORS,
+  SEVERITY_LABELS,
+  SEVERITY_COLORS,
+  type IncidentCategory,
+  type IncidentSeverity,
+} from '@/hooks/useParticipantIncidents';
 import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailSheet';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { useParticipantBonusPoints } from '@/hooks/useParticipantBonusPoints';
