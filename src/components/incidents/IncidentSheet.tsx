@@ -209,18 +209,18 @@ export function IncidentSheet({ open, onOpenChange, incident, prefillParticipant
             {selectedList.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {selectedList.map((p) => (
-                  <Badge key={p.id} variant="secondary" className="gap-1 pr-1">
-                    <Avatar className="h-5 w-5 -ml-1 mr-1">
+                  <Badge key={p.id} variant="secondary" className="gap-1.5 pr-1.5 py-1 pl-1 text-sm">
+                    <Avatar className="h-8 w-8">
                       <AvatarImage src={getParticipantThumb(p as any)} alt="" />
-                      <AvatarFallback className="text-[9px]">{p.name.charAt(0)}</AvatarFallback>
+                      <AvatarFallback className="text-xs">{p.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     {p.name}
                     <button
                       type="button"
                       onClick={() => toggle(p.id)}
-                      className="ml-1 rounded-full hover:bg-background/60 p-0.5"
+                      className="ml-0.5 rounded-full hover:bg-background/60 p-1"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </Badge>
                 ))}
@@ -244,11 +244,11 @@ export function IncidentSheet({ open, onOpenChange, incident, prefillParticipant
                     type="button"
                     onClick={() => toggle(p.id)}
                     className={cn(
-                      'w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted transition',
+                      'w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-muted transition',
                       selected && 'bg-primary/5'
                     )}
                   >
-                    <Avatar className="h-8 w-8 shrink-0">
+                    <Avatar className="h-11 w-11 shrink-0">
                       <AvatarImage src={getParticipantThumb(p as any)} alt="" loading="lazy" decoding="async" />
                       <AvatarFallback className="text-xs">{p.name.charAt(0)}</AvatarFallback>
                     </Avatar>
