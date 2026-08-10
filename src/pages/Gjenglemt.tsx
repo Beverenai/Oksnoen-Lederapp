@@ -188,7 +188,7 @@ export default function Gjenglemt() {
         {pLoading || (periodId && iLoading) ? (
           <div className="text-center text-muted-foreground py-10 text-sm">Laster...</div>
         ) : periodId ? (
-          <ItemGrid items={filtered} canManageAll={allPeriodsAccess} />
+          <ItemGrid items={filtered} canManageAll={!!isAdmin} />
         ) : (
           <div className="text-center text-muted-foreground py-10 text-sm">
             {allPeriodsAccess
