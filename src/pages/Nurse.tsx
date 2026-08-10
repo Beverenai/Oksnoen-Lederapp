@@ -740,11 +740,11 @@ export default function Nurse() {
     .filter(p => p.healthNotes.length === 0 && p.healthEvents.length === 0 && !p.healthInfo?.info)
     .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 
-  const getSeverityText = (severity: string | null) => {
-    return severityTextHelper(severity);
-  };
+  const wentHomeCount = wentHomeIds
+    ? participants.filter((p) => wentHomeIds.has(p.id)).length
+    : 0;
 
-  function severityTextHelper(severity: string | null) {
+  const getSeverityText = (severity: string | null) => {
     switch (severity) {
       case "low": return "Lav";
       case "medium": return "Middels";
