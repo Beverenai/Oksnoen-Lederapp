@@ -1197,6 +1197,12 @@ export default function Nurse() {
             </div>
           </div>
 
+          {wentHomeCount > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {participants.length - wentHomeCount} igjen i leir · {wentHomeCount} har dratt hjem
+            </p>
+          )}
+
           {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex flex-1 max-w-md gap-2">
