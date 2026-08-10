@@ -12,6 +12,7 @@ import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Input } from '@/components/ui/input';
 import { garmentLabel, colorMeta } from '@/lib/gjenglemtConstants';
 import { copyText } from '@/lib/clipboard';
+import { hasGjenglemtAllPeriodsAccess } from '@/lib/gjenglemtAccess';
 
 function getPublicBase() {
   if (typeof window === 'undefined') return 'https://app.oksnoen.com';
@@ -26,6 +27,7 @@ function getPublicBase() {
 export default function Gjenglemt() {
   const navigate = useNavigate();
   const { isAdmin, leader } = useAuth();
+  const allPeriodsAccess = hasGjenglemtAllPeriodsAccess(leader?.id, !!isAdmin);
   const { showInfo } = useStatusPopup();
   const { data: currentPeriod = null, isLoading: pLoading } = useActivePeriod();
   const { data: allPeriods = [] } = useGjenglemtPeriods();
@@ -38,8 +40,8 @@ export default function Gjenglemt() {
   const [addOpen, setAddOpen] = useState(false);
 
   const activePeriodId = currentPeriod?.id ?? null;
-  const periodId = (isAdmin && selectedPeriodId) ? selectedPeriodId : activePeriodId;
-  const viewingPeriod = isAdmin
+  const periodId = (allPeriodsAccess && selectedPeriodId) ? selectedPeriodId : activePeriodId;
+  const viewingPeriod = allPeriodsAccess
     ? (allPeriods.find(p => p.id === periodId) ?? currentPeriod)
     : currentPeriod;
   useGjenglemtRealtime(periodId);
@@ -79,6 +81,14 @@ export default function Gjenglemt() {
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          {allPeriodsAccess && (
+            <Button variant="outline" size="sm" asChild>
+              <a href="/gjenglemt-admin" target="_blank" rel="noreferrer">
+                <ExternalLink className="h-4 w-4" />
+                <span className="hidden sm:inline sm:ml-2">Arkiv</span>
+              </a>
+            </Button>
+          )}
           <Button variant="default" size="sm" onClick={() => setAddOpen(true)} disabled={!viewingPeriod}>
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline sm:ml-2">Nytt funn</span>
@@ -88,7 +98,7 @@ export default function Gjenglemt() {
 
       {/* Active period badge + public link */}
       <div className="flex flex-wrap items-center gap-2 shrink-0">
-        {isAdmin && allPeriods.length > 0 ? (
+        {allPeriodsAccess && allPeriods.length > 0 ? (
           <Select value={periodId ?? ''} onValueChange={(v) => setSelectedPeriodId(v)}>
             <SelectTrigger className="w-auto min-w-[180px] h-9 text-sm">
               <SelectValue placeholder="Velg periode" />
@@ -178,10 +188,10 @@ export default function Gjenglemt() {
         {pLoading || (periodId && iLoading) ? (
           <div className="text-center text-muted-foreground py-10 text-sm">Laster...</div>
         ) : periodId ? (
-          <ItemGrid items={filtered} canManageAll={isAdmin} />
+          <ItemGrid items={filtered} canManageAll={allPeriodsAccess} />
         ) : (
           <div className="text-center text-muted-foreground py-10 text-sm">
-            {isAdmin
+            {allPeriodsAccess
               ? 'Ingen aktiv periode. Sett en aktiv i Admin → Periode.'
               : 'Ingen aktiv periode ennå. Be admin sette en aktiv periode.'}
           </div>
