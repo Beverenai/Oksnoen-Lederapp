@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { formatFullRoom } from '@/lib/utils';
+import { formatFullRoom, cn } from '@/lib/utils';
 import { KioskAccountCard } from '@/components/kiosk/KioskAccountCard';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +18,7 @@ import { useSeasonView } from '@/contexts/SeasonViewContext';
 import { fetchSeasonParticipants } from '@/hooks/useSeasonParticipants';
 import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X, ChevronDown } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
@@ -318,6 +318,7 @@ export const ParticipantDetailDialog = ({
   const [incidentOpen, setIncidentOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingData, setBookingData] = useState<Tables<'participant_bookings'> | null>(null);
+  const [showNurseInfo, setShowNurseInfo] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -410,6 +411,7 @@ export const ParticipantDetailDialog = ({
 
     isEditingNotesRef.current = false;
     setNotesStatus('idle');
+    setShowNurseInfo(false);
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     if (savedIndicatorTimerRef.current) clearTimeout(savedIndicatorTimerRef.current);
   }, [participantId, open]);
@@ -753,13 +755,22 @@ export const ParticipantDetailDialog = ({
                 {/* Info fra Nurse */}
                 {healthInfo?.info && (
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Heart className="h-4 w-4 text-blue-600" />
-                      <span>Info fra Nurse</span>
-                    </div>
-                    <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg text-sm">
-                      {healthInfo.info.replace(/^\[Nurse\]\s*/i, '')}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowNurseInfo((v) => !v)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition"
+                    >
+                      <Heart className="h-3.5 w-3.5" />
+                      Info fra Nurse
+                      <ChevronDown
+                        className={cn('h-3.5 w-3.5 transition-transform', showNurseInfo && 'rotate-180')}
+                      />
+                    </button>
+                    {showNurseInfo && (
+                      <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg text-sm">
+                        {healthInfo.info.replace(/^\[Nurse\]\s*/i, '')}
+                      </div>
+                    )}
                   </div>
                 )}
 
