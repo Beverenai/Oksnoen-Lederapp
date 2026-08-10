@@ -27,6 +27,14 @@ import { CachedImage } from '@/components/ui/cached-image';
 import { TeamBadge } from '@/components/participants/TeamBadge';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { IncidentSheet } from '@/components/incidents/IncidentSheet';
+import {
+  CATEGORY_LABELS,
+  CATEGORY_COLORS,
+  SEVERITY_LABELS,
+  SEVERITY_COLORS,
+  type IncidentCategory,
+  type IncidentSeverity,
+} from '@/hooks/useParticipantIncidents';
 import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailSheet';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { useParticipantBonusPoints } from '@/hooks/useParticipantBonusPoints';
@@ -335,6 +343,37 @@ export const ParticipantDetailDialog = ({
       return data?.value === 'true';
     },
     staleTime: 60_000,
+  });
+
+  // Admin/Nurse: incidents registered on this participant
+  const { data: participantIncidents = [] } = useQuery({
+    queryKey: ['participant-incidents-detail', participantId],
+    enabled: open && !!participantId && (isAdmin || isNurse),
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('participant_incident_participants')
+        .select(
+          'participant_incidents(id, title, description, category, severity, created_at, leader:leaders(id, name))'
+        )
+        .eq('participant_id', participantId);
+      if (error) throw error;
+      return ((data || []) as any[])
+        .map((r) => r.participant_incidents)
+        .filter(Boolean)
+        .sort(
+          (a: any, b: any) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ) as Array<{
+        id: string;
+        title: string;
+        description: string | null;
+        category: IncidentCategory;
+        severity: IncidentSeverity;
+        created_at: string;
+        leader?: { id: string; name: string } | null;
+      }>;
+    },
   });
 
   const { data: secretWord } = useQuery({
@@ -827,6 +866,39 @@ export const ParticipantDetailDialog = ({
                   )}
                   {participant.has_arrived ? 'Marker som ikke ankommet' : 'Marker som ankommet'}
                 </Button>
+
+                {/* Admin/Nurse: registered incidents */}
+                {(isAdmin || isNurse) && participantIncidents.length > 0 && (
+                  <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/30 p-3">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Hendelser ({participantIncidents.length})
+                    </p>
+                    {participantIncidents.map((inc) => (
+                      <div key={inc.id} className="rounded-xl bg-background/70 p-2.5 space-y-1.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-medium">{inc.title}</p>
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            {format(new Date(inc.created_at), 'dd.MM.yy HH:mm')}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant="outline" className={`text-[10px] ${CATEGORY_COLORS[inc.category]}`}>
+                            {CATEGORY_LABELS[inc.category]}
+                          </Badge>
+                          <Badge variant="outline" className={`text-[10px] ${SEVERITY_COLORS[inc.severity]}`}>
+                            {SEVERITY_LABELS[inc.severity]}
+                          </Badge>
+                        </div>
+                        {inc.description && (
+                          <p className="text-xs text-muted-foreground whitespace-pre-wrap">{inc.description}</p>
+                        )}
+                        <p className="text-[10px] text-muted-foreground">
+                          Skrevet av <span className="font-medium">{inc.leader?.name ?? 'Ukjent'}</span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Register incident */}
                 <Button variant="outline" className="w-full" disabled={readOnly} onClick={() => setIncidentOpen(true)}>
