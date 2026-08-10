@@ -86,12 +86,23 @@ export function BookingsTab() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (!q) return enriched;
-    return enriched.filter(({ booking: b }) =>
-      [b.first_name, b.last_name, b.guardian_first_name, b.guardian_last_name,
-       b.guardian_phone, b.guardian_email, b.reservation_number, b.reservation_code,
-       b.postal_city]
-        .some(v => (v || '').toString().toLowerCase().includes(q))
-    );
+    const digits = (v: unknown) => (v || '').toString().replace(/\D/g, '');
+    const qDigits = digits(q);
+    return enriched.filter(({ booking: b }) => {
+      const textMatch = [b.first_name, b.last_name, b.guardian_first_name, b.guardian_last_name,
+        b.guardian_phone, b.guardian_email, b.reservation_number, b.reservation_code,
+        b.postal_city]
+        .some(v => (v || '').toString().toLowerCase().includes(q));
+      if (textMatch) return true;
+      // Phone search ignoring spaces, dashes and landcode (+47)
+      if (qDigits.length >= 3) {
+        const phone = digits(b.guardian_phone);
+        const bare = phone.startsWith('47') && phone.length > 8 ? phone.slice(2) : phone;
+        const needle = qDigits.startsWith('47') && qDigits.length > 8 ? qDigits.slice(2) : qDigits;
+        if (phone.includes(needle) || bare.includes(needle)) return true;
+      }
+      return false;
+    });
   }, [enriched, search]);
 
   const unmatched = useMemo(() => filtered.filter(e => !e.participant), [filtered]);
