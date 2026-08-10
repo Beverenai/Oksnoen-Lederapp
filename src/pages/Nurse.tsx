@@ -741,6 +741,10 @@ export default function Nurse() {
     .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 
   const getSeverityText = (severity: string | null) => {
+    return severityTextHelper(severity);
+  };
+
+  function severityTextHelper(severity: string | null) {
     switch (severity) {
       case "low": return "Lav";
       case "medium": return "Middels";
