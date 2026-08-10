@@ -111,6 +111,12 @@ html, body {
     --card: 0 0% 100%;
     --card-foreground: 220 30% 10%;
 
+    --toast: 220 15% 14%;
+    --toast-foreground: 0 0% 100%;
+    --toast-muted: 220 8% 68%;
+    --toast-action: 220 10% 26%;
+    --toast-danger: 0 85% 72%;
+
     --popover: 0 0% 100%;
     --popover-foreground: 220 30% 10%;
 
@@ -181,6 +187,12 @@ html, body {
 
     --card: 220 25% 12%;
     --card-foreground: 220 10% 95%;
+
+    --toast: 220 14% 16%;
+    --toast-foreground: 0 0% 100%;
+    --toast-muted: 220 8% 68%;
+    --toast-action: 220 10% 28%;
+    --toast-danger: 0 85% 72%;
 
     --popover: 220 25% 12%;
     --popover-foreground: 220 10% 95%;

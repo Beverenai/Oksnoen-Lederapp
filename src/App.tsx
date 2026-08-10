@@ -1,6 +1,7 @@
 import { Suspense, lazy } from "react";
 import { StatusPopupProvider } from "@/hooks/useStatusPopup";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
@@ -267,6 +268,7 @@ const App = () => (
           <StatusPopupProvider>
             <SplashScreen />
             <OfflineIndicator />
+            <Toaster />
             <BrowserRouter>
               <AuthProvider>
                 <SeasonViewProvider>

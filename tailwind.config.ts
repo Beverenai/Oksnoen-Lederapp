@@ -59,6 +59,13 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        toast: {
+          DEFAULT: "hsl(var(--toast))",
+          foreground: "hsl(var(--toast-foreground))",
+          muted: "hsl(var(--toast-muted))",
+          action: "hsl(var(--toast-action))",
+          danger: "hsl(var(--toast-danger))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
