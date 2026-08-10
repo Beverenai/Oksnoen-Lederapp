@@ -411,6 +411,7 @@ export const ParticipantDetailDialog = ({
 
     isEditingNotesRef.current = false;
     setNotesStatus('idle');
+    setShowNurseInfo(false);
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     if (savedIndicatorTimerRef.current) clearTimeout(savedIndicatorTimerRef.current);
   }, [participantId, open]);
