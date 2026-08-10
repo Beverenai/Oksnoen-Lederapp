@@ -755,13 +755,22 @@ export const ParticipantDetailDialog = ({
                 {/* Info fra Nurse */}
                 {healthInfo?.info && (
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Heart className="h-4 w-4 text-blue-600" />
-                      <span>Info fra Nurse</span>
-                    </div>
-                    <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg text-sm">
-                      {healthInfo.info.replace(/^\[Nurse\]\s*/i, '')}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowNurseInfo((v) => !v)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition"
+                    >
+                      <Heart className="h-3.5 w-3.5" />
+                      Info fra Nurse
+                      <ChevronDown
+                        className={cn('h-3.5 w-3.5 transition-transform', showNurseInfo && 'rotate-180')}
+                      />
+                    </button>
+                    {showNurseInfo && (
+                      <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg text-sm">
+                        {healthInfo.info.replace(/^\[Nurse\]\s*/i, '')}
+                      </div>
+                    )}
                   </div>
                 )}
 
