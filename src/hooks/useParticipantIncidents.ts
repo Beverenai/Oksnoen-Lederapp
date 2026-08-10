@@ -107,8 +107,11 @@ export function useParticipantIncidents(opts: UseIncidentsOptions = {}) {
     staleTime: 30_000,
   });
 
-  const invalidate = () =>
+  const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['participant-incidents'] });
+    qc.invalidateQueries({ queryKey: ['participant-incidents-detail'] });
+    qc.invalidateQueries({ queryKey: ['incident-counts'] });
+  };
 
   const createIncident = useMutation({
     mutationFn: async (input: {
