@@ -28,6 +28,7 @@ import { PhotoWallView } from '@/components/passport/PhotoWallView';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { useParticipantTeams } from '@/hooks/useParticipantTeams';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
+import { useIncidentCounts } from '@/hooks/useIncidentCounts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSeasonView } from '@/contexts/SeasonViewContext';
 import { fetchSeasonParticipants } from '@/hooks/useSeasonParticipants';
