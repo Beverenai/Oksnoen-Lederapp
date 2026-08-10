@@ -63,6 +63,7 @@ import { format, differenceInYears } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { useWentHomeParticipants } from '@/hooks/useWentHomeParticipants';
 
 type Participant = Tables<'participants'>;
 
@@ -119,6 +120,7 @@ const severityLevels = [
 export default function Nurse() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader, isAdmin, isNurse } = useAuth();
+  const { data: wentHomeIds } = useWentHomeParticipants(true);
   const { seasonView, readOnly } = useSeasonView();
   const [participants, setParticipants] = useState<ParticipantWithHealth[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -738,6 +740,10 @@ export default function Nurse() {
     .filter(p => p.healthNotes.length === 0 && p.healthEvents.length === 0 && !p.healthInfo?.info)
     .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 
+  const wentHomeCount = wentHomeIds
+    ? participants.filter((p) => wentHomeIds.has(p.id)).length
+    : 0;
+
   const getSeverityText = (severity: string | null) => {
     switch (severity) {
       case "low": return "Lav";
@@ -1050,6 +1056,7 @@ export default function Nurse() {
     const hasHealthData = participant.healthNotes.length > 0 || 
       participant.healthEvents.length > 0 || 
       !!participant.healthInfo?.info;
+    const wentHome = !!wentHomeIds?.has(participant.id);
     
     const age = participant.birth_date 
       ? differenceInYears(new Date(), new Date(participant.birth_date)) 
@@ -1061,7 +1068,11 @@ export default function Nurse() {
     return (
       <div
         className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-          hasHealthData ? 'border-destructive/50 bg-destructive/5' : 'bg-card'
+          wentHome
+            ? 'border-purple-500/60 bg-purple-500/5 opacity-70'
+            : hasHealthData
+              ? 'border-destructive/50 bg-destructive/5'
+              : 'bg-card'
         }`}
         onClick={() => openParticipantDetail(participant)}
       >
@@ -1082,6 +1093,11 @@ export default function Nurse() {
               )}
             </div>
             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+              {wentHome && (
+                <Badge className="text-xs bg-purple-500/15 text-purple-600 dark:text-purple-300 border-purple-500/40" variant="outline">
+                  Dratt hjem
+                </Badge>
+              )}
               {age && birthDateFormatted && (
                 <Badge variant="outline" className="text-xs">
                   {birthDateFormatted} · {age} år
@@ -1184,6 +1200,12 @@ export default function Nurse() {
               </DropdownMenu>
             </div>
           </div>
+
+          {wentHomeCount > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {participants.length - wentHomeCount} igjen i leir · {wentHomeCount} har dratt hjem
+            </p>
+          )}
 
           {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-4">
