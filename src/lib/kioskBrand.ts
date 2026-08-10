@@ -80,6 +80,12 @@ const TILE_GRADIENTS: Array<{ test: RegExp; background: string }> = [
   { test: /kinder bueno/i, background: 'linear-gradient(135deg, #5b3a1e 60%, #c8102e 100%)' },
 ];
 
+/** Flat tile colours that match the product photo's own background, so the photo blends in. */
+const PHOTO_TILE_COLORS: Array<{ test: RegExp; color: string }> = [
+  { test: /mix\s*godteri/i, color: '#0105f5' },
+  { test: /bubs\s*sm[åa]godt/i, color: '#fc03f4' },
+];
+
 function relativeLuminance(hex: string): number {
   const h = hex.replace('#', '');
   const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
@@ -100,6 +106,14 @@ export interface TileStyle {
 /** Full-bleed tile styling derived from the product's brand colour. */
 export function getTileStyle(productName: string, categoryName?: string | null): TileStyle {
   const brand = getBrandMark(productName, categoryName);
+  const photo = PHOTO_TILE_COLORS.find((p) => p.test.test(productName));
+  if (photo) {
+    return {
+      background: photo.color,
+      mark: brand.emoji ?? (brand.mark || productName.trim().charAt(0).toUpperCase()),
+      isLight: relativeLuminance(photo.color) > 0.55,
+    };
+  }
   const gradient = TILE_GRADIENTS.find((g) => g.test.test(productName));
   return {
     background: gradient?.background ?? brand.bg,
