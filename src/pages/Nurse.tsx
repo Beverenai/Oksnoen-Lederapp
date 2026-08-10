@@ -119,6 +119,7 @@ const severityLevels = [
 export default function Nurse() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader, isAdmin, isNurse } = useAuth();
+  const { data: wentHomeIds } = useWentHomeParticipants(true);
   const { seasonView, readOnly } = useSeasonView();
   const [participants, setParticipants] = useState<ParticipantWithHealth[]>([]);
   const [isLoading, setIsLoading] = useState(true);
