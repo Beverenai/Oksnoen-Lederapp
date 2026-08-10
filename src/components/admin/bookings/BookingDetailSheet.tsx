@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Phone, Mail, X, Pencil, Save, Loader2 } from 'lucide-react';
+import { Phone, Mail, X, Pencil, Save, Loader2, Copy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { copyText } from '@/lib/clipboard';
 import { syncBookingExtras } from '@/lib/syncBookingExtras';
 import { BookingEditLog } from '@/components/admin/bookings/BookingEditLog';
 import type { Tables } from '@/integrations/supabase/types';
@@ -244,9 +245,23 @@ export function BookingDetailSheet({ booking, participant, onClose, editable = f
           <Section title="Foresatte">
             <Field label="Navn" value={[b.guardian_first_name, b.guardian_last_name].filter(Boolean).join(' ') || '—'} />
             <Field label="Telefon" value={b.guardian_phone ? (
-              <a href={`tel:${b.guardian_phone}`} className="text-primary hover:underline inline-flex items-center gap-1">
-                <Phone className="w-3 h-3" />{b.guardian_phone}
-              </a>
+              <span className="inline-flex items-center gap-2">
+                <a href={`tel:${b.guardian_phone}`} className="text-primary hover:underline inline-flex items-center gap-1">
+                  <Phone className="w-3 h-3" />{b.guardian_phone}
+                </a>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  aria-label="Kopier telefonnummer"
+                  onClick={async () => {
+                    const ok = await copyText(b.guardian_phone || '');
+                    ok ? showSuccess('Nummer kopiert') : showError('Kunne ikke kopiere');
+                  }}
+                >
+                  <Copy className="w-3 h-3" />
+                </Button>
+              </span>
             ) : '—'} />
             <Field label="Epost" value={b.guardian_email ? (
               <a href={`mailto:${b.guardian_email}`} className="text-primary hover:underline inline-flex items-center gap-1">
