@@ -439,7 +439,7 @@ export default function Fix() {
 
       {/* New Task Form Dialog */}
       <Dialog open={showNewForm} onOpenChange={setShowNewForm}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-heading">Ny Fix-oppgave</DialogTitle>
           </DialogHeader>
@@ -564,7 +564,7 @@ export default function Fix() {
 
       {/* Task Detail Dialog */}
       <Dialog open={!!selectedTask} onOpenChange={(o) => { if (!o) { setSelectedTask(null); setIsEditing(false); } }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
           {selectedTask && (
             <>
               <DialogHeader>

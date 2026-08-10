@@ -1309,7 +1309,7 @@ export default function Nurse() {
 
       {/* Participant Detail Dialog */}
       <ResponsiveDialog open={isDetailOpen} onOpenChange={handleDetailOpenChange}>
-        <ResponsiveDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85vh] flex flex-col mx-auto">
+        <ResponsiveDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85dvh] flex flex-col mx-auto">
           <ResponsiveDialogHeader>
             <ResponsiveDialogTitle className="flex items-center gap-3">
               <div 

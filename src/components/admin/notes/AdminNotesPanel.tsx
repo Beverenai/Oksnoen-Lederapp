@@ -200,11 +200,11 @@ export function AdminNotesPanel() {
         <SheetContent
           side="right"
           className={cn(
-            'flex flex-col gap-3 p-4 pt-5',
+            'flex h-[100dvh] max-h-[100dvh] flex-col gap-3 overflow-hidden px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-[calc(1rem+env(safe-area-inset-top,0px))]',
             fullscreen ? 'w-screen sm:max-w-none' : 'w-full sm:max-w-5xl',
           )}
         >
-          <SheetHeader className="space-y-0 pr-8">
+          <SheetHeader className="space-y-0 pr-12">
             <SheetTitle className="flex items-center gap-2 text-base">
               <NotebookPen className="h-4 w-4" />
               Notater

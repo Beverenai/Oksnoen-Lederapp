@@ -182,7 +182,7 @@ export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm sm:max-w-md rounded-2xl p-0 gap-0 border-0 max-h-[85vh] overflow-y-auto overscroll-contain">
+      <DialogContent className="max-w-sm sm:max-w-md rounded-2xl p-0 gap-0 border-0 max-h-[85dvh] overflow-y-auto overscroll-contain">
         <div className="p-6 pb-4">
           <DialogHeader className="mb-4">
             <div className="flex flex-col items-center gap-3">
