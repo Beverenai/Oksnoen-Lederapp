@@ -760,6 +760,7 @@ export default function Passport() {
             onFilterByCabin={handleFilterByCabin}
             onParticipantClick={handleParticipantClick}
             onPrefetchParticipant={prefetchParticipant}
+            incidentCounts={incidentCounts}
           />
         </div>
       )}
