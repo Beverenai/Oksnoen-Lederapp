@@ -63,16 +63,6 @@ export function LeaderFilters({
           )}
         </Button>
 
-        <Button
-          variant={showUnreadOnly ? "destructive" : "outline"}
-          size="sm"
-          onClick={() => onUnreadFilterChange(!showUnreadOnly)}
-          className={cn("gap-1.5 shrink-0", compact && "h-9 px-2 sm:px-3")}
-        >
-          <div className="w-2.5 h-2.5 rounded-full bg-destructive" />
-          <span className={compact ? "hidden sm:inline text-sm" : undefined}>Ikke lest</span>
-          {showUnreadOnly && <X className="h-3 w-3 ml-1" />}
-        </Button>
       </div>
 
       {showTeamFilters && (

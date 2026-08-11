@@ -75,8 +75,7 @@ export function LeaderListView({ leaders, homeConfig, onLeaderUpdated }: LeaderL
     if (leader.isAdmin || leader.isNurse) return 'ring-2 ring-green-500';
     if (isKitchen) return 'ring-2 ring-purple-500';
     if (hasFriActivity) return 'ring-2 ring-blue-500';
-    if (leader.content?.has_read) return 'ring-2 ring-green-500';
-    return 'ring-2 ring-red-500';
+    return 'ring-2 ring-green-500';
   };
 
   const truncate = (text: string | null | undefined, maxLength: number) => {

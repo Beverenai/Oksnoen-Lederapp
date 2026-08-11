@@ -102,8 +102,7 @@ const getAvatarBorderClass = (leader: LeaderWithContent) => {
   
   if (isKitchen) return 'ring-4 ring-purple-500';
   if (isFri) return 'ring-4 ring-blue-500';
-  if (leader.isAdmin || leader.isNurse || leader.content?.has_read) return 'ring-4 ring-green-500';
-  return 'ring-4 ring-red-500';
+  return 'ring-4 ring-green-500';
 };
 
 export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailDialogProps) {

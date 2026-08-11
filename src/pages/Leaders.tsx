@@ -346,8 +346,7 @@ function LeadersFull() {
     if (isKitchen) return 'ring-4 ring-purple-500';
     if (isFri) return 'ring-4 ring-blue-500';
     if (isSjef) return 'ring-4 ring-green-500';
-    if (leader.isAdmin || leader.isNurse || leader.content?.has_read) return 'ring-4 ring-green-500';
-    return 'ring-4 ring-red-500';
+    return 'ring-4 ring-green-500';
   };
 
   // Get first name only
