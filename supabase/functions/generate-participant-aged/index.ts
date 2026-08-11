@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     const table = isLeaders ? 'leaders' : 'participants';
     const srcCol = isLeaders ? 'profile_image_url' : 'image_url';
     const agedCol = isLeaders ? 'profile_image_aged_url' : 'image_aged_url';
-    const bucket = isLeaders ? 'leader-images' : 'participant-images';
+    const bucket = 'participant-images';
 
     if (!isLeaders && !periodId) throw new Error('Mangler periode');
 
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
         if (!b64) throw new Error('Ingen bilde i AI-svaret');
 
         const bytes = fromBase64(b64);
-        const path = `${p.id}_aged.png`;
+        const path = isLeaders ? `leader-profiles/${p.id}_aged.png` : `${p.id}_aged.png`;
         const { error: upErr } = await supabase.storage
           .from(bucket)
           .upload(path, bytes, { upsert: true, contentType: 'image/png' });
