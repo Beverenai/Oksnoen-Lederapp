@@ -1,5 +1,12 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  enqueueRecording,
+  listRecordings,
+  markAttempt,
+  removeRecording,
+  subscribeVoiceQueue,
+} from '@/lib/voiceQueue';
 
 function encodeWav(chunks: Float32Array[], sampleRate: number, targetRate = 16000): Blob {
   const total = chunks.reduce((n, c) => n + c.length, 0);
@@ -45,16 +52,94 @@ function encodeWav(chunks: Float32Array[], sampleRate: number, targetRate = 1600
   return new Blob([buffer], { type: 'audio/wav' });
 }
 
-export function useVoiceTranscription() {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Kaller edge-funksjonen. Kaster ved nettverksfeil, returnerer {permanent:true} ved 4xx. */
+async function transcribeBlob(blob: Blob): Promise<{ text?: string; permanent?: boolean; message?: string }> {
+  const form = new FormData();
+  form.append('file', blob, 'recording.wav');
+  const { data, error } = await supabase.functions.invoke('transcribe-audio', { body: form });
+  if (error) {
+    const status = (error as { context?: { status?: number } })?.context?.status;
+    if (status && status >= 400 && status < 500) {
+      return { permanent: true, message: 'Lydopptaket kunne ikke transkriberes' };
+    }
+    throw error;
+  }
+  return { text: ((data as { text?: string })?.text ?? '').trim() };
+}
+
+interface Options {
+  /** Kalles når et lagret opptak blir transkribert i etterkant (t.d. når nettet er tilbake). */
+  onQueuedText?: (text: string) => void;
+}
+
+export function useVoiceTranscription(options: Options = {}) {
+  const { onQueuedText } = options;
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const streamRef = useRef<MediaStream | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
   const nodeRef = useRef<ScriptProcessorNode | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const chunksRef = useRef<Float32Array[]>([]);
+  const queuedCbRef = useRef(onQueuedText);
+  queuedCbRef.current = onQueuedText;
+  const processingRef = useRef(false);
+
+  const refreshCount = useCallback(async () => {
+    setPendingCount((await listRecordings()).length);
+  }, []);
+
+  /** Prøver å transkribere alle lagrede opptak. */
+  const processQueue = useCallback(async () => {
+    if (processingRef.current || !navigator.onLine) return;
+    processingRef.current = true;
+    try {
+      const items = await listRecordings();
+      for (const item of items) {
+        try {
+          setIsTranscribing(true);
+          const res = await transcribeBlob(item.blob);
+          if (res.permanent) {
+            await removeRecording(item.id);
+            setError(res.message ?? 'Lydopptaket kunne ikke transkriberes');
+            continue;
+          }
+          await removeRecording(item.id);
+          if (res.text) queuedCbRef.current?.(res.text);
+          else setError('Ingen tale gjenkjent');
+        } catch (e) {
+          console.warn('[voice] transkribering venter på nett', e);
+          await markAttempt(item.id);
+          break; // fortsatt offline/feil – behold opptaket og prøv senere
+        } finally {
+          setIsTranscribing(false);
+        }
+      }
+    } finally {
+      processingRef.current = false;
+      await refreshCount();
+    }
+  }, [refreshCount]);
+
+  // Hold antall i kø oppdatert + prøv på nytt når nettet kommer tilbake
+  useEffect(() => {
+    refreshCount();
+    const unsub = subscribeVoiceQueue(() => void refreshCount());
+    const onOnline = () => void processQueue();
+    window.addEventListener('online', onOnline);
+    void processQueue();
+    const timer = setInterval(() => void processQueue(), 30000);
+    return () => {
+      unsub();
+      window.removeEventListener('online', onOnline);
+      clearInterval(timer);
+    };
+  }, [processQueue, refreshCount]);
 
   const cleanup = useCallback(async () => {
     nodeRef.current?.disconnect();
@@ -99,7 +184,7 @@ export function useVoiceTranscription() {
     await cleanup();
   }, [cleanup]);
 
-  /** Stops recording and returns the transcribed text (or null on failure). */
+  /** Stopper opptaket og returnerer teksten. Lagres lokalt om nettet svikter. */
   const stopAndTranscribe = useCallback(async (): Promise<string | null> => {
     if (!isRecording) return null;
     const rate = ctxRef.current?.sampleRate ?? 48000;
@@ -114,27 +199,51 @@ export function useVoiceTranscription() {
       return null;
     }
 
+    // Offline: lagre med en gang, ingenting går tapt
+    if (!navigator.onLine) {
+      await enqueueRecording(blob);
+      setError('Ingen nett – opptaket er lagret og transkriberes automatisk når du er på nett igjen');
+      return null;
+    }
+
     setIsTranscribing(true);
     try {
-      const form = new FormData();
-      form.append('file', blob, 'recording.wav');
-      const { data, error: fnError } = await supabase.functions.invoke('transcribe-audio', {
-        body: form,
-      });
-      if (fnError) throw fnError;
-      const text = (data as { text?: string })?.text?.trim() ?? '';
-      if (!text) {
-        setError('Ingen tale gjenkjent');
-        return null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const res = await transcribeBlob(blob);
+          if (res.permanent) {
+            setError(res.message ?? 'Transkribering feilet');
+            return null;
+          }
+          if (!res.text) {
+            setError('Ingen tale gjenkjent');
+            return null;
+          }
+          return res.text;
+        } catch (e) {
+          if (attempt === 2) throw e;
+          await sleep(800 * (attempt + 1));
+        }
       }
-      return text;
-    } catch (e: any) {
-      setError(e?.message ?? 'Transkribering feilet');
+      return null;
+    } catch (e) {
+      console.error('[voice] transkribering feilet, lagrer lokalt', e);
+      await enqueueRecording(blob);
+      setError('Nettet svikter – opptaket er lagret og prøves på nytt automatisk');
       return null;
     } finally {
       setIsTranscribing(false);
     }
   }, [cleanup, isRecording]);
 
-  return { isRecording, isTranscribing, error, start, stopAndTranscribe, cancel };
+  return {
+    isRecording,
+    isTranscribing,
+    error,
+    pendingCount,
+    start,
+    stopAndTranscribe,
+    cancel,
+    retryPending: processQueue,
+  };
 }
