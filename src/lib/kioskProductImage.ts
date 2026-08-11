@@ -1,4 +1,6 @@
 import bubs from '@/assets/kiosk/bubs.webp';
+import bubsSmagodt from '@/assets/kiosk/bubs-smagodt.webp';
+import mixgodt from '@/assets/kiosk/mixgodt.webp';
 import cheezDoodles from '@/assets/kiosk/cheez-doodles.webp';
 import colaZero from '@/assets/kiosk/cola-zero.webp';
 import cola from '@/assets/kiosk/cola.webp';
@@ -49,6 +51,8 @@ const PRODUCT_IMAGES: Array<{ test: RegExp; src: string }> = [
   { test: /gott\s*(?:&|og)?\s*blandat/i, src: gottBlandat },
   { test: /knatt(?:ar|er)/i, src: knattar },
   { test: /mini\s*mix/i, src: minimix },
+  { test: /bubs\s*sm[åa]godt/i, src: bubsSmagodt },
+  { test: /mix\s*godteri/i, src: mixgodt },
   { test: /bubs/i, src: bubs },
   { test: /fizzy/i, src: fizzypop },
   { test: /haribo|roulette/i, src: roulette },

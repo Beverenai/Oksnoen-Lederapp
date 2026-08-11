@@ -28,6 +28,8 @@ import { PhotoWallView } from '@/components/passport/PhotoWallView';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { useParticipantTeams } from '@/hooks/useParticipantTeams';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
+import { useIncidentCounts } from '@/hooks/useIncidentCounts';
+import { useWentHomeParticipants } from '@/hooks/useWentHomeParticipants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSeasonView } from '@/contexts/SeasonViewContext';
 import { fetchSeasonParticipants } from '@/hooks/useSeasonParticipants';
@@ -139,7 +141,9 @@ async function fetchLeaderCabins(): Promise<Map<string, { id: string; name: stri
 export default function Passport() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { leader, effectiveLeader } = useAuth();
+  const { leader, effectiveLeader, isAdmin, isNurse } = useAuth();
+  const { data: incidentCounts } = useIncidentCounts(isAdmin || isNurse);
+  const { data: wentHomeIds } = useWentHomeParticipants(isAdmin || isNurse);
   const { seasonView } = useSeasonView();
   const [searchParams, setSearchParams] = useSearchParams();
   const cabinFilterFromUrl = searchParams.get('cabin');
@@ -382,6 +386,9 @@ export default function Passport() {
 
   const arrivedCount = participants.filter((p) => p.has_arrived).length;
   const passWrittenCount = participants.filter((p) => p.pass_written).length;
+  const wentHomeCount = wentHomeIds
+    ? participants.filter((p) => wentHomeIds.has(p.id)).length
+    : 0;
 
   const toggleCabinExpanded = (cabinId: string) => {
     const newExpanded = new Set(expandedCabins);
@@ -476,6 +483,11 @@ export default function Passport() {
           <p className="text-muted-foreground mt-1">
             {arrivedCount} av {participants.length} deltakere har ankommet
           </p>
+          {wentHomeCount > 0 && (
+            <p className="text-muted-foreground text-sm">
+              {arrivedCount - wentHomeCount} igjen i leir · {wentHomeCount} har dratt hjem
+            </p>
+          )}
           {checkoutEnabled && (
             <p className="text-muted-foreground text-sm">
               {passWrittenCount} av {participants.length} pass skrevet
@@ -758,6 +770,8 @@ export default function Passport() {
             onFilterByCabin={handleFilterByCabin}
             onParticipantClick={handleParticipantClick}
             onPrefetchParticipant={prefetchParticipant}
+            incidentCounts={incidentCounts}
+            wentHomeIds={wentHomeIds}
           />
         </div>
       )}

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActivePeriodId } from './useActivePeriodId';
 
-export type IncidentCategory = 'konflikt' | 'skade' | 'hjemlengsel' | 'positivt' | 'annet';
+export type IncidentCategory = 'konflikt' | 'skade' | 'hjemlengsel' | 'hjemreise' | 'positivt' | 'annet';
 export type IncidentSeverity = 'low' | 'medium' | 'high';
 
 export interface IncidentParticipant {
@@ -30,6 +30,7 @@ export const CATEGORY_LABELS: Record<IncidentCategory, string> = {
   konflikt: 'Konflikt',
   skade: 'Skade',
   hjemlengsel: 'Hjemlengsel',
+  hjemreise: 'Har dratt hjem',
   positivt: 'Positivt',
   annet: 'Annet',
 };
@@ -50,6 +51,7 @@ export const CATEGORY_COLORS: Record<IncidentCategory, string> = {
   konflikt: 'bg-red-500/15 text-red-700 dark:text-red-400',
   skade: 'bg-orange-500/15 text-orange-700 dark:text-orange-400',
   hjemlengsel: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
+  hjemreise: 'bg-purple-500/15 text-purple-700 dark:text-purple-400',
   positivt: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
   annet: 'bg-slate-500/15 text-slate-700 dark:text-slate-300',
 };
@@ -107,8 +109,12 @@ export function useParticipantIncidents(opts: UseIncidentsOptions = {}) {
     staleTime: 30_000,
   });
 
-  const invalidate = () =>
+  const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['participant-incidents'] });
+    qc.invalidateQueries({ queryKey: ['participant-incidents-detail'] });
+    qc.invalidateQueries({ queryKey: ['incident-counts'] });
+    qc.invalidateQueries({ queryKey: ['went-home-participants'] });
+  };
 
   const createIncident = useMutation({
     mutationFn: async (input: {

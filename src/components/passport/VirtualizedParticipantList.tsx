@@ -14,6 +14,8 @@ import {
 import { differenceInYears } from 'date-fns';
 import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
 import { TeamBadge } from '@/components/participants/TeamBadge';
+import type { IncidentCount } from '@/hooks/useIncidentCounts';
+import { AlertTriangle } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { formatFullRoom } from '@/lib/utils';
@@ -65,6 +67,8 @@ interface VirtualizedParticipantListProps {
   onFilterByCabin?: (cabinId: string) => void;
   onParticipantClick: (participantId: string) => void;
   onPrefetchParticipant: (participantId: string) => void;
+  incidentCounts?: Map<string, IncidentCount>;
+  wentHomeIds?: Set<string>;
 }
 
 const calculateAge = (birthDate: string): number => {
@@ -76,12 +80,16 @@ const ParticipantCard = memo(({
   participant, 
   completedActivities, 
   onClick, 
-  onPrefetch 
+  onPrefetch,
+  incidents,
+  wentHome,
 }: { 
   participant: ParticipantWithCabin; 
   completedActivities: string[];
   onClick: () => void;
   onPrefetch: () => void;
+  incidents?: IncidentCount;
+  wentHome?: boolean;
 }) => {
   const handleClick = () => {
     hapticImpact('light');
@@ -91,7 +99,11 @@ const ParticipantCard = memo(({
   return (
     <div
       className={`mx-4 p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-        participant.has_arrived ? 'border-success/50 bg-success/5' : 'bg-card'
+        wentHome
+          ? 'border-purple-500/40 bg-purple-500/5 opacity-80'
+          : participant.has_arrived
+          ? 'border-success/50 bg-success/5'
+          : 'bg-card'
       }`}
       onClick={handleClick}
       onMouseEnter={onPrefetch}
@@ -113,6 +125,29 @@ const ParticipantCard = memo(({
             <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
           ) : (
             <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
+          )}
+          {wentHome && (
+            <Badge
+              variant="outline"
+              className="shrink-0 px-1.5 py-0 text-[10px] bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30"
+            >
+              Dratt hjem
+            </Badge>
+          )}
+          {incidents && incidents.count > 0 && (
+            <Badge
+              variant="outline"
+              className={`shrink-0 gap-1 px-1.5 py-0 text-[10px] ${
+                incidents.highest === 'high'
+                  ? 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30'
+                  : incidents.highest === 'medium'
+                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                  : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              <AlertTriangle className="w-3 h-3" />
+              {incidents.count}
+            </Badge>
           )}
         </div>
         <div className="flex items-center gap-1 mt-1 flex-wrap">
@@ -255,6 +290,8 @@ export function VirtualizedParticipantList({
   onFilterByCabin,
   onParticipantClick,
   onPrefetchParticipant,
+  incidentCounts,
+  wentHomeIds,
 }: VirtualizedParticipantListProps) {
   // Flatten the data structure for rendering
   const flattenedItems = useMemo((): VirtualizedItem[] => {
@@ -356,6 +393,8 @@ export function VirtualizedParticipantList({
               key={`participant-${item.participant.id}`}
               participant={item.participant}
               completedActivities={completedActivities}
+              incidents={incidentCounts?.get(item.participant.id)}
+              wentHome={wentHomeIds?.has(item.participant.id)}
               onClick={() => onParticipantClick(item.participant.id)}
               onPrefetch={() => onPrefetchParticipant(item.participant.id)}
             />

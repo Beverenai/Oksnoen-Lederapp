@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { formatFullRoom } from '@/lib/utils';
+import { formatFullRoom, cn } from '@/lib/utils';
 import { KioskAccountCard } from '@/components/kiosk/KioskAccountCard';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +18,7 @@ import { useSeasonView } from '@/contexts/SeasonViewContext';
 import { fetchSeasonParticipants } from '@/hooks/useSeasonParticipants';
 import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X, ChevronDown } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,6 +27,14 @@ import { CachedImage } from '@/components/ui/cached-image';
 import { TeamBadge } from '@/components/participants/TeamBadge';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { IncidentSheet } from '@/components/incidents/IncidentSheet';
+import {
+  CATEGORY_LABELS,
+  CATEGORY_COLORS,
+  SEVERITY_LABELS,
+  SEVERITY_COLORS,
+  type IncidentCategory,
+  type IncidentSeverity,
+} from '@/hooks/useParticipantIncidents';
 import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailSheet';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { useParticipantBonusPoints } from '@/hooks/useParticipantBonusPoints';
@@ -228,7 +236,7 @@ function BonusPointsSection({
           <Badge variant="secondary" className="tabular-nums">{total} p</Badge>
         </Button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+      <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Star className="h-4 w-4 text-amber-500" />
@@ -310,6 +318,7 @@ export const ParticipantDetailDialog = ({
   const [incidentOpen, setIncidentOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingData, setBookingData] = useState<Tables<'participant_bookings'> | null>(null);
+  const [showNurseInfo, setShowNurseInfo] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -335,6 +344,37 @@ export const ParticipantDetailDialog = ({
       return data?.value === 'true';
     },
     staleTime: 60_000,
+  });
+
+  // Admin/Nurse: incidents registered on this participant
+  const { data: participantIncidents = [] } = useQuery({
+    queryKey: ['participant-incidents-detail', participantId],
+    enabled: open && !!participantId && (isAdmin || isNurse),
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('participant_incident_participants')
+        .select(
+          'participant_incidents(id, title, description, category, severity, created_at, leader:leaders(id, name))'
+        )
+        .eq('participant_id', participantId);
+      if (error) throw error;
+      return ((data || []) as any[])
+        .map((r) => r.participant_incidents)
+        .filter(Boolean)
+        .sort(
+          (a: any, b: any) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ) as Array<{
+        id: string;
+        title: string;
+        description: string | null;
+        category: IncidentCategory;
+        severity: IncidentSeverity;
+        created_at: string;
+        leader?: { id: string; name: string } | null;
+      }>;
+    },
   });
 
   const { data: secretWord } = useQuery({
@@ -371,6 +411,7 @@ export const ParticipantDetailDialog = ({
 
     isEditingNotesRef.current = false;
     setNotesStatus('idle');
+    setShowNurseInfo(false);
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     if (savedIndicatorTimerRef.current) clearTimeout(savedIndicatorTimerRef.current);
   }, [participantId, open]);
@@ -714,13 +755,22 @@ export const ParticipantDetailDialog = ({
                 {/* Info fra Nurse */}
                 {healthInfo?.info && (
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Heart className="h-4 w-4 text-blue-600" />
-                      <span>Info fra Nurse</span>
-                    </div>
-                    <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg text-sm">
-                      {healthInfo.info.replace(/^\[Nurse\]\s*/i, '')}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowNurseInfo((v) => !v)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition"
+                    >
+                      <Heart className="h-3.5 w-3.5" />
+                      Info fra Nurse
+                      <ChevronDown
+                        className={cn('h-3.5 w-3.5 transition-transform', showNurseInfo && 'rotate-180')}
+                      />
+                    </button>
+                    {showNurseInfo && (
+                      <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg text-sm">
+                        {healthInfo.info.replace(/^\[Nurse\]\s*/i, '')}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -827,6 +877,39 @@ export const ParticipantDetailDialog = ({
                   )}
                   {participant.has_arrived ? 'Marker som ikke ankommet' : 'Marker som ankommet'}
                 </Button>
+
+                {/* Admin/Nurse: registered incidents */}
+                {(isAdmin || isNurse) && participantIncidents.length > 0 && (
+                  <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/30 p-3">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Hendelser ({participantIncidents.length})
+                    </p>
+                    {participantIncidents.map((inc) => (
+                      <div key={inc.id} className="rounded-xl bg-background/70 p-2.5 space-y-1.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-medium">{inc.title}</p>
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            {format(new Date(inc.created_at), 'dd.MM.yy HH:mm')}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant="outline" className={`text-[10px] ${CATEGORY_COLORS[inc.category]}`}>
+                            {CATEGORY_LABELS[inc.category]}
+                          </Badge>
+                          <Badge variant="outline" className={`text-[10px] ${SEVERITY_COLORS[inc.severity]}`}>
+                            {SEVERITY_LABELS[inc.severity]}
+                          </Badge>
+                        </div>
+                        {inc.description && (
+                          <p className="text-xs text-muted-foreground whitespace-pre-wrap">{inc.description}</p>
+                        )}
+                        <p className="text-[10px] text-muted-foreground">
+                          Skrevet av <span className="font-medium">{inc.leader?.name ?? 'Ukjent'}</span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Register incident */}
                 <Button variant="outline" className="w-full" disabled={readOnly} onClick={() => setIncidentOpen(true)}>

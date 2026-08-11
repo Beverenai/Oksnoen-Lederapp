@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getParticipantThumb } from '@/lib/participantImage';
 import { hapticSuccess } from '@/lib/capacitorHaptics';
+import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 
 type ReviewStatus = 'pending' | 'approved' | 'dismissed';
 
@@ -58,6 +59,13 @@ export function IncidentInboxTab({ onDataChange }: Props) {
   const [showHandled, setShowHandled] = useState(false);
   const [openCommentFor, setOpenCommentFor] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
+  const [detailParticipantId, setDetailParticipantId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const openParticipant = (id: string) => {
+    setDetailParticipantId(id);
+    setDetailOpen(true);
+  };
 
   const { data: reviews = [], refetch: refetchReviews } = useQuery({
     queryKey: ['nurse-incident-reviews'],
@@ -199,15 +207,23 @@ export function IncidentInboxTab({ onDataChange }: Props) {
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               {i.participants.length > 0 && (
-                <div className="flex -space-x-2 shrink-0">
+                <div className="flex -space-x-2.5 shrink-0">
                   {i.participants.slice(0, 3).map((p) => (
-                    <Avatar key={p.id} className="h-7 w-7 ring-2 ring-background">
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => openParticipant(p.id)}
+                      className="rounded-full transition active:scale-95"
+                      aria-label={`Åpne ${p.name}`}
+                    >
+                    <Avatar className="h-11 w-11 ring-2 ring-background">
                       <AvatarImage src={getParticipantThumb(p as any)} alt={p.name} loading="lazy" decoding="async" />
-                      <AvatarFallback className="text-[10px]">{p.name.charAt(0)}</AvatarFallback>
+                      <AvatarFallback className="text-xs">{p.name.charAt(0)}</AvatarFallback>
                     </Avatar>
+                    </button>
                   ))}
                   {i.participants.length > 3 && (
-                    <div className="h-7 w-7 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[10px] font-medium">
+                    <div className="h-11 w-11 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-xs font-medium">
                       +{i.participants.length - 3}
                     </div>
                   )}
@@ -228,7 +244,12 @@ export function IncidentInboxTab({ onDataChange }: Props) {
               {SEVERITY_LABELS[i.severity]}
             </Badge>
             {i.participants.map((p) => (
-              <Badge key={p.id} variant="secondary" className="text-[10px]">
+              <Badge
+                key={p.id}
+                variant="secondary"
+                className="text-xs px-2 py-0.5 cursor-pointer hover:bg-secondary/80"
+                onClick={() => openParticipant(p.id)}
+              >
                 {p.name}
               </Badge>
             ))}
@@ -341,6 +362,13 @@ export function IncidentInboxTab({ onDataChange }: Props) {
           {handled.map(renderCard)}
         </div>
       )}
+
+      <ParticipantDetailDialog
+        participantId={detailParticipantId}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onParticipantUpdated={onDataChange}
+      />
     </div>
   );
 }

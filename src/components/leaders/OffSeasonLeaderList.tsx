@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { SnusCanRotator, snusProductsFrom } from '@/components/snus/SnusCanRotator';
 import { PeriodStamp, type StampEntry } from '@/components/passport/PeriodStamp';
+import { OffSeasonLeaderSheet } from './OffSeasonLeaderSheet';
 
 type OffSeasonLeader = {
   id: string;
@@ -35,6 +36,7 @@ export function OffSeasonLeaderList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [snusOnly, setSnusOnly] = useState(false);
+  const [selectedLeaderId, setSelectedLeaderId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['offseason-leaders'],
@@ -160,7 +162,11 @@ export function OffSeasonLeaderList() {
           const leaderStamps = (stamps?.get(leader.id) ?? []).slice(0, 3);
 
           return (
-            <Card key={leader.id} className="overflow-hidden rounded-[24px] shadow-sm">
+            <Card
+              key={leader.id}
+              className="cursor-pointer overflow-hidden rounded-[24px] shadow-sm transition-transform active:scale-[0.98]"
+              onClick={() => setSelectedLeaderId(leader.id)}
+            >
               <CardContent className="flex items-center gap-3 p-4">
                 <Avatar className="h-[64px] w-[64px] shrink-0 ring-2 ring-border ring-offset-2 ring-offset-background">
                   {leader.profile_image_url && (
@@ -197,7 +203,7 @@ export function OffSeasonLeaderList() {
                 </div>
 
                 {cans.length > 0 && (
-                  <div className="shrink-0">
+                  <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
                     <SnusCanRotator
                       productIds={
                         leader.snus_product_ids?.length
@@ -218,11 +224,12 @@ export function OffSeasonLeaderList() {
                       size="icon"
                       className="h-11 w-11 shrink-0 rounded-full bg-green-600 text-white shadow-md transition-transform active:scale-90 hover:bg-green-700"
                       aria-label="Kontakt"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <Phone className="h-5 w-5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenuItem
                       disabled={!leader.phone}
                       onClick={() => {
@@ -257,6 +264,11 @@ export function OffSeasonLeaderList() {
           </CardContent>
         </Card>
       )}
+
+      <OffSeasonLeaderSheet
+        leaderId={selectedLeaderId}
+        onOpenChange={(open) => !open && setSelectedLeaderId(null)}
+      />
     </div>
   );
 }
