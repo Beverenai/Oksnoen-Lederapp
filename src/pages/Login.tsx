@@ -17,7 +17,6 @@ import {
   hasBiometricOptOut,
   hasSavedBiometricLogin,
   saveBiometricLogin,
-  setBiometricOptOut,
   type BiometricKind,
 } from '@/lib/capacitorBiometric';
 
@@ -176,7 +175,6 @@ export default function Login() {
   };
 
   const declineBio = () => {
-    setBiometricOptOut(true);
     pendingCredsRef.current = null;
     navigate('/');
   };
