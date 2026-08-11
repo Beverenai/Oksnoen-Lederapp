@@ -15,6 +15,7 @@ import { NotesWhiteboard, type Stroke } from './NotesWhiteboard';
 import { NOTE_TEMPLATES } from './NoteTemplates';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { hapticImpact } from '@/lib/capacitorHaptics';
+import { holdAppUpdate } from '@/lib/registerSW';
 
 function relTime(iso: string | null) {
   if (!iso) return '';
@@ -48,6 +49,13 @@ export function AdminNotesPanel() {
   const pendingRef = useRef<Record<string, { id: string; patch: Record<string, unknown> }>>({});
   const [titleDraft, setTitleDraft] = useState('');
   const chipRowRef = useRef<HTMLDivElement | null>(null);
+
+  // Ingen automatisk app-oppdatering/refresh mens notatene er åpne
+  useEffect(() => {
+    if (!open) return;
+    const release = holdAppUpdate();
+    return release;
+  }, [open]);
 
   // Keep the selected chip visible in the horizontal mobile list
   useEffect(() => {
