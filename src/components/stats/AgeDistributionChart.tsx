@@ -116,14 +116,16 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
       boys: { label: 'Gutter', color: 'hsl(var(--chart-1))' },
       unknown: { label: 'Ukjent', color: 'hsl(var(--chart-3))' },
     };
-    ageData.forEach((item, index) => {
-      config[item.name] = {
-        label: item.name,
-        color: `hsl(var(--chart-${(index % 5) + 1}))`,
-      };
-    });
+    if (!splitGender || groupMode === 'gender') {
+      ageData.forEach((item, index) => {
+        config[item.name] = {
+          label: item.name,
+          color: `hsl(var(--chart-${(index % 5) + 1}))`,
+        };
+      });
+    }
     return config;
-  }, [ageData]);
+  }, [ageData, splitGender, groupMode]);
 
   const chartHeight = Math.max(180, ageData.length * 36);
 
@@ -170,11 +172,11 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
             {showSplit && (
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(var(--chart-4))' }} />
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: GIRL_COLOR }} />
                   Jenter {totalGirls}
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(var(--chart-1))' }} />
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: BOY_COLOR }} />
                   Gutter {totalBoys}
                 </span>
               </div>
@@ -197,23 +199,34 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
               />
               {showSplit ? (
                 <>
-                  <Bar dataKey="girls" stackId="g" fill="hsl(var(--chart-4))" maxBarSize={28}>
+                  <Bar dataKey="girls" stackId="g" fill={GIRL_COLOR} maxBarSize={28} isAnimationActive={false}>
+                    {ageData.map((_, index) => (
+                      <Cell key={`girl-${index}`} fill={GIRL_COLOR} />
+                    ))}
                     <LabelList
                       dataKey="girls"
                       position="center"
-                      className="fill-background text-xs font-medium"
+                      className="text-[11px] font-semibold"
+                      fill="#ffffff"
                       formatter={(v: number) => (v > 0 ? v : '')}
                     />
                   </Bar>
-                  <Bar dataKey="boys" stackId="g" fill="hsl(var(--chart-1))" maxBarSize={28}>
+                  <Bar dataKey="boys" stackId="g" fill={BOY_COLOR} maxBarSize={28} isAnimationActive={false}>
+                    {ageData.map((_, index) => (
+                      <Cell key={`boy-${index}`} fill={BOY_COLOR} />
+                    ))}
                     <LabelList
                       dataKey="boys"
                       position="center"
-                      className="fill-background text-xs font-medium"
+                      className="text-[11px] font-semibold"
+                      fill="#ffffff"
                       formatter={(v: number) => (v > 0 ? v : '')}
                     />
                   </Bar>
-                  <Bar dataKey="unknown" stackId="g" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} maxBarSize={28}>
+                  <Bar dataKey="unknown" stackId="g" fill={UNKNOWN_COLOR} radius={[0, 4, 4, 0]} maxBarSize={28} isAnimationActive={false}>
+                    {ageData.map((_, index) => (
+                      <Cell key={`unk-${index}`} fill={UNKNOWN_COLOR} />
+                    ))}
                     <LabelList
                       dataKey="count"
                       position="right"
