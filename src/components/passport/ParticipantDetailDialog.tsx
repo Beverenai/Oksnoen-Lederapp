@@ -686,6 +686,13 @@ export const ParticipantDetailDialog = ({
             </div>
 
             {/* Gift card / kiosk-ID under the avatar */}
+            {participant.image_aged_url && (
+              <div className="flex justify-center mb-1">
+                <Badge variant={showAged ? 'default' : 'secondary'} className="text-[11px]">
+                  {showAged ? '+40 år – trykk for å bytte tilbake' : 'Trykk bildet: se +40 år'}
+                </Badge>
+              </div>
+            )}
             {participant.gift_card_number && (
               <div className="flex justify-center -mt-1 mb-1">
                 <Badge variant="secondary" className="font-mono text-xs">
