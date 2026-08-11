@@ -290,12 +290,16 @@ export function AdminNotesPanel() {
                     />
                   </div>
                 </div>
-                <ScrollArea className="shrink-0">
-                  <div className="flex gap-2 pb-2">
+                <div
+                  ref={chipRowRef}
+                  className="scrollbar-hide -mx-4 shrink-0 overflow-x-auto overflow-y-hidden px-4"
+                  style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'contain' }}
+                >
+                  <div className="flex w-max gap-2 pb-2">
                     {isLoading && <span className="text-sm text-muted-foreground">Laster…</span>}
                     {filtered.map((n) => <NoteRow key={n.id} n={n} compact />)}
                   </div>
-                </ScrollArea>
+                </div>
               </div>
 
               {active ? (
