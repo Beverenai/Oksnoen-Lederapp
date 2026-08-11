@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sparkles, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BATCH = 5;
+
+type PeriodRow = { id: string; name: string; is_active: boolean | null };
 
 export function AgedPhotosGeneratorCard() {
   const [running, setRunning] = useState(false);
@@ -14,8 +18,37 @@ export function AgedPhotosGeneratorCard() {
   const [remaining, setRemaining] = useState<number | null>(null);
   const [failed, setFailed] = useState(0);
   const [done, setDone] = useState(false);
+  const [periods, setPeriods] = useState<PeriodRow[]>([]);
+  const [periodId, setPeriodId] = useState<string>('');
+  const [count, setCount] = useState<{ total: number; missing: number } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('periods')
+        .select('id, name, is_active')
+        .order('name', { ascending: true });
+      const rows = (data || []) as PeriodRow[];
+      setPeriods(rows);
+      setPeriodId((prev) => prev || rows.find((p) => p.is_active)?.id || rows[0]?.id || '');
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!periodId) { setCount(null); return; }
+    (async () => {
+      const [totalRes, missingRes] = await Promise.all([
+        supabase.from('participants').select('id', { count: 'exact', head: true })
+          .eq('period_id', periodId).not('image_url', 'is', null),
+        supabase.from('participants').select('id', { count: 'exact', head: true })
+          .eq('period_id', periodId).not('image_url', 'is', null).is('image_aged_url', null),
+      ]);
+      setCount({ total: totalRes.count ?? 0, missing: missingRes.count ?? 0 });
+    })();
+  }, [periodId, done]);
 
   const run = async (force = false) => {
+    if (!periodId) { toast.error('Velg en periode først'); return; }
     setRunning(true);
     setDone(false);
     setProcessed(0);
@@ -28,7 +61,7 @@ export function AgedPhotosGeneratorCard() {
       let offset = 0;
       while (safety-- > 0) {
         const { data, error } = await supabase.functions.invoke('generate-participant-aged', {
-          body: { batch_size: BATCH, force, offset: force ? offset : 0 },
+          body: { batch_size: BATCH, force, offset: force ? offset : 0, period_id: periodId },
         });
         if (error) throw error;
         if (data?.success === false) throw new Error(data?.error || 'Ukjent feil');
