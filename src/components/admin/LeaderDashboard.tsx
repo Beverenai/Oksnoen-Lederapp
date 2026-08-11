@@ -65,23 +65,6 @@ export function LeaderDashboard({ leaders, homeConfig, onLeaderUpdated }: Leader
     refetchContent();
   };
 
-  const handleResetAllUnread = async () => {
-    setIsResetting(true);
-    try {
-      const { error } = await supabase
-        .from('leader_content')
-        .update({ has_read: false })
-        .eq('has_read', true);
-      if (error) throw error;
-      toast.success('Alle ledere er markert som ulest');
-      refetchContent();
-    } catch (err: any) {
-      toast.error('Kunne ikke nullstille', { description: err?.message });
-    } finally {
-      setIsResetting(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
