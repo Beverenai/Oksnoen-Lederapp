@@ -85,6 +85,8 @@ const Kiosk = () => {
   const [editTarget, setEditTarget] = useState<KioskSale | null>(null);
   const [editLines, setEditLines] = useState<CartLine[]>([]);
   const [editSearch, setEditSearch] = useState('');
+  /** 0 = closed, 1 = first warning, 2 = final confirmation for negative balance. */
+  const [overdraftStep, setOverdraftStep] = useState<0 | 1 | 2>(0);
   const submittingRef = useRef(false);
   const clientRefRef = useRef<string | null>(null);
 
