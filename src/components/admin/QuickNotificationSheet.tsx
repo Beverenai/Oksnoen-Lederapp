@@ -74,17 +74,6 @@ const quickNotifications: QuickNotification[] = [
     color: 'bg-orange-500',
   },
   {
-    id: 'remind-unread',
-    icon: Bell,
-    title: 'Påminnelse: Les oppdatering',
-    description: 'Til ledere med ulest info (rød Hajolo)',
-    notificationTitle: '👀 Du har ulest info i appen',
-    notificationMessage: 'Husk å sjekke hva du skal gjøre denne økten. Trykk Hajolo når du har lest!',
-    target: 'unread_with_content',
-    url: '/',
-    color: 'bg-red-500',
-  },
-  {
     id: 'session-changed',
     icon: RefreshCw,
     title: 'Økten er endret',
