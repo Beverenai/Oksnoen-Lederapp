@@ -42,18 +42,23 @@ Deno.serve(async (req) => {
     let batchSize = 5;
     let force = false;
     let offset = 0;
+    let periodId: string | null = null;
     try {
       const body = await req.json();
       if (body?.batch_size) batchSize = Math.min(Math.max(1, body.batch_size), 10);
       if (body?.force) force = true;
       if (typeof body?.offset === 'number') offset = Math.max(0, body.offset);
+      if (typeof body?.period_id === 'string' && body.period_id) periodId = body.period_id;
     } catch { /* defaults */ }
+
+    if (!periodId) throw new Error('Mangler periode');
 
     let query = supabase
       .from('participants')
       .select('id, name, image_url, image_aged_url')
       .order('name', { ascending: true })
       .not('image_url', 'is', null)
+      .eq('period_id', periodId)
       .range(offset, offset + batchSize - 1);
 
     if (!force) query = query.is('image_aged_url', null);
@@ -130,6 +135,7 @@ Deno.serve(async (req) => {
       .from('participants')
       .select('id', { count: 'exact', head: true })
       .not('image_url', 'is', null)
+      .eq('period_id', periodId)
       .is('image_aged_url', null);
 
     return new Response(JSON.stringify({ success: true, ...results, remaining: remaining ?? 0 }), {
