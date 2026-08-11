@@ -47,6 +47,14 @@ export function AdminNotesPanel() {
   const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const pendingRef = useRef<Record<string, { id: string; patch: Record<string, unknown> }>>({});
   const [titleDraft, setTitleDraft] = useState('');
+  const chipRowRef = useRef<HTMLDivElement | null>(null);
+
+  // Keep the selected chip visible in the horizontal mobile list
+  useEffect(() => {
+    if (!activeId) return;
+    const el = chipRowRef.current?.querySelector<HTMLElement>(`[data-note-chip="${activeId}"]`);
+    el?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  }, [activeId, notes.length]);
 
   const active = useMemo(() => notes.find((n) => n.id === activeId) ?? null, [notes, activeId]);
 
