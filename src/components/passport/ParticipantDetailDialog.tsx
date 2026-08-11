@@ -726,9 +726,20 @@ export const ParticipantDetailDialog = ({
                   ) : null;
                 })()}
                 <div
-                  className="flex justify-center"
+                  className="flex flex-wrap justify-center gap-2 px-4"
                   style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
                 >
+                  {participant.image_aged_url && (
+                    <Button
+                      variant={showAged ? 'default' : 'outline'}
+                      size="lg"
+                      onClick={() => setShowAged((v) => !v)}
+                      className="rounded-full px-6"
+                    >
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      {showAged ? 'Vis i dag' : 'Vis +40 år'}
+                    </Button>
+                  )}
                   <Button
                     variant="secondary"
                     size="lg"
