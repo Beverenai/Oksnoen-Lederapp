@@ -104,6 +104,7 @@ function LeadersFull() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showTeamFilters, setShowTeamFilters] = useState(false);
   const [snusOnly, setSnusOnly] = useState(false);
+  const [showAged, setShowAged] = useState(false);
 
   // Fetch leaders with React Query for caching
   const { data: leadersData, isLoading } = useQuery({
@@ -447,6 +448,20 @@ function LeadersFull() {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Gammel/Ung toggle for alle */}
+              <button
+                onClick={() => setShowAged((v) => !v)}
+                className={cn(
+                  'rounded-full border px-3 py-1.5 text-sm font-medium transition-all',
+                  showAged
+                    ? 'border-foreground bg-foreground text-background'
+                    : 'border-border bg-muted text-muted-foreground hover:bg-muted/80'
+                )}
+                aria-pressed={showAged}
+              >
+                {showAged ? 'Gammel' : 'Ung'}
+              </button>
+
               {/* Search button */}
               <Button
                 variant="ghost"
@@ -579,9 +594,13 @@ function LeadersFull() {
                       getAvatarBorderClass(leader)
                     )}
                   >
-                    {leader.profile_image_url && (
+                    {(((showAged && (leader as any).profile_image_aged_url) || leader.profile_image_url)) && (
                       <AvatarImage
-                        src={leader.profile_image_url}
+                        src={
+                          showAged && (leader as any).profile_image_aged_url
+                            ? (leader as any).profile_image_aged_url
+                            : leader.profile_image_url!
+                        }
                         alt={leader.name}
                         loading="lazy"
                         decoding="async"
