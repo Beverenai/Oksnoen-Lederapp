@@ -15,7 +15,7 @@ const getPlugin = async () => {
   if (!isNative()) return null;
   if (plugin) return plugin;
   try {
-    const mod = await import('capacitor-native-biometric');
+    const mod = await import('@capgo/capacitor-native-biometric');
     plugin = mod.NativeBiometric;
     return plugin;
   } catch (e) {
