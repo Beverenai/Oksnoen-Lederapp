@@ -1,21 +1,25 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Phone, Loader2, PauseCircle, KeyRound, ArrowLeft } from 'lucide-react';
+import { Phone, Loader2, PauseCircle } from 'lucide-react';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
-import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { hapticError } from '@/lib/capacitorHaptics';
+import { PinPad } from '@/components/auth/PinPad';
+
+const PIN_LENGTH = 4;
 
 export default function Login() {
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [inactiveState, setInactiveState] = useState(false);
-  const [pinStep, setPinStep] = useState<'none' | 'enter' | 'create'>('none');
+  const [pinStep, setPinStep] = useState<'none' | 'enter' | 'create' | 'confirm'>('none');
   const [pin, setPin] = useState('');
-  const [pinConfirm, setPinConfirm] = useState('');
+  const [firstPin, setFirstPin] = useState('');
+  const [shake, setShake] = useState(false);
   const [adminName, setAdminName] = useState<string | null>(null);
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { login, deactivatedMessage } = useAuth();
@@ -24,6 +28,12 @@ export default function Login() {
   // Show deactivated message if user was auto-logged out
   const showDeactivated = inactiveState || !!deactivatedMessage;
 
+  const triggerShake = () => {
+    hapticError();
+    setShake(true);
+    window.setTimeout(() => setShake(false), 450);
+  };
+
   const handleResult = (result: Awaited<ReturnType<typeof login>>) => {
     if (result.success) {
       navigate('/');
@@ -31,20 +41,26 @@ export default function Login() {
     }
     if (result.error === 'PIN_REQUIRED') {
       setAdminName(result.name ?? null);
+      setPin('');
       setPinStep('enter');
       return;
     }
     if (result.error === 'PIN_SETUP_REQUIRED') {
       setAdminName(result.name ?? null);
+      setPin('');
+      setFirstPin('');
       setPinStep('create');
       return;
     }
     if (result.error === 'WRONG_PIN') {
       setPin('');
-      showError('Feil PIN-kode', 'Prøv igjen, eller kontakt superadmin for å nullstille.');
+      triggerShake();
+      showError('Feil PIN-kode', 'Prøv igjen, eller kontakt admin for å nullstille.');
       return;
     }
     if (result.error === 'INVALID_PIN_FORMAT') {
+      setPin('');
+      triggerShake();
       showError('Ugyldig PIN', 'PIN-koden må være 4–6 siffer.');
       return;
     }
@@ -70,28 +86,40 @@ export default function Login() {
     handleResult(result);
   };
 
-  const handlePinSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!/^\d{4,6}$/.test(pin)) {
-      showError('PIN-koden må være 4–6 siffer');
-      return;
-    }
-    if (pinStep === 'create' && pin !== pinConfirm) {
-      showError('PIN-kodene er ikke like');
-      return;
-    }
-
+  const submitPin = useCallback(async (value: string) => {
     setIsLoading(true);
-    const result = await login(phone, pin);
+    const result = await login(phone, value);
     setIsLoading(false);
     handleResult(result);
-  };
+  }, [phone, login]);
+
+  // Auto-advance when the PIN is complete (iOS-style)
+  useEffect(() => {
+    if (pin.length !== PIN_LENGTH || isLoading) return;
+    if (pinStep === 'enter') {
+      void submitPin(pin);
+    } else if (pinStep === 'create') {
+      setFirstPin(pin);
+      setPin('');
+      setPinStep('confirm');
+    } else if (pinStep === 'confirm') {
+      if (pin === firstPin) {
+        void submitPin(pin);
+      } else {
+        setPin('');
+        setFirstPin('');
+        setPinStep('create');
+        triggerShake();
+        showError('PIN-kodene er ikke like', 'Prøv på nytt.');
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pin, pinStep, isLoading, firstPin]);
 
   const resetPinStep = () => {
     setPinStep('none');
     setPin('');
-    setPinConfirm('');
+    setFirstPin('');
     setAdminName(null);
   };
 
@@ -138,69 +166,33 @@ export default function Login() {
             </CardContent>
           </Card>
         ) : pinStep !== 'none' ? (
-          <Card className="border-0 shadow-xl">
-            <CardHeader className="space-y-1 pb-4">
-              <CardTitle className="text-xl font-heading flex items-center gap-2">
-                <KeyRound className="w-5 h-5" />
-                {pinStep === 'create' ? 'Lag din PIN-kode' : 'Admin PIN-kode'}
-              </CardTitle>
-              <CardDescription>
-                {pinStep === 'create'
-                  ? `${adminName ? adminName.split(' ')[0] + ', d' : 'D'}u er admin — velg en PIN-kode på 4–6 siffer. Den brukes hver gang du logger inn.`
-                  : `${adminName ? 'Hei ' + adminName.split(' ')[0] + '! S' : 'S'}kriv inn PIN-koden din for å logge inn.`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handlePinSubmit} className="space-y-4">
-                <Input
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  placeholder="PIN-kode"
-                  maxLength={6}
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                  className="h-12 text-lg tracking-[0.4em] text-center"
-                  autoFocus
-                />
-                {pinStep === 'create' && (
-                  <Input
-                    type="password"
-                    inputMode="numeric"
-                    placeholder="Bekreft PIN-kode"
-                    maxLength={6}
-                    value={pinConfirm}
-                    onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, ''))}
-                    className="h-12 text-lg tracking-[0.4em] text-center"
-                  />
-                )}
-                <Button
-                  type="submit"
-                  className="w-full h-12 text-lg font-medium"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      {pinStep === 'create' ? 'Lagrer...' : 'Logger inn...'}
-                    </>
-                  ) : (
-                    pinStep === 'create' ? 'Lagre og logg inn' : 'Logg inn'
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full h-11"
-                  onClick={resetPinStep}
-                  disabled={isLoading}
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Tilbake
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+          <div className="py-2">
+            <PinPad
+              title={
+                pinStep === 'enter'
+                  ? adminName
+                    ? `Hei ${adminName.split(' ')[0]}!`
+                    : 'Skriv inn PIN-kode'
+                  : pinStep === 'create'
+                    ? 'Lag din PIN-kode'
+                    : 'Bekreft PIN-koden'
+              }
+              subtitle={
+                pinStep === 'enter'
+                  ? 'Skriv inn PIN-koden din'
+                  : pinStep === 'create'
+                    ? `Velg en firesifret PIN-kode. Du bruker den hver gang du logger inn.`
+                    : 'Skriv inn de samme fire sifrene på nytt'
+              }
+              value={pin}
+              onChange={setPin}
+              length={PIN_LENGTH}
+              isLoading={isLoading}
+              shake={shake}
+              onCancel={resetPinStep}
+              cancelLabel="Tilbake"
+            />
+          </div>
         ) : (
           <Card className="border-0 shadow-xl">
             <CardHeader className="space-y-1 pb-4">
