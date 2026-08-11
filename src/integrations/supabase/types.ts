@@ -1505,6 +1505,7 @@ export type Database = {
           ministerpost: string | null
           name: string
           phone: string
+          profile_image_aged_url: string | null
           profile_image_url: string | null
           snus_custom_label: string | null
           snus_product_id: string | null
@@ -1538,6 +1539,7 @@ export type Database = {
           ministerpost?: string | null
           name: string
           phone: string
+          profile_image_aged_url?: string | null
           profile_image_url?: string | null
           snus_custom_label?: string | null
           snus_product_id?: string | null
@@ -1571,6 +1573,7 @@ export type Database = {
           ministerpost?: string | null
           name?: string
           phone?: string
+          profile_image_aged_url?: string | null
           profile_image_url?: string | null
           snus_custom_label?: string | null
           snus_product_id?: string | null
