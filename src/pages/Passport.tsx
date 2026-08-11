@@ -161,6 +161,7 @@ export default function Passport() {
   const secretWordsActive = useSecretWordsActive();
   const [expandedCabins, setExpandedCabins] = useState<Set<string>>(new Set());
   const [photoWall, setPhotoWall] = useState(false);
+  const [showAged, setShowAged] = useState(false);
   // (bulk activity registration moved to dedicated route /passport/activity)
 
   // React Query for cached data fetching
@@ -545,6 +546,18 @@ export default function Passport() {
               <LayoutGrid className="h-3.5 w-3.5" />
               {photoWall ? 'Vanlig liste' : 'Bildevisning'}
             </button>
+            <button
+              type="button"
+              onClick={() => setShowAged((v) => !v)}
+              aria-pressed={showAged}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-medium transition-transform active:scale-95 ${
+                showAged
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'ios-chip text-foreground'
+              }`}
+            >
+              {showAged ? 'Gammel' : 'Ung'}
+            </button>
               {!seasonView && secretWordsActive && (
                 <button
                   type="button"
@@ -757,6 +770,7 @@ export default function Passport() {
       {photoWall ? (
         <PhotoWallView
           cabinGroups={cabinGroups}
+          showAged={showAged}
           onParticipantClick={handleParticipantClick}
           onPrefetchParticipant={prefetchParticipant}
         />
@@ -772,6 +786,7 @@ export default function Passport() {
             onPrefetchParticipant={prefetchParticipant}
             incidentCounts={incidentCounts}
             wentHomeIds={wentHomeIds}
+            showAged={showAged}
           />
         </div>
       )}
