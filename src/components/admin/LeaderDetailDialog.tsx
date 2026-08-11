@@ -26,7 +26,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Shield, Users, Heart, Camera, Bell, Check, ChefHat } from 'lucide-react';
+import { Loader2, Shield, Users, Heart, Camera, Bell, Check, ChefHat, KeyRound } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { compressImage } from '@/lib/imageUtils';
 import { hapticSuccess } from '@/lib/capacitorHaptics';
@@ -51,8 +51,9 @@ export function LeaderDetailDialog({
   currentRole = 'leader'
 }: LeaderDetailDialogProps) {
   const { showSuccess, showError, showInfo } = useStatusPopup();
-  const { leader: currentLeader } = useAuth();
+  const { leader: currentLeader, isSuperAdmin } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
+  const [isResettingPin, setIsResettingPin] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   
   // Change notification state
@@ -243,6 +244,24 @@ export function LeaderDetailDialog({
   }, [role, leaderId]);
 
   const getFirstName = (fullName: string) => fullName.split(' ')[0];
+
+  const handleResetPin = async () => {
+    if (!leaderId) return;
+    setIsResettingPin(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-pin-reset', {
+        body: { leader_id: leaderId },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+      hapticSuccess();
+      showSuccess('PIN-kode nullstilt', 'Lederen lager en ny PIN ved neste innlogging.');
+    } catch (err) {
+      console.error('PIN reset error:', err);
+      showError('Kunne ikke nullstille PIN-koden');
+    } finally {
+      setIsResettingPin(false);
+    }
+  };
 
   // Get changes for notification
   const getChanges = (): string[] => {
@@ -503,6 +522,27 @@ export function LeaderDetailDialog({
                   </div>
                 </RadioGroup>
               </div>
+
+              {isSuperAdmin && (role === 'admin' || role === 'superadmin') && (
+                <div className="space-y-2 rounded-lg border border-border p-3">
+                  <Label className="text-sm font-semibold flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-muted-foreground" />
+                    Admin PIN-kode
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Nullstill hvis {getFirstName(name || leader.name)} har glemt PIN-koden. Neste innlogging lager en ny.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetPin}
+                    disabled={isResettingPin}
+                  >
+                    {isResettingPin && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Nullstill PIN-kode
+                  </Button>
+                </div>
+              )}
 
               <Separator />
 
