@@ -5,10 +5,21 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Phone, Loader2, PauseCircle } from 'lucide-react';
+import { Phone, Loader2, PauseCircle, ScanFace, Fingerprint } from 'lucide-react';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import { hapticError } from '@/lib/capacitorHaptics';
 import { PinPad } from '@/components/auth/PinPad';
+import {
+  biometricLabel,
+  biometricUnlock,
+  clearBiometricLogin,
+  getBiometricInfo,
+  hasBiometricOptOut,
+  hasSavedBiometricLogin,
+  saveBiometricLogin,
+  setBiometricOptOut,
+  type BiometricKind,
+} from '@/lib/capacitorBiometric';
 
 const PIN_LENGTH = 4;
 
@@ -21,6 +32,15 @@ export default function Login() {
   const [firstPin, setFirstPin] = useState('');
   const [shake, setShake] = useState(false);
   const [adminName, setAdminName] = useState<string | null>(null);
+  const [bio, setBio] = useState<{ available: boolean; kind: BiometricKind; saved: boolean }>({
+    available: false,
+    kind: 'other',
+    saved: false,
+  });
+  const [offerBio, setOfferBio] = useState(false);
+  const pendingCredsRef = useRef<{ phone: string; pin: string } | null>(null);
+  const usedBiometricRef = useRef(false);
+  const autoTriedRef = useRef(false);
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { login, deactivatedMessage } = useAuth();
   const navigate = useNavigate();
@@ -36,6 +56,17 @@ export default function Login() {
 
   const handleResult = (result: Awaited<ReturnType<typeof login>>) => {
     if (result.success) {
+      // Offer to enable Face ID for next time
+      if (
+        bio.available &&
+        !bio.saved &&
+        !hasBiometricOptOut() &&
+        pendingCredsRef.current &&
+        !usedBiometricRef.current
+      ) {
+        setOfferBio(true);
+        return;
+      }
       navigate('/');
       return;
     }
@@ -54,6 +85,12 @@ export default function Login() {
     }
     if (result.error === 'WRONG_PIN') {
       setPin('');
+      if (usedBiometricRef.current) {
+        // Stored PIN is stale (e.g. admin reset it) — forget it and ask manually
+        usedBiometricRef.current = false;
+        void clearBiometricLogin();
+        setBio((b) => ({ ...b, saved: false }));
+      }
       triggerShake();
       showError('Feil PIN-kode', 'Prøv igjen, eller kontakt admin for å nullstille.');
       return;
@@ -88,10 +125,61 @@ export default function Login() {
 
   const submitPin = useCallback(async (value: string) => {
     setIsLoading(true);
+    pendingCredsRef.current = { phone, pin: value };
     const result = await login(phone, value);
     setIsLoading(false);
     handleResult(result);
   }, [phone, login]);
+
+  // Detect Face ID / Touch ID availability and stored credentials
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const info = await getBiometricInfo();
+      if (!info.available || cancelled) return;
+      const saved = await hasSavedBiometricLogin();
+      if (cancelled) return;
+      setBio({ available: true, kind: info.kind, saved });
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const startBiometricLogin = useCallback(async () => {
+    const creds = await biometricUnlock();
+    if (!creds) return;
+    usedBiometricRef.current = true;
+    setPhone(creds.phone);
+    setIsLoading(true);
+    const result = await login(creds.phone, creds.pin);
+    setIsLoading(false);
+    if (result.success) {
+      navigate('/');
+      return;
+    }
+    handleResult(result);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [login, navigate]);
+
+  // Auto-prompt Face ID once when credentials are stored
+  useEffect(() => {
+    if (!bio.saved || autoTriedRef.current || showDeactivated) return;
+    autoTriedRef.current = true;
+    void startBiometricLogin();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bio.saved]);
+
+  const acceptBio = async () => {
+    const creds = pendingCredsRef.current;
+    if (creds) await saveBiometricLogin(creds.phone, creds.pin);
+    pendingCredsRef.current = null;
+    navigate('/');
+  };
+
+  const declineBio = () => {
+    setBiometricOptOut(true);
+    pendingCredsRef.current = null;
+    navigate('/');
+  };
 
   // Auto-advance when the PIN is complete (iOS-style)
   useEffect(() => {
@@ -165,6 +253,31 @@ export default function Login() {
               </Button>
             </CardContent>
           </Card>
+        ) : offerBio ? (
+          <Card className="border-0 shadow-xl">
+            <CardContent className="pt-8 pb-6 text-center space-y-4">
+              {bio.kind === 'touchId' ? (
+                <Fingerprint className="w-16 h-16 mx-auto text-primary" />
+              ) : (
+                <ScanFace className="w-16 h-16 mx-auto text-primary" />
+              )}
+              <h2 className="text-xl font-heading font-semibold text-foreground">
+                Bruk {biometricLabel(bio.kind)} neste gang?
+              </h2>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                PIN-koden din lagres kryptert på denne telefonen, slik at du kan logge inn med{' '}
+                {biometricLabel(bio.kind)} i stedet for å skrive den hver gang.
+              </p>
+              <div className="space-y-2 pt-1">
+                <Button onClick={acceptBio} className="w-full h-12 text-lg font-medium">
+                  Slå på {biometricLabel(bio.kind)}
+                </Button>
+                <Button onClick={declineBio} variant="ghost" className="w-full h-11">
+                  Ikke nå
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : pinStep !== 'none' ? (
           <div className="py-2">
             <PinPad
@@ -229,6 +342,22 @@ export default function Login() {
                   )}
                 </Button>
               </form>
+              {bio.available && bio.saved && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={startBiometricLogin}
+                  disabled={isLoading}
+                  className="w-full h-12 text-base font-medium mt-3"
+                >
+                  {bio.kind === 'touchId' ? (
+                    <Fingerprint className="w-5 h-5 mr-2" />
+                  ) : (
+                    <ScanFace className="w-5 h-5 mr-2" />
+                  )}
+                  Logg inn med {biometricLabel(bio.kind)}
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
