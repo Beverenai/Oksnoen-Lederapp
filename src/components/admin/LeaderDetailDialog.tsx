@@ -523,6 +523,27 @@ export function LeaderDetailDialog({
                 </RadioGroup>
               </div>
 
+              {isSuperAdmin && (role === 'admin' || role === 'superadmin') && (
+                <div className="space-y-2 rounded-lg border border-border p-3">
+                  <Label className="text-sm font-semibold flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-muted-foreground" />
+                    Admin PIN-kode
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Nullstill hvis {getFirstName(name || leader.name)} har glemt PIN-koden. Neste innlogging lager en ny.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetPin}
+                    disabled={isResettingPin}
+                  >
+                    {isResettingPin && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Nullstill PIN-kode
+                  </Button>
+                </div>
+              )}
+
               <Separator />
 
               {/* Certifications */}
