@@ -19,6 +19,10 @@ interface AgeDistributionChartProps {
 
 type GroupMode = 'age' | 'birthYear' | 'gender';
 
+const GIRL_COLOR = 'hsl(340 75% 62%)';
+const BOY_COLOR = 'hsl(210 80% 55%)';
+const UNKNOWN_COLOR = 'hsl(var(--muted-foreground))';
+
 function resolveGenders(participants: Participant[]) {
   const guesses = participants.map((p) => {
     const raw = guessGender(p.first_name || p.name || null);
