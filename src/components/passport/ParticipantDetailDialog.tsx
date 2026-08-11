@@ -662,6 +662,17 @@ export const ParticipantDetailDialog = ({
                     </div>
                   )}
                 </button>
+                {participant.image_url && (
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute bottom-0 left-0 rounded-full h-8 w-8 shadow-lg"
+                    onClick={() => setLightboxOpen(true)}
+                    aria-label="Vis bildet større"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   variant="secondary"
                   size="icon"
@@ -689,7 +700,7 @@ export const ParticipantDetailDialog = ({
             {participant.image_aged_url && (
               <div className="flex justify-center mb-1">
                 <Badge variant={showAged ? 'default' : 'secondary'} className="text-[11px]">
-                  {showAged ? '+40 år – trykk for å bytte tilbake' : 'Trykk bildet: se +40 år'}
+                  {showAged ? '+40 år – trykk for å bytte tilbake' : 'Trykk bildet: se +40 år · lupe for større'}
                 </Badge>
               </div>
             )}
@@ -704,13 +715,16 @@ export const ParticipantDetailDialog = ({
             {/* Lightbox: full image, no crop */}
             <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
               <DialogContent className="max-w-[95vw] sm:max-w-2xl p-0 bg-black/95 border-none">
-                {participant.image_url && (
-                  <img
-                    src={participant.image_url}
-                    alt={participant.name}
-                    className="w-full max-h-[75vh] object-contain"
-                  />
-                )}
+                {(() => {
+                  const src = showAged && participant.image_aged_url ? participant.image_aged_url : participant.image_url;
+                  return src ? (
+                    <img
+                      src={src}
+                      alt={participant.name}
+                      className="w-full max-h-[75vh] object-contain"
+                    />
+                  ) : null;
+                })()}
                 <div
                   className="flex justify-center"
                   style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
