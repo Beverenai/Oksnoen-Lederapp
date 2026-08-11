@@ -22,7 +22,7 @@ interface AuthContextType {
   deactivatedMessage: string | null;
   /** Leader is not active this period — only off-season features available. */
   isLimitedAccess: boolean;
-  login: (phone: string) => Promise<{ success: boolean; error?: string; message?: string }>;
+  login: (phone: string, pin?: string) => Promise<{ success: boolean; error?: string; message?: string; name?: string }>;
   logout: () => void;
   refreshLeader: () => Promise<void>;
   retryAuth: () => void;
@@ -268,13 +268,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const login = async (phone: string): Promise<{ success: boolean; error?: string; message?: string }> => {
+  const login = async (phone: string, pin?: string): Promise<{ success: boolean; error?: string; message?: string; name?: string }> => {
     loginInProgressRef.current = true;
     setDeactivatedMessage(null);
     setAuthError(null);
     try {
       const { data, error } = await supabase.functions.invoke('phone-login', {
-        body: { phone }
+        body: { phone, pin }
       });
 
       if (error) {
@@ -283,7 +283,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!data.success) {
-        return { success: false, error: data.error || 'Innlogging feilet.', message: data.message };
+        return { success: false, error: data.error || 'Innlogging feilet.', message: data.message, name: data.name };
       }
 
       if (!data.session?.access_token || !data.session?.refresh_token) {
