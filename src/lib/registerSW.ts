@@ -6,8 +6,35 @@
 import { isCapacitor } from './capacitor';
 
 let registration: ServiceWorkerRegistration | null = null;
+let updateGuards = 0;
+let updatePending = false;
+
+/**
+ * Block automatic reloads while the user is in the middle of something
+ * (writing a note, drawing on a whiteboard, ...). Returns a release fn.
+ */
+export const holdAppUpdate = (): (() => void) => {
+  updateGuards++;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    updateGuards = Math.max(0, updateGuards - 1);
+    if (updateGuards === 0 && updatePending) {
+      // Pick up the new version the next time it is safe
+      applyPendingUpdate();
+    }
+  };
+};
+
+export const isAppUpdateHeld = (): boolean => updateGuards > 0;
 
 const applyPendingUpdate = (): void => {
+  if (updateGuards > 0) {
+    updatePending = true;
+    console.log('[SW] Update held back – user is editing');
+    return;
+  }
   if (registration?.waiting) {
     console.log('[SW] Applying waiting update immediately');
     registration.waiting.postMessage({ type: 'SKIP_WAITING' });
@@ -84,6 +111,11 @@ export const registerServiceWorker = async (): Promise<void> => {
 
     // Handle controller change (when new SW takes over)
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (updateGuards > 0) {
+        updatePending = true;
+        console.log('[SW] Controller changed while editing – reload deferred');
+        return;
+      }
       console.log('[SW] Controller changed, reloading page');
       window.location.reload();
     });
