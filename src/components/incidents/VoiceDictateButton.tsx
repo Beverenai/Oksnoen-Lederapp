@@ -2,8 +2,7 @@ import { Button } from '@/components/ui/button';
 import { CloudOff, Loader2, Mic, RefreshCw, Square, X } from 'lucide-react';
 import { useEffect } from 'react';
 import { useVoiceTranscription } from '@/hooks/useVoiceTranscription';
-import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { statusPopup } from '@/hooks/useStatusPopup';
+import { statusPopup, useStatusPopup } from '@/hooks/useStatusPopup';
 
 interface VoiceDictateButtonProps {
   onTranscript: (text: string) => void;
