@@ -84,6 +84,7 @@ export function LeaderDetailSheet({
 }: LeaderDetailSheetProps) {
   const [linkedCabins, setLinkedCabins] = useState<CabinInfo[]>([]);
   const [imageOpen, setImageOpen] = useState(false);
+  const [showAged, setShowAged] = useState(false);
   
   // Load linked cabins when leader changes
   useEffect(() => {
