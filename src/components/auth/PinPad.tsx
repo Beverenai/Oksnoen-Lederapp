@@ -1,5 +1,5 @@
 import { Delete, Loader2 } from 'lucide-react';
-import { hapticLight } from '@/lib/capacitorHaptics';
+import { hapticSelection } from '@/lib/capacitorHaptics';
 import { cn } from '@/lib/utils';
 
 interface PinPadProps {
@@ -29,13 +29,13 @@ export function PinPad({
 }: PinPadProps) {
   const press = (digit: string) => {
     if (isLoading || value.length >= length) return;
-    void hapticLight?.();
+    void hapticSelection();
     onChange(value + digit);
   };
 
   const back = () => {
     if (isLoading || !value.length) return;
-    void hapticLight?.();
+    void hapticSelection();
     onChange(value.slice(0, -1));
   };
 
