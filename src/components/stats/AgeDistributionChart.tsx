@@ -19,38 +19,42 @@ interface AgeDistributionChartProps {
 
 type GroupMode = 'age' | 'birthYear' | 'gender';
 
+function resolveGenders(participants: Participant[]) {
+  const guesses = participants.map((p) => {
+    const raw = guessGender(p.first_name || p.name || null);
+    return { p, g: (raw === 'male' || raw === 'female' ? raw : null) as 'male' | 'female' | null };
+  });
+  const cabinGender = new Map<string, 'male' | 'female'>();
+  const tally = new Map<string, { m: number; f: number }>();
+  guesses.forEach(({ p, g }) => {
+    if (!p.cabin_id || !g) return;
+    const t = tally.get(p.cabin_id) || { m: 0, f: 0 };
+    if (g === 'male') t.m++; else t.f++;
+    tally.set(p.cabin_id, t);
+  });
+  tally.forEach((t, cabinId) => {
+    if (t.m === 0 && t.f === 0) return;
+    cabinGender.set(cabinId, t.f >= t.m ? 'female' : 'male');
+  });
+  return guesses.map(({ p, g }) => {
+    let final = g;
+    if (!final && p.cabin_id && cabinGender.has(p.cabin_id)) {
+      final = cabinGender.get(p.cabin_id)!;
+    }
+    return { p, gender: final };
+  });
+}
+
 export function AgeDistributionChart({ participants }: AgeDistributionChartProps) {
   const [groupMode, setGroupMode] = useState<GroupMode>('age');
+  const [splitGender, setSplitGender] = useState(false);
 
   const ageData = useMemo(() => {
     if (groupMode === 'gender') {
-      // Step 1: initial guess per participant
-      const guesses = participants.map((p) => {
-        const raw = guessGender(p.first_name || p.name || null);
-        return { p, g: (raw === 'male' || raw === 'female' ? raw : null) as 'male' | 'female' | null };
-      });
-      // Step 2: infer room gender (rooms are single-sex). Use majority of known
-      // guesses in each cabin to fill in unknowns.
-      const cabinGender = new Map<string, 'male' | 'female'>();
-      const tally = new Map<string, { m: number; f: number }>();
-      guesses.forEach(({ p, g }) => {
-        if (!p.cabin_id || !g) return;
-        const t = tally.get(p.cabin_id) || { m: 0, f: 0 };
-        if (g === 'male') t.m++; else t.f++;
-        tally.set(p.cabin_id, t);
-      });
-      tally.forEach((t, cabinId) => {
-        if (t.m === 0 && t.f === 0) return;
-        cabinGender.set(cabinId, t.f >= t.m ? 'female' : 'male');
-      });
       let girls = 0, boys = 0, unknown = 0;
-      guesses.forEach(({ p, g }) => {
-        let final = g;
-        if (!final && p.cabin_id && cabinGender.has(p.cabin_id)) {
-          final = cabinGender.get(p.cabin_id)!;
-        }
-        if (final === 'female') girls++;
-        else if (final === 'male') boys++;
+      resolveGenders(participants).forEach(({ gender }) => {
+        if (gender === 'female') girls++;
+        else if (gender === 'male') boys++;
         else unknown++;
       });
       const out = [
@@ -61,9 +65,10 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
       return out.map((o) => ({ ...o })) as { name: string; count: number; fill: string }[];
     }
     const today = new Date();
-    const counts: Record<number, number> = {};
+    const counts: Record<number, { count: number; girls: number; boys: number; unknown: number }> = {};
+    const resolved = resolveGenders(participants);
 
-    participants.forEach((p) => {
+    resolved.forEach(({ p, gender }) => {
       if (!p.birth_date) return;
       const birthDate = new Date(p.birth_date);
 
@@ -79,24 +84,37 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
         key = age;
       }
 
-      counts[key] = (counts[key] || 0) + 1;
+      const bucket = counts[key] || (counts[key] = { count: 0, girls: 0, boys: 0, unknown: 0 });
+      bucket.count++;
+      if (gender === 'female') bucket.girls++;
+      else if (gender === 'male') bucket.boys++;
+      else bucket.unknown++;
     });
 
     return Object.entries(counts)
-      .map(([key, count]) => ({ age: parseInt(key), count }))
+      .map(([key, b]) => ({ age: parseInt(key), ...b }))
       .sort((a, b) => a.age - b.age)
       .map((item, index) => ({
         name: groupMode === 'birthYear' ? `${item.age}` : `${item.age} år`,
         count: item.count,
+        girls: item.girls,
+        boys: item.boys,
+        unknown: item.unknown,
         fill: `hsl(var(--chart-${(index % 5) + 1}))`,
       }));
   }, [participants, groupMode]);
 
   const total = ageData.reduce((sum, g) => sum + g.count, 0);
+  const totalGirls = ageData.reduce((sum, g) => sum + ((g as any).girls || 0), 0);
+  const totalBoys = ageData.reduce((sum, g) => sum + ((g as any).boys || 0), 0);
+  const showSplit = splitGender && groupMode !== 'gender';
 
   const chartConfig = useMemo(() => {
     const config: Record<string, { label: string; color?: string }> = {
       count: { label: 'Antall' },
+      girls: { label: 'Jenter', color: 'hsl(var(--chart-4))' },
+      boys: { label: 'Gutter', color: 'hsl(var(--chart-1))' },
+      unknown: { label: 'Ukjent', color: 'hsl(var(--chart-3))' },
     };
     ageData.forEach((item, index) => {
       config[item.name] = {
@@ -140,6 +158,29 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
             </Button>
           </div>
         </div>
+        {groupMode !== 'gender' && (
+          <div className="flex items-center gap-2 pt-2">
+            <Button
+              variant={splitGender ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSplitGender((v) => !v)}
+            >
+              Vis kjønn
+            </Button>
+            {showSplit && (
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(var(--chart-4))' }} />
+                  Jenter {totalGirls}
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: 'hsl(var(--chart-1))' }} />
+                  Gutter {totalBoys}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="w-full" style={{ height: chartHeight }}>
@@ -154,16 +195,44 @@ export function AgeDistributionChart({ participants }: AgeDistributionChartProps
                 width={groupMode === 'birthYear' ? 44 : 50}
                 tick={{ fontSize: 12 }}
               />
-              <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={28}>
-                {ageData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-                <LabelList 
-                  dataKey="count" 
-                  position="right" 
-                  className="fill-foreground text-sm font-medium"
-                />
-              </Bar>
+              {showSplit ? (
+                <>
+                  <Bar dataKey="girls" stackId="g" fill="hsl(var(--chart-4))" maxBarSize={28}>
+                    <LabelList
+                      dataKey="girls"
+                      position="center"
+                      className="fill-background text-xs font-medium"
+                      formatter={(v: number) => (v > 0 ? v : '')}
+                    />
+                  </Bar>
+                  <Bar dataKey="boys" stackId="g" fill="hsl(var(--chart-1))" maxBarSize={28}>
+                    <LabelList
+                      dataKey="boys"
+                      position="center"
+                      className="fill-background text-xs font-medium"
+                      formatter={(v: number) => (v > 0 ? v : '')}
+                    />
+                  </Bar>
+                  <Bar dataKey="unknown" stackId="g" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} maxBarSize={28}>
+                    <LabelList
+                      dataKey="count"
+                      position="right"
+                      className="fill-foreground text-sm font-medium"
+                    />
+                  </Bar>
+                </>
+              ) : (
+                <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={28}>
+                  {ageData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                  <LabelList 
+                    dataKey="count" 
+                    position="right" 
+                    className="fill-foreground text-sm font-medium"
+                  />
+                </Bar>
+              )}
             </BarChart>
           </ResponsiveContainer>
         </ChartContainer>
