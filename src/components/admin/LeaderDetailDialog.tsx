@@ -26,7 +26,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Shield, Users, Heart, Camera, Bell, Check, ChefHat } from 'lucide-react';
+import { Loader2, Shield, Users, Heart, Camera, Bell, Check, ChefHat, KeyRound } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { compressImage } from '@/lib/imageUtils';
 import { hapticSuccess } from '@/lib/capacitorHaptics';
@@ -51,8 +51,9 @@ export function LeaderDetailDialog({
   currentRole = 'leader'
 }: LeaderDetailDialogProps) {
   const { showSuccess, showError, showInfo } = useStatusPopup();
-  const { leader: currentLeader } = useAuth();
+  const { leader: currentLeader, isSuperAdmin } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
+  const [isResettingPin, setIsResettingPin] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   
   // Change notification state
@@ -243,6 +244,24 @@ export function LeaderDetailDialog({
   }, [role, leaderId]);
 
   const getFirstName = (fullName: string) => fullName.split(' ')[0];
+
+  const handleResetPin = async () => {
+    if (!leaderId) return;
+    setIsResettingPin(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-pin-reset', {
+        body: { leader_id: leaderId },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+      hapticSuccess();
+      showSuccess('PIN-kode nullstilt', 'Lederen lager en ny PIN ved neste innlogging.');
+    } catch (err) {
+      console.error('PIN reset error:', err);
+      showError('Kunne ikke nullstille PIN-koden');
+    } finally {
+      setIsResettingPin(false);
+    }
+  };
 
   // Get changes for notification
   const getChanges = (): string[] => {
