@@ -12,6 +12,16 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Loader2,
   Minus,
   Plus,
@@ -75,6 +85,8 @@ const Kiosk = () => {
   const [editTarget, setEditTarget] = useState<KioskSale | null>(null);
   const [editLines, setEditLines] = useState<CartLine[]>([]);
   const [editSearch, setEditSearch] = useState('');
+  /** 0 = closed, 1 = first warning, 2 = final confirmation for negative balance. */
+  const [overdraftStep, setOverdraftStep] = useState<0 | 1 | 2>(0);
   const submittingRef = useRef(false);
   const clientRefRef = useRef<string | null>(null);
 
@@ -193,7 +205,7 @@ const Kiosk = () => {
     );
   };
 
-  const handleCheckout = async () => {
+  const performCheckout = async () => {
     if (!participant) {
       blurActive();
       setPickerOpen(true);
@@ -238,6 +250,16 @@ const Kiosk = () => {
     } finally {
       submittingRef.current = false;
     }
+  };
+
+  /** Requires two confirmations before letting a participant go below 0 kr. */
+  const handleCheckout = async () => {
+    if (participant && lines.length > 0 && remaining !== null && remaining < 0) {
+      blurActive();
+      setOverdraftStep(1);
+      return;
+    }
+    await performCheckout();
   };
 
   /** Voids the sale shown in the success dialog. */
@@ -857,6 +879,46 @@ const Kiosk = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      <AlertDialog open={overdraftStep === 1} onOpenChange={(o) => !o && setOverdraftStep(0)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ikke nok penger på kontoen</AlertDialogTitle>
+            <AlertDialogDescription>
+              {participant?.name} har {balance} kr igjen, men kjøpet er på {total} kr. Saldoen
+              havner på {remaining} kr — altså minus.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setOverdraftStep(0)}>Avbryt</AlertDialogCancel>
+            <AlertDialogAction onClick={() => setOverdraftStep(2)}>Fortsett</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={overdraftStep === 2} onOpenChange={(o) => !o && setOverdraftStep(0)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Er du helt sikker?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Kjøpet registreres og {participant?.name} går i minus med{' '}
+              {Math.abs(remaining ?? 0)} kr.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setOverdraftStep(0)}>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                setOverdraftStep(0);
+                void performCheckout();
+              }}
+            >
+              Ja, registrer kjøpet
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
