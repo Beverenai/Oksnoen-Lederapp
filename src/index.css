@@ -513,3 +513,12 @@ header, nav {
     transform: scale(1);
   }
 }
+
+/* iOS-style PIN error shake */
+@keyframes pin-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(9px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(4px); }
+}
