@@ -343,24 +343,38 @@ export function LeaderDetailSheet({
       </SheetContent>
 
       <Dialog open={imageOpen} onOpenChange={setImageOpen}>
-        <DialogContent className="max-w-md p-2 sm:p-3">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl p-0 bg-black/95 border-none">
           {leader.profile_image_url && (
             <img
               src={(showAged && (leader as any).profile_image_aged_url) || leader.profile_image_url}
               alt={leader.name}
-              className="w-full h-auto rounded-lg object-contain max-h-[75vh]"
+              className="w-full max-h-[75vh] object-contain"
             />
           )}
-          {(leader as any).profile_image_aged_url && (
-            <button
-              type="button"
-              onClick={() => setShowAged((v) => !v)}
-              className="mx-auto mt-1 rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground active:scale-95 transition-transform"
+          <div
+            className="flex flex-wrap justify-center gap-2 px-4 pt-3"
+            style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+          >
+            {(leader as any).profile_image_aged_url && (
+              <Button
+                variant={showAged ? 'default' : 'outline'}
+                size="lg"
+                onClick={() => setShowAged((v) => !v)}
+                className="rounded-full px-6"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                {showAged ? 'Vis ung' : 'Vis gammel'}
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => setImageOpen(false)}
+              className="rounded-full px-8"
             >
-              {showAged ? 'Vis ung' : 'Vis gammel'}
-            </button>
-          )}
-          <p className="text-center text-sm font-medium text-foreground pb-1">{leader.name}</p>
+              Lukk
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </Sheet>
