@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Phone, MessageSquare, AlertTriangle, Car, Anchor, Mountain, Cross, Home, ArrowDown, Cable, Wrench } from 'lucide-react';
+import { Phone, MessageSquare, AlertTriangle, Car, Anchor, Mountain, Cross, Home, ArrowDown, Cable, Wrench, Maximize2, Sparkles } from 'lucide-react';
 import { icons } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
