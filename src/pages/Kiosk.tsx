@@ -879,6 +879,46 @@ const Kiosk = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      <AlertDialog open={overdraftStep === 1} onOpenChange={(o) => !o && setOverdraftStep(0)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ikke nok penger på kontoen</AlertDialogTitle>
+            <AlertDialogDescription>
+              {participant?.name} har {balance} kr igjen, men kjøpet er på {total} kr. Saldoen
+              havner på {remaining} kr — altså minus.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setOverdraftStep(0)}>Avbryt</AlertDialogCancel>
+            <AlertDialogAction onClick={() => setOverdraftStep(2)}>Fortsett</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={overdraftStep === 2} onOpenChange={(o) => !o && setOverdraftStep(0)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Er du helt sikker?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Kjøpet registreres og {participant?.name} går i minus med{' '}
+              {Math.abs(remaining ?? 0)} kr.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setOverdraftStep(0)}>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                setOverdraftStep(0);
+                void performCheckout();
+              }}
+            >
+              Ja, registrer kjøpet
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
