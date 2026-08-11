@@ -54,6 +54,7 @@ interface ParticipantWithCabin {
   notes: string | null;
   activity_notes: string | null;
   image_url: string | null;
+  image_aged_url?: string | null;
   times_attended: number | null;
   pass_written: boolean | null;
   pass_written_at: string | null;
