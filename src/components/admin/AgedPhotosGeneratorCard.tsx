@@ -99,12 +99,32 @@ export function AgedPhotosGeneratorCard() {
           <Sparkles className="w-5 h-5" /> AI: Eldre versjon av deltakerbilder
         </CardTitle>
         <CardDescription>
-          Lager en AI-generert «om 40 år»-utgave av hvert deltakerbilde. Trykk på bildet inne på en
+          Lager en AI-generert «om 40 år»-utgave av deltakerbildene for én periode. Trykk på bildet inne på en
           deltaker for å flippe mellom nå og eldre. Hvert bilde koster ett AI-kall, så bruk gjerne
           «Generer manglende».
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div className="space-y-1.5">
+          <Label>Periode</Label>
+          <Select value={periodId} onValueChange={setPeriodId} disabled={running}>
+            <SelectTrigger>
+              <SelectValue placeholder="Velg periode" />
+            </SelectTrigger>
+            <SelectContent>
+              {periods.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}{p.is_active ? ' (aktiv)' : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {count && (
+            <p className="text-xs text-muted-foreground">
+              {count.total} med bilde i denne perioden – {count.missing} mangler eldre-bilde
+            </p>
+          )}
+        </div>
         {running && (
           <div className="space-y-2">
             <Progress value={pct} />
