@@ -51,7 +51,7 @@ export function LeaderDetailDialog({
   currentRole = 'leader'
 }: LeaderDetailDialogProps) {
   const { showSuccess, showError, showInfo } = useStatusPopup();
-  const { leader: currentLeader, isSuperAdmin } = useAuth();
+  const { leader: currentLeader, isSuperAdmin, isAdmin } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [isResettingPin, setIsResettingPin] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -523,11 +523,11 @@ export function LeaderDetailDialog({
                 </RadioGroup>
               </div>
 
-              {isSuperAdmin && (role === 'admin' || role === 'superadmin') && (
+              {(isAdmin || isSuperAdmin) && (
                 <div className="space-y-2 rounded-lg border border-border p-3">
                   <Label className="text-sm font-semibold flex items-center gap-2">
                     <KeyRound className="w-4 h-4 text-muted-foreground" />
-                    Admin PIN-kode
+                    PIN-kode
                   </Label>
                   <p className="text-xs text-muted-foreground">
                     Nullstill hvis {getFirstName(name || leader.name)} har glemt PIN-koden. Neste innlogging lager en ny.
