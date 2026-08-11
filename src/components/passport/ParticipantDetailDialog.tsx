@@ -700,7 +700,7 @@ export const ParticipantDetailDialog = ({
             {participant.image_aged_url && (
               <div className="flex justify-center mb-1">
                 <Badge variant={showAged ? 'default' : 'secondary'} className="text-[11px]">
-                  {showAged ? '+40 år – trykk for å bytte tilbake' : 'Trykk bildet: se +40 år · lupe for større'}
+                  {showAged ? 'Gammel – trykk for å bytte tilbake' : 'Trykk bildet: ung/gammel · lupe for større'}
                 </Badge>
               </div>
             )}
@@ -737,7 +737,7 @@ export const ParticipantDetailDialog = ({
                       className="rounded-full px-6"
                     >
                       <Sparkles className="mr-2 h-4 w-4" />
-                      {showAged ? 'Vis i dag' : 'Vis +40 år'}
+                      {showAged ? 'Vis ung' : 'Vis gammel'}
                     </Button>
                   )}
                   <Button

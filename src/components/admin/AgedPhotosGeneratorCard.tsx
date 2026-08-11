@@ -128,11 +128,11 @@ export function AgedPhotosGeneratorCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5" /> AI: Eldre versjon av deltakerbilder
+          <Sparkles className="w-5 h-5" /> AI: Ung/gammel-bilder
         </CardTitle>
         <CardDescription>
-          Lager en AI-generert «om 40 år»-utgave av deltakerbildene for én periode. Trykk på bildet inne på en
-          deltaker for å flippe mellom nå og eldre. Hvert bilde koster ett AI-kall, så bruk gjerne
+          Lager en AI-generert «gammel»-utgave av bildene for én periode. Trykk på bildet inne på en
+          deltaker for å flippe mellom ung og gammel. Hvert bilde koster ett AI-kall, så bruk gjerne
           «Generer manglende».
         </CardDescription>
       </CardHeader>

@@ -324,7 +324,7 @@ export function LeaderDetailSheet({
               onClick={() => setShowAged((v) => !v)}
               className="mx-auto mt-1 rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground active:scale-95 transition-transform"
             >
-              {showAged ? 'Vis dagens bilde' : 'Vis +40 år'}
+              {showAged ? 'Vis ung' : 'Vis gammel'}
             </button>
           )}
           <p className="text-center text-sm font-medium text-foreground pb-1">{leader.name}</p>
