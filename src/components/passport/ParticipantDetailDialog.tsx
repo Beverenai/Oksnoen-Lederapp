@@ -18,7 +18,7 @@ import { useSeasonView } from '@/contexts/SeasonViewContext';
 import { fetchSeasonParticipants } from '@/hooks/useSeasonParticipants';
 import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X, ChevronDown } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X, ChevronDown, Maximize2 } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
@@ -54,6 +54,7 @@ interface ParticipantWithCabin {
   notes: string | null;
   activity_notes: string | null;
   image_url: string | null;
+  image_aged_url?: string | null;
   times_attended: number | null;
   pass_written: boolean | null;
   pass_written_at: string | null;
@@ -315,6 +316,7 @@ export const ParticipantDetailDialog = ({
   const [isTogglingPass, setIsTogglingPass] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [showAged, setShowAged] = useState(false);
   const [incidentOpen, setIncidentOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingData, setBookingData] = useState<Tables<'participant_bookings'> | null>(null);
@@ -614,12 +616,35 @@ export const ParticipantDetailDialog = ({
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => participant.image_url && setLightboxOpen(true)}
+                  onClick={() => {
+                    if (!participant.image_url) return;
+                    if (participant.image_aged_url) {
+                      setShowAged((v) => !v);
+                    } else {
+                      setLightboxOpen(true);
+                    }
+                  }}
                   disabled={!participant.image_url}
-                  className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full overflow-hidden bg-muted ring-2 ring-border shadow-md disabled:cursor-default focus:outline-none focus:ring-4 focus:ring-primary/40"
-                  aria-label={participant.image_url ? 'Vis bilde' : 'Ingen bilde'}
+                  className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full overflow-hidden bg-muted ring-2 ring-border shadow-md disabled:cursor-default focus:outline-none focus:ring-4 focus:ring-primary/40 transition-transform duration-500 [transform-style:preserve-3d]"
+                  style={showAged ? { transform: 'rotateY(180deg)' } : undefined}
+                  aria-label={
+                    participant.image_aged_url
+                      ? showAged
+                        ? 'Vis dagens bilde'
+                        : 'Vis eldre versjon'
+                      : participant.image_url
+                        ? 'Vis bilde'
+                        : 'Ingen bilde'
+                  }
                 >
-                  {participant.image_url ? (
+                  {showAged && participant.image_aged_url ? (
+                    <img
+                      src={participant.image_aged_url}
+                      alt={`${participant.name} – eldre versjon`}
+                      className="w-full h-full object-cover"
+                      style={{ transform: 'rotateY(180deg)' }}
+                    />
+                  ) : participant.image_url ? (
                     <CachedImage
                       src={participant.image_url}
                       alt={participant.name}
@@ -637,6 +662,17 @@ export const ParticipantDetailDialog = ({
                     </div>
                   )}
                 </button>
+                {participant.image_url && (
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute bottom-0 left-0 rounded-full h-8 w-8 shadow-lg"
+                    onClick={() => setLightboxOpen(true)}
+                    aria-label="Vis bildet større"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   variant="secondary"
                   size="icon"
@@ -661,6 +697,13 @@ export const ParticipantDetailDialog = ({
             </div>
 
             {/* Gift card / kiosk-ID under the avatar */}
+            {participant.image_aged_url && (
+              <div className="flex justify-center mb-1">
+                <Badge variant={showAged ? 'default' : 'secondary'} className="text-[11px]">
+                  {showAged ? 'Gammel – trykk for å bytte tilbake' : 'Trykk bildet: ung/gammel · lupe for større'}
+                </Badge>
+              </div>
+            )}
             {participant.gift_card_number && (
               <div className="flex justify-center -mt-1 mb-1">
                 <Badge variant="secondary" className="font-mono text-xs">
@@ -672,17 +715,31 @@ export const ParticipantDetailDialog = ({
             {/* Lightbox: full image, no crop */}
             <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
               <DialogContent className="max-w-[95vw] sm:max-w-2xl p-0 bg-black/95 border-none">
-                {participant.image_url && (
-                  <img
-                    src={participant.image_url}
-                    alt={participant.name}
-                    className="w-full max-h-[75vh] object-contain"
-                  />
-                )}
+                {(() => {
+                  const src = showAged && participant.image_aged_url ? participant.image_aged_url : participant.image_url;
+                  return src ? (
+                    <img
+                      src={src}
+                      alt={participant.name}
+                      className="w-full max-h-[75vh] object-contain"
+                    />
+                  ) : null;
+                })()}
                 <div
-                  className="flex justify-center"
+                  className="flex flex-wrap justify-center gap-2 px-4"
                   style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
                 >
+                  {participant.image_aged_url && (
+                    <Button
+                      variant={showAged ? 'default' : 'outline'}
+                      size="lg"
+                      onClick={() => setShowAged((v) => !v)}
+                      className="rounded-full px-6"
+                    >
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      {showAged ? 'Vis ung' : 'Vis gammel'}
+                    </Button>
+                  )}
                   <Button
                     variant="secondary"
                     size="lg"

@@ -36,8 +36,7 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
     if (isAdminOrNurse) return 'ring-green-500';
     if (isKitchen) return 'ring-purple-500';
     if (isFri) return 'ring-blue-500';
-    if (content?.has_read) return 'ring-green-500';
-    return 'ring-red-500';
+    return 'ring-green-500';
   };
 
   return (
@@ -133,9 +132,7 @@ export const LeaderCard = React.memo(function LeaderCard({ leader, onEdit }: Lea
           ) : isAdminOrNurse ? (
             <span className="text-[11px] text-muted-foreground/60" />
           ) : (
-            <span className="text-[11px] text-muted-foreground/60">
-              {content?.has_read ? 'Lest' : 'Ulest'}
-            </span>
+            <span className="text-[11px] text-muted-foreground/60" />
           )}
           <div className="flex gap-0.5 shrink-0">
             <Button

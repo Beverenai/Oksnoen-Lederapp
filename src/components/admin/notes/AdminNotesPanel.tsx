@@ -15,6 +15,7 @@ import { NotesWhiteboard, type Stroke } from './NotesWhiteboard';
 import { NOTE_TEMPLATES } from './NoteTemplates';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { hapticImpact } from '@/lib/capacitorHaptics';
+import { holdAppUpdate } from '@/lib/registerSW';
 
 function relTime(iso: string | null) {
   if (!iso) return '';
@@ -47,6 +48,21 @@ export function AdminNotesPanel() {
   const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const pendingRef = useRef<Record<string, { id: string; patch: Record<string, unknown> }>>({});
   const [titleDraft, setTitleDraft] = useState('');
+  const chipRowRef = useRef<HTMLDivElement | null>(null);
+
+  // Ingen automatisk app-oppdatering/refresh mens notatene er åpne
+  useEffect(() => {
+    if (!open) return;
+    const release = holdAppUpdate();
+    return release;
+  }, [open]);
+
+  // Keep the selected chip visible in the horizontal mobile list
+  useEffect(() => {
+    if (!activeId) return;
+    const el = chipRowRef.current?.querySelector<HTMLElement>(`[data-note-chip="${activeId}"]`);
+    el?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  }, [activeId, notes.length]);
 
   const active = useMemo(() => notes.find((n) => n.id === activeId) ?? null, [notes, activeId]);
 
@@ -161,10 +177,11 @@ export function AdminNotesPanel() {
   const NoteRow = ({ n, compact }: { n: AdminNote; compact?: boolean }) => (
     <button
       type="button"
+      data-note-chip={compact ? n.id : undefined}
       onClick={() => setActiveId(n.id)}
       className={cn(
         'flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors',
-        compact ? 'shrink-0 rounded-full py-1.5 text-xs' : 'w-full',
+        compact ? 'shrink-0 whitespace-nowrap rounded-full py-1.5 text-xs' : 'w-full',
         n.id === activeId
           ? 'border-primary bg-primary/10 text-foreground'
           : 'border-border/60 bg-card/60 text-muted-foreground hover:bg-card',
@@ -289,12 +306,16 @@ export function AdminNotesPanel() {
                     />
                   </div>
                 </div>
-                <ScrollArea className="shrink-0">
-                  <div className="flex gap-2 pb-2">
+                <div
+                  ref={chipRowRef}
+                  className="scrollbar-hide -mx-4 shrink-0 overflow-x-auto overflow-y-hidden px-4"
+                  style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'contain' }}
+                >
+                  <div className="flex w-max gap-2 pb-2">
                     {isLoading && <span className="text-sm text-muted-foreground">Laster…</span>}
                     {filtered.map((n) => <NoteRow key={n.id} n={n} compact />)}
                   </div>
-                </ScrollArea>
+                </div>
               </div>
 
               {active ? (

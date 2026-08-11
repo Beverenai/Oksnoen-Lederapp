@@ -1505,6 +1505,7 @@ export type Database = {
           ministerpost: string | null
           name: string
           phone: string
+          profile_image_aged_url: string | null
           profile_image_url: string | null
           snus_custom_label: string | null
           snus_product_id: string | null
@@ -1538,6 +1539,7 @@ export type Database = {
           ministerpost?: string | null
           name: string
           phone: string
+          profile_image_aged_url?: string | null
           profile_image_url?: string | null
           snus_custom_label?: string | null
           snus_product_id?: string | null
@@ -1571,6 +1573,7 @@ export type Database = {
           ministerpost?: string | null
           name?: string
           phone?: string
+          profile_image_aged_url?: string | null
           profile_image_url?: string | null
           snus_custom_label?: string | null
           snus_product_id?: string | null
@@ -2747,6 +2750,7 @@ export type Database = {
           gift_card_number: string | null
           has_arrived: boolean | null
           id: string
+          image_aged_url: string | null
           image_thumb_url: string | null
           image_url: string | null
           insj_points: number
@@ -2773,6 +2777,7 @@ export type Database = {
           gift_card_number?: string | null
           has_arrived?: boolean | null
           id?: string
+          image_aged_url?: string | null
           image_thumb_url?: string | null
           image_url?: string | null
           insj_points?: number
@@ -2799,6 +2804,7 @@ export type Database = {
           gift_card_number?: string | null
           has_arrived?: boolean | null
           id?: string
+          image_aged_url?: string | null
           image_thumb_url?: string | null
           image_url?: string | null
           insj_points?: number

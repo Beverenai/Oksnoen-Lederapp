@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Phone, MessageSquare, AlertTriangle, Car, Anchor, Mountain, Cross, Home, ArrowDown, Cable, Wrench } from 'lucide-react';
+import { Phone, MessageSquare, AlertTriangle, Car, Anchor, Mountain, Cross, Home, ArrowDown, Cable, Wrench, Maximize2, Sparkles } from 'lucide-react';
 import { icons } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
@@ -84,6 +84,7 @@ export function LeaderDetailSheet({
 }: LeaderDetailSheetProps) {
   const [linkedCabins, setLinkedCabins] = useState<CabinInfo[]>([]);
   const [imageOpen, setImageOpen] = useState(false);
+  const [showAged, setShowAged] = useState(false);
   
   // Load linked cabins when leader changes
   useEffect(() => {
@@ -153,22 +154,55 @@ export function LeaderDetailSheet({
       <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl pb-safe">
         <SheetHeader className="text-left pb-4">
           <div className="flex items-start gap-4">
-            <button
-              type="button"
-              onClick={() => leader.profile_image_url && setImageOpen(true)}
-              disabled={!leader.profile_image_url}
-              aria-label={`Vis bilde av ${getFirstName(leader.name)}`}
-              className="rounded-full transition-transform active:scale-95 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <Avatar className="w-20 h-20 border-2 border-primary/20">
-                {leader.profile_image_url && (
-                  <AvatarImage src={leader.profile_image_url} alt={leader.name} />
-                )}
-                <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                  {getFirstName(leader.name).slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </button>
+            <div className="relative flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!leader.profile_image_url) return;
+                  if ((leader as any).profile_image_aged_url) {
+                    setShowAged((v) => !v);
+                  } else {
+                    setImageOpen(true);
+                  }
+                }}
+                disabled={!leader.profile_image_url}
+                aria-label={
+                  (leader as any).profile_image_aged_url
+                    ? showAged
+                      ? 'Vis ung versjon'
+                      : 'Vis gammel versjon'
+                    : `Vis bilde av ${getFirstName(leader.name)}`
+                }
+                className="rounded-full transition-transform duration-500 active:scale-95 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [transform-style:preserve-3d]"
+                style={showAged ? { transform: 'rotateY(180deg)' } : undefined}
+              >
+                <Avatar className="w-20 h-20 border-2 border-primary/20">
+                  {showAged && (leader as any).profile_image_aged_url ? (
+                    <AvatarImage
+                      src={(leader as any).profile_image_aged_url}
+                      alt={`${leader.name} – gammel versjon`}
+                      style={{ transform: 'rotateY(180deg)' }}
+                    />
+                  ) : leader.profile_image_url ? (
+                    <AvatarImage src={leader.profile_image_url} alt={leader.name} />
+                  ) : null}
+                  <AvatarFallback className="bg-primary/10 text-primary text-xl">
+                    {getFirstName(leader.name).slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+              {leader.profile_image_url && (
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="absolute -bottom-1 -left-1 h-8 w-8 rounded-full shadow-lg"
+                  onClick={() => setImageOpen(true)}
+                  aria-label="Vis bildet større"
+                >
+                  <Maximize2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <SheetTitle className="text-xl">{getFirstName(leader.name)}</SheetTitle>
@@ -309,15 +343,38 @@ export function LeaderDetailSheet({
       </SheetContent>
 
       <Dialog open={imageOpen} onOpenChange={setImageOpen}>
-        <DialogContent className="max-w-md p-2 sm:p-3">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl p-0 bg-black/95 border-none">
           {leader.profile_image_url && (
             <img
-              src={leader.profile_image_url}
+              src={(showAged && (leader as any).profile_image_aged_url) || leader.profile_image_url}
               alt={leader.name}
-              className="w-full h-auto rounded-lg object-contain max-h-[75vh]"
+              className="w-full max-h-[75vh] object-contain"
             />
           )}
-          <p className="text-center text-sm font-medium text-foreground pb-1">{leader.name}</p>
+          <div
+            className="flex flex-wrap justify-center gap-2 px-4 pt-3"
+            style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+          >
+            {(leader as any).profile_image_aged_url && (
+              <Button
+                variant={showAged ? 'default' : 'outline'}
+                size="lg"
+                onClick={() => setShowAged((v) => !v)}
+                className="rounded-full px-6"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                {showAged ? 'Vis ung' : 'Vis gammel'}
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => setImageOpen(false)}
+              className="rounded-full px-8"
+            >
+              Lukk
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </Sheet>

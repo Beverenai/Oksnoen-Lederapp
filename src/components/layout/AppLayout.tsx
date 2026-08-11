@@ -579,6 +579,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <NavLinkItem item={{ to: '/klineliste', icon: HeartHandshake, label: 'Klineliste' }} />
               <NavLinkItem item={{ to: '/profile', icon: User, label: 'Min Profil' }} />
             </div>
+          ) : isAdmin ? (
+            /* Admin på desktop: kun kjernefunksjonene — alt annet ligger på /mer */
+            <div className="space-y-1">
+              <NavLinkItem item={{ to: '/', icon: Home, label: 'Hjem' }} />
+              <NavLinkItem item={nurseNavItem} />
+              <NavLinkItem item={{ to: '/leaders', icon: Users, label: 'Ledere' }} />
+              <NavLinkItem item={{ to: '/passport', icon: PassIcon as LucideIcon, label: 'Passkontroll' }} />
+              <NavLinkItem item={participantsNavItem} />
+              <NavLinkItem item={adminNavItem} />
+              <div className="pt-2">
+                <NavLinkItem item={merNavItem} />
+              </div>
+            </div>
           ) : (<>
           {/* Main navigation - always visible */}
           <div className="space-y-1">
@@ -611,19 +624,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
               isOpen={openGroups.special}
               onOpenChange={(open) => setOpenGroups(prev => ({ ...prev, special: open }))}
             />
-          )}
-
-          {/* Admin items - always visible for admin */}
-          {isAdmin && (
-            <div className="pt-2 space-y-1">
-              <div className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Admin
-              </div>
-              <NavLinkItem item={nurseNavItem} />
-              <NavLinkItem item={kitchenNavItem} />
-              <NavLinkItem item={participantsNavItem} />
-              <NavLinkItem item={adminNavItem} />
-            </div>
           )}
 
           {/* Alle sider — samme rutenett som på mobil */}

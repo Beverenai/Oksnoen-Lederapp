@@ -1,4 +1,4 @@
-import { Phone, Activity, Car, Anchor, Mountain, Cable, AlertTriangle, Wrench } from "lucide-react";
+import { Phone, Activity, Car, Anchor, Mountain, Cable, AlertTriangle, Wrench, Maximize2, Sparkles } from "lucide-react";
 import { formatMainCabins } from "@/lib/cabinDisplay";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -102,13 +102,23 @@ const getAvatarBorderClass = (leader: LeaderWithContent) => {
   
   if (isKitchen) return 'ring-4 ring-purple-500';
   if (isFri) return 'ring-4 ring-blue-500';
-  if (leader.isAdmin || leader.isNurse || leader.content?.has_read) return 'ring-4 ring-green-500';
-  return 'ring-4 ring-red-500';
+  return 'ring-4 ring-green-500';
 };
 
 export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailDialogProps) {
   const [linkedCabins, setLinkedCabins] = useState<CabinInfo[]>([]);
   const [fullContent, setFullContent] = useState<LeaderWithContent['content']>(null);
+  const [showAged, setShowAged] = useState(false);
+  const [imageOpen, setImageOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setShowAged(false);
+      setImageOpen(false);
+    }
+  }, [open]);
+
+  const agedUrl = (leader as any)?.profile_image_aged_url as string | null | undefined;
 
   useEffect(() => {
     if (leader && open) {
@@ -186,12 +196,46 @@ export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailD
         <div className="p-6 pb-4">
           <DialogHeader className="mb-4">
             <div className="flex flex-col items-center gap-3">
-              <Avatar className={`w-24 h-24 ${getAvatarBorderClass(leader)}`}>
-                <AvatarImage src={leader.profile_image_url || undefined} alt={leader.name} />
-                <AvatarFallback className="text-2xl font-semibold bg-muted">
-                  {getFirstName(leader.name).charAt(0)}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!leader.profile_image_url) return;
+                    if (agedUrl) setShowAged((v) => !v);
+                    else setImageOpen(true);
+                  }}
+                  disabled={!leader.profile_image_url}
+                  aria-label={agedUrl ? (showAged ? 'Vis ung versjon' : 'Vis gammel versjon') : 'Vis bilde'}
+                  className="rounded-full transition-transform duration-500 active:scale-95 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [transform-style:preserve-3d]"
+                  style={showAged ? { transform: 'rotateY(180deg)' } : undefined}
+                >
+                  <Avatar className={`w-24 h-24 ${getAvatarBorderClass(leader)}`}>
+                    {showAged && agedUrl ? (
+                      <AvatarImage
+                        src={agedUrl}
+                        alt={`${leader.name} – gammel versjon`}
+                        style={{ transform: 'rotateY(180deg)' }}
+                      />
+                    ) : (
+                      <AvatarImage src={leader.profile_image_url || undefined} alt={leader.name} />
+                    )}
+                    <AvatarFallback className="text-2xl font-semibold bg-muted">
+                      {getFirstName(leader.name).charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+                {leader.profile_image_url && (
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full shadow-lg"
+                    onClick={() => setImageOpen(true)}
+                    aria-label="Vis bildet større"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               <div className="text-center">
                 <DialogTitle className="text-xl font-bold">{leader.name}</DialogTitle>
                 {leader.ministerpost && (
@@ -322,6 +366,42 @@ export function LeaderDetailDialog({ leader, open, onOpenChange }: LeaderDetailD
           </Button>
         </div>
       </DialogContent>
+
+      <Dialog open={imageOpen} onOpenChange={setImageOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl p-0 bg-black/95 border-none">
+          {leader.profile_image_url && (
+            <img
+              src={(showAged && agedUrl) || leader.profile_image_url}
+              alt={leader.name}
+              className="w-full max-h-[75vh] object-contain"
+            />
+          )}
+          <div
+            className="flex flex-wrap justify-center gap-2 px-4 pt-3"
+            style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+          >
+            {agedUrl && (
+              <Button
+                variant={showAged ? 'default' : 'outline'}
+                size="lg"
+                onClick={() => setShowAged((v) => !v)}
+                className="rounded-full px-6"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                {showAged ? 'Vis ung' : 'Vis gammel'}
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => setImageOpen(false)}
+              className="rounded-full px-8"
+            >
+              Lukk
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
