@@ -43,34 +43,42 @@ Deno.serve(async (req) => {
     let force = false;
     let offset = 0;
     let periodId: string | null = null;
+    let target: 'participants' | 'leaders' = 'participants';
     try {
       const body = await req.json();
       if (body?.batch_size) batchSize = Math.min(Math.max(1, body.batch_size), 10);
       if (body?.force) force = true;
       if (typeof body?.offset === 'number') offset = Math.max(0, body.offset);
       if (typeof body?.period_id === 'string' && body.period_id) periodId = body.period_id;
+      if (body?.target === 'leaders') target = 'leaders';
     } catch { /* defaults */ }
 
-    if (!periodId) throw new Error('Mangler periode');
+    const isLeaders = target === 'leaders';
+    const table = isLeaders ? 'leaders' : 'participants';
+    const srcCol = isLeaders ? 'profile_image_url' : 'image_url';
+    const agedCol = isLeaders ? 'profile_image_aged_url' : 'image_aged_url';
+    const bucket = isLeaders ? 'leader-images' : 'participant-images';
+
+    if (!isLeaders && !periodId) throw new Error('Mangler periode');
 
     let query = supabase
-      .from('participants')
-      .select('id, name, image_url, image_aged_url')
+      .from(table)
+      .select(`id, name, ${srcCol}, ${agedCol}`)
       .order('name', { ascending: true })
-      .not('image_url', 'is', null)
-      .eq('period_id', periodId)
+      .not(srcCol, 'is', null)
       .range(offset, offset + batchSize - 1);
 
-    if (!force) query = query.is('image_aged_url', null);
+    if (!isLeaders) query = query.eq('period_id', periodId!);
+    if (!force) query = query.is(agedCol, null);
 
     const { data: rows, error } = await query;
     if (error) throw error;
 
     const results = { processed: 0, failed: 0, details: [] as any[] };
 
-    for (const p of rows || []) {
+    for (const p of (rows || []) as any[]) {
       try {
-        const srcRes = await fetch(p.image_url!);
+        const srcRes = await fetch(p[srcCol]);
         if (!srcRes.ok) throw new Error(`fetch bilde ${srcRes.status}`);
         const srcMime = srcRes.headers.get('content-type') || 'image/jpeg';
         const srcBytes = new Uint8Array(await srcRes.arrayBuffer());
@@ -110,17 +118,17 @@ Deno.serve(async (req) => {
         const bytes = fromBase64(b64);
         const path = `${p.id}_aged.png`;
         const { error: upErr } = await supabase.storage
-          .from('participant-images')
+          .from(bucket)
           .upload(path, bytes, { upsert: true, contentType: 'image/png' });
         if (upErr) throw upErr;
 
         const { data: { publicUrl } } = supabase.storage
-          .from('participant-images')
+          .from(bucket)
           .getPublicUrl(path);
 
         const { error: updErr } = await supabase
-          .from('participants')
-          .update({ image_aged_url: `${publicUrl}?v=${Date.now()}` })
+          .from(table)
+          .update({ [agedCol]: `${publicUrl}?v=${Date.now()}` })
           .eq('id', p.id);
         if (updErr) throw updErr;
 
@@ -131,12 +139,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { count: remaining } = await supabase
-      .from('participants')
+    let remainingQuery = supabase
+      .from(table)
       .select('id', { count: 'exact', head: true })
-      .not('image_url', 'is', null)
-      .eq('period_id', periodId)
-      .is('image_aged_url', null);
+      .not(srcCol, 'is', null)
+      .is(agedCol, null);
+    if (!isLeaders) remainingQuery = remainingQuery.eq('period_id', periodId!);
+    const { count: remaining } = await remainingQuery;
 
     return new Response(JSON.stringify({ success: true, ...results, remaining: remaining ?? 0 }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
