@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sparkles, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const BATCH = 5;
+const BATCH = 2;
 
 type PeriodRow = { id: string; name: string; is_active: boolean | null };
 
@@ -21,6 +21,7 @@ export function AgedPhotosGeneratorCard() {
   const [periods, setPeriods] = useState<PeriodRow[]>([]);
   const [periodId, setPeriodId] = useState<string>('');
   const [count, setCount] = useState<{ total: number; missing: number } | null>(null);
+  const [target, setTarget] = useState<'participants' | 'leaders'>('participants');
 
   useEffect(() => {
     (async () => {
@@ -35,6 +36,18 @@ export function AgedPhotosGeneratorCard() {
   }, []);
 
   useEffect(() => {
+    if (target === 'leaders') {
+      (async () => {
+        const [totalRes, missingRes] = await Promise.all([
+          supabase.from('leaders').select('id', { count: 'exact', head: true })
+            .not('profile_image_url', 'is', null),
+          supabase.from('leaders').select('id', { count: 'exact', head: true })
+            .not('profile_image_url', 'is', null).is('profile_image_aged_url', null),
+        ]);
+        setCount({ total: totalRes.count ?? 0, missing: missingRes.count ?? 0 });
+      })();
+      return;
+    }
     if (!periodId) { setCount(null); return; }
     (async () => {
       const [totalRes, missingRes] = await Promise.all([
@@ -45,10 +58,10 @@ export function AgedPhotosGeneratorCard() {
       ]);
       setCount({ total: totalRes.count ?? 0, missing: missingRes.count ?? 0 });
     })();
-  }, [periodId, done]);
+  }, [periodId, done, target]);
 
   const run = async (force = false) => {
-    if (!periodId) { toast.error('Velg en periode først'); return; }
+    if (target === 'participants' && !periodId) { toast.error('Velg en periode først'); return; }
     setRunning(true);
     setDone(false);
     setProcessed(0);
@@ -57,14 +70,33 @@ export function AgedPhotosGeneratorCard() {
     try {
       let totalProcessed = 0;
       let totalFailed = 0;
-      let safety = 200;
+      let safety = 600;
       let offset = 0;
+      let consecutiveErrors = 0;
       while (safety-- > 0) {
-        const { data, error } = await supabase.functions.invoke('generate-participant-aged', {
-          body: { batch_size: BATCH, force, offset: force ? offset : 0, period_id: periodId },
-        });
-        if (error) throw error;
-        if (data?.success === false) throw new Error(data?.error || 'Ukjent feil');
+        let data: any = null;
+        try {
+          const res = await supabase.functions.invoke('generate-participant-aged', {
+            body: {
+              batch_size: BATCH,
+              force,
+              offset: force ? offset : 0,
+              period_id: periodId,
+              target,
+            },
+          });
+          if (res.error) throw res.error;
+          if (res.data?.success === false) throw new Error(res.data?.error || 'Ukjent feil');
+          data = res.data;
+          consecutiveErrors = 0;
+        } catch (err: any) {
+          // Bildegenerering kan tidvis time ut – prøv videre i stedet for å stoppe helt
+          consecutiveErrors++;
+          if (consecutiveErrors >= 5) throw err;
+          if (force) offset += BATCH;
+          await new Promise((r) => setTimeout(r, 2000));
+          continue;
+        }
         const p = data?.processed || 0;
         const f = data?.failed || 0;
         totalProcessed += p;
@@ -106,6 +138,19 @@ export function AgedPhotosGeneratorCard() {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="space-y-1.5">
+          <Label>Hvem</Label>
+          <Select value={target} onValueChange={(v) => setTarget(v as any)} disabled={running}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="participants">Deltakere</SelectItem>
+              <SelectItem value="leaders">Ledere</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {target === 'participants' && (
+        <div className="space-y-1.5">
           <Label>Periode</Label>
           <Select value={periodId} onValueChange={setPeriodId} disabled={running}>
             <SelectTrigger>
@@ -125,6 +170,12 @@ export function AgedPhotosGeneratorCard() {
             </p>
           )}
         </div>
+        )}
+        {target === 'leaders' && count && (
+          <p className="text-xs text-muted-foreground">
+            {count.total} ledere med bilde – {count.missing} mangler eldre-bilde
+          </p>
+        )}
         {running && (
           <div className="space-y-2">
             <Progress value={pct} />
