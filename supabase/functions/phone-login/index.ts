@@ -84,15 +84,8 @@ serve(async (req) => {
     // Superadmin (August) can ALWAYS log in, even if accidentally deactivated
     const isSuperadminPhone = normalizedPhone === '90076299';
 
-    // ---- Admin PIN gate -------------------------------------------------
-    const { data: preRoles } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('leader_id', leader.id);
-    const roleNames = (preRoles ?? []).map((r: { role: string }) => r.role);
-    const needsPin = roleNames.includes('admin') || roleNames.includes('superadmin');
-
-    if (needsPin) {
+    // ---- PIN gate (all leaders) -----------------------------------------
+    {
       const { data: pinRow } = await supabase
         .from('admin_pins')
         .select('pin_hash')
