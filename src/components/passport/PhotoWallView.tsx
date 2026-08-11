@@ -14,6 +14,7 @@ interface WallParticipant {
   room: string | null;
   image_url: string | null;
   image_thumb_url?: string | null;
+  image_aged_url?: string | null;
   has_arrived: boolean | null;
   cabins: Cabin | null;
 }
@@ -22,6 +23,7 @@ interface PhotoWallViewProps {
   cabinGroups: { cabin: Cabin; participants: WallParticipant[]; leaders: { id: string; name: string }[] }[];
   onParticipantClick: (id: string) => void;
   onPrefetchParticipant?: (id: string) => void;
+  showAged?: boolean;
 }
 
 const initials = (name: string) =>
@@ -38,10 +40,12 @@ const PhotoTile = memo(
     p,
     onClick,
     onPrefetch,
+    showAged,
   }: {
     p: WallParticipant;
     onClick: () => void;
     onPrefetch?: () => void;
+    showAged?: boolean;
   }) => (
     <button
       type="button"
@@ -55,7 +59,11 @@ const PhotoTile = memo(
     >
       <div className="relative">
         <Avatar className="h-16 w-16 sm:h-20 sm:w-20 shadow-sm">
-          <AvatarImage src={getParticipantThumb(p) ?? undefined} alt={p.name} loading="lazy" />
+          <AvatarImage
+            src={(showAged && p.image_aged_url ? p.image_aged_url : getParticipantThumb(p)) ?? undefined}
+            alt={p.name}
+            loading="lazy"
+          />
           <AvatarFallback className="bg-muted text-sm font-semibold">
             {p.name ? initials(p.name) : <User className="h-5 w-5" />}
           </AvatarFallback>
@@ -78,6 +86,7 @@ export const PhotoWallView = ({
   cabinGroups,
   onParticipantClick,
   onPrefetchParticipant,
+  showAged,
 }: PhotoWallViewProps) => {
   if (cabinGroups.length === 0) {
     return (
@@ -127,6 +136,7 @@ export const PhotoWallView = ({
                       <PhotoTile
                         key={p.id}
                         p={p}
+                        showAged={showAged}
                         onClick={() => onParticipantClick(p.id)}
                         onPrefetch={
                           onPrefetchParticipant ? () => onPrefetchParticipant(p.id) : undefined

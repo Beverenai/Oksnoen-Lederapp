@@ -33,6 +33,7 @@ interface ParticipantWithCabin {
   cabin_id: string | null;
   image_url: string | null;
   image_thumb_url?: string | null;
+  image_aged_url?: string | null;
   has_arrived: boolean | null;
   notes: string | null;
   activity_notes: string | null;
@@ -69,6 +70,7 @@ interface VirtualizedParticipantListProps {
   onPrefetchParticipant: (participantId: string) => void;
   incidentCounts?: Map<string, IncidentCount>;
   wentHomeIds?: Set<string>;
+  showAged?: boolean;
 }
 
 const calculateAge = (birthDate: string): number => {
@@ -83,6 +85,7 @@ const ParticipantCard = memo(({
   onPrefetch,
   incidents,
   wentHome,
+  showAged,
 }: { 
   participant: ParticipantWithCabin; 
   completedActivities: string[];
@@ -90,6 +93,7 @@ const ParticipantCard = memo(({
   onPrefetch: () => void;
   incidents?: IncidentCount;
   wentHome?: boolean;
+  showAged?: boolean;
 }) => {
   const handleClick = () => {
     hapticImpact('light');
@@ -111,7 +115,11 @@ const ParticipantCard = memo(({
     >
     <div className="flex items-start gap-3">
       <Avatar className="w-10 h-10 shrink-0">
-        <AvatarImage src={getParticipantThumb(participant)} loading="lazy" decoding="async" />
+        <AvatarImage
+          src={showAged && participant.image_aged_url ? participant.image_aged_url : getParticipantThumb(participant)}
+          loading="lazy"
+          decoding="async"
+        />
         <AvatarFallback className="bg-muted text-muted-foreground">
           <User className="w-4 h-4" />
         </AvatarFallback>
@@ -292,6 +300,7 @@ export function VirtualizedParticipantList({
   onPrefetchParticipant,
   incidentCounts,
   wentHomeIds,
+  showAged,
 }: VirtualizedParticipantListProps) {
   // Flatten the data structure for rendering
   const flattenedItems = useMemo((): VirtualizedItem[] => {
@@ -395,6 +404,7 @@ export function VirtualizedParticipantList({
               completedActivities={completedActivities}
               incidents={incidentCounts?.get(item.participant.id)}
               wentHome={wentHomeIds?.has(item.participant.id)}
+              showAged={showAged}
               onClick={() => onParticipantClick(item.participant.id)}
               onPrefetch={() => onPrefetchParticipant(item.participant.id)}
             />
