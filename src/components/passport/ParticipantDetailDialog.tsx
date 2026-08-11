@@ -54,6 +54,7 @@ interface ParticipantWithCabin {
   notes: string | null;
   activity_notes: string | null;
   image_url: string | null;
+  image_aged_url?: string | null;
   times_attended: number | null;
   pass_written: boolean | null;
   pass_written_at: string | null;
@@ -315,6 +316,7 @@ export const ParticipantDetailDialog = ({
   const [isTogglingPass, setIsTogglingPass] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [showAged, setShowAged] = useState(false);
   const [incidentOpen, setIncidentOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingData, setBookingData] = useState<Tables<'participant_bookings'> | null>(null);
@@ -614,12 +616,35 @@ export const ParticipantDetailDialog = ({
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => participant.image_url && setLightboxOpen(true)}
+                  onClick={() => {
+                    if (!participant.image_url) return;
+                    if (participant.image_aged_url) {
+                      setShowAged((v) => !v);
+                    } else {
+                      setLightboxOpen(true);
+                    }
+                  }}
                   disabled={!participant.image_url}
-                  className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full overflow-hidden bg-muted ring-2 ring-border shadow-md disabled:cursor-default focus:outline-none focus:ring-4 focus:ring-primary/40"
-                  aria-label={participant.image_url ? 'Vis bilde' : 'Ingen bilde'}
+                  className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full overflow-hidden bg-muted ring-2 ring-border shadow-md disabled:cursor-default focus:outline-none focus:ring-4 focus:ring-primary/40 transition-transform duration-500 [transform-style:preserve-3d]"
+                  style={showAged ? { transform: 'rotateY(180deg)' } : undefined}
+                  aria-label={
+                    participant.image_aged_url
+                      ? showAged
+                        ? 'Vis dagens bilde'
+                        : 'Vis eldre versjon'
+                      : participant.image_url
+                        ? 'Vis bilde'
+                        : 'Ingen bilde'
+                  }
                 >
-                  {participant.image_url ? (
+                  {showAged && participant.image_aged_url ? (
+                    <img
+                      src={participant.image_aged_url}
+                      alt={`${participant.name} – eldre versjon`}
+                      className="w-full h-full object-cover"
+                      style={{ transform: 'rotateY(180deg)' }}
+                    />
+                  ) : participant.image_url ? (
                     <CachedImage
                       src={participant.image_url}
                       alt={participant.name}
@@ -661,6 +686,13 @@ export const ParticipantDetailDialog = ({
             </div>
 
             {/* Gift card / kiosk-ID under the avatar */}
+            {participant.image_aged_url && (
+              <div className="flex justify-center mb-1">
+                <Badge variant={showAged ? 'default' : 'secondary'} className="text-[11px]">
+                  {showAged ? '+40 år – trykk for å bytte tilbake' : 'Trykk bildet: se +40 år'}
+                </Badge>
+              </div>
+            )}
             {participant.gift_card_number && (
               <div className="flex justify-center -mt-1 mb-1">
                 <Badge variant="secondary" className="font-mono text-xs">

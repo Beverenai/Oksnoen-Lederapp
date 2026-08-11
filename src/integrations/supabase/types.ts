@@ -2747,6 +2747,7 @@ export type Database = {
           gift_card_number: string | null
           has_arrived: boolean | null
           id: string
+          image_aged_url: string | null
           image_thumb_url: string | null
           image_url: string | null
           insj_points: number
@@ -2773,6 +2774,7 @@ export type Database = {
           gift_card_number?: string | null
           has_arrived?: boolean | null
           id?: string
+          image_aged_url?: string | null
           image_thumb_url?: string | null
           image_url?: string | null
           insj_points?: number
@@ -2799,6 +2801,7 @@ export type Database = {
           gift_card_number?: string | null
           has_arrived?: boolean | null
           id?: string
+          image_aged_url?: string | null
           image_thumb_url?: string | null
           image_url?: string | null
           insj_points?: number
