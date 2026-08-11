@@ -37,8 +37,10 @@ Deno.serve(async (req) => {
       .from('user_roles')
       .select('role')
       .eq('leader_id', caller.id);
-    const isSuperadmin = (callerRoles ?? []).some((r: { role: string }) => r.role === 'superadmin');
-    if (!isSuperadmin) return json({ error: 'Bare superadmin kan nullstille PIN' }, 403);
+    const isAdmin = (callerRoles ?? []).some(
+      (r: { role: string }) => r.role === 'superadmin' || r.role === 'admin'
+    );
+    if (!isAdmin) return json({ error: 'Bare admin kan nullstille PIN' }, 403);
 
     const body = await req.json().catch(() => ({}));
     const leaderId = body?.leader_id;
