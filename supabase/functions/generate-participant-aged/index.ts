@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
 
     const results = { processed: 0, failed: 0, details: [] as any[] };
 
-    for (const p of (rows || []) as any[]) {
+    await Promise.all(((rows || []) as any[]).map(async (p) => {
       try {
         const srcRes = await fetch(p[srcCol]);
         if (!srcRes.ok) throw new Error(`fetch bilde ${srcRes.status}`);
@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
         results.failed++;
         results.details.push({ id: p.id, name: p.name, error: e instanceof Error ? e.message : String(e) });
       }
-    }
+    }));
 
     let remainingQuery = supabase
       .from(table)
