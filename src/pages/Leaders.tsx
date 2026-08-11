@@ -104,6 +104,7 @@ function LeadersFull() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showTeamFilters, setShowTeamFilters] = useState(false);
   const [snusOnly, setSnusOnly] = useState(false);
+  const [showAged, setShowAged] = useState(false);
 
   // Fetch leaders with React Query for caching
   const { data: leadersData, isLoading } = useQuery({
