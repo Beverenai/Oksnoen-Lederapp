@@ -1,0 +1,1 @@
+alter table public.leaders add column if not exists profile_image_aged_url text;

@@ -84,6 +84,7 @@ export function LeaderDetailSheet({
 }: LeaderDetailSheetProps) {
   const [linkedCabins, setLinkedCabins] = useState<CabinInfo[]>([]);
   const [imageOpen, setImageOpen] = useState(false);
+  const [showAged, setShowAged] = useState(false);
   
   // Load linked cabins when leader changes
   useEffect(() => {
@@ -312,10 +313,19 @@ export function LeaderDetailSheet({
         <DialogContent className="max-w-md p-2 sm:p-3">
           {leader.profile_image_url && (
             <img
-              src={leader.profile_image_url}
+              src={(showAged && (leader as any).profile_image_aged_url) || leader.profile_image_url}
               alt={leader.name}
               className="w-full h-auto rounded-lg object-contain max-h-[75vh]"
             />
+          )}
+          {(leader as any).profile_image_aged_url && (
+            <button
+              type="button"
+              onClick={() => setShowAged((v) => !v)}
+              className="mx-auto mt-1 rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground active:scale-95 transition-transform"
+            >
+              {showAged ? 'Vis dagens bilde' : 'Vis +40 år'}
+            </button>
           )}
           <p className="text-center text-sm font-medium text-foreground pb-1">{leader.name}</p>
         </DialogContent>
