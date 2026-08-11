@@ -12,6 +12,16 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Loader2,
   Minus,
   Plus,
@@ -193,7 +203,7 @@ const Kiosk = () => {
     );
   };
 
-  const handleCheckout = async () => {
+  const performCheckout = async () => {
     if (!participant) {
       blurActive();
       setPickerOpen(true);
@@ -238,6 +248,16 @@ const Kiosk = () => {
     } finally {
       submittingRef.current = false;
     }
+  };
+
+  /** Requires two confirmations before letting a participant go below 0 kr. */
+  const handleCheckout = async () => {
+    if (participant && lines.length > 0 && remaining !== null && remaining < 0) {
+      blurActive();
+      setOverdraftStep(1);
+      return;
+    }
+    await performCheckout();
   };
 
   /** Voids the sale shown in the success dialog. */
