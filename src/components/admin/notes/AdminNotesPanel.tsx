@@ -161,10 +161,11 @@ export function AdminNotesPanel() {
   const NoteRow = ({ n, compact }: { n: AdminNote; compact?: boolean }) => (
     <button
       type="button"
+      data-note-chip={compact ? n.id : undefined}
       onClick={() => setActiveId(n.id)}
       className={cn(
         'flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors',
-        compact ? 'shrink-0 rounded-full py-1.5 text-xs' : 'w-full',
+        compact ? 'shrink-0 whitespace-nowrap rounded-full py-1.5 text-xs' : 'w-full',
         n.id === activeId
           ? 'border-primary bg-primary/10 text-foreground'
           : 'border-border/60 bg-card/60 text-muted-foreground hover:bg-card',
