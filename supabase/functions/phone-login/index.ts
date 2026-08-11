@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { hashPin, isValidPin, verifyPin } from "../_shared/adminPin.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,7 +26,7 @@ serve(async (req) => {
   }
 
   try {
-    const { phone } = await req.json();
+    const { phone, pin } = await req.json();
 
     if (!phone || typeof phone !== 'string') {
       return new Response(
@@ -82,6 +83,53 @@ serve(async (req) => {
 
     // Superadmin (August) can ALWAYS log in, even if accidentally deactivated
     const isSuperadminPhone = normalizedPhone === '90076299';
+
+    // ---- Admin PIN gate -------------------------------------------------
+    const { data: preRoles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('leader_id', leader.id);
+    const roleNames = (preRoles ?? []).map((r: { role: string }) => r.role);
+    const needsPin = roleNames.includes('admin') || roleNames.includes('superadmin');
+
+    if (needsPin) {
+      const { data: pinRow } = await supabase
+        .from('admin_pins')
+        .select('pin_hash')
+        .eq('leader_id', leader.id)
+        .maybeSingle();
+
+      const json = (body: Record<string, unknown>) => new Response(
+        JSON.stringify(body),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
+      if (!pinRow) {
+        if (pin === undefined || pin === null || pin === '') {
+          return json({ success: false, error: 'PIN_SETUP_REQUIRED', name: leader.name });
+        }
+        if (!isValidPin(pin)) {
+          return json({ success: false, error: 'INVALID_PIN_FORMAT', message: 'PIN-koden må være 4–6 siffer.' });
+        }
+        const { error: insertErr } = await supabase
+          .from('admin_pins')
+          .insert({ leader_id: leader.id, pin_hash: await hashPin(pin) });
+        if (insertErr) {
+          console.error('Could not store admin pin:', insertErr.message);
+          return json({ success: false, error: 'Kunne ikke lagre PIN-koden. Prøv igjen.' });
+        }
+        console.log(`Admin PIN created for leader ${leader.id}`);
+      } else {
+        if (pin === undefined || pin === null || pin === '') {
+          return json({ success: false, error: 'PIN_REQUIRED', name: leader.name });
+        }
+        if (!isValidPin(pin) || !(await verifyPin(pin, pinRow.pin_hash))) {
+          console.log('Wrong admin PIN attempt');
+          return json({ success: false, error: 'WRONG_PIN', message: 'Feil PIN-kode.' });
+        }
+      }
+    }
+    // --------------------------------------------------------------------
 
     // Inactive leaders are allowed to sign in — the app restricts them to the
     // off-season features (Hjem, Ledersnakk, profil/snus, Klineliste, Lederpass).
