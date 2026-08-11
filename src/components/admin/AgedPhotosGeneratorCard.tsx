@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sparkles, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const BATCH = 2;
+const BATCH = 4;
 
 type PeriodRow = { id: string; name: string; is_active: boolean | null };
 
