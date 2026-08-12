@@ -167,6 +167,16 @@ export function useUpdateMailboxMessage() {
       }
       const { error } = await supabase.from('mailbox_messages').update(patch).eq('id', input.id);
       if (error) throw error;
+
+      if (typeof input.reply === 'string' && input.reply.trim()) {
+        try {
+          await supabase.functions.invoke('push-mailbox-reply', {
+            body: { message_id: input.id },
+          });
+        } catch (e) {
+          console.error('Kunne ikke sende svar-varsling', e);
+        }
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mailbox'] });
