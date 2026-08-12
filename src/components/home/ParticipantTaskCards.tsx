@@ -22,6 +22,7 @@ export function ParticipantTaskCards() {
   const markRead = useMarkParticipantTaskRead();
   const claim = useClaimParticipantTask();
   const complete = useCompleteParticipantTask();
+  const [lightbox, setLightbox] = useState<{ url: string; name: string } | null>(null);
 
   if (tasks.length === 0) return null;
 
