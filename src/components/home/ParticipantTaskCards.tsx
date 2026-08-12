@@ -131,6 +131,33 @@ export function ParticipantTaskCards() {
           </Card>
         );
       })}
+
+      <Dialog open={!!lightbox} onOpenChange={(open) => !open && setLightbox(null)}>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl p-0 bg-black/95 border-none">
+          {lightbox && (
+            <>
+              <img
+                src={lightbox.url}
+                alt={lightbox.name}
+                className="w-full max-h-[75vh] object-contain"
+              />
+              <div
+                className="flex justify-center"
+                style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+              >
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => setLightbox(null)}
+                  className="rounded-full px-8"
+                >
+                  Lukk
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
