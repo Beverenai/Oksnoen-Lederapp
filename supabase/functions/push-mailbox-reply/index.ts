@@ -62,8 +62,15 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", { _user_id: uid, _role: "admin" });
-    const { data: isSuper } = await supabaseAdmin.rpc("has_role", { _user_id: uid, _role: "superadmin" });
+    const { data: caller } = await supabaseAdmin
+      .from("leaders")
+      .select("id")
+      .eq("auth_user_id", uid)
+      .maybeSingle();
+    if (!caller) return json({ error: "Forbidden" }, 403);
+
+    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", { _leader_id: caller.id, _role: "admin" });
+    const { data: isSuper } = await supabaseAdmin.rpc("has_role", { _leader_id: caller.id, _role: "superadmin" });
     if (!isAdmin && !isSuper) return json({ error: "Forbidden" }, 403);
 
     const { data: message } = await supabaseAdmin
