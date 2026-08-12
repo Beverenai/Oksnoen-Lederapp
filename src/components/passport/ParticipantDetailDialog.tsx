@@ -18,7 +18,7 @@ import { useSeasonView } from '@/contexts/SeasonViewContext';
 import { fetchSeasonParticipants } from '@/hooks/useSeasonParticipants';
 import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X, ChevronDown, Maximize2 } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X, ChevronDown, Maximize2, Send } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,6 +27,7 @@ import { CachedImage } from '@/components/ui/cached-image';
 import { TeamBadge } from '@/components/participants/TeamBadge';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { IncidentSheet } from '@/components/incidents/IncidentSheet';
+import { SendParticipantTaskSheet } from '@/components/passport/SendParticipantTaskSheet';
 import {
   CATEGORY_LABELS,
   CATEGORY_COLORS,
@@ -318,6 +319,7 @@ export const ParticipantDetailDialog = ({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [showAged, setShowAged] = useState(false);
   const [incidentOpen, setIncidentOpen] = useState(false);
+  const [taskOpen, setTaskOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingData, setBookingData] = useState<Tables<'participant_bookings'> | null>(null);
   const [showNurseInfo, setShowNurseInfo] = useState(false);
@@ -974,6 +976,14 @@ export const ParticipantDetailDialog = ({
                   Registrer hendelse
                 </Button>
 
+                {/* Admin: send oppdrag til leder(e) */}
+                {isAdmin && (
+                  <Button variant="outline" className="w-full" disabled={readOnly} onClick={() => setTaskOpen(true)}>
+                    <Send className="h-4 w-4 mr-2 text-primary" />
+                    Send oppdrag til leder
+                  </Button>
+                )}
+
                 {/* Admin/Nurse: booking info (guardian contact) */}
                 {(isAdmin || isNurse) && (
                   <Button
@@ -1094,6 +1104,14 @@ export const ParticipantDetailDialog = ({
         open={incidentOpen}
         onOpenChange={setIncidentOpen}
         prefillParticipantId={participantId}
+      />
+    )}
+    {participantId && participant && (
+      <SendParticipantTaskSheet
+        open={taskOpen}
+        onOpenChange={setTaskOpen}
+        participantId={participantId}
+        participantName={participant.name}
       />
     )}
     {bookingOpen && bookingData && participant && (
