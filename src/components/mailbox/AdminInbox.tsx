@@ -13,7 +13,7 @@ import {
   statusLabel,
   useUpdateMailboxMessage,
 } from '@/hooks/useMailbox';
-import { EyeOff, Trash2 } from 'lucide-react';
+import { Bell, EyeOff, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const fmt = (iso: string) =>
