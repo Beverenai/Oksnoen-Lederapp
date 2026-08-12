@@ -1,8 +1,10 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Check, CheckCheck, Hand, Loader2, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useClaimParticipantTask,
