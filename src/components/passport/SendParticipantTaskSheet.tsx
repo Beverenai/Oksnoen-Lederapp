@@ -83,7 +83,7 @@ export function SendParticipantTaskSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="max-h-[92dvh] p-0 flex flex-col gap-0 rounded-t-3xl overflow-hidden"
+        className="max-h-[92dvh] p-0 flex flex-col gap-0 rounded-t-3xl overflow-hidden sm:max-h-[85vh] sm:max-w-xl sm:rounded-3xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:h-auto sm:border sm:border-border/60 sm:shadow-2xl"
       >
         {/* Topp: deltaker */}
         <div className="px-5 pt-5 pb-4 border-b border-border/60 bg-muted/30">
