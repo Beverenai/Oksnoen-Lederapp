@@ -222,7 +222,7 @@ export function ParticipantStatsCard() {
         <CollapsibleTrigger className="w-full px-3 py-2.5 flex items-center gap-2 text-left hover:bg-muted/40 transition-colors">
           <BarChart3 className="w-4 h-4 shrink-0 text-muted-foreground" />
           <span className="text-sm font-semibold shrink-0">Oversikt</span>
-          <span className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <span className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
             <Badge variant="secondary" className="text-[11px] shrink-0">
               {arrivedParticipants}/{totalParticipants} ankommet
             </Badge>
