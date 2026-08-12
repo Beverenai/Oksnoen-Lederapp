@@ -2,11 +2,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ClipboardCheck, Loader2, Trash2 } from 'lucide-react';
+import { ClipboardCheck, Loader2, Ban } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useAllParticipantTasks,
-  useDeleteParticipantTask,
+  useCancelParticipantTask,
   useParticipantTasksRealtime,
   type ParticipantTask,
 } from '@/hooks/useParticipantTasks';
@@ -22,6 +22,7 @@ function fmt(ts: string | null) {
 }
 
 function statusBadge(task: ParticipantTask) {
+  if (task.status === 'cancelled') return <Badge variant="outline" className="text-muted-foreground">Trukket tilbake</Badge>;
   if (task.status === 'done') return <Badge variant="secondary">Ferdig</Badge>;
   if (task.claimed_by) return <Badge className="bg-blue-500 hover:bg-blue-600">Tatt</Badge>;
   return <Badge variant="outline">Venter</Badge>;
@@ -30,7 +31,7 @@ function statusBadge(task: ParticipantTask) {
 export function ParticipantTasksTab() {
   useParticipantTasksRealtime();
   const { data: tasks = [], isLoading } = useAllParticipantTasks();
-  const del = useDeleteParticipantTask();
+  const cancel = useCancelParticipantTask();
 
   if (isLoading) {
     return (
@@ -89,21 +90,30 @@ export function ParticipantTasksTab() {
                   ) : (
                     !task.is_broadcast && <p className="text-warning font-medium">Ikke lest enda</p>
                   )}
-                  {task.completed_at && <p>Fullført {fmt(task.completed_at)}</p>}
+                  {task.status === 'cancelled' ? (
+                    <p>Trukket tilbake {fmt(task.completed_at)}</p>
+                  ) : (
+                    task.completed_at && <p>Fullført {fmt(task.completed_at)}</p>
+                  )}
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() =>
-                  del.mutate(task.id, {
-                    onSuccess: () => toast.success('Oppdrag slettet'),
-                    onError: () => toast.error('Kunne ikke slette'),
-                  })
-                }
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              {task.status !== 'cancelled' && task.status !== 'done' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 gap-1.5"
+                  disabled={cancel.isPending}
+                  onClick={() =>
+                    cancel.mutate(task.id, {
+                      onSuccess: () => toast.success('Oppdrag trukket tilbake'),
+                      onError: () => toast.error('Kunne ikke trekke tilbake'),
+                    })
+                  }
+                >
+                  <Ban className="h-3.5 w-3.5" />
+                  Trekk tilbake
+                </Button>
+              )}
             </div>
           </div>
         ))}
