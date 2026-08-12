@@ -86,16 +86,33 @@ export default function AdminDashboard() {
         </div>
       ) : (
         <>
-          {/* Nøkkeltall */}
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            <StatTile
-              label="I leir nå"
-              value={data.inCamp}
-              hint={`av ${data.totalParticipants} deltagere`}
-              onClick={() => navigate('/passport')}
-            />
-            <StatTile label="Ankommet" value={data.arrived} hint={`${data.notArrived} ikke ankommet`} onClick={() => navigate('/passport')} />
-            <StatTile label="Dratt hjem" value={data.wentHome} hint="registrert hendelse" onClick={() => navigate('/hendelser')} />
+          {/* Nøkkeltall – deltagerstatus i én boks */}
+          <div className="grid gap-2.5 sm:grid-cols-[2fr_1fr]">
+            <section className="rounded-3xl border border-border/60 bg-card/70 p-4 shadow-sm backdrop-blur">
+              <button
+                type="button"
+                onClick={() => navigate('/passport')}
+                className="flex w-full items-end gap-2 text-left"
+              >
+                <span className="text-4xl font-bold leading-none">{data.inCamp}</span>
+                <span className="pb-0.5 text-sm text-muted-foreground">i leir nå · av {data.totalParticipants} deltagere</span>
+                <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+              <div className="mt-3 grid grid-cols-3 divide-x divide-border/60 border-t border-border/60 pt-3">
+                <button type="button" onClick={() => navigate('/passport')} className="px-1 text-left">
+                  <p className="text-lg font-semibold leading-none">{data.arrived}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">Ankommet</p>
+                </button>
+                <button type="button" onClick={() => navigate('/passport')} className="px-3 text-left">
+                  <p className="text-lg font-semibold leading-none">{data.notArrived}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">Ikke ankommet</p>
+                </button>
+                <button type="button" onClick={() => navigate('/hendelser')} className="px-3 text-left">
+                  <p className="text-lg font-semibold leading-none">{data.wentHome}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">Dratt hjem</p>
+                </button>
+              </div>
+            </section>
             <StatTile label="Aktive ledere" value={data.activeLeaders} hint="denne perioden" onClick={() => navigate('/leaders')} />
           </div>
 
