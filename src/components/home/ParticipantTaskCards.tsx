@@ -35,12 +35,20 @@ export function ParticipantTaskCards() {
           <Card key={task.id} className="border-2 border-primary/30 bg-primary/5 dark:bg-primary/10 shadow-md">
             <CardContent className="py-4 space-y-3">
               <div className="flex items-center gap-3">
-                <Avatar className="h-14 w-14 border-2 border-primary/30">
-                  <AvatarImage src={img} alt={task.participant?.name ?? 'Deltaker'} />
-                  <AvatarFallback>
-                    <UserRound className="h-6 w-6" />
-                  </AvatarFallback>
-                </Avatar>
+                <button
+                  type="button"
+                  onClick={() => img && setLightbox({ url: task.participant?.image_url || img, name: task.participant?.name ?? 'Deltaker' })}
+                  disabled={!img}
+                  className="rounded-full focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:cursor-default"
+                  aria-label={img ? 'Forstørre bilde' : 'Ingen bilde'}
+                >
+                  <Avatar className="h-14 w-14 border-2 border-primary/30">
+                    <AvatarImage src={img} alt={task.participant?.name ?? 'Deltaker'} />
+                    <AvatarFallback>
+                      <UserRound className="h-6 w-6" />
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] uppercase tracking-widest text-primary/70 font-medium">
                     {task.is_broadcast ? 'Oppdrag til alle' : 'Beskjed til deg'}
