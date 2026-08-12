@@ -779,6 +779,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           style={{ height: isSubPage ? 'calc(56px + var(--safe-top))' : 'var(--safe-top)' }}
         />
         <div className="p-4 lg:p-6 min-w-0 w-full">
+          <DashboardReturnBar />
           {seasonView && (
             <div className="mb-4 flex items-center gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
               <Archive className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
