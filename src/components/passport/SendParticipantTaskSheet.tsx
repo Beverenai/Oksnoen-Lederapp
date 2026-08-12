@@ -105,7 +105,7 @@ export function SendParticipantTaskSheet({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 sm:flex-initial sm:min-h-0">
           {/* Beskjed */}
           <section className="space-y-2">
             <div className="flex items-center justify-between">
