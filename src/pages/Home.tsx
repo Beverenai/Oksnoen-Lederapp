@@ -699,6 +699,9 @@ export default function Home() {
 
       {/* Content Cards - consistent spacing */}
       <div className="px-4 mt-4 sm:mt-6 space-y-3 sm:space-y-4">
+        {/* Deltakeroppdrag fra admin — øverst */}
+        <ParticipantTaskCards />
+
         {/* HERO: Din aktivitet — viktigst, øverst */}
         {isElementVisible('current_activity') && (() => {
           const activityConfig = getConfigForElement('current_activity');

@@ -27,6 +27,7 @@ import { CachedImage } from '@/components/ui/cached-image';
 import { TeamBadge } from '@/components/participants/TeamBadge';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { IncidentSheet } from '@/components/incidents/IncidentSheet';
+import { SendParticipantTaskSheet } from '@/components/passport/SendParticipantTaskSheet';
 import {
   CATEGORY_LABELS,
   CATEGORY_COLORS,
@@ -318,6 +319,7 @@ export const ParticipantDetailDialog = ({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [showAged, setShowAged] = useState(false);
   const [incidentOpen, setIncidentOpen] = useState(false);
+  const [taskOpen, setTaskOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingData, setBookingData] = useState<Tables<'participant_bookings'> | null>(null);
   const [showNurseInfo, setShowNurseInfo] = useState(false);
@@ -973,6 +975,14 @@ export const ParticipantDetailDialog = ({
                   <MessageSquareWarning className="h-4 w-4 mr-2 text-red-600" />
                   Registrer hendelse
                 </Button>
+
+                {/* Admin: send oppdrag til leder(e) */}
+                {isAdmin && (
+                  <Button variant="outline" className="w-full" disabled={readOnly} onClick={() => setTaskOpen(true)}>
+                    <Send className="h-4 w-4 mr-2 text-primary" />
+                    Send oppdrag til leder
+                  </Button>
+                )}
 
                 {/* Admin/Nurse: booking info (guardian contact) */}
                 {(isAdmin || isNurse) && (
