@@ -12,6 +12,7 @@ import {
   BookOpen,
   Heart,
   BarChart2,
+  LayoutDashboard,
   Settings,
   LogOut,
   Bell,
@@ -144,6 +145,11 @@ export default function More() {
   const adminTopItems: MoreItem[] = [
     ...(isAdmin
       ? [
+          {
+            to: '/admin/dashboard',
+            icon: LayoutDashboard,
+            label: 'Dashboard',
+          } as MoreItem,
           {
             icon: Bell,
             label: 'Varslinger',
