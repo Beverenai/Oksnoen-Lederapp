@@ -212,6 +212,18 @@ export default function Fix() {
       if (error) throw error;
 
       showSuccess('Fix-oppgave opprettet!');
+
+      // Varsle admin om ny Fix-oppgave
+      supabase.functions.invoke('push-admin-alert', {
+        body: {
+          title: '🔧 Ny Fix-oppgave',
+          message: `${leader?.name ?? 'En leder'} la inn: ${title.trim()}${location.trim() ? ` (${location.trim()})` : ''}`,
+          url: '/fix',
+          alert_type: 'fix_task_created',
+          sender_name: leader?.name,
+        },
+      }).catch((err) => console.error('Kunne ikke varsle admin:', err));
+
       resetForm();
       setShowNewForm(false);
     } catch (error) {
