@@ -187,3 +187,25 @@ export function useDeleteParticipantTask() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['participant-tasks'] }),
   });
 }
+
+/** Trekker tilbake / kansellerer et oppdrag – raden beholdes for historikk */
+export function useCancelParticipantTask() {
+  const qc = useQueryClient();
+  const { leader, effectiveLeader } = useAuth();
+  const leaderId = effectiveLeader?.id ?? leader?.id ?? null;
+
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await (supabase as any)
+        .from('participant_tasks')
+        .update({
+          status: 'cancelled',
+          completed_at: new Date().toISOString(),
+          read_by: leaderId,
+        })
+        .eq('id', taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['participant-tasks'] }),
+  });
+}

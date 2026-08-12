@@ -13,11 +13,14 @@ import { ParticipantChip } from '@/components/admin/dashboard/ParticipantChip';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { LeaderDeviationsSheet } from '@/components/admin/LeaderDeviationsSheet';
+import { openAdminNotes } from '@/lib/adminNotesBus';
+import { markDashReturn } from '@/lib/dashboardReturn';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import {
   Cake, MessageSquareWarning, StickyNote, Heart, Wrench, Mail, ClipboardList,
-  ChefHat, RefreshCw, Settings,
+  ChefHat, RefreshCw, Settings, AlertTriangle, ChevronRight,
 } from 'lucide-react';
 
 function timeAgo(iso: string) {
@@ -26,12 +29,19 @@ function timeAgo(iso: string) {
 
 export default function AdminDashboard() {
   const { isAdmin } = useAuth();
-  const navigate = useNavigate();
+  const rawNavigate = useNavigate();
   const { data, isLoading, refetch, isRefetching } = useAdminDashboard(!!isAdmin);
   const { teamA, teamB } = useKitchenDutyToday();
   const teamsEnabled = useTeamsEnabled();
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [deviationsOpen, setDeviationsOpen] = useState(false);
+
+  // Alle hopp ut fra dashboardet husker at man kan gå tilbake hit
+  const navigate = (to: string) => {
+    markDashReturn();
+    rawNavigate(to);
+  };
 
   const openParticipant = (id: string) => {
     setDetailId(id);
@@ -76,16 +86,33 @@ export default function AdminDashboard() {
         </div>
       ) : (
         <>
-          {/* Nøkkeltall */}
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            <StatTile
-              label="I leir nå"
-              value={data.inCamp}
-              hint={`av ${data.totalParticipants} deltagere`}
-              onClick={() => navigate('/passport')}
-            />
-            <StatTile label="Ankommet" value={data.arrived} hint={`${data.notArrived} ikke ankommet`} onClick={() => navigate('/passport')} />
-            <StatTile label="Dratt hjem" value={data.wentHome} hint="registrert hendelse" onClick={() => navigate('/hendelser')} />
+          {/* Nøkkeltall – deltagerstatus i én boks */}
+          <div className="grid gap-2.5 sm:grid-cols-[2fr_1fr]">
+            <section className="rounded-3xl border border-border/60 bg-card/70 p-4 shadow-sm backdrop-blur">
+              <button
+                type="button"
+                onClick={() => navigate('/passport')}
+                className="flex w-full items-end gap-2 text-left"
+              >
+                <span className="text-4xl font-bold leading-none">{data.inCamp}</span>
+                <span className="pb-0.5 text-sm text-muted-foreground">i leir nå · av {data.totalParticipants} deltagere</span>
+                <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+              <div className="mt-3 grid grid-cols-3 divide-x divide-border/60 border-t border-border/60 pt-3">
+                <button type="button" onClick={() => navigate('/passport')} className="px-1 text-left">
+                  <p className="text-lg font-semibold leading-none">{data.arrived}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">Ankommet</p>
+                </button>
+                <button type="button" onClick={() => navigate('/passport')} className="px-3 text-left">
+                  <p className="text-lg font-semibold leading-none">{data.notArrived}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">Ikke ankommet</p>
+                </button>
+                <button type="button" onClick={() => navigate('/hendelser')} className="px-3 text-left">
+                  <p className="text-lg font-semibold leading-none">{data.wentHome}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">Dratt hjem</p>
+                </button>
+              </div>
+            </section>
             <StatTile label="Aktive ledere" value={data.activeLeaders} hint="denne perioden" onClick={() => navigate('/leaders')} />
           </div>
 
@@ -185,22 +212,34 @@ export default function AdminDashboard() {
               </DashCard>
 
               {/* Notater */}
-              <DashCard title="Notater" icon={<StickyNote className="h-4 w-4 text-amber-500" />}>
+              <DashCard
+                title="Notater"
+                icon={<StickyNote className="h-4 w-4 text-amber-500" />}
+                actionLabel="Åpne"
+                onAction={() => openAdminNotes()}
+              >
                 {data.notes.length === 0 ? (
                   <EmptyLine text="Ingen notater ennå." />
                 ) : (
                   <ul className="space-y-1.5">
                     {data.notes.map((n) => (
-                      <li key={n.id} className="flex items-center gap-2 rounded-xl bg-muted/40 px-2.5 py-2">
-                        <span className="truncate text-sm font-medium">
-                          {n.is_pinned ? '📌 ' : ''}{n.title || (n.kind === 'board' ? 'Whiteboard' : 'Uten tittel')}
-                        </span>
-                        <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">{timeAgo(n.updated_at)}</span>
+                      <li key={n.id}>
+                        <button
+                          type="button"
+                          onClick={() => openAdminNotes(n.id)}
+                          className="flex w-full items-center gap-2 rounded-xl bg-muted/40 px-2.5 py-2 text-left transition-transform active:scale-[0.99]"
+                        >
+                          <span className="truncate text-sm font-medium">
+                            {n.is_pinned ? '📌 ' : ''}{n.title || (n.kind === 'board' ? 'Whiteboard' : 'Uten tittel')}
+                          </span>
+                          <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">{timeAgo(n.updated_at)}</span>
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        </button>
                       </li>
                     ))}
                   </ul>
                 )}
-                <p className="mt-2 text-[11px] text-muted-foreground">Åpne notat-panelet nede til høyre for å redigere.</p>
+                <p className="mt-2 text-[11px] text-muted-foreground">Trykk på et notat for å åpne og redigere det.</p>
               </DashCard>
             </div>
 
@@ -229,6 +268,21 @@ export default function AdminDashboard() {
                   <StatTile label="Rapporter" value={data.nurseReports} hint="denne perioden" />
                   <StatTile label="Helseinfo" value={data.importantHealthInfo} hint="deltagere med info" />
                 </div>
+              </DashCard>
+
+              {/* Lederavvik */}
+              <DashCard
+                title="Lederavvik"
+                icon={<AlertTriangle className="h-4 w-4 text-orange-500" />}
+                actionLabel="Åpne"
+                onAction={() => setDeviationsOpen(true)}
+              >
+                <p className="text-xs text-muted-foreground">
+                  Registrer timer, overtid eller fravær og tagg lederen det gjelder.
+                </p>
+                <Button size="sm" className="mt-2 w-full" onClick={() => setDeviationsOpen(true)}>
+                  Lederavvik
+                </Button>
               </DashCard>
 
               {/* Fix */}
@@ -313,6 +367,7 @@ export default function AdminDashboard() {
       )}
 
       <ParticipantDetailDialog participantId={detailId} open={detailOpen} onOpenChange={setDetailOpen} />
+      <LeaderDeviationsSheet open={deviationsOpen} onOpenChange={setDeviationsOpen} />
       <AdminNotesPanel />
     </div>
   );
