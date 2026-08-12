@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Progress } from '@/components/ui/progress';
 import {
   Settings, Loader2, Shield, Calendar,
-  Save, LayoutGrid, List, Sparkles, CalendarDays, RefreshCw,
+  Save, LayoutGrid, List, Sparkles, CalendarDays, RefreshCw, LayoutDashboard,
 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
@@ -190,6 +190,12 @@ export default function Admin() {
           </p>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <Link to="/admin/dashboard">
+            <Button size="sm">
+              <LayoutDashboard className="h-4 w-4" />
+              <span className="hidden sm:inline sm:ml-2">Dashboard</span>
+            </Button>
+          </Link>
           <Link to="/admin/settings">
             <Button variant="outline" size="sm">
               <Settings className="h-4 w-4" />

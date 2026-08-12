@@ -37,6 +37,7 @@ const Skjaer = lazy(() => import("@/pages/Skjaer"));
 const Stories = lazy(() => import("@/pages/Stories"));
 const Admin = lazy(() => import("@/pages/admin/Admin"));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
+const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const Nurse = lazy(() => import("@/pages/Nurse"));
 const Fix = lazy(() => import("@/pages/Fix"));
 const Mailbox = lazy(() => import("@/pages/Mailbox"));
@@ -221,6 +222,7 @@ function AppRoutes() {
         <Route path="/nurse" element={<ProtectedRoute><Nurse /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
         <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
+        <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/shifts" element={<ProtectedRoute><ShiftPlanner /></ProtectedRoute>} />
         <Route path="/admin/shifts-mini" element={<ProtectedRoute><ShiftPlannerMini /></ProtectedRoute>} />
         <Route path="/admin/dynga" element={<ProtectedRoute><Dynga /></ProtectedRoute>} />
