@@ -1106,6 +1106,14 @@ export const ParticipantDetailDialog = ({
         prefillParticipantId={participantId}
       />
     )}
+    {participantId && participant && (
+      <SendParticipantTaskSheet
+        open={taskOpen}
+        onOpenChange={setTaskOpen}
+        participantId={participantId}
+        participantName={participant.name}
+      />
+    )}
     {bookingOpen && bookingData && participant && (
       <BookingDetailSheet
         booking={bookingData}
