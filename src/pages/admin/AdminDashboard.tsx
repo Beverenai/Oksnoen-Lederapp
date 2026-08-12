@@ -13,11 +13,14 @@ import { ParticipantChip } from '@/components/admin/dashboard/ParticipantChip';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { LeaderDeviationsSheet } from '@/components/admin/LeaderDeviationsSheet';
+import { openAdminNotes } from '@/lib/adminNotesBus';
+import { markDashReturn } from '@/lib/dashboardReturn';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import {
   Cake, MessageSquareWarning, StickyNote, Heart, Wrench, Mail, ClipboardList,
-  ChefHat, RefreshCw, Settings,
+  ChefHat, RefreshCw, Settings, AlertTriangle, ChevronRight,
 } from 'lucide-react';
 
 function timeAgo(iso: string) {
@@ -26,12 +29,19 @@ function timeAgo(iso: string) {
 
 export default function AdminDashboard() {
   const { isAdmin } = useAuth();
-  const navigate = useNavigate();
+  const rawNavigate = useNavigate();
   const { data, isLoading, refetch, isRefetching } = useAdminDashboard(!!isAdmin);
   const { teamA, teamB } = useKitchenDutyToday();
   const teamsEnabled = useTeamsEnabled();
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [deviationsOpen, setDeviationsOpen] = useState(false);
+
+  // Alle hopp ut fra dashboardet husker at man kan gå tilbake hit
+  const navigate = (to: string) => {
+    markDashReturn();
+    rawNavigate(to);
+  };
 
   const openParticipant = (id: string) => {
     setDetailId(id);
