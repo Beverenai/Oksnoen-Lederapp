@@ -147,17 +147,17 @@ export function useAdminDashboard(enabled: boolean) {
         supabase.from('participant_health_info').select('id', { count: 'exact', head: true }).eq('period_id', periodId!),
         supabase
           .from('fix_tasks')
-          .select('id, title, location, status, created_at')
+          .select('id, title, location, status, created_at', { count: 'exact' })
           .in('status', ['pending', 'assigned'])
           .order('created_at', { ascending: false })
-          .limit(20),
+          .limit(3),
         supabase
           .from('mailbox_messages')
-          .select('id, category, content, created_at, is_anonymous, admin_reply')
+          .select('id, category, content, created_at, is_anonymous, admin_reply', { count: 'exact' })
           .eq('period_id', periodId!)
           .is('admin_reply', null)
           .order('created_at', { ascending: false })
-          .limit(20),
+          .limit(3),
         supabase
           .from('participant_tasks')
           .select('id, message, status, created_at, is_broadcast, participant_id')
@@ -218,10 +218,10 @@ export function useAdminDashboard(enabled: boolean) {
         notes: (notesRes.data || []) as DashNote[],
         nurseReports: nurseRes.count ?? 0,
         importantHealthInfo: healthRes.count ?? 0,
-        openFix: (fixRes.data || []).length,
-        fixTasks: ((fixRes.data || []) as DashFixTask[]).slice(0, 3),
-        unansweredMail: (mailRes.data || []).length,
-        mailbox: ((mailRes.data || []) as DashMailbox[]).slice(0, 3),
+        openFix: fixRes.count ?? (fixRes.data || []).length,
+        fixTasks: (fixRes.data || []) as DashFixTask[],
+        unansweredMail: mailRes.count ?? (mailRes.data || []).length,
+        mailbox: (mailRes.data || []) as DashMailbox[],
         openTasks,
       };
     },
