@@ -28,6 +28,7 @@ import {
   HeartHandshake,
   Archive,
   ChefHat,
+  LayoutDashboard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
