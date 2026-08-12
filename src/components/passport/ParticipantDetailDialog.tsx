@@ -1112,7 +1112,7 @@ export const ParticipantDetailDialog = ({
         onOpenChange={setTaskOpen}
         participantId={participantId}
         participantName={participant.name}
-        participantImage={participant.image_thumb_url || participant.image_url || undefined}
+        participantImage={(participant as any).image_thumb_url || participant.image_url || undefined}
       />
     )}
     {bookingOpen && bookingData && participant && (
