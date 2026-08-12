@@ -270,6 +270,21 @@ export default function AdminDashboard() {
                 </div>
               </DashCard>
 
+              {/* Lederavvik */}
+              <DashCard
+                title="Lederavvik"
+                icon={<AlertTriangle className="h-4 w-4 text-orange-500" />}
+                actionLabel="Åpne"
+                onAction={() => setDeviationsOpen(true)}
+              >
+                <p className="text-xs text-muted-foreground">
+                  Registrer timer, overtid eller fravær og tagg lederen det gjelder.
+                </p>
+                <Button size="sm" className="mt-2 w-full" onClick={() => setDeviationsOpen(true)}>
+                  Lederavvik
+                </Button>
+              </DashCard>
+
               {/* Fix */}
               <DashCard
                 title="FIX"
@@ -352,6 +367,7 @@ export default function AdminDashboard() {
       )}
 
       <ParticipantDetailDialog participantId={detailId} open={detailOpen} onOpenChange={setDetailOpen} />
+      <LeaderDeviationsSheet open={deviationsOpen} onOpenChange={setDeviationsOpen} />
       <AdminNotesPanel />
     </div>
   );
