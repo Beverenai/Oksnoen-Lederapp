@@ -52,6 +52,9 @@ export function ParticipantStatsCard() {
   const [isMissingOpen, setIsMissingOpen] = useState(false);
   const [isBirthdaysOpen, setIsBirthdaysOpen] = useState(true);
   const [isNotArrivedOpen, setIsNotArrivedOpen] = useState(true);
+  const [isOverviewOpen, setIsOverviewOpen] = useState(
+    () => typeof window === 'undefined' || window.innerWidth >= 640
+  );
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { data: activePeriodId } = useActivePeriodId();
@@ -214,15 +217,39 @@ export function ParticipantStatsCard() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <BarChart3 className="w-5 h-5" />
-            Oversikt
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5">
+    <Collapsible open={isOverviewOpen} onOpenChange={setIsOverviewOpen} className="space-y-3">
+      <Card className="overflow-hidden">
+        <CollapsibleTrigger className="w-full px-3 py-2.5 flex items-center gap-2 text-left hover:bg-muted/40 transition-colors">
+          <BarChart3 className="w-4 h-4 shrink-0 text-muted-foreground" />
+          <span className="text-sm font-semibold shrink-0">Oversikt</span>
+          <span className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+            <Badge variant="secondary" className="text-[11px] shrink-0">
+              {arrivedParticipants}/{totalParticipants} ankommet
+            </Badge>
+            {notArrived.length > 0 && (
+              <Badge variant="outline" className="text-[11px] shrink-0 border-red-500/40 text-red-600 dark:text-red-400">
+                {notArrived.length} mangler
+              </Badge>
+            )}
+            {missingActivities.length > 0 && (
+              <Badge variant="outline" className="text-[11px] shrink-0 border-amber-500/40 text-amber-600 dark:text-amber-400">
+                {missingActivities.length} uten aktivitet
+              </Badge>
+            )}
+            {upcomingBirthdays.length > 0 && (
+              <Badge variant="outline" className="text-[11px] shrink-0 border-pink-500/40 text-pink-600 dark:text-pink-400">
+                {upcomingBirthdays.length} bursdager
+              </Badge>
+            )}
+          </span>
+          {isOverviewOpen ? (
+            <ChevronUp className="w-4 h-4 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" />
+          )}
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+        <CardContent className="space-y-5 pt-3">
           {/* Arrival Stats */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -378,10 +405,13 @@ export function ParticipantStatsCard() {
             </p>
           )}
         </CardContent>
+        </CollapsibleContent>
       </Card>
 
       {/* Age Distribution Chart */}
-      <AgeDistributionChart participants={participants} />
+      <CollapsibleContent>
+        <AgeDistributionChart participants={participants} />
+      </CollapsibleContent>
 
       {/* Participant Detail Dialog */}
       <ParticipantDetailDialog
@@ -390,6 +420,6 @@ export function ParticipantStatsCard() {
         onOpenChange={setIsDialogOpen}
         onParticipantUpdated={() => loadData(false)}
       />
-    </div>
+    </Collapsible>
   );
 }

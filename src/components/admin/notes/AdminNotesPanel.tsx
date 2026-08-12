@@ -16,6 +16,7 @@ import { NOTE_TEMPLATES } from './NoteTemplates';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { holdAppUpdate } from '@/lib/registerSW';
+import { ADMIN_NOTES_OPEN_EVENT } from '@/lib/adminNotesBus';
 
 function relTime(iso: string | null) {
   if (!iso) return '';
@@ -56,6 +57,17 @@ export function AdminNotesPanel() {
     const release = holdAppUpdate();
     return release;
   }, [open]);
+
+  // Kan åpnes utenfra (f.eks. ved å trykke på et notat i dashboardet)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const noteId = (e as CustomEvent<{ noteId?: string }>).detail?.noteId;
+      if (noteId) setActiveId(noteId);
+      setOpen(true);
+    };
+    window.addEventListener(ADMIN_NOTES_OPEN_EVENT, handler);
+    return () => window.removeEventListener(ADMIN_NOTES_OPEN_EVENT, handler);
+  }, [setActiveId]);
 
   // Keep the selected chip visible in the horizontal mobile list
   useEffect(() => {

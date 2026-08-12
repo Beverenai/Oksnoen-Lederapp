@@ -1302,6 +1302,67 @@ export type Database = {
           },
         ]
       }
+      leader_deviations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          hours: number | null
+          id: string
+          kind: string
+          leader_id: string
+          note: string | null
+          occurred_on: string
+          period_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          hours?: number | null
+          id?: string
+          kind?: string
+          leader_id: string
+          note?: string | null
+          occurred_on?: string
+          period_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          hours?: number | null
+          id?: string
+          kind?: string
+          leader_id?: string
+          note?: string | null
+          occurred_on?: string
+          period_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_deviations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_deviations_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_deviations_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leader_hookups: {
         Row: {
           confirmed_at: string | null

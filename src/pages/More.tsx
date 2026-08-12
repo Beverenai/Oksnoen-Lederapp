@@ -12,6 +12,7 @@ import {
   BookOpen,
   Heart,
   BarChart2,
+  LayoutDashboard,
   Settings,
   LogOut,
   Bell,
@@ -141,7 +142,33 @@ export default function More() {
     };
   }, []);
 
+  const adminTopItems: MoreItem[] = [
+    ...(isAdmin
+      ? [
+          {
+            to: '/admin/dashboard',
+            icon: LayoutDashboard,
+            label: 'Dashboard',
+          } as MoreItem,
+          {
+            icon: Bell,
+            label: 'Varslinger',
+            onClick: () => setNotificationSheetOpen(true),
+          } as MoreItem,
+        ]
+      : []),
+    ...(isNurse || isAdmin
+      ? [{ to: '/nurse', icon: Heart, label: 'Nurse' } as MoreItem]
+      : []),
+    ...(isAdmin
+      ? [{ to: '/participant-stats', icon: BarChart2, label: 'Deltagere' } as MoreItem]
+      : []),
+  ];
+
   const fullSections: MoreSection[] = [
+    ...(adminTopItems.length > 0
+      ? [{ label: 'Admin', items: adminTopItems }]
+      : []),
     {
       label: 'Min side',
       items: [
@@ -190,16 +217,8 @@ export default function More() {
         ...(murderState?.is_active
           ? [{ to: '/morder', icon: Skull, label: 'Morderleken' } as MoreItem]
           : []),
-        ...(isNurse || isAdmin
-          ? [{ to: '/nurse', icon: Heart, label: 'Nurse' } as MoreItem]
-          : []),
         ...(isKitchen || isAdmin
           ? [{ to: '/kjokken', icon: ChefHat, label: 'Kjøkken' } as MoreItem]
-          : []),
-        ...(isAdmin
-          ? [
-              { to: '/participant-stats', icon: BarChart2, label: 'Deltagere' } as MoreItem,
-            ]
           : []),
         ...(hookupsEnabled || isAdmin
           ? [
@@ -215,18 +234,7 @@ export default function More() {
     },
     {
       label: 'Konto',
-      items: [
-        ...(isAdmin
-          ? [
-              {
-                icon: Bell,
-                label: 'Hurtigvarslinger',
-                onClick: () => setNotificationSheetOpen(true),
-              } as MoreItem,
-            ]
-          : []),
-        { icon: LogOut, label: 'Logg ut', onClick: () => logout() },
-      ],
+      items: [{ icon: LogOut, label: 'Logg ut', onClick: () => logout() }],
     },
   ];
 
