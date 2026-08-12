@@ -11,6 +11,16 @@ import {
   type ParticipantTask,
 } from '@/hooks/useParticipantTasks';
 
+function fmt(ts: string | null) {
+  if (!ts) return '';
+  return new Date(ts).toLocaleString('nb-NO', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 function statusBadge(task: ParticipantTask) {
   if (task.status === 'done') return <Badge variant="secondary">Ferdig</Badge>;
   if (task.claimed_by) return <Badge className="bg-blue-500 hover:bg-blue-600">Tatt</Badge>;
@@ -64,11 +74,23 @@ export function ParticipantTasksTab() {
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-1">{task.message}</p>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  {task.claimer?.name && `Tatt av ${task.claimer.name}. `}
-                  {task.read_at && 'Lest. '}
-                  {task.completed_at && 'Fullført.'}
-                </p>
+                <div className="text-[11px] text-muted-foreground mt-1.5 space-y-0.5">
+                  <p>Sendt {fmt(task.created_at)}{task.creator?.name ? ` av ${task.creator.name}` : ''}</p>
+                  {task.claimed_at && (
+                    <p className="text-blue-600 dark:text-blue-400">
+                      Tatt av {task.claimer?.name ?? 'leder'} {fmt(task.claimed_at)}
+                    </p>
+                  )}
+                  {task.read_at ? (
+                    <p className="text-success font-medium">
+                      Lest {fmt(task.read_at)}
+                      {task.target_leader?.name ? ` av ${task.target_leader.name}` : ''}
+                    </p>
+                  ) : (
+                    !task.is_broadcast && <p className="text-warning font-medium">Ikke lest enda</p>
+                  )}
+                  {task.completed_at && <p>Fullført {fmt(task.completed_at)}</p>}
+                </div>
               </div>
               <Button
                 variant="ghost"
