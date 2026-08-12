@@ -212,22 +212,34 @@ export default function AdminDashboard() {
               </DashCard>
 
               {/* Notater */}
-              <DashCard title="Notater" icon={<StickyNote className="h-4 w-4 text-amber-500" />}>
+              <DashCard
+                title="Notater"
+                icon={<StickyNote className="h-4 w-4 text-amber-500" />}
+                actionLabel="Åpne"
+                onAction={() => openAdminNotes()}
+              >
                 {data.notes.length === 0 ? (
                   <EmptyLine text="Ingen notater ennå." />
                 ) : (
                   <ul className="space-y-1.5">
                     {data.notes.map((n) => (
-                      <li key={n.id} className="flex items-center gap-2 rounded-xl bg-muted/40 px-2.5 py-2">
-                        <span className="truncate text-sm font-medium">
-                          {n.is_pinned ? '📌 ' : ''}{n.title || (n.kind === 'board' ? 'Whiteboard' : 'Uten tittel')}
-                        </span>
-                        <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">{timeAgo(n.updated_at)}</span>
+                      <li key={n.id}>
+                        <button
+                          type="button"
+                          onClick={() => openAdminNotes(n.id)}
+                          className="flex w-full items-center gap-2 rounded-xl bg-muted/40 px-2.5 py-2 text-left transition-transform active:scale-[0.99]"
+                        >
+                          <span className="truncate text-sm font-medium">
+                            {n.is_pinned ? '📌 ' : ''}{n.title || (n.kind === 'board' ? 'Whiteboard' : 'Uten tittel')}
+                          </span>
+                          <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">{timeAgo(n.updated_at)}</span>
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        </button>
                       </li>
                     ))}
                   </ul>
                 )}
-                <p className="mt-2 text-[11px] text-muted-foreground">Åpne notat-panelet nede til høyre for å redigere.</p>
+                <p className="mt-2 text-[11px] text-muted-foreground">Trykk på et notat for å åpne og redigere det.</p>
               </DashCard>
             </div>
 
