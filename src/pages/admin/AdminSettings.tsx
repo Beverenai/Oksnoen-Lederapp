@@ -67,7 +67,6 @@ const navItems = [
   { key: 'sweaters', label: 'Gensere', desc: 'Hentet / kjøpt genser dag 1', icon: Shirt, color: 'bg-lime-500/15 text-lime-600 dark:text-lime-400' },
   { key: 'kiosk', label: 'Gomla', desc: 'Varer og priser i Gomla', icon: ShoppingBasket, color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
   { key: 'season-view', label: 'Hele sesongen', desc: 'Se alle perioder samlet (kun lesing)', icon: Archive, color: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300' },
-  { key: 'participant-tasks', label: 'Deltakeroppdrag', desc: 'Beskjeder sendt til ledere om deltakere', icon: ClipboardList, color: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
   { key: 'archive', label: 'Periodearkiv', desc: 'Se data fra alle perioder', icon: Archive, color: 'bg-slate-500/15 text-slate-600 dark:text-slate-300', path: '/arkiv' },
 ];
 
@@ -84,7 +83,6 @@ const sectionLabels: Record<string, string> = {
   bookings: 'Booking-info',
   sweaters: 'Gensere',
   'season-view': 'Hele sesongen',
-  'participant-tasks': 'Deltakeroppdrag',
 };
 
 export default function AdminSettings() {
