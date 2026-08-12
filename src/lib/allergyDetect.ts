@@ -98,8 +98,19 @@ export type NoteRow = {
   participant_notes: string | null;
 };
 
+const norm = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-zæøå0-9 ]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 export function detectAllergies(rows: NoteRow[]): AllergyHit[] {
-  const out: AllergyHit[] = [];
+  const byParticipant = new Map<
+    string,
+    { hit: AllergyHit; cats: Set<string>; quotes: Map<string, string> }
+  >();
+
   for (const r of rows) {
     const text = [r.booking_notes, r.health_info, r.participant_notes]
       .filter(Boolean)
@@ -107,7 +118,7 @@ export function detectAllergies(rows: NoteRow[]): AllergyHit[] {
     if (!text.trim()) continue;
 
     const cats = new Set<string>();
-    const quotes = new Set<string>();
+    const quotes = new Map<string, string>();
 
     for (const sentence of text.split(SPLIT)) {
       const s = sentence.trim();
@@ -116,23 +127,51 @@ export function detectAllergies(rows: NoteRow[]): AllergyHit[] {
       for (const cat of ALLERGY_CATEGORIES) {
         if (cat.patterns.some((p) => p.test(foodOnly))) {
           cats.add(cat.key);
-          quotes.add(s.length > 220 ? `${s.slice(0, 220)}…` : s);
+          const key = norm(s);
+          if (key && !quotes.has(key)) {
+            quotes.set(key, s.length > 220 ? `${s.slice(0, 220)}…` : s);
+          }
         }
       }
     }
 
-    if (cats.size) {
-      out.push({
-        participant_id: r.participant_id,
-        name: r.name,
-        cabin_name: r.cabin_name,
-        room: r.room,
-        categories: [...cats],
-        quotes: [...quotes],
+    if (!cats.size) continue;
+
+    const id = r.participant_id || norm(r.name);
+    const existing = byParticipant.get(id);
+    if (existing) {
+      cats.forEach((c) => existing.cats.add(c));
+      quotes.forEach((v, k) => {
+        if (!existing.quotes.has(k)) existing.quotes.set(k, v);
+      });
+      existing.hit.cabin_name = existing.hit.cabin_name ?? r.cabin_name;
+      existing.hit.room = existing.hit.room ?? r.room;
+    } else {
+      byParticipant.set(id, {
+        hit: {
+          participant_id: r.participant_id,
+          name: r.name,
+          cabin_name: r.cabin_name,
+          room: r.room,
+          categories: [],
+          quotes: [],
+        },
+        cats,
+        quotes,
       });
     }
   }
-  return out.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+
+  return [...byParticipant.values()]
+    .map(({ hit, cats, quotes }) => {
+      const list = [...quotes.values()];
+      // drop quotes fully contained in a longer quote
+      const deduped = list.filter(
+        (q, i) => !list.some((o, j) => j !== i && o.length > q.length && norm(o).includes(norm(q))),
+      );
+      return { ...hit, categories: [...cats], quotes: deduped };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 }
 
 export function countByCategory(hits: AllergyHit[]): Record<string, number> {
