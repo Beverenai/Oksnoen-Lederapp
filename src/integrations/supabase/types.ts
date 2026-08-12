@@ -2699,6 +2699,110 @@ export type Database = {
           },
         ]
       }
+      participant_tasks: {
+        Row: {
+          claimed_at: string | null
+          claimed_by: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_broadcast: boolean
+          message: string
+          participant_id: string
+          period_id: string | null
+          read_at: string | null
+          read_by: string | null
+          status: string
+          target_leader_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_broadcast?: boolean
+          message: string
+          participant_id: string
+          period_id?: string | null
+          read_at?: string | null
+          read_by?: string | null
+          status?: string
+          target_leader_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_broadcast?: boolean
+          message?: string
+          participant_id?: string
+          period_id?: string | null
+          read_at?: string | null
+          read_by?: string | null
+          status?: string
+          target_leader_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_tasks_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_tasks_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "participant_tasks_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_tasks_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_tasks_read_by_fkey"
+            columns: ["read_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_tasks_target_leader_id_fkey"
+            columns: ["target_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participant_teams: {
         Row: {
           bonus_points: number
@@ -4136,6 +4240,7 @@ export type Database = {
       add_murder_player: { Args: { _leader_id: string }; Returns: undefined }
       archive_murder_round: { Args: never; Returns: string }
       claim_murder_kill: { Args: never; Returns: string }
+      claim_participant_task: { Args: { _task_id: string }; Returns: boolean }
       confirm_murder_death: { Args: { _claim_id?: string }; Returns: undefined }
       current_leader_id: { Args: never; Returns: string }
       edit_kiosk_sale: {
