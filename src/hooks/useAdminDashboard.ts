@@ -84,11 +84,6 @@ export interface AdminDashboardData {
   openTasks: DashTask[];
 }
 
-function todayParts() {
-  const d = new Date();
-  return { month: d.getMonth() + 1, day: d.getDate(), year: d.getFullYear() };
-}
-
 /** Days until next occurrence of the birthday (0 = today). */
 function daysUntilBirthday(birth: string): { inDays: number; turns: number | null } {
   const b = new Date(birth + 'T00:00:00');
@@ -206,9 +201,6 @@ export function useAdminDashboard(enabled: boolean) {
 
       const arrived = participants.filter((p) => p.has_arrived).length;
       const wentHome = participants.filter((p) => wentHomeSet.has(p.id)).length;
-
-      const { month, day } = todayParts();
-      void month; void day;
 
       return {
         period: (periodRes.data as any) ?? null,
