@@ -526,6 +526,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
           ) : isAdmin ? (
             /* Admin på desktop: kun kjernefunksjonene — alt annet ligger på /mer */
             <div className="space-y-1">
+              <Link
+                to="/admin/dashboard"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+              >
+                <LayoutDashboard className="w-5 h-5" />
+                Admin Dashboard
+              </Link>
               <NavLinkItem item={{ to: '/', icon: Home, label: 'Hjem' }} />
               <NavLinkItem item={nurseNavItem} />
               <NavLinkItem item={{ to: '/leaders', icon: Users, label: 'Ledere' }} />
