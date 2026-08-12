@@ -706,25 +706,46 @@ export default function Home() {
         {/* HERO: Din aktivitet — viktigst, øverst */}
         {isElementVisible('current_activity') && (() => {
           const activityConfig = getConfigForElement('current_activity');
+          const hasActivity = !!content?.current_activity;
           return (
             <Card className={cn(
-              "border-2 border-primary/20 bg-primary/5 dark:bg-primary/10 shadow-lg",
+              hasActivity
+                ? "border-2 border-primary/20 bg-primary/5 dark:bg-primary/10 shadow-lg"
+                : "border border-border/60 bg-muted/30 dark:bg-muted/20 shadow-sm",
               getCardStyle(activityConfig)
             )}>
-              <CardContent className="py-8 sm:py-10">
-                <div className="flex flex-col items-center text-center gap-4">
-                  <div className="p-3 rounded-full bg-primary/20">
-                    <ActivityIcon className="w-6 h-6 text-primary" />
+              <CardContent className={cn(
+                hasActivity ? "py-8 sm:py-10" : "py-3 sm:py-4"
+              )}>
+                <div className={cn(
+                  "flex items-center gap-3",
+                  hasActivity && "flex-col text-center gap-4"
+                )}>
+                  <div className={cn(
+                    "rounded-full flex items-center justify-center shrink-0",
+                    hasActivity ? "p-3 bg-primary/20" : "p-1.5 bg-muted"
+                  )}>
+                    <ActivityIcon className={cn(
+                      hasActivity ? "w-6 h-6 text-primary" : "w-4 h-4 text-muted-foreground"
+                    )} />
                   </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] uppercase tracking-widest text-primary/70 font-medium mb-2">
+                  <div className="flex-1 min-w-0">
+                    <p className={cn(
+                      "uppercase font-medium mb-0.5",
+                      hasActivity
+                        ? "text-[10px] tracking-widest text-primary/70 mb-2"
+                        : "text-[10px] tracking-wide text-muted-foreground/80"
+                    )}>
                       {getElementTitle('current_activity', 'Din aktivitet')}
                     </p>
                     <p className={cn(
-                      "text-2xl sm:text-3xl font-bold font-heading text-foreground",
+                      "text-foreground leading-snug",
+                      hasActivity
+                        ? "text-2xl sm:text-3xl font-bold font-heading"
+                        : "text-sm",
                       activityConfig?.is_italic && "italic"
                     )}>
-                      {content?.current_activity || 'Ingen aktivitet tildelt'}
+                      {hasActivity ? content.current_activity : 'Ingen aktivitet tildelt'}
                     </p>
                   </div>
                 </div>
