@@ -29,7 +29,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const { data, isLoading, refetch, isRefetching } = useAdminDashboard(!!isAdmin);
   const { teamA, teamB } = useKitchenDutyToday();
-  const { data: teamsEnabled } = useTeamsEnabled();
+  const teamsEnabled = useTeamsEnabled();
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
