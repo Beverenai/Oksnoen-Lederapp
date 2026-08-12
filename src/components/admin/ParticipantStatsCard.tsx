@@ -52,6 +52,9 @@ export function ParticipantStatsCard() {
   const [isMissingOpen, setIsMissingOpen] = useState(false);
   const [isBirthdaysOpen, setIsBirthdaysOpen] = useState(true);
   const [isNotArrivedOpen, setIsNotArrivedOpen] = useState(true);
+  const [isOverviewOpen, setIsOverviewOpen] = useState(
+    () => typeof window === 'undefined' || window.innerWidth >= 640
+  );
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { data: activePeriodId } = useActivePeriodId();
