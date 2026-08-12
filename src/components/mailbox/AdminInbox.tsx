@@ -13,7 +13,7 @@ import {
   statusLabel,
   useUpdateMailboxMessage,
 } from '@/hooks/useMailbox';
-import { EyeOff, Trash2 } from 'lucide-react';
+import { Bell, EyeOff, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const fmt = (iso: string) =>
@@ -190,6 +190,26 @@ export function AdminInbox({ messages, onDeleted }: { messages: MailboxMessage[]
                     >
                       {m.admin_reply ? 'Endre svar' : 'Svar'}
                     </Button>
+                    {m.admin_reply && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={async () => {
+                          const { data, error } = await supabase.functions.invoke('push-mailbox-reply', {
+                            body: { message_id: m.id },
+                          });
+                          if (error) {
+                            toast.error('Kunne ikke sende varsel');
+                            return;
+                          }
+                          const sent = (data as { sent?: number } | null)?.sent ?? 0;
+                          toast.success(sent > 0 ? 'Varsel sendt' : 'Ingen enheter å varsle');
+                        }}
+                      >
+                        <Bell className="mr-1.5 h-3.5 w-3.5" />
+                        Send varsel
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
