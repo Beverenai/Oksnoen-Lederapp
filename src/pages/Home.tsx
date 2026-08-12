@@ -46,6 +46,7 @@ import { useMyMurderState } from '@/hooks/useMurderGame';
 import { Skull } from 'lucide-react';
 import { Tent, AlertCircle } from 'lucide-react';
 import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
+import { ParticipantTaskCards } from '@/components/home/ParticipantTaskCards';
 import { SnusBadge } from '@/components/snus/SnusBadge';
 import { SnusCan3D } from '@/components/snus/SnusCan3D';
 import { getSnusProduct, customSnusProduct } from '@/lib/snusCatalog';
