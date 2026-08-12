@@ -13,7 +13,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { IncidentSheet } from '@/components/incidents/IncidentSheet';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getParticipantThumb } from '@/lib/participantImage';
+import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 import { format } from 'date-fns';
+import { nb } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Search } from 'lucide-react';
 
@@ -24,6 +28,13 @@ export function IncidentsTab() {
   const [sev, setSev] = useState<IncidentSeverity | 'all'>('all');
   const [editing, setEditing] = useState<Incident | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [detailParticipantId, setDetailParticipantId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const openParticipant = (id: string) => {
+    setDetailParticipantId(id);
+    setDetailOpen(true);
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -122,9 +133,39 @@ export function IncidentsTab() {
             >
               <CardContent className="py-3 space-y-2">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-medium text-sm">{i.title}</p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {i.participants.length > 0 && (
+                      <div className="flex -space-x-2.5 shrink-0">
+                        {i.participants.slice(0, 3).map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); openParticipant(p.id); }}
+                            className="rounded-full transition active:scale-95"
+                            aria-label={`Åpne ${p.name}`}
+                          >
+                            <Avatar className="h-11 w-11 ring-2 ring-background">
+                              <AvatarImage
+                                src={getParticipantThumb(p as any)}
+                                alt={p.name}
+                                loading="lazy"
+                                decoding="async"
+                              />
+                              <AvatarFallback className="text-xs">{p.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                          </button>
+                        ))}
+                        {i.participants.length > 3 && (
+                          <div className="h-11 w-11 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-xs font-medium">
+                            +{i.participants.length - 3}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <p className="font-medium text-sm truncate">{i.title}</p>
+                  </div>
                   <span className="text-[10px] text-muted-foreground shrink-0">
-                    {format(new Date(i.created_at), 'dd.MM.yy HH:mm')}
+                    {format(new Date(i.created_at), 'd. MMM HH:mm', { locale: nb })}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1">
@@ -135,7 +176,12 @@ export function IncidentsTab() {
                     {SEVERITY_LABELS[i.severity]}
                   </Badge>
                   {i.participants.map((p) => (
-                    <Badge key={p.id} variant="secondary" className="text-[10px]">
+                    <Badge
+                      key={p.id}
+                      variant="secondary"
+                      className="text-xs px-2 py-0.5 cursor-pointer hover:bg-secondary/80"
+                      onClick={(e) => { e.stopPropagation(); openParticipant(p.id); }}
+                    >
                       {p.name}
                     </Badge>
                   ))}
@@ -153,6 +199,12 @@ export function IncidentsTab() {
       )}
 
       <IncidentSheet open={sheetOpen} onOpenChange={setSheetOpen} incident={editing} />
+
+      <ParticipantDetailDialog
+        participantId={detailParticipantId}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+      />
     </div>
   );
 }
