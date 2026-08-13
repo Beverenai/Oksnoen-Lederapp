@@ -9,6 +9,7 @@ import { SnusCan3D } from '@/components/snus/SnusCan3D';
 import { getSnusProduct, customSnusProduct } from '@/lib/snusCatalog';
 import { useIncomingHookupCount } from '@/hooks/useHookups';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
+import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import type { Leader } from '@/types/database';
 
 /**
