@@ -401,6 +401,7 @@ export default function AdminDashboard() {
 
       <ParticipantDetailDialog participantId={detailId} open={detailOpen} onOpenChange={setDetailOpen} />
       <LeaderDeviationsSheet open={deviationsOpen} onOpenChange={setDeviationsOpen} />
+      <IncidentSheet open={incidentOpen} onOpenChange={setIncidentOpen} incident={openIncident} />
       <AdminNotesPanel />
     </div>
   );
