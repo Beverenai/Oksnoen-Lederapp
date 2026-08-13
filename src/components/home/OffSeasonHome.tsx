@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Circle, HeartHandshake, IdCard, Crown, Lock, BarChart2, Sparkles } from 'lucide-react';
+import { MessageCircle, Circle, HeartHandshake, IdCard, Crown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { LederPass } from '@/components/passport/LederPass';
 import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
