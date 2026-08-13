@@ -36,7 +36,8 @@ import { useMailboxUnreadCount } from '@/hooks/useMailbox';
 import { useHookupsEnabled, useIncomingHookupCount } from '@/hooks/useHookups';
 import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute } from '@/lib/limitedAccess';
-import { IdCard, MessageCircle, Circle } from 'lucide-react';
+import { IdCard, MessageCircle, Circle, Crown } from 'lucide-react';
+import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 
 type MoreItem = {
   to?: string;
@@ -98,6 +99,7 @@ export default function More() {
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
+  const [plusOpen, setPlusOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -255,6 +257,7 @@ export default function More() {
         { to: '/snus', icon: Circle, label: 'Snus' },
         { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
         { to: '/profile', icon: User, label: 'Min Profil' },
+        { icon: Crown, label: 'Øksnøen +', onClick: () => setPlusOpen(true) },
       ],
     },
     {
@@ -313,6 +316,8 @@ export default function More() {
         open={notificationSheetOpen}
         onOpenChange={setNotificationSheetOpen}
       />
+
+      <OksnoenPlusDialog open={plusOpen} onOpenChange={setPlusOpen} />
     </div>
   );
 }
