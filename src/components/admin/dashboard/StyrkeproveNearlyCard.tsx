@@ -86,22 +86,20 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
           cabinName: p.cabin_id ? cabinMap.get(p.cabin_id) ?? null : null,
         };
 
-        const participantMissing = new Set<string>();
-
         if (!hasStoreStyrkprove(activities)) {
           const m = missingStore(activities);
-          if (m.length >= 1 && m.length <= 2) store.push({ ...base, missing: m });
-          m.forEach((x) => participantMissing.add(x));
+          if (m.length >= 1 && m.length <= 2) {
+            store.push({ ...base, missing: m });
+            m.forEach((x) => missingCounts.set(x, (missingCounts.get(x) || 0) + 1));
+          }
         }
         if (!hasLilleStyrkprove(activities)) {
           const m = missingLille(activities);
-          if (m.length >= 1 && m.length <= 2) lille.push({ ...base, missing: m });
-          m.forEach((x) => participantMissing.add(x));
+          if (m.length >= 1 && m.length <= 2) {
+            lille.push({ ...base, missing: m });
+            m.forEach((x) => missingCounts.set(x, (missingCounts.get(x) || 0) + 1));
+          }
         }
-
-        participantMissing.forEach((m) => {
-          missingCounts.set(m, (missingCounts.get(m) || 0) + 1);
-        });
       });
 
       const priority = [
@@ -195,11 +193,11 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
         </div>
       )}
 
-      {/* Oversikt over hvilke aktiviteter som mangler fra styrkeprøven */}
+      {/* Oversikt over hvilke aktiviteter deltagerne som er nær styrkeprøven fortsatt mangler */}
       {data && data.missingItems.length > 0 && (
         <div className="mt-4 border-t border-border/60 pt-3">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Aktiviteter som mangler fra styrkeprøven
+            Dette må gjøres for at de skal klare styrkeprøven
           </p>
           <div className="flex flex-wrap gap-2">
             {data.missingItems.map((item) => (

@@ -108,7 +108,7 @@ export default function AdminDashboard() {
                   <p className="text-lg font-semibold leading-none">{data.notArrived}</p>
                   <p className="mt-1 text-[11px] text-muted-foreground">Ikke ankommet</p>
                 </button>
-                <button type="button" onClick={() => navigate('/hendelser')} className="px-3 text-left">
+                <button type="button" onClick={() => navigate('/passport?status=wenthome')} className="px-3 text-left">
                   <p className="text-lg font-semibold leading-none">{data.wentHome}</p>
                   <p className="mt-1 text-[11px] text-muted-foreground">Dratt hjem</p>
                 </button>
