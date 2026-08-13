@@ -3215,6 +3215,7 @@ export type Database = {
           is_active: boolean
           is_public: boolean
           name: string
+          season_year: number
           slug: string
           start_date: string | null
           updated_at: string
@@ -3227,6 +3228,7 @@ export type Database = {
           is_active?: boolean
           is_public?: boolean
           name: string
+          season_year?: number
           slug: string
           start_date?: string | null
           updated_at?: string
@@ -3239,6 +3241,7 @@ export type Database = {
           is_active?: boolean
           is_public?: boolean
           name?: string
+          season_year?: number
           slug?: string
           start_date?: string | null
           updated_at?: string

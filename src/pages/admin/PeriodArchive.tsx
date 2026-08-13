@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Archive, FileSpreadsheet, Loader2, Printer } from 'lucide-react';
-import { archiveGroups, datasetsForGroup, archiveDatasets } from '@/lib/archiveDatasets';
+import { archiveGroups, datasetsForGroup, archiveDatasets, type ArchiveRow } from '@/lib/archiveDatasets';
 import { downloadWorkbook } from '@/lib/archiveExport';
 import { ArchiveDatasetCard } from '@/components/archive/ArchiveDatasetCard';
 
@@ -19,6 +19,7 @@ interface Period {
   is_active: boolean;
   start_date: string | null;
   end_date: string | null;
+  season_year: number;
 }
 
 export default function PeriodArchive() {
@@ -26,6 +27,7 @@ export default function PeriodArchive() {
   const { isAdmin, isNurse } = useAuth();
   const { showError, showSuccess } = useStatusPopup();
   const [periodId, setPeriodId] = useState<string>('');
+  const [year, setYear] = useState<number | null>(null);
   const [group, setGroup] = useState<string>('participants');
   const [exporting, setExporting] = useState(false);
 
@@ -34,7 +36,7 @@ export default function PeriodArchive() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('periods')
-        .select('id,name,is_active,start_date,end_date')
+        .select('id,name,is_active,start_date,end_date,season_year')
         .order('start_date', { ascending: true });
       if (error) throw error;
       return (data || []) as Period[];
@@ -42,11 +44,32 @@ export default function PeriodArchive() {
     staleTime: 60_000,
   });
 
+  const years = useMemo(
+    () => Array.from(new Set(periods.map((p) => p.season_year))).sort((a, b) => b - a),
+    [periods],
+  );
+
   useEffect(() => {
-    if (!periodId && periods.length) {
-      setPeriodId((periods.find((p) => p.is_active) ?? periods[0]).id);
+    if (year === null && years.length) {
+      const active = periods.find((p) => p.is_active);
+      setYear(active?.season_year ?? years[0]);
     }
-  }, [periods, periodId]);
+  }, [years, periods, year]);
+
+  const yearPeriods = useMemo(
+    () => (year === null ? periods : periods.filter((p) => p.season_year === year)),
+    [periods, year],
+  );
+
+  useEffect(() => {
+    if (!yearPeriods.length) {
+      if (periodId) setPeriodId('');
+      return;
+    }
+    if (!yearPeriods.some((p) => p.id === periodId)) {
+      setPeriodId((yearPeriods.find((p) => p.is_active) ?? yearPeriods[0]).id);
+    }
+  }, [yearPeriods, periodId]);
 
   const period = useMemo(() => periods.find((p) => p.id === periodId) ?? null, [periods, periodId]);
   const datasets = useMemo(() => datasetsForGroup(group), [group]);
@@ -65,6 +88,29 @@ export default function PeriodArchive() {
     } catch (e) {
       console.error(e);
       showError('Kunne ikke eksportere');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportSeason = async () => {
+    if (!yearPeriods.length) return;
+    setExporting(true);
+    try {
+      const sheets: { name: string; rows: ArchiveRow[] }[] = [];
+      for (const ds of archiveDatasets) {
+        const rows: ArchiveRow[] = [];
+        for (const p of yearPeriods) {
+          const part = await ds.fetch(p.id);
+          part.forEach((r) => rows.push({ Periode: p.name, ...r }));
+        }
+        sheets.push({ name: ds.label, rows });
+      }
+      await downloadWorkbook(sheets, `Sesong-${year}-arkiv.xlsx`);
+      showSuccess(`Hele sesongen ${year} lastet ned`);
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke eksportere sesongen');
     } finally {
       setExporting(false);
     }
@@ -92,7 +138,8 @@ export default function PeriodArchive() {
 
         <Card className="p-4 space-y-3">
           <p className="text-sm text-muted-foreground">
-            Se all lagret data fra en tidligere periode. Å velge periode her endrer <strong>ikke</strong> aktiv
+            Se all lagret data fra en tidligere sesong og periode. Alt blir liggende lagret år etter år, så du
+            kan hente det fram når som helst. Å velge sesong eller periode her endrer <strong>ikke</strong> aktiv
             periode eller noen innstillinger.
           </p>
           {isLoading ? (
@@ -101,12 +148,27 @@ export default function PeriodArchive() {
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={year === null ? '' : String(year)}
+                onValueChange={(v) => setYear(Number(v))}
+              >
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="År" />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      Sesong {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={periodId} onValueChange={setPeriodId}>
                 <SelectTrigger className="w-[240px]">
                   <SelectValue placeholder="Velg periode" />
                 </SelectTrigger>
                 <SelectContent>
-                  {periods.map((p) => (
+                  {yearPeriods.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
                       {p.is_active ? ' (aktiv)' : ''}
@@ -123,6 +185,14 @@ export default function PeriodArchive() {
               <div className="flex gap-2 ml-auto print:hidden">
                 <Button size="sm" variant="outline" onClick={() => window.print()} disabled={!period}>
                   <Printer className="h-4 w-4 mr-1" /> Print / PDF
+                </Button>
+                <Button size="sm" variant="outline" onClick={exportSeason} disabled={!yearPeriods.length || exporting}>
+                  {exporting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-4 w-4 mr-1" />
+                  )}
+                  Hele sesongen
                 </Button>
                 <Button size="sm" onClick={exportAll} disabled={!period || exporting}>
                   {exporting ? (
