@@ -102,6 +102,9 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
 
   const total = (data?.store.length ?? 0) + (data?.lille.length ?? 0);
 
+  // Skjul kortet helt når ingen deltagere mangler 1–2 aktiviteter
+  if (!isLoading && total === 0) return null;
+
   return (
     <DashCard
       title="Nær styrkeprøven"
@@ -113,8 +116,6 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
           <Skeleton className="h-12 rounded-2xl" />
           <Skeleton className="h-12 rounded-2xl" />
         </div>
-      ) : total === 0 ? (
-        <EmptyLine text="Ingen deltagere mangler 1–2 aktiviteter." />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {(
@@ -138,7 +139,17 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
                       name={r.name}
                       imageUrl={r.imageUrl}
                       thumbUrl={r.thumbUrl}
-                      subtitle={`Mangler: ${r.missing.join(', ')}${r.cabinName ? ` · ${r.cabinName}` : ''}`}
+                      subtitle={
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span className="text-muted-foreground">Mangler:</span>
+                          {r.missing.map((m) => (
+                            <Badge key={m} variant="outline" className="px-1 py-0 text-[10px] font-normal">
+                              {m}
+                            </Badge>
+                          ))}
+                          {r.cabinName && <span className="text-muted-foreground">· {r.cabinName}</span>}
+                        </div>
+                      }
                       onClick={() => onParticipantClick(r.id)}
                       right={
                         <Badge variant="secondary" className="shrink-0 text-[10px]">
