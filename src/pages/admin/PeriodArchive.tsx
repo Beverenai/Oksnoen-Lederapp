@@ -19,6 +19,7 @@ interface Period {
   is_active: boolean;
   start_date: string | null;
   end_date: string | null;
+  season_year: number;
 }
 
 export default function PeriodArchive() {
@@ -26,6 +27,7 @@ export default function PeriodArchive() {
   const { isAdmin, isNurse } = useAuth();
   const { showError, showSuccess } = useStatusPopup();
   const [periodId, setPeriodId] = useState<string>('');
+  const [year, setYear] = useState<number | null>(null);
   const [group, setGroup] = useState<string>('participants');
   const [exporting, setExporting] = useState(false);
 
@@ -34,7 +36,7 @@ export default function PeriodArchive() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('periods')
-        .select('id,name,is_active,start_date,end_date')
+        .select('id,name,is_active,start_date,end_date,season_year')
         .order('start_date', { ascending: true });
       if (error) throw error;
       return (data || []) as Period[];
@@ -42,11 +44,32 @@ export default function PeriodArchive() {
     staleTime: 60_000,
   });
 
+  const years = useMemo(
+    () => Array.from(new Set(periods.map((p) => p.season_year))).sort((a, b) => b - a),
+    [periods],
+  );
+
   useEffect(() => {
-    if (!periodId && periods.length) {
-      setPeriodId((periods.find((p) => p.is_active) ?? periods[0]).id);
+    if (year === null && years.length) {
+      const active = periods.find((p) => p.is_active);
+      setYear(active?.season_year ?? years[0]);
     }
-  }, [periods, periodId]);
+  }, [years, periods, year]);
+
+  const yearPeriods = useMemo(
+    () => (year === null ? periods : periods.filter((p) => p.season_year === year)),
+    [periods, year],
+  );
+
+  useEffect(() => {
+    if (!yearPeriods.length) {
+      if (periodId) setPeriodId('');
+      return;
+    }
+    if (!yearPeriods.some((p) => p.id === periodId)) {
+      setPeriodId((yearPeriods.find((p) => p.is_active) ?? yearPeriods[0]).id);
+    }
+  }, [yearPeriods, periodId]);
 
   const period = useMemo(() => periods.find((p) => p.id === periodId) ?? null, [periods, periodId]);
   const datasets = useMemo(() => datasetsForGroup(group), [group]);
@@ -101,12 +124,27 @@ export default function PeriodArchive() {
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={year === null ? '' : String(year)}
+                onValueChange={(v) => setYear(Number(v))}
+              >
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="År" />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      Sesong {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={periodId} onValueChange={setPeriodId}>
                 <SelectTrigger className="w-[240px]">
                   <SelectValue placeholder="Velg periode" />
                 </SelectTrigger>
                 <SelectContent>
-                  {periods.map((p) => (
+                  {yearPeriods.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
                       {p.is_active ? ' (aktiv)' : ''}
