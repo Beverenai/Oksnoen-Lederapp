@@ -1,0 +1,2 @@
+INSERT INTO public.app_config (key, value) VALUES ('checkout_progress', '{"status":"idle","processed":0,"total":0}') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO public.app_config (key, value) VALUES ('checkout_enabled', 'true') ON CONFLICT (key) DO UPDATE SET value = 'true';

@@ -156,6 +156,24 @@ export function CheckoutTab() {
     }
   }, [progress.status, loadData]);
 
+  const handleEnableCheckout = async () => {
+    hapticImpact('medium');
+    try {
+      const { error } = await supabase
+        .from('app_config')
+        .upsert({ key: 'checkout_enabled', value: 'true' }, { onConflict: 'key' });
+      if (error) throw error;
+      setCheckoutEnabled(true);
+      hapticSuccess();
+      showSuccess('Utsjekk aktivert! Ledere ser nå pass i Passkontroll.');
+      loadData();
+    } catch (e) {
+      console.error('Enable checkout failed', e);
+      hapticError();
+      showError('Kunne ikke aktivere utsjekk');
+    }
+  };
+
   const handleStartCheckout = async () => {
     hapticImpact('medium');
     try {
@@ -332,10 +350,10 @@ export function CheckoutTab() {
               <Switch
                 id="checkout-toggle"
                 checked={checkoutEnabled}
-                disabled={isGenerating || !activePeriod}
+                disabled={!activePeriod}
                 onCheckedChange={(checked) => {
                   if (checked) {
-                    handleStartCheckout();
+                    handleEnableCheckout();
                   } else {
                     handleDisableCheckout();
                   }
@@ -346,6 +364,15 @@ export function CheckoutTab() {
               </Label>
               {isGenerating && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
             </div>
+            <Button
+              onClick={handleStartCheckout}
+              variant="outline"
+              disabled={isGenerating || !activePeriod}
+              className="gap-2"
+            >
+              {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              Generer passforslag
+            </Button>
             <Button
               onClick={handleResetPasses}
               variant="outline"
