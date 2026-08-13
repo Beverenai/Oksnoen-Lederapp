@@ -74,6 +74,7 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
 
       const store: Row[] = [];
       const lille: Row[] = [];
+      const missingCounts = new Map<string, number>();
 
       (participantsRes.data || []).forEach((p) => {
         const activities = acts.get(p.id) || [];
@@ -85,18 +86,47 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
           cabinName: p.cabin_id ? cabinMap.get(p.cabin_id) ?? null : null,
         };
 
+        const participantMissing = new Set<string>();
+
         if (!hasStoreStyrkprove(activities)) {
           const m = missingStore(activities);
           if (m.length >= 1 && m.length <= 2) store.push({ ...base, missing: m });
+          m.forEach((x) => participantMissing.add(x));
         }
         if (!hasLilleStyrkprove(activities)) {
           const m = missingLille(activities);
           if (m.length >= 1 && m.length <= 2) lille.push({ ...base, missing: m });
+          m.forEach((x) => participantMissing.add(x));
         }
+
+        participantMissing.forEach((m) => {
+          missingCounts.set(m, (missingCounts.get(m) || 0) + 1);
+        });
       });
 
+      const priority = [
+        'Klatring',
+        'Rappis',
+        'Taubane',
+        'Tretten meter',
+        'Skrikeren begge veier',
+        'Åtte/Ti/Tretten meter',
+        'Skrikeren en vei/Triatlon',
+      ];
+
+      const missingItems = Array.from(missingCounts.entries())
+        .map(([label, count]) => ({ label, count }))
+        .sort((a, b) => {
+          const ia = priority.indexOf(a.label);
+          const ib = priority.indexOf(b.label);
+          if (ia !== -1 && ib !== -1) return ia - ib;
+          if (ia !== -1) return -1;
+          if (ib !== -1) return 1;
+          return a.label.localeCompare(b.label, 'nb');
+        });
+
       const sort = (a: Row, b: Row) => a.missing.length - b.missing.length || a.name.localeCompare(b.name, 'nb');
-      return { store: store.sort(sort), lille: lille.sort(sort) };
+      return { store: store.sort(sort), lille: lille.sort(sort), missingItems };
     },
   });
 
