@@ -138,29 +138,6 @@ export default function PeriodArchive() {
     }
   };
 
-  const exportSeasonUnused = async () => {
-    if (!yearPeriods.length) return;
-    setExporting(true);
-    try {
-      const sheets: { name: string; rows: ArchiveRow[] }[] = [];
-      for (const ds of archiveDatasets) {
-        const rows: ArchiveRow[] = [];
-        for (const p of yearPeriods) {
-          const part = await ds.fetch(p.id);
-          part.forEach((r) => rows.push({ Periode: p.name, ...r }));
-        }
-        sheets.push({ name: ds.label, rows });
-      }
-      await downloadWorkbook(sheets, `Sesong-${year}-arkiv.xlsx`);
-      showSuccess(`Hele sesongen ${year} lastet ned`);
-    } catch (e) {
-      console.error(e);
-      showError('Kunne ikke eksportere sesongen');
-    } finally {
-      setExporting(false);
-    }
-  };
-
   if (!isAdmin && !isNurse) {
     return (
       <div className="p-6 text-center text-muted-foreground">
