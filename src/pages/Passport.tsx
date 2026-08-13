@@ -150,6 +150,7 @@ export default function Passport() {
   const teamsParamFromUrl = searchParams.get('teams');
   const multiTeamIds = teamsParamFromUrl ? teamsParamFromUrl.split(',').filter(Boolean) : [];
   const kitchenDutyActive = searchParams.get('kitchenDuty') === '1';
+  const statusFilterFromUrl = searchParams.get('status');
   
   const [searchQuery, setSearchQuery] = useState('');
   const [myCabinsFilter, setMyCabinsFilter] = useState(false);
