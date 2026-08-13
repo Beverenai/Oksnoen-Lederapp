@@ -317,12 +317,12 @@ export default function Passport() {
       const cabinName = p.cabins?.name?.toLowerCase() || '';
       const matchesCabinSearch = cabinName.includes(query);
       const matchesSearch = matchesName || matchesCabinSearch;
-      
+
       // Filter by leader's cabins if "Min hytte" is active
-      const matchesCabin = myCabinsFilter 
-        ? myCabinIds.includes(p.cabin_id || '') 
+      const matchesCabin = myCabinsFilter
+        ? myCabinIds.includes(p.cabin_id || '')
         : true;
-      
+
       // Filter by cabin URL param if present
       const matchesUrlCabin = cabinFilterFromUrl
         ? p.cabin_id === cabinFilterFromUrl
@@ -342,11 +342,20 @@ export default function Passport() {
       const matchesPeriod =
         periodFilter === 'all' ? true : p.period_id === periodFilter;
 
+      const matchesStatus =
+        statusFilterFromUrl === 'wenthome'
+          ? !!wentHomeIds?.has(p.id)
+          : statusFilterFromUrl === 'arrived'
+          ? !!p.has_arrived
+          : statusFilterFromUrl === 'notarrived'
+          ? !p.has_arrived
+          : true;
+
       return (
-        matchesSearch && matchesCabin && matchesUrlCabin && matchesTeam && matchesMultiTeam && matchesPeriod
+        matchesSearch && matchesCabin && matchesUrlCabin && matchesTeam && matchesMultiTeam && matchesPeriod && matchesStatus
       );
     });
-  }, [participants, searchQuery, myCabinsFilter, myCabinIds, cabinFilterFromUrl, teamFilter, teamsParamFromUrl, periodFilter]);
+  }, [participants, searchQuery, myCabinsFilter, myCabinIds, cabinFilterFromUrl, teamFilter, teamsParamFromUrl, periodFilter, statusFilterFromUrl, wentHomeIds]);
 
   // Group participants by cabin
   const cabinGroups = useMemo((): CabinGroup[] => {
