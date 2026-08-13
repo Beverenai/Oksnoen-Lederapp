@@ -4,7 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAdminDashboard } from '@/hooks/useAdminDashboard';
 import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
-import { CATEGORY_COLORS, CATEGORY_LABELS, SEVERITY_COLORS, SEVERITY_LABELS } from '@/hooks/useParticipantIncidents';
+import { CATEGORY_COLORS, CATEGORY_LABELS, SEVERITY_COLORS, SEVERITY_LABELS, useParticipantIncidents, type Incident } from '@/hooks/useParticipantIncidents';
+import { IncidentSheet } from '@/components/incidents/IncidentSheet';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 import { AdminNotesPanel } from '@/components/admin/notes/AdminNotesPanel';
 import { StatTile } from '@/components/admin/dashboard/StatTile';
@@ -37,6 +38,16 @@ export default function AdminDashboard() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [deviationsOpen, setDeviationsOpen] = useState(false);
+  const { data: allIncidents = [] } = useParticipantIncidents({ adminAll: true });
+  const [openIncident, setOpenIncident] = useState<Incident | null>(null);
+  const [incidentOpen, setIncidentOpen] = useState(false);
+
+  const openIncidentById = (id: string) => {
+    const found = allIncidents.find((i) => i.id === id);
+    if (!found) return;
+    setOpenIncident(found);
+    setIncidentOpen(true);
+  };
 
   // Alle hopp ut fra dashboardet husker at man kan gå tilbake hit
   const navigate = (to: string) => {
@@ -175,7 +186,19 @@ export default function AdminDashboard() {
                 ) : (
                   <ul className="space-y-2">
                     {data.incidents.slice(0, 5).map((inc) => (
-                      <li key={inc.id} className="rounded-2xl bg-muted/40 p-2.5">
+                      <li
+                        key={inc.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => openIncidentById(inc.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            openIncidentById(inc.id);
+                          }
+                        }}
+                        className="cursor-pointer rounded-2xl bg-muted/40 p-2.5 transition-all active:scale-[0.98] hover:bg-muted/70"
+                      >
                         <div className="flex flex-wrap items-center gap-1.5">
                           <Badge className={CATEGORY_COLORS[inc.category]} variant="secondary">
                             {CATEGORY_LABELS[inc.category]}
@@ -184,6 +207,7 @@ export default function AdminDashboard() {
                             {SEVERITY_LABELS[inc.severity]}
                           </Badge>
                           <span className="ml-auto text-[11px] text-muted-foreground">{timeAgo(inc.created_at)}</span>
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                         </div>
                         <p className="mt-1.5 text-sm font-medium leading-snug">{inc.title}</p>
                         {inc.participants.length > 0 && (
@@ -192,7 +216,10 @@ export default function AdminDashboard() {
                               <button
                                 key={p.id}
                                 type="button"
-                                onClick={() => openParticipant(p.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openParticipant(p.id);
+                                }}
                                 className="flex items-center gap-1.5 rounded-full bg-background/70 py-0.5 pl-0.5 pr-2.5 active:scale-95 transition-transform"
                               >
                                 <img
@@ -374,6 +401,7 @@ export default function AdminDashboard() {
 
       <ParticipantDetailDialog participantId={detailId} open={detailOpen} onOpenChange={setDetailOpen} />
       <LeaderDeviationsSheet open={deviationsOpen} onOpenChange={setDeviationsOpen} />
+      <IncidentSheet open={incidentOpen} onOpenChange={setIncidentOpen} incident={openIncident} />
       <AdminNotesPanel />
     </div>
   );
