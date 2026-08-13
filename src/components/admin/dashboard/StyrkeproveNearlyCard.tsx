@@ -86,22 +86,20 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
           cabinName: p.cabin_id ? cabinMap.get(p.cabin_id) ?? null : null,
         };
 
-        const participantMissing = new Set<string>();
-
         if (!hasStoreStyrkprove(activities)) {
           const m = missingStore(activities);
-          if (m.length >= 1 && m.length <= 2) store.push({ ...base, missing: m });
-          m.forEach((x) => participantMissing.add(x));
+          if (m.length >= 1 && m.length <= 2) {
+            store.push({ ...base, missing: m });
+            m.forEach((x) => missingCounts.set(x, (missingCounts.get(x) || 0) + 1));
+          }
         }
         if (!hasLilleStyrkprove(activities)) {
           const m = missingLille(activities);
-          if (m.length >= 1 && m.length <= 2) lille.push({ ...base, missing: m });
-          m.forEach((x) => participantMissing.add(x));
+          if (m.length >= 1 && m.length <= 2) {
+            lille.push({ ...base, missing: m });
+            m.forEach((x) => missingCounts.set(x, (missingCounts.get(x) || 0) + 1));
+          }
         }
-
-        participantMissing.forEach((m) => {
-          missingCounts.set(m, (missingCounts.get(m) || 0) + 1);
-        });
       });
 
       const priority = [
