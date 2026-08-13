@@ -29,7 +29,13 @@ export function ParticipantChip({ name, imageUrl, thumbUrl, subtitle, size = 'md
       </Avatar>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold leading-tight">{name}</p>
-        {subtitle && <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>}
+        {subtitle && (
+          typeof subtitle === 'string' ? (
+            <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>
+          ) : (
+            <div className="text-[11px] text-muted-foreground">{subtitle}</div>
+          )
+        )}
       </div>
       {right}
     </button>
