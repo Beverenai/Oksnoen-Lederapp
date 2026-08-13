@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Circle, HeartHandshake, IdCard } from 'lucide-react';
+import { MessageCircle, Circle, HeartHandshake, IdCard, Crown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { LederPass } from '@/components/passport/LederPass';
 import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
 import { SnusCan3D } from '@/components/snus/SnusCan3D';
 import { getSnusProduct, customSnusProduct } from '@/lib/snusCatalog';
 import { useIncomingHookupCount } from '@/hooks/useHookups';
+import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import type { Leader } from '@/types/database';
 
 /**
@@ -25,6 +26,7 @@ export function OffSeasonHome({
   const navigate = useNavigate();
   const incomingHookups = useIncomingHookupCount();
   const [mySnus, setMySnus] = useState<{ productId: string | null; customLabel: string | null } | null>(null);
+  const [plusOpen, setPlusOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +79,13 @@ export function OffSeasonHome({
       label: 'Lederhuset',
       onClick: () => navigate('/chat'),
     },
+    {
+      key: 'plus',
+      icon: Crown,
+      label: 'Øksnøen +',
+      badge: true,
+      onClick: () => setPlusOpen(true),
+    },
   ];
 
   return (
@@ -107,6 +116,8 @@ export function OffSeasonHome({
           Åpne lederpasset
         </div>
       </button>
+
+      <OksnoenPlusDialog open={plusOpen} onOpenChange={setPlusOpen} />
     </div>
   );
 }
