@@ -19,6 +19,7 @@ export const archiveGroups = [
   { key: 'dynga', label: 'Dynga' },
   { key: 'activities', label: 'Aktiviteter & poeng' },
   { key: 'teams', label: 'Lag' },
+  { key: 'leaders', label: 'Ledere' },
   { key: 'secret-words', label: 'Hemmelige ord' },
   { key: 'bookings', label: 'Booking' },
   { key: 'sweaters', label: 'Gensere' },
@@ -413,6 +414,56 @@ export const archiveDatasets: ArchiveDataset[] = [
         Slot: r.slot,
         Par: r.pair_id,
       }));
+    },
+  },
+  {
+    key: 'period-leaders',
+    label: 'Ledere i perioden',
+    group: 'leaders',
+    description: 'Låst kopi av hvilke ledere som var med, med hytte, lag og roller',
+    fetch: async (periodId) => {
+      const list = await rows(
+        'period_leader_snapshots',
+        'leader_name,gender,is_active,is_external,cabins,teams,roles,snapshot_at',
+        periodId,
+        'leader_name',
+      );
+      return list.map((l) => ({
+        Leder: l.leader_name,
+        Hytte: l.cabins ?? '',
+        Lag: l.teams ?? '',
+        Roller: l.roles ?? '',
+        Kjønn: l.gender === 'male' ? 'Mann' : l.gender === 'female' ? 'Kvinne' : '',
+        Aktiv: bool(l.is_active),
+        Ekstern: bool(l.is_external),
+        Lagret: dt(l.snapshot_at),
+      }));
+    },
+  },
+  {
+    key: 'period-cabin-leaders',
+    label: 'Hytteledere',
+    group: 'leaders',
+    description: 'Hvem som var ledere på hvilken hytte i perioden',
+    fetch: async (periodId) => {
+      const list = await rows('period_leader_snapshots', 'leader_name,cabins', periodId, 'leader_name');
+      const byCabin: Record<string, string[]> = {};
+      list.forEach((l) => {
+        (l.cabins || '')
+          .split(',')
+          .map((c: string) => c.trim())
+          .filter(Boolean)
+          .forEach((c: string) => {
+            byCabin[c] = [...(byCabin[c] || []), l.leader_name];
+          });
+      });
+      return Object.keys(byCabin)
+        .sort((a, b) => a.localeCompare(b, 'nb'))
+        .map((cabin) => ({
+          Hytte: cabin,
+          Ledere: byCabin[cabin].join(', '),
+          Antall: byCabin[cabin].length,
+        }));
     },
   },
   {

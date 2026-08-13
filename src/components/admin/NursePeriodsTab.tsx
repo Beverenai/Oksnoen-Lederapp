@@ -24,6 +24,15 @@ export function NursePeriodsTab() {
   const [periods, setPeriods] = useState<Period[]>([]);
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
+  const [savingLeaders, setSavingLeaders] = useState(false);
+
+  const saveLeadersNow = async () => {
+    setSavingLeaders(true);
+    const { data, error } = await (supabase as any).rpc('snapshot_period_leaders', { _period_id: null });
+    if (error) showError('Kunne ikke lagre ledere');
+    else showSuccess(`${data ?? 0} ledere lagret for perioden`);
+    setSavingLeaders(false);
+  };
 
   const load = async () => {
     const { data, error } = await supabase
@@ -40,6 +49,13 @@ export function NursePeriodsTab() {
   const setActive = async (p: Period) => {
     if (p.is_active) return;
     setSwitching(p.id);
+    // Freeze which leaders (cabins, teams, roles) belonged to the period we are leaving —
+    // leader/cabin links are not period-scoped, so without this the history is lost.
+    try {
+      await (supabase as any).rpc('snapshot_period_leaders', { _period_id: null });
+    } catch (e) {
+      console.error('Kunne ikke lagre ledersnapshot', e);
+    }
     const { error: e1 } = await supabase.from('periods').update({ is_active: false }).neq('id', p.id);
     const { error: e2 } = await supabase.from('periods').update({ is_active: true }).eq('id', p.id);
     if (e1 || e2) {
@@ -167,6 +183,15 @@ export function NursePeriodsTab() {
                   );
                 })}
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 w-full"
+                disabled={savingLeaders || !active}
+                onClick={saveLeadersNow}
+              >
+                {savingLeaders ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lagre ledere for aktiv periode'}
+              </Button>
             </>
           )}
         </CardContent>
