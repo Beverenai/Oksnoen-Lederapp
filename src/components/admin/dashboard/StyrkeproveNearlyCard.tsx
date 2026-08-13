@@ -193,11 +193,11 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
         </div>
       )}
 
-      {/* Oversikt over hvilke aktiviteter som mangler fra styrkeprøven */}
+      {/* Oversikt over hvilke aktiviteter deltagerne som er nær styrkeprøven fortsatt mangler */}
       {data && data.missingItems.length > 0 && (
         <div className="mt-4 border-t border-border/60 pt-3">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Aktiviteter som mangler fra styrkeprøven
+            Dette må gjøres for at de skal klare styrkeprøven
           </p>
           <div className="flex flex-wrap gap-2">
             {data.missingItems.map((item) => (
