@@ -38,6 +38,7 @@ import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute } from '@/lib/limitedAccess';
 import { IdCard, MessageCircle, Circle, Crown } from 'lucide-react';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
+import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 
 type MoreItem = {
   to?: string;
@@ -310,6 +311,24 @@ export default function More() {
             </div>
           </section>
         ),
+      )}
+
+      {limited && (
+        <section className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Øksnøen <span className="oks-gold-text">+</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPlusOpen(true)}
+              className="text-[11px] font-semibold oks-gold-text"
+            >
+              Se abonnement
+            </button>
+          </div>
+          <PlusPerkTiles onLocked={() => setPlusOpen(true)} />
+        </section>
       )}
 
       <QuickNotificationSheet

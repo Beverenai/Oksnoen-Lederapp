@@ -1428,6 +1428,45 @@ export type Database = {
           },
         ]
       }
+      leader_matches: {
+        Row: {
+          created_at: string
+          id: string
+          leader_a_id: string
+          leader_b_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leader_a_id: string
+          leader_b_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leader_a_id?: string
+          leader_b_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_matches_leader_a_id_fkey"
+            columns: ["leader_a_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_matches_leader_b_id_fkey"
+            columns: ["leader_b_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leader_period_history: {
         Row: {
           created_at: string
@@ -1499,6 +1538,48 @@ export type Database = {
           {
             foreignKeyName: "leader_service_periods_leader_id_fkey"
             columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leader_swipes: {
+        Row: {
+          created_at: string
+          id: string
+          liked: boolean
+          swiper_leader_id: string
+          target_leader_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          liked: boolean
+          swiper_leader_id: string
+          target_leader_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          liked?: boolean
+          swiper_leader_id?: string
+          target_leader_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_swipes_swiper_leader_id_fkey"
+            columns: ["swiper_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_swipes_target_leader_id_fkey"
+            columns: ["target_leader_id"]
             isOneToOne: false
             referencedRelation: "leaders"
             referencedColumns: ["id"]
@@ -4439,6 +4520,10 @@ export type Database = {
       }
       set_murder_game_active: { Args: { _active: boolean }; Returns: undefined }
       start_murder_game: { Args: { _leader_ids: string[] }; Returns: string }
+      swipe_leader: {
+        Args: { _liked: boolean; _target: string }
+        Returns: boolean
+      }
       void_kiosk_sale: { Args: { _sale_id: string }; Returns: undefined }
     }
     Enums: {

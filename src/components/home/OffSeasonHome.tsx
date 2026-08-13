@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Circle, HeartHandshake, IdCard, Crown, Lock, BarChart2, Sparkles } from 'lucide-react';
+import { MessageCircle, Circle, HeartHandshake, IdCard, Crown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { LederPass } from '@/components/passport/LederPass';
 import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
@@ -9,6 +9,7 @@ import { SnusCan3D } from '@/components/snus/SnusCan3D';
 import { getSnusProduct, customSnusProduct } from '@/lib/snusCatalog';
 import { useIncomingHookupCount } from '@/hooks/useHookups';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
+import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import type { Leader } from '@/types/database';
 
 /**
@@ -103,29 +104,21 @@ export function OffSeasonHome({
       <HomeQuickActions actions={actions} />
 
       {/* Låste «premium»-flater — åpner Øksnøen + (kun for gøy) */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { icon: BarChart2, label: 'Din leirstatistikk', desc: 'Se alle årene dine' },
-          { icon: Sparkles, label: 'Ledertema', desc: 'Gull-modus i appen' },
-        ].map((item) => (
+      <section className="space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Øksnøen <span className="oks-gold-text">+</span>
+          </p>
           <button
-            key={item.label}
             type="button"
             onClick={() => setPlusOpen(true)}
-            className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/40 p-3.5 text-left opacity-80 active:scale-[0.98] transition-transform"
+            className="text-[11px] font-semibold oks-gold-text"
           >
-            <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-muted/70">
-              <Lock className="h-3 w-3 text-muted-foreground" />
-            </span>
-            <item.icon className="h-5 w-5 text-muted-foreground" strokeWidth={2} />
-            <p className="mt-2 text-sm font-semibold text-foreground">{item.label}</p>
-            <p className="text-[11px] text-muted-foreground">{item.desc}</p>
-            <p className="mt-1.5 text-[10px] font-bold uppercase tracking-wide oks-gold-text">
-              Øksnøen +
-            </p>
+            Se alt
           </button>
-        ))}
-      </div>
+        </div>
+        <PlusPerkTiles variant="row" onLocked={() => setPlusOpen(true)} />
+      </section>
 
       <button
         type="button"
