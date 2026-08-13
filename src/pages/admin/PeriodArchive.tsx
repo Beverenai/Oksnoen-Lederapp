@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Archive, FileSpreadsheet, Loader2, Printer } from 'lucide-react';
-import { archiveGroups, datasetsForGroup, archiveDatasets } from '@/lib/archiveDatasets';
+import { archiveGroups, datasetsForGroup, archiveDatasets, type ArchiveRow } from '@/lib/archiveDatasets';
 import { downloadWorkbook } from '@/lib/archiveExport';
 import { ArchiveDatasetCard } from '@/components/archive/ArchiveDatasetCard';
 
