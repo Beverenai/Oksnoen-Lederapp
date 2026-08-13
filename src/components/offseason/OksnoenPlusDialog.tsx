@@ -11,6 +11,16 @@ import {
   Loader2,
   AlertCircle,
   Lock,
+  CalendarClock,
+  BedDouble,
+  UtensilsCrossed,
+  AlarmClock,
+  Beer,
+  Repeat2,
+  Flame,
+  Droplets,
+  ClipboardX,
+  Baby,
   type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -26,6 +36,16 @@ const PERKS: { icon: LucideIcon; title: string; desc: string }[] = [
   { icon: HeartHandshake, title: 'Prioritert klinekø', desc: 'Hopp foran i køen på klinelista' },
   { icon: Music4, title: 'Egen fanfare', desc: 'Spilles automatisk når du går ned til brygga' },
   { icon: ShieldOff, title: 'Reklamefritt Lederhuset', desc: 'Ingen forstyrrelser i chatten' },
+  { icon: CalendarClock, title: 'Aktivitet 24t før', desc: 'Se hvilken aktivitet du har et døgn i forveien' },
+  { icon: BedDouble, title: 'Velg soveplass', desc: 'Du bestemmer selv hvor du skal sove' },
+  { icon: UtensilsCrossed, title: 'Ekstra tilbehør', desc: 'Premium tilbehør på Lederbordet' },
+  { icon: AlarmClock, title: 'Kvarter lenger søvn', desc: '15 minutter ekstra hver morgen' },
+  { icon: Beer, title: '2 ekstra enheter', desc: 'Om kvelden – og lov til å bli full én gang i perioden' },
+  { icon: Repeat2, title: 'Bytt aktivitet', desc: 'Bytt aktivitet med en annen leder én gang' },
+  { icon: Flame, title: 'Tinder for ledere', desc: 'Sveip på lederne – kun for Øksnøen +' },
+  { icon: Droplets, title: 'Rituals i dusjen', desc: 'Premium shampo og garantert varmtvann' },
+  { icon: ClipboardX, title: 'Slipper Sanitas', desc: 'Fritak fra Sanitas hele perioden' },
+  { icon: Baby, title: 'Se bilde av barna', desc: 'Full tilgang til bilder av deltagerne' },
 ];
 
 const DECLINES = [
