@@ -31,6 +31,7 @@ export default function PeriodArchive() {
   const [year, setYear] = useState<number | null>(null);
   const [group, setGroup] = useState<string>('participants');
   const [exporting, setExporting] = useState(false);
+  const [allOpen, setAllOpen] = useState(false);
 
   const { data: periods = [], isLoading } = useQuery({
     queryKey: ['archive', 'periods'],
@@ -75,6 +76,10 @@ export default function PeriodArchive() {
   const period = useMemo(() => periods.find((p) => p.id === periodId) ?? null, [periods, periodId]);
   const datasets = useMemo(() => datasetsForGroup(group), [group]);
 
+  useEffect(() => {
+    setAllOpen(datasetsForGroup(group).length <= 3);
+  }, [group]);
+
   const exportAll = async () => {
     if (!period) return;
     setExporting(true);
@@ -112,6 +117,26 @@ export default function PeriodArchive() {
     } catch (e) {
       console.error(e);
       showError('Kunne ikke eksportere sesongen');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportGroup = async () => {
+    if (!period) return;
+    setExporting(true);
+    try {
+      const sheets = [];
+      for (const ds of datasets) {
+        const rows = await ds.fetch(period.id);
+        sheets.push({ name: ds.label, rows });
+      }
+      const label = archiveGroups.find((g) => g.key === group)?.label ?? group;
+      await downloadWorkbook(sheets, `${period.name.replace(/\s+/g, '-')}-${label.replace(/[^\wÆØÅæøå]+/g, '-')}.xlsx`);
+      showSuccess('Alle listene lastet ned');
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke eksportere listene');
     } finally {
       setExporting(false);
     }
@@ -231,13 +256,32 @@ export default function PeriodArchive() {
         </div>
 
         {period && (
-          <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+              <p className="text-xs text-muted-foreground">
+                {datasets.length} lister · trykk på en liste for å åpne den
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => setAllOpen((v) => !v)}>
+                  {allOpen ? 'Lukk alle' : 'Åpne alle'}
+                </Button>
+                <Button size="sm" variant="secondary" onClick={exportGroup} disabled={exporting}>
+                  {exporting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-4 w-4 mr-1" />
+                  )}
+                  Last ned alle listene
+                </Button>
+              </div>
+            </div>
             {datasets.map((ds) => (
               <ArchiveDatasetCard
-                key={ds.key}
+                key={`${ds.key}-${allOpen}`}
                 dataset={ds}
                 periodId={period.id}
                 periodName={period.name.replace(/\s+/g, '-')}
+                defaultOpen={allOpen}
               />
             ))}
           </div>
