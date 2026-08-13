@@ -136,8 +136,8 @@ export default function PeriodArchive() {
           </h1>
         </div>
 
-        <Card className="p-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
+        <Card className="p-4 space-y-4">
+          <p className="max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
             Se all lagret data fra en tidligere sesong og periode. Alt blir liggende lagret år etter år, så du
             kan hente det fram når som helst. Å velge sesong eller periode her endrer <strong>ikke</strong> aktiv
             periode eller noen innstillinger.
@@ -147,12 +147,13 @@ export default function PeriodArchive() {
               <Loader2 className="h-4 w-4 animate-spin" /> Laster perioder...
             </div>
           ) : (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
               <Select
                 value={year === null ? '' : String(year)}
                 onValueChange={(v) => setYear(Number(v))}
               >
-                <SelectTrigger className="w-[120px]">
+                <SelectTrigger className="w-[130px] rounded-xl">
                   <SelectValue placeholder="År" />
                 </SelectTrigger>
                 <SelectContent>
@@ -164,7 +165,7 @@ export default function PeriodArchive() {
                 </SelectContent>
               </Select>
               <Select value={periodId} onValueChange={setPeriodId}>
-                <SelectTrigger className="w-[240px]">
+                <SelectTrigger className="w-[200px] rounded-xl">
                   <SelectValue placeholder="Velg periode" />
                 </SelectTrigger>
                 <SelectContent>
@@ -177,12 +178,13 @@ export default function PeriodArchive() {
                 </SelectContent>
               </Select>
               {period?.start_date && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="rounded-full">
                   {new Date(period.start_date).toLocaleDateString('nb-NO')}
                   {period.end_date ? ` – ${new Date(period.end_date).toLocaleDateString('nb-NO')}` : ''}
                 </Badge>
               )}
-              <div className="flex gap-2 ml-auto print:hidden">
+              </div>
+              <div className="flex flex-wrap gap-2 print:hidden sm:justify-end">
                 <Button size="sm" variant="outline" onClick={() => window.print()} disabled={!period}>
                   <Printer className="h-4 w-4 mr-1" /> Print / PDF
                 </Button>
@@ -207,18 +209,24 @@ export default function PeriodArchive() {
           )}
         </Card>
 
-        <div className="flex gap-2 overflow-x-auto pb-1 print:hidden">
-          {archiveGroups.map((g) => (
-            <Button
-              key={g.key}
-              size="sm"
-              variant={group === g.key ? 'default' : 'outline'}
-              className="whitespace-nowrap"
-              onClick={() => setGroup(g.key)}
-            >
-              {g.label}
-            </Button>
-          ))}
+        <div className="-mx-4 px-4 print:hidden">
+          <div className="flex gap-1.5 overflow-x-auto rounded-2xl bg-muted/50 p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {archiveGroups.map((g) => (
+              <button
+                key={g.key}
+                type="button"
+                onClick={() => setGroup(g.key)}
+                className={cn(
+                  'whitespace-nowrap rounded-xl px-3 py-1.5 text-[13px] font-medium transition-colors',
+                  group === g.key
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {period && (
