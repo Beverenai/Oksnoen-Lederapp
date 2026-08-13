@@ -108,35 +108,35 @@ export function OksnoenPlusDialog({
           style={{ background: 'var(--gradient-oks-gold)' }}
           aria-hidden
         />
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" aria-hidden />
-        <div className="relative px-5 pb-8" style={{ paddingTop: 'calc(var(--safe-t) + 1rem)' }}>
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" aria-hidden />
+        <div className="relative px-5 pb-5" style={{ paddingTop: 'calc(var(--safe-t) + 0.75rem)' }}>
           <button
             type="button"
             onClick={close}
             aria-label="Lukk"
-            className="absolute right-4 flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-card/70 backdrop-blur text-foreground"
-            style={{ top: 'calc(var(--safe-t) + 0.75rem)' }}
+            className="absolute right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-card/70 backdrop-blur text-foreground"
+            style={{ top: 'calc(var(--safe-t) + 0.5rem)' }}
           >
             <X className="h-4 w-4" />
           </button>
 
-          <div className="mx-auto mt-6 flex h-20 w-20 items-center justify-center rounded-[1.4rem] oks-gold-surface oks-gold-ring">
-            <Crown className="h-10 w-10 text-background" strokeWidth={2.2} />
+          <div className="mx-auto mt-2 flex h-14 w-14 items-center justify-center rounded-[1.1rem] oks-gold-surface oks-gold-ring">
+            <Crown className="h-7 w-7 text-background" strokeWidth={2.2} />
           </div>
-          <h2 className="mt-4 text-center text-3xl font-heading font-bold tracking-tight text-foreground">
+          <h2 className="mt-3 text-center text-2xl font-heading font-bold tracking-tight text-foreground">
             Øksnøen <span className="oks-gold-text">+</span>
           </h2>
-          <p className="mx-auto mt-1.5 max-w-xs text-center text-sm text-muted-foreground">
+          <p className="mx-auto mt-1 max-w-xs text-center text-[13px] text-muted-foreground">
             Denne funksjonen krever Øksnøen + abonnement.
           </p>
         </div>
       </div>
 
       {/* Innhold */}
-      <div className="scroll-area px-5 pb-4">
-        <div className="mx-auto w-full max-w-md space-y-5">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-3">
+        <div className="mx-auto w-full max-w-md space-y-4">
           {/* Planvalg */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 items-stretch gap-3 pt-2">
             {(['monthly', 'yearly'] as Plan[]).map((p) => {
               const active = plan === p;
               const info = PLANS[p];
@@ -146,24 +146,24 @@ export function OksnoenPlusDialog({
                   type="button"
                   onClick={() => { hapticImpact('light'); setPlan(p); setStatus('idle'); }}
                   className={cn(
-                    'relative rounded-2xl border p-3.5 text-left transition-all',
+                    'relative flex flex-col rounded-2xl border px-3.5 pb-3 pt-3 text-left transition-all',
                     active
                       ? 'border-primary bg-primary/5 shadow-sm'
                       : 'border-border/60 bg-card/60',
                   )}
                 >
                   {p === 'monthly' && (
-                    <span className="absolute -top-2 left-3 rounded-full oks-gold-surface px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-background">
+                    <span className="absolute -top-2.5 left-3 z-10 whitespace-nowrap rounded-full oks-gold-surface px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-background shadow-sm">
                       Mest populær
                     </span>
                   )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                       {info.label}
                     </span>
                     <span
                       className={cn(
-                        'flex h-4.5 w-4.5 items-center justify-center rounded-full border',
+                        'flex shrink-0 items-center justify-center rounded-full border',
                         active ? 'border-primary bg-primary' : 'border-border',
                       )}
                       style={{ height: '1.1rem', width: '1.1rem' }}
@@ -171,28 +171,28 @@ export function OksnoenPlusDialog({
                       {active && <Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} />}
                     </span>
                   </div>
-                  <div className="mt-1.5 flex items-baseline gap-1">
-                    <span className="text-lg font-bold text-foreground">{info.price}</span>
-                    <span className="text-[11px] text-muted-foreground">{info.unit}</span>
+                  <div className="mt-1 flex flex-wrap items-baseline gap-x-1">
+                    <span className="text-base font-bold text-foreground">{info.price}</span>
+                    <span className="text-[10px] text-muted-foreground">{info.unit}</span>
                   </div>
                 </button>
               );
             })}
           </div>
-          <p className="-mt-2 px-1 text-[11px] text-muted-foreground">{PLANS[plan].note}</p>
+          <p className="-mt-1 px-1 text-[11px] text-muted-foreground">{PLANS[plan].note}</p>
 
           {/* Perks */}
           <div className="rounded-2xl border border-border/60 bg-card/60 divide-y divide-border/50">
             {PERKS.map((perk) => (
-              <div key={perk.title} className="flex items-start gap-3 p-3.5">
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+              <div key={perk.title} className="flex items-start gap-3 p-3">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                   <perk.icon className="h-4 w-4 text-primary" strokeWidth={2.2} />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground">{perk.title}</p>
-                  <p className="text-xs text-muted-foreground">{perk.desc}</p>
+                  <p className="text-[13px] font-semibold leading-snug text-foreground">{perk.title}</p>
+                  <p className="text-[11px] leading-snug text-muted-foreground">{perk.desc}</p>
                 </div>
-                <Check className="ml-auto mt-1 h-4 w-4 shrink-0 text-primary" strokeWidth={2.6} />
+                <Check className="ml-auto mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={2.6} />
               </div>
             ))}
           </div>
