@@ -3099,6 +3099,62 @@ export type Database = {
           },
         ]
       }
+      period_leader_snapshots: {
+        Row: {
+          cabins: string | null
+          created_at: string
+          gender: string | null
+          id: string
+          is_active: boolean | null
+          is_external: boolean | null
+          leader_id: string | null
+          leader_name: string
+          period_id: string
+          roles: string | null
+          snapshot_at: string
+          teams: string | null
+          updated_at: string
+        }
+        Insert: {
+          cabins?: string | null
+          created_at?: string
+          gender?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_external?: boolean | null
+          leader_id?: string | null
+          leader_name: string
+          period_id: string
+          roles?: string | null
+          snapshot_at?: string
+          teams?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cabins?: string | null
+          created_at?: string
+          gender?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_external?: boolean | null
+          leader_id?: string | null
+          leader_name?: string
+          period_id?: string
+          roles?: string | null
+          snapshot_at?: string
+          teams?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "period_leader_snapshots_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       period_leaders: {
         Row: {
           created_at: string
@@ -4519,6 +4575,10 @@ export type Database = {
         }[]
       }
       set_murder_game_active: { Args: { _active: boolean }; Returns: undefined }
+      snapshot_period_leaders: {
+        Args: { _period_id?: string }
+        Returns: number
+      }
       start_murder_game: { Args: { _leader_ids: string[] }; Returns: string }
       swipe_leader: {
         Args: { _liked: boolean; _target: string }
