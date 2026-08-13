@@ -74,6 +74,7 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
 
       const store: Row[] = [];
       const lille: Row[] = [];
+      const missingCounts = new Map<string, number>();
 
       (participantsRes.data || []).forEach((p) => {
         const activities = acts.get(p.id) || [];
@@ -85,18 +86,47 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
           cabinName: p.cabin_id ? cabinMap.get(p.cabin_id) ?? null : null,
         };
 
+        const participantMissing = new Set<string>();
+
         if (!hasStoreStyrkprove(activities)) {
           const m = missingStore(activities);
           if (m.length >= 1 && m.length <= 2) store.push({ ...base, missing: m });
+          m.forEach((x) => participantMissing.add(x));
         }
         if (!hasLilleStyrkprove(activities)) {
           const m = missingLille(activities);
           if (m.length >= 1 && m.length <= 2) lille.push({ ...base, missing: m });
+          m.forEach((x) => participantMissing.add(x));
         }
+
+        participantMissing.forEach((m) => {
+          missingCounts.set(m, (missingCounts.get(m) || 0) + 1);
+        });
       });
 
+      const priority = [
+        'Klatring',
+        'Rappis',
+        'Taubane',
+        'Tretten meter',
+        'Skrikeren begge veier',
+        'Åtte/Ti/Tretten meter',
+        'Skrikeren en vei/Triatlon',
+      ];
+
+      const missingItems = Array.from(missingCounts.entries())
+        .map(([label, count]) => ({ label, count }))
+        .sort((a, b) => {
+          const ia = priority.indexOf(a.label);
+          const ib = priority.indexOf(b.label);
+          if (ia !== -1 && ib !== -1) return ia - ib;
+          if (ia !== -1) return -1;
+          if (ib !== -1) return 1;
+          return a.label.localeCompare(b.label, 'nb');
+        });
+
       const sort = (a: Row, b: Row) => a.missing.length - b.missing.length || a.name.localeCompare(b.name, 'nb');
-      return { store: store.sort(sort), lille: lille.sort(sort) };
+      return { store: store.sort(sort), lille: lille.sort(sort), missingItems };
     },
   });
 
@@ -162,6 +192,29 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Oversikt over hvilke aktiviteter som mangler fra styrkeprøven */}
+      {data && data.missingItems.length > 0 && (
+        <div className="mt-4 border-t border-border/60 pt-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Aktiviteter som mangler fra styrkeprøven
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {data.missingItems.map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center gap-2 rounded-full border border-border/60 bg-muted/50 px-3 py-2 text-sm"
+              >
+                <span className="font-medium">{item.label}</span>
+                <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-orange-500 px-1 text-[11px] font-bold text-white">
+                  {item.count}
+                </span>
+                <span className="text-[11px] text-muted-foreground">deltagere</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </DashCard>

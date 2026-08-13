@@ -11,7 +11,6 @@ import { StatTile } from '@/components/admin/dashboard/StatTile';
 import { DashCard, EmptyLine } from '@/components/admin/dashboard/DashCard';
 import { ParticipantChip } from '@/components/admin/dashboard/ParticipantChip';
 import { StyrkeproveNearlyCard } from '@/components/admin/dashboard/StyrkeproveNearlyCard';
-import { MissingActivitiesCard } from '@/components/admin/dashboard/MissingActivitiesCard';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -80,7 +79,6 @@ export default function AdminDashboard() {
 
       {isLoading || !data ? (
         <div className="space-y-3">
-          <Skeleton className="h-24 rounded-3xl" />
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}
           </div>
@@ -89,11 +87,6 @@ export default function AdminDashboard() {
         </div>
       ) : (
         <>
-          {/* Aktiviteter som mangler – øverst */}
-          <div className="mb-3">
-            <MissingActivitiesCard />
-          </div>
-
           {/* Nøkkeltall – deltagerstatus i én boks */}
           <div className="grid gap-2.5 sm:grid-cols-[2fr_1fr]">
             <section className="rounded-3xl border border-border/60 bg-card/70 p-4 shadow-sm backdrop-blur">
