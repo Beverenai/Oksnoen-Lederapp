@@ -350,7 +350,7 @@ export function CheckoutTab() {
               <Switch
                 id="checkout-toggle"
                 checked={checkoutEnabled}
-                disabled={isGenerating || !activePeriod}
+                disabled={!activePeriod}
                 onCheckedChange={(checked) => {
                   if (checked) {
                     handleEnableCheckout();
