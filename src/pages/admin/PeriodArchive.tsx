@@ -97,9 +97,9 @@ export default function PeriodArchive() {
     if (!yearPeriods.length) return;
     setExporting(true);
     try {
-      const sheets: { name: string; rows: Record<string, unknown>[] }[] = [];
+      const sheets: { name: string; rows: ArchiveRow[] }[] = [];
       for (const ds of archiveDatasets) {
-        const rows: Record<string, unknown>[] = [];
+        const rows: ArchiveRow[] = [];
         for (const p of yearPeriods) {
           const part = await ds.fetch(p.id);
           part.forEach((r) => rows.push({ Periode: p.name, ...r }));
