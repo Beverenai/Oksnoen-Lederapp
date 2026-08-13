@@ -33,30 +33,21 @@ type ParticipantSummary = {
 
 type Row = ParticipantSummary & { missing: string[] };
 
-type SummaryDef =
-  | { label: string; req: string }
-  | { label: string; alt: string[] };
-
 type SummaryItem = {
   label: string;
   count: number;
   participants: ParticipantSummary[];
 };
 
-const SUMMARY_ACTIVITIES: SummaryDef[] = [
-  { label: 'Klatring', req: 'Klatring' },
-  { label: 'Rappis', req: 'Rappis' },
-  { label: 'Taubane', req: 'Taubane' },
-  { label: 'Tretten meter', req: 'Tretten meter' },
-  { label: 'Skrikeren begge veier', req: 'Skrikeren begge veier' },
-  { label: 'Åtte/Ti/Tretten meter', alt: LILLE_STYRKEPROVE_HEIGHT_ALTERNATIVES },
-  { label: 'Skrikeren en vei / Triatlon', alt: LILLE_STYRKEPROVE_SWIMMING_ALTERNATIVES },
+const SUMMARY_LABELS = [
+  'Klatring',
+  'Rappis',
+  'Taubane',
+  'Tretten meter',
+  'Skrikeren begge veier',
+  'Åtte/Ti/Tretten meter',
+  'Skrikeren en vei / Triatlon',
 ];
-
-function isMissingSummary(activities: string[], def: SummaryDef): boolean {
-  if ('req' in def) return !matchesRequirement(activities, def.req);
-  return !def.alt.some((alt) => matchesRequirement(activities, alt));
-}
 
 function missingStore(activities: string[]) {
   return STORE_STYRKEPROVE_REQUIREMENTS.filter((r) => !matchesRequirement(activities, r));
@@ -106,41 +97,48 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
         acts.set(a.participant_id, list);
       });
 
-      const allParticipants: ParticipantSummary[] = (participantsRes.data || []).map((p) => ({
-        id: p.id,
-        name: p.first_name && p.last_name ? `${p.first_name} ${p.last_name}` : p.name,
-        imageUrl: p.image_url ?? null,
-        thumbUrl: (p as any).image_thumb_url ?? null,
-        cabinName: p.cabin_id ? cabinMap.get(p.cabin_id) ?? null : null,
-      }));
-
       const store: Row[] = [];
       const lille: Row[] = [];
 
-      allParticipants.forEach((p) => {
+      (participantsRes.data || []).forEach((p) => {
         const activities = acts.get(p.id) || [];
+        const base: ParticipantSummary = {
+          id: p.id,
+          name: p.first_name && p.last_name ? `${p.first_name} ${p.last_name}` : p.name,
+          imageUrl: p.image_url ?? null,
+          thumbUrl: (p as any).image_thumb_url ?? null,
+          cabinName: p.cabin_id ? cabinMap.get(p.cabin_id) ?? null : null,
+        };
 
         if (!hasStoreStyrkprove(activities)) {
           const m = missingStore(activities);
           if (m.length >= 1 && m.length <= 2) {
-            store.push({ ...p, missing: m });
+            store.push({ ...base, missing: m });
           }
         }
         if (!hasLilleStyrkprove(activities)) {
           const m = missingLille(activities);
           if (m.length >= 1 && m.length <= 2) {
-            lille.push({ ...p, missing: m });
+            lille.push({ ...base, missing: m });
           }
         }
       });
 
-      const summary: SummaryItem[] = SUMMARY_ACTIVITIES.map((def) => {
-        const participants: ParticipantSummary[] = [];
-        allParticipants.forEach((p) => {
-          const activities = acts.get(p.id) || [];
-          if (isMissingSummary(activities, def)) participants.push(p);
-        });
-        return { label: def.label, count: participants.length, participants };
+      // Slå sammen deltagere som er nær både lille og store styrkeprøven
+      const nearById = new Map<string, Row>();
+      [...store, ...lille].forEach((r) => {
+        const existing = nearById.get(r.id);
+        if (!existing) {
+          nearById.set(r.id, r);
+        } else {
+          existing.missing = Array.from(new Set([...existing.missing, ...r.missing]));
+        }
+      });
+      const nearParticipants = Array.from(nearById.values());
+
+      const summary: SummaryItem[] = SUMMARY_LABELS.map((label) => {
+        const participants = nearParticipants.filter((r) => r.missing.includes(label));
+        return { label, count: participants.length, participants };
       }).filter((item) => item.count > 0);
 
       const sort = (a: Row, b: Row) => a.missing.length - b.missing.length || a.name.localeCompare(b.name, 'nb');
