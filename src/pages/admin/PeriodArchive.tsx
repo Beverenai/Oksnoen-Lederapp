@@ -31,6 +31,7 @@ export default function PeriodArchive() {
   const [year, setYear] = useState<number | null>(null);
   const [group, setGroup] = useState<string>('participants');
   const [exporting, setExporting] = useState(false);
+  const [allOpen, setAllOpen] = useState(false);
 
   const { data: periods = [], isLoading } = useQuery({
     queryKey: ['archive', 'periods'],
