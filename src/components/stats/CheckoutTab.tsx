@@ -140,8 +140,7 @@ export function CheckoutTab() {
             setProgress(parsed);
 
             if (parsed.status === 'done') {
-              setCheckoutEnabled(true);
-              showSuccess('Utsjekk aktivert! Ledere kan nå skrive pass.');
+              showSuccess('Passforslag ferdig generert.');
               loadData();
             } else if (parsed.status === 'error') {
               showError('Feil ved generering: ' + (parsed.error || 'Ukjent feil'));
@@ -211,15 +210,10 @@ export function CheckoutTab() {
       if (error) throw error;
 
       await supabase.from('app_config').upsert(
-        { key: 'checkout_enabled', value: 'false' },
-        { onConflict: 'key' }
-      );
-      await supabase.from('app_config').upsert(
         { key: 'checkout_progress', value: JSON.stringify({ status: 'idle', processed: 0, total: 0 }) },
         { onConflict: 'key' }
       );
 
-      setCheckoutEnabled(false);
       setProgress({ status: 'idle', processed: 0, total: 0 });
       hapticSuccess();
       showSuccess(`Alle pass for ${activePeriod.name} er tilbakestilt`);
