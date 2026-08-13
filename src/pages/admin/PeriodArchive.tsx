@@ -93,6 +93,29 @@ export default function PeriodArchive() {
     }
   };
 
+  const exportSeason = async () => {
+    if (!yearPeriods.length) return;
+    setExporting(true);
+    try {
+      const sheets: { name: string; rows: Record<string, unknown>[] }[] = [];
+      for (const ds of archiveDatasets) {
+        const rows: Record<string, unknown>[] = [];
+        for (const p of yearPeriods) {
+          const part = await ds.fetch(p.id);
+          part.forEach((r) => rows.push({ Periode: p.name, ...r }));
+        }
+        sheets.push({ name: ds.label, rows });
+      }
+      await downloadWorkbook(sheets, `Sesong-${year}-arkiv.xlsx`);
+      showSuccess(`Hele sesongen ${year} lastet ned`);
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke eksportere sesongen');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (!isAdmin && !isNurse) {
     return (
       <div className="p-6 text-center text-muted-foreground">
@@ -115,7 +138,8 @@ export default function PeriodArchive() {
 
         <Card className="p-4 space-y-3">
           <p className="text-sm text-muted-foreground">
-            Se all lagret data fra en tidligere periode. Å velge periode her endrer <strong>ikke</strong> aktiv
+            Se all lagret data fra en tidligere sesong og periode. Alt blir liggende lagret år etter år, så du
+            kan hente det fram når som helst. Å velge sesong eller periode her endrer <strong>ikke</strong> aktiv
             periode eller noen innstillinger.
           </p>
           {isLoading ? (
@@ -161,6 +185,14 @@ export default function PeriodArchive() {
               <div className="flex gap-2 ml-auto print:hidden">
                 <Button size="sm" variant="outline" onClick={() => window.print()} disabled={!period}>
                   <Printer className="h-4 w-4 mr-1" /> Print / PDF
+                </Button>
+                <Button size="sm" variant="outline" onClick={exportSeason} disabled={!yearPeriods.length || exporting}>
+                  {exporting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-4 w-4 mr-1" />
+                  )}
+                  Hele sesongen
                 </Button>
                 <Button size="sm" onClick={exportAll} disabled={!period || exporting}>
                   {exporting ? (
