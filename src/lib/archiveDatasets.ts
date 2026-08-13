@@ -467,23 +467,6 @@ export const archiveDatasets: ArchiveDataset[] = [
     },
   },
   {
-    key: 'secret-words-list',
-    label: 'Tildelte ord (liste)',
-    group: 'secret-words',
-    fetch: async (periodId) => {
-      const [list, parts] = await Promise.all([
-        rows('secret_word_assignments', 'participant_id,word,slot,pair_id', periodId),
-        participantMap(periodId),
-      ]);
-      return list.map((r) => ({
-        Deltaker: parts[r.participant_id] ?? '',
-        Ord: r.word,
-        Slot: r.slot,
-        Par: r.pair_id,
-      }));
-    },
-  },
-  {
     key: 'secret-word-matches',
     label: 'Matcher',
     group: 'secret-words',
