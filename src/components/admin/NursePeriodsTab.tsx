@@ -174,6 +174,15 @@ export function NursePeriodsTab() {
                   );
                 })}
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 w-full"
+                disabled={savingLeaders || !active}
+                onClick={saveLeadersNow}
+              >
+                {savingLeaders ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lagre ledere for aktiv periode'}
+              </Button>
             </>
           )}
         </CardContent>
