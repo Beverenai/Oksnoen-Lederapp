@@ -276,6 +276,13 @@ export default function Passport() {
     window.scrollTo({ top: 0 });
   };
 
+  const clearStatusFilter = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('status');
+    setSearchParams(next, { replace: true });
+    window.scrollTo({ top: 0 });
+  };
+
   // Filter by specific cabin — triggered from cabin header click
   const handleFilterByCabin = useCallback((cabinId: string) => {
     setSearchQuery('');
