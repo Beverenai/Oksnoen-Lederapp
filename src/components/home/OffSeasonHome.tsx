@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Circle, HeartHandshake, IdCard, Crown } from 'lucide-react';
+import { MessageCircle, Circle, HeartHandshake, IdCard, Crown, Flame, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { LederPass } from '@/components/passport/LederPass';
 import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
@@ -102,6 +102,24 @@ export function OffSeasonHome({
       </header>
 
       <HomeQuickActions actions={actions} />
+
+      {/* Øksnøen Tinder — øverste attraksjon off-season */}
+      <button
+        type="button"
+        onClick={() => navigate('/kline-tinder')}
+        className="flex w-full items-center gap-3 rounded-3xl border border-rose-500/25 bg-gradient-to-br from-rose-500/15 via-card/70 to-orange-400/10 p-4 text-left shadow-sm transition-transform active:scale-[0.99]"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 text-white shadow-md">
+          <Flame className="h-5 w-5" />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-[15px] font-heading font-bold leading-tight">Øksnøen Tinder</span>
+          <span className="block text-[12px] text-muted-foreground">
+            Sveip på ledere — match hvis begge sveiper ja
+          </span>
+        </span>
+        <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+      </button>
 
       {/* Låste «premium»-flater — åpner Øksnøen + (kun for gøy) */}
       <section className="space-y-2">
