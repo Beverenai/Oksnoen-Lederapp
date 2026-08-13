@@ -38,6 +38,7 @@ import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute } from '@/lib/limitedAccess';
 import { IdCard, MessageCircle, Circle, Crown } from 'lucide-react';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
+import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 
 type MoreItem = {
   to?: string;
