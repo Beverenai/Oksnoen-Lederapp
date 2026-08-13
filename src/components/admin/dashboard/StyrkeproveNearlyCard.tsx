@@ -194,6 +194,29 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
           ))}
         </div>
       )}
+
+      {/* Oversikt over hvilke aktiviteter som mangler fra styrkeprøven */}
+      {data && data.missingItems.length > 0 && (
+        <div className="mt-4 border-t border-border/60 pt-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Aktiviteter som mangler fra styrkeprøven
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {data.missingItems.map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center gap-2 rounded-full border border-border/60 bg-muted/50 px-3 py-2 text-sm"
+              >
+                <span className="font-medium">{item.label}</span>
+                <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-orange-500 px-1 text-[11px] font-bold text-white">
+                  {item.count}
+                </span>
+                <span className="text-[11px] text-muted-foreground">deltagere</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </DashCard>
   );
 }
