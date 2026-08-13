@@ -11,6 +11,7 @@ import { StatTile } from '@/components/admin/dashboard/StatTile';
 import { DashCard, EmptyLine } from '@/components/admin/dashboard/DashCard';
 import { ParticipantChip } from '@/components/admin/dashboard/ParticipantChip';
 import { StyrkeproveNearlyCard } from '@/components/admin/dashboard/StyrkeproveNearlyCard';
+import { MissingActivitiesCard } from '@/components/admin/dashboard/MissingActivitiesCard';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
