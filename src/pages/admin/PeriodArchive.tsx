@@ -117,6 +117,49 @@ export default function PeriodArchive() {
     }
   };
 
+  const exportGroup = async () => {
+    if (!period) return;
+    setExporting(true);
+    try {
+      const sheets = [];
+      for (const ds of datasets) {
+        const rows = await ds.fetch(period.id);
+        sheets.push({ name: ds.label, rows });
+      }
+      const label = archiveGroups.find((g) => g.key === group)?.label ?? group;
+      await downloadWorkbook(sheets, `${period.name.replace(/\s+/g, '-')}-${label.replace(/[^\wÆØÅæøå]+/g, '-')}.xlsx`);
+      showSuccess('Alle listene lastet ned');
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke eksportere listene');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportSeasonUnused = async () => {
+    if (!yearPeriods.length) return;
+    setExporting(true);
+    try {
+      const sheets: { name: string; rows: ArchiveRow[] }[] = [];
+      for (const ds of archiveDatasets) {
+        const rows: ArchiveRow[] = [];
+        for (const p of yearPeriods) {
+          const part = await ds.fetch(p.id);
+          part.forEach((r) => rows.push({ Periode: p.name, ...r }));
+        }
+        sheets.push({ name: ds.label, rows });
+      }
+      await downloadWorkbook(sheets, `Sesong-${year}-arkiv.xlsx`);
+      showSuccess(`Hele sesongen ${year} lastet ned`);
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke eksportere sesongen');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (!isAdmin && !isNurse) {
     return (
       <div className="p-6 text-center text-muted-foreground">
@@ -231,13 +274,32 @@ export default function PeriodArchive() {
         </div>
 
         {period && (
-          <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+              <p className="text-xs text-muted-foreground">
+                {datasets.length} lister · trykk på en liste for å åpne den
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => setAllOpen((v) => !v)}>
+                  {allOpen ? 'Lukk alle' : 'Åpne alle'}
+                </Button>
+                <Button size="sm" variant="secondary" onClick={exportGroup} disabled={exporting}>
+                  {exporting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-4 w-4 mr-1" />
+                  )}
+                  Last ned alle listene
+                </Button>
+              </div>
+            </div>
             {datasets.map((ds) => (
               <ArchiveDatasetCard
-                key={ds.key}
+                key={`${ds.key}-${allOpen}`}
                 dataset={ds}
                 periodId={period.id}
                 periodName={period.name.replace(/\s+/g, '-')}
+                defaultOpen={allOpen}
               />
             ))}
           </div>
