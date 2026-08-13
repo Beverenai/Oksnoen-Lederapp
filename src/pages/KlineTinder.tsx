@@ -11,6 +11,7 @@ import {
 } from '@/hooks/useLeaderSwipes';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { cn } from '@/lib/utils';
+import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 
 type Tab = 'deck' | 'matches';
 
@@ -19,6 +20,7 @@ export default function KlineTinder() {
   const [tab, setTab] = useState<Tab>('deck');
   const [index, setIndex] = useState(0);
   const [matchName, setMatchName] = useState<string | null>(null);
+  const [plusOpen, setPlusOpen] = useState(false);
 
   const { candidates, isLoading } = useSwipeCandidates();
   const { data: matches = [] } = useMyMatches();
@@ -39,6 +41,12 @@ export default function KlineTinder() {
     } catch {
       toast.error('Klarte ikke å lagre sveipet');
     }
+  };
+
+  const handleSuperlike = () => {
+    hapticImpact('light');
+    toast.info('Superlike er en Øksnøen +-fordel');
+    setPlusOpen(true);
   };
 
   return (
@@ -108,6 +116,7 @@ export default function KlineTinder() {
                     depth={i}
                     interactive={i === 0}
                     onDecide={(liked) => handleDecide(leader.id, leader.name, liked)}
+                    onSuperlike={handleSuperlike}
                   />
                 ))}
             </div>
@@ -173,6 +182,8 @@ export default function KlineTinder() {
           </span>
         </button>
       )}
+
+      <OksnoenPlusDialog open={plusOpen} onOpenChange={setPlusOpen} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Heart, X, Circle } from 'lucide-react';
+import { Heart, X, Circle, Star, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SnusCan3D } from '@/components/snus/SnusCan3D';
 import { getSnusProduct, customSnusProduct } from '@/lib/snusCatalog';
@@ -14,11 +14,13 @@ const THRESHOLD = 110;
 export function SwipeCard({
   leader,
   onDecide,
+  onSuperlike,
   interactive,
   depth = 0,
 }: {
   leader: SwipeCandidate;
   onDecide: (liked: boolean) => void;
+  onSuperlike?: () => void;
   interactive: boolean;
   depth?: number;
 }) {
@@ -130,7 +132,7 @@ export function SwipeCard({
       </div>
 
       {interactive && (
-        <div className="absolute -bottom-16 left-0 right-0 flex items-center justify-center gap-5">
+        <div className="absolute -bottom-16 left-0 right-0 flex items-center justify-center gap-4">
           <button
             type="button"
             onClick={() => decide(false)}
@@ -140,6 +142,17 @@ export function SwipeCard({
             )}
           >
             <X className="h-6 w-6 text-rose-500" strokeWidth={2.6} />
+          </button>
+          <button
+            type="button"
+            onClick={() => onSuperlike?.()}
+            aria-label="Superlike (krever Øksnøen +)"
+            className="relative flex h-12 w-12 items-center justify-center rounded-full border border-sky-400/50 bg-card shadow-md active:scale-95 transition-transform"
+          >
+            <Star className="h-5 w-5 text-sky-400/70" strokeWidth={2.6} />
+            <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-border/60 bg-background">
+              <Lock className="h-2.5 w-2.5 text-muted-foreground" />
+            </span>
           </button>
           <button
             type="button"
