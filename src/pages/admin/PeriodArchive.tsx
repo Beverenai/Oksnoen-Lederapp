@@ -76,6 +76,10 @@ export default function PeriodArchive() {
   const period = useMemo(() => periods.find((p) => p.id === periodId) ?? null, [periods, periodId]);
   const datasets = useMemo(() => datasetsForGroup(group), [group]);
 
+  useEffect(() => {
+    setAllOpen(datasetsForGroup(group).length <= 3);
+  }, [group]);
+
   const exportAll = async () => {
     if (!period) return;
     setExporting(true);
