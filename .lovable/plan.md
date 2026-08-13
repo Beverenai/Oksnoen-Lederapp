@@ -27,15 +27,16 @@ Ny side `/kline-tinder` – en sveipestokk med ledere.
 - **Hvem vises:** ledere som ikke er aktive i perioden (og eksterne/manuelle ledere), utenom deg selv, de du allerede har sveipet, og de du allerede er koblet til på klinelista.
 - **Kort:** stort profilbilde, navn, snusboks-badge, år på leir – i et kort man kan sveipe eller trykke på knappene «Nei» / «Ja».
 - **Sveip høyre** = du liker. Sveip venstre = hopp over (huskes).
-- **Match:** når begge har sveipet høyre, blir det en match – full-skjerm «Det er en match!»-animasjon, og koblingen blir bekreftet på klinelista (samme data som i dag, så kartet og lista oppdateres automatisk).
+- **Match:** når begge har sveipet høyre, blir det en match – full-skjerm «Det er en match!»-animasjon. Matchen er helt separat fra klinelista: ingenting kobles automatisk der. Vil man registrere en kobling på klinelista, må det fortsatt gjøres manuelt som i dag.
 - **Matcher-liste** nederst på siden: alle dine matcher, med mulighet til å åpne Lederhuset-chatten.
-- Push-varsel ved match, gjennom samme mekanisme som klinelista bruker i dag.
-- Sveip-høyre uten svar vises som «venter» (som en pending forespørsel i dag).
+- Push-varsel ved match.
+- Sveip høyre uten svar tilbake vises ikke for motparten som forespørsel – det er helt skjult til begge har sveipet høyre.
 
 ## Teknisk
 
 - Ny tabell `leader_swipes` (`swiper_leader_id`, `target_leader_id`, `liked boolean`, unik per par) med GRANT + RLS: en leder ser og skriver kun sine egne rader; motparten får ikke lese.
-- Databasefunksjon `swipe_leader(_target uuid, _liked boolean)` (security definer) som lagrer sveipet, og ved gjensidig «liked» oppretter/bekrefter raden i `leader_hookups` og returnerer om det ble match. Dette hindrer at klienten kan lage falske matcher.
+- Ny tabell `leader_matches` (`leader_a_id`, `leader_b_id`, unikt par) for matchene – helt uavhengig av `leader_hookups`. Klinelista røres ikke.
+- Databasefunksjon `swipe_leader(_target uuid, _liked boolean)` (security definer) som lagrer sveipet, og ved gjensidig «liked» oppretter raden i `leader_matches` og returnerer om det ble match. Dette hindrer at klienten kan lage falske matcher.
 - Nye filer: `src/pages/KlineTinder.tsx`, `src/components/klineliste/SwipeDeck.tsx`, `src/components/klineliste/SwipeCard.tsx`, `src/components/offseason/PlusPerkTiles.tsx`, `src/hooks/useLeaderSwipes.ts`.
 - `src/lib/limitedAccess.ts`: legg til `/kline-tinder`. Ny rute i `src/App.tsx`.
 - Fordelslisten flyttes til `src/components/offseason/plusPerks.ts` slik at både dialogen, hjem og «Mer» bruker samme kilde.
