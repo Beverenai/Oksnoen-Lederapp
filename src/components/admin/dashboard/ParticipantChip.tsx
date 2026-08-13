@@ -5,7 +5,7 @@ interface ParticipantChipProps {
   name: string;
   imageUrl?: string | null;
   thumbUrl?: string | null;
-  subtitle?: string | null;
+  subtitle?: React.ReactNode;
   size?: 'sm' | 'md';
   onClick?: () => void;
   right?: React.ReactNode;
