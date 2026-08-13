@@ -383,7 +383,7 @@ export function CheckoutTab() {
           </div>
 
           {/* Stats when enabled */}
-          {checkoutEnabled && !isGenerating && (
+          {checkoutEnabled && (
             <div className="pt-4 border-t space-y-4">
               <div>
                 <h4 className="font-medium mb-3">Fremgang</h4>
