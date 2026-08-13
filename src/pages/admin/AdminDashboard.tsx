@@ -4,7 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAdminDashboard } from '@/hooks/useAdminDashboard';
 import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
-import { CATEGORY_COLORS, CATEGORY_LABELS, SEVERITY_COLORS, SEVERITY_LABELS } from '@/hooks/useParticipantIncidents';
+import { CATEGORY_COLORS, CATEGORY_LABELS, SEVERITY_COLORS, SEVERITY_LABELS, useParticipantIncidents, type Incident } from '@/hooks/useParticipantIncidents';
+import { IncidentSheet } from '@/components/incidents/IncidentSheet';
 import { ParticipantDetailDialog } from '@/components/passport/ParticipantDetailDialog';
 import { AdminNotesPanel } from '@/components/admin/notes/AdminNotesPanel';
 import { StatTile } from '@/components/admin/dashboard/StatTile';
@@ -37,6 +38,16 @@ export default function AdminDashboard() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [deviationsOpen, setDeviationsOpen] = useState(false);
+  const { data: allIncidents = [] } = useParticipantIncidents({ adminAll: true });
+  const [openIncident, setOpenIncident] = useState<Incident | null>(null);
+  const [incidentOpen, setIncidentOpen] = useState(false);
+
+  const openIncidentById = (id: string) => {
+    const found = allIncidents.find((i) => i.id === id);
+    if (!found) return;
+    setOpenIncident(found);
+    setIncidentOpen(true);
+  };
 
   // Alle hopp ut fra dashboardet husker at man kan gå tilbake hit
   const navigate = (to: string) => {
