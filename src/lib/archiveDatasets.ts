@@ -23,6 +23,7 @@ export const archiveGroups = [
   { key: 'secret-words', label: 'Hemmelige ord' },
   { key: 'bookings', label: 'Booking' },
   { key: 'sweaters', label: 'Gensere' },
+  { key: 'gomla', label: 'Gomla (kiosk)' },
   { key: 'other', label: 'Øvrig' },
 ] as const;
 
