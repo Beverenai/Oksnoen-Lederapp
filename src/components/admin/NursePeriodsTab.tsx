@@ -40,6 +40,13 @@ export function NursePeriodsTab() {
   const setActive = async (p: Period) => {
     if (p.is_active) return;
     setSwitching(p.id);
+    // Freeze which leaders (cabins, teams, roles) belonged to the period we are leaving —
+    // leader/cabin links are not period-scoped, so without this the history is lost.
+    try {
+      await (supabase as any).rpc('snapshot_period_leaders', { _period_id: null });
+    } catch (e) {
+      console.error('Kunne ikke lagre ledersnapshot', e);
+    }
     const { error: e1 } = await supabase.from('periods').update({ is_active: false }).neq('id', p.id);
     const { error: e2 } = await supabase.from('periods').update({ is_active: true }).eq('id', p.id);
     if (e1 || e2) {
