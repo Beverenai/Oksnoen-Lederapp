@@ -538,6 +538,87 @@ export const archiveDatasets: ArchiveDataset[] = [
     },
   },
   {
+    key: 'gomla-sales',
+    label: 'Salg',
+    group: 'gomla',
+    description: 'Alle kiosksalg i perioden med varelinjer',
+    fetch: async (periodId) => {
+      const [list, parts, leaders] = await Promise.all([
+        rows('kiosk_sales', 'id,sale_number,participant_id,sold_by,total,voided_at,created_at', periodId, 'created_at'),
+        participantMap(periodId),
+        nameMap('leaders'),
+      ]);
+      const ids = list.map((s) => s.id);
+      const items: Record<string, string[]> = {};
+      if (ids.length) {
+        const { data } = await sb
+          .from('kiosk_sale_items')
+          .select('sale_id,product_name,quantity,unit_price')
+          .in('sale_id', ids);
+        (data || []).forEach((r: any) => {
+          items[r.sale_id] = [...(items[r.sale_id] || []), `${r.quantity}× ${r.product_name} (${r.unit_price} kr)`];
+        });
+      }
+      return list.map((s) => ({
+        Salgsnr: s.sale_number ?? '',
+        Deltaker: parts[s.participant_id] ?? '',
+        Varer: (items[s.id] || []).join(', '),
+        Total: Number(s.total ?? 0),
+        Solgt_av: s.sold_by ? leaders[s.sold_by] ?? '' : '',
+        Kansellert: bool(!!s.voided_at),
+        Dato: dt(s.created_at),
+      }));
+    },
+  },
+  {
+    key: 'gomla-deposits',
+    label: 'Innskudd',
+    group: 'gomla',
+    description: 'Kioskpenger satt inn eller justert',
+    fetch: async (periodId) => {
+      const [list, parts, leaders] = await Promise.all([
+        rows('kiosk_deposits', 'participant_id,amount,kind,note,created_by,created_at', periodId, 'created_at'),
+        participantMap(periodId),
+        nameMap('leaders'),
+      ]);
+      return list.map((r) => ({
+        Deltaker: parts[r.participant_id] ?? '',
+        Beløp: Number(r.amount ?? 0),
+        Type: r.kind ?? '',
+        Notat: r.note ?? '',
+        Lagt_inn_av: r.created_by ? leaders[r.created_by] ?? '' : '',
+        Dato: dt(r.created_at),
+      }));
+    },
+  },
+  {
+    key: 'gomla-balances',
+    label: 'Saldo pr. deltaker',
+    group: 'gomla',
+    description: 'Innskudd minus kjøp for hver deltaker',
+    fetch: async (periodId) => {
+      const [parts, deposits, sales] = await Promise.all([
+        archiveParticipants(periodId),
+        rows('kiosk_deposits', 'participant_id,amount', periodId),
+        rows('kiosk_sales', 'participant_id,total,voided_at', periodId),
+      ]);
+      const dep: Record<string, number> = {};
+      deposits.forEach((r) => { dep[r.participant_id] = (dep[r.participant_id] || 0) + Number(r.amount ?? 0); });
+      const spent: Record<string, number> = {};
+      sales.filter((s) => !s.voided_at).forEach((s) => {
+        spent[s.participant_id] = (spent[s.participant_id] || 0) + Number(s.total ?? 0);
+      });
+      return parts
+        .filter((p: any) => dep[p.id] || spent[p.id])
+        .map((p: any) => ({
+          Deltaker: p.name,
+          Innskudd: dep[p.id] || 0,
+          Kjøpt_for: spent[p.id] || 0,
+          Saldo: (dep[p.id] || 0) - (spent[p.id] || 0),
+        }));
+    },
+  },
+  {
     key: 'incidents',
     label: 'Hendelser',
     group: 'other',
