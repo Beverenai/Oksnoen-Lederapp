@@ -24,6 +24,15 @@ export function NursePeriodsTab() {
   const [periods, setPeriods] = useState<Period[]>([]);
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
+  const [savingLeaders, setSavingLeaders] = useState(false);
+
+  const saveLeadersNow = async () => {
+    setSavingLeaders(true);
+    const { data, error } = await (supabase as any).rpc('snapshot_period_leaders', { _period_id: null });
+    if (error) showError('Kunne ikke lagre ledere');
+    else showSuccess(`${data ?? 0} ledere lagret for perioden`);
+    setSavingLeaders(false);
+  };
 
   const load = async () => {
     const { data, error } = await supabase
