@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Archive, FileSpreadsheet, Loader2, Printer } from 'lucide-react';
