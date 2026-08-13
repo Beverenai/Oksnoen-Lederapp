@@ -19,6 +19,7 @@ export const archiveGroups = [
   { key: 'dynga', label: 'Dynga' },
   { key: 'activities', label: 'Aktiviteter & poeng' },
   { key: 'teams', label: 'Lag' },
+  { key: 'leaders', label: 'Ledere' },
   { key: 'secret-words', label: 'Hemmelige ord' },
   { key: 'bookings', label: 'Booking' },
   { key: 'sweaters', label: 'Gensere' },
