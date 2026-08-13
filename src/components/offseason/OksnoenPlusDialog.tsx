@@ -116,6 +116,23 @@ export function OksnoenPlusDialog({
           <p className="mx-auto mt-1 max-w-xs text-center text-[13px] text-muted-foreground">
             Denne funksjonen krever Øksnøen + abonnement.
           </p>
+
+          {/* Uthevede fordeler */}
+          <div className="mx-auto mt-4 flex max-w-md gap-2">
+            {PLUS_HIGHLIGHTS.map((perk) => (
+              <div
+                key={perk.key}
+                className="flex-1 rounded-2xl border border-border/50 bg-card/70 p-2.5 text-center backdrop-blur"
+              >
+                <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-full oks-gold-surface">
+                  <perk.icon className="h-4 w-4 text-background" strokeWidth={2.3} />
+                </span>
+                <p className="mt-1.5 text-[10.5px] font-semibold leading-tight text-foreground">
+                  {perk.title}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -168,18 +185,33 @@ export function OksnoenPlusDialog({
           </div>
           <p className="-mt-1 px-1 text-[11px] text-muted-foreground">{PLANS[plan].note}</p>
 
-          {/* Perks */}
-          <div className="rounded-2xl border border-border/60 bg-card/60 divide-y divide-border/50">
-            {PERKS.map((perk) => (
-              <div key={perk.title} className="flex items-start gap-3 p-3">
-                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <perk.icon className="h-4 w-4 text-primary" strokeWidth={2.2} />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold leading-snug text-foreground">{perk.title}</p>
-                  <p className="text-[11px] leading-snug text-muted-foreground">{perk.desc}</p>
+          {/* Perks – gruppert */}
+          <div className="space-y-3">
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Alt du får
+            </p>
+            {PLUS_PERK_GROUPS.map((group) => (
+              <div key={group.label} className="space-y-1.5">
+                <p className="px-1 text-[11px] font-bold uppercase tracking-wide oks-gold-text">
+                  {group.label}
+                </p>
+                <div
+                  className="overflow-hidden rounded-2xl border border-border/60 divide-y divide-border/50"
+                  style={{ background: 'linear-gradient(180deg, hsl(var(--card)/0.75), hsl(var(--card)/0.45))' }}
+                >
+                  {group.perks.map((perk) => (
+                    <div key={perk.key} className="flex items-start gap-3 p-3">
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full oks-gold-surface oks-gold-ring">
+                        <perk.icon className="h-4 w-4 text-background" strokeWidth={2.3} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold leading-snug text-foreground">{perk.title}</p>
+                        <p className="text-[11px] leading-snug text-muted-foreground">{perk.desc}</p>
+                      </div>
+                      <Check className="ml-auto mt-1 h-4 w-4 shrink-0 text-primary" strokeWidth={2.6} />
+                    </div>
+                  ))}
                 </div>
-                <Check className="ml-auto mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={2.6} />
               </div>
             ))}
           </div>
