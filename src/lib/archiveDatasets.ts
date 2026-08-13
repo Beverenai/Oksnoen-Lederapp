@@ -417,6 +417,73 @@ export const archiveDatasets: ArchiveDataset[] = [
     },
   },
   {
+    key: 'period-leaders',
+    label: 'Ledere i perioden',
+    group: 'leaders',
+    description: 'Låst kopi av hvilke ledere som var med, med hytte, lag og roller',
+    fetch: async (periodId) => {
+      const list = await rows(
+        'period_leader_snapshots',
+        'leader_name,gender,is_active,is_external,cabins,teams,roles,snapshot_at',
+        periodId,
+        'leader_name',
+      );
+      return list.map((l) => ({
+        Leder: l.leader_name,
+        Hytte: l.cabins ?? '',
+        Lag: l.teams ?? '',
+        Roller: l.roles ?? '',
+        Kjønn: l.gender === 'male' ? 'Mann' : l.gender === 'female' ? 'Kvinne' : '',
+        Aktiv: bool(l.is_active),
+        Ekstern: bool(l.is_external),
+        Lagret: dt(l.snapshot_at),
+      }));
+    },
+  },
+  {
+    key: 'period-cabin-leaders',
+    label: 'Hytteledere',
+    group: 'leaders',
+    description: 'Hvem som var ledere på hvilken hytte i perioden',
+    fetch: async (periodId) => {
+      const list = await rows('period_leader_snapshots', 'leader_name,cabins', periodId, 'leader_name');
+      const byCabin: Record<string, string[]> = {};
+      list.forEach((l) => {
+        (l.cabins || '')
+          .split(',')
+          .map((c: string) => c.trim())
+          .filter(Boolean)
+          .forEach((c: string) => {
+            byCabin[c] = [...(byCabin[c] || []), l.leader_name];
+          });
+      });
+      return Object.keys(byCabin)
+        .sort((a, b) => a.localeCompare(b, 'nb'))
+        .map((cabin) => ({
+          Hytte: cabin,
+          Ledere: byCabin[cabin].join(', '),
+          Antall: byCabin[cabin].length,
+        }));
+    },
+  },
+  {
+    key: 'secret-words-list',
+    label: 'Tildelte ord (liste)',
+    group: 'secret-words',
+    fetch: async (periodId) => {
+      const [list, parts] = await Promise.all([
+        rows('secret_word_assignments', 'participant_id,word,slot,pair_id', periodId),
+        participantMap(periodId),
+      ]);
+      return list.map((r) => ({
+        Deltaker: parts[r.participant_id] ?? '',
+        Ord: r.word,
+        Slot: r.slot,
+        Par: r.pair_id,
+      }));
+    },
+  },
+  {
     key: 'secret-word-matches',
     label: 'Matcher',
     group: 'secret-words',
