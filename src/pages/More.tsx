@@ -43,6 +43,7 @@ import { isLimitedAccessRoute } from '@/lib/limitedAccess';
 import { IdCard, MessageCircle, Circle, Crown, Camera } from 'lucide-react';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { TinderIcon } from '@/components/icons/TinderIcon';
+import { usePovCurrentRoll } from '@/hooks/usePov';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import { BentoTile, type BentoTone, type BentoSize } from '@/components/offseason/BentoTile';
 import povHero from '@/assets/pov-hero.jpg.asset.json';
@@ -110,6 +111,8 @@ export default function More() {
   const hookupsEnabled = useHookupsEnabled();
   const incomingHookups = useIncomingHookupCount();
   const unopenedSips = useUnopenedSipCount();
+  const { data: povRoll } = usePovCurrentRoll();
+  const povShotsLeft = povRoll?.my_shots_left ?? 0;
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
@@ -247,7 +250,7 @@ export default function More() {
             ]
           : []),
         { to: '/kline-tinder', icon: TinderIcon, label: 'Tinder' } as MoreItem,
-        { to: '/pov', icon: Camera, label: 'Øksnøen POV' } as MoreItem,
+        { to: '/pov', icon: Camera, label: 'POV' } as MoreItem,
         { icon: Crown, label: 'Øksnøen +', onClick: () => setPlusOpen(true) } as MoreItem,
         { to: '/feedback', icon: Lightbulb, label: 'Feedback' } as MoreItem,
       ],
