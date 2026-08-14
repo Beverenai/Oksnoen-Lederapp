@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Crown,
   X,
@@ -52,6 +53,14 @@ export function OksnoenPlusDialog({
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
+  // Lås bakgrunnsscroll mens arket er åpent (iOS)
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
   if (!open) return null;
 
   const decline = DECLINES[Math.min(attempts, DECLINES.length) - 1] ?? DECLINES[0];
@@ -80,13 +89,13 @@ export function OksnoenPlusDialog({
     onOpenChange(false);
   };
 
-  return (
+  const content = (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Øksnøen +"
-      className="fixed inset-0 z-[70] flex flex-col bg-background animate-in slide-in-from-bottom duration-300"
-      style={{ height: '100dvh' }}
+      className="fixed inset-0 z-[120] flex flex-col overflow-hidden bg-background animate-in slide-in-from-bottom duration-300"
+      style={{ height: '100dvh', paddingBottom: 0 }}
     >
       {/* Topp */}
       <div className="relative shrink-0 overflow-hidden">
@@ -305,4 +314,7 @@ export function OksnoenPlusDialog({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return content;
+  return createPortal(content, document.body);
 }
