@@ -671,3 +671,8 @@ header, nav {
 .oks-decline-shake {
   animation: oks-decline-shake 0.45s ease-in-out;
 }
+
+/* Off-season-flatene skal dekke hele skjermen selv med lite innhold */
+.oks-offseason-bg {
+  min-height: 100dvh;
+}
