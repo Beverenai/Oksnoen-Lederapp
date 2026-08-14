@@ -304,7 +304,7 @@ export default function More() {
     <div
       className={cn(
         'mx-auto w-full max-w-2xl space-y-6 pb-8',
-        limited && 'oks-offseason-bg -mx-4 px-4 pt-1',
+        limited && 'pt-1',
       )}
     >
       <header className="pt-1">
