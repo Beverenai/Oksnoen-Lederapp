@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import type { DrinkType } from '@/lib/drinkSounds';
+import { drinkOf } from '@/lib/drinkSounds';
 
 export type SipRow = {
   id: string;
   amount: number;
   message: string | null;
+  drink_type: DrinkType;
   created_at: string;
   opened_at: string | null;
   drunk_at: string | null;
@@ -74,7 +77,7 @@ export function useMySips() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leader_sips')
-        .select('id, amount, message, created_at, opened_at, drunk_at, from_leader_id, to_leader_id')
+        .select('id, amount, message, drink_type, created_at, opened_at, drunk_at, from_leader_id, to_leader_id')
         .order('created_at', { ascending: false });
       if (error) throw error;
       const rows = data ?? [];
@@ -91,6 +94,7 @@ export function useMySips() {
       }
       const mapped: SipRow[] = rows.map((r) => ({
         ...r,
+        drink_type: drinkOf((r as { drink_type?: string }).drink_type),
         fromName: names.get(r.from_leader_id)?.name ?? 'Ukjent',
         toName: names.get(r.to_leader_id)?.name ?? 'Ukjent',
         fromImage: names.get(r.from_leader_id)?.image ?? null,
@@ -120,16 +124,19 @@ export function useGiveSips() {
       targetId,
       amount,
       message,
+      drinkType,
     }: {
       targetId: string;
       amount: number;
       message?: string;
+      drinkType?: DrinkType;
     }) => {
       const { data, error } = await supabase.rpc('give_sips', {
         _to: targetId,
         _amount: amount,
         _message: message ?? null,
-      });
+        _drink_type: drinkType ?? 'beer',
+      } as never);
       if (error) throw error;
       const sipId = data as unknown as string;
       // Varsling til mottakeren – aldri kritisk om den feiler.

@@ -1667,6 +1667,7 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          drink_type: string
           drunk_at: string | null
           from_leader_id: string
           id: string
@@ -1679,6 +1680,7 @@ export type Database = {
         Insert: {
           amount?: number
           created_at?: string
+          drink_type?: string
           drunk_at?: string | null
           from_leader_id: string
           id?: string
@@ -1691,6 +1693,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          drink_type?: string
           drunk_at?: string | null
           from_leader_id?: string
           id?: string
@@ -4871,10 +4874,20 @@ export type Database = {
           updated_at: string
         }[]
       }
-      give_sips: {
-        Args: { _amount: number; _message?: string; _to: string }
-        Returns: string
-      }
+      give_sips:
+        | {
+            Args: { _amount: number; _message?: string; _to: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              _amount: number
+              _drink_type?: string
+              _message?: string
+              _to: string
+            }
+            Returns: string
+          }
       has_role: {
         Args: {
           _leader_id: string

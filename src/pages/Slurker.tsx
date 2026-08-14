@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/sheet';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { useDrinkSips, useGiveSips, useMySips, useOpenSip, useSipLeaders, useSipsLeft } from '@/hooks/useSips';
-import { playBeerCrack } from '@/lib/beerSound';
+import { DRINKS, type DrinkType, drinkOf, playDrinkSound } from '@/lib/drinkSounds';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +40,7 @@ export default function Slurker() {
   const [target, setTarget] = useState<{ id: string; name: string; image: string | null } | null>(null);
   const [amount, setAmount] = useState(1);
   const [message, setMessage] = useState('');
+  const [drinkType, setDrinkType] = useState<DrinkType>('beer');
   const [plusOpen, setPlusOpen] = useState(false);
 
   const filtered = useMemo(() => {
@@ -58,23 +59,34 @@ export default function Slurker() {
     .filter((r) => r.drunk_at)
     .reduce((sum, r) => sum + r.amount, 0);
 
+  // Viser hvilke drikketyper man faktisk har fått / drukket
+  const mixEmojis = (rows: typeof received) => {
+    const types = Array.from(new Set(rows.map((r) => drinkOf(r.drink_type))));
+    return (types.length ? types : (['beer'] as DrinkType[])).map((t) => DRINKS[t].emoji).join('');
+  };
+  const receivedMix = mixEmojis(received);
+  const drunkMix = mixEmojis(received.filter((r) => r.drunk_at));
+
   const handleGive = async () => {
     if (!target) return;
     try {
-      await give.mutateAsync({ targetId: target.id, amount, message });
+      await give.mutateAsync({ targetId: target.id, amount, message, drinkType });
       hapticImpact('medium');
-      toast.success(`${amount} ${amount === 1 ? 'slurk' : 'slurker'} sendt til ${target.name}`);
+      toast.success(
+        `${amount} ${amount === 1 ? 'slurk' : 'slurker'} ${DRINKS[drinkType].emoji} sendt til ${target.name}`,
+      );
       setTarget(null);
       setMessage('');
       setAmount(1);
+      setDrinkType('beer');
     } catch (e: any) {
       toast.error(e?.message ?? 'Klarte ikke å gi slurker');
     }
   };
 
-  const handleOpen = async (id: string) => {
+  const handleOpen = async (id: string, type: DrinkType) => {
     hapticImpact('heavy');
-    playBeerCrack();
+    playDrinkSound(type);
     try {
       await openSip.mutateAsync(id);
     } catch {
@@ -141,11 +153,15 @@ export default function Slurker() {
         <div className="relative mt-3 grid grid-cols-2 gap-2 text-center">
           <div className="rounded-2xl bg-oks-cream/10 px-3 py-2">
             <p className="text-[10px] font-bold uppercase tracking-wider text-oks-gold">Fått</p>
-            <p className="font-heading text-[22px] font-bold leading-none">{totalReceived} 🍺</p>
+            <p className="font-heading text-[22px] font-bold leading-none">
+              {totalReceived} {receivedMix}
+            </p>
           </div>
           <div className="rounded-2xl bg-oks-cream/10 px-3 py-2">
             <p className="text-[10px] font-bold uppercase tracking-wider text-oks-gold">Drukket</p>
-            <p className="font-heading text-[22px] font-bold leading-none">{drunkAmount} 🍺</p>
+            <p className="font-heading text-[22px] font-bold leading-none">
+              {drunkAmount} {drunkMix}
+            </p>
           </div>
         </div>
         <button
@@ -165,7 +181,8 @@ export default function Slurker() {
       {undrunkAmount > 0 && (
         <section className="rounded-[22px] border border-oks-gold/35 bg-oks-gold/10 p-4">
           <p className="font-heading text-[15px] font-bold text-foreground">
-            Du har {undrunkAmount} {undrunkAmount === 1 ? 'slurk' : 'slurker'} å drikke 🍺
+            Du har {undrunkAmount} {undrunkAmount === 1 ? 'slurk' : 'slurker'} å drikke{' '}
+            {mixEmojis(toDrink)}
           </p>
           <p className="mt-0.5 text-[12px] text-muted-foreground">
             Skål — så bekrefter du at de er drukket.
@@ -173,10 +190,10 @@ export default function Slurker() {
           <Button
             onClick={async () => {
               hapticImpact('medium');
-              playBeerCrack();
+              playDrinkSound(drinkOf(toDrink[0]?.drink_type));
               try {
                 await drinkSips.mutateAsync(toDrink.map((r) => r.id));
-                toast.success('Skål! Slurkene er drukket 🍺');
+                toast.success(`Skål! Slurkene er drukket ${mixEmojis(toDrink)}`);
               } catch {
                 toast.error('Klarte ikke å registrere');
               }
@@ -211,17 +228,18 @@ export default function Slurker() {
                   {sip.fromName}
                 </p>
                 <p className="text-[11.5px] text-oks-cream/70">
-                  ga deg {sip.amount} {sip.amount === 1 ? 'slurk' : 'slurker'}
+                  ga deg {sip.amount} {sip.amount === 1 ? 'slurk' : 'slurker'}{' '}
+                  {DRINKS[sip.drink_type].emoji}
                   {sip.message ? ` — «${sip.message}»` : ''}
                 </p>
               </div>
               <Button
                 size="sm"
-                onClick={() => handleOpen(sip.id)}
+                onClick={() => handleOpen(sip.id, sip.drink_type)}
                 className="shrink-0 rounded-full bg-oks-gold px-3.5 text-oks-red-deep hover:bg-oks-gold/90"
               >
                 <Sparkles className="mr-1 h-3.5 w-3.5" />
-                Åpne pilsen
+                Åpne {DRINKS[sip.drink_type].noun}
               </Button>
             </div>
           ))}
@@ -256,6 +274,7 @@ export default function Slurker() {
                 hapticImpact('light');
                 setAmount(1);
                 setMessage('');
+                setDrinkType('beer');
                 setTarget({ id: l.id, name: l.name, image: l.profile_image_url });
               }}
               className="flex w-full items-center gap-3 rounded-[20px] border border-border/60 bg-card/80 p-3 text-left shadow-sm transition-transform active:scale-[0.99]"
@@ -301,7 +320,7 @@ export default function Slurker() {
                 {sip.message ? <span className="text-muted-foreground"> — «{sip.message}»</span> : null}
               </p>
               <span className="shrink-0 rounded-full bg-oks-gold/15 px-2 py-0.5 text-[11px] font-bold text-oks-gold">
-                {sip.amount} 🍺
+                {sip.amount} {DRINKS[sip.drink_type].emoji}
               </span>
             </div>
           ))}
@@ -330,7 +349,7 @@ export default function Slurker() {
                   {amount}
                 </p>
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  {amount === 1 ? 'slurk' : 'slurker'}
+                  {amount === 1 ? 'slurk' : 'slurker'} {DRINKS[drinkType].label.toLowerCase()}
                 </p>
               </div>
               <Button
@@ -351,6 +370,33 @@ export default function Slurker() {
                 <Plus className="h-5 w-5" />
               </Button>
             </div>
+            <div>
+              <p className="mb-2 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                Hva gir du?
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.keys(DRINKS) as DrinkType[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      hapticImpact('light');
+                      setDrinkType(t);
+                      playDrinkSound(t);
+                    }}
+                    className={cn(
+                      'flex flex-col items-center gap-1 rounded-2xl border px-2 py-3 transition-all',
+                      drinkType === t
+                        ? 'border-oks-gold bg-oks-gold/15 shadow-sm'
+                        : 'border-border/60 bg-card/70',
+                    )}
+                  >
+                    <span className="text-[26px] leading-none">{DRINKS[t].emoji}</span>
+                    <span className="text-[12px] font-bold text-foreground">{DRINKS[t].label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
             <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -368,7 +414,7 @@ export default function Slurker() {
               ) : (
                 <Beer className="mr-2 h-4 w-4" />
               )}
-              {left < 1 ? 'Tom for slurker' : `Send ${amount}`}
+              {left < 1 ? 'Tom for slurker' : `Send ${amount} ${DRINKS[drinkType].emoji}`}
             </Button>
             {left < 1 && (
               <button
