@@ -268,8 +268,8 @@ export default function More() {
         {
           to: '/pov',
           icon: Camera,
-          label: 'Øksnøen POV',
-          desc: 'Engangskamera',
+          label: 'POV',
+          desc: povRoll ? `${povShotsLeft} bilder igjen` : 'Ingen film i kameraet',
           tone: 'paper',
           size: 'lg',
           image: povHero.url,
