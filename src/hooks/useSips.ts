@@ -191,7 +191,7 @@ export function useMyDrink() {
   const queryClient = useQueryClient();
   const myId = leader?.id;
 
-  const query = useQuery<DrinkType>({
+  const query = useQuery<{ drink: DrinkType; isSet: boolean }>({
     queryKey: ['my-drink', myId],
     enabled: !!myId,
     queryFn: async () => {
@@ -201,7 +201,8 @@ export function useMyDrink() {
         .eq('id', myId!)
         .maybeSingle();
       if (error) throw error;
-      return drinkOf((data as { preferred_drink?: string } | null)?.preferred_drink);
+      const raw = (data as { preferred_drink?: string | null } | null)?.preferred_drink ?? null;
+      return { drink: drinkOf(raw), isSet: !!raw };
     },
     staleTime: 60_000,
   });
@@ -216,10 +217,16 @@ export function useMyDrink() {
       return drink;
     },
     onSuccess: (drink) => {
-      queryClient.setQueryData(['my-drink', myId], drink);
+      queryClient.setQueryData(['my-drink', myId], { drink, isSet: true });
       queryClient.invalidateQueries({ queryKey: ['my-drink', myId] });
     },
   });
 
-  return { drink: query.data ?? 'beer', isLoading: query.isLoading, setDrink };
+  return {
+    drink: query.data?.drink ?? 'beer',
+    /** false første gang – da spør vi lederen om hva de drikker */
+    isSet: query.data?.isSet ?? false,
+    isLoading: query.isLoading,
+    setDrink,
+  };
 }
