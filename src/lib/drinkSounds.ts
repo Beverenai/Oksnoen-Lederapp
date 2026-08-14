@@ -4,7 +4,7 @@
  * WebAudio slik at vi slipper lydfiler (og de virker offline).
  */
 
-export type DrinkType = 'beer' | 'wine' | 'drink' | 'vodka' | 'champagne' | 'shot';
+export type DrinkType = 'beer' | 'wine' | 'drink';
 
 export const DRINKS: Record<
   DrinkType,
@@ -12,16 +12,22 @@ export const DRINKS: Record<
 > = {
   beer: { label: 'Øl', emoji: '🍺', noun: 'pilsen', sound: 'sip-beer.caf' },
   wine: { label: 'Vin', emoji: '🍷', noun: 'vinen', sound: 'sip-wine.caf' },
-  drink: { label: 'Drink', emoji: '🍸', noun: 'drinken', sound: 'sip-drink.caf' },
-  vodka: { label: 'Vodkadrink', emoji: '🍹', noun: 'vodkadrinken', sound: 'sip-drink.caf' },
-  champagne: { label: 'Champagne', emoji: '🥂', noun: 'champagnen', sound: 'sip-wine.caf' },
-  shot: { label: 'Shot', emoji: '🥃', noun: 'shotet', sound: 'sip-shot.caf' },
+  drink: { label: 'Sprit', emoji: '🥃', noun: 'spriten', sound: 'sip-drink.caf' },
 };
 
 export const DRINK_TYPES = Object.keys(DRINKS) as DrinkType[];
 
+/** Gamle drikketyper fra databasen mappes til de tre som finnes nå. */
+const LEGACY: Record<string, DrinkType> = {
+  vodka: 'drink',
+  shot: 'drink',
+  champagne: 'wine',
+};
+
 export function drinkOf(value: string | null | undefined): DrinkType {
-  return (DRINK_TYPES as string[]).includes(value ?? '') ? (value as DrinkType) : 'beer';
+  const v = value ?? '';
+  if ((DRINK_TYPES as string[]).includes(v)) return v as DrinkType;
+  return LEGACY[v] ?? 'beer';
 }
 
 function newCtx(): AudioContext | null {
