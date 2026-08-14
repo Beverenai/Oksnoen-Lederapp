@@ -58,6 +58,8 @@ export function LeaderDetailDialog({
   
   // Change notification state
   const [showNotifyDialog, setShowNotifyDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [detectedChanges, setDetectedChanges] = useState<string[]>([]);
   const [isSendingNotification, setIsSendingNotification] = useState(false);
   
