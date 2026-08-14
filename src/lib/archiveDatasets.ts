@@ -19,9 +19,11 @@ export const archiveGroups = [
   { key: 'dynga', label: 'Dynga' },
   { key: 'activities', label: 'Aktiviteter & poeng' },
   { key: 'teams', label: 'Lag' },
+  { key: 'leaders', label: 'Ledere' },
   { key: 'secret-words', label: 'Hemmelige ord' },
   { key: 'bookings', label: 'Booking' },
   { key: 'sweaters', label: 'Gensere' },
+  { key: 'gomla', label: 'Gomla (kiosk)' },
   { key: 'other', label: 'Øvrig' },
 ] as const;
 
@@ -416,6 +418,56 @@ export const archiveDatasets: ArchiveDataset[] = [
     },
   },
   {
+    key: 'period-leaders',
+    label: 'Ledere i perioden',
+    group: 'leaders',
+    description: 'Låst kopi av hvilke ledere som var med, med hytte, lag og roller',
+    fetch: async (periodId) => {
+      const list = await rows(
+        'period_leader_snapshots',
+        'leader_name,gender,is_active,is_external,cabins,teams,roles,snapshot_at',
+        periodId,
+        'leader_name',
+      );
+      return list.map((l) => ({
+        Leder: l.leader_name,
+        Hytte: l.cabins ?? '',
+        Lag: l.teams ?? '',
+        Roller: l.roles ?? '',
+        Kjønn: l.gender === 'male' ? 'Mann' : l.gender === 'female' ? 'Kvinne' : '',
+        Aktiv: bool(l.is_active),
+        Ekstern: bool(l.is_external),
+        Lagret: dt(l.snapshot_at),
+      }));
+    },
+  },
+  {
+    key: 'period-cabin-leaders',
+    label: 'Hytteledere',
+    group: 'leaders',
+    description: 'Hvem som var ledere på hvilken hytte i perioden',
+    fetch: async (periodId) => {
+      const list = await rows('period_leader_snapshots', 'leader_name,cabins', periodId, 'leader_name');
+      const byCabin: Record<string, string[]> = {};
+      list.forEach((l) => {
+        (l.cabins || '')
+          .split(',')
+          .map((c: string) => c.trim())
+          .filter(Boolean)
+          .forEach((c: string) => {
+            byCabin[c] = [...(byCabin[c] || []), l.leader_name];
+          });
+      });
+      return Object.keys(byCabin)
+        .sort((a, b) => a.localeCompare(b, 'nb'))
+        .map((cabin) => ({
+          Hytte: cabin,
+          Ledere: byCabin[cabin].join(', '),
+          Antall: byCabin[cabin].length,
+        }));
+    },
+  },
+  {
     key: 'secret-word-matches',
     label: 'Matcher',
     group: 'secret-words',
@@ -482,6 +534,264 @@ export const archiveDatasets: ArchiveDataset[] = [
         'Hentet dato': dt(s.picked_up_at),
         'Kjøpt på leir': bool(s.bought_on_camp),
         'Kjøpt str.': s.bought_size ?? '',
+      }));
+    },
+  },
+  {
+    key: 'gomla-sales',
+    label: 'Salg',
+    group: 'gomla',
+    description: 'Alle kiosksalg i perioden med varelinjer',
+    fetch: async (periodId) => {
+      const [list, parts, leaders] = await Promise.all([
+        rows('kiosk_sales', 'id,sale_number,participant_id,sold_by,total,voided_at,created_at', periodId, 'created_at'),
+        participantMap(periodId),
+        nameMap('leaders'),
+      ]);
+      const ids = list.map((s) => s.id);
+      const items: Record<string, string[]> = {};
+      if (ids.length) {
+        const { data } = await sb
+          .from('kiosk_sale_items')
+          .select('sale_id,product_name,quantity,unit_price')
+          .in('sale_id', ids);
+        (data || []).forEach((r: any) => {
+          items[r.sale_id] = [...(items[r.sale_id] || []), `${r.quantity}× ${r.product_name} (${r.unit_price} kr)`];
+        });
+      }
+      return list.map((s) => ({
+        Salgsnr: s.sale_number ?? '',
+        Deltaker: parts[s.participant_id] ?? '',
+        Varer: (items[s.id] || []).join(', '),
+        Total: Number(s.total ?? 0),
+        Solgt_av: s.sold_by ? leaders[s.sold_by] ?? '' : '',
+        Kansellert: bool(!!s.voided_at),
+        Dato: dt(s.created_at),
+      }));
+    },
+  },
+  {
+    key: 'gomla-deposits',
+    label: 'Innskudd',
+    group: 'gomla',
+    description: 'Kioskpenger satt inn eller justert',
+    fetch: async (periodId) => {
+      const [list, parts, leaders] = await Promise.all([
+        rows('kiosk_deposits', 'participant_id,amount,kind,note,created_by,created_at', periodId, 'created_at'),
+        participantMap(periodId),
+        nameMap('leaders'),
+      ]);
+      return list.map((r) => ({
+        Deltaker: parts[r.participant_id] ?? '',
+        Beløp: Number(r.amount ?? 0),
+        Type: r.kind ?? '',
+        Notat: r.note ?? '',
+        Lagt_inn_av: r.created_by ? leaders[r.created_by] ?? '' : '',
+        Dato: dt(r.created_at),
+      }));
+    },
+  },
+  {
+    key: 'gomla-balances',
+    label: 'Saldo pr. deltaker',
+    group: 'gomla',
+    description: 'Innskudd minus kjøp for hver deltaker',
+    fetch: async (periodId) => {
+      const [parts, deposits, sales] = await Promise.all([
+        archiveParticipants(periodId),
+        rows('kiosk_deposits', 'participant_id,amount', periodId),
+        rows('kiosk_sales', 'participant_id,total,voided_at', periodId),
+      ]);
+      const dep: Record<string, number> = {};
+      deposits.forEach((r) => { dep[r.participant_id] = (dep[r.participant_id] || 0) + Number(r.amount ?? 0); });
+      const spent: Record<string, number> = {};
+      sales.filter((s) => !s.voided_at).forEach((s) => {
+        spent[s.participant_id] = (spent[s.participant_id] || 0) + Number(s.total ?? 0);
+      });
+      return parts
+        .filter((p: any) => dep[p.id] || spent[p.id])
+        .map((p: any) => ({
+          Deltaker: p.name,
+          Innskudd: dep[p.id] || 0,
+          Kjøpt_for: spent[p.id] || 0,
+          Saldo: (dep[p.id] || 0) - (spent[p.id] || 0),
+        }));
+    },
+  },
+  {
+    key: 'gomla-items',
+    label: 'Varelinjer',
+    group: 'gomla',
+    description: 'Hver enkelt vare som ble solgt',
+    fetch: async (periodId) => {
+      const [sales, parts] = await Promise.all([
+        rows('kiosk_sales', 'id,sale_number,participant_id,voided_at,created_at', periodId, 'created_at'),
+        participantMap(periodId),
+      ]);
+      const byId: Record<string, any> = {};
+      sales.forEach((s) => { byId[s.id] = s; });
+      const ids = sales.map((s) => s.id);
+      if (!ids.length) return [];
+      const { data } = await sb
+        .from('kiosk_sale_items')
+        .select('sale_id,product_name,quantity,unit_price')
+        .in('sale_id', ids);
+      return (data || []).map((r: any) => {
+        const s = byId[r.sale_id] || {};
+        return {
+          Salgsnr: s.sale_number ?? '',
+          Deltaker: parts[s.participant_id] ?? '',
+          Vare: r.product_name,
+          Antall: r.quantity,
+          Stykkpris: Number(r.unit_price ?? 0),
+          Sum: Number(r.unit_price ?? 0) * Number(r.quantity ?? 0),
+          Kansellert: bool(!!s.voided_at),
+          Dato: dt(s.created_at),
+        };
+      });
+    },
+  },
+  {
+    key: 'gomla-top-products',
+    label: 'Toppvarer',
+    group: 'gomla',
+    description: 'Hvilke varer som solgte mest i perioden',
+    fetch: async (periodId) => {
+      const sales = await rows('kiosk_sales', 'id,voided_at', periodId);
+      const valid = new Set(sales.filter((s) => !s.voided_at).map((s) => s.id));
+      if (!valid.size) return [];
+      const { data } = await sb
+        .from('kiosk_sale_items')
+        .select('sale_id,product_name,quantity,unit_price')
+        .in('sale_id', Array.from(valid));
+      const agg: Record<string, { qty: number; sum: number }> = {};
+      (data || []).forEach((r: any) => {
+        const a = (agg[r.product_name] ||= { qty: 0, sum: 0 });
+        a.qty += Number(r.quantity ?? 0);
+        a.sum += Number(r.quantity ?? 0) * Number(r.unit_price ?? 0);
+      });
+      return Object.entries(agg)
+        .sort((a, b) => b[1].qty - a[1].qty)
+        .map(([name, a]) => ({ Vare: name, Antall_solgt: a.qty, Omsetning: a.sum }));
+    },
+  },
+  {
+    key: 'gomla-top-buyers',
+    label: 'Toppkjøpere',
+    group: 'gomla',
+    description: 'Deltakere som handlet mest, med antall besøk',
+    fetch: async (periodId) => {
+      const [sales, parts] = await Promise.all([
+        rows('kiosk_sales', 'participant_id,total,voided_at', periodId),
+        participantMap(periodId),
+      ]);
+      const agg: Record<string, { visits: number; sum: number }> = {};
+      sales.filter((s) => !s.voided_at).forEach((s) => {
+        const a = (agg[s.participant_id] ||= { visits: 0, sum: 0 });
+        a.visits += 1;
+        a.sum += Number(s.total ?? 0);
+      });
+      return Object.entries(agg)
+        .sort((a, b) => b[1].sum - a[1].sum)
+        .map(([pid, a]) => ({
+          Deltaker: parts[pid] ?? '',
+          Besøk: a.visits,
+          Handlet_for: a.sum,
+        }));
+    },
+  },
+  {
+    key: 'gomla-sellers',
+    label: 'Salg pr. leder',
+    group: 'gomla',
+    description: 'Hvem som satt i kiosken og hvor mye de solgte',
+    fetch: async (periodId) => {
+      const [sales, leaders] = await Promise.all([
+        rows('kiosk_sales', 'sold_by,total,voided_at', periodId),
+        nameMap('leaders'),
+      ]);
+      const agg: Record<string, { count: number; sum: number; voided: number }> = {};
+      sales.forEach((s) => {
+        const key = s.sold_by ?? 'ukjent';
+        const a = (agg[key] ||= { count: 0, sum: 0, voided: 0 });
+        if (s.voided_at) { a.voided += 1; return; }
+        a.count += 1;
+        a.sum += Number(s.total ?? 0);
+      });
+      return Object.entries(agg)
+        .sort((a, b) => b[1].sum - a[1].sum)
+        .map(([lid, a]) => ({
+          Leder: leaders[lid] ?? 'Ukjent',
+          Antall_salg: a.count,
+          Omsetning: a.sum,
+          Kansellerte: a.voided,
+        }));
+    },
+  },
+  {
+    key: 'gomla-voided',
+    label: 'Kansellerte salg',
+    group: 'gomla',
+    fetch: async (periodId) => {
+      const [sales, parts, leaders] = await Promise.all([
+        rows('kiosk_sales', 'sale_number,participant_id,total,sold_by,voided_by,voided_at', periodId),
+        participantMap(periodId),
+        nameMap('leaders'),
+      ]);
+      return sales
+        .filter((s) => s.voided_at)
+        .map((s) => ({
+          Salgsnr: s.sale_number ?? '',
+          Deltaker: parts[s.participant_id] ?? '',
+          Beløp: Number(s.total ?? 0),
+          Solgt_av: s.sold_by ? leaders[s.sold_by] ?? '' : '',
+          Annullert_av: s.voided_by ? leaders[s.voided_by] ?? '' : '',
+          Annullert: dt(s.voided_at),
+        }));
+    },
+  },
+  {
+    key: 'gomla-summary',
+    label: 'Oppsummering',
+    group: 'gomla',
+    description: 'Totaler for kiosken i perioden',
+    fetch: async (periodId) => {
+      const [sales, deposits] = await Promise.all([
+        rows('kiosk_sales', 'participant_id,total,voided_at', periodId),
+        rows('kiosk_deposits', 'amount', periodId),
+      ]);
+      const ok = sales.filter((s) => !s.voided_at);
+      const omsetning = ok.reduce((n, s) => n + Number(s.total ?? 0), 0);
+      const innskudd = deposits.reduce((n, r) => n + Number(r.amount ?? 0), 0);
+      const kunder = new Set(ok.map((s) => s.participant_id)).size;
+      return [
+        { Nøkkeltall: 'Antall salg', Verdi: ok.length },
+        { Nøkkeltall: 'Kansellerte salg', Verdi: sales.length - ok.length },
+        { Nøkkeltall: 'Omsetning (kr)', Verdi: omsetning },
+        { Nøkkeltall: 'Innskudd (kr)', Verdi: innskudd },
+        { Nøkkeltall: 'Rest på konto (kr)', Verdi: innskudd - omsetning },
+        { Nøkkeltall: 'Unike kunder', Verdi: kunder },
+        { Nøkkeltall: 'Snitt pr. salg (kr)', Verdi: ok.length ? Math.round((omsetning / ok.length) * 100) / 100 : 0 },
+      ];
+    },
+  },
+  {
+    key: 'gomla-products',
+    label: 'Varekatalog',
+    group: 'gomla',
+    description: 'Priser og varer slik de var registrert',
+    fetch: async () => {
+      const { data, error } = await sb
+        .from('kiosk_products')
+        .select('name,price,is_active,sort_order,category_id')
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      const cats = await nameMap('kiosk_categories');
+      return (data || []).map((p: any) => ({
+        Vare: p.name,
+        Kategori: p.category_id ? cats[p.category_id] ?? '' : '',
+        Pris: Number(p.price ?? 0),
+        Aktiv: bool(p.is_active),
       }));
     },
   },

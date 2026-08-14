@@ -140,8 +140,7 @@ export function CheckoutTab() {
             setProgress(parsed);
 
             if (parsed.status === 'done') {
-              setCheckoutEnabled(true);
-              showSuccess('Utsjekk aktivert! Ledere kan nå skrive pass.');
+              showSuccess('Passforslag ferdig generert.');
               loadData();
             } else if (parsed.status === 'error') {
               showError('Feil ved generering: ' + (parsed.error || 'Ukjent feil'));
@@ -155,6 +154,24 @@ export function CheckoutTab() {
       return () => clearInterval(interval);
     }
   }, [progress.status, loadData]);
+
+  const handleEnableCheckout = async () => {
+    hapticImpact('medium');
+    try {
+      const { error } = await supabase
+        .from('app_config')
+        .upsert({ key: 'checkout_enabled', value: 'true' }, { onConflict: 'key' });
+      if (error) throw error;
+      setCheckoutEnabled(true);
+      hapticSuccess();
+      showSuccess('Utsjekk aktivert! Ledere ser nå pass i Passkontroll.');
+      loadData();
+    } catch (e) {
+      console.error('Enable checkout failed', e);
+      hapticError();
+      showError('Kunne ikke aktivere utsjekk');
+    }
+  };
 
   const handleStartCheckout = async () => {
     hapticImpact('medium');
@@ -193,15 +210,10 @@ export function CheckoutTab() {
       if (error) throw error;
 
       await supabase.from('app_config').upsert(
-        { key: 'checkout_enabled', value: 'false' },
-        { onConflict: 'key' }
-      );
-      await supabase.from('app_config').upsert(
         { key: 'checkout_progress', value: JSON.stringify({ status: 'idle', processed: 0, total: 0 }) },
         { onConflict: 'key' }
       );
 
-      setCheckoutEnabled(false);
       setProgress({ status: 'idle', processed: 0, total: 0 });
       hapticSuccess();
       showSuccess(`Alle pass for ${activePeriod.name} er tilbakestilt`);
@@ -332,10 +344,10 @@ export function CheckoutTab() {
               <Switch
                 id="checkout-toggle"
                 checked={checkoutEnabled}
-                disabled={isGenerating || !activePeriod}
+                disabled={!activePeriod}
                 onCheckedChange={(checked) => {
                   if (checked) {
-                    handleStartCheckout();
+                    handleEnableCheckout();
                   } else {
                     handleDisableCheckout();
                   }
@@ -346,6 +358,15 @@ export function CheckoutTab() {
               </Label>
               {isGenerating && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
             </div>
+            <Button
+              onClick={handleStartCheckout}
+              variant="outline"
+              disabled={isGenerating || !activePeriod}
+              className="gap-2"
+            >
+              {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              Generer passforslag
+            </Button>
             <Button
               onClick={handleResetPasses}
               variant="outline"
@@ -362,7 +383,7 @@ export function CheckoutTab() {
           </div>
 
           {/* Stats when enabled */}
-          {checkoutEnabled && !isGenerating && (
+          {checkoutEnabled && (
             <div className="pt-4 border-t space-y-4">
               <div>
                 <h4 className="font-medium mb-3">Fremgang</h4>

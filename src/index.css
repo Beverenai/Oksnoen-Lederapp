@@ -692,3 +692,44 @@ header, nav {
   60% { transform: translateX(-6px); }
   80% { transform: translateX(4px); }
 }
+
+/* ===== Øksnøen + (tøysepaywall) ===== */
+:root {
+  --oks-gold: 43 74% 55%;
+  --oks-gold-light: 45 90% 76%;
+  --gradient-oks-gold: linear-gradient(
+    135deg,
+    hsl(var(--oks-gold-light)) 0%,
+    hsl(var(--oks-gold)) 45%,
+    hsl(var(--oks-gold-light)) 100%
+  );
+}
+
+.oks-gold-text {
+  background: var(--gradient-oks-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.oks-gold-surface {
+  background: var(--gradient-oks-gold);
+}
+
+.oks-gold-ring {
+  box-shadow:
+    0 0 0 1px hsl(var(--oks-gold) / 0.55),
+    0 10px 30px -12px hsl(var(--oks-gold) / 0.5);
+}
+
+@keyframes oks-decline-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+.oks-decline-shake {
+  animation: oks-decline-shake 0.45s ease-in-out;
+}

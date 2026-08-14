@@ -21,6 +21,7 @@ import {
   ChefHat,
   Mail,
   HeartHandshake,
+  Flame,
   LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -36,7 +37,9 @@ import { useMailboxUnreadCount } from '@/hooks/useMailbox';
 import { useHookupsEnabled, useIncomingHookupCount } from '@/hooks/useHookups';
 import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute } from '@/lib/limitedAccess';
-import { IdCard, MessageCircle, Circle } from 'lucide-react';
+import { IdCard, MessageCircle, Circle, Crown } from 'lucide-react';
+import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
+import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 
 type MoreItem = {
   to?: string;
@@ -98,6 +101,7 @@ export default function More() {
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
+  const [plusOpen, setPlusOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -230,6 +234,7 @@ export default function More() {
               } as MoreItem,
             ]
           : []),
+        { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder' } as MoreItem,
       ],
     },
     {
@@ -253,8 +258,10 @@ export default function More() {
           badge: incomingHookups,
         },
         { to: '/snus', icon: Circle, label: 'Snus' },
+        { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder' },
         { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
         { to: '/profile', icon: User, label: 'Min Profil' },
+        { icon: Crown, label: 'Øksnøen +', onClick: () => setPlusOpen(true) },
       ],
     },
     {
@@ -309,10 +316,30 @@ export default function More() {
         ),
       )}
 
+      {limited && (
+        <section className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Øksnøen <span className="oks-gold-text">+</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPlusOpen(true)}
+              className="text-[11px] font-semibold oks-gold-text"
+            >
+              Se abonnement
+            </button>
+          </div>
+          <PlusPerkTiles onLocked={() => setPlusOpen(true)} />
+        </section>
+      )}
+
       <QuickNotificationSheet
         open={notificationSheetOpen}
         onOpenChange={setNotificationSheetOpen}
       />
+
+      <OksnoenPlusDialog open={plusOpen} onOpenChange={setPlusOpen} />
     </div>
   );
 }

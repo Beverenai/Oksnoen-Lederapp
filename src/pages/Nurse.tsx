@@ -159,9 +159,17 @@ export default function Nurse() {
   const healthNoteSaveQueue = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
-    loadParticipants();
     loadPeriods();
   }, []);
+
+  // Reload when the period selection changes — archived periods are read through
+  // the admin/nurse security-definer function since participants RLS is active-period only.
+  useEffect(() => {
+    if (!periods.length) return;
+    setIsLoading(true);
+    loadParticipants();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPeriodId, periods.length]);
 
   const loadPeriods = async () => {
     const { data } = await supabase
@@ -187,8 +195,20 @@ export default function Nurse() {
   const loadParticipants = async () => {
     try {
       let participantsData: any[] | null = null;
+      const period = periods.find((p) => p.id === selectedPeriodId);
       if (seasonView) {
         participantsData = (await fetchSeasonParticipants()) as any[];
+      } else if (period && !period.is_active) {
+        const [{ data, error }, cabinsRes] = await Promise.all([
+          (supabase as any).rpc('get_archive_participants', { _period_id: period.id }),
+          supabase.from('cabins').select('id,name'),
+        ]);
+        if (error) throw error;
+        const cabinNames: Record<string, string> = {};
+        (cabinsRes.data || []).forEach((c: any) => { cabinNames[c.id] = c.name; });
+        participantsData = ((data || []) as any[])
+          .map((p) => ({ ...p, cabins: p.cabin_id ? { name: cabinNames[p.cabin_id] } : null }))
+          .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'nb'));
       } else {
         const { data, error } = await supabase
           .from('participants')

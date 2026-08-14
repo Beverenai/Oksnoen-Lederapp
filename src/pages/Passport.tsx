@@ -150,6 +150,7 @@ export default function Passport() {
   const teamsParamFromUrl = searchParams.get('teams');
   const multiTeamIds = teamsParamFromUrl ? teamsParamFromUrl.split(',').filter(Boolean) : [];
   const kitchenDutyActive = searchParams.get('kitchenDuty') === '1';
+  const statusFilterFromUrl = searchParams.get('status');
   
   const [searchQuery, setSearchQuery] = useState('');
   const [myCabinsFilter, setMyCabinsFilter] = useState(false);
@@ -275,6 +276,13 @@ export default function Passport() {
     window.scrollTo({ top: 0 });
   };
 
+  const clearStatusFilter = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('status');
+    setSearchParams(next, { replace: true });
+    window.scrollTo({ top: 0 });
+  };
+
   // Filter by specific cabin — triggered from cabin header click
   const handleFilterByCabin = useCallback((cabinId: string) => {
     setSearchQuery('');
@@ -316,12 +324,12 @@ export default function Passport() {
       const cabinName = p.cabins?.name?.toLowerCase() || '';
       const matchesCabinSearch = cabinName.includes(query);
       const matchesSearch = matchesName || matchesCabinSearch;
-      
+
       // Filter by leader's cabins if "Min hytte" is active
-      const matchesCabin = myCabinsFilter 
-        ? myCabinIds.includes(p.cabin_id || '') 
+      const matchesCabin = myCabinsFilter
+        ? myCabinIds.includes(p.cabin_id || '')
         : true;
-      
+
       // Filter by cabin URL param if present
       const matchesUrlCabin = cabinFilterFromUrl
         ? p.cabin_id === cabinFilterFromUrl
@@ -341,11 +349,20 @@ export default function Passport() {
       const matchesPeriod =
         periodFilter === 'all' ? true : p.period_id === periodFilter;
 
+      const matchesStatus =
+        statusFilterFromUrl === 'wenthome'
+          ? !!wentHomeIds?.has(p.id)
+          : statusFilterFromUrl === 'arrived'
+          ? !!p.has_arrived
+          : statusFilterFromUrl === 'notarrived'
+          ? !p.has_arrived
+          : true;
+
       return (
-        matchesSearch && matchesCabin && matchesUrlCabin && matchesTeam && matchesMultiTeam && matchesPeriod
+        matchesSearch && matchesCabin && matchesUrlCabin && matchesTeam && matchesMultiTeam && matchesPeriod && matchesStatus
       );
     });
-  }, [participants, searchQuery, myCabinsFilter, myCabinIds, cabinFilterFromUrl, teamFilter, teamsParamFromUrl, periodFilter]);
+  }, [participants, searchQuery, myCabinsFilter, myCabinIds, cabinFilterFromUrl, teamFilter, teamsParamFromUrl, periodFilter, statusFilterFromUrl, wentHomeIds]);
 
   // Group participants by cabin
   const cabinGroups = useMemo((): CabinGroup[] => {
@@ -455,19 +472,27 @@ export default function Passport() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Back bar when filtered by cabin — sticky so it's always reachable */}
-      {(cabinFilterFromUrl || myCabinsFilter) && (
+      {/* Back bar when filtered by cabin or status — sticky so it's always reachable */}
+      {(cabinFilterFromUrl || myCabinsFilter || statusFilterFromUrl) && (
         <div className="sticky top-0 z-20 -mx-4 px-4 py-2 bg-background/80 backdrop-blur-md border-b">
           <Button
             variant="ghost"
             onClick={() => {
               hapticImpact('light');
-              clearCabinFilter();
+              if (statusFilterFromUrl) {
+                clearStatusFilter();
+              } else {
+                clearCabinFilter();
+              }
             }}
             className="h-11 w-full justify-start px-2 text-base font-semibold"
           >
             <ArrowLeft className="w-5 h-5 mr-2 shrink-0" />
-            <span className="truncate">Tilbake til alle hytter</span>
+            <span className="truncate">
+              {statusFilterFromUrl === 'wenthome'
+                ? 'Tilbake til alle deltagere'
+                : 'Tilbake til alle hytter'}
+            </span>
           </Button>
         </div>
       )}

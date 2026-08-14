@@ -6,10 +6,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Archive, FileSpreadsheet, Loader2, Printer } from 'lucide-react';
-import { archiveGroups, datasetsForGroup, archiveDatasets } from '@/lib/archiveDatasets';
+import { archiveGroups, datasetsForGroup, archiveDatasets, type ArchiveRow } from '@/lib/archiveDatasets';
 import { downloadWorkbook } from '@/lib/archiveExport';
 import { ArchiveDatasetCard } from '@/components/archive/ArchiveDatasetCard';
 
@@ -19,6 +20,7 @@ interface Period {
   is_active: boolean;
   start_date: string | null;
   end_date: string | null;
+  season_year: number;
 }
 
 export default function PeriodArchive() {
@@ -26,15 +28,17 @@ export default function PeriodArchive() {
   const { isAdmin, isNurse } = useAuth();
   const { showError, showSuccess } = useStatusPopup();
   const [periodId, setPeriodId] = useState<string>('');
+  const [year, setYear] = useState<number | null>(null);
   const [group, setGroup] = useState<string>('participants');
   const [exporting, setExporting] = useState(false);
+  const [allOpen, setAllOpen] = useState(false);
 
   const { data: periods = [], isLoading } = useQuery({
     queryKey: ['archive', 'periods'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('periods')
-        .select('id,name,is_active,start_date,end_date')
+        .select('id,name,is_active,start_date,end_date,season_year')
         .order('start_date', { ascending: true });
       if (error) throw error;
       return (data || []) as Period[];
@@ -42,14 +46,39 @@ export default function PeriodArchive() {
     staleTime: 60_000,
   });
 
+  const years = useMemo(
+    () => Array.from(new Set(periods.map((p) => p.season_year))).sort((a, b) => b - a),
+    [periods],
+  );
+
   useEffect(() => {
-    if (!periodId && periods.length) {
-      setPeriodId((periods.find((p) => p.is_active) ?? periods[0]).id);
+    if (year === null && years.length) {
+      const active = periods.find((p) => p.is_active);
+      setYear(active?.season_year ?? years[0]);
     }
-  }, [periods, periodId]);
+  }, [years, periods, year]);
+
+  const yearPeriods = useMemo(
+    () => (year === null ? periods : periods.filter((p) => p.season_year === year)),
+    [periods, year],
+  );
+
+  useEffect(() => {
+    if (!yearPeriods.length) {
+      if (periodId) setPeriodId('');
+      return;
+    }
+    if (!yearPeriods.some((p) => p.id === periodId)) {
+      setPeriodId((yearPeriods.find((p) => p.is_active) ?? yearPeriods[0]).id);
+    }
+  }, [yearPeriods, periodId]);
 
   const period = useMemo(() => periods.find((p) => p.id === periodId) ?? null, [periods, periodId]);
   const datasets = useMemo(() => datasetsForGroup(group), [group]);
+
+  useEffect(() => {
+    setAllOpen(datasetsForGroup(group).length <= 3);
+  }, [group]);
 
   const exportAll = async () => {
     if (!period) return;
@@ -65,6 +94,49 @@ export default function PeriodArchive() {
     } catch (e) {
       console.error(e);
       showError('Kunne ikke eksportere');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportSeason = async () => {
+    if (!yearPeriods.length) return;
+    setExporting(true);
+    try {
+      const sheets: { name: string; rows: ArchiveRow[] }[] = [];
+      for (const ds of archiveDatasets) {
+        const rows: ArchiveRow[] = [];
+        for (const p of yearPeriods) {
+          const part = await ds.fetch(p.id);
+          part.forEach((r) => rows.push({ Periode: p.name, ...r }));
+        }
+        sheets.push({ name: ds.label, rows });
+      }
+      await downloadWorkbook(sheets, `Sesong-${year}-arkiv.xlsx`);
+      showSuccess(`Hele sesongen ${year} lastet ned`);
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke eksportere sesongen');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportGroup = async () => {
+    if (!period) return;
+    setExporting(true);
+    try {
+      const sheets = [];
+      for (const ds of datasets) {
+        const rows = await ds.fetch(period.id);
+        sheets.push({ name: ds.label, rows });
+      }
+      const label = archiveGroups.find((g) => g.key === group)?.label ?? group;
+      await downloadWorkbook(sheets, `${period.name.replace(/\s+/g, '-')}-${label.replace(/[^\wÆØÅæøå]+/g, '-')}.xlsx`);
+      showSuccess('Alle listene lastet ned');
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke eksportere listene');
     } finally {
       setExporting(false);
     }
@@ -90,9 +162,10 @@ export default function PeriodArchive() {
           </h1>
         </div>
 
-        <Card className="p-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Se all lagret data fra en tidligere periode. Å velge periode her endrer <strong>ikke</strong> aktiv
+        <Card className="p-4 space-y-4">
+          <p className="max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
+            Se all lagret data fra en tidligere sesong og periode. Alt blir liggende lagret år etter år, så du
+            kan hente det fram når som helst. Å velge sesong eller periode her endrer <strong>ikke</strong> aktiv
             periode eller noen innstillinger.
           </p>
           {isLoading ? (
@@ -100,13 +173,29 @@ export default function PeriodArchive() {
               <Loader2 className="h-4 w-4 animate-spin" /> Laster perioder...
             </div>
           ) : (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={year === null ? '' : String(year)}
+                onValueChange={(v) => setYear(Number(v))}
+              >
+                <SelectTrigger className="w-[130px] rounded-xl">
+                  <SelectValue placeholder="År" />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      Sesong {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={periodId} onValueChange={setPeriodId}>
-                <SelectTrigger className="w-[240px]">
+                <SelectTrigger className="w-[200px] rounded-xl">
                   <SelectValue placeholder="Velg periode" />
                 </SelectTrigger>
                 <SelectContent>
-                  {periods.map((p) => (
+                  {yearPeriods.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
                       {p.is_active ? ' (aktiv)' : ''}
@@ -115,14 +204,23 @@ export default function PeriodArchive() {
                 </SelectContent>
               </Select>
               {period?.start_date && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="rounded-full">
                   {new Date(period.start_date).toLocaleDateString('nb-NO')}
                   {period.end_date ? ` – ${new Date(period.end_date).toLocaleDateString('nb-NO')}` : ''}
                 </Badge>
               )}
-              <div className="flex gap-2 ml-auto print:hidden">
+              </div>
+              <div className="flex flex-wrap gap-2 print:hidden sm:justify-end">
                 <Button size="sm" variant="outline" onClick={() => window.print()} disabled={!period}>
                   <Printer className="h-4 w-4 mr-1" /> Print / PDF
+                </Button>
+                <Button size="sm" variant="outline" onClick={exportSeason} disabled={!yearPeriods.length || exporting}>
+                  {exporting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-4 w-4 mr-1" />
+                  )}
+                  Hele sesongen
                 </Button>
                 <Button size="sm" onClick={exportAll} disabled={!period || exporting}>
                   {exporting ? (
@@ -137,28 +235,53 @@ export default function PeriodArchive() {
           )}
         </Card>
 
-        <div className="flex gap-2 overflow-x-auto pb-1 print:hidden">
-          {archiveGroups.map((g) => (
-            <Button
-              key={g.key}
-              size="sm"
-              variant={group === g.key ? 'default' : 'outline'}
-              className="whitespace-nowrap"
-              onClick={() => setGroup(g.key)}
-            >
-              {g.label}
-            </Button>
-          ))}
+        <div className="-mx-4 px-4 print:hidden">
+          <div className="flex gap-1.5 overflow-x-auto rounded-2xl bg-muted/50 p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {archiveGroups.map((g) => (
+              <button
+                key={g.key}
+                type="button"
+                onClick={() => setGroup(g.key)}
+                className={cn(
+                  'whitespace-nowrap rounded-xl px-3 py-1.5 text-[13px] font-medium transition-colors',
+                  group === g.key
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {period && (
-          <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+              <p className="text-xs text-muted-foreground">
+                {datasets.length} lister · trykk på en liste for å åpne den
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => setAllOpen((v) => !v)}>
+                  {allOpen ? 'Lukk alle' : 'Åpne alle'}
+                </Button>
+                <Button size="sm" variant="secondary" onClick={exportGroup} disabled={exporting}>
+                  {exporting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="h-4 w-4 mr-1" />
+                  )}
+                  Last ned alle listene
+                </Button>
+              </div>
+            </div>
             {datasets.map((ds) => (
               <ArchiveDatasetCard
-                key={ds.key}
+                key={`${ds.key}-${allOpen}`}
                 dataset={ds}
                 periodId={period.id}
                 periodName={period.name.replace(/\s+/g, '-')}
+                defaultOpen={allOpen}
               />
             ))}
           </div>
