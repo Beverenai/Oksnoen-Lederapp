@@ -245,7 +245,7 @@ export default function More() {
               } as MoreItem,
             ]
           : []),
-        { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder' } as MoreItem,
+        { to: '/kline-tinder', icon: TinderIcon, label: 'Tinder' } as MoreItem,
         { to: '/pov', icon: Camera, label: 'Øksnøen POV' } as MoreItem,
         { icon: Crown, label: 'Øksnøen +', onClick: () => setPlusOpen(true) } as MoreItem,
         { to: '/feedback', icon: Lightbulb, label: 'Feedback' } as MoreItem,
@@ -273,7 +273,7 @@ export default function More() {
           size: 'lg',
           image: povHero.url,
         },
-        { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder', desc: 'Sveip på ledere', tone: 'sunset', size: 'lg' },
+        { to: '/kline-tinder', icon: TinderIcon, label: 'Tinder', desc: 'Sveip på ledere', tone: 'sunset', size: 'lg' },
         {
           to: '/slurker',
           icon: Beer,
