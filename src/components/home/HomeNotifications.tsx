@@ -95,17 +95,19 @@ export function HomeNotifications() {
       });
 
     hookups.forEach((h) => {
+      const otherId = h.leader_a_id === leader?.id ? h.leader_b_id : h.leader_a_id;
+      const other = leaderMap.get(otherId);
       list.push({
         id: `hookup-${h.id}`,
         type: 'hookup',
-        title: `${h.otherName ?? 'Noen'} vil kline`,
+        title: `${other?.name ?? 'Noen'} vil kline`,
         subtitle: 'Godta eller avslå i Klinelista',
-        image: h.otherImage,
-        initials: (h.otherName ?? 'U').slice(0, 2).toUpperCase(),
+        image: other?.image,
+        initials: (other?.name ?? 'U').slice(0, 2).toUpperCase(),
         createdAt: h.created_at,
         action: () => {
           setOpen(false);
-          navigate('/klineliste');
+          navigate('/klinelista');
         },
         icon: <Heart className="h-4 w-4 text-rose-500" />,
       });
