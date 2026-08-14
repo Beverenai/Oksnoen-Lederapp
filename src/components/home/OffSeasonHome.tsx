@@ -6,7 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { SnusCan3D } from '@/components/snus/SnusCan3D';
 import { getSnusProduct, customSnusProduct } from '@/lib/snusCatalog';
 import { useIncomingHookupCount } from '@/hooks/useHookups';
-import { useSipsLeft, useUnopenedSipCount } from '@/hooks/useSips';
+import { useSipsLeft, useUnopenedSipCount, useMyDrink } from '@/hooks/useSips';
+import { DRINKS } from '@/lib/drinkSounds';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import { BentoTile } from '@/components/offseason/BentoTile';
@@ -31,6 +32,7 @@ export function OffSeasonHome({
   const navigate = useNavigate();
   const incomingHookups = useIncomingHookupCount();
   const { data: sipsLeft = 0 } = useSipsLeft();
+  const { drink: myDrink } = useMyDrink();
   const unopenedSips = useUnopenedSipCount();
   const { data: povRoll } = usePovCurrentRoll();
   const povLeft = povRoll?.my_shots_left ?? 0;
@@ -101,10 +103,10 @@ export function OffSeasonHome({
         <BentoTile
           icon={Beer}
           label="Gi slurker"
-          desc={`${'🍺'.repeat(Math.min(sipsLeft, 5))} ${sipsLeft} igjen`}
+          desc={`${DRINKS[myDrink].emoji.repeat(Math.min(sipsLeft, 5))} ${sipsLeft} igjen`}
           tone="red"
           size="lg"
-          visual={<span className="text-[26px] leading-none">🍺</span>}
+          visual={<span className="text-[26px] leading-none">{DRINKS[myDrink].emoji}</span>}
           count={unopenedSips || undefined}
           className="bg-[linear-gradient(140deg,#f7b733_0%,#e08908_50%,#a8410a_100%)] border-oks-gold/50 text-white"
           onClick={() => navigate('/slurker')}
