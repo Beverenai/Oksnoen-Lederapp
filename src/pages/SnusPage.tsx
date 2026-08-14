@@ -104,9 +104,10 @@ export default function SnusPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-5 pb-6">
+    <div className="oks-offseason-bg mx-auto -mx-4 w-full max-w-2xl space-y-6 px-4 pb-8 pt-1">
       <header className="pt-1">
-        <h1 className="text-2xl font-heading font-bold text-foreground">Snus</h1>
+        <h1 className="text-[26px] font-heading font-bold leading-tight text-foreground">Snus</h1>
+        <span className="mt-2 mb-1.5 block h-1 w-10 rounded-full bg-[var(--gradient-oks-sunset)]" />
         <p className="text-sm text-muted-foreground">
           Velg boksen din – da ser andre ledere hvem de kan bomme av.
         </p>
