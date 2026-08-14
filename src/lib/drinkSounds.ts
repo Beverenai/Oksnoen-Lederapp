@@ -1,36 +1,88 @@
 /**
- * Lyder for slurker – øl, vin og drink. Alt lages i WebAudio slik at vi
- * slipper lydfiler (og de virker offline).
+ * Drikketyper for slurker – hver leder velger sin egen drikke, og alle
+ * slurker de gir vises og høres som den drikken. Alle lyder lages i
+ * WebAudio slik at vi slipper lydfiler (og de virker offline).
  */
-import { playBeerCrack } from './beerSound';
 
-export type DrinkType = 'beer' | 'wine' | 'drink';
+export type DrinkType = 'beer' | 'wine' | 'drink' | 'vodka' | 'champagne' | 'shot';
 
-export const DRINKS: Record<DrinkType, { label: string; emoji: string; noun: string }> = {
-  beer: { label: 'Øl', emoji: '🍺', noun: 'pilsen' },
-  wine: { label: 'Vin', emoji: '🍷', noun: 'vinen' },
-  drink: { label: 'Drink', emoji: '🍸', noun: 'drinken' },
+export const DRINKS: Record<
+  DrinkType,
+  { label: string; emoji: string; noun: string; sound: string }
+> = {
+  beer: { label: 'Øl', emoji: '🍺', noun: 'pilsen', sound: 'sip-beer.caf' },
+  wine: { label: 'Vin', emoji: '🍷', noun: 'vinen', sound: 'sip-wine.caf' },
+  drink: { label: 'Drink', emoji: '🍸', noun: 'drinken', sound: 'sip-drink.caf' },
+  vodka: { label: 'Vodkadrink', emoji: '🍹', noun: 'vodkadrinken', sound: 'sip-drink.caf' },
+  champagne: { label: 'Champagne', emoji: '🥂', noun: 'champagnen', sound: 'sip-wine.caf' },
+  shot: { label: 'Shot', emoji: '🥃', noun: 'shotet', sound: 'sip-shot.caf' },
 };
 
+export const DRINK_TYPES = Object.keys(DRINKS) as DrinkType[];
+
 export function drinkOf(value: string | null | undefined): DrinkType {
-  return value === 'wine' || value === 'drink' ? value : 'beer';
+  return (DRINK_TYPES as string[]).includes(value ?? '') ? (value as DrinkType) : 'beer';
 }
 
-function ctxOrNull(): AudioContext | null {
+function newCtx(): AudioContext | null {
   const Ctx: typeof AudioContext =
     window.AudioContext ??
     (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
   return Ctx ? new Ctx() : null;
 }
 
-/** Kork som popper + vin som helles i glass. */
-async function playWinePour() {
-  const ctx = ctxOrNull();
-  if (!ctx) return;
-  if (ctx.state === 'suspended') await ctx.resume();
+function noiseBuffer(ctx: AudioContext, dur: number, shape?: (t: number) => number) {
+  const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    const t = i / ctx.sampleRate;
+    data[i] = (Math.random() * 2 - 1) * (shape ? shape(t) : 1);
+  }
+  return buffer;
+}
+
+/** «Psshhh» – en pils som åpnes. */
+async function beer(ctx: AudioContext) {
   const now = ctx.currentTime;
 
-  // «Pop» – korken ut av flasken
+  const click = ctx.createOscillator();
+  const clickGain = ctx.createGain();
+  click.type = 'triangle';
+  click.frequency.setValueAtTime(420, now);
+  click.frequency.exponentialRampToValueAtTime(90, now + 0.09);
+  clickGain.gain.setValueAtTime(0.5, now);
+  clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+  click.connect(clickGain).connect(ctx.destination);
+  click.start(now);
+  click.stop(now + 0.13);
+
+  const dur = 1.5;
+  const noise = ctx.createBufferSource();
+  noise.buffer = noiseBuffer(ctx, dur);
+
+  const bp = ctx.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.Q.value = 0.8;
+  bp.frequency.setValueAtTime(1200, now);
+  bp.frequency.exponentialRampToValueAtTime(5200, now + 0.12);
+  bp.frequency.exponentialRampToValueAtTime(2200, now + dur);
+
+  const hiss = ctx.createGain();
+  hiss.gain.setValueAtTime(0.0001, now);
+  hiss.gain.exponentialRampToValueAtTime(0.42, now + 0.06);
+  hiss.gain.exponentialRampToValueAtTime(0.06, now + 0.6);
+  hiss.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+  noise.connect(bp).connect(hiss).connect(ctx.destination);
+  noise.start(now + 0.02);
+  noise.stop(now + dur);
+  return dur;
+}
+
+/** Kork som popper + vin som helles i glass. */
+async function wine(ctx: AudioContext) {
+  const now = ctx.currentTime;
+
   const pop = ctx.createOscillator();
   const popGain = ctx.createGain();
   pop.type = 'sine';
@@ -42,17 +94,9 @@ async function playWinePour() {
   pop.start(now);
   pop.stop(now + 0.14);
 
-  // Helling – boblende støy med stigende tonehøyde (glasset fylles)
   const dur = 1.8;
-  const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < data.length; i++) {
-    const t = i / ctx.sampleRate;
-    const glug = 0.6 + 0.4 * Math.sin(2 * Math.PI * 7 * t);
-    data[i] = (Math.random() * 2 - 1) * glug;
-  }
   const noise = ctx.createBufferSource();
-  noise.buffer = buffer;
+  noise.buffer = noiseBuffer(ctx, dur, (t) => 0.6 + 0.4 * Math.sin(2 * Math.PI * 7 * t));
 
   const bp = ctx.createBiquadFilter();
   bp.type = 'bandpass';
@@ -68,29 +112,21 @@ async function playWinePour() {
   noise.connect(bp).connect(gain).connect(ctx.destination);
   noise.start(now + 0.15);
   noise.stop(now + dur);
-
-  window.setTimeout(() => ctx.close().catch(() => {}), (dur + 0.3) * 1000);
+  return dur;
 }
 
 /** Shaker med is + klirr i glasset. */
-async function playCocktailShake() {
-  const ctx = ctxOrNull();
-  if (!ctx) return;
-  if (ctx.state === 'suspended') await ctx.resume();
+async function cocktail(ctx: AudioContext, shakes = 4) {
   const now = ctx.currentTime;
 
-  // Shaker: fire raske «rist» med isbiter
-  for (let s = 0; s < 4; s++) {
+  for (let s = 0; s < shakes; s++) {
     const at = now + s * 0.17;
     const dur = 0.14;
-    const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) {
-      const env = 1 - i / data.length;
-      data[i] = (Math.random() * 2 - 1) * env * env;
-    }
     const src = ctx.createBufferSource();
-    src.buffer = buffer;
+    src.buffer = noiseBuffer(ctx, dur, (t) => {
+      const env = 1 - t / dur;
+      return env * env;
+    });
     const hp = ctx.createBiquadFilter();
     hp.type = 'highpass';
     hp.frequency.value = 2600;
@@ -101,9 +137,8 @@ async function playCocktailShake() {
     src.stop(at + dur);
   }
 
-  // Klirr – to lyse toner som ringer ut (glass mot glass)
   [1860, 2480].forEach((freq, i) => {
-    const at = now + 0.72 + i * 0.08;
+    const at = now + shakes * 0.17 + 0.04 + i * 0.08;
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
     osc.type = 'sine';
@@ -116,15 +151,117 @@ async function playCocktailShake() {
     osc.stop(at + 0.95);
   });
 
-  window.setTimeout(() => ctx.close().catch(() => {}), 2200);
+  return shakes * 0.17 + 1.1;
+}
+
+/** Champagnekork + bobler + skål-klirr. */
+async function champagne(ctx: AudioContext) {
+  const now = ctx.currentTime;
+
+  // Kraftig kork
+  const pop = ctx.createOscillator();
+  const popGain = ctx.createGain();
+  pop.type = 'triangle';
+  pop.frequency.setValueAtTime(1100, now);
+  pop.frequency.exponentialRampToValueAtTime(120, now + 0.07);
+  popGain.gain.setValueAtTime(0.7, now);
+  popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+  pop.connect(popGain).connect(ctx.destination);
+  pop.start(now);
+  pop.stop(now + 0.11);
+
+  // Bobler – lyse, korte knitringer
+  const dur = 1.6;
+  const noise = ctx.createBufferSource();
+  noise.buffer = noiseBuffer(ctx, dur, () => (Math.random() > 0.86 ? 1 : 0.12));
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 3800;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, now + 0.1);
+  g.gain.exponentialRampToValueAtTime(0.26, now + 0.3);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  noise.connect(hp).connect(g).connect(ctx.destination);
+  noise.start(now + 0.1);
+  noise.stop(now + dur);
+
+  // Skål – to glass som møtes
+  [2640, 3320].forEach((freq, i) => {
+    const at = now + 0.75 + i * 0.06;
+    const osc = ctx.createOscillator();
+    const og = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    og.gain.setValueAtTime(0.001, at);
+    og.gain.exponentialRampToValueAtTime(0.28, at + 0.008);
+    og.gain.exponentialRampToValueAtTime(0.0001, at + 1.1);
+    osc.connect(og).connect(ctx.destination);
+    osc.start(at);
+    osc.stop(at + 1.15);
+  });
+
+  return dur + 0.4;
+}
+
+/** Kort «skål» – glass i bordet og en rask slurk. */
+async function shot(ctx: AudioContext) {
+  const now = ctx.currentTime;
+
+  // Glasset settes i bordet
+  const thud = ctx.createOscillator();
+  const tg = ctx.createGain();
+  thud.type = 'sine';
+  thud.frequency.setValueAtTime(230, now);
+  thud.frequency.exponentialRampToValueAtTime(70, now + 0.12);
+  tg.gain.setValueAtTime(0.6, now);
+  tg.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+  thud.connect(tg).connect(ctx.destination);
+  thud.start(now);
+  thud.stop(now + 0.2);
+
+  // Rask «gulp»
+  const gulp = ctx.createOscillator();
+  const gg = ctx.createGain();
+  gulp.type = 'sine';
+  gulp.frequency.setValueAtTime(140, now + 0.2);
+  gulp.frequency.exponentialRampToValueAtTime(420, now + 0.34);
+  gg.gain.setValueAtTime(0.0001, now + 0.2);
+  gg.gain.exponentialRampToValueAtTime(0.32, now + 0.26);
+  gg.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+  gulp.connect(gg).connect(ctx.destination);
+  gulp.start(now + 0.2);
+  gulp.stop(now + 0.45);
+
+  // Klirr til slutt
+  const ring = ctx.createOscillator();
+  const rg = ctx.createGain();
+  ring.type = 'sine';
+  ring.frequency.value = 2100;
+  rg.gain.setValueAtTime(0.001, now + 0.5);
+  rg.gain.exponentialRampToValueAtTime(0.22, now + 0.51);
+  rg.gain.exponentialRampToValueAtTime(0.0001, now + 1.1);
+  ring.connect(rg).connect(ctx.destination);
+  ring.start(now + 0.5);
+  ring.stop(now + 1.15);
+
+  return 1.3;
 }
 
 /** Spiller lyden som hører til drikketypen. */
-export async function playDrinkSound(type: DrinkType) {
+export async function playDrinkSound(type: DrinkType | string | null | undefined) {
   try {
-    if (type === 'wine') return await playWinePour();
-    if (type === 'drink') return await playCocktailShake();
-    return await playBeerCrack();
+    const ctx = newCtx();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') await ctx.resume();
+    const t = drinkOf(typeof type === 'string' ? type : 'beer');
+    let dur = 1.5;
+    if (t === 'wine') dur = await wine(ctx);
+    else if (t === 'drink') dur = await cocktail(ctx);
+    else if (t === 'vodka') dur = await cocktail(ctx, 6);
+    else if (t === 'champagne') dur = await champagne(ctx);
+    else if (t === 'shot') dur = await shot(ctx);
+    else dur = await beer(ctx);
+    window.setTimeout(() => ctx.close().catch(() => {}), (dur + 0.3) * 1000);
   } catch {
     /* lyd er bonus – aldri kritisk */
   }

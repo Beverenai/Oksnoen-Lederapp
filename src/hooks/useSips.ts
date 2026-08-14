@@ -124,19 +124,16 @@ export function useGiveSips() {
       targetId,
       amount,
       message,
-      drinkType,
     }: {
       targetId: string;
       amount: number;
       message?: string;
-      drinkType?: DrinkType;
     }) => {
       const { data, error } = await supabase.rpc('give_sips', {
         _to: targetId,
         _amount: amount,
         _message: message ?? null,
-        _drink_type: drinkType ?? 'beer',
-      } as never);
+      });
       if (error) throw error;
       const sipId = data as unknown as string;
       // Varsling til mottakeren – aldri kritisk om den feiler.
@@ -186,4 +183,43 @@ export function useDrinkSips() {
       queryClient.invalidateQueries({ queryKey: ['my-sips', leader?.id] });
     },
   });
+}
+
+/** Min valgte drikke – alt jeg gir vises og høres som denne. */
+export function useMyDrink() {
+  const { leader } = useAuth();
+  const queryClient = useQueryClient();
+  const myId = leader?.id;
+
+  const query = useQuery<DrinkType>({
+    queryKey: ['my-drink', myId],
+    enabled: !!myId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leaders')
+        .select('preferred_drink')
+        .eq('id', myId!)
+        .maybeSingle();
+      if (error) throw error;
+      return drinkOf((data as { preferred_drink?: string } | null)?.preferred_drink);
+    },
+    staleTime: 60_000,
+  });
+
+  const setDrink = useMutation({
+    mutationFn: async (drink: DrinkType) => {
+      const { error } = await supabase
+        .from('leaders')
+        .update({ preferred_drink: drink })
+        .eq('id', myId!);
+      if (error) throw error;
+      return drink;
+    },
+    onSuccess: (drink) => {
+      queryClient.setQueryData(['my-drink', myId], drink);
+      queryClient.invalidateQueries({ queryKey: ['my-drink', myId] });
+    },
+  });
+
+  return { drink: query.data ?? 'beer', isLoading: query.isLoading, setDrink };
 }

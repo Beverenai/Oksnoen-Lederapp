@@ -1,14 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Heart, Loader2, MessageCircle, Sparkles, Trash2, Users } from 'lucide-react';
+import { ArrowLeft, Heart, Loader2, MessageCircle, Sparkles, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { SwipeCard } from '@/components/klineliste/SwipeCard';
-import {
-  useMyMatches,
-  useSwipeCandidates,
-  useSwipeLeader,
-  useUnmatch,
-} from '@/hooks/useLeaderSwipes';
+import { useMyMatches, useSwipeCandidates, useSwipeLeader } from '@/hooks/useLeaderSwipes';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { cn } from '@/lib/utils';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
@@ -28,7 +23,6 @@ export default function KlineTinder() {
   const { candidates, isLoading } = useSwipeCandidates();
   const { data: matches = [] } = useMyMatches();
   const swipe = useSwipeLeader();
-  const unmatch = useUnmatch();
   const { data: unread = {} } = useMatchUnread();
 
   const dismissedSet = new Set(dismissed);
@@ -163,14 +157,6 @@ export default function KlineTinder() {
                       </span>
                     )}
                   </button>
-                <button
-                  type="button"
-                  onClick={() => unmatch.mutate(m.id)}
-                  aria-label="Fjern match"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-border/60 text-muted-foreground"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
                 </div>
               </div>
             ))}
