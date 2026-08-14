@@ -30,9 +30,9 @@ export function LederpassStrip({
       className="oks-bookcloth oks-grain relative flex w-full items-center gap-3 overflow-hidden rounded-[16px] border border-oks-gold/45 p-3 text-left shadow-oks transition-transform active:scale-[0.99]"
     >
       <span className="absolute inset-x-0 top-0 h-px bg-oks-gold/50" />
-      {leader?.image_url ? (
+      {leader?.profile_image_url ? (
         <img
-          src={leader.image_url}
+          src={leader.profile_image_url}
           alt=""
           className="h-12 w-12 shrink-0 rounded-full border-2 border-oks-gold/70 object-cover"
         />
