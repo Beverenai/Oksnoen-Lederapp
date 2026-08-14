@@ -1825,6 +1825,7 @@ export type Database = {
           ministerpost: string | null
           name: string
           phone: string
+          preferred_drink: string
           profile_image_aged_url: string | null
           profile_image_url: string | null
           snus_custom_label: string | null
@@ -1861,6 +1862,7 @@ export type Database = {
           ministerpost?: string | null
           name: string
           phone: string
+          preferred_drink?: string
           profile_image_aged_url?: string | null
           profile_image_url?: string | null
           snus_custom_label?: string | null
@@ -1897,6 +1899,7 @@ export type Database = {
           ministerpost?: string | null
           name?: string
           phone?: string
+          preferred_drink?: string
           profile_image_aged_url?: string | null
           profile_image_url?: string | null
           snus_custom_label?: string | null
@@ -4874,20 +4877,15 @@ export type Database = {
           updated_at: string
         }[]
       }
-      give_sips:
-        | {
-            Args: { _amount: number; _message?: string; _to: string }
-            Returns: string
-          }
-        | {
-            Args: {
-              _amount: number
-              _drink_type?: string
-              _message?: string
-              _to: string
-            }
-            Returns: string
-          }
+      give_sips: {
+        Args: {
+          _amount: number
+          _drink_type?: string
+          _message?: string
+          _to: string
+        }
+        Returns: string
+      }
       has_role: {
         Args: {
           _leader_id: string
