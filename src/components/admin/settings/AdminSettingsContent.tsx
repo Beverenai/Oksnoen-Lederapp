@@ -101,6 +101,7 @@ export function AdminSettingsContent({
   onLeaderUpdated,
 }: AdminSettingsContentProps) {
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
   switch (activeSection) {
     case 'leaders':
       return (
@@ -121,7 +122,20 @@ export function AdminSettingsContent({
               <CardDescription className="flex flex-wrap gap-2 items-center">
                 <span>Aktive: {leaders.filter(l => l.is_active !== false && l.phone !== '12345678').length}</span>
                 <span className="text-muted-foreground">•</span>
-                <span>Inaktive: {leaders.filter(l => l.is_active === false && l.phone !== '12345678').length}</span>
+                <span>Inaktive: {leaders.filter(l => l.is_active === false && !(l as any).deleted_at && l.phone !== '12345678').length}</span>
+                {leaders.some(l => (l as any).deleted_at) && (
+                  <>
+                    <span className="text-muted-foreground">•</span>
+                    <button
+                      type="button"
+                      className="underline underline-offset-2 hover:text-foreground"
+                      onClick={() => setShowDeleted(v => !v)}
+                    >
+                      Slettede: {leaders.filter(l => (l as any).deleted_at).length}
+                      {showDeleted ? ' (skjul)' : ' (vis)'}
+                    </button>
+                  </>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -189,13 +203,14 @@ export function AdminSettingsContent({
                     {leaders
                       .filter((leader) =>
                         leader.phone !== '12345678' &&
+                        (showDeleted ? true : !(leader as any).deleted_at) &&
                         (leader.name.toLowerCase().includes(leaderSearch.toLowerCase()) ||
                         leader.phone.includes(leaderSearch))
                       )
                       .map((leader) => (
                       <tr 
                         key={leader.id} 
-                        className={`hover:bg-muted/50 cursor-pointer ${leader.is_active === false ? 'opacity-50' : ''}`}
+                        className={`hover:bg-muted/50 cursor-pointer ${leader.is_active === false ? 'opacity-50' : ''} ${(leader as any).deleted_at ? 'line-through opacity-40' : ''}`}
                         onClick={() => onEditLeader(leader)}
                       >
                         <td className="py-2 px-3">
