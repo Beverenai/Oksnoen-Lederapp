@@ -95,7 +95,7 @@ export default function Slurker() {
   // Viser hvilke drikketyper man faktisk har fått / drukket
   const mixEmojis = (rows: typeof received) => {
     const types = Array.from(new Set(rows.map((r) => drinkOf(r.drink_type))));
-    return (types.length ? types : (['beer'] as DrinkType[])).map((t) => DRINKS[t].emoji).join('');
+    return (types.length ? types : ([myDrink] as DrinkType[])).map((t) => DRINKS[t].emoji).join('');
   };
   const receivedMix = mixEmojis(received);
   const drunkMix = mixEmojis(received.filter((r) => r.drunk_at));
