@@ -18,7 +18,7 @@ type Tab = 'deck' | 'matches';
 export default function KlineTinder() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('deck');
-  const [index, setIndex] = useState(0);
+  const [dismissed, setDismissed] = useState<string[]>([]);
   const [matchName, setMatchName] = useState<string | null>(null);
   const [plusOpen, setPlusOpen] = useState(false);
 
@@ -27,10 +27,12 @@ export default function KlineTinder() {
   const swipe = useSwipeLeader();
   const unmatch = useUnmatch();
 
-  const visible = candidates.slice(index, index + 3);
+  const dismissedSet = new Set(dismissed);
+  const deck = candidates.filter((c) => !dismissedSet.has(c.id));
+  const visible = deck.slice(0, 3);
 
   const handleDecide = async (targetId: string, name: string, liked: boolean) => {
-    setIndex((i) => i + 1);
+    setDismissed((prev) => (prev.includes(targetId) ? prev : [...prev, targetId]));
     hapticImpact(liked ? 'medium' : 'light');
     try {
       const isMatch = await swipe.mutateAsync({ targetId, liked });
