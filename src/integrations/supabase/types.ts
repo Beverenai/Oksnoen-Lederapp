@@ -4874,10 +4874,20 @@ export type Database = {
           updated_at: string
         }[]
       }
-      give_sips: {
-        Args: { _amount: number; _message?: string; _to: string }
-        Returns: string
-      }
+      give_sips:
+        | {
+            Args: { _amount: number; _message?: string; _to: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              _amount: number
+              _drink_type?: string
+              _message?: string
+              _to: string
+            }
+            Returns: string
+          }
       has_role: {
         Args: {
           _leader_id: string
