@@ -258,25 +258,27 @@ export default function More() {
     {
       label: 'Off-season',
       items: [
-        { to: '/lederpass', icon: IdCard, label: 'Lederpass' },
+        { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder', desc: 'Sveip på ledere', tone: 'sunset', size: 'lg' },
+        { to: '/lederpass', icon: IdCard, label: 'Lederpass', desc: 'Stempler', tone: 'red' },
         {
           to: '/klineliste',
           icon: HeartHandshake,
           label: 'Klineliste',
+          desc: 'Kartet',
+          tone: 'navy',
           badge: incomingHookups,
         },
-        { to: '/snus', icon: Circle, label: 'Snus' },
-        { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder' },
-        { to: '/pov', icon: Camera, label: 'Øksnøen POV' },
-        { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
-        { to: '/profile', icon: User, label: 'Min Profil' },
-        { icon: Crown, label: 'Øksnøen +', onClick: () => setPlusOpen(true) },
-        { to: '/feedback', icon: Lightbulb, label: 'Feedback' },
+        { to: '/snus', icon: Circle, label: 'Snus', desc: 'Din boks', tone: 'cream' },
+        { to: '/pov', icon: Camera, label: 'Øksnøen POV', desc: 'Engangskamera', tone: 'cream' },
+        { to: '/chat', icon: MessageCircle, label: 'Lederhuset', desc: 'Chatten', tone: 'cream' },
+        { to: '/profile', icon: User, label: 'Min Profil', desc: 'Bilde og info', tone: 'cream' },
+        { icon: Crown, label: 'Øksnøen +', desc: 'Se abonnementet', tone: 'gold', onClick: () => setPlusOpen(true) },
+        { to: '/feedback', icon: Lightbulb, label: 'Feedback', desc: 'Nye ideer', tone: 'cream' },
       ],
     },
     {
       label: 'Konto',
-      items: [{ icon: LogOut, label: 'Logg ut', onClick: () => logout() }],
+      items: [{ icon: LogOut, label: 'Logg ut', tone: 'cream', onClick: () => logout() }],
     },
   ];
 
@@ -288,12 +290,23 @@ export default function More() {
     : fullSections;
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6 pb-6">
+    <div
+      className={cn(
+        'mx-auto w-full max-w-2xl space-y-6 pb-8',
+        limited && 'oks-offseason-bg -mx-4 px-4 pt-1',
+      )}
+    >
       <header className="pt-1">
-        <h1 className="text-2xl font-heading font-bold text-foreground">
+        {limited && (
+          <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-oks-gold/40 bg-[var(--gradient-oks-red)] px-3 py-1 text-[10.5px] font-bold uppercase tracking-wider text-oks-cream shadow-oks">
+            <span className="h-1.5 w-1.5 rounded-full bg-oks-gold" />
+            Off-season
+          </span>
+        )}
+        <h1 className="text-[26px] font-heading font-bold leading-tight text-foreground">
           Hei{firstName ? `, ${firstName}` : ''} <span aria-hidden>👋</span>
         </h1>
-        <p className="text-sm text-muted-foreground">Alle sider og funksjoner</p>
+        <p className="mt-1 text-sm text-muted-foreground">Alle sider og funksjoner</p>
       </header>
 
       {isAdmin && !limited && (
@@ -311,17 +324,38 @@ export default function More() {
 
       {sections.map((section) =>
         section.items.length === 0 ? null : (
-          <section key={section.label} className="space-y-2">
-            <div className={cn(
-              'px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground',
-            )}>
+          <section key={section.label} className="space-y-2.5">
+            <div className="px-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
               {section.label}
             </div>
-            <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">
-              {section.items.map((item, i) => (
-                <Tile key={`${section.label}-${i}`} item={item} />
-              ))}
-            </div>
+            {limited ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {section.items.map((item, i) => (
+                  <BentoTile
+                    key={`${section.label}-${i}`}
+                    icon={item.icon}
+                    label={item.label}
+                    desc={item.desc}
+                    tone={item.tone ?? 'cream'}
+                    size={item.size ?? 'sm'}
+                    count={item.badge || undefined}
+                    onClick={() => {
+                      if (item.to) navigate(item.to);
+                      else item.onClick?.();
+                    }}
+                    className={
+                      item.size === 'lg' || item.size === 'md' ? 'sm:col-span-2' : undefined
+                    }
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">
+                {section.items.map((item, i) => (
+                  <Tile key={`${section.label}-${i}`} item={item} />
+                ))}
+              </div>
+            )}
           </section>
         ),
       )}
