@@ -18,6 +18,7 @@ import {
   type PovPhoto,
 } from '@/hooks/usePov';
 import { toast } from 'sonner';
+import povHero from '@/assets/pov-hero.jpg.asset.json';
 
 function countdown(iso: string | null): string | null {
   if (!iso) return null;
@@ -79,11 +80,25 @@ export default function Pov() {
 
   return (
     <div className="oks-offseason-bg mx-auto -mx-4 w-full max-w-2xl space-y-6 px-4 pb-8 pt-1">
-      <header className="pt-1">
-        <h1 className="font-heading text-[26px] font-bold leading-tight text-foreground">Øksnøen POV</h1>
-        <span className="mt-2 mb-1.5 block h-1 w-10 rounded-full bg-[var(--gradient-oks-sunset)]" />
-        <p className="text-sm text-muted-foreground">
-          Engangskamera. Ingen forhåndsvisning – alt avsløres når filmen utvikles.
+      <header className="oks-paper oks-paper-frame relative mt-1 overflow-hidden">
+        <div className="oks-grain relative overflow-hidden rounded-[2px]">
+          <img
+            src={povHero.url}
+            alt="Øksnøen sommerleir"
+            className="aspect-[16/9] w-full object-cover"
+          />
+          <span className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-oks-night-deep/85 to-transparent" />
+          <div className="absolute inset-x-3 bottom-2.5">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.28em] text-oks-gold">
+              Engangskamera
+            </span>
+            <h1 className="font-heading text-[24px] font-bold leading-tight text-oks-cream">
+              Øksnøen POV
+            </h1>
+          </div>
+        </div>
+        <p className="absolute inset-x-3 bottom-1.5 text-[11px] font-semibold text-oks-night-deep/70">
+          Ingen forhåndsvisning – alt avsløres når filmen utvikles.
         </p>
       </header>
 
