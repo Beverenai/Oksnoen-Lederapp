@@ -334,6 +334,9 @@ export function AdminSettingsContent({
     case 'murder':
       return <MurderGameTab />;
 
+    case 'pov':
+      return <PovTab />;
+
     case 'bookings':
       return <BookingsTab />;
 

@@ -29,6 +29,7 @@ import {
   ClipboardList,
   ShoppingBasket,
   Archive,
+  Camera,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
