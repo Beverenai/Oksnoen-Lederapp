@@ -103,10 +103,10 @@ export function OffSeasonHome({
         <BentoTile
           icon={Beer}
           label="Gi slurker"
-          desc={`${'🍺'.repeat(Math.min(sipsLeft, 5))} ${sipsLeft} igjen`}
+          desc={`${DRINKS[myDrink].emoji.repeat(Math.min(sipsLeft, 5))} ${sipsLeft} igjen`}
           tone="red"
           size="lg"
-          visual={<span className="text-[26px] leading-none">🍺</span>}
+          visual={<span className="text-[26px] leading-none">{DRINKS[myDrink].emoji}</span>}
           count={unopenedSips || undefined}
           className="bg-[linear-gradient(140deg,#f7b733_0%,#e08908_50%,#a8410a_100%)] border-oks-gold/50 text-white"
           onClick={() => navigate('/slurker')}
