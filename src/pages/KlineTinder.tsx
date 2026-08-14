@@ -58,24 +58,7 @@ export default function KlineTinder() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex items-center gap-2 px-4 pb-2 pt-1">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          aria-label="Tilbake"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-card"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-heading font-bold leading-tight">Kline-Tinder</h1>
-          <p className="text-[11px] text-muted-foreground">
-            Matcher havner ikke i klinelista – det må gjøres manuelt
-          </p>
-        </div>
-      </header>
-
-      <div className="px-4 pb-3">
+      <div className="px-4 pb-3 pt-1">
         <div className="flex rounded-full border border-border/60 bg-card/60 p-1">
           {([
             ['deck', 'Sveip', Sparkles],
