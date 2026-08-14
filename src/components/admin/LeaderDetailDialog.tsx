@@ -625,14 +625,61 @@ export function LeaderDetailDialog({
             </div>
           </div>
 
-          {/* Bottom bar - just close button now */}
-          <div className="bottom-bar flex justify-end">
+          {/* Bottom bar */}
+          <div className="bottom-bar flex items-center justify-between gap-2">
+            {isAdmin && leader && leader.id !== currentLeader?.id ? (
+              (leader as any).deleted_at ? (
+                <Button variant="outline" onClick={handleRestore} disabled={isDeleting} className="gap-2">
+                  {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                  Gjenopprett
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Slett leder
+                </Button>
+              )
+            ) : (
+              <span />
+            )}
             <Button variant="outline" onClick={() => handleClose(false)}>
               Lukk
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Slett leder (myk sletting) */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Slette {leader ? getFirstName(leader.name) : 'lederen'} fra appen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Lederen forsvinner fra Ledere-lista og alle andre lister i appen, og mister tilgang.
+              Ingenting de har lagt inn slettes — rapporter, hendelser, notater, gomla og historikk
+              blir liggende, og du kan gjenopprette lederen senere.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleSoftDelete();
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Slett leder
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Change Notification Dialog */}
       <AlertDialog open={showNotifyDialog} onOpenChange={setShowNotifyDialog}>
