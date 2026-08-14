@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Beer, Wine, GlassWater, Heart, MessageSquare, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -8,6 +8,8 @@ import { useMySips } from '@/hooks/useSips';
 import { useMyHookups } from '@/hooks/useHookups';
 import { useMyMatches } from '@/hooks/useLeaderSwipes';
 import { useMyMailboxMessages } from '@/hooks/useMailbox';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { DRINKS, type DrinkType } from '@/lib/drinkSounds';
 import { cn } from '@/lib/utils';
 
