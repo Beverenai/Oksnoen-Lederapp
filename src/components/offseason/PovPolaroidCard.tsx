@@ -35,7 +35,7 @@ export function PovPolaroidCard({ className }: { className?: string }) {
           hapticImpact('medium');
           navigate('/pov');
         }}
-        className="oks-paper oks-paper-frame relative block w-full text-left transition-transform active:scale-[0.99]"
+        className="oks-paper oks-paper-frame relative block w-full !pb-2.5 text-left transition-transform active:scale-[0.99]"
       >
         <span className="oks-grain relative block overflow-hidden rounded-[2px]">
           <img
