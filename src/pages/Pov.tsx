@@ -45,6 +45,16 @@ export default function Pov() {
   const toggleReaction = usePovToggleReaction(activeRollId);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'mine'>('all');
+  const autoOpened = useRef(false);
+
+  // Ta deg rett inn i kameraet når du åpner POV (ingen ekstra trykk).
+  useEffect(() => {
+    if (autoOpened.current) return;
+    if (roll?.status === 'open' && roll.my_shots_left > 0) {
+      autoOpened.current = true;
+      setCameraOpen(true);
+    }
+  }, [roll?.status, roll?.my_shots_left]);
 
   const developedRolls = useMemo(
     () => (rolls ?? []).filter((r) => r.status === 'developed'),
@@ -80,26 +90,27 @@ export default function Pov() {
 
   return (
     <div className="oks-offseason-bg mx-auto -mx-4 w-full max-w-2xl space-y-6 px-4 pb-8 pt-1">
-      <header className="oks-paper oks-paper-frame relative mt-1 overflow-hidden">
-        <div className="oks-grain relative overflow-hidden rounded-[2px]">
-          <img
-            src={povHero.url}
-            alt="Øksnøen sommerleir"
-            className="aspect-[16/9] w-full object-cover"
-          />
-          <span className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-oks-night-deep/85 to-transparent" />
-          <div className="absolute inset-x-3 bottom-2.5">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.28em] text-oks-gold">
-              Engangskamera
-            </span>
-            <h1 className="font-heading text-[24px] font-bold leading-tight text-oks-cream">
-              Øksnøen POV
-            </h1>
-          </div>
+      <header className="relative mt-1 overflow-hidden rounded-[24px] border border-oks-gold/25 shadow-oks">
+        <img
+          src={povHero.url}
+          alt="Øksnøen sommerleir"
+          className="aspect-[4/3] w-full object-cover sm:aspect-[16/9]"
+        />
+        <span
+          aria-hidden
+          className="absolute inset-0 bg-[linear-gradient(to_top,hsl(var(--oks-night-deep)/0.94)_0%,hsl(var(--oks-night-deep)/0.35)_55%,transparent_85%)]"
+        />
+        <div className="absolute inset-x-4 bottom-4">
+          <span className="block text-[10px] font-bold uppercase tracking-[0.28em] text-oks-gold">
+            Engangskamera
+          </span>
+          <h1 className="font-heading text-[26px] font-bold leading-tight text-oks-cream">
+            Øksnøen POV
+          </h1>
+          <p className="mt-1 text-[11.5px] font-medium leading-snug text-oks-cream/70">
+            Ingen forhåndsvisning – alt avsløres når filmen utvikles.
+          </p>
         </div>
-        <p className="absolute inset-x-3 bottom-1.5 text-[11px] font-semibold text-oks-night-deep/70">
-          Ingen forhåndsvisning – alt avsløres når filmen utvikles.
-        </p>
       </header>
 
       {!roll && (
@@ -115,37 +126,38 @@ export default function Pov() {
       )}
 
       {roll?.status === 'open' && (
-        <div className="overflow-hidden rounded-3xl border border-amber-500/30 bg-gradient-to-b from-neutral-900 to-neutral-950 p-5 text-white shadow-xl">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.25em] text-amber-300/70">
+        <div className="overflow-hidden rounded-[24px] border border-oks-gold/25 bg-[linear-gradient(150deg,hsl(var(--oks-forest))_0%,hsl(var(--oks-night-deep))_100%)] p-4 text-oks-cream shadow-oks">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-oks-gold">
                 Film i kameraet
               </div>
-              <div className="text-lg font-semibold">{roll.title}</div>
+              <div className="truncate font-heading text-[17px] font-bold">{roll.title}</div>
+              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-oks-cream/60">
+                <Clock className="h-3.5 w-3.5" />
+                {reveal ? `Utvikles om ${reveal}` : 'Utvikles når admin sier stopp'}
+              </div>
             </div>
-            <div className="rounded-xl bg-white/5 px-3 py-2 text-center">
-              <div className="font-mono text-xl text-amber-300">
+            <div className="shrink-0 rounded-2xl bg-oks-cream/10 px-3.5 py-2 text-center">
+              <div className="font-mono text-2xl leading-none text-oks-gold">
                 {String(roll.my_shots_left).padStart(2, '0')}
               </div>
-              <div className="text-[10px] text-white/50">igjen</div>
+              <div className="mt-0.5 text-[9.5px] uppercase tracking-widest text-oks-cream/50">
+                igjen
+              </div>
             </div>
-          </div>
-
-          <div className="mt-4 flex items-center gap-2 text-[11px] text-white/50">
-            <Clock className="h-3.5 w-3.5" />
-            {reveal ? `Utvikles om ${reveal}` : 'Utvikles når admin sier stopp'}
           </div>
 
           <Button
-            className="mt-4 w-full bg-amber-300 text-neutral-900 hover:bg-amber-200"
+            className="mt-4 w-full rounded-2xl bg-[var(--gradient-oks-gold)] text-oks-red-deep hover:opacity-90"
             size="lg"
             disabled={roll.my_shots_left <= 0}
             onClick={() => setCameraOpen(true)}
           >
             <Camera className="mr-2 h-5 w-5" />
-            {roll.my_shots_left > 0 ? 'Åpne kameraet' : 'Filmen er full'}
+            {roll.my_shots_left > 0 ? 'Ta bilde' : 'Filmen er full'}
           </Button>
-          <p className="mt-3 text-center text-[11px] text-white/40">
+          <p className="mt-3 text-center text-[11px] text-oks-cream/45">
             {roll.photo_count} bilder er tatt av gjengen så langt.
           </p>
         </div>
