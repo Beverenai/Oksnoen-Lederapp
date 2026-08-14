@@ -25,28 +25,28 @@ function PerkTile({
         else onLocked();
       }}
       className={cn(
-        'relative overflow-hidden rounded-2xl border p-3 text-left transition-transform active:scale-[0.98]',
+        'relative overflow-hidden rounded-[20px] border p-3.5 text-left shadow-oks transition-transform active:scale-[0.98]',
         unlocked
-          ? 'border-primary/40 bg-primary/5'
-          : 'border-border/60 bg-card/40 opacity-90',
+          ? 'border-oks-gold/50 bg-oks-gold/10'
+          : 'border-oks-gold/25 bg-card/70 backdrop-blur',
         className,
       )}
     >
       <span
         className={cn(
           'absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full',
-          unlocked ? 'bg-primary/15' : 'bg-muted/70',
+          unlocked ? 'bg-oks-gold/25' : 'bg-oks-gold/15',
         )}
         aria-hidden
       >
         {unlocked ? (
-          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          <span className="h-1.5 w-1.5 rounded-full bg-oks-gold" />
         ) : (
-          <Lock className="h-2.5 w-2.5 text-muted-foreground" />
+          <Lock className="h-2.5 w-2.5 text-oks-gold" />
         )}
       </span>
       <perk.icon
-        className={cn('h-5 w-5', unlocked ? 'text-primary' : 'text-muted-foreground')}
+        className={cn('h-5 w-5', unlocked ? 'text-oks-gold' : 'text-oks-red/70')}
         strokeWidth={2}
       />
       <p className="mt-2 pr-5 text-[12.5px] font-semibold leading-tight text-foreground">
