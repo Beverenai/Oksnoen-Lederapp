@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Circle, HeartHandshake, Flame } from 'lucide-react';
+import { MessageCircle, Circle, HeartHandshake, Flame, Beer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { SnusCan3D } from '@/components/snus/SnusCan3D';
 import { getSnusProduct, customSnusProduct } from '@/lib/snusCatalog';
 import { useIncomingHookupCount } from '@/hooks/useHookups';
+import { useSipsLeft, useUnopenedSipCount } from '@/hooks/useSips';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import { BentoTile } from '@/components/offseason/BentoTile';
@@ -26,6 +27,8 @@ export function OffSeasonHome({
 }) {
   const navigate = useNavigate();
   const incomingHookups = useIncomingHookupCount();
+  const { data: sipsLeft = 0 } = useSipsLeft();
+  const unopenedSips = useUnopenedSipCount();
   const [mySnus, setMySnus] = useState<{ productId: string | null; customLabel: string | null } | null>(null);
   const [plusOpen, setPlusOpen] = useState(false);
 
@@ -88,6 +91,15 @@ export function OffSeasonHome({
           size="lg"
           torn
           onClick={() => navigate('/chat')}
+        />
+        <BentoTile
+          icon={Beer}
+          label="Gi slurker"
+          desc={`${sipsLeft} igjen å dele ut`}
+          tone="red"
+          size="lg"
+          count={unopenedSips || undefined}
+          onClick={() => navigate('/slurker')}
         />
         <BentoTile
           icon={HeartHandshake}
