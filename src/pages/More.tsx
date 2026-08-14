@@ -42,6 +42,7 @@ import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute } from '@/lib/limitedAccess';
 import { IdCard, MessageCircle, Circle, Crown, Camera } from 'lucide-react';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
+import { TinderIcon } from '@/components/icons/TinderIcon';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import { BentoTile, type BentoTone, type BentoSize } from '@/components/offseason/BentoTile';
 import povHero from '@/assets/pov-hero.jpg.asset.json';
