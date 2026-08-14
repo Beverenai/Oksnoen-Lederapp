@@ -15,6 +15,7 @@ export const LIMITED_ACCESS_ROUTES = [
   '/snus',
   '/feedback',
   '/pov',
+  '/slurker',
 ] as const;
 
 export function isLimitedAccessRoute(path: string): boolean {
