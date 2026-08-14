@@ -150,9 +150,26 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
     stopStream();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1440 } },
+        video: {
+          facingMode: facing,
+          // Ask for the sharpest feed the device can give us.
+          width: { ideal: 2160 },
+          height: { ideal: 3840 },
+          frameRate: { ideal: 30 },
+        },
         audio: false,
       });
+      // Some devices only expose their full resolution after applying constraints.
+      const track = stream.getVideoTracks()[0];
+      const caps = track?.getCapabilities?.();
+      if (caps?.width?.max && caps?.height?.max) {
+        await track
+          .applyConstraints({
+            width: { ideal: Math.min(caps.width.max, 2160) },
+            height: { ideal: Math.min(caps.height.max, 3840) },
+          })
+          .catch(() => {});
+      }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
