@@ -41,6 +41,7 @@ import { isLimitedAccessRoute } from '@/lib/limitedAccess';
 import { IdCard, MessageCircle, Circle, Crown, Camera } from 'lucide-react';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
+import { BentoTile, type BentoTone, type BentoSize } from '@/components/offseason/BentoTile';
 
 type MoreItem = {
   to?: string;
@@ -48,6 +49,9 @@ type MoreItem = {
   label: string;
   onClick?: () => void;
   badge?: number;
+  desc?: string;
+  tone?: BentoTone;
+  size?: BentoSize;
 };
 
 type MoreSection = {
