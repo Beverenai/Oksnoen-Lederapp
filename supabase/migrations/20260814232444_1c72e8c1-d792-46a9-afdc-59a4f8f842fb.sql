@@ -1,0 +1,1 @@
+ALTER TABLE public.leader_sips ADD COLUMN IF NOT EXISTS drunk_at timestamp with time zone;

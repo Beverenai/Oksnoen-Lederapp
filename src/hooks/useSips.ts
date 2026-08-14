@@ -8,6 +8,7 @@ export type SipRow = {
   message: string | null;
   created_at: string;
   opened_at: string | null;
+  drunk_at: string | null;
   from_leader_id: string;
   to_leader_id: string;
   fromName: string;
@@ -73,7 +74,7 @@ export function useMySips() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leader_sips')
-        .select('id, amount, message, created_at, opened_at, from_leader_id, to_leader_id')
+        .select('id, amount, message, created_at, opened_at, drunk_at, from_leader_id, to_leader_id')
         .order('created_at', { ascending: false });
       if (error) throw error;
       const rows = data ?? [];
@@ -152,6 +153,26 @@ export function useOpenSip() {
         .from('leader_sips')
         .update({ opened_at: new Date().toISOString() })
         .eq('id', sipId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-sips', leader?.id] });
+    },
+  });
+}
+
+/** Bekreft at du har drukket slurkene du har fått. */
+export function useDrinkSips() {
+  const queryClient = useQueryClient();
+  const { leader } = useAuth();
+
+  return useMutation({
+    mutationFn: async (sipIds: string[]) => {
+      if (!sipIds.length) return;
+      const { error } = await supabase
+        .from('leader_sips')
+        .update({ drunk_at: new Date().toISOString() })
+        .in('id', sipIds);
       if (error) throw error;
     },
     onSuccess: () => {
