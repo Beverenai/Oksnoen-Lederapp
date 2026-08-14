@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Circle, HeartHandshake, IdCard, Crown, Flame, ChevronRight } from 'lucide-react';
+import { MessageCircle, Circle, HeartHandshake, IdCard, Crown, Flame, Camera, Lightbulb } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { LederPass } from '@/components/passport/LederPass';
-import { HomeQuickActions, type QuickAction } from '@/components/home/HomeQuickActions';
 import { SnusCan3D } from '@/components/snus/SnusCan3D';
 import { getSnusProduct, customSnusProduct } from '@/lib/snusCatalog';
 import { useIncomingHookupCount } from '@/hooks/useHookups';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
+import { BentoTile } from '@/components/offseason/BentoTile';
 import type { Leader } from '@/types/database';
 
 /**
@@ -51,86 +50,98 @@ export function OffSeasonHome({
 
   const firstName = (leader?.name || '').split(' ')[0] || '';
 
-  const actions: QuickAction[] = [
-    {
-      key: 'snus',
-      icon: Circle,
-      label: 'Snus',
-      visual: mySnus ? (
-        <SnusCan3D
-          product={getSnusProduct(mySnus.productId) ?? customSnusProduct(mySnus.customLabel || 'Snus')}
-          size={36}
-          interactive={false}
-          spin={-22}
-          hideHint
-        />
-      ) : undefined,
-      onClick: () => navigate('/snus'),
-    },
-    {
-      key: 'klineliste',
-      icon: HeartHandshake,
-      label: 'Klineliste',
-      count: incomingHookups || undefined,
-      onClick: () => navigate('/klineliste'),
-    },
-    {
-      key: 'chat',
-      icon: MessageCircle,
-      label: 'Lederhuset',
-      onClick: () => navigate('/chat'),
-    },
-    {
-      key: 'plus',
-      icon: Crown,
-      label: 'Øksnøen +',
-      badge: true,
-      onClick: () => setPlusOpen(true),
-    },
-  ];
-
   return (
-    <div className="animate-fade-in space-y-5 pb-6">
-      <header className="pt-1 text-center">
-        <Badge variant="secondary" className="text-xs">Off-season</Badge>
-        <h1 className="mt-2 text-2xl font-heading font-bold text-foreground">
+    <div className="oks-offseason-bg animate-fade-in -mx-4 space-y-7 px-4 pb-8 pt-1">
+      <header className="pt-1">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-oks-gold/40 bg-[var(--gradient-oks-red)] px-3 py-1 text-[10.5px] font-bold uppercase tracking-wider text-oks-cream shadow-oks">
+          <span className="h-1.5 w-1.5 rounded-full bg-oks-gold" />
+          Off-season
+        </span>
+        <h1 className="mt-3 text-[28px] font-heading font-bold leading-tight text-foreground">
           Hei{firstName ? `, ${firstName}` : ''} <span aria-hidden>👋</span>
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="mt-1 max-w-[26rem] text-sm text-muted-foreground">
           Passet ditt, snusen og klinelista er åpne året rundt.
         </p>
       </header>
 
-      <HomeQuickActions actions={actions} />
-
-      {/* Øksnøen Tinder — øverste attraksjon off-season */}
-      <button
-        type="button"
-        onClick={() => navigate('/kline-tinder')}
-        className="flex w-full items-center gap-3 rounded-3xl border border-rose-500/25 bg-gradient-to-br from-rose-500/15 via-card/70 to-orange-400/10 p-4 text-left shadow-sm transition-transform active:scale-[0.99]"
-      >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 text-white shadow-md">
-          <Flame className="h-5 w-5" />
-        </span>
-        <span className="min-w-0">
-          <span className="block text-[15px] font-heading font-bold leading-tight">Øksnøen Tinder</span>
-          <span className="block text-[12px] text-muted-foreground">
-            Sveip på ledere — match hvis begge sveiper ja
-          </span>
-        </span>
-        <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
-      </button>
+      {/* Bento-grid med off-season-funksjonene */}
+      <div className="grid grid-cols-2 gap-3">
+        <BentoTile
+          icon={Flame}
+          label="Øksnøen Tinder"
+          desc="Sveip på ledere — match hvis begge sveiper ja"
+          tone="sunset"
+          size="lg"
+          onClick={() => navigate('/kline-tinder')}
+        />
+        <BentoTile
+          icon={Circle}
+          label="Snus"
+          desc="Din boks"
+          tone="navy"
+          visual={
+            mySnus ? (
+              <SnusCan3D
+                product={getSnusProduct(mySnus.productId) ?? customSnusProduct(mySnus.customLabel || 'Snus')}
+                size={34}
+                interactive={false}
+                spin={-22}
+                hideHint
+              />
+            ) : undefined
+          }
+          onClick={() => navigate('/snus')}
+        />
+        <BentoTile
+          icon={HeartHandshake}
+          label="Klineliste"
+          desc="Kartet"
+          tone="red"
+          count={incomingHookups || undefined}
+          onClick={() => navigate('/klineliste')}
+        />
+        <BentoTile
+          icon={MessageCircle}
+          label="Lederhuset"
+          desc="Off-season-chatten"
+          tone="cream"
+          onClick={() => navigate('/chat')}
+        />
+        <BentoTile
+          icon={Camera}
+          label="Øksnøen POV"
+          desc="Engangskamera"
+          tone="cream"
+          onClick={() => navigate('/pov')}
+        />
+        <BentoTile
+          icon={Crown}
+          label="Øksnøen +"
+          desc="Se abonnementet"
+          tone="gold"
+          dot
+          onClick={() => setPlusOpen(true)}
+        />
+        <BentoTile
+          icon={Lightbulb}
+          label="Feedback"
+          desc="Foreslå nye funksjoner"
+          tone="cream"
+          onClick={() => navigate('/feedback')}
+        />
+      </div>
 
       {/* Låste «premium»-flater — åpner Øksnøen + (kun for gøy) */}
-      <section className="space-y-2">
-        <div className="flex items-center justify-between px-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <section className="space-y-2.5">
+        <div className="flex items-center justify-between px-0.5">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
             Øksnøen <span className="oks-gold-text">+</span>
           </p>
           <button
             type="button"
             onClick={() => setPlusOpen(true)}
-            className="text-[11px] font-semibold oks-gold-text"
+            className="text-[11px] font-bold uppercase tracking-wide oks-gold-text"
           >
             Se alt
           </button>
@@ -142,12 +153,12 @@ export function OffSeasonHome({
         type="button"
         onClick={() => navigate('/lederpass')}
         aria-label="Åpne lederpasset"
-        className="w-full rounded-3xl overflow-hidden border border-border/60 bg-card/60 shadow-sm active:scale-[0.99] transition-transform"
+        className="w-full overflow-hidden rounded-[26px] border border-oks-gold/35 bg-card/70 shadow-oks transition-transform active:scale-[0.99]"
       >
         <div className="h-[60dvh] min-h-[380px] pointer-events-none">
           <LederPass leader={leader} fill periodLabel={periodLabel} />
         </div>
-        <div className="flex items-center justify-center gap-2 py-3 text-sm font-medium text-muted-foreground">
+        <div className="flex items-center justify-center gap-2 border-t border-oks-gold/25 py-3.5 text-sm font-semibold text-oks-red">
           <IdCard className="h-4 w-4" />
           Åpne lederpasset
         </div>

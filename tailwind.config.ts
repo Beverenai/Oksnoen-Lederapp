@@ -76,6 +76,14 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        oks: {
+          red: "hsl(var(--oks-red))",
+          "red-deep": "hsl(var(--oks-red-deep))",
+          navy: "hsl(var(--oks-navy))",
+          cream: "hsl(var(--oks-cream))",
+          gold: "hsl(var(--oks-gold))",
+          "gold-light": "hsl(var(--oks-gold-light))",
+        },
       },
       borderRadius: {
         lg: "var(--radius-card)",
@@ -86,6 +94,7 @@ export default {
       boxShadow: {
         card: "var(--shadow-card)",
         elevated: "var(--shadow-elevated)",
+        oks: "var(--shadow-oks-card)",
       },
       spacing: {
         'ios-1': 'var(--spacing-1)',
