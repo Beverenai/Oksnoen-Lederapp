@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Beer, Crown, Loader2, Minus, Plus, Search, Sparkles } from 'lucide-react';
+import { ArrowLeft, Beer, Crown, Loader2, Minus, Plus, Search, Sparkles, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,8 @@ import { DrinkPicker } from '@/components/offseason/DrinkPicker';
 import { DRINKS, type DrinkType, drinkOf, playDrinkSound } from '@/lib/drinkSounds';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { cn } from '@/lib/utils';
+
+const FAVORITES_KEY = 'oks-slurker-favorites';
 
 function initials(name: string) {
   return name
@@ -41,14 +43,44 @@ export default function Slurker() {
   const [target, setTarget] = useState<{ id: string; name: string; image: string | null } | null>(null);
   const [amount, setAmount] = useState(1);
   const [message, setMessage] = useState('');
-  const { drink: myDrink, setDrink } = useMyDrink();
+  const { drink: myDrink, isSet: drinkIsSet, isLoading: drinkLoading, setDrink } = useMyDrink();
   const [plusOpen, setPlusOpen] = useState(false);
+  const [drinkOpen, setDrinkOpen] = useState(false);
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(FAVORITES_KEY);
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Første gang: spør hva lederen drikker
+  useEffect(() => {
+    if (!drinkLoading && !drinkIsSet) setDrinkOpen(true);
+  }, [drinkLoading, drinkIsSet]);
+
+  const toggleFavorite = (id: string) => {
+    hapticImpact('light');
+    setFavorites((prev) => {
+      const next = prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id];
+      try {
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+      } catch {
+        /* ignorer */
+      }
+      return next;
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = q ? leaders.filter((l) => l.name.toLowerCase().includes(q)) : leaders;
-    return list;
+    return q ? leaders.filter((l) => l.name.toLowerCase().includes(q)) : leaders;
   }, [leaders, query]);
+
+  const favSet = new Set(favorites);
+  const favLeaders = filtered.filter((l) => favSet.has(l.id));
+  const restLeaders = filtered.filter((l) => !favSet.has(l.id));
 
   const received = sips?.received ?? [];
   const given = sips?.given ?? [];
@@ -105,12 +137,24 @@ export default function Slurker() {
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="truncate font-heading text-lg font-bold leading-tight">Gi slurker</h1>
           <p className="text-[11px] text-muted-foreground">
             Du har 10 slurker å dele ut — bruk dem klokt
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            hapticImpact('light');
+            setDrinkOpen(true);
+          }}
+          aria-label="Endre min drikke"
+          className="flex shrink-0 items-center gap-1.5 rounded-full border border-oks-gold/50 bg-oks-gold/10 px-3 py-1.5 active:scale-[0.97]"
+        >
+          <span className="text-[19px] leading-none">{DRINKS[myDrink].emoji}</span>
+          <span className="text-[11.5px] font-bold text-foreground">{DRINKS[myDrink].label}</span>
+        </button>
       </header>
 
       {/* Slurk-banken */}
@@ -265,33 +309,70 @@ export default function Slurker() {
             className="rounded-2xl pl-9"
           />
         </div>
-        <div className="space-y-2">
-          {filtered.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              onClick={() => {
-                hapticImpact('light');
-                setAmount(1);
-                setMessage('');
-                setTarget({ id: l.id, name: l.name, image: l.profile_image_url });
-              }}
-              className="flex w-full items-center gap-3 rounded-[20px] border border-border/60 bg-card/80 p-3 text-left shadow-sm transition-transform active:scale-[0.99]"
-            >
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={l.profile_image_url ?? undefined} alt="" />
-                <AvatarFallback>{initials(l.name)}</AvatarFallback>
-              </Avatar>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-semibold text-foreground">
-                  {l.name}
-                </span>
-                <span className="text-[11px] text-muted-foreground">
-                  {l.is_active ? 'Aktiv i perioden' : 'Off-season'}
-                </span>
-              </span>
-              <Beer className="h-4 w-4 shrink-0 text-oks-gold" />
-            </button>
+        <div className="overflow-hidden rounded-[20px] border border-border/60 bg-card/70">
+          {[
+            ...(favLeaders.length ? [{ label: 'Favoritter', rows: favLeaders }] : []),
+            ...(restLeaders.length
+              ? [{ label: favLeaders.length ? 'Alle ledere' : null, rows: restLeaders }]
+              : []),
+          ].map((group) => (
+            <div key={group.label ?? 'all'}>
+              {group.label && (
+                <p className="border-b border-border/50 bg-muted/40 px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                  {group.label}
+                </p>
+              )}
+              {group.rows.map((l, i) => (
+                <div
+                  key={l.id}
+                  className={cn(
+                    'flex items-center gap-2.5 px-3 py-2',
+                    i > 0 && 'border-t border-border/40',
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      hapticImpact('light');
+                      setAmount(1);
+                      setMessage('');
+                      setTarget({ id: l.id, name: l.name, image: l.profile_image_url });
+                    }}
+                    className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={l.profile_image_url ?? undefined} alt="" />
+                      <AvatarFallback className="text-[11px]">{initials(l.name)}</AvatarFallback>
+                    </Avatar>
+                    <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-foreground">
+                      {l.name}
+                    </span>
+                    {!l.is_active && (
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">
+                        Off
+                      </span>
+                    )}
+                    <span className="shrink-0 text-[16px] leading-none">{DRINKS[myDrink].emoji}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleFavorite(l.id)}
+                    aria-label={favSet.has(l.id) ? `Fjern ${l.name} som favoritt` : `Gjør ${l.name} til favoritt`}
+                    aria-pressed={favSet.has(l.id)}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full active:scale-95"
+                  >
+                    <Star
+                      className={cn(
+                        'h-4 w-4',
+                        favSet.has(l.id)
+                          ? 'fill-oks-gold text-oks-gold'
+                          : 'text-muted-foreground/50',
+                      )}
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
           ))}
           {filtered.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">Ingen ledere funnet.</p>
@@ -325,24 +406,6 @@ export default function Slurker() {
           ))}
         </section>
       )}
-
-      {/* Min drikke */}
-      <section className="rounded-[26px] border border-border/60 bg-card/70 p-4">
-        <div className="mb-3 flex items-baseline justify-between gap-2">
-          <h2 className="font-heading text-[15px] font-bold">Min drikke</h2>
-          <p className="text-[11px] text-muted-foreground">
-            Alle slurker du gir blir {DRINKS[myDrink].label.toLowerCase()} {DRINKS[myDrink].emoji}
-          </p>
-        </div>
-        <DrinkPicker
-          value={myDrink}
-          onChange={(d) => {
-            setDrink.mutate(d, {
-              onError: () => toast.error('Klarte ikke å lagre drikken'),
-            });
-          }}
-        />
-      </section>
 
       {/* Gi-arket */}
       <Sheet open={!!target} onOpenChange={(o) => !o && setTarget(null)}>
@@ -419,6 +482,32 @@ export default function Slurker() {
               </button>
             )}
           </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Min drikke */}
+      <Sheet open={drinkOpen} onOpenChange={setDrinkOpen}>
+        <SheetContent side="bottom" className="rounded-t-[28px] pb-[calc(1.25rem+var(--safe-bottom))]">
+          <SheetHeader className="text-left">
+            <SheetTitle className="font-heading">Hva drikker du?</SheetTitle>
+          </SheetHeader>
+          <p className="mt-1 text-[12.5px] text-muted-foreground">
+            Alle slurker du gir vises og høres som denne drikken. Du kan endre den når som helst
+            øverst på siden.
+          </p>
+          <DrinkPicker
+            className="mt-4"
+            value={myDrink}
+            onChange={(d) => {
+              setDrink.mutate(d, { onError: () => toast.error('Klarte ikke å lagre drikken') });
+            }}
+          />
+          <Button
+            className="mt-4 h-12 w-full rounded-2xl text-[15px] font-bold"
+            onClick={() => setDrinkOpen(false)}
+          >
+            Ferdig {DRINKS[myDrink].emoji}
+          </Button>
         </SheetContent>
       </Sheet>
 
