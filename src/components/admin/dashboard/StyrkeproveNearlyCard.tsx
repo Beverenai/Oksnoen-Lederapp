@@ -256,10 +256,7 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
                 imageUrl={p.imageUrl}
                 thumbUrl={p.thumbUrl}
                 subtitle={p.cabinName ?? undefined}
-                onClick={() => {
-                  setSelected(null);
-                  onParticipantClick(p.id);
-                }}
+                onClick={() => onParticipantClick(p.id)}
               />
             ))}
           </div>
