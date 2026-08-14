@@ -96,6 +96,7 @@ function Tile({ item }: { item: MoreItem }) {
 
 export default function More() {
   const { isAdmin, isNurse, isKitchen, isSuperAdmin, isLimitedAccess, logout, leader, effectiveLeader } = useAuth();
+  const navigate = useNavigate();
   const { mode: appMode } = useAppMode();
   const limited = (appMode === 'inactive' || isLimitedAccess) && !isSuperAdmin;
   const sweatersEnabled = useSweatersEnabled();
