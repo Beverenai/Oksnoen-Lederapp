@@ -21,6 +21,7 @@ import {
   ChefHat,
   Mail,
   HeartHandshake,
+  Flame,
   LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -233,6 +234,7 @@ export default function More() {
               } as MoreItem,
             ]
           : []),
+        { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder' } as MoreItem,
       ],
     },
     {
@@ -256,6 +258,7 @@ export default function More() {
           badge: incomingHookups,
         },
         { to: '/snus', icon: Circle, label: 'Snus' },
+        { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder' },
         { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
         { to: '/profile', icon: User, label: 'Min Profil' },
         { icon: Crown, label: 'Øksnøen +', onClick: () => setPlusOpen(true) },

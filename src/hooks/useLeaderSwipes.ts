@@ -97,7 +97,7 @@ export function useMyMatches() {
  * ones), minus myself, everyone I already swiped, and my existing matches.
  */
 export function useSwipeCandidates() {
-  const { leader } = useAuth();
+  const { leader, isLimitedAccess } = useAuth();
   const myId = leader?.id;
   const { data: swipes = [], isLoading: swipesLoading } = useMySwipes();
   const { data: matches = [] } = useMyMatches();
@@ -138,9 +138,10 @@ export function useSwipeCandidates() {
         l.id !== myId &&
         !swiped.has(l.id) &&
         !matched.has(l.id) &&
-        (l.is_active === false || l.is_external === true),
+        // Aktive ledere kan sveipe på alle; inaktive ser off-season-utvalget.
+        (!isLimitedAccess || l.is_active === false || l.is_external === true),
     );
-  }, [base.data, swipes, matches, myId]);
+  }, [base.data, swipes, matches, myId, isLimitedAccess]);
 
   return {
     candidates,
