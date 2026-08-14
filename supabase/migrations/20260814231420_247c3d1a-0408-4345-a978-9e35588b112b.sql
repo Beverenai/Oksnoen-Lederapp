@@ -1,0 +1,2 @@
+CREATE POLICY "Admins view all matches" ON public.leader_matches FOR SELECT TO authenticated USING (public.is_admin());
+CREATE POLICY "Admins view all swipes" ON public.leader_swipes FOR SELECT TO authenticated USING (public.is_admin());
