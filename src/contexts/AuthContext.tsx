@@ -192,6 +192,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       console.log('[Auth] Leader found:', leaderData.name);
 
+      // Slettede ledere mister tilgang (data beholdes i databasen)
+      if ((leaderData as any).deleted_at) {
+        console.warn('[Auth] Leader is deleted — signing out');
+        setAuthError('Kontoen din er ikke aktiv i appen lenger.');
+        await supabase.auth.signOut();
+        return;
+      }
+
       // 2. Load roles
       let roles: AppRole[] = [];
       try {
