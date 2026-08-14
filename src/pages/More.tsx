@@ -38,7 +38,7 @@ import { useMailboxUnreadCount } from '@/hooks/useMailbox';
 import { useHookupsEnabled, useIncomingHookupCount } from '@/hooks/useHookups';
 import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute } from '@/lib/limitedAccess';
-import { IdCard, MessageCircle, Circle, Crown } from 'lucide-react';
+import { IdCard, MessageCircle, Circle, Crown, Camera } from 'lucide-react';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 
@@ -236,6 +236,7 @@ export default function More() {
             ]
           : []),
         { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder' } as MoreItem,
+        { to: '/pov', icon: Camera, label: 'Øksnøen POV' } as MoreItem,
         { icon: Crown, label: 'Øksnøen +', onClick: () => setPlusOpen(true) } as MoreItem,
         { to: '/feedback', icon: Lightbulb, label: 'Feedback' } as MoreItem,
       ],
@@ -262,6 +263,7 @@ export default function More() {
         },
         { to: '/snus', icon: Circle, label: 'Snus' },
         { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder' },
+        { to: '/pov', icon: Camera, label: 'Øksnøen POV' },
         { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
         { to: '/profile', icon: User, label: 'Min Profil' },
         { icon: Crown, label: 'Øksnøen +', onClick: () => setPlusOpen(true) },

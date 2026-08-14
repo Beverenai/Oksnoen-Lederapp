@@ -3367,6 +3367,137 @@ export type Database = {
         }
         Relationships: []
       }
+      pov_photo_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          leader_id: string
+          photo_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leader_id: string
+          photo_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leader_id?: string
+          photo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pov_photo_reactions_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pov_photo_reactions_photo_id_fkey"
+            columns: ["photo_id"]
+            isOneToOne: false
+            referencedRelation: "pov_photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pov_photos: {
+        Row: {
+          created_at: string
+          hidden: boolean
+          id: string
+          leader_id: string
+          roll_id: string
+          storage_path: string
+          taken_at: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hidden?: boolean
+          id?: string
+          leader_id: string
+          roll_id: string
+          storage_path: string
+          taken_at?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hidden?: boolean
+          id?: string
+          leader_id?: string
+          roll_id?: string
+          storage_path?: string
+          taken_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pov_photos_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pov_photos_roll_id_fkey"
+            columns: ["roll_id"]
+            isOneToOne: false
+            referencedRelation: "pov_rolls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pov_rolls: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          developed_at: string | null
+          id: string
+          reveal_at: string | null
+          season_year: number
+          shots_per_leader: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          developed_at?: string | null
+          id?: string
+          reveal_at?: string | null
+          season_year?: number
+          shots_per_leader?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          developed_at?: string | null
+          id?: string
+          reveal_at?: string | null
+          season_year?: number
+          shots_per_leader?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pov_rolls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       push_subscriptions: {
         Row: {
           auth: string | null
@@ -4685,6 +4816,25 @@ export type Database = {
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
       mark_fix_task_fixed: { Args: { _task_id: string }; Returns: undefined }
+      pov_current_roll: {
+        Args: never
+        Returns: {
+          developed_at: string
+          id: string
+          my_shots_left: number
+          photo_count: number
+          reveal_at: string
+          shots_per_leader: number
+          status: string
+          title: string
+        }[]
+      }
+      pov_develop_roll: { Args: { _roll_id: string }; Returns: undefined }
+      pov_my_shots_left: { Args: { _roll_id: string }; Returns: number }
+      pov_take_photo: {
+        Args: { _roll_id: string; _storage_path: string }
+        Returns: string
+      }
       record_kiosk_sale: {
         Args: { _client_ref?: string; _items: Json; _participant_id: string }
         Returns: string

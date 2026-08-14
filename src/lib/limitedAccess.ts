@@ -14,6 +14,7 @@ export const LIMITED_ACCESS_ROUTES = [
   '/kline-tinder',
   '/snus',
   '/feedback',
+  '/pov',
 ] as const;
 
 export function isLimitedAccessRoute(path: string): boolean {

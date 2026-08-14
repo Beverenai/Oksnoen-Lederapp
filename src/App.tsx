@@ -28,6 +28,7 @@ import NotFound from "@/pages/NotFound";
 const Profile = lazy(() => import("@/pages/Profile"));
 const SnusPage = lazy(() => import("@/pages/SnusPage"));
 const FeedbackPage = lazy(() => import("@/pages/Feedback"));
+const PovPage = lazy(() => import("@/pages/Pov"));
 const Leaders = lazy(() => import("@/pages/Leaders"));
 const Team = lazy(() => import("@/pages/Team"));
 const Passport = lazy(() => import("@/pages/Passport"));
@@ -252,6 +253,7 @@ function AppRoutes() {
         <Route path="/kline-tinder" element={<ProtectedRoute><KlineTinder /></ProtectedRoute>} />
         <Route path="/snus" element={<ProtectedRoute><SnusPage /></ProtectedRoute>} />
         <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
+        <Route path="/pov" element={<ProtectedRoute><PovPage /></ProtectedRoute>} />
         <Route path="/liggeliste" element={<Navigate to="/klineliste" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

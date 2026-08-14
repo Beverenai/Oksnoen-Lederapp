@@ -32,6 +32,7 @@ import { GjenglemtSettingsTab } from '@/components/admin/settings/GjenglemtSetti
 import { NursePeriodsTab } from '@/components/admin/NursePeriodsTab';
 import { RouletteTasksTab } from '@/components/admin/RouletteTasksTab';
 import { MurderGameTab } from '@/components/admin/MurderGameTab';
+import { PovTab } from '@/components/admin/PovTab';
 import { BookingsTab } from '@/components/admin/BookingsTab';
 import { SweatersTab } from '@/components/admin/SweatersTab';
 import { KioskProductsTab } from '@/components/admin/KioskProductsTab';
@@ -333,6 +334,9 @@ export function AdminSettingsContent({
 
     case 'murder':
       return <MurderGameTab />;
+
+    case 'pov':
+      return <PovTab />;
 
     case 'bookings':
       return <BookingsTab />;
