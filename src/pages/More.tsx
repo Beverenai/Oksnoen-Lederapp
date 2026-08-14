@@ -259,6 +259,7 @@ export default function More() {
     {
       label: 'Off-season',
       items: [
+        { to: '/pov', icon: Camera, label: 'Øksnøen POV', desc: 'Engangskamera', tone: 'paper', size: 'lg' },
         { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder', desc: 'Sveip på ledere', tone: 'sunset', size: 'lg' },
         { to: '/lederpass', icon: IdCard, label: 'Lederpass', desc: 'Stempler', tone: 'red' },
         {
@@ -266,15 +267,14 @@ export default function More() {
           icon: HeartHandshake,
           label: 'Klineliste',
           desc: 'Kartet',
-          tone: 'navy',
+          tone: 'night',
           badge: incomingHookups,
         },
-        { to: '/snus', icon: Circle, label: 'Snus', desc: 'Din boks', tone: 'cream' },
-        { to: '/pov', icon: Camera, label: 'Øksnøen POV', desc: 'Engangskamera', tone: 'cream' },
-        { to: '/chat', icon: MessageCircle, label: 'Lederhuset', desc: 'Chatten', tone: 'cream' },
+        { to: '/snus', icon: Circle, label: 'Snus', desc: 'Din boks', tone: 'night' },
+        { to: '/chat', icon: MessageCircle, label: 'Lederhuset', desc: 'Chatten', tone: 'forest' },
         { to: '/profile', icon: User, label: 'Min Profil', desc: 'Bilde og info', tone: 'cream' },
         { icon: Crown, label: 'Øksnøen +', desc: 'Se abonnementet', tone: 'gold', onClick: () => setPlusOpen(true) },
-        { to: '/feedback', icon: Lightbulb, label: 'Feedback', desc: 'Nye ideer', tone: 'cream' },
+        { to: '/feedback', icon: Lightbulb, label: 'Feedback', desc: 'Nye ideer', tone: 'paper' },
       ],
     },
     {
@@ -339,6 +339,7 @@ export default function More() {
                     desc={item.desc}
                     tone={item.tone ?? 'cream'}
                     size={item.size ?? 'sm'}
+                    torn={item.size === 'lg'}
                     count={item.badge || undefined}
                     onClick={() => {
                       if (item.to) navigate(item.to);
