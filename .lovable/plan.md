@@ -1,36 +1,38 @@
-# Off-season: nattmørkt design + nytt POV-hovedbilde
+# Off-season: retro papir-design + nytt POV-hovedbilde
 
 ## Hva du får
-En off-season-opplevelse som ser ut som skjermbildet: dyp nattblå bakgrunn, POV som stort hero-kort med bilde og «Ta neste bilde», rød Tinder-flis og mørkegrønn Lederhuset-flis side om side, to smale fliser (Klineliste, Snus), og en mørk rød Lederpass-stripe med profilbilde, navn og gull-merker.
+Off-season-flatene får et retro «fotoalbum»-preg som i mockupen: mørk nattblå bakgrunn, POV som en stabel med polaroid-rammer i papir, Tinder og Lederhuset som avrevne papirstrimler med rød/mørkegrønn tekstur, Klineliste + Snus som en delt strimmel, og Lederpasset som et bokbind i mørk rød skinn med gullkant.
 
-Det opplastede Øksnøen-bildet (regatta-skiltet) blir hovedbildet for POV — brukt både i POV-hero på hjem og øverst på POV-siden. Bildet ligger sidelengs, så det roteres til riktig retning før bruk.
+Det opplastede Øksnøen-bildet (regatta-skiltet) blir POV-hovedbildet — i POV-stabelen på hjem og øverst på `/pov`. Bildet ligger sidelengs, så det roteres til riktig retning før bruk.
 
 ## Endringer
 
 ### 1. POV-hovedbilde
-- Roter det opplastede bildet til riktig retning og last det opp som CDN-asset.
-- Bruk det som bakgrunn i POV-hero-kortet på off-season-hjem og som header-bilde på `/pov`, med mørk gradient over slik at tekst og knapp er lesbare.
+- Roter det opplastede bildet og last det opp som CDN-asset.
+- Brukes som bildet i POV-polaroid-kortet på hjem og som header-bilde på POV-siden, med mørk gradient over for lesbar tekst.
 
-### 2. Nattmørk off-season-palett
-- Utvid `oks-offseason-bg` med en mørk nattvariant: dyp navy/nesten svart bakgrunn med svak rød/gull glød øverst.
-- Nye flis-toner: `night` (mørk navy), `forest` (mørkegrønn til Lederhuset), sterkere rød til Tinder, mørk rød + gullkant til Lederpass.
-- Kort blir mørke flater med lys krem tekst — samme tokens, ingen hardkodede farger.
+### 2. Retro papir-lag (bruker det som allerede finnes)
+Prosjektet har alt `ivory-paper.webp` og `red-bookcloth.webp` som assets — de gjenbrukes som teksturer i stedet for nye bilder.
+- Nye CSS-hjelpere: `.oks-paper-frame` (kremhvit polaroid-ramme med lett rotasjon og skygge), `.oks-torn-strip` (avrevet papirkant via mask), `.oks-bookcloth` (rødt bokbind til Lederpasset), samt fint korn/vignett-overlegg.
+- Mørk nattpalett: dyp navy bakgrunn, teal-aksent, gull og mørkegrønn — som tokens i `index.css`, ingen hardkodede farger.
 
 ### 3. Hjem (off-season)
-- Header: logo + «Off-season»-chip + «Hei, {navn} 👋» på et mørkt bilde-topp.
-- POV-hero: fullbredde kort med bildet, «X av Y bilder», framdriftslinje og «Ta neste bilde»-knapp.
-- Rad 2: Øksnøen Tinder (rød, høy) + Lederhuset (mørkegrønn, høy, med varselprikk).
-- Rad 3: Klineliste + Snus (Snus beholder 3D-boksen).
-- Nederst: Lederpass-stripe (avatar, navn, rolle- og periode-merker) som åpner passet. Øksnøen + og Feedback flyttes til Mer for å holde hjem ryddig.
+- Header: logo + «Off-season»-chip + «Hei, {navn} 👋» over et mørkt kveldsbilde.
+- POV: polaroid-stabel (2–3 papirlag bak) med kameraikon, «X av Y bilder», framdriftslinje og «Ta neste bilde»-knapp. Messing-kamerarunding øverst til høyre.
+- Øksnøen Tinder: rød papirstrimmel i full bredde.
+- Lederhuset: mørkegrønn papirstrimmel med rødt antall-merke.
+- Klineliste + Snus: en delt mørk strimmel med skillelinje (Snus beholder 3D-boksen).
+- Lederpass: bokbind-stripe med avatar, navn, gull-merker (rolle + periode) og gullemblem.
+- Øksnøen + og Feedback flyttes til Mer så hjem holdes ryddig.
 
 ### 4. Mer + undersider
-- `Mer`-rutenettet får samme mørke fliser og toner.
-- `Pov`, `Klineliste`, `SnusPage`, `Feedback` bruker den mørke bakgrunnen og samme header-stil.
+- `Mer` får samme papir/mørke stil på flisene.
+- `Pov`, `Klineliste`, `SnusPage`, `Feedback` får den mørke bakgrunnen og samme retro header-stil.
 
 ## Teknisk
-- `src/index.css`: nye night/forest-tokens og mørk `oks-offseason-bg`-variant; `tailwind.config.ts` utvides tilsvarende.
-- `src/components/offseason/BentoTile.tsx`: nye toner + støtte for bilde-bakgrunn/hero-variant med CTA.
-- `src/components/home/OffSeasonHome.tsx`: ny layout iht. skjermbildet.
-- `src/pages/More.tsx`, `Pov.tsx`, `Klineliste.tsx`, `SnusPage.tsx`, `Feedback.tsx`: mørk bakgrunn og toner.
+- `src/index.css` + `tailwind.config.ts`: nattpalett-tokens (navy/teal/grønn/gull) og papir-hjelperklasser med de eksisterende tekstur-assetene.
+- `src/components/offseason/BentoTile.tsx`: nye varianter — `polaroid` (bilde + CTA), `strip` (avrevet strimmel), `split` (to-i-en), `bookcloth`.
+- `src/components/home/OffSeasonHome.tsx`: ny layout iht. mockupen.
+- `src/pages/More.tsx`, `Pov.tsx`, `Klineliste.tsx`, `SnusPage.tsx`, `Feedback.tsx`: bakgrunn og header.
 - Bildet lastes opp via `lovable-assets` og importeres som pointer-JSON (ingen binærfil i repoet).
-- Ingen endringer i data, roller eller logikk.
+- Rotasjon/teksturer holdes lette (CSS-masker og eksisterende webp) så det ikke går utover ytelsen på iPhone. Ingen endringer i data eller logikk.
