@@ -22,6 +22,7 @@ import {
   Mail,
   HeartHandshake,
   Flame,
+  Lightbulb,
   LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -236,6 +237,7 @@ export default function More() {
           : []),
         { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder' } as MoreItem,
         { icon: Crown, label: 'Øksnøen +', onClick: () => setPlusOpen(true) } as MoreItem,
+        { to: '/feedback', icon: Lightbulb, label: 'Feedback' } as MoreItem,
       ],
     },
     {
@@ -263,6 +265,7 @@ export default function More() {
         { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
         { to: '/profile', icon: User, label: 'Min Profil' },
         { icon: Crown, label: 'Øksnøen +', onClick: () => setPlusOpen(true) },
+        { to: '/feedback', icon: Lightbulb, label: 'Feedback' },
       ],
     },
     {
