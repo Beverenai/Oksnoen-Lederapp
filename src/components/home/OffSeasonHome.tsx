@@ -6,7 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { SnusCan3D } from '@/components/snus/SnusCan3D';
 import { getSnusProduct, customSnusProduct } from '@/lib/snusCatalog';
 import { useIncomingHookupCount } from '@/hooks/useHookups';
-import { useSipsLeft, useUnopenedSipCount } from '@/hooks/useSips';
+import { useSipsLeft, useUnopenedSipCount, useMyDrink } from '@/hooks/useSips';
+import { DRINKS } from '@/lib/drinkSounds';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import { BentoTile } from '@/components/offseason/BentoTile';
@@ -31,6 +32,7 @@ export function OffSeasonHome({
   const navigate = useNavigate();
   const incomingHookups = useIncomingHookupCount();
   const { data: sipsLeft = 0 } = useSipsLeft();
+  const { drink: myDrink } = useMyDrink();
   const unopenedSips = useUnopenedSipCount();
   const { data: povRoll } = usePovCurrentRoll();
   const povLeft = povRoll?.my_shots_left ?? 0;
