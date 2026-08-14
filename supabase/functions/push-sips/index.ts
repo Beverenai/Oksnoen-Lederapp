@@ -89,7 +89,7 @@ serve(async (req) => {
 
     const { data: sip } = await supabaseAdmin
       .from("leader_sips")
-      .select("id, from_leader_id, to_leader_id, amount, message, notified_at")
+      .select("id, from_leader_id, to_leader_id, amount, message, drink_type, notified_at")
       .eq("id", sipId)
       .maybeSingle();
     if (!sip) return json({ error: "Not found" }, 404);
@@ -117,8 +117,14 @@ serve(async (req) => {
     }
 
     const amount = Number(sip.amount) || 1;
-    const title = "🍺 Du har fått slurker";
-    const message = `${caller.name} ga deg ${amount} ${amount === 1 ? "slurk" : "slurker"}${
+    const drinkType = sip.drink_type === "wine" || sip.drink_type === "drink" ? sip.drink_type : "beer";
+    const drinkMeta = {
+      beer: { emoji: "🍺", label: "øl", sound: "sip-beer.caf" },
+      wine: { emoji: "🍷", label: "vin", sound: "sip-wine.caf" },
+      drink: { emoji: "🍸", label: "drink", sound: "sip-drink.caf" },
+    }[drinkType];
+    const title = `${drinkMeta.emoji} Du har fått slurker`;
+    const message = `${caller.name} ga deg ${amount} ${amount === 1 ? "slurk" : "slurker"} ${drinkMeta.label}${
       sip.message ? ` — «${sip.message}»` : ""
     }`;
     const url = "/slurker";
@@ -146,14 +152,14 @@ serve(async (req) => {
       .select("*")
       .eq("leader_id", recipientId);
 
-    const payloadData = JSON.stringify({ title, body: message, url, badge });
+    const payloadData = JSON.stringify({ title, body: message, url, badge, drink: drinkType });
     let sent = 0;
     let failed = 0;
 
     for (const sub of (subscriptions ?? []) as Array<Record<string, string>>) {
       if (sub.channel === "apns") {
         if (!apnsCfg) continue;
-        const res = await sendApnsAlert(apnsCfg, sub.native_token, { title, body: message, url, badge });
+        const res = await sendApnsAlert(apnsCfg, sub.native_token, { title, body: message, url, badge, sound: drinkMeta.sound });
         if (res.ok) sent++;
         else {
           failed++;
