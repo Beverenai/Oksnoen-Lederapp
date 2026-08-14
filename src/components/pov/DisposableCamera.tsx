@@ -11,73 +11,111 @@ type Props = {
   onClose: () => void;
 };
 
-/** Renders the video frame with a disposable-camera look onto a canvas. */
-function developFrame(
+const MONTHS_NO = [
+  'JAN', 'FEB', 'MAR', 'APR', 'MAI', 'JUN',
+  'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DES',
+];
+
+/** Longest side of the saved photo — keeps full sensor detail without huge files. */
+const MAX_LONG_SIDE = 2400;
+
+let stampFontLoaded: Promise<void> | null = null;
+
+/** Pixel stamp font, loaded once and ignored if it fails. */
+function loadStampFont(): Promise<void> {
+  if (stampFontLoaded) return stampFontLoaded;
+  stampFontLoaded = (async () => {
+    try {
+      const face = new FontFace(
+        'PovStamp',
+        "url(https://fonts.gstatic.com/s/silkscreen/v3/m8JXjfVPf62XiF7kO-i9ULQ4.woff2) format('woff2')",
+      );
+      const loaded = await face.load();
+      (document.fonts as FontFaceSet).add(loaded);
+    } catch {
+      /* fall back to monospace */
+    }
+  })();
+  return stampFontLoaded;
+}
+
+/**
+ * Draws the live frame at full sensor resolution with a clean, bright grade:
+ * light contrast + saturation lift, a whisper of grain and a soft vignette.
+ */
+async function developFrame(
   video: HTMLVideoElement,
   mirrored: boolean,
   stamp: boolean,
 ): Promise<Blob> {
-  const targetW = 1200;
-  const targetH = 900; // 4:3
-  const canvas = document.createElement('canvas');
-  canvas.width = targetW;
-  canvas.height = targetH;
-  const ctx = canvas.getContext('2d')!;
+  const vw = video.videoWidth || 1440;
+  const vh = video.videoHeight || 1920;
 
-  // Cover-crop the video into 4:3
-  const vw = video.videoWidth || targetW;
-  const vh = video.videoHeight || targetH;
-  const scale = Math.max(targetW / vw, targetH / vh);
-  const dw = vw * scale;
-  const dh = vh * scale;
-  const dx = (targetW - dw) / 2;
-  const dy = (targetH - dh) / 2;
+  // Keep the camera's own aspect ratio — no crop, no lost pixels.
+  const scale = Math.min(1, MAX_LONG_SIDE / Math.max(vw, vh));
+  const w = Math.round(vw * scale);
+  const h = Math.round(vh * scale);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { alpha: false })!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
   ctx.save();
+  // Clean grade: crisp and bright, not a heavy vintage filter.
+  try {
+    ctx.filter = 'saturate(1.1) contrast(1.06) brightness(1.03)';
+  } catch {
+    /* older engines just get the raw frame */
+  }
   if (mirrored) {
-    ctx.translate(targetW, 0);
+    ctx.translate(w, 0);
     ctx.scale(-1, 1);
   }
-  ctx.drawImage(video, dx, dy, dw, dh);
+  ctx.drawImage(video, 0, 0, w, h);
   ctx.restore();
 
-  // Warm film tone
+  // Barely-there warm highlight so skin tones glow like the reference shot.
   ctx.globalCompositeOperation = 'soft-light';
-  ctx.fillStyle = 'rgba(255, 176, 92, 0.28)';
-  ctx.fillRect(0, 0, targetW, targetH);
+  ctx.fillStyle = 'rgba(255, 196, 140, 0.10)';
+  ctx.fillRect(0, 0, w, h);
   ctx.globalCompositeOperation = 'source-over';
 
-  // Vignette
+  // Soft vignette, just enough to hold the eye in the frame.
   const grad = ctx.createRadialGradient(
-    targetW / 2, targetH / 2, targetH * 0.25,
-    targetW / 2, targetH / 2, targetH * 0.8,
+    w / 2, h / 2, Math.min(w, h) * 0.45,
+    w / 2, h / 2, Math.max(w, h) * 0.75,
   );
   grad.addColorStop(0, 'rgba(0,0,0,0)');
-  grad.addColorStop(1, 'rgba(0,0,0,0.42)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.16)');
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, targetW, targetH);
+  ctx.fillRect(0, 0, w, h);
 
-  // Grain
-  const grainCount = Math.round((targetW * targetH) / 90);
-  ctx.globalAlpha = 0.055;
+  // Fine grain (very subtle, scaled to the frame so it never looks noisy).
+  const grainCount = Math.round((w * h) / 900);
+  ctx.globalAlpha = 0.03;
   for (let i = 0; i < grainCount; i++) {
-    const x = Math.random() * targetW;
-    const y = Math.random() * targetH;
     ctx.fillStyle = Math.random() > 0.5 ? '#ffffff' : '#000000';
-    ctx.fillRect(x, y, 1.4, 1.4);
+    ctx.fillRect(Math.random() * w, Math.random() * h, 1, 1);
   }
   ctx.globalAlpha = 1;
 
-  // Date stamp
   if (stamp) {
+    await loadStampFont();
     const d = new Date();
-    const text = `${String(d.getDate()).padStart(2, '0')} ${String(d.getMonth() + 1).padStart(2, '0')} '${String(d.getFullYear()).slice(2)}`;
-    ctx.font = 'bold 46px "Courier New", monospace';
-    ctx.textAlign = 'right';
-    ctx.shadowColor = 'rgba(255,120,0,0.9)';
-    ctx.shadowBlur = 18;
-    ctx.fillStyle = '#ff9d3d';
-    ctx.fillText(text, targetW - 42, targetH - 44);
+    const text = `POV CAMERA • ${String(d.getDate()).padStart(2, '0')} ${MONTHS_NO[d.getMonth()]} ${d.getFullYear()}`;
+    const size = Math.round(Math.min(w, h) * 0.032);
+    ctx.font = `${size}px PovStamp, "Courier New", monospace`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.shadowColor = 'rgba(255, 106, 0, 0.85)';
+    ctx.shadowBlur = size * 0.55;
+    ctx.fillStyle = '#ff8a1f';
+    const margin = Math.round(Math.min(w, h) * 0.055);
+    ctx.fillText(text, margin, h - margin);
+    ctx.fillText(text, margin, h - margin); // second pass for the glowing burn-in
     ctx.shadowBlur = 0;
   }
 
@@ -85,7 +123,7 @@ function developFrame(
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error('Klarte ikke lagre bildet'))),
       'image/jpeg',
-      0.86,
+      0.94,
     );
   });
 }
