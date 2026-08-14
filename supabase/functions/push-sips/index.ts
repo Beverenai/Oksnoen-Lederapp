@@ -117,12 +117,16 @@ serve(async (req) => {
     }
 
     const amount = Number(sip.amount) || 1;
-    const drinkType = sip.drink_type === "wine" || sip.drink_type === "drink" ? sip.drink_type : "beer";
-    const drinkMeta = {
+    const DRINK_META: Record<string, { emoji: string; label: string; sound: string }> = {
       beer: { emoji: "🍺", label: "øl", sound: "sip-beer.caf" },
       wine: { emoji: "🍷", label: "vin", sound: "sip-wine.caf" },
       drink: { emoji: "🍸", label: "drink", sound: "sip-drink.caf" },
-    }[drinkType];
+      vodka: { emoji: "🍹", label: "vodkadrink", sound: "sip-drink.caf" },
+      champagne: { emoji: "🥂", label: "champagne", sound: "sip-wine.caf" },
+      shot: { emoji: "🥃", label: "shot", sound: "sip-shot.caf" },
+    };
+    const drinkType = DRINK_META[sip.drink_type as string] ? (sip.drink_type as string) : "beer";
+    const drinkMeta = DRINK_META[drinkType];
     const title = `${drinkMeta.emoji} Du har fått slurker`;
     const message = `${caller.name} ga deg ${amount} ${amount === 1 ? "slurk" : "slurker"} ${drinkMeta.label}${
       sip.message ? ` — «${sip.message}»` : ""
