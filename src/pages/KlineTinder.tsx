@@ -41,6 +41,7 @@ export default function KlineTinder() {
         hapticImpact('heavy');
       }
     } catch {
+      setDismissed((prev) => prev.filter((id) => id !== targetId));
       toast.error('Klarte ikke å lagre sveipet');
     }
   };
