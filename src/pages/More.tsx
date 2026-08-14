@@ -40,7 +40,7 @@ import { useHookupsEnabled, useIncomingHookupCount } from '@/hooks/useHookups';
 import { useUnopenedSipCount } from '@/hooks/useSips';
 import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute } from '@/lib/limitedAccess';
-import { IdCard, MessageCircle, Circle, Crown, Camera } from 'lucide-react';
+import { IdCard, MessageCircle, Circle, Crown, Camera, ChevronRight } from 'lucide-react';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { TinderIcon } from '@/components/icons/TinderIcon';
 import { usePovCurrentRoll } from '@/hooks/usePov';
@@ -264,48 +264,27 @@ export default function More() {
   const firstName = (leader?.name || '').split(' ')[0] || '';
 
   // Off-season / inactive leaders: only the allowed surfaces.
+  // Off-season: hjemskjermen har allerede POV, Tinder, Slurker, Klineliste og Snus,
+  // så «Mer» er en kompakt liste med resten – ingen doble knapper.
   const limitedSections: MoreSection[] = [
     {
-      label: 'Off-season',
+      label: 'Ditt',
       items: [
-        {
-          to: '/pov',
-          icon: Camera,
-          label: 'POV',
-          desc: povRoll ? `${povShotsLeft} bilder igjen` : 'Ingen film i kameraet',
-          tone: 'paper',
-          size: 'lg',
-          image: povHero.url,
-        },
-        { to: '/kline-tinder', icon: TinderIcon, label: 'Tinder', desc: 'Sveip på ledere', tone: 'sunset', size: 'lg' },
-        {
-          to: '/slurker',
-          icon: Beer,
-          label: 'Gi slurker',
-          desc: '10 slurker å dele ut',
-          tone: 'red',
-          size: 'lg',
-          badge: unopenedSips,
-        },
-        { to: '/lederpass', icon: IdCard, label: 'Lederpass', desc: 'Stempler', tone: 'red' },
-        {
-          to: '/klineliste',
-          icon: HeartHandshake,
-          label: 'Klineliste',
-          desc: 'Kartet',
-          tone: 'night',
-          badge: incomingHookups,
-        },
-        { to: '/snus', icon: Circle, label: 'Snus', desc: 'Din boks', tone: 'night' },
-        { to: '/chat', icon: MessageCircle, label: 'Lederhuset', desc: 'Chatten', tone: 'forest' },
-        { to: '/profile', icon: User, label: 'Min Profil', desc: 'Bilde og info', tone: 'cream' },
-        { icon: Crown, label: 'Øksnøen +', desc: 'Se abonnementet', tone: 'gold', onClick: () => setPlusOpen(true) },
-        { to: '/feedback', icon: Lightbulb, label: 'Feedback', desc: 'Nye ideer', tone: 'paper' },
+        { to: '/lederpass', icon: IdCard, label: 'Lederpass', desc: 'Stemplene dine' },
+        { to: '/profile', icon: User, label: 'Min Profil', desc: 'Bilde, snus og drikke' },
+        { to: '/chat', icon: MessageCircle, label: 'Lederhuset', desc: 'Off-season-chatten' },
+      ],
+    },
+    {
+      label: 'Mer moro',
+      items: [
+        { icon: Crown, label: 'Øksnøen +', desc: 'Se abonnementet', onClick: () => setPlusOpen(true) },
+        { to: '/feedback', icon: Lightbulb, label: 'Feedback', desc: 'Foreslå nye funksjoner' },
       ],
     },
     {
       label: 'Konto',
-      items: [{ icon: LogOut, label: 'Logg ut', tone: 'cream', onClick: () => logout() }],
+      items: [{ icon: LogOut, label: 'Logg ut', onClick: () => logout() }],
     },
   ];
 
@@ -356,25 +335,41 @@ export default function More() {
               {section.label}
             </div>
             {limited ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="overflow-hidden rounded-[22px] border border-border/60 bg-card/70 backdrop-blur">
                 {section.items.map((item, i) => (
-                  <BentoTile
+                  <button
                     key={`${section.label}-${i}`}
-                    icon={item.icon}
-                    label={item.label}
-                    desc={item.desc}
-                    tone={item.tone ?? 'cream'}
-                    size={item.size ?? 'sm'}
-                    image={item.image}
-                    count={item.badge || undefined}
+                    type="button"
                     onClick={() => {
+                      hapticImpact('light');
                       if (item.to) navigate(item.to);
                       else item.onClick?.();
                     }}
-                    className={
-                      item.size === 'lg' || item.size === 'md' ? 'sm:col-span-2' : undefined
-                    }
-                  />
+                    className={cn(
+                      'flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-muted/40',
+                      i > 0 && 'border-t border-border/50',
+                    )}
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-oks-gold/15 text-oks-gold">
+                      <item.icon className="h-[18px] w-[18px]" strokeWidth={1.9} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14.5px] font-semibold text-foreground">
+                        {item.label}
+                      </span>
+                      {item.desc && (
+                        <span className="block truncate text-[11.5px] text-muted-foreground">
+                          {item.desc}
+                        </span>
+                      )}
+                    </span>
+                    {!!item.badge && item.badge > 0 && (
+                      <span className="min-w-[1.25rem] rounded-full bg-destructive px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-destructive-foreground">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </button>
                 ))}
               </div>
             ) : (
