@@ -12,6 +12,7 @@ import { StatTile } from '@/components/admin/dashboard/StatTile';
 import { DashCard, EmptyLine } from '@/components/admin/dashboard/DashCard';
 import { ParticipantChip } from '@/components/admin/dashboard/ParticipantChip';
 import { StyrkeproveNearlyCard } from '@/components/admin/dashboard/StyrkeproveNearlyCard';
+import { SessionActivitiesCard } from '@/components/admin/dashboard/SessionActivitiesCard';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -126,6 +127,11 @@ export default function AdminDashboard() {
               </div>
             </section>
             <StatTile label="Aktive ledere" value={data.activeLeaders} hint="denne perioden" onClick={() => navigate('/leaders')} />
+          </div>
+
+          {/* Aktiviteter denne økten — redigerbart rett fra dashboardet */}
+          <div className="mt-3">
+            <SessionActivitiesCard />
           </div>
 
           <div className="mt-3 grid gap-3 lg:grid-cols-3">
