@@ -114,6 +114,17 @@ export default function AdminSettings() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Mobil: appens tilbake-pil lukker seksjonen i stedet for å forlate siden,
+  // så vi slipper to piler på skjermen.
+  useEffect(() => {
+    if (!activeSection) return;
+    window.history.pushState({ adminSection: activeSection }, '');
+    const onPop = () => setActiveSection('');
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [activeSection]);
+
   const deactivateAllLeaders = async () => {
     if (!confirm('Reset periode: Dette vil deaktivere alle nåværende ledere.\n\nNår du syncer nye ledere, vil de som matcher (basert på telefonnummer) automatisk bli aktivert igjen med sin lagrede info (profilbilde, notater osv).')) return;
 
@@ -289,7 +300,12 @@ export default function AdminSettings() {
       <>
         <div className="space-y-6">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setActiveSection('')}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden lg:inline-flex"
+              onClick={() => window.history.back()}
+            >
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-2xl font-heading font-bold text-foreground">
