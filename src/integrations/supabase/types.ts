@@ -1802,6 +1802,8 @@ export type Database = {
           can_rope_setup: boolean | null
           can_zipline: boolean | null
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           email: string | null
           gender: string | null
           has_boat_license: boolean | null
@@ -1836,6 +1838,8 @@ export type Database = {
           can_rope_setup?: boolean | null
           can_zipline?: boolean | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
           gender?: string | null
           has_boat_license?: boolean | null
@@ -1870,6 +1874,8 @@ export type Database = {
           can_rope_setup?: boolean | null
           can_zipline?: boolean | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
           gender?: string | null
           has_boat_license?: boolean | null
@@ -1894,7 +1900,15 @@ export type Database = {
           team?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "leaders_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mailbox_messages: {
         Row: {
@@ -4895,6 +4909,7 @@ export type Database = {
         Args: { _client_ref?: string; _items: Json; _participant_id: string }
         Returns: string
       }
+      restore_leader: { Args: { _leader_id: string }; Returns: undefined }
       revive_and_reshuffle_murder: {
         Args: { _count?: number }
         Returns: {
@@ -4908,6 +4923,7 @@ export type Database = {
         Args: { _period_id?: string }
         Returns: number
       }
+      soft_delete_leader: { Args: { _leader_id: string }; Returns: undefined }
       start_murder_game: { Args: { _leader_ids: string[] }; Returns: string }
       swipe_leader: {
         Args: { _liked: boolean; _target: string }
