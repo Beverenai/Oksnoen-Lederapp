@@ -164,7 +164,7 @@ export default function Pov() {
           {photosLoading ? (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="aspect-[4/3] w-full rounded-xl" />
+                <Skeleton key={i} className="aspect-[3/4] w-full rounded-xl" />
               ))}
             </div>
           ) : shown.length === 0 ? (
