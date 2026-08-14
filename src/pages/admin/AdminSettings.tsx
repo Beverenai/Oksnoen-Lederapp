@@ -114,6 +114,17 @@ export default function AdminSettings() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Mobil: appens tilbake-pil lukker seksjonen i stedet for å forlate siden,
+  // så vi slipper to piler på skjermen.
+  useEffect(() => {
+    if (!activeSection) return;
+    window.history.pushState({ adminSection: activeSection }, '');
+    const onPop = () => setActiveSection('');
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [activeSection]);
+
   const deactivateAllLeaders = async () => {
     if (!confirm('Reset periode: Dette vil deaktivere alle nåværende ledere.\n\nNår du syncer nye ledere, vil de som matcher (basert på telefonnummer) automatisk bli aktivert igjen med sin lagrede info (profilbilde, notater osv).')) return;
 
