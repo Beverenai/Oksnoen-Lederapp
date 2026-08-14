@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Crown,
   X,
@@ -80,13 +81,13 @@ export function OksnoenPlusDialog({
     onOpenChange(false);
   };
 
-  return (
+  const content = (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Øksnøen +"
-      className="fixed inset-0 z-[70] flex flex-col bg-background animate-in slide-in-from-bottom duration-300"
-      style={{ height: '100dvh' }}
+      className="fixed inset-0 z-[120] flex flex-col overflow-hidden bg-background animate-in slide-in-from-bottom duration-300"
+      style={{ height: '100dvh', paddingBottom: 0 }}
     >
       {/* Topp */}
       <div className="relative shrink-0 overflow-hidden">
