@@ -35,7 +35,7 @@ export function PovPolaroidCard({ className }: { className?: string }) {
           hapticImpact('medium');
           navigate('/pov');
         }}
-        className="oks-paper oks-paper-frame relative block w-full text-left transition-transform active:scale-[0.99]"
+        className="oks-paper oks-paper-frame relative block w-full !pb-2.5 text-left transition-transform active:scale-[0.99]"
       >
         <span className="oks-grain relative block overflow-hidden rounded-[2px]">
           <img
@@ -54,11 +54,11 @@ export function PovPolaroidCard({ className }: { className?: string }) {
             </span>
           </span>
           <span className="absolute right-2.5 top-2.5 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--gradient-oks-gold)] text-oks-red-deep shadow-oks">
-            <Camera className="h-4.5 w-4.5" strokeWidth={2.2} />
+            <Camera className="h-4 w-4" strokeWidth={2.2} />
           </span>
         </span>
 
-        <span className="absolute inset-x-3 bottom-1.5 flex items-center gap-2.5">
+        <span className="relative mt-2.5 flex items-center gap-2.5 px-0.5 pb-0.5">
           <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
             <span
               className="absolute inset-0 rounded-full"
