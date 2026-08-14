@@ -39,11 +39,37 @@ const drinkIcon: Record<DrinkType, typeof Beer> = {
 
 export function HomeNotifications() {
   const navigate = useNavigate();
+  const { leader } = useAuth();
   const [open, setOpen] = useState(false);
+  const [leaderMap, setLeaderMap] = useState<Map<string, { name: string; image: string | null }>>(new Map());
   const { data: sipsData } = useMySips();
   const { incoming: hookups } = useMyHookups();
   const { data: matches = [] } = useMyMatches();
   const { data: mailboxMessages = [] } = useMyMailboxMessages();
+
+  useEffect(() => {
+    const ids = Array.from(
+      new Set(
+        hookups.map((h) => (h.leader_a_id === leader?.id ? h.leader_b_id : h.leader_a_id)),
+      ),
+    ).filter(Boolean);
+    if (!ids.length) {
+      setLeaderMap(new Map());
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('leaders')
+      .select('id, name, profile_image_url')
+      .in('id', ids)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const map = new Map<string, { name: string; image: string | null }>();
+        (data ?? []).forEach((l) => map.set(l.id, { name: l.name, image: l.profile_image_url ?? null }));
+        setLeaderMap(map);
+      });
+    return () => { cancelled = true; };
+  }, [hookups, leader?.id]);
 
   const notifications = useMemo<NotificationItem[]>(() => {
     const list: NotificationItem[] = [];
