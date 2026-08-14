@@ -1428,6 +1428,48 @@ export type Database = {
           },
         ]
       }
+      leader_match_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          match_id: string
+          read_at: string | null
+          sender_leader_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          match_id: string
+          read_at?: string | null
+          sender_leader_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          match_id?: string
+          read_at?: string | null
+          sender_leader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_match_messages_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "leader_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_match_messages_sender_leader_id_fkey"
+            columns: ["sender_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leader_matches: {
         Row: {
           created_at: string
@@ -4561,6 +4603,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_in_match: { Args: { _match_id: string }; Returns: boolean }
       is_kitchen: { Args: never; Returns: boolean }
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
