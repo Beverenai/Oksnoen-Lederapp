@@ -261,7 +261,7 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
           </div>
 
           {/* Viewfinder */}
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-black">
+          <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-black">
             <video
               ref={videoRef}
               playsInline
@@ -269,7 +269,7 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
               className={cn(
                 'h-full w-full object-cover',
                 facing === 'user' && 'scale-x-[-1]',
-                'saturate-[0.9] contrast-[1.05] sepia-[0.12]',
+                'saturate-[1.1] contrast-[1.06] brightness-[1.03]',
               )}
             />
             {/* Frame guides */}
