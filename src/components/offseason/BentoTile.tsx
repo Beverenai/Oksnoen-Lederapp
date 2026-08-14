@@ -47,6 +47,8 @@ export type BentoTileProps = {
   dot?: boolean;
   locked?: boolean;
   visual?: ReactNode;
+  /** Bakgrunnsbilde – gjør flisen til et fotokort */
+  image?: string;
   /** Avrevet papirkant nederst — gir retro-preg */
   torn?: boolean;
   onClick: () => void;
@@ -63,11 +65,63 @@ export function BentoTile({
   count,
   dot,
   visual,
+  image,
   torn,
   onClick,
   className,
 }: BentoTileProps) {
   const wide = size !== 'sm';
+
+  if (image) {
+    return (
+      <button
+        type="button"
+        aria-label={label}
+        onClick={() => {
+          hapticImpact('light');
+          onClick();
+        }}
+        className={cn(
+          'relative flex min-h-[168px] items-end overflow-hidden rounded-[22px] border border-oks-gold/25 text-left shadow-oks transition-transform active:scale-[0.98]',
+          sizeClass[size],
+          'p-0',
+          className,
+        )}
+      >
+        <img src={image} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+        <span
+          aria-hidden
+          className="absolute inset-0 bg-[linear-gradient(to_top,hsl(var(--oks-night-deep)/0.92)_0%,hsl(var(--oks-night-deep)/0.45)_45%,transparent_85%)]"
+        />
+        <span className="relative z-10 flex w-full items-end gap-3 p-4">
+          <span
+            className={cn(
+              'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-oks-cream/15 text-oks-cream backdrop-blur',
+            )}
+          >
+            {visual ?? <Icon className="h-5.5 w-5.5" strokeWidth={2} />}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-heading text-[18px] font-bold leading-tight text-oks-cream">
+              {label}
+            </span>
+            {desc && (
+              <span className="mt-0.5 block text-[11.5px] font-semibold uppercase tracking-[0.16em] text-oks-gold">
+                {desc}
+              </span>
+            )}
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-oks-cream/70" />
+        </span>
+        {count ? (
+          <span className="absolute right-2.5 top-2.5 z-10 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+            {count > 99 ? '99+' : count}
+          </span>
+        ) : null}
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
