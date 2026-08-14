@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -108,8 +108,7 @@ export function useSwipeCandidates() {
       const [leadersRes, periodsRes] = await Promise.all([
         supabase
           .from('leaders')
-          .select('id, name, profile_image_url, snus_user, snus_product_id, snus_custom_label, is_active, is_external')
-          .order('name'),
+          .select('id, name, profile_image_url, snus_user, snus_product_id, snus_custom_label, is_active, is_external'),
         supabase.from('leader_service_periods').select('leader_id, year'),
       ]);
 
@@ -130,10 +129,25 @@ export function useSwipeCandidates() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Stable random order: every leader gets a random key once, so the deck
+  // does not jump around when one card is removed.
+  const randomKeys = useRef<Map<string, number>>(new Map());
+  useMemo(() => {
+    const map = randomKeys.current;
+    const ids = (base.data ?? []).map((l) => l.id);
+    ids.forEach((id) => {
+      if (!map.has(id)) map.set(id, Math.random());
+    });
+    const idSet = new Set(ids);
+    for (const key of Array.from(map.keys())) {
+      if (!idSet.has(key)) map.delete(key);
+    }
+  }, [base.data]);
+
   const candidates = useMemo(() => {
     const swiped = new Set(swipes.map((s) => s.target_leader_id));
     const matched = new Set(matches.map((m) => m.leaderId));
-    return (base.data ?? []).filter(
+    const filtered = (base.data ?? []).filter(
       (l) =>
         l.id !== myId &&
         !swiped.has(l.id) &&
@@ -141,6 +155,11 @@ export function useSwipeCandidates() {
         // Aktive ledere kan sveipe på alle; inaktive ser off-season-utvalget.
         (!isLimitedAccess || l.is_active === false || l.is_external === true),
     );
+    return filtered.sort((a, b) => {
+      const ka = randomKeys.current.get(a.id) ?? 0;
+      const kb = randomKeys.current.get(b.id) ?? 0;
+      return ka - kb;
+    });
   }, [base.data, swipes, matches, myId, isLimitedAccess]);
 
   return {
