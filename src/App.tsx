@@ -29,6 +29,7 @@ const Profile = lazy(() => import("@/pages/Profile"));
 const SnusPage = lazy(() => import("@/pages/SnusPage"));
 const FeedbackPage = lazy(() => import("@/pages/Feedback"));
 const PovPage = lazy(() => import("@/pages/Pov"));
+const SlurkerPage = lazy(() => import("@/pages/Slurker"));
 const Leaders = lazy(() => import("@/pages/Leaders"));
 const Team = lazy(() => import("@/pages/Team"));
 const Passport = lazy(() => import("@/pages/Passport"));
@@ -254,6 +255,7 @@ function AppRoutes() {
         <Route path="/snus" element={<ProtectedRoute><SnusPage /></ProtectedRoute>} />
         <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
         <Route path="/pov" element={<ProtectedRoute><PovPage /></ProtectedRoute>} />
+        <Route path="/slurker" element={<ProtectedRoute><SlurkerPage /></ProtectedRoute>} />
         <Route path="/liggeliste" element={<Navigate to="/klineliste" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

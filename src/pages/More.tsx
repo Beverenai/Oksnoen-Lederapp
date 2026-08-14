@@ -23,6 +23,7 @@ import {
   HeartHandshake,
   Flame,
   Lightbulb,
+  Beer,
   LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -36,6 +37,7 @@ import { hapticImpact } from '@/lib/capacitorHaptics';
 import { LederPassMini } from '@/components/passport/LederPassMini';
 import { useMailboxUnreadCount } from '@/hooks/useMailbox';
 import { useHookupsEnabled, useIncomingHookupCount } from '@/hooks/useHookups';
+import { useUnopenedSipCount } from '@/hooks/useSips';
 import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute } from '@/lib/limitedAccess';
 import { IdCard, MessageCircle, Circle, Crown, Camera } from 'lucide-react';
@@ -106,6 +108,7 @@ export default function More() {
   const { data: mailboxUnread } = useMailboxUnreadCount(!!isAdmin);
   const hookupsEnabled = useHookupsEnabled();
   const incomingHookups = useIncomingHookupCount();
+  const unopenedSips = useUnopenedSipCount();
   const [hasScheduleImage, setHasScheduleImage] = useState(false);
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
@@ -271,6 +274,15 @@ export default function More() {
           image: povHero.url,
         },
         { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder', desc: 'Sveip på ledere', tone: 'sunset', size: 'lg' },
+        {
+          to: '/slurker',
+          icon: Beer,
+          label: 'Gi slurker',
+          desc: '10 slurker å dele ut',
+          tone: 'red',
+          size: 'lg',
+          badge: unopenedSips,
+        },
         { to: '/lederpass', icon: IdCard, label: 'Lederpass', desc: 'Stempler', tone: 'red' },
         {
           to: '/klineliste',

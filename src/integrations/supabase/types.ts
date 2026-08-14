@@ -1663,6 +1663,57 @@ export type Database = {
           },
         ]
       }
+      leader_sips: {
+        Row: {
+          amount: number
+          created_at: string
+          from_leader_id: string
+          id: string
+          message: string | null
+          notified_at: string | null
+          opened_at: string | null
+          season_year: number
+          to_leader_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          from_leader_id: string
+          id?: string
+          message?: string | null
+          notified_at?: string | null
+          opened_at?: string | null
+          season_year?: number
+          to_leader_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          from_leader_id?: string
+          id?: string
+          message?: string | null
+          notified_at?: string | null
+          opened_at?: string | null
+          season_year?: number
+          to_leader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_sips_from_leader_id_fkey"
+            columns: ["from_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_sips_to_leader_id_fkey"
+            columns: ["to_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leader_swipes: {
         Row: {
           created_at: string
@@ -4803,6 +4854,10 @@ export type Database = {
           updated_at: string
         }[]
       }
+      give_sips: {
+        Args: { _amount: number; _message?: string; _to: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _leader_id: string
@@ -4816,6 +4871,7 @@ export type Database = {
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
       mark_fix_task_fixed: { Args: { _task_id: string }; Returns: undefined }
+      my_sips_left: { Args: never; Returns: number }
       pov_current_roll: {
         Args: never
         Returns: {
