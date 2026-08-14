@@ -78,9 +78,10 @@ export default function Pov() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-5 pb-8">
+    <div className="oks-offseason-bg mx-auto -mx-4 w-full max-w-2xl space-y-6 px-4 pb-8 pt-1">
       <header className="pt-1">
-        <h1 className="font-heading text-2xl font-bold text-foreground">Øksnøen POV</h1>
+        <h1 className="font-heading text-[26px] font-bold leading-tight text-foreground">Øksnøen POV</h1>
+        <span className="mt-2 mb-1.5 block h-1 w-10 rounded-full bg-[var(--gradient-oks-sunset)]" />
         <p className="text-sm text-muted-foreground">
           Engangskamera. Ingen forhåndsvisning – alt avsløres når filmen utvikles.
         </p>
