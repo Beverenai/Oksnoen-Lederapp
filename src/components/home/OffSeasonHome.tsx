@@ -69,11 +69,8 @@ export function OffSeasonHome({
           Off-season
         </span>
         <h1 className="mt-3 font-heading text-[28px] font-bold leading-tight text-foreground">
-          Hei{firstName ? `, ${firstName}` : ''} <span aria-hidden>👋</span>
+          Hei{firstName ? ` ${firstName}` : ''}
         </h1>
-        <p className="mt-1 max-w-[26rem] text-sm text-muted-foreground">
-          Kameraet, passet og klinelista er åpne året rundt.
-        </p>
       </header>
 
       {/* POV som fotokort — samme stil som i Mer-menyen */}
