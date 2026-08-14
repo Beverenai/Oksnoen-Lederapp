@@ -36,7 +36,7 @@ export function PovGrid({ photos, onToggleReaction, isAdmin, onHide, onDelete }:
               hapticImpact('light');
               setOpenIndex(i);
             }}
-            className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-border/60 bg-muted"
+            className="group relative aspect-[3/4] overflow-hidden rounded-xl border border-border/60 bg-muted"
           >
             {photo.signedUrl ? (
               <img
