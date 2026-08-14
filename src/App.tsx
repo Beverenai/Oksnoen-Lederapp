@@ -33,6 +33,7 @@ const loadMore = () => import("@/pages/More");
 
 const Profile = lazy(loadProfile);
 const SnusPage = lazy(() => import("@/pages/SnusPage"));
+const FeedbackPage = lazy(() => import("@/pages/Feedback"));
 const Leaders = lazy(loadLeaders);
 const Team = lazy(() => import("@/pages/Team"));
 const Passport = lazy(loadPassport);
@@ -261,6 +262,7 @@ function AppRoutes() {
           <Route path="/klineliste" element={<Klineliste />} />
           <Route path="/kline-tinder" element={<KlineTinder />} />
           <Route path="/snus" element={<SnusPage />} />
+          <Route path="/feedback" element={<FeedbackPage />} />
           <Route path="/liggeliste" element={<Navigate to="/klineliste" replace />} />
         </Route>
 
