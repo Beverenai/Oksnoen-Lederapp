@@ -42,6 +42,7 @@ import { IdCard, MessageCircle, Circle, Crown, Camera } from 'lucide-react';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import { BentoTile, type BentoTone, type BentoSize } from '@/components/offseason/BentoTile';
+import povHero from '@/assets/pov-hero.jpg.asset.json';
 
 type MoreItem = {
   to?: string;
