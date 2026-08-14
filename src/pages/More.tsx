@@ -235,6 +235,7 @@ export default function More() {
             ]
           : []),
         { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder' } as MoreItem,
+        { icon: Crown, label: 'Øksnøen +', onClick: () => setPlusOpen(true) } as MoreItem,
       ],
     },
     {
