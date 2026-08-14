@@ -375,6 +375,21 @@ export function RichNoteEditor({ noteId, initialContent, onChange }: RichNoteEdi
           const text = target.textContent || '';
           if (target.isContentEditable === false) return;
           if (/^\s*[☐☑]/.test(text) && target !== ref.current) {
+            // Kun kryss av når man faktisk treffer selve boksen, ikke teksten
+            const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+            const firstText = walker.nextNode() as Text | null;
+            if (!firstText) return;
+            const boxIndex = firstText.data.search(/[☐☑]/);
+            if (boxIndex < 0) return;
+            const boxRange = document.createRange();
+            boxRange.setStart(firstText, boxIndex);
+            boxRange.setEnd(firstText, boxIndex + 1);
+            const rect = boxRange.getBoundingClientRect();
+            const pad = 6;
+            const hitBox =
+              e.clientX >= rect.left - pad && e.clientX <= rect.right + pad
+              && e.clientY >= rect.top - pad && e.clientY <= rect.bottom + pad;
+            if (!hitBox) return;
             target.textContent = text.startsWith('☐')
               ? text.replace('☐', '☑')
               : text.replace('☑', '☐');
