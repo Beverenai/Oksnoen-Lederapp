@@ -89,7 +89,7 @@ export default function Slurker() {
           type="button"
           onClick={() => navigate(-1)}
           aria-label="Tilbake"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card"
+          className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card lg:flex"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>

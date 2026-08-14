@@ -10,7 +10,9 @@ import { useSipsLeft, useUnopenedSipCount } from '@/hooks/useSips';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import { BentoTile } from '@/components/offseason/BentoTile';
-import { PovPolaroidCard } from '@/components/offseason/PovPolaroidCard';
+import { usePovCurrentRoll } from '@/hooks/usePov';
+import povHero from '@/assets/pov-hero.jpg.asset.json';
+import { Camera } from 'lucide-react';
 import { LederpassStrip } from '@/components/offseason/LederpassStrip';
 import type { Leader } from '@/types/database';
 
@@ -30,6 +32,8 @@ export function OffSeasonHome({
   const incomingHookups = useIncomingHookupCount();
   const { data: sipsLeft = 0 } = useSipsLeft();
   const unopenedSips = useUnopenedSipCount();
+  const { data: povRoll } = usePovCurrentRoll();
+  const povLeft = povRoll?.my_shots_left ?? 0;
   const [mySnus, setMySnus] = useState<{ productId: string | null; customLabel: string | null } | null>(null);
   const [plusOpen, setPlusOpen] = useState(false);
 
@@ -70,27 +74,39 @@ export function OffSeasonHome({
         </p>
       </header>
 
-      {/* POV som polaroid-stabel */}
-      <PovPolaroidCard className="mt-1" />
+      {/* POV som fotokort — samme stil som i Mer-menyen */}
+      <BentoTile
+        icon={Camera}
+        label="POV"
+        desc={povRoll ? `${povLeft} bilder igjen` : 'Ingen film i kameraet'}
+        tone="paper"
+        size="lg"
+        image={povHero.url}
+        onClick={() => navigate('/pov')}
+        className="mt-1"
+      />
 
       {/* Avrevne papirstrimler */}
       <div className="grid grid-cols-2 gap-3">
         <BentoTile
           icon={TinderIcon}
           label="Tinder"
-          desc="Sveip på ledere — match hvis begge sveiper ja"
+          desc="Sveip på ledere"
           tone="sunset"
           size="lg"
-          torn
+          visual={<TinderIcon className="h-6 w-6" />}
+          className="bg-[linear-gradient(140deg,#ff6036_0%,#fd267d_55%,#e1136b_100%)] border-white/25 text-white [&_*]:!opacity-100"
           onClick={() => navigate('/kline-tinder')}
         />
         <BentoTile
           icon={Beer}
           label="Gi slurker"
-          desc={`${sipsLeft} igjen å dele ut`}
+          desc={`${'🍺'.repeat(Math.min(sipsLeft, 5))} ${sipsLeft} igjen`}
           tone="red"
           size="lg"
+          visual={<span className="text-[26px] leading-none">🍺</span>}
           count={unopenedSips || undefined}
+          className="bg-[linear-gradient(140deg,#f7b733_0%,#e08908_50%,#a8410a_100%)] border-oks-gold/50 text-white"
           onClick={() => navigate('/slurker')}
         />
         <BentoTile
