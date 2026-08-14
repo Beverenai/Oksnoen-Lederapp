@@ -247,13 +247,52 @@ async function shot(ctx: AudioContext) {
   return 1.3;
 }
 
-/** Spiller lyden som hører til drikketypen. */
-export async function playDrinkSound(type: DrinkType | string | null | undefined) {
+/** Ekte lydfiler (Pixabay) – se public/sounds/LICENSE.txt */
+const FILES: Partial<Record<DrinkType, string>> = {
+  beer: '/sounds/sip-beer.mp3',
+  wine: '/sounds/sip-wine.mp3',
+  drink: '/sounds/sip-drink.mp3',
+  vodka: '/sounds/sip-drink.mp3',
+  champagne: '/sounds/sip-wine.mp3',
+};
+
+const cache = new Map<string, HTMLAudioElement>();
+
+function preload(src: string) {
+  let el = cache.get(src);
+  if (!el) {
+    el = new Audio(src);
+    el.preload = 'auto';
+    cache.set(src, el);
+  }
+  return el;
+}
+
+/** Laster inn lydfilene i bakgrunnen slik at avspilling blir umiddelbar. */
+export function preloadDrinkSounds() {
+  if (typeof Audio === 'undefined') return;
+  Object.values(FILES).forEach((src) => src && preload(src));
+}
+
+/** Prøver ekte lydfil – returnerer false hvis den ikke kan spilles. */
+async function playFile(src: string): Promise<boolean> {
+  if (typeof Audio === 'undefined') return false;
+  try {
+    // Klon slik at raske gjentatte avspillinger ikke avbryter hverandre.
+    const node = preload(src).cloneNode(true) as HTMLAudioElement;
+    node.volume = 1;
+    await node.play();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function playSynth(t: DrinkType) {
   try {
     const ctx = newCtx();
     if (!ctx) return;
     if (ctx.state === 'suspended') await ctx.resume();
-    const t = drinkOf(typeof type === 'string' ? type : 'beer');
     let dur = 1.5;
     if (t === 'wine') dur = await wine(ctx);
     else if (t === 'drink') dur = await cocktail(ctx);
@@ -265,4 +304,12 @@ export async function playDrinkSound(type: DrinkType | string | null | undefined
   } catch {
     /* lyd er bonus – aldri kritisk */
   }
+}
+
+/** Spiller lyden som hører til drikketypen. */
+export async function playDrinkSound(type: DrinkType | string | null | undefined) {
+  const t = drinkOf(typeof type === 'string' ? type : 'beer');
+  const src = FILES[t];
+  if (src && (await playFile(src))) return;
+  await playSynth(t);
 }
