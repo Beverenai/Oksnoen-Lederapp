@@ -133,7 +133,7 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
   const streamRef = useRef<MediaStream | null>(null);
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   const [flashOn, setFlashOn] = useState(true);
-  const [stamp, setStamp] = useState(true);
+  const stamp = true;
   const [flashing, setFlashing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -320,16 +320,9 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
               <Camera className="h-7 w-7" strokeWidth={2.2} />
             </button>
 
-            <button
-              type="button"
-              onClick={() => setStamp((s) => !s)}
-              className={cn(
-                'rounded-full px-3 py-1.5 font-mono text-[11px]',
-                stamp ? 'bg-amber-300/90 text-neutral-900' : 'bg-white/10 text-white/60',
-              )}
-            >
+            <span className="rounded-full bg-amber-300/90 px-3 py-1.5 font-mono text-[11px] text-neutral-900">
               Dato
-            </button>
+            </span>
           </div>
 
           <p className="mt-3 text-center text-[11px] leading-snug text-white/40">
