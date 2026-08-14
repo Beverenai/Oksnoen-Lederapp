@@ -131,7 +131,7 @@ export function BentoTile({
         onClick();
       }}
       className={cn(
-        'oks-grain relative flex overflow-hidden border text-left shadow-oks transition-transform active:scale-[0.98]',
+        'oks-grain group relative isolate flex overflow-hidden border text-left shadow-[0_18px_38px_-22px_hsl(var(--oks-night-deep)/0.95),inset_0_1px_0_hsl(var(--oks-cream)/0.14)] transition-all duration-200 active:scale-[0.98] hover:-translate-y-[1px]',
         torn ? 'rounded-[6px] pb-6' : 'rounded-[22px]',
         wide ? 'items-center gap-3.5' : 'flex-col justify-between gap-2.5',
         toneClass[tone],
@@ -139,6 +139,15 @@ export function BentoTile({
         className,
       )}
     >
+      {/* Dybde: mykt lys øverst til venstre + skygge nederst */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -left-6 -top-10 -z-10 h-28 w-28 rounded-full bg-oks-cream/12 blur-2xl"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-[linear-gradient(to_top,hsl(var(--oks-night-deep)/0.35),transparent)]"
+      />
       {torn && (
         <span
           aria-hidden
@@ -147,7 +156,7 @@ export function BentoTile({
       )}
       <span
         className={cn(
-          'flex shrink-0 items-center justify-center rounded-2xl',
+          'flex shrink-0 items-center justify-center rounded-2xl ring-1 ring-inset ring-oks-cream/15 shadow-[inset_0_1px_0_hsl(var(--oks-cream)/0.25)]',
           iconWrapClass[tone],
           wide ? 'h-12 w-12' : 'h-10 w-10',
         )}
