@@ -306,4 +306,7 @@ export function OksnoenPlusDialog({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return content;
+  return createPortal(content, document.body);
 }
