@@ -349,7 +349,7 @@ export default function More() {
                     desc={item.desc}
                     tone={item.tone ?? 'cream'}
                     size={item.size ?? 'sm'}
-                    torn={item.size === 'lg'}
+                    image={item.image}
                     count={item.badge || undefined}
                     onClick={() => {
                       if (item.to) navigate(item.to);
