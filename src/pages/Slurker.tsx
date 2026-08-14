@@ -274,7 +274,6 @@ export default function Slurker() {
                 hapticImpact('light');
                 setAmount(1);
                 setMessage('');
-                setDrinkType('beer');
                 setTarget({ id: l.id, name: l.name, image: l.profile_image_url });
               }}
               className="flex w-full items-center gap-3 rounded-[20px] border border-border/60 bg-card/80 p-3 text-left shadow-sm transition-transform active:scale-[0.99]"
