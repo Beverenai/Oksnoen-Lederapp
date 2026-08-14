@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trophy, Medal, AlertCircle, Info, ChevronDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState, ReactNode } from "react";
+import { useState, useMemo, ReactNode } from "react";
 import { ParticipantDetailDialog } from "@/components/passport/ParticipantDetailDialog";
 import {
   hasStoreStyrkprove,
@@ -109,6 +109,9 @@ export function StyrkeproveTab() {
     },
   });
 
+  const rows = data || [];
+  const allSorted = useMemo(() => [...rows].sort((a, b) => a.name.localeCompare(b.name)), [rows]);
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -119,7 +122,7 @@ export function StyrkeproveTab() {
     );
   }
 
-  const rows = data || [];
+  const currentIndex = selectedParticipantId ? allSorted.findIndex((r) => r.id === selectedParticipantId) : -1;
 
   const storeDone: ParticipantRow[] = [];
   const lilleDone: ParticipantRow[] = [];
@@ -379,6 +382,9 @@ export function StyrkeproveTab() {
         participantId={selectedParticipantId}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        participantIds={allSorted.map((r) => r.id)}
+        currentIndex={currentIndex}
+        onNavigate={(idx) => setSelectedParticipantId(allSorted[idx].id)}
       />
     </div>
   );

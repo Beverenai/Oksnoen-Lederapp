@@ -18,7 +18,7 @@ import { useSeasonView } from '@/contexts/SeasonViewContext';
 import { fetchSeasonParticipants } from '@/hooks/useSeasonParticipants';
 import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X, ChevronDown, Maximize2, Send } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Send } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
@@ -85,6 +85,10 @@ interface ParticipantDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onParticipantUpdated?: () => void;
+  // Optional list for sequential navigation without closing the dialog
+  participantIds?: string[];
+  currentIndex?: number;
+  onNavigate?: (index: number) => void;
 }
 
 // Fetch participant detail directly from Supabase
@@ -305,6 +309,9 @@ export const ParticipantDetailDialog = ({
   open,
   onOpenChange,
   onParticipantUpdated,
+  participantIds,
+  currentIndex: currentIndexProp,
+  onNavigate,
 }: ParticipantDetailDialogProps) => {
   const { leader, isAdmin, isNurse } = useAuth();
   const { showSuccess, showError, showInfo } = useStatusPopup();
@@ -419,6 +426,28 @@ export const ParticipantDetailDialog = ({
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     if (savedIndicatorTimerRef.current) clearTimeout(savedIndicatorTimerRef.current);
   }, [participantId, open]);
+
+  // Optional sequential navigation through a list of participants without closing the dialog
+  const navigationIndex = currentIndexProp ?? (participantId && participantIds ? participantIds.indexOf(participantId) : -1);
+  const hasNavigation = participantIds && participantIds.length > 1 && onNavigate !== undefined;
+  const canGoPrev = hasNavigation && navigationIndex > 0;
+  const canGoNext = hasNavigation && navigationIndex >= 0 && navigationIndex < participantIds.length - 1;
+  const goPrev = () => {
+    if (canGoPrev && onNavigate) onNavigate(navigationIndex - 1);
+  };
+  const goNext = () => {
+    if (canGoNext && onNavigate) onNavigate(navigationIndex + 1);
+  };
+
+  useEffect(() => {
+    if (!hasNavigation || !open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') goPrev();
+      else if (e.key === 'ArrowRight') goNext();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasNavigation, open, navigationIndex, onNavigate]);
 
   const saveActivityNotes = useCallback(async (participantToSave: ParticipantWithCabin, value: string) => {
     const { error } = await supabase
@@ -800,6 +829,34 @@ export const ParticipantDetailDialog = ({
                   </Badge>
                 </div>
               </ResponsiveDialogHeader>
+
+              {hasNavigation && (
+                <div className="sticky top-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border z-10">
+                  <div className="flex items-center justify-between gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      onClick={goPrev}
+                      disabled={!canGoPrev}
+                    >
+                      <ChevronLeft className="h-4 w-4" /> Forrige
+                    </Button>
+                    <span className="text-sm font-medium text-muted-foreground tabular-nums">
+                      {navigationIndex + 1} / {participantIds.length}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      onClick={goNext}
+                      disabled={!canGoNext}
+                    >
+                      Neste <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 {/* Total poeng — kun når Lag er aktivt */}
