@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Camera, Film, Clock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
