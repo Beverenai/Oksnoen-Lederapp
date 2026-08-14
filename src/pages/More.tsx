@@ -271,6 +271,15 @@ export default function More() {
           image: povHero.url,
         },
         { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder', desc: 'Sveip på ledere', tone: 'sunset', size: 'lg' },
+        {
+          to: '/slurker',
+          icon: Beer,
+          label: 'Gi slurker',
+          desc: '10 slurker å dele ut',
+          tone: 'red',
+          size: 'lg',
+          badge: unopenedSips,
+        },
         { to: '/lederpass', icon: IdCard, label: 'Lederpass', desc: 'Stempler', tone: 'red' },
         {
           to: '/klineliste',
