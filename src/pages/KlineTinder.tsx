@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Heart, Loader2, Sparkles, Trash2, Users } from 'lucide-react';
+import { ArrowLeft, Heart, Loader2, MessageCircle, Sparkles, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { SwipeCard } from '@/components/klineliste/SwipeCard';
 import {
@@ -12,6 +12,8 @@ import {
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { cn } from '@/lib/utils';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
+import { MatchChatSheet } from '@/components/klineliste/MatchChatSheet';
+import { useMatchUnread } from '@/hooks/useMatchChat';
 
 type Tab = 'deck' | 'matches';
 
@@ -21,11 +23,13 @@ export default function KlineTinder() {
   const [dismissed, setDismissed] = useState<string[]>([]);
   const [matchName, setMatchName] = useState<string | null>(null);
   const [plusOpen, setPlusOpen] = useState(false);
+  const [chat, setChat] = useState<{ id: string; name: string; image: string | null } | null>(null);
 
   const { candidates, isLoading } = useSwipeCandidates();
   const { data: matches = [] } = useMyMatches();
   const swipe = useSwipeLeader();
   const unmatch = useUnmatch();
+  const { data: unread = {} } = useMatchUnread();
 
   const dismissedSet = new Set(dismissed);
   const deck = candidates.filter((c) => !dismissedSet.has(c.id));
@@ -139,6 +143,11 @@ export default function KlineTinder() {
                 key={m.id}
                 className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card/60 p-3"
               >
+                <button
+                  type="button"
+                  onClick={() => setChat({ id: m.id, name: m.name, image: m.profile_image_url })}
+                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                >
                 {m.profile_image_url ? (
                   <img
                     src={m.profile_image_url}
@@ -152,16 +161,34 @@ export default function KlineTinder() {
                 )}
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{m.name}</p>
-                  <p className="text-[11px] text-muted-foreground">Dere sveipet ja på hverandre</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {unread[m.id] ? `${unread[m.id]} nye meldinger` : 'Trykk for å chatte'}
+                  </p>
                 </div>
+                </button>
+                <div className="ml-auto flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setChat({ id: m.id, name: m.name, image: m.profile_image_url })}
+                    aria-label={`Chat med ${m.name}`}
+                    className="relative flex h-9 w-9 items-center justify-center rounded-full border border-border/60 text-primary"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    {!!unread[m.id] && (
+                      <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                        {unread[m.id]}
+                      </span>
+                    )}
+                  </button>
                 <button
                   type="button"
                   onClick={() => unmatch.mutate(m.id)}
                   aria-label="Fjern match"
-                  className="ml-auto flex h-9 w-9 items-center justify-center rounded-full border border-border/60 text-muted-foreground"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-border/60 text-muted-foreground"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
+                </div>
               </div>
             ))}
           </div>
@@ -187,6 +214,16 @@ export default function KlineTinder() {
       )}
 
       <OksnoenPlusDialog open={plusOpen} onOpenChange={setPlusOpen} />
+
+      {chat && (
+        <MatchChatSheet
+          open
+          matchId={chat.id}
+          name={chat.name}
+          imageUrl={chat.image}
+          onClose={() => setChat(null)}
+        />
+      )}
     </div>
   );
 }
