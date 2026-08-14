@@ -258,8 +258,6 @@ const FILES: Partial<Record<DrinkType, string>> = {
   beer: '/sounds/sip-beer.mp3',
   wine: '/sounds/sip-wine.mp3',
   drink: '/sounds/sip-drink.mp3',
-  vodka: '/sounds/sip-drink.mp3',
-  champagne: '/sounds/sip-wine.mp3',
 };
 
 const cache = new Map<string, HTMLAudioElement>();
@@ -302,9 +300,6 @@ async function playSynth(t: DrinkType) {
     let dur = 1.5;
     if (t === 'wine') dur = await wine(ctx);
     else if (t === 'drink') dur = await cocktail(ctx);
-    else if (t === 'vodka') dur = await cocktail(ctx, 6);
-    else if (t === 'champagne') dur = await champagne(ctx);
-    else if (t === 'shot') dur = await shot(ctx);
     else dur = await beer(ctx);
     window.setTimeout(() => ctx.close().catch(() => {}), (dur + 0.3) * 1000);
   } catch {
