@@ -13,7 +13,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
-import { useGiveSips, useMySips, useOpenSip, useSipLeaders, useSipsLeft } from '@/hooks/useSips';
+import { useDrinkSips, useGiveSips, useMySips, useOpenSip, useSipLeaders, useSipsLeft } from '@/hooks/useSips';
 import { playBeerCrack } from '@/lib/beerSound';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { cn } from '@/lib/utils';
@@ -35,6 +35,7 @@ export default function Slurker() {
   const { data: sips } = useMySips();
   const give = useGiveSips();
   const openSip = useOpenSip();
+  const drinkSips = useDrinkSips();
   const [query, setQuery] = useState('');
   const [target, setTarget] = useState<{ id: string; name: string; image: string | null } | null>(null);
   const [amount, setAmount] = useState(1);
@@ -51,6 +52,11 @@ export default function Slurker() {
   const given = sips?.given ?? [];
   const unopened = received.filter((r) => !r.opened_at);
   const totalReceived = received.reduce((sum, r) => sum + r.amount, 0);
+  const toDrink = received.filter((r) => r.opened_at && !r.drunk_at);
+  const undrunkAmount = toDrink.reduce((sum, r) => sum + r.amount, 0);
+  const drunkAmount = received
+    .filter((r) => r.drunk_at)
+    .reduce((sum, r) => sum + r.amount, 0);
 
   const handleGive = async () => {
     if (!target) return;
@@ -102,8 +108,8 @@ export default function Slurker() {
           className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-oks-gold/25 blur-3xl"
         />
         <div className="relative flex items-center gap-4">
-          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-oks-cream/15 backdrop-blur">
-            <Beer className="h-8 w-8" strokeWidth={2} />
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-oks-cream/15 text-[32px] leading-none backdrop-blur">
+            🍺
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-oks-gold">
@@ -113,6 +119,33 @@ export default function Slurker() {
               {leftLoading ? '–' : left}
               <span className="ml-1 text-[15px] font-semibold opacity-70">/ 10</span>
             </p>
+          </div>
+        </div>
+
+        {/* Interaktiv slurke-rad: fylte øl = igjen å gi */}
+        <div className="relative mt-3 flex flex-wrap gap-1.5">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <span
+              key={i}
+              aria-hidden
+              className={cn(
+                'text-[20px] leading-none transition-all',
+                i < left ? 'opacity-100' : 'opacity-25 grayscale',
+              )}
+            >
+              🍺
+            </span>
+          ))}
+        </div>
+
+        <div className="relative mt-3 grid grid-cols-2 gap-2 text-center">
+          <div className="rounded-2xl bg-oks-cream/10 px-3 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-oks-gold">Fått</p>
+            <p className="font-heading text-[22px] font-bold leading-none">{totalReceived} 🍺</p>
+          </div>
+          <div className="rounded-2xl bg-oks-cream/10 px-3 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-oks-gold">Drukket</p>
+            <p className="font-heading text-[22px] font-bold leading-none">{drunkAmount} 🍺</p>
           </div>
         </div>
         <button
@@ -129,6 +162,36 @@ export default function Slurker() {
       </section>
 
       {/* Uåpnede slurker */}
+      {undrunkAmount > 0 && (
+        <section className="rounded-[22px] border border-oks-gold/35 bg-oks-gold/10 p-4">
+          <p className="font-heading text-[15px] font-bold text-foreground">
+            Du har {undrunkAmount} {undrunkAmount === 1 ? 'slurk' : 'slurker'} å drikke 🍺
+          </p>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">
+            Skål — så bekrefter du at de er drukket.
+          </p>
+          <Button
+            onClick={async () => {
+              hapticImpact('medium');
+              playBeerCrack();
+              try {
+                await drinkSips.mutateAsync(toDrink.map((r) => r.id));
+                toast.success('Skål! Slurkene er drukket 🍺');
+              } catch {
+                toast.error('Klarte ikke å registrere');
+              }
+            }}
+            disabled={drinkSips.isPending}
+            className="mt-3 h-11 w-full rounded-2xl font-bold"
+          >
+            {drinkSips.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            Jeg har drukket slurkene
+          </Button>
+        </section>
+      )}
+
       {unopened.length > 0 && (
         <section className="space-y-2.5">
           <p className="px-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
