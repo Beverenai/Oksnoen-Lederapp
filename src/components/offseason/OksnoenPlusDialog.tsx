@@ -53,6 +53,14 @@ export function OksnoenPlusDialog({
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
+  // Lås bakgrunnsscroll mens arket er åpent (iOS)
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
   if (!open) return null;
 
   const decline = DECLINES[Math.min(attempts, DECLINES.length) - 1] ?? DECLINES[0];
