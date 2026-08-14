@@ -42,6 +42,7 @@ import { IdCard, MessageCircle, Circle, Crown, Camera } from 'lucide-react';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import { BentoTile, type BentoTone, type BentoSize } from '@/components/offseason/BentoTile';
+import povHero from '@/assets/pov-hero.jpg.asset.json';
 
 type MoreItem = {
   to?: string;
@@ -52,6 +53,7 @@ type MoreItem = {
   desc?: string;
   tone?: BentoTone;
   size?: BentoSize;
+  image?: string;
 };
 
 type MoreSection = {
@@ -259,7 +261,15 @@ export default function More() {
     {
       label: 'Off-season',
       items: [
-        { to: '/pov', icon: Camera, label: 'Øksnøen POV', desc: 'Engangskamera', tone: 'paper', size: 'lg' },
+        {
+          to: '/pov',
+          icon: Camera,
+          label: 'Øksnøen POV',
+          desc: 'Engangskamera',
+          tone: 'paper',
+          size: 'lg',
+          image: povHero.url,
+        },
         { to: '/kline-tinder', icon: Flame, label: 'Øksnøen Tinder', desc: 'Sveip på ledere', tone: 'sunset', size: 'lg' },
         { to: '/lederpass', icon: IdCard, label: 'Lederpass', desc: 'Stempler', tone: 'red' },
         {
