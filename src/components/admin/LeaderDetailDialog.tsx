@@ -26,7 +26,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Shield, Users, Heart, Camera, Bell, Check, ChefHat, KeyRound } from 'lucide-react';
+import { Loader2, Shield, Users, Heart, Camera, Bell, Check, ChefHat, KeyRound, Trash2, RotateCcw } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { compressImage } from '@/lib/imageUtils';
 import { hapticSuccess } from '@/lib/capacitorHaptics';
@@ -58,6 +58,8 @@ export function LeaderDetailDialog({
   
   // Change notification state
   const [showNotifyDialog, setShowNotifyDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [detectedChanges, setDetectedChanges] = useState<string[]>([]);
   const [isSendingNotification, setIsSendingNotification] = useState(false);
   
@@ -350,6 +352,46 @@ export function LeaderDetailDialog({
     onOpenChange(false);
   };
 
+  const handleSoftDelete = async () => {
+    if (!leader) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.rpc('soft_delete_leader' as never, {
+        _leader_id: leader.id,
+      } as never);
+      if (error) throw error;
+      hapticSuccess();
+      showSuccess(`${getFirstName(leader.name)} er slettet fra appen`);
+      setShowDeleteDialog(false);
+      onSaved();
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error('Error deleting leader:', error);
+      showError(error?.message || 'Kunne ikke slette lederen');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!leader) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.rpc('restore_leader' as never, {
+        _leader_id: leader.id,
+      } as never);
+      if (error) throw error;
+      hapticSuccess();
+      showSuccess('Lederen er gjenopprettet');
+      onSaved();
+      onOpenChange(false);
+    } catch (error: any) {
+      showError(error?.message || 'Kunne ikke gjenopprette lederen');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !leader) return;
@@ -583,14 +625,61 @@ export function LeaderDetailDialog({
             </div>
           </div>
 
-          {/* Bottom bar - just close button now */}
-          <div className="bottom-bar flex justify-end">
+          {/* Bottom bar */}
+          <div className="bottom-bar flex items-center justify-between gap-2">
+            {isAdmin && leader && leader.id !== currentLeader?.id ? (
+              (leader as any).deleted_at ? (
+                <Button variant="outline" onClick={handleRestore} disabled={isDeleting} className="gap-2">
+                  {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                  Gjenopprett
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Slett leder
+                </Button>
+              )
+            ) : (
+              <span />
+            )}
             <Button variant="outline" onClick={() => handleClose(false)}>
               Lukk
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Slett leder (myk sletting) */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Slette {leader ? getFirstName(leader.name) : 'lederen'} fra appen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Lederen forsvinner fra Ledere-lista og alle andre lister i appen, og mister tilgang.
+              Ingenting de har lagt inn slettes — rapporter, hendelser, notater, gomla og historikk
+              blir liggende, og du kan gjenopprette lederen senere.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleSoftDelete();
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Slett leder
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Change Notification Dialog */}
       <AlertDialog open={showNotifyDialog} onOpenChange={setShowNotifyDialog}>

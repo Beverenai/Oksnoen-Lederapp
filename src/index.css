@@ -570,6 +570,9 @@ header, nav {
   --texture-bookcloth: url('/__l5e/assets-v1/86c18e5a-da7c-47f7-b34c-d2326f142c3b/red-bookcloth.webp');
 }
 
+/* Off-season-tema på hele dokumentet, slik at portaler (ark/dialoger) også blir mørke */
+html.oks-offseason-theme,
+html.oks-offseason-theme body,
 .oks-offseason-bg {
   --background: var(--oks-night);
   --foreground: 40 40% 94%;
@@ -585,6 +588,15 @@ header, nav {
   --secondary-foreground: 40 40% 94%;
   --accent: 210 32% 20%;
   --accent-foreground: 40 40% 94%;
+}
+
+html.oks-offseason-theme,
+html.oks-offseason-theme body {
+  background-color: hsl(var(--oks-night-deep));
+  color: hsl(var(--foreground));
+}
+
+.oks-offseason-bg {
   color: hsl(var(--foreground));
   background:
     radial-gradient(110% 48% at 14% -6%, hsl(var(--oks-red) / 0.34) 0%, transparent 62%),
