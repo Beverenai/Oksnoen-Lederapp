@@ -531,6 +531,83 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback_items: {
+        Row: {
+          admin_reply: string | null
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          leader_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          admin_reply?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          leader_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          admin_reply?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          leader_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_items_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_votes: {
+        Row: {
+          created_at: string
+          feedback_id: string
+          leader_id: string
+        }
+        Insert: {
+          created_at?: string
+          feedback_id: string
+          leader_id: string
+        }
+        Update: {
+          created_at?: string
+          feedback_id?: string
+          leader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_votes_feedback_id_fkey"
+            columns: ["feedback_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_votes_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fix_tasks: {
         Row: {
           admin_notes: string | null
