@@ -99,7 +99,7 @@ export function BentoTile({
               'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-oks-cream/15 text-oks-cream backdrop-blur',
             )}
           >
-            {visual ?? <Icon className="h-5.5 w-5.5" strokeWidth={2} />}
+            {visual ?? <Icon className="h-5 w-5" strokeWidth={2} />}
           </span>
           <span className="min-w-0 flex-1">
             <span className="block font-heading text-[18px] font-bold leading-tight text-oks-cream">
