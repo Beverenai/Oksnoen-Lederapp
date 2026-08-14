@@ -74,6 +74,9 @@ export function StyrkeproveNearlyCard({ onParticipantClick }: { onParticipantCli
   const { data, isLoading } = useQuery({
     queryKey: ['dash-styrkeprove-nearly', activePeriodId],
     enabled: !!activePeriodId,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const [participantsRes, activitiesRes, cabinsRes] = await Promise.all([
         supabase
