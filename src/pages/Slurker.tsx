@@ -165,7 +165,7 @@ export default function Slurker() {
         />
         <div className="relative flex items-center gap-4">
           <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-oks-cream/15 text-[32px] leading-none backdrop-blur">
-            🍺
+            {DRINKS[myDrink].emoji}
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-oks-gold">
@@ -189,7 +189,7 @@ export default function Slurker() {
                 i < left ? 'opacity-100' : 'opacity-25 grayscale',
               )}
             >
-              🍺
+              {DRINKS[myDrink].emoji}
             </span>
           ))}
         </div>
