@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Phone, MessageSquare, X } from 'lucide-react';
+import { Phone, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -57,7 +57,7 @@ export function OffSeasonLeaderSheet({ leaderId, onOpenChange }: OffSeasonLeader
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 pr-11">
               {leader?.phone && (
                 <>
                   <Button
@@ -80,15 +80,6 @@ export function OffSeasonLeaderSheet({ leaderId, onOpenChange }: OffSeasonLeader
                   </Button>
                 </>
               )}
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-10 w-10 rounded-full"
-                aria-label="Lukk"
-                onClick={() => onOpenChange(false)}
-              >
-                <X className="h-5 w-5" />
-              </Button>
             </div>
           </div>
 

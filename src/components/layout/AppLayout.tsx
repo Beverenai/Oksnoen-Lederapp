@@ -172,6 +172,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { mode: appMode } = useAppMode();
   const { seasonView, setSeasonView } = useSeasonView();
   const inactiveForUser = (appMode === 'inactive' || isLimitedAccess) && !isSuperAdmin;
+
+  // Off-season-tema på <html> slik at ark/dialoger (portaler) ikke blir hvite
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('oks-offseason-theme', inactiveForUser);
+    return () => root.classList.remove('oks-offseason-theme');
+  }, [inactiveForUser]);
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
