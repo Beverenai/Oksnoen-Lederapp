@@ -30,6 +30,7 @@ import {
   ShoppingBasket,
   Archive,
   Camera,
+  Flame,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
@@ -70,6 +71,7 @@ const navItems = [
   { key: 'kiosk', label: 'Gomla', desc: 'Varer og priser i Gomla', icon: ShoppingBasket, color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
   { key: 'season-view', label: 'Hele sesongen', desc: 'Se alle perioder samlet (kun lesing)', icon: Archive, color: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300' },
   { key: 'archive', label: 'Periodearkiv', desc: 'Se data fra alle perioder', icon: Archive, color: 'bg-slate-500/15 text-slate-600 dark:text-slate-300', path: '/arkiv' },
+  { key: 'tinder', label: 'Øksnøen Tinder', desc: 'Se matcher og likes mellom ledere', icon: Flame, color: 'bg-rose-500/15 text-rose-600 dark:text-rose-300' },
 ];
 
 const sectionLabels: Record<string, string> = {
@@ -86,6 +88,7 @@ const sectionLabels: Record<string, string> = {
   bookings: 'Booking-info',
   sweaters: 'Gensere',
   'season-view': 'Hele sesongen',
+  tinder: 'Øksnøen Tinder',
 };
 
 export default function AdminSettings() {
