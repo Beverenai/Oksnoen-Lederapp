@@ -83,6 +83,11 @@ export default {
           cream: "hsl(var(--oks-cream))",
           gold: "hsl(var(--oks-gold))",
           "gold-light": "hsl(var(--oks-gold-light))",
+          night: "hsl(var(--oks-night))",
+          "night-deep": "hsl(var(--oks-night-deep))",
+          forest: "hsl(var(--oks-forest))",
+          teal: "hsl(var(--oks-teal))",
+          paper: "hsl(var(--oks-paper))",
         },
       },
       borderRadius: {
