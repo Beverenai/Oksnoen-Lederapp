@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		97AA10012F600001000AA001 /* morderen-drept.caf in Resources */ = {isa = PBXBuildFile; fileRef = 97AA10002F600000000AA001 /* morderen-drept.caf */; };
+		97AA10200F60000100AA020 /* sip-beer.caf in Resources */ = {isa = PBXBuildFile; fileRef = 97AA10100F60000000AA010 /* sip-beer.caf */; };
+		97AA10201F60000100AA021 /* sip-wine.caf in Resources */ = {isa = PBXBuildFile; fileRef = 97AA10101F60000000AA011 /* sip-wine.caf */; };
+		97AA10202F60000100AA022 /* sip-drink.caf in Resources */ = {isa = PBXBuildFile; fileRef = 97AA10102F60000000AA012 /* sip-drink.caf */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
@@ -62,6 +65,9 @@
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		97A50F892F0478460035F8DC /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		97AA10002F600000000AA001 /* morderen-drept.caf */ = {isa = PBXFileReference; lastKnownFileType = audio.caf; path = "morderen-drept.caf"; sourceTree = "<group>"; };
+		97AA10100F60000000AA010 /* sip-beer.caf */ = {isa = PBXFileReference; lastKnownFileType = audio.caf; path = "sip-beer.caf"; sourceTree = "<group>"; };
+		97AA10101F60000000AA011 /* sip-wine.caf */ = {isa = PBXFileReference; lastKnownFileType = audio.caf; path = "sip-wine.caf"; sourceTree = "<group>"; };
+		97AA10102F60000000AA012 /* sip-drink.caf */ = {isa = PBXFileReference; lastKnownFileType = audio.caf; path = "sip-drink.caf"; sourceTree = "<group>"; };
 		97E5D6162F585A8F0086ECF3 /* LederWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LederWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		97E5D6182F585A8F0086ECF3 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		97E5D61A2F585A8F0086ECF3 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -137,6 +143,9 @@
 				504EC3131FED79650016851F /* Info.plist */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				97AA10002F600000000AA001 /* morderen-drept.caf */,
+				97AA10100F60000000AA010 /* sip-beer.caf */,
+				97AA10101F60000000AA011 /* sip-wine.caf */,
+				97AA10102F60000000AA012 /* sip-drink.caf */,
 				50B271D01FEDC1A000F3C39B /* public */,
 				97E5D6312F585B850086ECF3 /* WidgetBridgePlugin 2.swift */,
 			);
@@ -249,6 +258,9 @@
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
 				97AA10012F600001000AA001 /* morderen-drept.caf in Resources */,
+				97AA10200F60000100AA020 /* sip-beer.caf in Resources */,
+				97AA10201F60000100AA021 /* sip-wine.caf in Resources */,
+				97AA10202F60000100AA022 /* sip-drink.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
