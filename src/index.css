@@ -573,7 +573,7 @@ header, nav {
 /* Off-season-tema på hele dokumentet, slik at portaler (ark/dialoger) også blir mørke */
 html.oks-offseason-theme,
 html.oks-offseason-theme body,
-.oks-offseason-bg {
+html.oks-offseason-theme .oks-offseason-bg {
   --background: var(--oks-night);
   --foreground: 40 40% 94%;
   --card: 210 40% 13%;
@@ -596,7 +596,7 @@ html.oks-offseason-theme body {
   color: hsl(var(--foreground));
 }
 
-.oks-offseason-bg {
+html.oks-offseason-theme .oks-offseason-bg {
   color: hsl(var(--foreground));
   background:
     radial-gradient(110% 48% at 14% -6%, hsl(var(--oks-red) / 0.34) 0%, transparent 62%),
@@ -685,6 +685,6 @@ html.oks-offseason-theme body {
 }
 
 /* Off-season-flatene skal dekke hele skjermen selv med lite innhold */
-.oks-offseason-bg {
+html.oks-offseason-theme .oks-offseason-bg {
   min-height: 100dvh;
 }
