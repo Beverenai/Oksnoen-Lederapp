@@ -557,19 +557,90 @@ header, nav {
   );
 }
 
-/* Varm bakgrunn med rødt/gull-glød øverst for off-season-flatene */
-.oks-offseason-bg {
-  background:
-    radial-gradient(120% 55% at 12% -8%, hsl(var(--oks-red) / 0.16) 0%, transparent 62%),
-    radial-gradient(90% 45% at 92% 2%, hsl(var(--oks-gold) / 0.18) 0%, transparent 60%),
-    linear-gradient(180deg, hsl(var(--oks-cream)) 0%, hsl(var(--background)) 48%);
+/* ===== Off-season: retro «fotoalbum» på mørk natt-bakgrunn =====
+   Klassen overstyrer semantiske tokens lokalt, slik at alle barn
+   (text-foreground, bg-card, border-border ...) blir lesbare. */
+:root {
+  --oks-night: 210 46% 9%;
+  --oks-night-deep: 212 52% 6%;
+  --oks-forest: 158 32% 16%;
+  --oks-teal: 176 44% 42%;
+  --oks-paper: 40 38% 92%;
+  --texture-paper: url('/__l5e/assets-v1/e36bdd85-dffa-4a83-a8b1-adf151163e61/ivory-paper.webp');
+  --texture-bookcloth: url('/__l5e/assets-v1/86c18e5a-da7c-47f7-b34c-d2326f142c3b/red-bookcloth.webp');
 }
 
-.dark .oks-offseason-bg {
+.oks-offseason-bg {
+  --background: var(--oks-night);
+  --foreground: 40 40% 94%;
+  --card: 210 40% 13%;
+  --card-foreground: 40 40% 94%;
+  --muted: 210 32% 18%;
+  --muted-foreground: 205 16% 68%;
+  --border: 205 22% 24%;
+  --input: 205 22% 24%;
+  --popover: 210 40% 12%;
+  --popover-foreground: 40 40% 94%;
+  --secondary: 210 32% 18%;
+  --secondary-foreground: 40 40% 94%;
+  --accent: 210 32% 20%;
+  --accent-foreground: 40 40% 94%;
+  color: hsl(var(--foreground));
   background:
-    radial-gradient(120% 55% at 12% -8%, hsl(var(--oks-red) / 0.3) 0%, transparent 62%),
-    radial-gradient(90% 45% at 92% 2%, hsl(var(--oks-gold) / 0.16) 0%, transparent 60%),
-    linear-gradient(180deg, hsl(var(--oks-red-deep) / 0.35) 0%, hsl(var(--background)) 46%);
+    radial-gradient(110% 48% at 14% -6%, hsl(var(--oks-red) / 0.34) 0%, transparent 62%),
+    radial-gradient(90% 42% at 90% 4%, hsl(var(--oks-gold) / 0.2) 0%, transparent 60%),
+    radial-gradient(120% 60% at 50% 110%, hsl(var(--oks-forest) / 0.5) 0%, transparent 68%),
+    linear-gradient(180deg, hsl(var(--oks-night)) 0%, hsl(var(--oks-night-deep)) 100%);
+}
+
+/* Retro papir-tekstur (kremhvit ark) */
+.oks-paper {
+  background-color: hsl(var(--oks-paper));
+  background-image: var(--texture-paper);
+  background-size: 320px;
+  background-blend-mode: multiply;
+  color: hsl(var(--oks-night-deep));
+}
+
+/* Polaroid-ramme: tykk bunnkant, myk skygge, lett skjevhet */
+.oks-paper-frame {
+  padding: 10px 10px 30px;
+  border-radius: 4px;
+  box-shadow:
+    0 1px 0 hsl(0 0% 100% / 0.6) inset,
+    0 18px 40px -18px hsl(var(--oks-night-deep) / 0.9),
+    0 2px 6px hsl(var(--oks-night-deep) / 0.4);
+}
+
+/* Avrevet papirkant nederst */
+.oks-torn-strip {
+  --torn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='10' preserveAspectRatio='none' viewBox='0 0 120 10'%3E%3Cpath d='M0 0h120v6.2l-6-1.4-6 1.9-6-2.1-6 1.6-6-1.2-6 2.2-6-2-6 1.5-6-1.7-6 2.1-6-1.9-6 1.4-6-1.6-6 2-6-1.5-6 1.2-6-2.1-6 1.8-6-1.5z' fill='%23000'/%3E%3C/svg%3E");
+  -webkit-mask-image: var(--torn);
+  mask-image: var(--torn);
+  -webkit-mask-size: 120px 100%;
+  mask-size: 120px 100%;
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+}
+
+/* Rødt bokbind — brukt til lederpass-stripen */
+.oks-bookcloth {
+  background-color: hsl(var(--oks-red-deep));
+  background-image: var(--texture-bookcloth);
+  background-size: 300px;
+  background-blend-mode: multiply;
+}
+
+/* Fint filmkorn over kort */
+.oks-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 120px;
 }
 
 .oks-gold-text {
