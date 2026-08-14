@@ -67,6 +67,9 @@ export function StyrkeproveTab() {
   const { data, isLoading } = useQuery({
     queryKey: ["styrkeprove-stats", seasonView ? 'season' : activePeriodId],
     enabled: seasonView || !!activePeriodId,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       let participantQuery: any = supabase
         .from("participants")

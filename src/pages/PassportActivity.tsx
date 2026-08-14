@@ -35,6 +35,8 @@ export default function PassportActivity() {
     refetch();
     queryClient.invalidateQueries({ queryKey: ['participant-activities-map'] });
     queryClient.invalidateQueries({ queryKey: ['participants'] });
+    queryClient.invalidateQueries({ queryKey: ['styrkeprove-stats'] });
+    queryClient.invalidateQueries({ queryKey: ['dash-styrkeprove-nearly'] });
   };
 
   return (
