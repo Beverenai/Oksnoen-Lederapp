@@ -21,6 +21,7 @@ import {
   ChefHat,
   Mail,
   HeartHandshake,
+  Flame,
   LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
