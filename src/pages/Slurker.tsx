@@ -13,7 +13,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
-import { useDrinkSips, useGiveSips, useMySips, useOpenSip, useSipLeaders, useSipsLeft } from '@/hooks/useSips';
+import { useDrinkSips, useGiveSips, useMyDrink, useMySips, useOpenSip, useSipLeaders, useSipsLeft } from '@/hooks/useSips';
+import { DrinkPicker } from '@/components/offseason/DrinkPicker';
 import { DRINKS, type DrinkType, drinkOf, playDrinkSound } from '@/lib/drinkSounds';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { cn } from '@/lib/utils';
@@ -40,7 +41,7 @@ export default function Slurker() {
   const [target, setTarget] = useState<{ id: string; name: string; image: string | null } | null>(null);
   const [amount, setAmount] = useState(1);
   const [message, setMessage] = useState('');
-  const [drinkType, setDrinkType] = useState<DrinkType>('beer');
+  const { drink: myDrink, setDrink } = useMyDrink();
   const [plusOpen, setPlusOpen] = useState(false);
 
   const filtered = useMemo(() => {
@@ -70,15 +71,14 @@ export default function Slurker() {
   const handleGive = async () => {
     if (!target) return;
     try {
-      await give.mutateAsync({ targetId: target.id, amount, message, drinkType });
+      await give.mutateAsync({ targetId: target.id, amount, message });
       hapticImpact('medium');
       toast.success(
-        `${amount} ${amount === 1 ? 'slurk' : 'slurker'} ${DRINKS[drinkType].emoji} sendt til ${target.name}`,
+        `${amount} ${amount === 1 ? 'slurk' : 'slurker'} ${DRINKS[myDrink].emoji} sendt til ${target.name}`,
       );
       setTarget(null);
       setMessage('');
       setAmount(1);
-      setDrinkType('beer');
     } catch (e: any) {
       toast.error(e?.message ?? 'Klarte ikke å gi slurker');
     }
@@ -327,6 +327,24 @@ export default function Slurker() {
         </section>
       )}
 
+      {/* Min drikke */}
+      <section className="rounded-[26px] border border-border/60 bg-card/70 p-4">
+        <div className="mb-3 flex items-baseline justify-between gap-2">
+          <h2 className="font-heading text-[15px] font-bold">Min drikke</h2>
+          <p className="text-[11px] text-muted-foreground">
+            Alle slurker du gir blir {DRINKS[myDrink].label.toLowerCase()} {DRINKS[myDrink].emoji}
+          </p>
+        </div>
+        <DrinkPicker
+          value={myDrink}
+          onChange={(d) => {
+            setDrink.mutate(d, {
+              onError: () => toast.error('Klarte ikke å lagre drikken'),
+            });
+          }}
+        />
+      </section>
+
       {/* Gi-arket */}
       <Sheet open={!!target} onOpenChange={(o) => !o && setTarget(null)}>
         <SheetContent side="bottom" className="rounded-t-[28px] pb-[calc(1.25rem+var(--safe-bottom))]">
@@ -349,7 +367,7 @@ export default function Slurker() {
                   {amount}
                 </p>
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  {amount === 1 ? 'slurk' : 'slurker'} {DRINKS[drinkType].label.toLowerCase()}
+                  {amount === 1 ? 'slurk' : 'slurker'} {DRINKS[myDrink].label.toLowerCase()}
                 </p>
               </div>
               <Button
@@ -370,33 +388,9 @@ export default function Slurker() {
                 <Plus className="h-5 w-5" />
               </Button>
             </div>
-            <div>
-              <p className="mb-2 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                Hva gir du?
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                {(Object.keys(DRINKS) as DrinkType[]).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => {
-                      hapticImpact('light');
-                      setDrinkType(t);
-                      playDrinkSound(t);
-                    }}
-                    className={cn(
-                      'flex flex-col items-center gap-1 rounded-2xl border px-2 py-3 transition-all',
-                      drinkType === t
-                        ? 'border-oks-gold bg-oks-gold/15 shadow-sm'
-                        : 'border-border/60 bg-card/70',
-                    )}
-                  >
-                    <span className="text-[26px] leading-none">{DRINKS[t].emoji}</span>
-                    <span className="text-[12px] font-bold text-foreground">{DRINKS[t].label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <p className="text-center text-[12px] text-muted-foreground">
+              Du sender {DRINKS[myDrink].label.toLowerCase()} {DRINKS[myDrink].emoji} — endre drikke øverst på siden.
+            </p>
             <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -414,7 +408,7 @@ export default function Slurker() {
               ) : (
                 <Beer className="mr-2 h-4 w-4" />
               )}
-              {left < 1 ? 'Tom for slurker' : `Send ${amount} ${DRINKS[drinkType].emoji}`}
+              {left < 1 ? 'Tom for slurker' : `Send ${amount} ${DRINKS[myDrink].emoji}`}
             </Button>
             {left < 1 && (
               <button
