@@ -18,6 +18,7 @@ import {
   type PovPhoto,
 } from '@/hooks/usePov';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import povHero from '@/assets/pov-hero.jpg.asset.json';
 
 function countdown(iso: string | null): string | null {
@@ -33,6 +34,7 @@ function countdown(iso: string | null): string | null {
 
 export default function Pov() {
   const { isAdmin, leader } = useAuth();
+  const navigate = useNavigate();
   const { showError } = useStatusPopup();
   const { data: roll, isLoading } = usePovCurrentRoll();
   const { data: rolls } = usePovRolls();
@@ -89,7 +91,7 @@ export default function Pov() {
   }
 
   return (
-    <div className="oks-offseason-bg mx-auto -mx-4 w-full max-w-2xl space-y-6 px-4 pb-8 pt-1">
+    <div className="mx-auto w-full max-w-2xl space-y-6 pb-8 pt-1">
       <header className="relative mt-1 overflow-hidden rounded-[24px] border border-oks-gold/25 shadow-oks">
         <img
           src={povHero.url}
@@ -245,7 +247,10 @@ export default function Pov() {
             shotsLeft={roll.my_shots_left}
             busy={takePhoto.isPending}
             onCapture={handleCapture}
-            onClose={() => setCameraOpen(false)}
+            onClose={() => {
+              setCameraOpen(false);
+              if (autoOpened.current) navigate('/', { replace: true });
+            }}
           />,
           document.body,
         )}
