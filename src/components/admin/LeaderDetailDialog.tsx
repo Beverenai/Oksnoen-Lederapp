@@ -26,7 +26,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Shield, Users, Heart, Camera, Bell, Check, ChefHat, KeyRound } from 'lucide-react';
+import { Loader2, Shield, Users, Heart, Camera, Bell, Check, ChefHat, KeyRound, Trash2, RotateCcw } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { compressImage } from '@/lib/imageUtils';
 import { hapticSuccess } from '@/lib/capacitorHaptics';
@@ -350,6 +350,46 @@ export function LeaderDetailDialog({
   const handleSkipNotification = () => {
     setShowNotifyDialog(false);
     onOpenChange(false);
+  };
+
+  const handleSoftDelete = async () => {
+    if (!leader) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.rpc('soft_delete_leader' as never, {
+        _leader_id: leader.id,
+      } as never);
+      if (error) throw error;
+      hapticSuccess();
+      showSuccess(`${getFirstName(leader.name)} er slettet fra appen`);
+      setShowDeleteDialog(false);
+      onSaved();
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error('Error deleting leader:', error);
+      showError(error?.message || 'Kunne ikke slette lederen');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!leader) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.rpc('restore_leader' as never, {
+        _leader_id: leader.id,
+      } as never);
+      if (error) throw error;
+      hapticSuccess();
+      showSuccess('Lederen er gjenopprettet');
+      onSaved();
+      onOpenChange(false);
+    } catch (error: any) {
+      showError(error?.message || 'Kunne ikke gjenopprette lederen');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
