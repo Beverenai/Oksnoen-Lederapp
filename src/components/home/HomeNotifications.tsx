@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Beer, Wine, GlassWater, Heart, MessageSquare } from 'lucide-react';
+import { Bell, Beer, Wine, GlassWater, Heart, MessageSquare, Check } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useMySips } from '@/hooks/useSips';
@@ -166,9 +166,8 @@ export function HomeNotifications() {
   const seenSet = useMemo(() => new Set(seen), [seen]);
   const unreadCount = notifications.filter((n) => !seenSet.has(n.id)).length;
 
-  /** Når man åpner varslene er de sett — badgen nullstilles. */
-  useEffect(() => {
-    if (!open || notifications.length === 0) return;
+  const markAllAsRead = useCallback(() => {
+    if (notifications.length === 0) return;
     const ids = notifications.map((n) => n.id);
     setSeen((prev) => {
       const next = Array.from(new Set([...prev, ...ids])).slice(-300);
@@ -177,7 +176,13 @@ export function HomeNotifications() {
       } catch { /* ignorer */ }
       return next;
     });
-  }, [open, notifications]);
+  }, [notifications]);
+
+  /** Når man åpner varslene er de sett — badgen nullstilles. */
+  useEffect(() => {
+    if (!open || notifications.length === 0) return;
+    markAllAsRead();
+  }, [open, notifications, markAllAsRead]);
 
   return (
     <>
@@ -197,8 +202,19 @@ export function HomeNotifications() {
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="w-full max-w-sm sm:max-w-sm">
-          <SheetHeader className="pb-2 pr-10 text-left">
+          <SheetHeader className="flex flex-row items-center justify-between pb-2 pr-10 text-left">
             <SheetTitle className="text-lg font-heading">Varslinger</SheetTitle>
+            {notifications.length > 0 && (
+              <button
+                type="button"
+                onClick={markAllAsRead}
+                disabled={unreadCount === 0}
+                className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary transition hover:bg-primary/20 disabled:opacity-50"
+              >
+                <Check className="h-3.5 w-3.5" />
+                Merk alle som lest
+              </button>
+            )}
           </SheetHeader>
 
           <div className="mt-2 space-y-2">
