@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Heart, Loader2, MessageCircle, Sparkles, Users } from 'lucide-react';
 import { toast } from 'sonner';
@@ -28,6 +28,14 @@ export default function KlineTinder() {
   const dismissedSet = new Set(dismissed);
   const deck = candidates.filter((c) => !dismissedSet.has(c.id));
   const visible = deck.slice(0, 3);
+
+  // Uendelig sveiping: når kortstokken er tom men det finnes kandidater igjen
+  // (de du har sveipet vekk før), nullstilles lokal historikk så de kommer opp igjen.
+  useEffect(() => {
+    if (deck.length === 0 && candidates.length > 0 && dismissed.length > 0) {
+      setDismissed([]);
+    }
+  }, [deck.length, candidates.length, dismissed.length]);
 
   const handleDecide = async (targetId: string, name: string, liked: boolean) => {
     setDismissed((prev) => (prev.includes(targetId) ? prev : [...prev, targetId]));
