@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, RefreshCw, SwitchCamera, X, Zap, ZapOff } from 'lucide-react';
+import { Camera, Check, RefreshCw, SwitchCamera, X, Zap, ZapOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { hapticImpact, hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
