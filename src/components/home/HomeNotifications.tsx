@@ -1,8 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Beer, Wine, GlassWater, Heart, MessageSquare, X } from 'lucide-react';
+import { Bell, Beer, Wine, GlassWater, Heart, MessageSquare } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useMySips } from '@/hooks/useSips';
 import { useMyHookups } from '@/hooks/useHookups';
@@ -171,11 +170,8 @@ export function HomeNotifications() {
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="w-full max-w-sm sm:max-w-sm">
-          <SheetHeader className="flex-row items-center justify-between space-y-0 pb-2">
+          <SheetHeader className="pb-2 pr-10 text-left">
             <SheetTitle className="text-lg font-heading">Varslinger</SheetTitle>
-            <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Lukk">
-              <X className="h-5 w-5" />
-            </Button>
           </SheetHeader>
 
           <div className="mt-2 space-y-2">
