@@ -1811,6 +1811,7 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           email: string | null
+          extra_sips: number
           gender: string | null
           has_boat_license: boolean | null
           has_car: boolean | null
@@ -1848,6 +1849,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           email?: string | null
+          extra_sips?: number
           gender?: string | null
           has_boat_license?: boolean | null
           has_car?: boolean | null
@@ -1885,6 +1887,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           email?: string | null
+          extra_sips?: number
           gender?: string | null
           has_boat_license?: boolean | null
           has_car?: boolean | null
@@ -4878,6 +4881,18 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_sips_admin_overview: {
+        Args: never
+        Returns: {
+          extra_sips: number
+          given: number
+          is_active: boolean
+          leader_id: string
+          leader_name: string
+          profile_image_url: string
+          sips_left: number
+        }[]
+      }
       give_sips: {
         Args: {
           _amount: number
@@ -4886,6 +4901,10 @@ export type Database = {
           _to: string
         }
         Returns: string
+      }
+      grant_extra_sips: {
+        Args: { _amount: number; _leader_id: string }
+        Returns: number
       }
       has_role: {
         Args: {
