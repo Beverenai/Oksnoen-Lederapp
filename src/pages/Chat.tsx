@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowDown, AtSign, Send } from 'lucide-react';
+import { ArrowDown, AtSign, Send, Users } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { cn } from '@/lib/utils';
 import {
@@ -12,6 +12,9 @@ import {
   applyMention,
   findMentionedLeaders,
   splitMentionSegments,
+  hasAllMention,
+  ALL_MENTION_ID,
+  ALL_MENTION_NAME,
 } from '@/lib/chatMentions';
 
 interface ChatMessage {
@@ -222,10 +225,14 @@ export default function Chat() {
   const mentionMatches = useMemo(() => {
     if (!mention) return [];
     const q = mention.query.trim().toLowerCase();
-    return taggableLeaders
+    const people = taggableLeaders
       .filter((l) => l.id !== leader?.id)
       .filter((l) => (q ? l.name.toLowerCase().includes(q) : true))
       .slice(0, 6);
+    const showAll = !q || ALL_MENTION_NAME.startsWith(q);
+    return showAll
+      ? [{ id: ALL_MENTION_ID, name: ALL_MENTION_NAME, profile_image_url: null } as LeaderLite, ...people]
+      : people;
   }, [mention, taggableLeaders, leader?.id]);
 
   const send = async () => {
@@ -233,9 +240,11 @@ export default function Chat() {
     if (!body || !leader) return;
     setSending(true);
     nearBottomRef.current = true;
-    const mentions = findMentionedLeaders(body, taggableLeaders)
-      .map((l) => l.id)
-      .filter((id) => id !== leader.id);
+    const everyone = hasAllMention(body);
+    const mentions = (everyone
+      ? taggableLeaders.map((l) => l.id)
+      : findMentionedLeaders(body, taggableLeaders).map((l) => l.id)
+    ).filter((id) => id !== leader.id);
     const { data: inserted, error } = await supabase
       .from('chat_messages')
       .insert({ leader_id: leader.id, body, channel, mentions })
@@ -575,11 +584,27 @@ export default function Chat() {
                     onClick={() => insertMention(l.name)}
                     className="flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-accent"
                   >
-                    <Avatar className="h-7 w-7">
-                      <AvatarImage src={l.profile_image_url || undefined} />
-                      <AvatarFallback className="text-[10px]">{initials(l.name)}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">{l.name}</span>
+                    {l.id === ALL_MENTION_ID ? (
+                      <>
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <Users className="h-3.5 w-3.5" />
+                        </span>
+                        <span className="text-sm font-medium">
+                          alle
+                          <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                            varsler alle i chatten
+                          </span>
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Avatar className="h-7 w-7">
+                          <AvatarImage src={l.profile_image_url || undefined} />
+                          <AvatarFallback className="text-[10px]">{initials(l.name)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium">{l.name}</span>
+                      </>
+                    )}
                   </button>
                 ))}
               </div>
