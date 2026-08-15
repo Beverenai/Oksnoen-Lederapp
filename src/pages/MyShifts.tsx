@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -68,7 +69,7 @@ export default function MyShifts() {
   // Realtime: refresh vaktplan-bilde når admin endrer det
   useEffect(() => {
     const channel = supabase
-      .channel('schedule-image-url-changes')
+      .channel(uniqueRealtimeChannelName('schedule-image-url-changes'))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'app_config', filter: 'key=eq.schedule_image_url' },

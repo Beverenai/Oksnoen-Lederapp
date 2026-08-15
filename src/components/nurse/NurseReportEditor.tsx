@@ -1,6 +1,7 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -93,7 +94,7 @@ export function NurseReportEditor({ participants, onDataChange, onOpenParticipan
   useEffect(() => {
     loadAll();
     const channel = supabase
-      .channel('nurse-report-period-watch')
+      .channel(uniqueRealtimeChannelName('nurse-report-period-watch'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'periods' }, () => loadAll())
       .subscribe();
     return () => { supabase.removeChannel(channel); };

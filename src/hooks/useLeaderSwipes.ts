@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 export type SwipeCandidate = {
   id: string;
@@ -81,7 +82,7 @@ export function useMyMatches() {
 
   useEffect(() => {
     const channel = supabase
-      .channel('leader-matches-live')
+      .channel(uniqueRealtimeChannelName('leader-matches-live'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leader_matches' }, () => {
         queryClient.invalidateQueries({ queryKey: ['leader-matches'] });
       })

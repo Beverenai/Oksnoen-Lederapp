@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import type { Tables } from '@/integrations/supabase/types';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 export type RouletteTask = Tables<'roulette_tasks'>;
 export type RouletteAssignment = Tables<'roulette_assignments'>;
@@ -47,7 +48,7 @@ export function useCurrentAssignment(leaderId: string | undefined | null) {
   useEffect(() => {
     if (!leaderId) return;
     const ch = supabase
-      .channel(`roulette-${leaderId}`)
+      .channel(uniqueRealtimeChannelName(`roulette-${leaderId}`))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'roulette_assignments', filter: `leader_id=eq.${leaderId}` }, () => {
         qc.invalidateQueries({ queryKey: ['current-roulette-assignment', leaderId] });
       })

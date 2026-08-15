@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { getTeamSortOrder } from '@/lib/teamUtils';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 type Leader = Tables<'leaders'>;
 type LeaderContent = Tables<'leader_content'>;
@@ -82,7 +83,7 @@ export function useLeaderDashboardData(leaders: Leader[]) {
   // Realtime subscription for leader_content
   useEffect(() => {
     const channel = supabase
-      .channel('leader-content-realtime')
+      .channel(uniqueRealtimeChannelName('leader-content-realtime'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leader_content' }, () => {
         refetchContent();
       })

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 export type AdminNote = Tables<'admin_notes'>;
 export type NoteKind = 'doc' | 'board';
@@ -64,7 +65,7 @@ export function useAdminNotes(enabled: boolean) {
     if (!enabled) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
     const channel = supabase
-      .channel('admin-notes-realtime')
+      .channel(uniqueRealtimeChannelName('admin-notes-realtime'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_notes' }, () => {
         if (Date.now() - selfWriteRef.current < 1500) return;
         if (timer) clearTimeout(timer);

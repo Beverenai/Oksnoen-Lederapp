@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 export type MatchMessage = {
   id: string;
@@ -34,7 +35,7 @@ export function useMatchMessages(matchId: string | null) {
   useEffect(() => {
     if (!matchId) return;
     const channel = supabase
-      .channel(`match-chat-${matchId}`)
+      .channel(uniqueRealtimeChannelName(`match-chat-${matchId}`))
       .on(
         'postgres_changes',
         {

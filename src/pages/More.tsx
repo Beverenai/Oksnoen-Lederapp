@@ -29,6 +29,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 import { useSweatersEnabled } from '@/hooks/useSweatersEnabled';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
 import { useMyMurderState } from '@/hooks/useMurderGame';
@@ -143,7 +144,7 @@ export default function More() {
     };
     fetchScheduleImage();
     const channel = supabase
-      .channel('more-schedule-image')
+      .channel(uniqueRealtimeChannelName('more-schedule-image'))
       .on(
         'postgres_changes',
         {

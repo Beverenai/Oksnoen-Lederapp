@@ -2,6 +2,7 @@ import { ReactNode, useState, useEffect, useCallback, useRef } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 import { DashboardReturnBar } from '@/components/admin/DashboardReturnBar';
 import { 
   Home, 
@@ -385,7 +386,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     fetchScheduleImage();
 
     const channel = supabase
-      .channel('schedule-image-changes')
+      .channel(uniqueRealtimeChannelName('schedule-image-changes'))
       .on(
         'postgres_changes',
         {
@@ -427,7 +428,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     fetchHasReadStatus();
 
     const channel = supabase
-      .channel('hajolo-status')
+      .channel(uniqueRealtimeChannelName('hajolo-status'))
       .on(
         'postgres_changes',
         {

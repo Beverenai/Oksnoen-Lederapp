@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActivePeriodId } from '@/hooks/useActivePeriodId';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 export type HookupStatus = 'pending' | 'confirmed' | 'declined';
 
@@ -51,7 +52,7 @@ export function useHookupsEnabled() {
 
   useEffect(() => {
     const channel = supabase
-      .channel('hookups-enabled-global')
+      .channel(uniqueRealtimeChannelName('hookups-enabled-global'))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'app_config' },
@@ -103,7 +104,7 @@ export function useHookups() {
 
   useEffect(() => {
     const channel = supabase
-      .channel('hookups-live')
+      .channel(uniqueRealtimeChannelName('hookups-live'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leader_hookups' }, () => {
         queryClient.invalidateQueries({ queryKey: ['hookups'] });
       })

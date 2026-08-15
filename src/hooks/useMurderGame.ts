@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 export interface MyMurderState {
   game_id: string;
@@ -36,7 +37,7 @@ function useMurderRealtime(keys: unknown[][]) {
   const qc = useQueryClient();
   useEffect(() => {
     const ch = supabase
-      .channel(`murder-${Math.random().toString(36).slice(2)}`)
+      .channel(uniqueRealtimeChannelName('murder'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'murder_players' }, () => {
         keys.forEach((k) => qc.invalidateQueries({ queryKey: k }));
       })
