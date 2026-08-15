@@ -209,6 +209,22 @@ export function NursePeriodsTab() {
               >
                 {savingLeaders ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lagre ledere for aktiv periode'}
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full"
+                disabled={sendingOffSeason}
+                onClick={sendAllToOffSeason}
+              >
+                {sendingOffSeason ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <MoonStar className="w-4 h-4 mr-2" />
+                    Send alle til off-season (unntatt Bengt)
+                  </>
+                )}
+              </Button>
             </>
           )}
         </CardContent>
