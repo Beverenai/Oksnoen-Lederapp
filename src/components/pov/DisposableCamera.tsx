@@ -131,6 +131,8 @@ async function developFrame(
 export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const trackRef = useRef<MediaStreamTrack | null>(null);
+  const lastTapRef = useRef(0);
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   const [flashOn, setFlashOn] = useState(true);
   const stamp = true;
@@ -140,10 +142,16 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
   const [winding, setWinding] = useState(false);
   const [shutterBlink, setShutterBlink] = useState(false);
   const [justShot, setJustShot] = useState(false);
+  const [hasTorch, setHasTorch] = useState(false);
+  const [canSwitch, setCanSwitch] = useState(true);
+  const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
+    trackRef.current = null;
   }, []);
 
   const startStream = useCallback(async () => {
@@ -151,16 +159,24 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
     setReady(false);
     stopStream();
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: facing,
-          // Ask for the sharpest feed the device can give us.
-          width: { ideal: 2160 },
-          height: { ideal: 3840 },
-          frameRate: { ideal: 30 },
-        },
-        audio: false,
-      });
+      const base = {
+        width: { ideal: 2160 },
+        height: { ideal: 3840 },
+        frameRate: { ideal: 30 },
+      };
+      // Ask for the exact lens first (iPhone/Android), then fall back gracefully.
+      let stream: MediaStream | null = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { ...base, facingMode: { exact: facing } },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { ...base, facingMode: facing },
+          audio: false,
+        });
+      }
       // Some devices only expose their full resolution after applying constraints.
       const track = stream.getVideoTracks()[0];
       const caps = track?.getCapabilities?.();
@@ -172,6 +188,11 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
           })
           .catch(() => {});
       }
+      trackRef.current = track ?? null;
+      setHasTorch(!!(caps as any)?.torch);
+      const zoomCap = (caps as any)?.zoom;
+      setZoomRange(zoomCap?.max && zoomCap.max > (zoomCap.min ?? 1) ? { min: zoomCap.min ?? 1, max: Math.min(zoomCap.max, 5) } : null);
+      setZoom(1);
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -192,10 +213,56 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
     return stopStream;
   }, [startStream, stopStream]);
 
+  // Er det i det hele tatt to kameraer her?
+  useEffect(() => {
+    navigator.mediaDevices
+      ?.enumerateDevices?.()
+      .then((list) => {
+        const cams = list.filter((d) => d.kind === 'videoinput');
+        setCanSwitch(cams.length > 1);
+      })
+      .catch(() => setCanSwitch(true));
+  }, [ready]);
+
+  const flip = useCallback(() => {
+    hapticImpact('medium');
+    setFacing((f) => (f === 'user' ? 'environment' : 'user'));
+  }, []);
+
+  /** Tapp i søkeren for å fokusere der. */
+  const focusAt = useCallback(async (clientX: number, clientY: number, rect: DOMRect) => {
+    const x = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
+    const y = Math.min(Math.max((clientY - rect.top) / rect.height, 0), 1);
+    setFocusPoint({ x: x * 100, y: y * 100 });
+    setTimeout(() => setFocusPoint(null), 900);
+    hapticImpact('light');
+    const track = trackRef.current;
+    const caps: any = track?.getCapabilities?.();
+    if (!track || !caps) return;
+    const constraints: any = {};
+    if (caps.focusMode?.includes?.('single-shot')) constraints.focusMode = 'single-shot';
+    else if (caps.focusMode?.includes?.('continuous')) constraints.focusMode = 'continuous';
+    if (caps.pointsOfInterest) constraints.pointsOfInterest = [{ x, y }];
+    if (Object.keys(constraints).length === 0) return;
+    await track.applyConstraints({ advanced: [constraints] } as any).catch(() => {});
+  }, []);
+
+  const applyZoom = useCallback(async (value: number) => {
+    setZoom(value);
+    const track = trackRef.current;
+    if (!track || !zoomRange) return;
+    await track.applyConstraints({ advanced: [{ zoom: value } as any] } as any).catch(() => {});
+  }, [zoomRange]);
+
   const shoot = async () => {
     if (!videoRef.current || !ready || busy || winding || shotsLeft <= 0) return;
     hapticImpact('heavy');
-    if (flashOn) {
+    const track = trackRef.current;
+    const useTorch = flashOn && hasTorch && facing === 'environment';
+    if (useTorch) {
+      await track?.applyConstraints({ advanced: [{ torch: true } as any] } as any).catch(() => {});
+      await new Promise((r) => setTimeout(r, 180));
+    } else if (flashOn) {
       setFlashing(true);
       setTimeout(() => setFlashing(false), 140);
     }
@@ -212,6 +279,9 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
     } catch {
       hapticError();
     } finally {
+      if (useTorch) {
+        await track?.applyConstraints({ advanced: [{ torch: false } as any] } as any).catch(() => {});
+      }
       // Fake film-winding delay — you can't machine-gun a disposable camera.
       setTimeout(() => setWinding(false), 700);
     }
@@ -276,11 +346,16 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
         </div>
         <button
           type="button"
-          onClick={() => setFacing((f) => (f === 'user' ? 'environment' : 'user'))}
-          className="rounded-full bg-white/10 p-2 active:scale-95"
-          aria-label="Bytt kamera"
+          onClick={flip}
+          disabled={!canSwitch}
+          className={cn(
+            'flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[11px] font-medium active:scale-95',
+            !canSwitch && 'opacity-40',
+          )}
+          aria-label="Bytt mellom front- og bakkamera"
         >
           <SwitchCamera className="h-5 w-5" />
+          {facing === 'user' ? 'Front' : 'Bak'}
         </button>
       </div>
 
@@ -293,8 +368,21 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
             <div className="h-6 w-6 rounded-full bg-amber-300/80 shadow-[0_0_16px_rgba(252,211,77,0.6)]" />
           </div>
 
-          {/* Viewfinder */}
-          <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-black">
+          {/* Viewfinder – tapp for å fokusere, dobbelttapp for å bytte kamera */}
+          <div
+            className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-black"
+            onPointerDown={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const now = Date.now();
+              if (now - lastTapRef.current < 280) {
+                lastTapRef.current = 0;
+                if (canSwitch) flip();
+                return;
+              }
+              lastTapRef.current = now;
+              focusAt(e.clientX, e.clientY, rect);
+            }}
+          >
             <video
               ref={videoRef}
               playsInline
@@ -308,6 +396,13 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
             {/* Frame guides */}
             <div className="pointer-events-none absolute inset-3 border border-white/25" />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(0,0,0,0.45)_100%)]" />
+            {focusPoint && (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute h-16 w-16 -translate-x-1/2 -translate-y-1/2 animate-in zoom-in-50 fade-in rounded-lg border-2 border-amber-300 shadow-[0_0_18px_rgba(252,211,77,0.5)]"
+                style={{ left: `${focusPoint.x}%`, top: `${focusPoint.y}%` }}
+              />
+            )}
             {(error || !ready) && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 px-6 text-center">
                 <p className="text-xs text-white/70">{error ?? 'Starter kamera…'}</p>
@@ -358,10 +453,27 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
             </span>
           </div>
 
+          {zoomRange && (
+            <div className="mt-3 flex items-center gap-2">
+              <span className="font-mono text-[10px] text-white/50">1x</span>
+              <input
+                type="range"
+                min={zoomRange.min}
+                max={zoomRange.max}
+                step={0.1}
+                value={zoom}
+                onChange={(e) => applyZoom(parseFloat(e.target.value))}
+                aria-label="Zoom"
+                className="h-1 flex-1 accent-amber-300"
+              />
+              <span className="font-mono text-[10px] text-amber-300">{zoom.toFixed(1)}x</span>
+            </div>
+          )}
+
           <p className="mt-3 text-center text-[11px] leading-snug text-white/40">
             {winding
               ? 'Sveiver frem filmen…'
-              : 'Ingen forhåndsvisning. Bildene utvikles når filmen er ferdig.'}
+              : 'Tapp for å fokusere · dobbelttapp for å bytte kamera. Ingen forhåndsvisning.'}
           </p>
         </div>
       </div>

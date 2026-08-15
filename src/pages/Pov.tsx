@@ -19,7 +19,7 @@ import {
 } from '@/hooks/usePov';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import povHero from '@/assets/pov-hero.jpg.asset.json';
+import povHeroUrl from '@/assets/pov-hero-local.jpg';
 
 function countdown(iso: string | null): string | null {
   if (!iso) return null;
@@ -94,7 +94,7 @@ export default function Pov() {
     <div className="mx-auto w-full max-w-2xl space-y-6 pb-8 pt-1">
       <header className="relative mt-1 overflow-hidden rounded-[24px] border border-oks-gold/25 shadow-oks">
         <img
-          src={povHero.url}
+          src={povHeroUrl}
           alt="Øksnøen sommerleir"
           className="aspect-[4/3] w-full object-cover sm:aspect-[16/9]"
         />

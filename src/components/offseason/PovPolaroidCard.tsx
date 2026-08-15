@@ -1,7 +1,7 @@
 import { Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePovCurrentRoll } from '@/hooks/usePov';
-import povHero from '@/assets/pov-hero.jpg.asset.json';
+import povHeroUrl from '@/assets/pov-hero-local.jpg';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { cn } from '@/lib/utils';
 
@@ -39,7 +39,7 @@ export function PovPolaroidCard({ className }: { className?: string }) {
       >
         <span className="oks-grain relative block overflow-hidden rounded-[2px]">
           <img
-            src={povHero.url}
+            src={povHeroUrl}
             alt="Øksnøen POV"
             loading="lazy"
             className="aspect-[4/3] w-full object-cover"

@@ -12,7 +12,7 @@ import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import { BentoTile } from '@/components/offseason/BentoTile';
 import { usePovCurrentRoll } from '@/hooks/usePov';
-import povHero from '@/assets/pov-hero.jpg.asset.json';
+import povHeroUrl from '@/assets/pov-hero-local.jpg';
 import { Camera } from 'lucide-react';
 import { LederpassStrip } from '@/components/offseason/LederpassStrip';
 import { HomeNotifications } from '@/components/home/HomeNotifications';
@@ -86,7 +86,7 @@ export function OffSeasonHome({
         desc={povRoll ? `${povLeft} bilder igjen` : 'Ingen film i kameraet'}
         tone="paper"
         size="lg"
-        image={povHero.url}
+        image={povHeroUrl}
         onClick={() => navigate('/pov')}
         className="mt-1"
       />
