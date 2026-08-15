@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,7 +76,7 @@ export default function Admin() {
       debounce = setTimeout(() => { loadData(); }, 600);
     };
     const channel = supabase
-      .channel('admin-leaders-realtime')
+      .channel(uniqueRealtimeChannelName('admin-leaders-realtime'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leaders' }, scheduleReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leader_cabins' }, scheduleReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leader_content' }, scheduleReload)

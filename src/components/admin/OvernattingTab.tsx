@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
@@ -49,7 +50,7 @@ export function OvernattingTab() {
   useEffect(() => {
     load();
     const ch = supabase
-      .channel('overnatting-admin')
+      .channel(uniqueRealtimeChannelName('overnatting-admin'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'overnatting_responses' }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };

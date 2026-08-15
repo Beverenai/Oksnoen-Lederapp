@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 export const POV_BUCKET = 'pov-photos';
 
@@ -65,7 +66,7 @@ export function usePovPhotos(rollId: string | undefined) {
   useEffect(() => {
     if (!rollId) return;
     const channel = supabase
-      .channel(`pov-photos-${rollId}`)
+      .channel(uniqueRealtimeChannelName(`pov-photos-${rollId}`))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'pov_photos', filter: `roll_id=eq.${rollId}` },

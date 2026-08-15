@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 export interface ParticipantTask {
   id: string;
@@ -37,7 +38,7 @@ export function useParticipantTasksRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
     const channel = supabase
-      .channel('participant-tasks-rt')
+      .channel(uniqueRealtimeChannelName('participant-tasks-rt'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'participant_tasks' }, () => {
         qc.invalidateQueries({ queryKey: ['participant-tasks'] });
       })

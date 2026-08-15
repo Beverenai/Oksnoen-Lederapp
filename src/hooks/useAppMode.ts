@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 export type AppMode = 'active' | 'inactive';
-
-let channelSeq = 0;
 
 /**
  * Global app mode. When set to 'inactive', all features are hidden for
@@ -16,7 +15,7 @@ export function useAppMode(): { mode: AppMode; isLoading: boolean } {
 
   useEffect(() => {
     let cancelled = false;
-    const channelName = `app-mode-changes-${++channelSeq}-${Math.random().toString(36).slice(2, 8)}`;
+    const channelName = uniqueRealtimeChannelName('app-mode-changes');
 
     const load = async () => {
       const { data } = await supabase

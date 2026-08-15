@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import type { Tables } from '@/integrations/supabase/types';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 export type KitchenSection = Tables<'kitchen_sections'>;
 export type KitchenItem = Tables<'kitchen_items'>;
@@ -59,7 +60,7 @@ export function useKitchenRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
     const channel = supabase
-      .channel('kitchen-realtime')
+      .channel(uniqueRealtimeChannelName('kitchen-realtime'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'kitchen_item_checks' }, () => {
         qc.invalidateQueries({ queryKey: ['kitchen-checks'] });
       })

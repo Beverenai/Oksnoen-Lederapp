@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 export type MailboxCategory = 'question' | 'idea' | 'praise' | 'concern' | 'other';
 export type MailboxStatus = 'new' | 'read' | 'replied';
@@ -41,7 +42,7 @@ export function useMailboxRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
     const channel = supabase
-      .channel('mailbox-messages')
+      .channel(uniqueRealtimeChannelName('mailbox-messages'))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'mailbox_messages' },

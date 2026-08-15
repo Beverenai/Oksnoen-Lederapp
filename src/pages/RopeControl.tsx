@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -171,7 +172,7 @@ export default function RopeControl() {
     if (!leader) return;
 
     const channel = supabase
-      .channel('rope-control-updates')
+      .channel(uniqueRealtimeChannelName('rope-control-updates'))
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 

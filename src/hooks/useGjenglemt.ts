@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 export interface GjenglemtPeriod {
   id: string;
@@ -235,7 +236,7 @@ export function useGjenglemtRealtime(periodId: string | null) {
   useEffect(() => {
     if (!periodId) return;
     const channel = supabase
-      .channel(`gjenglemt-items-${periodId}`)
+      .channel(uniqueRealtimeChannelName(`gjenglemt-items-${periodId}`))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'gjenglemt_items', filter: `period_id=eq.${periodId}` }, () => {
         qc.invalidateQueries({ queryKey: ['gjenglemt-items', periodId] });
       })

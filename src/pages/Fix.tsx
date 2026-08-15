@@ -2,6 +2,7 @@ import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -126,7 +127,7 @@ export default function Fix() {
 
     // Realtime subscription
     const channel = supabase
-      .channel('fix-tasks-changes')
+      .channel(uniqueRealtimeChannelName('fix-tasks-changes'))
       .on('postgres_changes', {
         event: '*',
         schema: 'public',

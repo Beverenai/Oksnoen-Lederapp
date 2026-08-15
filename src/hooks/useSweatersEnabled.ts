@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 /**
  * Whether the "Gensere" (sweater pickup) module is enabled globally.
@@ -25,7 +26,7 @@ export function useSweatersEnabled() {
 
   useEffect(() => {
     const channel = supabase
-      .channel('sweaters-enabled-global')
+      .channel(uniqueRealtimeChannelName('sweaters-enabled-global'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, (payload: any) => {
         if (payload.new?.key === 'sweaters_enabled' || payload.old?.key === 'sweaters_enabled') {
           queryClient.invalidateQueries({ queryKey: ['sweaters-enabled'] });

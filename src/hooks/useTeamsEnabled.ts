@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 /**
  * Returns whether the global "teams" flag is enabled.
@@ -25,7 +26,7 @@ export function useTeamsEnabled() {
 
   useEffect(() => {
     const channel = supabase
-      .channel('teams-enabled-global')
+      .channel(uniqueRealtimeChannelName('teams-enabled-global'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, (payload: any) => {
         if (payload.new?.key === 'teams_enabled' || payload.old?.key === 'teams_enabled') {
           queryClient.invalidateQueries({ queryKey: ['teams-enabled'] });

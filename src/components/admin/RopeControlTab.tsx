@@ -1,6 +1,7 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 import { useActivePeriodId } from '@/hooks/useActivePeriodId';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -112,7 +113,7 @@ export function RopeControlTab() {
     loadData();
 
     const channel = supabase
-      .channel('admin-rope-controls')
+      .channel(uniqueRealtimeChannelName('admin-rope-controls'))
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 

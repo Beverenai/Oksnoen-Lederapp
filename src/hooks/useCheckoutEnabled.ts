@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 /**
  * Returns whether the global "checkout" / pass-flow flag is enabled.
@@ -25,7 +26,7 @@ export function useCheckoutEnabled() {
 
   useEffect(() => {
     const channel = supabase
-      .channel('checkout-enabled-global')
+      .channel(uniqueRealtimeChannelName('checkout-enabled-global'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, (payload: any) => {
         if (payload.new?.key === 'checkout_enabled' || payload.old?.key === 'checkout_enabled') {
           queryClient.invalidateQueries({ queryKey: ['checkout-enabled'] });

@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 type BadgeNavigator = Navigator & {
   setAppBadge?: (count?: number) => Promise<void>;
@@ -60,7 +61,7 @@ export function useAppBadge() {
     window.addEventListener('focus', refresh);
 
     const channel = supabase
-      .channel('app-badge-live')
+      .channel(uniqueRealtimeChannelName('app-badge-live'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leader_hookups' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'mailbox_messages' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'murder_kill_claims' }, () => refresh())

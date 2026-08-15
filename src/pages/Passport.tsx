@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -217,7 +218,7 @@ export default function Passport() {
   // Realtime subscription for checkout_enabled
   useEffect(() => {
     const channel = supabase
-      .channel('checkout-config')
+      .channel(uniqueRealtimeChannelName('checkout-config'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, (payload: any) => {
         if (payload.new?.key === 'checkout_enabled') {
           queryClient.invalidateQueries({ queryKey: ['checkout-enabled'] });
@@ -230,7 +231,7 @@ export default function Passport() {
   // Realtime subscription for participants — keeps arrival count live
   useEffect(() => {
     const channel = supabase
-      .channel('passport-participants')
+      .channel(uniqueRealtimeChannelName('passport-participants'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, () => {
         queryClient.invalidateQueries({ queryKey: ['participants-with-cabins'] });
       })

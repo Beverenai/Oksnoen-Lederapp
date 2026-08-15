@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActivePeriodId } from './useActivePeriodId';
 import { useParticipantTeams, type ParticipantTeam } from './useParticipantTeams';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 interface KitchenDutyRow {
   id: string;
@@ -51,7 +52,7 @@ export function useKitchenDutyConfig() {
   useEffect(() => {
     if (!periodId) return;
     const channel = supabase
-      .channel('team-kitchen-duty')
+      .channel(uniqueRealtimeChannelName('team-kitchen-duty'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'team_kitchen_duty' }, () => {
         qc.invalidateQueries({ queryKey: ['team-kitchen-duty', periodId] });
       })

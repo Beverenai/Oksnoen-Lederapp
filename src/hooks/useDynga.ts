@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 
 export type DyngaColumn = Tables<'dynga_columns'>;
 export type DyngaCardRow = Tables<'dynga_cards'>;
@@ -24,7 +25,7 @@ export function useDyngaRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
     const channel = supabase
-      .channel('dynga-rt')
+      .channel(uniqueRealtimeChannelName('dynga-rt'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dynga_columns' }, () => {
         qc.invalidateQueries({ queryKey: ['dynga-columns'] });
       })

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -389,7 +390,7 @@ export default function Home() {
     if (!leader) return;
 
     const channel = supabase
-      .channel('home-updates')
+      .channel(uniqueRealtimeChannelName('home-updates'))
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
