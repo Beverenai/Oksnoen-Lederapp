@@ -453,10 +453,27 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
             </span>
           </div>
 
+          {zoomRange && (
+            <div className="mt-3 flex items-center gap-2">
+              <span className="font-mono text-[10px] text-white/50">1x</span>
+              <input
+                type="range"
+                min={zoomRange.min}
+                max={zoomRange.max}
+                step={0.1}
+                value={zoom}
+                onChange={(e) => applyZoom(parseFloat(e.target.value))}
+                aria-label="Zoom"
+                className="h-1 flex-1 accent-amber-300"
+              />
+              <span className="font-mono text-[10px] text-amber-300">{zoom.toFixed(1)}x</span>
+            </div>
+          )}
+
           <p className="mt-3 text-center text-[11px] leading-snug text-white/40">
             {winding
               ? 'Sveiver frem filmen…'
-              : 'Ingen forhåndsvisning. Bildene utvikles når filmen er ferdig.'}
+              : 'Tapp for å fokusere · dobbelttapp for å bytte kamera. Ingen forhåndsvisning.'}
           </p>
         </div>
       </div>
