@@ -12,6 +12,9 @@ import {
   applyMention,
   findMentionedLeaders,
   splitMentionSegments,
+  hasAllMention,
+  ALL_MENTION_ID,
+  ALL_MENTION_NAME,
 } from '@/lib/chatMentions';
 
 interface ChatMessage {
@@ -222,10 +225,14 @@ export default function Chat() {
   const mentionMatches = useMemo(() => {
     if (!mention) return [];
     const q = mention.query.trim().toLowerCase();
-    return taggableLeaders
+    const people = taggableLeaders
       .filter((l) => l.id !== leader?.id)
       .filter((l) => (q ? l.name.toLowerCase().includes(q) : true))
       .slice(0, 6);
+    const showAll = !q || ALL_MENTION_NAME.startsWith(q);
+    return showAll
+      ? [{ id: ALL_MENTION_ID, name: ALL_MENTION_NAME, profile_image_url: null } as LeaderLite, ...people]
+      : people;
   }, [mention, taggableLeaders, leader?.id]);
 
   const send = async () => {
@@ -233,9 +240,11 @@ export default function Chat() {
     if (!body || !leader) return;
     setSending(true);
     nearBottomRef.current = true;
-    const mentions = findMentionedLeaders(body, taggableLeaders)
-      .map((l) => l.id)
-      .filter((id) => id !== leader.id);
+    const everyone = hasAllMention(body);
+    const mentions = (everyone
+      ? taggableLeaders.map((l) => l.id)
+      : findMentionedLeaders(body, taggableLeaders).map((l) => l.id)
+    ).filter((id) => id !== leader.id);
     const { data: inserted, error } = await supabase
       .from('chat_messages')
       .insert({ leader_id: leader.id, body, channel, mentions })
