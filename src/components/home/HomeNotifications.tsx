@@ -202,8 +202,19 @@ export function HomeNotifications() {
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="w-full max-w-sm sm:max-w-sm">
-          <SheetHeader className="pb-2 pr-10 text-left">
+          <SheetHeader className="flex flex-row items-center justify-between pb-2 pr-10 text-left">
             <SheetTitle className="text-lg font-heading">Varslinger</SheetTitle>
+            {notifications.length > 0 && (
+              <button
+                type="button"
+                onClick={markAllAsRead}
+                disabled={unreadCount === 0}
+                className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary transition hover:bg-primary/20 disabled:opacity-50"
+              >
+                <Check className="h-3.5 w-3.5" />
+                Merk alle som lest
+              </button>
+            )}
           </SheetHeader>
 
           <div className="mt-2 space-y-2">
