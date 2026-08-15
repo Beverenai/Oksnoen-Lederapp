@@ -316,11 +316,11 @@ export function DisposableCamera({ shotsLeft, onCapture, onClose }: Props) {
         }
       }
       if (bitmap) {
-        blob = await developFrame(bitmap, bitmap.width, bitmap.height, facing === 'user');
+        blob = await developFrame(bitmap, bitmap.width, bitmap.height, facing === 'user', look);
         bitmap.close?.();
       } else {
         const v = videoRef.current;
-        blob = await developFrame(v, v.videoWidth, v.videoHeight, facing === 'user');
+        blob = await developFrame(v, v.videoWidth, v.videoHeight, facing === 'user', look);
       }
 
       // Opplasting skjer i bakgrunnen — du kan ta neste bilde med en gang.
