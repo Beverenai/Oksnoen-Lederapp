@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 export type AppMode = 'active' | 'inactive';
 
+let channelSeq = 0;
+
 /**
  * Global app mode. When set to 'inactive', all features are hidden for
  * non-superadmin users; only the chat page remains available.
@@ -14,6 +16,7 @@ export function useAppMode(): { mode: AppMode; isLoading: boolean } {
 
   useEffect(() => {
     let cancelled = false;
+    const channelName = `app-mode-changes-${++channelSeq}-${Math.random().toString(36).slice(2, 8)}`;
 
     const load = async () => {
       const { data } = await supabase
@@ -28,7 +31,7 @@ export function useAppMode(): { mode: AppMode; isLoading: boolean } {
     load();
 
     const channel = supabase
-      .channel('app-mode-changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'app_config', filter: 'key=eq.app_mode' },
