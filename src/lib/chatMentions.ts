@@ -13,6 +13,15 @@ export interface MentionLeader {
   name: string;
 }
 
+/** Pseudo-tagg som varsler alle i kanalen: "@alle". */
+export const ALL_MENTION_ID = '__all__';
+export const ALL_MENTION_NAME = 'alle';
+
+/** Er "@alle" brukt i teksten? */
+export function hasAllMention(text: string): boolean {
+  return /(^|[\s(])@alle\b/i.test(text);
+}
+
 function byLongestName<T extends MentionLeader>(leaders: T[]) {
   return [...leaders].sort((a, b) => b.name.length - a.name.length);
 }
@@ -45,6 +54,19 @@ export function splitMentionSegments<T extends MentionLeader>(
   while (i < text.length) {
     if (text[i] === '@') {
       const rest = text.slice(i + 1).toLowerCase();
+      if (rest.startsWith(ALL_MENTION_NAME) && !/[a-zæøå0-9]/i.test(rest[ALL_MENTION_NAME.length] ?? '')) {
+        if (buffer) {
+          out.push({ type: 'text', text: buffer });
+          buffer = '';
+        }
+        out.push({
+          type: 'mention',
+          text: `@${text.slice(i + 1, i + 1 + ALL_MENTION_NAME.length)}`,
+          leaderId: ALL_MENTION_ID,
+        });
+        i += 1 + ALL_MENTION_NAME.length;
+        continue;
+      }
       const hit = candidates.find((l) => rest.startsWith(l.name.toLowerCase()));
       if (hit) {
         if (buffer) {
