@@ -53,6 +53,8 @@
 	<string>Vi bruker Face ID for at du raskt og trygt kan logge inn i appen.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Vi trenger tilgang til kameraet for å ta profilbilde og bilder til Fix-meldinger.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Vi trenger tilgang til mikrofonen for å diktere hendelser i appen.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Vi trenger tilgang til bildebiblioteket for å velge profilbilde og bilder til Fix-meldinger.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
