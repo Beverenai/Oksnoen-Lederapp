@@ -146,17 +146,25 @@ export function useSwipeCandidates() {
   }, [base.data]);
 
   const candidates = useMemo(() => {
-    const swiped = new Set(swipes.map((s) => s.target_leader_id));
+    const liked = new Set(swipes.filter((s) => s.liked).map((s) => s.target_leader_id));
+    const passed = new Set(swipes.filter((s) => !s.liked).map((s) => s.target_leader_id));
     const matched = new Set(matches.map((m) => m.leaderId));
-    const filtered = (base.data ?? []).filter(
+    const pool = (base.data ?? []).filter(
       (l) =>
         l.id !== myId &&
-        !swiped.has(l.id) &&
+        !liked.has(l.id) &&
         !matched.has(l.id) &&
         // Aktive ledere kan sveipe på alle; inaktive ser off-season-utvalget.
         (!isLimitedAccess || l.is_active === false || l.is_external === true),
     );
-    return filtered.sort((a, b) => {
+
+    // Uendelig sveiping: først de du ikke har sveipet, og når de er brukt opp
+    // kommer de du har sveipet vekk tilbake igjen (kun likte forsvinner).
+    const fresh = pool.filter((l) => !passed.has(l.id));
+    const recycled = pool.filter((l) => passed.has(l.id));
+    const ordered = fresh.length > 0 ? fresh : recycled;
+
+    return [...ordered].sort((a, b) => {
       const ka = randomKeys.current.get(a.id) ?? 0;
       const kb = randomKeys.current.get(b.id) ?? 0;
       return ka - kb;
