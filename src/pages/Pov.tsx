@@ -215,6 +215,17 @@ export default function Pov() {
                 </button>
               ))}
             </div>
+              {shown.length > 0 && (
+                <button
+                  type="button"
+                  onClick={downloadAll}
+                  disabled={downloading}
+                  className="flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground disabled:opacity-50"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  {downloading ? 'Laster…' : 'Alle'}
+                </button>
+              )}
           </div>
 
           {photosLoading ? (
