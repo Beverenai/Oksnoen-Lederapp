@@ -81,8 +81,34 @@ serve(async (req) => {
       });
     }
 
+    const leaderIds = (updated ?? []).map((r: { id: string }) => r.id);
+    let notified = 0;
+    if (leaderIds.length > 0) {
+      try {
+        const res = await fetch(`${supabaseUrl}/functions/v1/push-send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({
+            title: "Off-season er i gang 🌙",
+            message:
+              "Sesongen er over! Du har fortsatt tilgang til Lederhuset, Tinder, POV, slurker og lederpasset ditt.",
+            url: "/",
+            leader_ids: leaderIds,
+            include_inactive: true,
+          }),
+        });
+        const pushJson = await res.json().catch(() => null);
+        notified = pushJson?.sent ?? 0;
+      } catch (pushErr) {
+        console.error("off-season push failed:", pushErr);
+      }
+    }
+
     return new Response(
-      JSON.stringify({ success: true, deactivated: updated?.length ?? 0 }),
+      JSON.stringify({ success: true, deactivated: leaderIds.length, notified }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
