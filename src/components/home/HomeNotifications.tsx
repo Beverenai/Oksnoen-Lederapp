@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Beer, Wine, GlassWater, Heart, MessageSquare } from 'lucide-react';
+import { Bell, Beer, Wine, GlassWater, Heart, MessageSquare, Check } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useMySips } from '@/hooks/useSips';
