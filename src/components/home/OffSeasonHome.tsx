@@ -15,6 +15,7 @@ import { usePovCurrentRoll } from '@/hooks/usePov';
 import povHero from '@/assets/pov-hero.jpg.asset.json';
 import { Camera } from 'lucide-react';
 import { LederpassStrip } from '@/components/offseason/LederpassStrip';
+import { HomeNotifications } from '@/components/home/HomeNotifications';
 import type { Leader } from '@/types/database';
 
 /**
