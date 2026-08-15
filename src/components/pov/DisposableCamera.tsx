@@ -509,6 +509,36 @@ export function DisposableCamera({ shotsLeft, onCapture, onClose }: Props) {
           </div>
         )}
 
+        {/* Filtervelger */}
+        <div className="-mx-6 mb-4 overflow-x-auto px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-max items-center gap-2">
+            {POV_FILTERS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => {
+                  hapticImpact('light');
+                  setFilterId(f.id);
+                  try {
+                    localStorage.setItem('pov-filter', f.id);
+                  } catch {
+                    /* ignorer */
+                  }
+                }}
+                aria-pressed={filterId === f.id}
+                className={cn(
+                  'whitespace-nowrap rounded-full px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-wider backdrop-blur transition-all active:scale-95',
+                  filterId === f.id
+                    ? 'bg-amber-300 text-neutral-900'
+                    : 'bg-black/40 text-white/70',
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex items-center justify-between">
           <div className="w-14 text-[10px] leading-tight text-white/50">
             {uploading > 0 ? `Laster opp ${uploading}…` : 'Tapp for fokus'}
