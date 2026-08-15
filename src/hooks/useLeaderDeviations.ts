@@ -92,3 +92,41 @@ export function useDeleteLeaderDeviation() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['leader-deviations'] }),
   });
 }
+
+export function useUpdateLeaderDeviation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      leaderId: string;
+      kind: DeviationKind;
+      hours: number | null;
+      occurredOn: string;
+      note: string | null;
+    }) => {
+      const { error } = await (supabase as any)
+        .from('leader_deviations')
+        .update({
+          leader_id: input.leaderId,
+          kind: input.kind,
+          hours: input.hours,
+          occurred_on: input.occurredOn,
+          note: input.note,
+        })
+        .eq('id', input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leader-deviations'] }),
+  });
+}
+
+function _unusedDeleteLeaderDeviation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any).from('leader_deviations').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leader-deviations'] }),
+  });
+}
