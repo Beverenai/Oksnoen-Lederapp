@@ -221,7 +221,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const isKtc = roles.includes('kitchen');
 
       // 3. Inactive leaders keep access, but only to the off-season features.
-      setIsLimitedAccess(leaderData.is_active === false && !isSA);
+      //    Gjelder også admin/superadmin — de skal se off-season-appen når de er inaktive.
+      setIsLimitedAccess(leaderData.is_active === false);
 
       // 4. Apply state
       setDeactivatedMessage(null);
@@ -256,7 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!error && leaderData) {
       setLeader(leaderData);
-      setIsLimitedAccess(leaderData.is_active === false && !isSuperAdmin);
+      setIsLimitedAccess(leaderData.is_active === false);
     }
   }, [leader?.id, isSuperAdmin]);
 

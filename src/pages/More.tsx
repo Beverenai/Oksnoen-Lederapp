@@ -105,7 +105,7 @@ export default function More() {
   const { isAdmin, isNurse, isKitchen, isSuperAdmin, isLimitedAccess, logout, leader, effectiveLeader } = useAuth();
   const navigate = useNavigate();
   const { mode: appMode } = useAppMode();
-  const limited = (appMode === 'inactive' || isLimitedAccess) && !isSuperAdmin;
+  const limited = isLimitedAccess || (appMode === 'inactive' && !isSuperAdmin);
   const sweatersEnabled = useSweatersEnabled();
   const { data: murderState } = useMyMurderState();
   const { data: mailboxUnread } = useMailboxUnreadCount(!!isAdmin);

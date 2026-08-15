@@ -133,7 +133,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   // Limited access: app-wide inactive mode, or a leader who is not active this
   // period. Only the off-season surfaces are reachable for non-superadmins.
-  if ((mode === 'inactive' || isLimitedAccess) && !isSuperAdmin) {
+  if (isLimitedAccess || (mode === 'inactive' && !isSuperAdmin)) {
     if (!isLimitedAccessRoute(window.location.pathname)) {
       return <Navigate to="/" replace />;
     }
