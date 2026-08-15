@@ -133,6 +133,11 @@ export function DisposableCamera({ shotsLeft, onCapture, onClose }: Props) {
   const [justShot, setJustShot] = useState(false);
   const [uploading, setUploading] = useState(0);
   const [taken, setTaken] = useState(0);
+  const [filterId, setFilterId] = useState<PovFilterId>(() => {
+    const saved = localStorage.getItem('pov-filter');
+    return povFilterOf(saved).id;
+  });
+  const look = povFilterOf(filterId);
   const [hasTorch, setHasTorch] = useState(false);
   const [canSwitch, setCanSwitch] = useState(true);
   const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null);
