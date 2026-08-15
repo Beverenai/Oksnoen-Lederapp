@@ -166,9 +166,8 @@ export function HomeNotifications() {
   const seenSet = useMemo(() => new Set(seen), [seen]);
   const unreadCount = notifications.filter((n) => !seenSet.has(n.id)).length;
 
-  /** Når man åpner varslene er de sett — badgen nullstilles. */
-  useEffect(() => {
-    if (!open || notifications.length === 0) return;
+  const markAllAsRead = useCallback(() => {
+    if (notifications.length === 0) return;
     const ids = notifications.map((n) => n.id);
     setSeen((prev) => {
       const next = Array.from(new Set([...prev, ...ids])).slice(-300);
@@ -177,7 +176,13 @@ export function HomeNotifications() {
       } catch { /* ignorer */ }
       return next;
     });
-  }, [open, notifications]);
+  }, [notifications]);
+
+  /** Når man åpner varslene er de sett — badgen nullstilles. */
+  useEffect(() => {
+    if (!open || notifications.length === 0) return;
+    markAllAsRead();
+  }, [open, notifications, markAllAsRead]);
 
   return (
     <>
