@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Camera, Film, Clock, Sparkles } from 'lucide-react';
+import { Camera, Film, Clock, Sparkles, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,7 +19,7 @@ import {
 } from '@/hooks/usePov';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import povHero from '@/assets/pov-hero.jpg.asset.json';
+import povHeroUrl from '@/assets/pov-hero-local.jpg';
 
 function countdown(iso: string | null): string | null {
   if (!iso) return null;
@@ -48,6 +48,32 @@ export default function Pov() {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'mine'>('all');
   const autoOpened = useRef(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const downloadAll = async () => {
+    setDownloading(true);
+    try {
+      for (const photo of shown) {
+        if (!photo.signedUrl) continue;
+        const res = await fetch(photo.signedUrl);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `oksnoen-pov-${photo.id}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        await new Promise((r) => setTimeout(r, 350));
+      }
+      toast.success('Bildene er lastet ned');
+    } catch {
+      showError('Kunne ikke laste ned', 'Prøv igjen, eller last ned ett og ett bilde.');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   // Ta deg rett inn i kameraet når du åpner POV (ingen ekstra trykk).
   useEffect(() => {
@@ -94,7 +120,7 @@ export default function Pov() {
     <div className="mx-auto w-full max-w-2xl space-y-6 pb-8 pt-1">
       <header className="relative mt-1 overflow-hidden rounded-[24px] border border-oks-gold/25 shadow-oks">
         <img
-          src={povHero.url}
+          src={povHeroUrl}
           alt="Øksnøen sommerleir"
           className="aspect-[4/3] w-full object-cover sm:aspect-[16/9]"
         />
@@ -189,6 +215,17 @@ export default function Pov() {
                 </button>
               ))}
             </div>
+              {shown.length > 0 && (
+                <button
+                  type="button"
+                  onClick={downloadAll}
+                  disabled={downloading}
+                  className="flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground disabled:opacity-50"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  {downloading ? 'Laster…' : 'Alle'}
+                </button>
+              )}
           </div>
 
           {photosLoading ? (

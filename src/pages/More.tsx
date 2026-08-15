@@ -47,7 +47,7 @@ import { TinderIcon } from '@/components/icons/TinderIcon';
 import { usePovCurrentRoll } from '@/hooks/usePov';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import { BentoTile, type BentoTone, type BentoSize } from '@/components/offseason/BentoTile';
-import povHero from '@/assets/pov-hero.jpg.asset.json';
+import povHeroUrl from '@/assets/pov-hero-local.jpg';
 
 type MoreItem = {
   to?: string;
