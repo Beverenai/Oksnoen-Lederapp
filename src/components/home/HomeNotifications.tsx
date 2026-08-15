@@ -36,10 +36,23 @@ const drinkIcon: Record<DrinkType, typeof Beer> = {
   drink: GlassWater,
 };
 
+const SEEN_KEY = 'oks-home-notifications-seen';
+
+function readSeen(): string[] {
+  try {
+    const raw = localStorage.getItem(SEEN_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((v) => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 export function HomeNotifications() {
   const navigate = useNavigate();
   const { leader } = useAuth();
   const [open, setOpen] = useState(false);
+  const [seen, setSeen] = useState<string[]>(() => readSeen());
   const [leaderMap, setLeaderMap] = useState<Map<string, { name: string; image: string | null }>>(new Map());
   const { data: sipsData } = useMySips();
   const { incoming: hookups } = useMyHookups();
@@ -150,7 +163,21 @@ export function HomeNotifications() {
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [sipsData, hookups, matches, mailboxMessages, navigate]);
 
-  const unreadCount = notifications.length;
+  const seenSet = useMemo(() => new Set(seen), [seen]);
+  const unreadCount = notifications.filter((n) => !seenSet.has(n.id)).length;
+
+  /** Når man åpner varslene er de sett — badgen nullstilles. */
+  useEffect(() => {
+    if (!open || notifications.length === 0) return;
+    const ids = notifications.map((n) => n.id);
+    setSeen((prev) => {
+      const next = Array.from(new Set([...prev, ...ids])).slice(-300);
+      try {
+        localStorage.setItem(SEEN_KEY, JSON.stringify(next));
+      } catch { /* ignorer */ }
+      return next;
+    });
+  }, [open, notifications]);
 
   return (
     <>
@@ -220,6 +247,9 @@ export function HomeNotifications() {
                       })}
                     </p>
                   </div>
+                  {!seenSet.has(n.id) && (
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" />
+                  )}
                 </button>
               ))
             )}

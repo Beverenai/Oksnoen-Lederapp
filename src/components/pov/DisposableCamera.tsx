@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, RefreshCw, SwitchCamera, X, Zap, ZapOff } from 'lucide-react';
+import { Camera, Check, RefreshCw, SwitchCamera, X, Zap, ZapOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { hapticImpact, hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
@@ -138,6 +138,8 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [winding, setWinding] = useState(false);
+  const [shutterBlink, setShutterBlink] = useState(false);
+  const [justShot, setJustShot] = useState(false);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -197,11 +199,16 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
       setFlashing(true);
       setTimeout(() => setFlashing(false), 140);
     }
+    // Lukker-blink: alltid synlig, også uten blits.
+    setShutterBlink(true);
+    setTimeout(() => setShutterBlink(false), 180);
     setWinding(true);
     try {
       const blob = await developFrame(videoRef.current, facing === 'user', stamp);
       await onCapture(blob);
       hapticSuccess();
+      setJustShot(true);
+      setTimeout(() => setJustShot(false), 1600);
     } catch {
       hapticError();
     } finally {
@@ -221,6 +228,32 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
           flashing ? 'opacity-95' : 'opacity-0',
         )}
       />
+
+      {/* Lukker-blink */}
+      <div
+        className={cn(
+          'pointer-events-none absolute inset-0 z-[79] bg-black transition-opacity duration-150',
+          shutterBlink ? 'opacity-100' : 'opacity-0',
+        )}
+      />
+
+      {/* Bekreftelse: bildet er tatt */}
+      {justShot && (
+        <div className="pointer-events-none absolute inset-0 z-[82] flex items-center justify-center px-8">
+          <div className="animate-in zoom-in-50 fade-in flex flex-col items-center gap-3 rounded-3xl border border-amber-300/40 bg-neutral-950/85 px-8 py-7 text-center shadow-2xl backdrop-blur-md duration-200">
+            <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-amber-300 text-neutral-900 shadow-[0_0_40px_rgba(252,211,77,0.55)]">
+              <Check className="h-9 w-9" strokeWidth={3} />
+              <span className="absolute inset-0 animate-ping rounded-full border-2 border-amber-300/70" />
+            </span>
+            <div>
+              <p className="font-heading text-lg font-semibold text-white">Bilde tatt!</p>
+              <p className="font-mono text-xs text-amber-300">
+                {String(Math.max(shotsLeft - 1, 0)).padStart(2, '0')} bilder igjen på filmen
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Top bar */}
       <div
