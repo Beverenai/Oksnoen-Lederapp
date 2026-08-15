@@ -56,7 +56,7 @@
     "@types/react-window": "^2.0.0",
     "browser-image-compression": "^2.0.2",
     "canvas-confetti": "^1.9.4",
-    "capacitor-native-biometric": "^4.2.2",
+    "@capgo/capacitor-native-biometric": "8.6.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
