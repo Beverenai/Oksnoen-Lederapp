@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Search, Trash2, Plus, X, AlertTriangle } from 'lucide-react';
+import { Loader2, Search, Trash2, Plus, X, AlertTriangle, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -17,6 +17,7 @@ import {
   useLeaderDeviations,
   useCreateLeaderDeviation,
   useDeleteLeaderDeviation,
+  useUpdateLeaderDeviation,
   DEVIATION_LABELS,
   DEVIATION_COLORS,
   type DeviationKind,
@@ -34,8 +35,10 @@ export function LeaderDeviationsSheet({ open, onOpenChange }: Props) {
   const { data: deviations = [], isLoading } = useLeaderDeviations(open);
   const create = useCreateLeaderDeviation();
   const del = useDeleteLeaderDeviation();
+  const update = useUpdateLeaderDeviation();
 
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [leaderId, setLeaderId] = useState<string | null>(null);
   const [kind, setKind] = useState<DeviationKind>('overtime');
@@ -65,6 +68,7 @@ export function LeaderDeviationsSheet({ open, onOpenChange }: Props) {
 
   const reset = () => {
     setAdding(false);
+    setEditingId(null);
     setLeaderId(null);
     setQuery('');
     setKind('overtime');
@@ -81,6 +85,19 @@ export function LeaderDeviationsSheet({ open, onOpenChange }: Props) {
     const parsed = hours.trim() ? Number(hours.replace(',', '.')) : null;
     if (parsed !== null && (Number.isNaN(parsed) || parsed < 0)) {
       toast.error('Ugyldig antall timer');
+      return;
+    }
+    if (editingId) {
+      update.mutate(
+        { id: editingId, leaderId, kind, hours: parsed, occurredOn, note: note.trim() || null },
+        {
+          onSuccess: () => {
+            toast.success('Avvik oppdatert');
+            reset();
+          },
+          onError: () => toast.error('Kunne ikke oppdatere avvik'),
+        },
+      );
       return;
     }
     create.mutate(
@@ -104,7 +121,7 @@ export function LeaderDeviationsSheet({ open, onOpenChange }: Props) {
         <SheetHeader className="space-y-0 pr-10 text-left">
           <SheetTitle className="flex items-center gap-2 text-base">
             <AlertTriangle className="h-4 w-4 text-orange-500" />
-            Lederavvik
+            {editingId ? 'Endre avvik' : 'Lederavvik'}
           </SheetTitle>
           <p className="text-xs text-muted-foreground">Timer, overtid og fravær knyttet til en leder</p>
         </SheetHeader>
@@ -211,9 +228,9 @@ export function LeaderDeviationsSheet({ open, onOpenChange }: Props) {
 
             <div className="mt-auto flex gap-2 pt-2">
               <Button variant="outline" className="flex-1" onClick={reset}>Avbryt</Button>
-              <Button className="flex-1" onClick={submit} disabled={create.isPending}>
-                {create.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Lagre avvik
+              <Button className="flex-1" onClick={submit} disabled={create.isPending || update.isPending}>
+                {(create.isPending || update.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingId ? 'Lagre endringer' : 'Lagre avvik'}
               </Button>
             </div>
           </div>
@@ -274,6 +291,23 @@ export function LeaderDeviationsSheet({ open, onOpenChange }: Props) {
                             <p className="mt-1 text-[11px] text-muted-foreground">Registrert av {d.creator.name}</p>
                           )}
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0"
+                          onClick={() => {
+                            setEditingId(d.id);
+                            setLeaderId(d.leader_id);
+                            setKind(d.kind);
+                            setHours(d.hours != null ? String(Number(d.hours)).replace('.', ',') : '');
+                            setOccurredOn(d.occurred_on);
+                            setNote(d.note ?? '');
+                            setAdding(true);
+                          }}
+                          aria-label="Endre avvik"
+                        >
+                          <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
