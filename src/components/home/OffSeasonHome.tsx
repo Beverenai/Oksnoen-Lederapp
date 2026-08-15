@@ -15,6 +15,7 @@ import { usePovCurrentRoll } from '@/hooks/usePov';
 import povHero from '@/assets/pov-hero.jpg.asset.json';
 import { Camera } from 'lucide-react';
 import { LederpassStrip } from '@/components/offseason/LederpassStrip';
+import { HomeNotifications } from '@/components/home/HomeNotifications';
 import type { Leader } from '@/types/database';
 
 /**
@@ -63,14 +64,19 @@ export function OffSeasonHome({
 
   return (
     <div className="oks-offseason-bg animate-fade-in -mx-4 space-y-6 px-4 pb-8 pt-1">
-      <header className="pt-1">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-oks-gold/40 bg-[var(--gradient-oks-red)] px-3 py-1 text-[10.5px] font-bold uppercase tracking-wider text-oks-cream shadow-oks">
-          <span className="h-1.5 w-1.5 rounded-full bg-oks-gold" />
-          Off-season
-        </span>
-        <h1 className="mt-3 font-heading text-[28px] font-bold leading-tight text-foreground">
-          Hei{firstName ? ` ${firstName}` : ''}
-        </h1>
+      <header className="relative flex items-start justify-between pt-1">
+        <div>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-oks-gold/40 bg-[var(--gradient-oks-red)] px-3 py-1 text-[10.5px] font-bold uppercase tracking-wider text-oks-cream shadow-oks">
+            <span className="h-1.5 w-1.5 rounded-full bg-oks-gold" />
+            Off-season
+          </span>
+          <h1 className="mt-3 font-heading text-[28px] font-bold leading-tight text-foreground">
+            Hei{firstName ? ` ${firstName}` : ''}
+          </h1>
+        </div>
+        <div className="pt-0.5">
+          <HomeNotifications />
+        </div>
       </header>
 
       {/* POV som fotokort — samme stil som i Mer-menyen */}
