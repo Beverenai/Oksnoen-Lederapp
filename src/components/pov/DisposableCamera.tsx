@@ -3,6 +3,7 @@ import { Check, RefreshCw, SwitchCamera, X, Zap, ZapOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { hapticImpact, hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { POV_FILTERS, povFilterOf, type PovFilter, type PovFilterId } from '@/lib/povFilters';
 
 type Props = {
   shotsLeft: number;
@@ -45,6 +46,7 @@ async function developFrame(
   sw: number,
   sh: number,
   mirrored: boolean,
+  look: PovFilter,
 ): Promise<Blob> {
   const vw = sw || 1440;
   const vh = sh || 1920;
@@ -63,8 +65,7 @@ async function developFrame(
 
   ctx.save();
   try {
-    // Light touch: keep it crisp and true, not a heavy vintage filter.
-    ctx.filter = 'saturate(1.06) contrast(1.03)';
+    ctx.filter = look.css;
   } catch {
     /* older engines just get the raw frame */
   }
@@ -75,19 +76,19 @@ async function developFrame(
   ctx.drawImage(source, 0, 0, w, h);
   ctx.restore();
 
-  // Whisper of warmth in the highlights.
-  ctx.globalCompositeOperation = 'soft-light';
-  ctx.fillStyle = 'rgba(255, 200, 150, 0.06)';
-  ctx.fillRect(0, 0, w, h);
-  ctx.globalCompositeOperation = 'source-over';
+  if (look.tint) {
+    ctx.globalCompositeOperation = look.tint.mode;
+    ctx.fillStyle = look.tint.color;
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'source-over';
+  }
 
-  // Very soft vignette.
   const grad = ctx.createRadialGradient(
     w / 2, h / 2, Math.min(w, h) * 0.55,
     w / 2, h / 2, Math.max(w, h) * 0.78,
   );
   grad.addColorStop(0, 'rgba(0,0,0,0)');
-  grad.addColorStop(1, 'rgba(0,0,0,0.12)');
+  grad.addColorStop(1, `rgba(0,0,0,${look.vignette})`);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, w, h);
 
