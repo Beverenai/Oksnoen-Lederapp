@@ -195,13 +195,9 @@ export function useMyDrink() {
     queryKey: ['my-drink', myId],
     enabled: !!myId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('leaders')
-        .select('preferred_drink')
-        .eq('id', myId!)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('get_my_drink');
       if (error) throw error;
-      const raw = (data as { preferred_drink?: string | null } | null)?.preferred_drink ?? null;
+      const raw = (data as string | null) ?? null;
       return { drink: drinkOf(raw), isSet: !!raw };
     },
     staleTime: 60_000,
@@ -209,16 +205,21 @@ export function useMyDrink() {
 
   const setDrink = useMutation({
     mutationFn: async (drink: DrinkType) => {
-      const { error } = await supabase
-        .from('leaders')
-        .update({ preferred_drink: drink })
-        .eq('id', myId!);
+      const { data, error } = await supabase.rpc('set_my_drink', { _drink: drink });
       if (error) throw error;
-      return drink;
+      return drinkOf(data as string | null);
+    },
+    onMutate: (drink) => {
+      // Vis valget umiddelbart
+      const prev = queryClient.getQueryData(['my-drink', myId]);
+      queryClient.setQueryData(['my-drink', myId], { drink, isSet: true });
+      return { prev };
+    },
+    onError: (_err, _drink, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['my-drink', myId], ctx.prev);
     },
     onSuccess: (drink) => {
       queryClient.setQueryData(['my-drink', myId], { drink, isSet: true });
-      queryClient.invalidateQueries({ queryKey: ['my-drink', myId] });
     },
   });
 
