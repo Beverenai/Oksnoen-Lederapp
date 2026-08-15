@@ -346,11 +346,16 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
         </div>
         <button
           type="button"
-          onClick={() => setFacing((f) => (f === 'user' ? 'environment' : 'user'))}
-          className="rounded-full bg-white/10 p-2 active:scale-95"
-          aria-label="Bytt kamera"
+          onClick={flip}
+          disabled={!canSwitch}
+          className={cn(
+            'flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[11px] font-medium active:scale-95',
+            !canSwitch && 'opacity-40',
+          )}
+          aria-label="Bytt mellom front- og bakkamera"
         >
           <SwitchCamera className="h-5 w-5" />
+          {facing === 'user' ? 'Front' : 'Bak'}
         </button>
       </div>
 
@@ -363,8 +368,21 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
             <div className="h-6 w-6 rounded-full bg-amber-300/80 shadow-[0_0_16px_rgba(252,211,77,0.6)]" />
           </div>
 
-          {/* Viewfinder */}
-          <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-black">
+          {/* Viewfinder – tapp for å fokusere, dobbelttapp for å bytte kamera */}
+          <div
+            className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-black"
+            onPointerDown={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const now = Date.now();
+              if (now - lastTapRef.current < 280) {
+                lastTapRef.current = 0;
+                if (canSwitch) flip();
+                return;
+              }
+              lastTapRef.current = now;
+              focusAt(e.clientX, e.clientY, rect);
+            }}
+          >
             <video
               ref={videoRef}
               playsInline
@@ -378,6 +396,13 @@ export function DisposableCamera({ shotsLeft, busy, onCapture, onClose }: Props)
             {/* Frame guides */}
             <div className="pointer-events-none absolute inset-3 border border-white/25" />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(0,0,0,0.45)_100%)]" />
+            {focusPoint && (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute h-16 w-16 -translate-x-1/2 -translate-y-1/2 animate-in zoom-in-50 fade-in rounded-lg border-2 border-amber-300 shadow-[0_0_18px_rgba(252,211,77,0.5)]"
+                style={{ left: `${focusPoint.x}%`, top: `${focusPoint.y}%` }}
+              />
+            )}
             {(error || !ready) && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 px-6 text-center">
                 <p className="text-xs text-white/70">{error ?? 'Starter kamera…'}</p>
