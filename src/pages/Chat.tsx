@@ -584,11 +584,27 @@ export default function Chat() {
                     onClick={() => insertMention(l.name)}
                     className="flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-accent"
                   >
-                    <Avatar className="h-7 w-7">
-                      <AvatarImage src={l.profile_image_url || undefined} />
-                      <AvatarFallback className="text-[10px]">{initials(l.name)}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">{l.name}</span>
+                    {l.id === ALL_MENTION_ID ? (
+                      <>
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <Users className="h-3.5 w-3.5" />
+                        </span>
+                        <span className="text-sm font-medium">
+                          alle
+                          <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                            varsler alle i chatten
+                          </span>
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Avatar className="h-7 w-7">
+                          <AvatarImage src={l.profile_image_url || undefined} />
+                          <AvatarFallback className="text-[10px]">{initials(l.name)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium">{l.name}</span>
+                      </>
+                    )}
                   </button>
                 ))}
               </div>
