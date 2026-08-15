@@ -358,6 +358,7 @@ export function DisposableCamera({ shotsLeft, onCapture, onClose }: Props) {
           'absolute inset-0 h-full w-full object-cover',
           facing === 'user' && 'scale-x-[-1]',
         )}
+        style={{ filter: look.css }}
       />
 
       {/* Tapp-flate: tapp = fokus, dobbelttapp = snu, klyp = zoom */}
