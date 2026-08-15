@@ -97,6 +97,7 @@ serve(async (req) => {
               "Sesongen er over! Du har fortsatt tilgang til Lederhuset, Tinder, POV, slurker og lederpasset ditt.",
             url: "/",
             leader_ids: leaderIds,
+            sender_leader_id: leaderRow.id,
             include_inactive: true,
           }),
         });
