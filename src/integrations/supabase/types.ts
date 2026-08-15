@@ -4823,6 +4823,7 @@ export type Database = {
           target_leader_id: string
         }[]
       }
+      get_my_drink: { Args: never; Returns: string }
       get_my_murder_state: {
         Args: never
         Returns: {
@@ -4933,6 +4934,7 @@ export type Database = {
         }[]
       }
       set_murder_game_active: { Args: { _active: boolean }; Returns: undefined }
+      set_my_drink: { Args: { _drink: string }; Returns: string }
       snapshot_period_leaders: {
         Args: { _period_id?: string }
         Returns: number

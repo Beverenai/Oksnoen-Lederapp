@@ -3,6 +3,7 @@ import { Check, RefreshCw, SwitchCamera, X, Zap, ZapOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { hapticImpact, hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { POV_FILTERS, povFilterOf, type PovFilter, type PovFilterId } from '@/lib/povFilters';
 
 type Props = {
   shotsLeft: number;
@@ -45,6 +46,7 @@ async function developFrame(
   sw: number,
   sh: number,
   mirrored: boolean,
+  look: PovFilter,
 ): Promise<Blob> {
   const vw = sw || 1440;
   const vh = sh || 1920;
@@ -63,8 +65,7 @@ async function developFrame(
 
   ctx.save();
   try {
-    // Light touch: keep it crisp and true, not a heavy vintage filter.
-    ctx.filter = 'saturate(1.06) contrast(1.03)';
+    ctx.filter = look.css;
   } catch {
     /* older engines just get the raw frame */
   }
@@ -75,19 +76,19 @@ async function developFrame(
   ctx.drawImage(source, 0, 0, w, h);
   ctx.restore();
 
-  // Whisper of warmth in the highlights.
-  ctx.globalCompositeOperation = 'soft-light';
-  ctx.fillStyle = 'rgba(255, 200, 150, 0.06)';
-  ctx.fillRect(0, 0, w, h);
-  ctx.globalCompositeOperation = 'source-over';
+  if (look.tint) {
+    ctx.globalCompositeOperation = look.tint.mode;
+    ctx.fillStyle = look.tint.color;
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'source-over';
+  }
 
-  // Very soft vignette.
   const grad = ctx.createRadialGradient(
     w / 2, h / 2, Math.min(w, h) * 0.55,
     w / 2, h / 2, Math.max(w, h) * 0.78,
   );
   grad.addColorStop(0, 'rgba(0,0,0,0)');
-  grad.addColorStop(1, 'rgba(0,0,0,0.12)');
+  grad.addColorStop(1, `rgba(0,0,0,${look.vignette})`);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, w, h);
 
@@ -132,6 +133,11 @@ export function DisposableCamera({ shotsLeft, onCapture, onClose }: Props) {
   const [justShot, setJustShot] = useState(false);
   const [uploading, setUploading] = useState(0);
   const [taken, setTaken] = useState(0);
+  const [filterId, setFilterId] = useState<PovFilterId>(() => {
+    const saved = localStorage.getItem('pov-filter');
+    return povFilterOf(saved).id;
+  });
+  const look = povFilterOf(filterId);
   const [hasTorch, setHasTorch] = useState(false);
   const [canSwitch, setCanSwitch] = useState(true);
   const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null);
@@ -310,11 +316,11 @@ export function DisposableCamera({ shotsLeft, onCapture, onClose }: Props) {
         }
       }
       if (bitmap) {
-        blob = await developFrame(bitmap, bitmap.width, bitmap.height, facing === 'user');
+        blob = await developFrame(bitmap, bitmap.width, bitmap.height, facing === 'user', look);
         bitmap.close?.();
       } else {
         const v = videoRef.current;
-        blob = await developFrame(v, v.videoWidth, v.videoHeight, facing === 'user');
+        blob = await developFrame(v, v.videoWidth, v.videoHeight, facing === 'user', look);
       }
 
       // Opplasting skjer i bakgrunnen — du kan ta neste bilde med en gang.
@@ -352,6 +358,7 @@ export function DisposableCamera({ shotsLeft, onCapture, onClose }: Props) {
           'absolute inset-0 h-full w-full object-cover',
           facing === 'user' && 'scale-x-[-1]',
         )}
+        style={{ filter: look.css }}
       />
 
       {/* Tapp-flate: tapp = fokus, dobbelttapp = snu, klyp = zoom */}
@@ -501,6 +508,36 @@ export function DisposableCamera({ shotsLeft, onCapture, onClose }: Props) {
             <span className="font-mono text-[10px] text-amber-300">{zoom.toFixed(1)}x</span>
           </div>
         )}
+
+        {/* Filtervelger */}
+        <div className="-mx-6 mb-4 overflow-x-auto px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-max items-center gap-2">
+            {POV_FILTERS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => {
+                  hapticImpact('light');
+                  setFilterId(f.id);
+                  try {
+                    localStorage.setItem('pov-filter', f.id);
+                  } catch {
+                    /* ignorer */
+                  }
+                }}
+                aria-pressed={filterId === f.id}
+                className={cn(
+                  'whitespace-nowrap rounded-full px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-wider backdrop-blur transition-all active:scale-95',
+                  filterId === f.id
+                    ? 'bg-amber-300 text-neutral-900'
+                    : 'bg-black/40 text-white/70',
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="flex items-center justify-between">
           <div className="w-14 text-[10px] leading-tight text-white/50">

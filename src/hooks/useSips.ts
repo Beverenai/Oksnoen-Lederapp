@@ -195,13 +195,9 @@ export function useMyDrink() {
     queryKey: ['my-drink', myId],
     enabled: !!myId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('leaders')
-        .select('preferred_drink')
-        .eq('id', myId!)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('get_my_drink');
       if (error) throw error;
-      const raw = (data as { preferred_drink?: string | null } | null)?.preferred_drink ?? null;
+      const raw = (data as string | null) ?? null;
       return { drink: drinkOf(raw), isSet: !!raw };
     },
     staleTime: 60_000,
@@ -209,16 +205,9 @@ export function useMyDrink() {
 
   const setDrink = useMutation({
     mutationFn: async (drink: DrinkType) => {
-      if (!myId) throw new Error('Ingen leder innlogget');
-      const { data, error } = await supabase
-        .from('leaders')
-        .update({ preferred_drink: drink })
-        .eq('id', myId)
-        .select('id, preferred_drink')
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('set_my_drink', { _drink: drink });
       if (error) throw error;
-      if (!data) throw new Error('Kunne ikke lagre drikken');
-      return drink;
+      return drinkOf(data as string | null);
     },
     onMutate: (drink) => {
       // Vis valget umiddelbart
