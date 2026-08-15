@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { Calendar, Loader2, Power } from 'lucide-react';
+import { Calendar, Loader2, Power, MoonStar } from 'lucide-react';
 import { useAppMode, setAppMode } from '@/hooks/useAppMode';
 import { useAuth } from '@/contexts/AuthContext';
 import { LeaderHistoryImportCard } from '@/components/admin/LeaderHistoryImportCard';
@@ -25,6 +25,23 @@ export function NursePeriodsTab() {
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
   const [savingLeaders, setSavingLeaders] = useState(false);
+  const [sendingOffSeason, setSendingOffSeason] = useState(false);
+
+  const sendAllToOffSeason = async () => {
+    if (!confirm('Sende alle ledere (unntatt Bengt Simonsen) til off-season? De mister full tilgang til appen.')) return;
+    setSendingOffSeason(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('deactivate-all-leaders');
+      if (error) throw error;
+      const n = (data as { deactivated?: number } | null)?.deactivated ?? 0;
+      showSuccess(`${n} ledere er nå i off-season`);
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke sende ledere til off-season');
+    } finally {
+      setSendingOffSeason(false);
+    }
+  };
 
   const saveLeadersNow = async () => {
     setSavingLeaders(true);
