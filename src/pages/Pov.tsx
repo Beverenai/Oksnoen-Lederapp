@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Camera, Film, Clock, Sparkles } from 'lucide-react';
+import { Camera, Film, Clock, Sparkles, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -48,6 +48,32 @@ export default function Pov() {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'mine'>('all');
   const autoOpened = useRef(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const downloadAll = async () => {
+    setDownloading(true);
+    try {
+      for (const photo of shown) {
+        if (!photo.signedUrl) continue;
+        const res = await fetch(photo.signedUrl);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `oksnoen-pov-${photo.id}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        await new Promise((r) => setTimeout(r, 350));
+      }
+      toast.success('Bildene er lastet ned');
+    } catch {
+      showError('Kunne ikke laste ned', 'Prøv igjen, eller last ned ett og ett bilde.');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   // Ta deg rett inn i kameraet når du åpner POV (ingen ekstra trykk).
   useEffect(() => {
