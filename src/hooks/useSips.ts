@@ -209,16 +209,28 @@ export function useMyDrink() {
 
   const setDrink = useMutation({
     mutationFn: async (drink: DrinkType) => {
-      const { error } = await supabase
+      if (!myId) throw new Error('Ingen leder innlogget');
+      const { data, error } = await supabase
         .from('leaders')
         .update({ preferred_drink: drink })
-        .eq('id', myId!);
+        .eq('id', myId)
+        .select('id, preferred_drink')
+        .maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error('Kunne ikke lagre drikken');
       return drink;
+    },
+    onMutate: (drink) => {
+      // Vis valget umiddelbart
+      const prev = queryClient.getQueryData(['my-drink', myId]);
+      queryClient.setQueryData(['my-drink', myId], { drink, isSet: true });
+      return { prev };
+    },
+    onError: (_err, _drink, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['my-drink', myId], ctx.prev);
     },
     onSuccess: (drink) => {
       queryClient.setQueryData(['my-drink', myId], { drink, isSet: true });
-      queryClient.invalidateQueries({ queryKey: ['my-drink', myId] });
     },
   });
 
