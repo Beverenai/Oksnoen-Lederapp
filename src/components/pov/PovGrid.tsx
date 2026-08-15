@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Heart, Download, X, EyeOff, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Heart, Download, X, EyeOff, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import type { PovPhoto } from '@/hooks/usePov';
@@ -24,6 +24,31 @@ function formatTime(iso: string) {
 export function PovGrid({ photos, onToggleReaction, isAdmin, onHide, onDelete }: Props) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const open = openIndex !== null ? photos[openIndex] : null;
+  const touchRef = useRef<{ x: number; y: number } | null>(null);
+
+  const step = useCallback(
+    (dir: -1 | 1) => {
+      setOpenIndex((i) => {
+        if (i === null) return i;
+        const next = i + dir;
+        if (next < 0 || next >= photos.length) return i;
+        hapticImpact('light');
+        return next;
+      });
+    },
+    [photos.length],
+  );
+
+  useEffect(() => {
+    if (openIndex === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') step(1);
+      else if (e.key === 'ArrowLeft') step(-1);
+      else if (e.key === 'Escape') setOpenIndex(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openIndex, step]);
 
   return (
     <>
@@ -81,7 +106,9 @@ export function PovGrid({ photos, onToggleReaction, isAdmin, onHide, onDelete }:
             </button>
             <div className="text-center">
               <div className="text-sm font-medium">{open.photographer}</div>
-              <div className="text-[11px] text-white/50">{formatTime(open.taken_at)}</div>
+              <div className="text-[11px] text-white/50">
+                {formatTime(open.taken_at)} · {(openIndex ?? 0) + 1}/{photos.length}
+              </div>
             </div>
             {open.signedUrl ? (
               <a
@@ -98,8 +125,19 @@ export function PovGrid({ photos, onToggleReaction, isAdmin, onHide, onDelete }:
           </div>
 
           <div
-            className="flex flex-1 items-center justify-center px-3"
+            className="relative flex flex-1 items-center justify-center px-3"
             onClick={() => setOpenIndex(null)}
+            onTouchStart={(e) => {
+              touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }}
+            onTouchEnd={(e) => {
+              const start = touchRef.current;
+              touchRef.current = null;
+              if (!start) return;
+              const dx = e.changedTouches[0].clientX - start.x;
+              const dy = e.changedTouches[0].clientY - start.y;
+              if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) step(dx < 0 ? 1 : -1);
+            }}
           >
             {open.signedUrl && (
               <img
@@ -108,6 +146,32 @@ export function PovGrid({ photos, onToggleReaction, isAdmin, onHide, onDelete }:
                 className="max-h-full w-full rounded-2xl object-contain"
                 onClick={(e) => e.stopPropagation()}
               />
+            )}
+            {(openIndex ?? 0) > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  step(-1);
+                }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white backdrop-blur"
+                aria-label="Forrige bilde"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+            )}
+            {(openIndex ?? 0) < photos.length - 1 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  step(1);
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white backdrop-blur"
+                aria-label="Neste bilde"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
             )}
           </div>
 
