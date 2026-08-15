@@ -28,13 +28,13 @@ export function NursePeriodsTab() {
   const [sendingOffSeason, setSendingOffSeason] = useState(false);
 
   const sendAllToOffSeason = async () => {
-    if (!confirm('Sende alle ledere (unntatt Bengt Simonsen) til off-season? De mister full tilgang til appen.')) return;
+    if (!confirm('Sende alle ledere (unntatt Bengt Simonsen) til off-season? De får off-season-appen og et push-varsel.')) return;
     setSendingOffSeason(true);
     try {
       const { data, error } = await supabase.functions.invoke('deactivate-all-leaders');
       if (error) throw error;
-      const n = (data as { deactivated?: number } | null)?.deactivated ?? 0;
-      showSuccess(`${n} ledere er nå i off-season`);
+      const res = data as { deactivated?: number; notified?: number } | null;
+      showSuccess(`${res?.deactivated ?? 0} ledere i off-season · ${res?.notified ?? 0} varsler sendt`);
     } catch (e) {
       console.error(e);
       showError('Kunne ikke sende ledere til off-season');
