@@ -171,11 +171,8 @@ export function HomeNotifications() {
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="w-full max-w-sm sm:max-w-sm">
-          <SheetHeader className="flex-row items-center justify-between space-y-0 pb-2">
+          <SheetHeader className="pb-2 pr-10 text-left">
             <SheetTitle className="text-lg font-heading">Varslinger</SheetTitle>
-            <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Lukk">
-              <X className="h-5 w-5" />
-            </Button>
           </SheetHeader>
 
           <div className="mt-2 space-y-2">
