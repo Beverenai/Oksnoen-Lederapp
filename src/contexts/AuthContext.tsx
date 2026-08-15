@@ -257,7 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!error && leaderData) {
       setLeader(leaderData);
-      setIsLimitedAccess(leaderData.is_active === false && !isSuperAdmin);
+      setIsLimitedAccess(leaderData.is_active === false);
     }
   }, [leader?.id, isSuperAdmin]);
 
