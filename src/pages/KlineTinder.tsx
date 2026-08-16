@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Heart, Loader2, MessageCircle, Sparkles, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { SwipeCard } from '@/components/klineliste/SwipeCard';
-import { useMyMatches, useSwipeCandidates, useSwipeLeader } from '@/hooks/useLeaderSwipes';
+import { notifyMatch, useMyMatches, useSwipeCandidates, useSwipeLeader } from '@/hooks/useLeaderSwipes';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { cn } from '@/lib/utils';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';

@@ -203,6 +203,18 @@ export function useSwipeLeader() {
 }
 
 export function useUnmatch() {
+/** Push til motparten om en ny match. Feil skal aldri stoppe sveipingen. */
+export async function notifyMatch(targetLeaderId: string) {
+  try {
+    await supabase.functions.invoke('push-match', {
+      body: { kind: 'match', target_leader_id: targetLeaderId },
+    });
+  } catch (e) {
+    console.warn('push-match feilet', e);
+  }
+}
+
+export function useUnmatch() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (matchId: string) => {
