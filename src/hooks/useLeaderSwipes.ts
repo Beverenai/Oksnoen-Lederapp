@@ -202,7 +202,6 @@ export function useSwipeLeader() {
   });
 }
 
-export function useUnmatch() {
 /** Push til motparten om en ny match. Feil skal aldri stoppe sveipingen. */
 export async function notifyMatch(targetLeaderId: string) {
   try {
