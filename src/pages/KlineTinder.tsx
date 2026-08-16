@@ -26,7 +26,8 @@ export default function KlineTinder() {
   const { data: unread = {} } = useMatchUnread();
 
   const dismissedSet = new Set(dismissed);
-  const deck = candidates.filter((c) => !dismissedSet.has(c.id));
+  const matchedIds = new Set(matches.map((m) => m.leaderId));
+  const deck = candidates.filter((c) => !dismissedSet.has(c.id) && !matchedIds.has(c.id));
   const visible = deck.slice(0, 3);
 
   // Uendelig sveiping: når kortstokken er tom men det finnes kandidater igjen
@@ -38,6 +39,7 @@ export default function KlineTinder() {
   }, [deck.length, candidates.length, dismissed.length]);
 
   const handleDecide = async (targetId: string, name: string, liked: boolean) => {
+    if (matchedIds.has(targetId)) return;
     setDismissed((prev) => (prev.includes(targetId) ? prev : [...prev, targetId]));
     hapticImpact(liked ? 'medium' : 'light');
     try {
@@ -45,6 +47,8 @@ export default function KlineTinder() {
       if (isMatch) {
         setMatchName(name);
         hapticImpact('heavy');
+        // Gi motparten push om den nye matchen.
+        notifyMatch(targetId);
       }
     } catch {
       setDismissed((prev) => prev.filter((id) => id !== targetId));
