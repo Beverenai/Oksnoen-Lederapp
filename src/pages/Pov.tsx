@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import povHeroUrl from '@/assets/pov-hero-local.jpg';
+import { isShareAbort, savePhotosToDevice } from '@/lib/savePhoto';
 
 function countdown(iso: string | null): string | null {
   if (!iso) return null;
@@ -49,29 +50,30 @@ export default function Pov() {
   const [filter, setFilter] = useState<'all' | 'mine'>('all');
   const autoOpened = useRef(false);
   const [downloading, setDownloading] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
   const downloadAll = async () => {
     setDownloading(true);
     try {
-      for (const photo of shown) {
-        if (!photo.signedUrl) continue;
-        const res = await fetch(photo.signedUrl);
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `oksnoen-pov-${photo.id}.jpg`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 4000);
-        await new Promise((r) => setTimeout(r, 350));
+      const items = shown
+        .filter((p) => p.signedUrl)
+        .map((p) => ({ url: p.signedUrl as string, filename: `oksnoen-pov-${p.id}.jpg` }));
+      if (items.length === 0) return;
+      const result = await savePhotosToDevice(items, {
+        onProgress: (done, total) => setProgress({ done, total }),
+      });
+      toast.success(
+        result === 'shared'
+          ? 'Velg «Lagre bilder» for å legge dem i Bilder'
+          : 'Bildene er lastet ned',
+      );
+    } catch (e) {
+      if (!isShareAbort(e)) {
+        showError('Kunne ikke lagre', 'Prøv igjen, eller lagre ett og ett bilde.');
       }
-      toast.success('Bildene er lastet ned');
-    } catch {
-      showError('Kunne ikke laste ned', 'Prøv igjen, eller last ned ett og ett bilde.');
     } finally {
       setDownloading(false);
+      setProgress(null);
     }
   };
 
@@ -223,7 +225,11 @@ export default function Pov() {
                   className="flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground disabled:opacity-50"
                 >
                   <Download className="h-3.5 w-3.5" />
-                  {downloading ? 'Laster…' : 'Alle'}
+                  {downloading
+                    ? progress
+                      ? `${progress.done}/${progress.total}`
+                      : 'Lagrer…'
+                    : 'Lagre alle'}
                 </button>
               )}
           </div>
