@@ -773,6 +773,31 @@ export default function Chat() {
           onSubmit={(e) => { e.preventDefault(); send(); }}
           className="relative shrink-0"
         >
+          {replyTo && (
+            <div className="mb-1.5 flex items-start gap-2 rounded-2xl border bg-card/70 px-3 py-2 backdrop-blur">
+              <Reply className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold text-primary">
+                  Svarer{' '}
+                  {replyTo.leader_id === leader?.id
+                    ? 'deg selv'
+                    : leaders[replyTo.leader_id]?.name || 'Ukjent'}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {replyTo.body || (replyTo.image_path ? '📷 Bilde' : '')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReplyTo(null)}
+                aria-label="Avbryt svar"
+                className="rounded-full p-1 text-muted-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
           {mention && mentionMatches.length > 0 && (
             <div className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-2xl border bg-popover shadow-xl">
               <p className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -814,6 +839,32 @@ export default function Chat() {
           )}
 
           <div className="flex items-end gap-2 rounded-3xl border bg-card/70 p-1.5 backdrop-blur shadow-sm">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) void sendImage(file);
+              }}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading || !leader}
+              aria-label="Send bilde"
+              className="h-9 w-9 shrink-0 rounded-full text-muted-foreground"
+            >
+              {uploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ImagePlus className="h-4 w-4" />
+              )}
+            </Button>
             <Button
               type="button"
               size="icon"
@@ -830,20 +881,20 @@ export default function Chat() {
               onChange={handleInput}
               onKeyDown={handleKeyDown}
               onClick={(e) => syncMention(input, (e.target as HTMLTextAreaElement).selectionStart ?? 0)}
-              placeholder="Skriv en melding… bruk @ for å tagge"
+              placeholder={replyTo ? 'Skriv svaret…' : 'Skriv en melding… bruk @ for å tagge'}
               maxLength={4000}
               rows={1}
-              disabled={sending || !leader}
+              disabled={sending || uploading || !leader}
               className="min-h-[36px] max-h-40 flex-1 resize-none border-0 bg-transparent px-1 py-2 text-base shadow-none focus-visible:ring-0"
             />
             <Button
               type="submit"
               size="icon"
-              disabled={sending || !input.trim()}
+              disabled={sending || uploading || !input.trim()}
               aria-label="Send"
               className="h-9 w-9 shrink-0 rounded-full"
             >
-              <Send className="h-4 w-4" />
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
         </form>
