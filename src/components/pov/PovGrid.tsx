@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Heart, Download, X, EyeOff, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, Download, X, EyeOff, Trash2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { hapticImpact } from '@/lib/capacitorHaptics';
+import { canSaveToPhotos, isShareAbort, savePhotoToDevice } from '@/lib/savePhoto';
 import type { PovPhoto } from '@/hooks/usePov';
 
 type Props = {
@@ -25,6 +27,22 @@ export function PovGrid({ photos, onToggleReaction, isAdmin, onHide, onDelete }:
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const open = openIndex !== null ? photos[openIndex] : null;
   const touchRef = useRef<{ x: number; y: number } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const savePhoto = useCallback(async (photo: PovPhoto) => {
+    if (!photo.signedUrl) return;
+    setSaving(true);
+    hapticImpact('light');
+    try {
+      const result = await savePhotoToDevice(photo.signedUrl, `oksnoen-pov-${photo.id}.jpg`);
+      if (result === 'shared') toast.success('Velg «Lagre bilde» for å legge det i Bilder');
+      else toast.success('Bildet er lastet ned');
+    } catch (e) {
+      if (!isShareAbort(e)) toast.error('Kunne ikke lagre bildet');
+    } finally {
+      setSaving(false);
+    }
+  }, []);
 
   const step = useCallback(
     (dir: -1 | 1) => {
@@ -111,14 +129,19 @@ export function PovGrid({ photos, onToggleReaction, isAdmin, onHide, onDelete }:
               </div>
             </div>
             {open.signedUrl ? (
-              <a
-                href={open.signedUrl}
-                download={`oksnoen-pov-${open.id}.jpg`}
-                className="rounded-full bg-white/10 p-2 text-white"
-                aria-label="Last ned bilde"
+              <button
+                type="button"
+                onClick={() => savePhoto(open)}
+                disabled={saving}
+                className="rounded-full bg-white/10 p-2 text-white disabled:opacity-50"
+                aria-label={canSaveToPhotos() ? 'Lagre bilde i Bilder' : 'Last ned bilde'}
               >
-                <Download className="h-5 w-5" />
-              </a>
+                {saving ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Download className="h-5 w-5" />
+                )}
+              </button>
             ) : (
               <span className="w-9" />
             )}
@@ -193,6 +216,21 @@ export function PovGrid({ photos, onToggleReaction, isAdmin, onHide, onDelete }:
               <Heart className={cn('h-4 w-4', open.reactedByMe && 'fill-current')} />
               {open.reactions}
             </button>
+            {open.signedUrl && (
+              <button
+                type="button"
+                onClick={() => savePhoto(open)}
+                disabled={saving}
+                className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                Lagre
+              </button>
+            )}
             {isAdmin && onHide && (
               <button
                 type="button"
