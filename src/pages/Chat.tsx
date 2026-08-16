@@ -5,9 +5,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowDown, AtSign, Send, Users } from 'lucide-react';
+import { ArrowDown, AtSign, ImagePlus, Loader2, Reply, Send, Users, X } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { cn } from '@/lib/utils';
+import { compressImage } from '@/lib/imageUtils';
+import { ChatReactions, type ChatReaction } from '@/components/chat/ChatReactions';
+import { ChatImage, CHAT_BUCKET } from '@/components/chat/ChatImage';
 import {
   activeMentionQuery,
   applyMention,
@@ -26,6 +29,8 @@ interface ChatMessage {
   channel?: string | null;
   period_id?: string | null;
   mentions?: string[] | null;
+  reply_to_id?: string | null;
+  image_path?: string | null;
 }
 
 interface LeaderLite {
