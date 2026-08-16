@@ -103,6 +103,10 @@ export default function Chat() {
   const [sending, setSending] = useState(false);
   const [showJump, setShowJump] = useState(false);
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null);
+  const [reactions, setReactions] = useState<ChatReaction[]>([]);
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   // Inaktive ledere har kun tilgang til off season-chatten
@@ -159,10 +163,13 @@ export default function Chat() {
     return () => el.removeEventListener('scroll', onScroll);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setMessages([]);
+  /**
+   * Henter meldinger, ledere og reaksjoner. Kalles ved bytte av kanal, når
+   * appen får fokus igjen, jevnlig i bakgrunnen og hver gang realtime kobler
+   * til på nytt — slik at ingen meldinger blir hengende igjen usett.
+   */
+  const load = useCallback(
+    async (opts: { reset?: boolean } = {}) => {
       let periodId: string | null = null;
       if (channel === 'period') {
         const { data: period } = await supabase
@@ -171,7 +178,7 @@ export default function Chat() {
           .eq('is_active', true)
           .maybeSingle();
         periodId = period?.id ?? null;
-        if (!cancelled) setPeriodLabel(period?.name ?? null);
+        setPeriodLabel(period?.name ?? null);
       }
 
       let query = supabase
@@ -186,14 +193,37 @@ export default function Chat() {
         query,
         supabase.from('leaders').select('id,name,profile_image_url,is_active,is_external'),
       ]);
-      if (cancelled) return;
-      setMessages((msgs || []) as ChatMessage[]);
+
+      const list = (msgs || []) as ChatMessage[];
+      setMessages(list);
       const map: Record<string, LeaderLite> = {};
       (lds || []).forEach((l: any) => { map[l.id] = l; });
       setLeaders(map);
-      scrollToBottom(true);
-    })();
 
+      if (list.length > 0) {
+        const { data: reacts } = await supabase
+          .from('chat_message_reactions')
+          .select('message_id, leader_id, emoji')
+          .in('message_id', list.map((m) => m.id));
+        setReactions((reacts ?? []) as ChatReaction[]);
+      } else {
+        setReactions([]);
+      }
+
+      if (opts.reset) scrollToBottom(true);
+    },
+    [channel],
+  );
+
+  useEffect(() => {
+    setMessages([]);
+    setReactions([]);
+    setReplyTo(null);
+    void load({ reset: true });
+  }, [channel, load]);
+
+  // Realtime + fallback: poll når fanen er synlig, og last på nytt ved fokus.
+  useEffect(() => {
     const rt = supabase
       .channel(uniqueRealtimeChannelName(`chat-messages-${channel}`))
       .on(
@@ -213,13 +243,44 @@ export default function Chat() {
           setMessages((prev) => prev.filter((m) => m.id !== (payload.old as any).id));
         },
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_message_reactions' },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as ChatReaction & { id?: string };
+          if (!row?.message_id) return;
+          setReactions((prev) => {
+            const without = prev.filter(
+              (r) =>
+                !(
+                  r.message_id === row.message_id &&
+                  r.leader_id === row.leader_id &&
+                  r.emoji === row.emoji
+                ),
+            );
+            return payload.eventType === 'DELETE' ? without : [...without, row];
+          });
+        },
+      )
+      .subscribe((status) => {
+        // Ny tilkobling kan ha mistet meldinger — hent alt på nytt.
+        if (status === 'SUBSCRIBED') void load();
+      });
+
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    const interval = window.setInterval(refresh, 20_000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
 
     return () => {
-      cancelled = true;
       supabase.removeChannel(rt);
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
     };
-  }, [channel]);
+  }, [channel, load]);
 
   /** Ledere som kan tagges: periodechat = aktive, off season = alle med konto. */
   const taggableLeaders = useMemo(() => {
