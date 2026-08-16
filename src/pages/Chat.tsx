@@ -635,6 +635,10 @@ export default function Chat() {
             const { msg, showHeader, showAvatar, isMe } = it;
             const author = leaders[msg.leader_id];
             const mentionsMe = !!leader && (msg.mentions ?? []).includes(leader.id);
+            const quoted = msg.reply_to_id
+              ? messages.find((m) => m.id === msg.reply_to_id)
+              : undefined;
+            const msgReactions = reactions.filter((r) => r.message_id === msg.id);
             return (
               <div
                 key={it.key}
@@ -675,28 +679,71 @@ export default function Chat() {
                       </button>
                     </div>
                   )}
-                  <div
-                    title={new Date(msg.created_at).toLocaleString('nb-NO')}
-                    className={cn(
-                      'rounded-2xl px-3 py-2 pb-1.5 text-sm whitespace-pre-wrap break-words shadow-sm',
-                      isMe
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-foreground',
-                      isMe && showHeader && 'rounded-tr-md',
-                      !isMe && showHeader && 'rounded-tl-md',
-                      mentionsMe && !isMe && 'ring-2 ring-primary/50',
-                    )}
-                  >
-                    {renderBody(msg, isMe)}
-                    <span
+                  <div className={cn('flex items-center gap-1', isMe && 'flex-row-reverse')}>
+                    <div
+                      title={new Date(msg.created_at).toLocaleString('nb-NO')}
                       className={cn(
-                        'block text-[10px] leading-none mt-1',
-                        isMe ? 'text-primary-foreground/70 text-right' : 'text-muted-foreground',
+                        'min-w-0 rounded-2xl px-3 py-2 pb-1.5 text-sm whitespace-pre-wrap break-words shadow-sm',
+                        isMe
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-foreground',
+                        isMe && showHeader && 'rounded-tr-md',
+                        !isMe && showHeader && 'rounded-tl-md',
+                        mentionsMe && !isMe && 'ring-2 ring-primary/50',
                       )}
                     >
-                      {timeLabel(msg.created_at)}
-                    </span>
+                      {quoted && (
+                        <div
+                          className={cn(
+                            'mb-1.5 rounded-lg border-l-2 px-2 py-1 text-[12px]',
+                            isMe
+                              ? 'border-primary-foreground/60 bg-primary-foreground/10'
+                              : 'border-primary/60 bg-background/60',
+                          )}
+                        >
+                          <span className="block font-semibold">
+                            {quoted.leader_id === leader?.id
+                              ? 'Deg'
+                              : leaders[quoted.leader_id]?.name || 'Ukjent'}
+                          </span>
+                          <span className="line-clamp-2 opacity-80">
+                            {quoted.body || (quoted.image_path ? '📷 Bilde' : '')}
+                          </span>
+                        </div>
+                      )}
+                      {msg.image_path && (
+                        <div className="mb-1 -mx-1">
+                          <ChatImage path={msg.image_path} />
+                        </div>
+                      )}
+                      {msg.body && renderBody(msg, isMe)}
+                      <span
+                        className={cn(
+                          'block text-[10px] leading-none mt-1',
+                          isMe ? 'text-primary-foreground/70 text-right' : 'text-muted-foreground',
+                        )}
+                      >
+                        {timeLabel(msg.created_at)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplyTo(msg);
+                        requestAnimationFrame(() => textareaRef.current?.focus());
+                      }}
+                      aria-label="Svar på meldingen"
+                      className="shrink-0 rounded-full p-1.5 text-muted-foreground opacity-60 transition-opacity hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                    >
+                      <Reply className="h-3.5 w-3.5" />
+                    </button>
                   </div>
+                  <ChatReactions
+                    reactions={msgReactions}
+                    myLeaderId={leader?.id}
+                    onToggle={(emoji) => toggleReaction(msg.id, emoji)}
+                    align={isMe ? 'end' : 'start'}
+                  />
                 </div>
               </div>
             );
