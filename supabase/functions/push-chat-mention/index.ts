@@ -91,7 +91,7 @@ serve(async (req) => {
 
     const { data: message } = await supabaseAdmin
       .from("chat_messages")
-      .select("id, leader_id, body, channel, mentions")
+      .select("id, leader_id, body, channel, mentions, image_path")
       .eq("id", messageId)
       .maybeSingle();
     if (!message) return json({ error: "Not found" }, 404);

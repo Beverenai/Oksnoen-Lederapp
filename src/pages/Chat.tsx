@@ -880,6 +880,11 @@ export default function Chat() {
               value={input}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
+              onFocus={() => {
+                // Tastaturet dekker bunnen på iPhone — hopp ned igjen.
+                nearBottomRef.current = true;
+                setTimeout(() => scrollToBottom(true), 250);
+              }}
               onClick={(e) => syncMention(input, (e.target as HTMLTextAreaElement).selectionStart ?? 0)}
               placeholder={replyTo ? 'Skriv svaret…' : 'Skriv en melding… bruk @ for å tagge'}
               maxLength={4000}
