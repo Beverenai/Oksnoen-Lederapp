@@ -55,9 +55,13 @@ export function useMyMatches() {
       const { data, error } = await supabase
         .from('leader_matches')
         .select('id, created_at, leader_a_id, leader_b_id')
+        // Kun mine egne matcher — admin kan lese alle rader, så filteret må stå her.
+        .or(`leader_a_id.eq.${myId},leader_b_id.eq.${myId}`)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      const rows = data ?? [];
+      const rows = (data ?? []).filter(
+        (r) => r.leader_a_id === myId || r.leader_b_id === myId,
+      );
       const otherIds = rows.map((r) => (r.leader_a_id === myId ? r.leader_b_id : r.leader_a_id));
       if (otherIds.length === 0) return [];
       const { data: leaders } = await supabase
