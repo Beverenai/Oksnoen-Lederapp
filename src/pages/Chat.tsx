@@ -302,19 +302,43 @@ export default function Chat() {
       : people;
   }, [mention, taggableLeaders, leader?.id]);
 
+  /** Ledere som skal varsles: taggede + den du svarer på. */
+  const mentionIdsFor = (body: string, replyingTo: ChatMessage | null) => {
+    const everyone = hasAllMention(body);
+    const ids = new Set(
+      (everyone
+        ? taggableLeaders.map((l) => l.id)
+        : findMentionedLeaders(body, taggableLeaders).map((l) => l.id)),
+    );
+    if (replyingTo) ids.add(replyingTo.leader_id);
+    ids.delete(leader?.id ?? '');
+    return [...ids];
+  };
+
+  const notifyMentions = (messageId: string, mentions: string[]) => {
+    if (mentions.length === 0) return;
+    // Feiler stille — en manglende push skal aldri hindre at meldingen er sendt.
+    supabase.functions
+      .invoke('push-chat-mention', { body: { message_id: messageId } })
+      .catch((e) => console.warn('push-chat-mention failed', e));
+  };
+
   const send = async () => {
     const body = input.trim();
     if (!body || !leader) return;
+    const replyingTo = replyTo;
     setSending(true);
     nearBottomRef.current = true;
-    const everyone = hasAllMention(body);
-    const mentions = (everyone
-      ? taggableLeaders.map((l) => l.id)
-      : findMentionedLeaders(body, taggableLeaders).map((l) => l.id)
-    ).filter((id) => id !== leader.id);
+    const mentions = mentionIdsFor(body, replyingTo);
     const { data: inserted, error } = await supabase
       .from('chat_messages')
-      .insert({ leader_id: leader.id, body, channel, mentions })
+      .insert({
+        leader_id: leader.id,
+        body,
+        channel,
+        mentions,
+        reply_to_id: replyingTo?.id ?? null,
+      })
       .select('id')
       .maybeSingle();
     setSending(false);
@@ -328,16 +352,80 @@ export default function Chat() {
     }
     setInput('');
     setMention(null);
+    setReplyTo(null);
     // Reset textarea auto-grow
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     scrollToBottom(true);
+    if (inserted?.id) notifyMentions(inserted.id, mentions);
+    void load();
+  };
 
-    // Varsle de taggede. Feiler stille — en manglende push skal aldri
-    // hindre at meldingen er sendt.
-    if (inserted?.id && mentions.length > 0) {
-      supabase.functions
-        .invoke('push-chat-mention', { body: { message_id: inserted.id } })
-        .catch((e) => console.warn('push-chat-mention failed', e));
+  /** Send et bilde (med valgfri tekst som bildetekst). */
+  const sendImage = async (file: File) => {
+    if (!leader) return;
+    const caption = input.trim();
+    const replyingTo = replyTo;
+    setUploading(true);
+    nearBottomRef.current = true;
+    try {
+      const compressed = await compressImage(file);
+      const ext = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${leader.id}/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from(CHAT_BUCKET)
+        .upload(path, compressed, { contentType: compressed.type || 'image/jpeg' });
+      if (upErr) throw upErr;
+
+      const mentions = mentionIdsFor(caption, replyingTo);
+      const { data: inserted, error } = await supabase
+        .from('chat_messages')
+        .insert({
+          leader_id: leader.id,
+          body: caption,
+          channel,
+          mentions,
+          image_path: path,
+          reply_to_id: replyingTo?.id ?? null,
+        })
+        .select('id')
+        .maybeSingle();
+      if (error) {
+        await supabase.storage.from(CHAT_BUCKET).remove([path]);
+        throw error;
+      }
+      setInput('');
+      setReplyTo(null);
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+      scrollToBottom(true);
+      if (inserted?.id) notifyMentions(inserted.id, mentions);
+      void load();
+    } catch (e: any) {
+      showError('Kunne ikke sende bildet', e?.message ?? 'Prøv igjen');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const toggleReaction = async (messageId: string, emoji: string) => {
+    if (!leader) return;
+    const mine = reactions.some(
+      (r) => r.message_id === messageId && r.leader_id === leader.id && r.emoji === emoji,
+    );
+    // Optimistisk — realtime bekrefter etterpå.
+    setReactions((prev) =>
+      mine
+        ? prev.filter(
+            (r) => !(r.message_id === messageId && r.leader_id === leader.id && r.emoji === emoji),
+          )
+        : [...prev, { message_id: messageId, leader_id: leader.id, emoji }],
+    );
+    const q = supabase.from('chat_message_reactions');
+    const { error } = mine
+      ? await q.delete().eq('message_id', messageId).eq('leader_id', leader.id).eq('emoji', emoji)
+      : await q.insert({ message_id: messageId, leader_id: leader.id, emoji });
+    if (error && !error.message.toLowerCase().includes('duplicate')) {
+      showError('Kunne ikke reagere', error.message);
+      void load();
     }
   };
 
