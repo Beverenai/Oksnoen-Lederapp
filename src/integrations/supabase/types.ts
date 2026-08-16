@@ -320,33 +320,78 @@ export type Database = {
           },
         ]
       }
+      chat_message_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          leader_id: string
+          message_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          leader_id: string
+          message_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          leader_id?: string
+          message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_message_reactions_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           body: string
           channel: string
           created_at: string
           id: string
+          image_path: string | null
           leader_id: string
           mentions: string[]
           period_id: string | null
+          reply_to_id: string | null
         }
         Insert: {
           body: string
           channel?: string
           created_at?: string
           id?: string
+          image_path?: string | null
           leader_id: string
           mentions?: string[]
           period_id?: string | null
+          reply_to_id?: string | null
         }
         Update: {
           body?: string
           channel?: string
           created_at?: string
           id?: string
+          image_path?: string | null
           leader_id?: string
           mentions?: string[]
           period_id?: string | null
+          reply_to_id?: string | null
         }
         Relationships: [
           {
@@ -361,6 +406,13 @@ export type Database = {
             columns: ["period_id"]
             isOneToOne: false
             referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
             referencedColumns: ["id"]
           },
         ]
