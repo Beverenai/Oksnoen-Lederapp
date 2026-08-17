@@ -24,6 +24,7 @@ import {
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
 import { LeirskoleSpecialDayTimeline } from '@/components/admin/LeirskoleSpecialDayTimeline';
 import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
+import { trimDayHours } from '@/lib/leirskoleDayHours';
 
 type StaffRow = LeirskoleStaff & {
   leader: {
