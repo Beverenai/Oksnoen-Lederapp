@@ -209,9 +209,14 @@ Deno.serve(async (req) => {
 
     if ((postsRaw ?? []).length === 0) {
       const N = staff.length;
-      const scale = (target: number) => Math.max(1, Math.min(target, Math.max(1, Math.ceil(N * (target / 6)))));
-      const shiftReq = Math.max(1, Math.min(N > 1 ? N - 1 : 1, scale(6)));
-      const mealReq = Math.max(1, Math.min(2, Math.ceil(N / 4)));
+      // Mål: hver leder skal fylle 8 timer per dag. Skaler bemanningen på
+      // øktene slik at total kapasitet per dag ≈ 8 timer * antall ledere.
+      const mealReq = Math.max(1, Math.min(3, Math.ceil(N / 4)));
+      const mealHours = 3 * mealReq; // Frokost + Middag + Kvelds (1t hver)
+      const nightHours = 3; // Nattevakt 22:30-01:30, 1 leder
+      const shiftHoursPerLeader = 2.5 + 2.5 + 1.5; // Økt 1 + 2 + 3
+      const needed = 8 * N - mealHours - nightHours;
+      const shiftReq = Math.max(1, Math.min(N, Math.ceil(needed / shiftHoursPerLeader)));
       const days: string[] = [];
       const d0 = new Date(week.start_date + "T00:00:00Z");
       const d1 = new Date(week.end_date + "T00:00:00Z");
