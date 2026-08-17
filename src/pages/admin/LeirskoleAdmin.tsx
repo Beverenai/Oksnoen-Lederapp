@@ -111,6 +111,7 @@ export default function LeirskoleAdmin() {
   const [openStep, setOpenStep] = useState<number | null>(1);
   const [todayOpen, setTodayOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [viewDate, setViewDate] = useState<string | null>(null);
 
   const [taskDraft, setTaskDraft] = useState({ title: '', description: '', due_at: '' });
   const [taskAssignAll, setTaskAssignAll] = useState(true);
@@ -244,9 +245,27 @@ export default function LeirskoleAdmin() {
     [hoursByStaff],
   );
 
-  const todayPosts = useMemo(
-    () => (posts ?? []).filter((p) => p.date === today).sort((a, b) => a.start_time.localeCompare(b.start_time)),
-    [posts, today],
+  /** Alle dagene i uken – for dagvelgeren. */
+  const weekDates = useMemo(() => {
+    if (!week) return [] as string[];
+    const out: string[] = [];
+    const d = new Date(`${week.start_date}T12:00:00`);
+    const last = new Date(`${week.end_date}T12:00:00`);
+    while (d <= last && out.length < 21) {
+      out.push(d.toLocaleDateString('sv-SE'));
+      d.setDate(d.getDate() + 1);
+    }
+    return out;
+  }, [week]);
+
+  const activeDate = viewDate ?? (weekDates.includes(today) ? today : weekDates[0] ?? today);
+
+  const dayPosts = useMemo(
+    () =>
+      (posts ?? [])
+        .filter((p) => p.date === activeDate)
+        .sort((a, b) => a.start_time.localeCompare(b.start_time)),
+    [posts, activeDate],
   );
 
   const staffNames = useMemo(() => {
@@ -472,7 +491,7 @@ export default function LeirskoleAdmin() {
 
       <LeirskoleWeekBoard week={week} staff={staff ?? []} />
 
-      {todayPosts.length > 0 && (
+      {weekDates.length > 0 && (
         <div className="oks-ls-pill oks-ls-stripe overflow-hidden">
           <button
             type="button"
@@ -480,14 +499,38 @@ export default function LeirskoleAdmin() {
             className="flex w-full items-center gap-2 p-4 text-left"
           >
             <Clock className="h-4 w-4 shrink-0 text-primary" />
-            <span className="flex-1 text-sm font-semibold">I dag</span>
+            <span className="flex-1 text-sm font-semibold">
+              {activeDate === today ? 'I dag' : shortDate(activeDate)}
+            </span>
             <span className="shrink-0 rounded-full bg-muted/60 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
-              {todayPosts.length} vakter
+              {dayPosts.length} vakter
             </span>
             <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${todayOpen ? 'rotate-180' : ''}`} />
           </button>
           <div className={`space-y-1.5 px-4 pb-4 ${todayOpen ? '' : 'hidden'}`}>
-            {todayPosts.map((p) => (
+            <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+              {weekDates.map((d) => {
+                const on = d === activeDate;
+                const count = (posts ?? []).filter((p) => p.date === d).length;
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setViewDate(d)}
+                    className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                      on ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground'
+                    }`}
+                  >
+                    {d === today ? 'I dag' : shortDate(d)}
+                    <span className={`ml-1 font-normal ${on ? 'text-primary-foreground/80' : ''}`}>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {dayPosts.length === 0 && (
+              <p className="py-3 text-center text-xs text-muted-foreground">Ingen vakter denne dagen.</p>
+            )}
+            {dayPosts.map((p) => (
               <div key={p.id} className="rounded-2xl bg-muted/40 px-3 py-2">
                 <div className="flex items-center justify-between gap-2">
                   <p className="min-w-0 truncate text-sm font-medium">{p.name}</p>
