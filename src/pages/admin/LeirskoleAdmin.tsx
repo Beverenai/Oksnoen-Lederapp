@@ -27,6 +27,7 @@ import { LeirskoleLeaderSheet } from '@/components/admin/LeirskoleLeaderSheet';
 import { LeirskolePostsCard } from '@/components/admin/LeirskolePostsCard';
 import { LeirskoleWeekPlanCard } from '@/components/admin/LeirskoleWeekPlanCard';
 import { LeirskoleDayActivityCard } from '@/components/admin/LeirskoleDayActivityCard';
+import { LeirskoleKitchenCard } from '@/components/admin/LeirskoleKitchenCard';
 import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
 import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
 import { formatDue, hhmm, shortDate, todayStr } from '@/lib/leirskoleDates';
@@ -564,6 +565,7 @@ export default function LeirskoleAdmin() {
           open={openStep === 3}
           onToggle={() => setOpenStep(openStep === 3 ? null : 3)}
         >
+          <LeirskoleKitchenCard week={week} staff={staff ?? []} />
           <LeirskolePostsCard
             week={week}
             staff={staff ?? []}

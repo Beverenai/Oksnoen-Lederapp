@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Coffee, CalendarDays, Clock, Moon, Settings, Megaphone, Check, Users, Sunrise, Sunset } from 'lucide-react';
+import { Coffee, CalendarDays, ChefHat, Clock, Moon, Settings, Megaphone, Check, Users, Sunrise, Sunset } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
   useLeirskoleSchedule,
   useLeirskoleStaff,
+  useLeirskoleKitchenDays,
   useIsLeirskoleStaff,
   useLeirskoleSessionInfo,
   useMarkLeirskoleInfoRead,
@@ -86,6 +87,7 @@ export default function Leirskole() {
   const { data: myCompetencies } = useMyLeirskoleCompetencies();
   const { data: weekPosts } = useLeirskoleSchedule(week?.id);
   const { data: weekStaff } = useLeirskoleStaff(week?.id);
+  const { data: kitchenDays } = useLeirskoleKitchenDays(week?.id);
   const [compOpen, setCompOpen] = useState(false);
   const [colleagueId, setColleagueId] = useState<string | null>(null);
 
@@ -180,6 +182,12 @@ export default function Leirskole() {
   const myStaffId = useMemo(
     () => (weekStaff ?? []).find((s) => s.leader_id === effectiveLeader?.id)?.id ?? null,
     [weekStaff, effectiveLeader?.id],
+  );
+
+  /** Har jeg kjøkken hele dagen i dag? */
+  const kitchenToday = useMemo(
+    () => !!myStaffId && (kitchenDays ?? []).some((k) => k.staff_id === myStaffId && k.date === today),
+    [kitchenDays, myStaffId, today],
   );
 
   /** Kollegaer på min neste vakt. */
@@ -290,6 +298,16 @@ export default function Leirskole() {
       )}
 
       {/* Denne økten skal du */}
+      {kitchenToday && (
+        <div className="oks-ls-pill flex items-center gap-2 border-[hsl(var(--oks-ls-green))]/50 p-4">
+          <ChefHat className="h-5 w-5 text-[hsl(var(--oks-ls-green))]" />
+          <div>
+            <p className="text-sm font-bold">Kjøkken hele dagen</p>
+            <p className="text-xs text-muted-foreground">Du står på kjøkkenet i dag — ingen andre økter.</p>
+          </div>
+        </div>
+      )}
+
       {(nextShift || myInfo.length > 0) && (
         <div className="oks-ls-pill p-4">
           <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
