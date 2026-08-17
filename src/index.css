@@ -699,23 +699,24 @@ html.oks-offseason-theme .oks-offseason-bg {
   --oks-ls-sea: 196 60% 34%;
 }
 
+/* Samme mørke palett som off-season, kun aksenten er teal for leirskole. */
 html.oks-leirskole-theme,
 html.oks-leirskole-theme body,
 html.oks-leirskole-theme .oks-leirskole-bg {
-  --background: var(--oks-ls-night);
-  --foreground: 190 20% 96%;
-  --card: 205 36% 12%;
-  --card-foreground: 190 20% 96%;
-  --muted: 205 28% 17%;
-  --muted-foreground: 199 14% 70%;
-  --border: 200 20% 22%;
-  --input: 200 20% 22%;
-  --popover: 205 36% 11%;
-  --popover-foreground: 190 20% 96%;
-  --secondary: 205 28% 17%;
-  --secondary-foreground: 190 20% 96%;
-  --accent: 205 28% 20%;
-  --accent-foreground: 190 20% 96%;
+  --background: var(--oks-night);
+  --foreground: 40 40% 94%;
+  --card: 210 40% 13%;
+  --card-foreground: 40 40% 94%;
+  --muted: 210 32% 18%;
+  --muted-foreground: 205 16% 68%;
+  --border: 205 22% 24%;
+  --input: 205 22% 24%;
+  --popover: 210 40% 12%;
+  --popover-foreground: 40 40% 94%;
+  --secondary: 210 32% 18%;
+  --secondary-foreground: 40 40% 94%;
+  --accent: 210 32% 20%;
+  --accent-foreground: 40 40% 94%;
   --primary: var(--oks-ls-teal);
   --primary-foreground: 206 50% 6%;
   --ring: var(--oks-ls-teal);
@@ -723,7 +724,7 @@ html.oks-leirskole-theme .oks-leirskole-bg {
 
 html.oks-leirskole-theme,
 html.oks-leirskole-theme body {
-  background-color: hsl(var(--oks-ls-night-deep));
+  background-color: hsl(var(--oks-night-deep));
   color: hsl(var(--foreground));
 }
 
@@ -731,10 +732,10 @@ html.oks-leirskole-theme .oks-leirskole-bg {
   color: hsl(var(--foreground));
   min-height: 100dvh;
   background:
-    radial-gradient(115% 46% at 12% -8%, hsl(var(--oks-ls-teal) / 0.26) 0%, transparent 62%),
-    radial-gradient(95% 40% at 92% 2%, hsl(var(--oks-ls-sea) / 0.28) 0%, transparent 60%),
-    radial-gradient(120% 58% at 50% 112%, hsl(var(--oks-ls-sea) / 0.22) 0%, transparent 70%),
-    linear-gradient(180deg, hsl(var(--oks-ls-night)) 0%, hsl(var(--oks-ls-night-deep)) 100%);
+    radial-gradient(110% 48% at 14% -6%, hsl(var(--oks-ls-teal) / 0.24) 0%, transparent 62%),
+    radial-gradient(90% 42% at 90% 4%, hsl(var(--oks-ls-sea) / 0.22) 0%, transparent 60%),
+    radial-gradient(120% 60% at 50% 110%, hsl(var(--oks-forest) / 0.5) 0%, transparent 68%),
+    linear-gradient(180deg, hsl(var(--oks-night)) 0%, hsl(var(--oks-night-deep)) 100%);
 }
 
 /* Glass-pill flate brukt i leirskole-UI */
