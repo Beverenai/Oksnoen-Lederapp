@@ -142,7 +142,7 @@ serve(async (req) => {
         await supabase.from('user_roles').delete().in('id', toDelete);
       }
 
-      if (role === 'admin' || role === 'nurse' || role === 'kitchen') {
+      if (role === 'admin' || role === 'nurse' || role === 'kitchen' || role === 'leirskole') {
         const { error: insertError } = await supabase
           .from('user_roles')
           .insert({ leader_id, role });

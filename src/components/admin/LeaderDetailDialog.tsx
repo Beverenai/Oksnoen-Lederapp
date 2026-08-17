@@ -27,13 +27,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Shield, Users, Heart, Camera, Bell, Check, ChefHat, KeyRound, Trash2, RotateCcw } from 'lucide-react';
+import { Tent } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { compressImage } from '@/lib/imageUtils';
 import { hapticSuccess } from '@/lib/capacitorHaptics';
 import { useAuth } from '@/contexts/AuthContext';
 
 type Leader = Tables<'leaders'>;
-type AppRole = 'superadmin' | 'admin' | 'nurse' | 'leader' | 'kitchen';
+type AppRole = 'superadmin' | 'admin' | 'nurse' | 'leader' | 'kitchen' | 'leirskole';
 
 interface LeaderDetailDialogProps {
   leader: Leader | null;
@@ -284,7 +285,7 @@ export function LeaderDetailDialog({
     
     if (role !== orig.role) {
       const roleNames: Record<AppRole, string> = {
-        superadmin: 'Superadmin', admin: 'Admin', nurse: 'Sykepleier', leader: 'Leder', kitchen: 'Kjøkken'
+        superadmin: 'Superadmin', admin: 'Admin', nurse: 'Sykepleier', leader: 'Leder', kitchen: 'Kjøkken', leirskole: 'Leirskole'
       };
       changes.push(`Din rolle er endret til: ${roleNames[role]}`);
     }
@@ -553,6 +554,13 @@ export function LeaderDetailDialog({
                     <Label htmlFor="role-nurse" className="flex items-center gap-2 cursor-pointer">
                       <Heart className="w-4 h-4 text-green-500" />
                       Sykepleier
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="leirskole" id="role-leirskole" />
+                    <Label htmlFor="role-leirskole" className="flex items-center gap-2 cursor-pointer">
+                      <Tent className="w-4 h-4 text-emerald-600" />
+                      Leirskole
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
