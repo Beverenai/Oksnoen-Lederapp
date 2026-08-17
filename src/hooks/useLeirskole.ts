@@ -173,3 +173,25 @@ export function useGenerateLeirskoleSchedule() {
     },
   });
 }
+
+/**
+ * Er jeg satt opp som staff på denne leirskoleuken?
+ * Brukes til å begrense leirskole-chatten til de som faktisk er aktive.
+ */
+export function useIsLeirskoleStaff(weekId?: string | null) {
+  const { effectiveLeader } = useAuth();
+  return useQuery({
+    queryKey: ['leirskole-is-staff', weekId, effectiveLeader?.id],
+    enabled: !!weekId && !!effectiveLeader?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leirskole_staff')
+        .select('id')
+        .eq('week_id', weekId!)
+        .eq('leader_id', effectiveLeader!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return !!data;
+    },
+  });
+}

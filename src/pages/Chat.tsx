@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
+import { useActiveLeirskoleWeek, useIsLeirskoleStaff } from '@/hooks/useLeirskole';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAccessMode } from '@/hooks/useViewMode';
 import { Button } from '@/components/ui/button';
@@ -95,9 +96,13 @@ export default function Chat() {
   const { showError } = useStatusPopup();
   const { limited, leirskoleView, mode: accessMode } = useAccessMode();
   const canUsePeriodChat = !limited;
-  const canUseLeirskoleChat = leirskoleView || (isAdmin && accessMode !== 'offseason');
+  const { data: activeLeirskoleWeek } = useActiveLeirskoleWeek();
+  const { data: isLeirskoleStaff } = useIsLeirskoleStaff(activeLeirskoleWeek?.id);
+  // Leirskole-chatten er kun for de som er satt opp på den aktive leirskoleuken (+ admin).
+  const canUseLeirskoleChat =
+    (isAdmin && accessMode !== 'offseason') || (leirskoleView && !!isLeirskoleStaff);
   const [channel, setChannel] = useState<'period' | 'offseason' | 'leirskole'>(
-    accessMode === 'leirskole' ? 'leirskole' : canUsePeriodChat ? 'period' : 'offseason',
+    accessMode === 'leirskole' && canUseLeirskoleChat ? 'leirskole' : canUsePeriodChat ? 'period' : 'offseason',
   );
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -114,10 +119,10 @@ export default function Chat() {
 
   // Inaktive ledere har kun tilgang til off season-chatten
   useEffect(() => {
-    if (accessMode === 'leirskole') setChannel('leirskole');
+    if (accessMode === 'leirskole') setChannel(canUseLeirskoleChat ? 'leirskole' : 'offseason');
     else if (!canUsePeriodChat) setChannel((c) => (c === 'period' || c === 'leirskole' ? 'offseason' : c));
     else setChannel((c) => (c === 'offseason' ? 'period' : c));
-  }, [canUsePeriodChat, accessMode]);
+  }, [canUsePeriodChat, accessMode, canUseLeirskoleChat]);
   const shellRef = useRef<HTMLDivElement>(null);
   const [shellHeight, setShellHeight] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
