@@ -29,7 +29,7 @@ type Props = {
  * Vises som en horisontal rad med toggles, og valgt ukes detaljer
  * kan ekspanderes om nødvendig.
  */
-export function LeirskoleWeekPeriodsCard({ selectedWeekId, onSelect }: Props) {
+export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelect }: Props) {
   const qc = useQueryClient();
   const { showError } = useStatusPopup();
   const { data: weeks } = useLeirskoleWeeks();
