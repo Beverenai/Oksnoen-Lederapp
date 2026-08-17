@@ -60,6 +60,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
   const { data: history } = useLeirskoleActivityHistory();
   const { data: types } = useLeirskoleActivityTypes(true);
   const { data: planCells } = useLeirskoleWeekPlan(week.id);
+  const { data: weekDays } = useLeirskoleWeekDays(week.id);
   const save = useSaveLeirskoleActivities();
   const removeOne = useDeleteLeirskoleActivity();
 
