@@ -332,12 +332,17 @@ export default function More() {
       )}
     >
       <header className="pt-1">
-        {limited && (
+        {accessMode === 'leirskole' ? (
+          <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/15 px-3 py-1 text-[10.5px] font-bold uppercase tracking-wider text-primary">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            Leirskole
+          </span>
+        ) : limited ? (
           <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-oks-gold/40 bg-[var(--gradient-oks-red)] px-3 py-1 text-[10.5px] font-bold uppercase tracking-wider text-oks-cream shadow-oks">
             <span className="h-1.5 w-1.5 rounded-full bg-oks-gold" />
             Off-season
           </span>
-        )}
+        ) : null}
         <h1 className="text-[26px] font-heading font-bold leading-tight text-foreground">
           Hei{firstName ? `, ${firstName}` : ''} <span aria-hidden>👋</span>
         </h1>
