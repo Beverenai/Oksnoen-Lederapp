@@ -7,6 +7,7 @@ import {
   useLeirskoleActivities,
   useLeirskoleSchedule,
   useLeirskoleActivityTypes,
+  useLeirskoleWeekDays,
   type LeirskoleStaff,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
