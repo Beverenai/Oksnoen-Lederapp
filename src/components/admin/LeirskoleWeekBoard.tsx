@@ -668,27 +668,47 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             <LabelCell>Kjøkken</LabelCell>
             {dates.map((date) => {
               const onDuty = (kitchenDays ?? []).filter((k) => k.date === date);
+              /** Kjøkkenvakt = 8t, så alt annet samme dag er en konflikt. */
+              const clash = onDuty.filter((k) =>
+                (postsByDate.get(date) ?? []).some((p) => (p.assignments ?? []).some((a) => a.staff_id === k.staff_id)),
+              );
               return (
                 <Popover key={date}>
                   <PopoverTrigger asChild>
                     <button
                       type="button"
-                      className="rounded-xl border border-sky-500/40 bg-sky-500/10 p-2 text-left text-[11px] hover:brightness-105"
+                      className={`rounded-xl border p-2 text-left text-[11px] hover:brightness-105 ${
+                        clash.length ? 'border-destructive/60 bg-destructive/10' : 'border-sky-500/40 bg-sky-500/10'
+                      }`}
                     >
                       {onDuty.length === 0 ? (
                         <span className="text-muted-foreground">—</span>
                       ) : (
-                        <span className="font-semibold">
-                          {onDuty.map((k) => firstName(staffToLeader.get(k.staff_id)?.name ?? '?')).join(', ')}
-                        </span>
+                        <>
+                          <span className="font-semibold">
+                            {onDuty.map((k) => firstName(staffToLeader.get(k.staff_id)?.name ?? '?')).join(', ')}
+                          </span>
+                          <span className="ml-1 text-[10px] text-muted-foreground">{KITCHEN_DAY_HOURS}t</span>
+                          {clash.length > 0 && (
+                            <p className="mt-0.5 text-[10px] font-semibold text-destructive">
+                              {clash
+                                .map((k) => firstName(staffToLeader.get(k.staff_id)?.name ?? '?'))
+                                .join(', ')}{' '}
+                              er også satt på økt
+                            </p>
+                          )}
+                        </>
                       )}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent align="start" className="w-64 p-2">
-                    <p className="px-1 pb-1.5 text-xs font-semibold">Kjøkken hele dagen</p>
+                    <p className="px-1 pb-1.5 text-xs font-semibold">
+                      Kjøkken hele dagen · {KITCHEN_DAY_HOURS}t
+                    </p>
                     <div className="max-h-[60vh] space-y-0.5 overflow-y-auto">
                       {staffOptions.map((s) => {
                         const on = onDuty.some((k) => k.staff_id === s.staffId);
+                        const hours = staffHoursByDate.get(date)?.get(s.staffId) ?? 0;
                         return (
                           <button
                             key={s.staffId}
@@ -696,12 +716,21 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                             onClick={() =>
                               setKitchenDay.mutate({ weekId: week.id, staffId: s.staffId, date, active: !on })
                             }
-                            className={`w-full truncate rounded-lg px-2 py-1.5 text-left text-xs hover:bg-muted ${
+                            className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs hover:bg-muted ${
                               on ? 'bg-primary/10 font-semibold' : ''
                             }`}
                           >
-                            {on ? '✓ ' : ''}
-                            {s.name}
+                            <span className="flex-1 truncate">
+                              {on ? '✓ ' : ''}
+                              {s.name}
+                            </span>
+                            <span
+                              className={`tabular-nums text-[10px] ${
+                                hours > maxHours + 0.01 ? 'text-destructive' : 'text-muted-foreground'
+                              }`}
+                            >
+                              {hours.toFixed(1)}t
+                            </span>
                           </button>
                         );
                       })}
