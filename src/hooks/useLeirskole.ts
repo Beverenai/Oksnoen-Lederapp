@@ -126,7 +126,7 @@ export function useSaveLeirskoleSessionActivities() {
   });
 }
 
-/** Alle leirskoleuker (nyeste først). */
+/** Alle leirskoleuker (kronologisk, eldste først). */
 export function useLeirskoleWeeks() {
   return useQuery({
     queryKey: ['leirskole-weeks'],
@@ -134,7 +134,7 @@ export function useLeirskoleWeeks() {
       const { data, error } = await supabase
         .from('leirskole_weeks')
         .select('*')
-        .order('start_date', { ascending: false });
+        .order('start_date', { ascending: true });
       if (error) throw error;
       return (data ?? []) as LeirskoleWeek[];
     },
