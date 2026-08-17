@@ -617,6 +617,76 @@ export function useSetLeirskoleDayType() {
 }
 
 /** Rutene i ukeplanleggeren (dag × rad). */
+export type LeirskoleKitchenDay = Tables<'leirskole_kitchen_days'>;
+
+/** Ledere som har kjøkken hele dagen (og dermed ingen andre vakter den dagen). */
+export function useLeirskoleKitchenDays(weekId?: string | null) {
+  return useQuery({
+    queryKey: ['leirskole-kitchen-days', weekId],
+    enabled: !!weekId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leirskole_kitchen_days')
+        .select('*')
+        .eq('week_id', weekId!);
+      if (error) throw error;
+      return (data ?? []) as LeirskoleKitchenDay[];
+    },
+  });
+}
+
+/** Sett/fjern kjøkkendag for en leder. Fjerner også vaktene deres den dagen. */
+export function useSetLeirskoleKitchenDay() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      weekId,
+      staffId,
+      date,
+      active,
+    }: {
+      weekId: string;
+      staffId: string;
+      date: string;
+      active: boolean;
+    }) => {
+      if (!active) {
+        const { error } = await supabase
+          .from('leirskole_kitchen_days')
+          .delete()
+          .eq('staff_id', staffId)
+          .eq('date', date);
+        if (error) throw error;
+        return;
+      }
+      const { error } = await supabase
+        .from('leirskole_kitchen_days')
+        .upsert({ week_id: weekId, staff_id: staffId, date }, { onConflict: 'staff_id,date' });
+      if (error) throw error;
+
+      // Kjøkkenledere skal ikke stå på andre vakter den dagen.
+      const { data: posts } = await supabase
+        .from('leirskole_posts')
+        .select('id')
+        .eq('week_id', weekId)
+        .eq('date', date);
+      const postIds = (posts ?? []).map((p) => p.id);
+      if (postIds.length) {
+        await supabase
+          .from('leirskole_assignments')
+          .delete()
+          .eq('staff_id', staffId)
+          .in('post_id', postIds);
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['leirskole-kitchen-days'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-my-shifts'] });
+    },
+  });
+}
+
 export function useLeirskoleWeekPlan(weekId?: string | null) {
   return useQuery({
     queryKey: ['leirskole-week-plan', weekId],
