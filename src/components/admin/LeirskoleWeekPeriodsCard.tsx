@@ -8,8 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { shortDate } from '@/lib/leirskoleDates';
-import { CalendarRange, Plus, Trash2, Users, Check, ChevronDown, Settings2 } from 'lucide-react';
+import { CalendarRange, Plus, Trash2, Users, Check, ChevronDown, Settings2, Crown, Edit3 } from 'lucide-react';
 
 type Props = {
   selectedWeekId: string | null;
