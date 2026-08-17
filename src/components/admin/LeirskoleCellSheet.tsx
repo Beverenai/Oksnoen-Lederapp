@@ -10,11 +10,13 @@ import { activityLine } from '@/lib/leirskoleRandomPlan';
 
 export interface CellTarget {
   date: string;
-  /** formiddag | ettermiddag | kveld — null for egne økter på ankomst/avreise. */
+  /** formiddag | ettermiddag | kveld | postId for egne økter på ankomst/avreise. */
   session: string | null;
   rowIndex: number | null;
   postId?: string | null;
   label: string;
+  /** 'normal' | 'arrival' | 'departure' — ankomst krever ikke kompetanse. */
+  dayType?: 'normal' | 'arrival' | 'departure';
 }
 
 export interface CellLeader {
