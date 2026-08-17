@@ -171,7 +171,11 @@ export function autoAssignWeek({
         activity,
         leaderId: best.leaderId,
         name: best.name,
-        outsideCompetence: requireComp && best.competencies.length > 0 && !best.competencies.includes(activity),
+        outsideCompetence:
+          requireComp &&
+          activityRequiresCompetence(activity) &&
+          best.competencies.length > 0 &&
+          !best.competencies.includes(activity),
         repeat: before > 0,
       });
     }
