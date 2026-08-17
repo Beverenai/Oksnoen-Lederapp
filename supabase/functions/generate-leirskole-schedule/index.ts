@@ -354,7 +354,8 @@ Deno.serve(async (req) => {
       const labels = (types ?? []).map((t: any) => String(t.label).toLowerCase());
       const { data: cells } = await supa.from("leirskole_week_plan_cells")
         .select("date, row_index, content").eq("week_id", week_id);
-      const ROW_TO_NAME: Record<number, string> = { 0: "Økt 1", 1: "Økt 2", 2: "Økt 3" };
+      // Radene i ukeplanleggeren er 1-indekserte (rad 1 = Økt 1).
+      const ROW_TO_NAME: Record<number, string> = { 1: "Økt 1", 2: "Økt 2", 3: "Økt 3" };
       const countBySlot = new Map<string, number>();
       for (const c of (cells ?? []) as any[]) {
         const name = ROW_TO_NAME[Number(c.row_index)];
@@ -512,6 +513,8 @@ Deno.serve(async (req) => {
         progress = false;
         // Ta den lederen som har minst timer denne dagen først.
         const hungry = staff
+          // Kjøkkenledere jobber 8t på kjøkkenet og skal ikke fylles opp mer.
+          .filter(st => !onKitchen(st.id, date))
           .map(st => ({ st, s: stateById.get(st.id)!, target: Math.min(8, Number(st.max_daily_hours ?? 8)) }))
           .filter(x => (x.s.hoursByDate[date] ?? 0) < x.target - 0.001)
           .sort((a, b) => (a.s.hoursByDate[date] ?? 0) - (b.s.hoursByDate[date] ?? 0));
