@@ -173,14 +173,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const sweatersEnabled = useSweatersEnabled();
   const { mode: appMode } = useAppMode();
   const { seasonView, setSeasonView } = useSeasonView();
-  const { limited: inactiveForUser } = useAccessMode();
+  const { limited: inactiveForUser, mode: accessMode } = useAccessMode();
 
   // Off-season-tema på <html> slik at ark/dialoger (portaler) ikke blir hvite
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.toggle('oks-offseason-theme', inactiveForUser);
+    root.classList.toggle('oks-offseason-theme', accessMode === 'offseason');
     return () => root.classList.remove('oks-offseason-theme');
-  }, [inactiveForUser]);
+  }, [accessMode]);
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
@@ -208,7 +208,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const isRegularLeader = !isAdmin && !isNurse;
 
   // Determine if current route is a sub-page (not one of the main tab routes)
-  const bottomNavItems: BottomNavItem[] = inactiveForUser
+  const bottomNavItems: BottomNavItem[] = accessMode === 'leirskole'
+    ? [
+        { to: '/', icon: Tent, label: 'Leirskole' },
+        { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
+        { to: '/profile', icon: User, label: 'Profil' },
+        { to: '/mer', icon: LayoutGrid, label: 'Mer' },
+      ]
+    : inactiveForUser
     ? [
         { to: '/', icon: Home, label: 'Hjem' },
         { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
