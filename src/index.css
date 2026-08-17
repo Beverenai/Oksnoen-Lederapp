@@ -689,42 +689,46 @@ html.oks-offseason-theme .oks-offseason-bg {
   min-height: 100dvh;
 }
 
-/* ===== Leirskole: mørkt iOS-tema med teal aksent =====
-   Egen flate for leirskole-modus, slik at den skiller seg tydelig
-   fra sommerleir (lys) og off-season (retro rød/gull). */
+/* ===== Leirskole: mørkt iOS-tema i Øksnøen-logofargene =====
+   Rød, grønn og blå fra logoen brukes som aksenter og gradienter,
+   slik at leirskole skiller seg fra sommerleir (lys) og off-season. */
 :root {
-  --oks-ls-night: 205 44% 8%;
-  --oks-ls-night-deep: 206 50% 5%;
-  --oks-ls-teal: 176 62% 46%;
-  --oks-ls-sea: 196 60% 34%;
+  --oks-ls-night: 218 42% 9%;
+  --oks-ls-night-deep: 220 48% 6%;
+  --oks-ls-red: 358 74% 54%;
+  --oks-ls-green: 148 58% 42%;
+  --oks-ls-blue: 212 78% 52%;
+  --oks-ls-yellow: 42 92% 58%;
 }
 
-/* Samme mørke palett som off-season, kun aksenten er teal for leirskole. */
+/* Mørk palett med blå primær og rød/grønn som støttefarger. */
 html.oks-leirskole-theme,
 html.oks-leirskole-theme body,
 html.oks-leirskole-theme .oks-leirskole-bg {
-  --background: var(--oks-night);
+  --background: var(--oks-ls-night);
   --foreground: 40 40% 94%;
-  --card: 210 40% 13%;
+  --card: 218 38% 14%;
   --card-foreground: 40 40% 94%;
-  --muted: 210 32% 18%;
-  --muted-foreground: 205 16% 68%;
-  --border: 205 22% 24%;
-  --input: 205 22% 24%;
-  --popover: 210 40% 12%;
+  --muted: 218 30% 19%;
+  --muted-foreground: 214 16% 70%;
+  --border: 216 22% 26%;
+  --input: 216 22% 26%;
+  --popover: 218 38% 13%;
   --popover-foreground: 40 40% 94%;
-  --secondary: 210 32% 18%;
+  --secondary: 218 30% 19%;
   --secondary-foreground: 40 40% 94%;
-  --accent: 210 32% 20%;
+  --accent: 218 30% 21%;
   --accent-foreground: 40 40% 94%;
-  --primary: var(--oks-ls-teal);
-  --primary-foreground: 206 50% 6%;
-  --ring: var(--oks-ls-teal);
+  --primary: var(--oks-ls-blue);
+  --primary-foreground: 0 0% 100%;
+  --ring: var(--oks-ls-blue);
+  --destructive: var(--oks-ls-red);
+  --destructive-foreground: 0 0% 100%;
 }
 
 html.oks-leirskole-theme,
 html.oks-leirskole-theme body {
-  background-color: hsl(var(--oks-night-deep));
+  background-color: hsl(var(--oks-ls-night-deep));
   color: hsl(var(--foreground));
 }
 
@@ -732,10 +736,10 @@ html.oks-leirskole-theme .oks-leirskole-bg {
   color: hsl(var(--foreground));
   min-height: 100dvh;
   background:
-    radial-gradient(110% 48% at 14% -6%, hsl(var(--oks-ls-teal) / 0.24) 0%, transparent 62%),
-    radial-gradient(90% 42% at 90% 4%, hsl(var(--oks-ls-sea) / 0.22) 0%, transparent 60%),
-    radial-gradient(120% 60% at 50% 110%, hsl(var(--oks-forest) / 0.5) 0%, transparent 68%),
-    linear-gradient(180deg, hsl(var(--oks-night)) 0%, hsl(var(--oks-night-deep)) 100%);
+    radial-gradient(95% 44% at 8% -4%, hsl(var(--oks-ls-red) / 0.26) 0%, transparent 60%),
+    radial-gradient(90% 40% at 92% 2%, hsl(var(--oks-ls-blue) / 0.28) 0%, transparent 60%),
+    radial-gradient(120% 55% at 50% 108%, hsl(var(--oks-ls-green) / 0.3) 0%, transparent 66%),
+    linear-gradient(180deg, hsl(var(--oks-ls-night)) 0%, hsl(var(--oks-ls-night-deep)) 100%);
 }
 
 /* Glass-pill flate brukt i leirskole-UI */
@@ -745,4 +749,42 @@ html.oks-leirskole-theme .oks-leirskole-bg {
   background: hsl(var(--card) / 0.72);
   backdrop-filter: blur(14px);
   box-shadow: 0 14px 34px -22px hsl(0 0% 0% / 0.9);
+}
+
+/* Logo-gradient: rød → grønn → blå. Brukes på topp-kort og aksenter. */
+.oks-ls-gradient {
+  background:
+    linear-gradient(135deg,
+      hsl(var(--oks-ls-red) / 0.9) 0%,
+      hsl(var(--oks-ls-green) / 0.85) 48%,
+      hsl(var(--oks-ls-blue) / 0.95) 100%);
+  color: hsl(0 0% 100%);
+}
+
+.oks-ls-gradient-text {
+  background: linear-gradient(100deg,
+    hsl(var(--oks-ls-red)) 0%,
+    hsl(var(--oks-ls-yellow)) 34%,
+    hsl(var(--oks-ls-green)) 64%,
+    hsl(var(--oks-ls-blue)) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Fargestripe øverst på et kort, i logofargene */
+.oks-ls-stripe {
+  position: relative;
+  overflow: hidden;
+}
+.oks-ls-stripe::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg,
+    hsl(var(--oks-ls-red)) 0%,
+    hsl(var(--oks-ls-yellow)) 33%,
+    hsl(var(--oks-ls-green)) 66%,
+    hsl(var(--oks-ls-blue)) 100%);
 }

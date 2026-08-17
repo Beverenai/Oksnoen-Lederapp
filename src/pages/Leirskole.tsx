@@ -105,16 +105,16 @@ export default function Leirskole() {
   return (
     <div className="space-y-3 animate-fade-in pb-6">
       {/* Uke */}
-      <div className="oks-ls-pill overflow-hidden p-4">
+      <div className="oks-ls-gradient overflow-hidden rounded-3xl p-4 shadow-lg">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Leirskole</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80">Leirskole</p>
             <h1 className="mt-0.5 truncate text-2xl font-heading font-bold leading-tight">{week.name}</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
+            <p className="mt-0.5 text-sm text-white/85">
               {shortDate(week.start_date)} – {shortDate(week.end_date)} · Hei {firstName}
             </p>
           </div>
-          <span className="shrink-0 rounded-full bg-primary/15 px-3 py-1 text-[11px] font-semibold text-primary">
+          <span className="shrink-0 rounded-full bg-white/20 px-3 py-1 text-[11px] font-semibold">
             {week.schedule_published_at ? 'Publisert' : 'Utkast'}
           </span>
         </div>
@@ -124,9 +124,9 @@ export default function Leirskole() {
             { v: `${myHours.toFixed(1)}t`, l: 'Min uke' },
             { v: `${todayHours.toFixed(1)}/${maxDaily}t`, l: 'I dag' },
           ].map((s) => (
-            <div key={s.l} className="rounded-2xl bg-muted/40 px-3 py-2">
+            <div key={s.l} className="rounded-2xl bg-white/15 px-3 py-2">
               <p className="text-lg font-bold tabular-nums">{s.v}</p>
-              <p className="text-[11px] text-muted-foreground">{s.l}</p>
+              <p className="text-[11px] text-white/80">{s.l}</p>
             </div>
           ))}
         </div>

@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users, ChevronRight } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
   useLeirskoleActivities,
@@ -242,106 +243,10 @@ export default function LeirskoleAdmin() {
     );
   }
 
-  return (
-    <div className="space-y-3 animate-fade-in pb-8">
-      <Button variant="ghost" size="sm" className="gap-1.5 px-2" onClick={() => navigate('/')}>
-        <ArrowLeft className="h-4 w-4" /> Tilbake
-      </Button>
+  const hasSchedule = (posts ?? []).length > 0;
 
-      {/* Statusstripe */}
-      <div className="oks-ls-pill p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Leirskole-admin</p>
-            <h1 className="mt-0.5 truncate text-2xl font-heading font-bold">{week.name}</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {shortDate(week.start_date)} – {shortDate(week.end_date)} · maks {Number(week.max_daily_hours ?? 8)}t/dag
-            </p>
-          </div>
-          <span className="shrink-0 rounded-full bg-primary/15 px-3 py-1 text-[11px] font-semibold text-primary">
-            {week.schedule_published_at ? 'Publisert' : 'Utkast'}
-          </span>
-        </div>
-
-        <div className="mt-3 grid grid-cols-4 gap-2">
-          {[
-            { v: `${(staff ?? []).length}`, l: 'Ledere' },
-            { v: `${onDutyCount}`, l: 'På vakt nå' },
-            { v: `${totalHours.toFixed(0)}t`, l: 'Timer' },
-            { v: `${(posts ?? []).length}`, l: 'Poster' },
-          ].map((s) => (
-            <div key={s.l} className="rounded-2xl bg-muted/40 px-2.5 py-2">
-              <p className="text-lg font-bold tabular-nums">{s.v}</p>
-              <p className="text-[10.5px] text-muted-foreground">{s.l}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-3 flex items-center justify-between rounded-2xl bg-muted/40 px-3 py-2">
-          <span className="flex items-center gap-2 text-sm">
-            <Bell className="h-4 w-4 text-primary" /> Publisert for lederne
-          </span>
-          <Switch
-            checked={!!week.schedule_published_at}
-            onCheckedChange={(v) => publish.mutate({ id: week.id, published: v })}
-          />
-        </div>
-      </div>
-
-      {/* I dag */}
-      {todayPosts.length > 0 && (
-        <div className="oks-ls-pill p-4">
-          <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
-            <Clock className="h-4 w-4 text-primary" /> I dag
-          </p>
-          <div className="space-y-1.5">
-            {todayPosts.map((p) => (
-              <div key={p.id} className="rounded-2xl bg-muted/40 px-3 py-2">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="min-w-0 truncate text-sm font-medium">{p.name}</p>
-                  <span className="shrink-0 text-xs font-semibold tabular-nums">
-                    {hhmm(p.start_time)}–{hhmm(p.end_time)}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {p.assignments.length === 0
-                    ? 'Ingen satt opp'
-                    : p.assignments.map((a) => staffNames.get(a.staff_id) ?? '—').join(', ')}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Ledere denne uken (hovedflaten) */}
-      <LeirskoleStaffPanel
-        weekName={week.name}
-        weekDates={`${week.start_date} – ${week.end_date}`}
-        staff={staff ?? []}
-        hoursByStaff={hoursByStaff}
-        maxDailyHours={week.max_daily_hours}
-        activitiesByLeader={activitiesByLeader}
-        onSelect={(s) => setSelectedStaffId(s.id)}
-      />
-
-      {/* Aktivitetsgenerator */}
-      <LeirskoleActivityCard week={week} staff={staff ?? []} />
-
-      <LeirskoleAccessCard
-        weekId={week.id}
-        weekName={week.name}
-        maxDailyHours={week.max_daily_hours}
-      />
-
-      {/* Vaktplan-generator */}
-      <LeirskolePostsCard week={week} staff={staff ?? []} />
-
-      {/* Denne økten skal du */}
-      <LeirskoleSessionInfoCard weekId={week.id} staff={staff ?? []} />
-
-      {/* Oppgaver */}
-      <div className="oks-ls-pill space-y-3 p-4">
+  const taskPanel = (
+      <div className="oks-ls-pill oks-ls-stripe space-y-3 p-4">
         <div>
           <p className="flex items-center gap-2 text-sm font-semibold">
             <Users className="h-4 w-4 text-primary" /> Oppgaver til lederne
@@ -432,6 +337,134 @@ export default function LeirskoleAdmin() {
           ))}
         </div>
       </div>
+  );
+
+  return (
+    <div className="space-y-3 animate-fade-in pb-8">
+      <Button variant="ghost" size="sm" className="gap-1.5 px-2" onClick={() => navigate('/')}>
+        <ArrowLeft className="h-4 w-4" /> Tilbake
+      </Button>
+
+      {/* Toppkort i logofargene */}
+      <div className="oks-ls-gradient rounded-3xl p-4 shadow-lg">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80">Leirskole-admin</p>
+            <h1 className="mt-0.5 truncate text-2xl font-heading font-bold">{week.name}</h1>
+            <p className="mt-0.5 text-sm text-white/85">
+              {shortDate(week.start_date)} – {shortDate(week.end_date)} · maks {Number(week.max_daily_hours ?? 8)}t/dag
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full bg-white/20 px-3 py-1 text-[11px] font-semibold">
+            {week.schedule_published_at ? 'Publisert' : 'Utkast'}
+          </span>
+        </div>
+
+        <div className="mt-3 grid grid-cols-4 gap-2">
+          {[
+            { v: `${(staff ?? []).length}`, l: 'Ledere' },
+            { v: `${onDutyCount}`, l: 'På vakt nå' },
+            { v: `${totalHours.toFixed(0)}t`, l: 'Timer' },
+            { v: `${(posts ?? []).length}`, l: 'Vakter' },
+          ].map((s) => (
+            <div key={s.l} className="rounded-2xl bg-white/15 px-2.5 py-2">
+              <p className="text-lg font-bold tabular-nums">{s.v}</p>
+              <p className="text-[10.5px] text-white/80">{s.l}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-3 flex items-center justify-between rounded-2xl bg-white/15 px-3 py-2">
+          <span className="flex items-center gap-2 text-sm">
+            <Bell className="h-4 w-4" /> Publisert for lederne
+          </span>
+          <Switch
+            checked={!!week.schedule_published_at}
+            onCheckedChange={(v) => publish.mutate({ id: week.id, published: v })}
+          />
+        </div>
+      </div>
+
+      {/* Arbeidsflyt: 1) vaktplan → 2) oppgaver per økt */}
+      <div className="oks-ls-pill flex items-center gap-2 p-3 text-xs">
+        <span className={`rounded-full px-2.5 py-1 font-semibold ${hasSchedule ? 'bg-primary/20 text-primary' : 'bg-muted/60 text-muted-foreground'}`}>
+          1. Vaktplan {hasSchedule ? '✓' : ''}
+        </span>
+        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        <span className={`rounded-full px-2.5 py-1 font-semibold ${(weekActivities ?? []).length ? 'bg-primary/20 text-primary' : 'bg-muted/60 text-muted-foreground'}`}>
+          2. Oppgaver per økt
+        </span>
+      </div>
+
+      <Tabs defaultValue="oversikt" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 rounded-2xl">
+          <TabsTrigger value="oversikt" className="rounded-xl text-xs">Oversikt</TabsTrigger>
+          <TabsTrigger value="vaktplan" className="rounded-xl text-xs">Vaktplan</TabsTrigger>
+          <TabsTrigger value="okter" className="rounded-xl text-xs">Økter</TabsTrigger>
+          <TabsTrigger value="oppgaver" className="rounded-xl text-xs">Oppgaver</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="oversikt" className="mt-3 space-y-3">
+          {todayPosts.length > 0 && (
+            <div className="oks-ls-pill oks-ls-stripe p-4">
+              <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                <Clock className="h-4 w-4 text-primary" /> I dag
+              </p>
+              <div className="space-y-1.5">
+                {todayPosts.map((p) => (
+                  <div key={p.id} className="rounded-2xl bg-muted/40 px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="min-w-0 truncate text-sm font-medium">{p.name}</p>
+                      <span className="shrink-0 text-xs font-semibold tabular-nums">
+                        {hhmm(p.start_time)}–{hhmm(p.end_time)}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {p.assignments.length === 0
+                        ? 'Ingen satt opp'
+                        : p.assignments.map((a) => staffNames.get(a.staff_id) ?? '—').join(', ')}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <LeirskoleStaffPanel
+            weekName={week.name}
+            weekDates={`${week.start_date} – ${week.end_date}`}
+            staff={staff ?? []}
+            hoursByStaff={hoursByStaff}
+            maxDailyHours={week.max_daily_hours}
+            activitiesByLeader={activitiesByLeader}
+            onSelect={(s) => setSelectedStaffId(s.id)}
+          />
+
+          <LeirskoleAccessCard
+            weekId={week.id}
+            weekName={week.name}
+            maxDailyHours={week.max_daily_hours}
+          />
+        </TabsContent>
+
+        <TabsContent value="vaktplan" className="mt-3 space-y-3">
+          <LeirskolePostsCard week={week} staff={staff ?? []} />
+        </TabsContent>
+
+        <TabsContent value="okter" className="mt-3 space-y-3">
+          {!hasSchedule && (
+            <div className="oks-ls-pill p-4 text-sm text-muted-foreground">
+              Generer vaktplanen først — da vet vi hvilke ledere som er på vakt hver økt.
+            </div>
+          )}
+          <LeirskoleActivityCard week={week} staff={staff ?? []} />
+          <LeirskoleSessionInfoCard weekId={week.id} staff={staff ?? []} />
+        </TabsContent>
+
+        <TabsContent value="oppgaver" className="mt-3 space-y-3">
+          {taskPanel}
+        </TabsContent>
+      </Tabs>
 
       {selectedStaff?.leader && (
         <LeirskoleLeaderSheet
