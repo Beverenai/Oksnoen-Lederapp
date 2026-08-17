@@ -2,9 +2,25 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Check } from 'lucide-react';
-import { useSaveLeirskoleCompetencies, useLeirskoleActivityTypes } from '@/hooks/useLeirskole';
+import { Input } from '@/components/ui/input';
+import { Check, Plus } from 'lucide-react';
+import {
+  useSaveLeirskoleCompetencies,
+  useLeirskoleActivityTypes,
+  useAddLeirskoleActivityType,
+} from '@/hooks/useLeirskole';
 import { LEIRSKOLE_COMPETENCIES } from '@/lib/leirskoleCompetencies';
+
+function slugify(label: string) {
+  return (
+    label
+      .toLowerCase()
+      .replace(/[æå]/g, 'a')
+      .replace(/ø/g, 'o')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_|_$/g, '') || `aktivitet_${Date.now()}`
+  );
+}
 
 interface Props {
   open: boolean;
@@ -30,6 +46,9 @@ export function LeirskoleCompetenceSheet({
   const [selected, setSelected] = useState<string[]>(current);
   const save = useSaveLeirskoleCompetencies();
   const { data: types } = useLeirskoleActivityTypes();
+  const addType = useAddLeirskoleActivityType();
+  const [newLabel, setNewLabel] = useState('');
+  const [newEmoji, setNewEmoji] = useState('');
 
   /** Alle aktiviteter — både nye fra databasen og de gamle standardene. */
   const options = (() => {
@@ -56,6 +75,24 @@ export function LeirskoleCompetenceSheet({
 
   const toggle = (key: string) =>
     setSelected((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+
+  const addActivity = async () => {
+    const label = newLabel.trim();
+    if (!label) return;
+    if (options.some((o) => o.label.toLowerCase() === label.toLowerCase())) {
+      toast.error('Aktiviteten finnes allerede');
+      return;
+    }
+    try {
+      await addType.mutateAsync({ label, emoji: newEmoji.trim() || '⭐', sortOrder: options.length });
+      setSelected((prev) => [...prev, slugify(label)]);
+      setNewLabel('');
+      setNewEmoji('');
+      toast.success('Aktivitet lagt til');
+    } catch (e: any) {
+      toast.error(e.message ?? 'Kunne ikke legge til');
+    }
+  };
 
   const submit = async () => {
     if (required && selected.length === 0) {
@@ -105,6 +142,40 @@ export function LeirskoleCompetenceSheet({
               </button>
             );
           })}
+        </div>
+
+        <div className="mt-3 rounded-2xl border border-dashed border-border/60 p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Legg til aktivitet
+          </p>
+          <div className="flex gap-2">
+            <Input
+              value={newEmoji}
+              onChange={(e) => setNewEmoji(e.target.value)}
+              placeholder="⭐"
+              className="w-16 text-center"
+              maxLength={4}
+            />
+            <Input
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              placeholder="Navn på aktivitet"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addActivity();
+                }
+              }}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={addActivity}
+              disabled={!newLabel.trim() || addType.isPending}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="mt-5 flex gap-2 pb-2">
