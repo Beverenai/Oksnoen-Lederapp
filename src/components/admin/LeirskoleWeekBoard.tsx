@@ -271,6 +271,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     mutationFn: async ({ date, name }: { date: string; name: string }) => {
       const t = MEAL_TIMES[name] ?? { start: '22:30', end: '01:30', hours: 3 };
       const night = name === 'Nattevakt';
+      const sanitas = name === 'Sanitas';
       const { error } = await supabase.from('leirskole_posts').insert({
         week_id: week.id,
         date,
@@ -282,9 +283,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         crosses_midnight: night,
         is_custom: true,
         is_published: true,
-        post_type: night ? 'night' : 'meal',
-        required_leaders: night ? 1 : 2,
-        sort_order: night ? 90 : 50,
+        post_type: night ? 'night' : sanitas ? 'other' : 'meal',
+        required_leaders: night ? 1 : sanitas ? 4 : 2,
+        sort_order: night ? 90 : sanitas ? 70 : 50,
       });
       if (error) throw error;
     },
