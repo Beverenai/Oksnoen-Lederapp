@@ -524,7 +524,7 @@ Deno.serve(async (req) => {
 
     const status = missing.length === 0 && conflicts.length === 0 ? "success" : "partial";
     const stats = {
-      assigned: newAssignments.length,
+      assigned: insertRows.length,
       locked_kept: toKeep.length,
       missing,
       conflicts,
