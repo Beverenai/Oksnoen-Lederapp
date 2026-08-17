@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AlertTriangle, Moon, Sparkles, Wand2 } from 'lucide-react';
@@ -27,6 +28,12 @@ import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffP
 import { trimDayHours } from '@/lib/leirskoleDayHours';
 
 const MEALS = ['Frokost', 'Middag', 'Kvelds'];
+const MEAL_TIMES: Record<string, { start: string; end: string; hours: number }> = {
+  Frokost: { start: '09:00', end: '10:00', hours: 1 },
+  Middag: { start: '14:00', end: '15:00', hours: 1 },
+  Kvelds: { start: '19:00', end: '20:00', hours: 1 },
+};
+const TEMPLATE_NAMES = new Set(['Frokost', 'Middag', 'Kvelds', 'Nattevakt', 'Sanitas', 'Økt 1', 'Økt 2', 'Økt 3']);
 
 type StaffRow = LeirskoleStaff & {
   leader: {
@@ -202,6 +209,34 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   });
 
   /** Rydd en dag: fjern automatiske vakter til ingen ligger over dagstaket. */
+  const createPost = useMutation({
+    mutationFn: async ({ date, name }: { date: string; name: string }) => {
+      const t = MEAL_TIMES[name] ?? { start: '22:30', end: '01:30', hours: 3 };
+      const night = name === 'Nattevakt';
+      const { error } = await supabase.from('leirskole_posts').insert({
+        week_id: week.id,
+        date,
+        name,
+        start_time: t.start,
+        end_time: t.end,
+        duration_hours: t.hours,
+        is_night: night,
+        crosses_midnight: night,
+        is_custom: true,
+        is_published: true,
+        post_type: night ? 'night' : 'meal',
+        required_leaders: night ? 1 : 2,
+        sort_order: night ? 90 : 50,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
+      toast.success('Økt lagt til');
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke legge til økten'),
+  });
+
   const fixDay = useMutation({
     mutationFn: async (date: string) => {
       const day = staffHoursByDate.get(date) ?? new Map<string, number>();
@@ -415,7 +450,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                     weekId={week.id}
                     date={date}
                     posts={(postsByDate.get(date) ?? [])
-                      .filter((p) => p.is_custom)
+                      .filter((p) => p.is_custom && !TEMPLATE_NAMES.has((p.name ?? '').trim()))
                       .map((p) => ({
                         id: p.id,
                         name: p.name ?? '',
@@ -522,15 +557,27 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             <LabelCell>Måltid</LabelCell>
             {dates.map((date) => {
               const dayPosts = postsByDate.get(date) ?? [];
-              const mealPosts = MEALS.map((m) => ({
+              const special = specialDays.has(date);
+              const mealRows = MEALS.map((m) => ({
                 meal: m,
                 post: dayPosts.find((p) => (p.name ?? '').trim().toLowerCase() === m.toLowerCase()),
-              })).filter((x) => x.post);
+              })).filter((x) => x.post || !special || x.meal === 'Middag');
               return (
                 <div key={date} className="rounded-xl border border-border/60 bg-muted/25 p-1.5">
-                  {mealPosts.length === 0 && <p className="text-[11px] text-muted-foreground">—</p>}
+                  {mealRows.length === 0 && <p className="text-[11px] text-muted-foreground">—</p>}
                   <div className="space-y-1">
-                    {mealPosts.map(({ meal, post }) => (
+                    {mealRows.map(({ meal, post }) =>
+                      !post ? (
+                        <button
+                          key={meal}
+                          type="button"
+                          onClick={() => createPost.mutate({ date, name: meal })}
+                          disabled={createPost.isPending}
+                          className="w-full rounded-lg border border-dashed border-border px-1 py-0.5 text-left text-[10px] text-muted-foreground hover:bg-muted"
+                        >
+                          + {meal}
+                        </button>
+                      ) : (
                       <LeirskolePostStaffPicker
                         key={meal}
                         weekId={week.id}
@@ -539,11 +586,11 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                         hoursByStaff={staffHoursByDate.get(date) ?? new Map()}
                         staffOptions={staffOptions}
                         post={{
-                          id: post!.id,
-                          name: post!.name ?? meal,
+                          id: post.id,
+                          name: post.name ?? meal,
                           date,
-                          duration_hours: post!.duration_hours,
-                          assignments: post!.assignments ?? [],
+                          duration_hours: post.duration_hours,
+                          assignments: post.assignments ?? [],
                         }}
                       >
                         <button
@@ -552,13 +599,14 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                         >
                           <span className="shrink-0 font-semibold">{meal}</span>
                           <span className="flex-1 text-muted-foreground">
-                            {(post!.assignments ?? [])
+                            {(post.assignments ?? [])
                               .map((a) => firstName(staffToLeader.get(a.staff_id)?.name ?? '?'))
                               .join(', ') || 'ingen'}
                           </span>
                         </button>
                       </LeirskolePostStaffPicker>
-                    ))}
+                      ),
+                    )}
                   </div>
                 </div>
               );
@@ -625,9 +673,15 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
               );
               if (!post) {
                 return (
-                  <div key={date} className="rounded-xl border border-border/60 bg-muted/25 p-2 text-[11px] text-muted-foreground">
-                    —
-                  </div>
+                  <button
+                    key={date}
+                    type="button"
+                    onClick={() => createPost.mutate({ date, name: 'Nattevakt' })}
+                    disabled={createPost.isPending}
+                    className="rounded-xl border border-dashed border-indigo-500/40 bg-muted/25 p-2 text-left text-[11px] text-muted-foreground hover:bg-muted"
+                  >
+                    + Nattevakt
+                  </button>
                 );
               }
               return (
