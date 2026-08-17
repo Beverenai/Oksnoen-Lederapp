@@ -62,15 +62,34 @@ export function LeirskoleSpecialDayTimeline({
       });
   }, [posts]);
 
-  /** Klemmer et tidsrom slik at det aldri overlapper en annen økt. */
+  /** Finner nærmeste ledige tidsrom, slik at økter aldri overlapper. */
   const clampRange = (from: number, to: number, ignoreId?: string) => {
-    const others = sorted.filter((r) => r.post.id !== ignoreId);
-    const prevEnd = Math.max(0, ...others.filter((r) => r.to <= from).map((r) => r.to));
-    const nextStart = Math.min(SLOTS, ...others.filter((r) => r.from >= prevEnd && r.from > from).map((r) => r.from));
-    const start = Math.max(prevEnd, Math.min(from, nextStart - 2));
-    const end = Math.max(start + 2, Math.min(to, nextStart));
-    const blocked = others.some((r) => start < r.to && end > r.from);
-    return blocked ? null : { from: start, to: end };
+    const others = sorted
+      .filter((r) => r.post.id !== ignoreId)
+      .sort((a, b) => a.from - b.from);
+
+    // Bygg alle ledige luker i døgnet.
+    const gaps: { from: number; to: number }[] = [];
+    let cursor = 0;
+    for (const r of others) {
+      if (r.from - cursor >= 2) gaps.push({ from: cursor, to: r.from });
+      cursor = Math.max(cursor, r.to);
+    }
+    if (SLOTS - cursor >= 2) gaps.push({ from: cursor, to: SLOTS });
+    if (!gaps.length) return null;
+
+    // Velg luken som treffer draget – ellers den nærmeste.
+    const hit =
+      gaps.find((g) => from < g.to && to > g.from) ??
+      gaps.reduce((best, g) => {
+        const d = from < g.from ? g.from - from : from - g.to;
+        const bd = from < best.from ? best.from - from : from - best.to;
+        return d < bd ? g : best;
+      });
+
+    const start = Math.max(hit.from, Math.min(from, hit.to - 2));
+    const end = Math.max(start + 2, Math.min(to, hit.to));
+    return { from: start, to: end };
   };
 
   const invalidate = () =>
@@ -187,7 +206,7 @@ export function LeirskoleSpecialDayTimeline({
     const next = clampRange(edit.from, edit.to, edit.id);
     setEdit(null);
     if (!next) {
-      toast.error('Økter kan ikke overlappe');
+      toast.error('Ingen ledig tid å flytte økten til');
       return;
     }
     updatePost.mutate({
@@ -253,7 +272,7 @@ export function LeirskoleSpecialDayTimeline({
             setDrag(null);
             const next = clampRange(from, Math.max(to, from + 4));
             if (!next) {
-              toast.error('Det ligger allerede en økt her');
+              toast.error('Ingen ledig tid igjen denne dagen');
               return;
             }
             setDraft(next);
