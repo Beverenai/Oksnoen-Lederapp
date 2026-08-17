@@ -10,7 +10,7 @@ import { Check, Trash2 } from 'lucide-react';
 const START_HOUR = 7;
 const END_HOUR = 24;
 const SLOT_MIN = 15;
-const SLOT_PX = 7; // høyde per 15 min
+const SLOT_PX = 4; // kompakt: høyde per 15 min
 const SLOTS = ((END_HOUR - START_HOUR) * 60) / SLOT_MIN;
 
 const toClock = (slot: number) => {
@@ -190,14 +190,14 @@ export function LeirskoleSpecialDayTimeline({
   return (
     <div className="flex h-full flex-col gap-1">
       <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">
-        Dra for å lage · dra økten for å flytte
+        Dra for å lage økt
       </p>
       <div className="flex flex-1 gap-1">
         {/* Klokkeskala */}
         <div className="w-8 shrink-0 select-none pt-0">
           {Array.from({ length: END_HOUR - START_HOUR }, (_, i) => (
-            <div key={i} style={{ height: SLOT_PX * 4 }} className="text-right text-[9px] leading-none text-muted-foreground">
-              {String(START_HOUR + i).padStart(2, '0')}
+            <div key={i} style={{ height: SLOT_PX * 4 }} className="text-right text-[8px] leading-none text-muted-foreground">
+              {i % 2 === 0 ? String(START_HOUR + i).padStart(2, '0') : ''}
             </div>
           ))}
         </div>
