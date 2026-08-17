@@ -212,7 +212,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     ? [
         { to: '/', icon: Tent, label: 'Leirskole' },
         { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
-        { to: '/profile', icon: User, label: 'Profil' },
+        ...(isAdmin
+          ? [{ to: '/admin/leirskole', icon: LayoutDashboard, label: 'Admin' } as BottomNavItem]
+          : []),
         { to: '/mer', icon: LayoutGrid, label: 'Mer' },
       ]
     : inactiveForUser
