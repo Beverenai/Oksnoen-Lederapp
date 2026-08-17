@@ -1,0 +1,2 @@
+ALTER TABLE public.chat_messages DROP CONSTRAINT IF EXISTS chat_messages_channel_check;
+ALTER TABLE public.chat_messages ADD CONSTRAINT chat_messages_channel_check CHECK (channel = ANY (ARRAY['period'::text, 'offseason'::text, 'leirskole'::text]));
