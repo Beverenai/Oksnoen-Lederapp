@@ -44,6 +44,7 @@ import { useAccessMode } from '@/hooks/useViewMode';
 import { Link as LinkIcon } from 'lucide-react';
 import { LederPass } from '@/components/passport/LederPass';
 import { OffSeasonHome } from '@/components/home/OffSeasonHome';
+import LeirskolePage from '@/pages/Leirskole';
 import { useMyMurderState } from '@/hooks/useMurderGame';
 import { Skull } from 'lucide-react';
 import { Tent, AlertCircle } from 'lucide-react';
