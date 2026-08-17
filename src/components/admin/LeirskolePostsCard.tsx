@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { CalendarClock, Play, Plus, Trash2, Lock, LockOpen, Moon, RefreshCw } from 'lucide-react';
+import { CalendarClock, Play, Trash2, Lock, LockOpen, Moon, RefreshCw } from 'lucide-react';
 import {
   useLeirskoleSchedule,
   useGenerateLeirskoleSchedule,
@@ -70,14 +70,6 @@ export function LeirskolePostsCard({
   const generate = useGenerateLeirskoleSchedule();
 
   const weekDates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
-  const [draft, setDraft] = useState({
-    name: '',
-    date: weekDates[0] ?? week.start_date,
-    start_time: '08:00',
-    end_time: '16:00',
-    required_leaders: 1,
-    is_night: false,
-  });
   const [keepLocked, setKeepLocked] = useState(true);
   const [publishAfter, setPublishAfter] = useState(true);
 
@@ -102,54 +94,6 @@ export function LeirskolePostsCard({
     () => (posts ?? []).filter((p) => p.assignments.length < (p.required_leaders ?? 1)).length,
     [posts],
   );
-
-  const addPost = useMutation({
-    mutationFn: async () => {
-      if (readOnly) throw new Error('Denne vaktplanen styres fra jobbplattformen');
-      if (!draft.name.trim()) throw new Error('Vakten må ha et navn');
-      const { error } = await supabase.from('leirskole_posts').insert({
-        week_id: week.id,
-        name: draft.name.trim(),
-        date: draft.date,
-        start_time: draft.start_time,
-        end_time: draft.end_time,
-        required_leaders: Math.max(1, Number(draft.required_leaders) || 1),
-        is_night: draft.is_night,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Vakt lagt til');
-      setDraft((d) => ({ ...d, name: '' }));
-      invalidate();
-    },
-    onError: (error: unknown) => showError(errorMessage(error, 'Kunne ikke legge til vakten')),
-  });
-
-  const copyDay = useMutation({
-    mutationFn: async ({ from, to }: { from: string; to: string }) => {
-      if (readOnly) throw new Error('Denne vaktplanen styres fra jobbplattformen');
-      const source = (posts ?? []).filter((p) => p.date === from);
-      if (!source.length) throw new Error('Ingen vakter å kopiere');
-      const rows = source.map((p) => ({
-        week_id: week.id,
-        name: p.name,
-        date: to,
-        start_time: p.start_time,
-        end_time: p.end_time,
-        required_leaders: p.required_leaders,
-        is_night: p.is_night,
-        post_type: p.post_type,
-      }));
-      const { error } = await supabase.from('leirskole_posts').insert(rows);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Dagen er kopiert');
-      invalidate();
-    },
-    onError: (error: unknown) => showError(errorMessage(error, 'Kunne ikke kopiere dagen')),
-  });
 
   const deletePost = useMutation({
     mutationFn: async (id: string) => {
