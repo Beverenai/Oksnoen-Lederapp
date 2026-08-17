@@ -312,6 +312,63 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
           )}
         </div>
       )}
+
+      {/* Dialog for å bytte hvilken uke som er aktiv for lederne */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-primary" /> Velg aktiv uke
+            </DialogTitle>
+            <DialogDescription>
+              Dette er den uken lederne ser i appen. Du kan fortsatt planlegge andre uker uten at de blir aktive.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-1">
+            {(weeks ?? []).map((w) => {
+              const isActive = w.id === activeWeekId;
+              return (
+                <div
+                  key={w.id}
+                  className={`flex items-center gap-3 rounded-2xl border p-3 ${
+                    isActive ? 'border-primary/40 bg-primary/10' : 'border-border/60 bg-muted/30'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-1.5 text-sm font-semibold">
+                      {w.name}
+                      {isActive && (
+                        <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
+                          AKTIV
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {shortDate(w.start_date)} – {shortDate(w.end_date)} · {staffCount.get(w.id) ?? 0} ledere
+                    </p>
+                  </div>
+                  {isActive ? (
+                    <Check className="h-5 w-5 shrink-0 text-primary" />
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="h-8 rounded-full px-3 text-xs oks-ls-gradient"
+                      disabled={setActive.isPending}
+                      onClick={() => setActive.mutate(w.id)}
+                    >
+                      Sett aktiv
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+            {(weeks ?? []).length === 0 && (
+              <p className="py-4 text-center text-sm text-muted-foreground">Ingen uker lagt inn ennå.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
