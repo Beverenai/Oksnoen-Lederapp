@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAppMode } from '@/hooks/useAppMode';
 
 export type ViewMode = 'auto' | 'full' | 'offseason' | 'leirskole';
+export type AccessMode = 'full' | 'offseason' | 'leirskole';
 
 const STORAGE_KEY = 'oks_view_mode';
 const EVENT = 'oks-view-mode-change';
@@ -50,15 +51,24 @@ export function useAccessMode() {
 
   let limited = autoLimited;
   let leirskoleView = isLeirskole;
+  let mode: AccessMode = isLeirskole && autoLimited ? 'leirskole' : autoLimited ? 'offseason' : 'full';
 
   if (canSwitch) {
-    if (viewMode === 'full') limited = false;
-    else if (viewMode === 'offseason') limited = true;
+    if (viewMode === 'full') {
+      limited = false;
+      leirskoleView = false;
+      mode = 'full';
+    } else if (viewMode === 'offseason') {
+      limited = true;
+      leirskoleView = false;
+      mode = 'offseason';
+    }
     else if (viewMode === 'leirskole') {
       limited = true;
       leirskoleView = true;
+      mode = 'leirskole';
     }
   }
 
-  return { limited, leirskoleView, viewMode, setViewMode, canSwitch, autoLimited };
+  return { limited, leirskoleView, mode, viewMode, setViewMode, canSwitch, autoLimited };
 }

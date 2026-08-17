@@ -93,11 +93,11 @@ function timeLabel(iso: string) {
 export default function Chat() {
   const { leader, isLimitedAccess, isLeirskole, isAdmin } = useAuth();
   const { showError } = useStatusPopup();
-  const { limited, leirskoleView } = useAccessMode();
+  const { limited, leirskoleView, mode: accessMode } = useAccessMode();
   const canUsePeriodChat = !limited;
-  const canUseLeirskoleChat = leirskoleView || isAdmin;
+  const canUseLeirskoleChat = leirskoleView || (isAdmin && accessMode !== 'offseason');
   const [channel, setChannel] = useState<'period' | 'offseason' | 'leirskole'>(
-    limited && leirskoleView ? 'leirskole' : canUsePeriodChat ? 'period' : 'offseason',
+    accessMode === 'leirskole' ? 'leirskole' : canUsePeriodChat ? 'period' : 'offseason',
   );
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -114,8 +114,10 @@ export default function Chat() {
 
   // Inaktive ledere har kun tilgang til off season-chatten
   useEffect(() => {
-    if (!canUsePeriodChat) setChannel((c) => (c === 'period' ? (leirskoleView ? 'leirskole' : 'offseason') : c));
-  }, [canUsePeriodChat, leirskoleView]);
+    if (accessMode === 'leirskole') setChannel('leirskole');
+    else if (!canUsePeriodChat) setChannel((c) => (c === 'period' || c === 'leirskole' ? 'offseason' : c));
+    else setChannel((c) => (c === 'offseason' ? 'period' : c));
+  }, [canUsePeriodChat, accessMode]);
   const shellRef = useRef<HTMLDivElement>(null);
   const [shellHeight, setShellHeight] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
