@@ -79,6 +79,9 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
           Velg aktiviteter fra lista i hver rute (økt 1–3). Trykk på fargeprikkene for å markere ruten. Lagres
           automatisk.
         </CardDescription>
+        <p className="mt-1 text-xs font-semibold text-primary">
+          {filledCount} av {dates.length * ROWS.length} ruter fylt ut
+        </p>
       </CardHeader>
       <CardContent>
         <div className="-mx-2 overflow-x-auto px-2 pb-2">
