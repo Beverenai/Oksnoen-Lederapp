@@ -22,6 +22,7 @@ import {
   useLeirskoleSchedule,
   useAddLeirskolePost,
   useDeleteLeirskolePost,
+  useLeirskoleWeeks,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
 
@@ -71,6 +72,7 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
   const { data: activityTypes } = useLeirskoleActivityTypes(true);
   const { data: weekDays } = useLeirskoleWeekDays(week.id);
   const { data: posts } = useLeirskoleSchedule(week.id);
+  const { data: allWeeks } = useLeirskoleWeeks();
   const save = useSaveLeirskoleWeekPlanCell();
   const setDayType = useSetLeirskoleDayType();
   const addPost = useAddLeirskolePost();
@@ -89,31 +91,40 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
     return map;
   }, [cells]);
 
-  /** Ankomst- og avreisedager har egne økter i stedet for økt 1–3. */
+  /** Ankomst-, avreise- og kombinerte dager har egne økter i stedet for økt 1–3. */
   const specialDays = useMemo(() => {
-    const map = new Map<string, 'arrival' | 'departure'>();
+    const map = new Map<string, 'arrival' | 'departure' | 'both'>();
     (weekDays ?? []).forEach((d) => {
-      if (d.day_type === 'departure' || d.day_type === 'arrival') {
-        map.set(d.date, d.day_type as 'arrival' | 'departure');
+      if (d.day_type === 'departure' || d.day_type === 'arrival' || d.day_type === 'both') {
+        map.set(d.date, d.day_type as 'arrival' | 'departure' | 'both');
       }
     });
     return map;
   }, [weekDays]);
 
-  /** Første dag er alltid ankomst, siste dag alltid avreise. */
+  /**
+   * Første dag er ankomstdag — men i alle uker som har en tidligere uke før seg,
+   * reiser forrige gruppe hjem samme dag, så dagen blir «avreise + ankomst».
+   */
   const first = dates[0];
   const last = dates[dates.length - 1];
+  const isFollowUpWeek = useMemo(
+    () => (allWeeks ?? []).some((w) => w.id !== week.id && w.start_date < week.start_date),
+    [allWeeks, week.id, week.start_date],
+  );
+  const firstDayType: 'arrival' | 'both' = isFollowUpWeek ? 'both' : 'arrival';
   const seeded = useRef<string | null>(null);
   useEffect(() => {
-    if (readOnly || !weekDays || dates.length < 2) return;
-    const stamp = `${week.id}:${first}:${last}`;
+    if (readOnly || !weekDays || !allWeeks || dates.length < 2) return;
+    const stamp = `${week.id}:${first}:${last}:${firstDayType}`;
     if (seeded.current === stamp) return;
     const typeOf = (date: string) => weekDays.find((d) => d.date === date)?.day_type ?? 'normal';
     seeded.current = stamp;
-    if (typeOf(first) !== 'arrival') setDayType.mutate({ weekId: week.id, date: first, dayType: 'arrival' });
+    if (typeOf(first) !== firstDayType)
+      setDayType.mutate({ weekId: week.id, date: first, dayType: firstDayType });
     if (typeOf(last) !== 'departure') setDayType.mutate({ weekId: week.id, date: last, dayType: 'departure' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readOnly, weekDays, first, last, week.id]);
+  }, [readOnly, weekDays, allWeeks, first, last, week.id, firstDayType]);
 
   const postsByDate = useMemo(() => {
     const map = new Map<string, { id: string; name: string; start_time: string; end_time: string }[]>();
@@ -168,15 +179,20 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
     );
   };
 
-  const LABELS: Record<'arrival' | 'departure', string> = {
+  const LABELS: Record<'arrival' | 'departure' | 'both', string> = {
     arrival: 'Ankomstdag',
     departure: 'Avreisedag',
+    both: 'Avreise + ankomst',
   };
 
   const toggleDayType = (date: string, type: 'arrival' | 'departure') => {
     if (date === first || date === last) {
       toast.info(
-        date === first ? 'Første dag er alltid ankomstdag' : 'Siste dag er alltid avreisedag',
+        date === first
+          ? firstDayType === 'both'
+            ? 'Første dag er alltid avreise + ankomst'
+            : 'Første dag er alltid ankomstdag'
+          : 'Siste dag er alltid avreisedag',
       );
       return;
     }
@@ -260,7 +276,7 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
                             { type: 'arrival' as const, Icon: PlaneLanding },
                             { type: 'departure' as const, Icon: PlaneTakeoff },
                           ]).map(({ type, Icon }) => {
-                            const active = special === type;
+                            const active = special === type || special === 'both';
                             return (
                               <button
                                 key={type}
