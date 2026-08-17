@@ -200,7 +200,8 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
         </CardTitle>
         <CardDescription>
           Velg aktiviteter fra lista i hver rute (økt 1–3). Trykk på fargeprikkene for å markere ruten. Marker
-          avreisedager med fly-ikonet — der lager du egne økter med navn og tid. Lagres automatisk.
+          ankomst- eller avreisedager med fly-ikonene — der lager du egne økter med navn og tid. Lagres
+          automatisk.
         </CardDescription>
         <p className="mt-1 text-xs font-semibold text-primary">
           {filledCount} av {totalCells} ruter fylt ut · {dates.length} dager
@@ -211,13 +212,14 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
           <div className="flex min-w-max gap-2">
             {dates.map((date) => {
               const d = parse(date);
-              const isDeparture = departure.has(date);
+              const special = specialDays.get(date);
+              const isSpecial = !!special;
               const dayRows = rowsFor(date);
               return (
                 <div key={date} className="w-44 shrink-0">
                   <div
                     className={`mb-2 rounded-xl px-2 py-1.5 ${
-                      isDeparture
+                      isSpecial
                         ? 'border border-dashed border-amber-500/70 bg-amber-500/15'
                         : 'oks-ls-gradient'
                     }`}
@@ -225,44 +227,57 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
                     <div className="flex items-center justify-between gap-1">
                       <p
                         className={`text-xs font-bold ${
-                          isDeparture ? 'text-amber-200' : 'text-white'
+                          isSpecial ? 'text-amber-700 dark:text-amber-200' : 'text-white'
                         }`}
                       >
                         {WEEKDAYS[d.getDay()]} {d.getDate()}.
                       </p>
                       {!readOnly && (
-                        <button
-                          type="button"
-                          aria-label={isDeparture ? 'Gjør til vanlig dag' : 'Marker som avreisedag'}
-                          title={isDeparture ? 'Gjør til vanlig dag' : 'Marker som avreisedag'}
-                          onClick={() => toggleDeparture(date)}
-                          className={`rounded-md p-1 ${
-                            isDeparture
-                              ? 'bg-amber-500/30 text-amber-100'
-                              : 'bg-white/20 text-white hover:bg-white/30'
-                          }`}
-                        >
-                          <PlaneTakeoff className="h-3 w-3" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          {([
+                            { type: 'arrival' as const, Icon: PlaneLanding },
+                            { type: 'departure' as const, Icon: PlaneTakeoff },
+                          ]).map(({ type, Icon }) => {
+                            const active = special === type;
+                            return (
+                              <button
+                                key={type}
+                                type="button"
+                                aria-label={active ? 'Gjør til vanlig dag' : `Marker som ${LABELS[type].toLowerCase()}`}
+                                title={active ? 'Gjør til vanlig dag' : LABELS[type]}
+                                onClick={() => toggleDayType(date, type)}
+                                className={`rounded-md p-1 ${
+                                  active
+                                    ? 'bg-amber-500/30 text-amber-700 dark:text-amber-100'
+                                    : isSpecial
+                                      ? 'bg-amber-500/10 text-amber-700/70 dark:text-amber-100/70 hover:bg-amber-500/20'
+                                      : 'bg-white/20 text-white hover:bg-white/30'
+                                }`}
+                              >
+                                <Icon className="h-3 w-3" />
+                              </button>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
-                    {isDeparture && (
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-200/80">
-                        Avreisedag
+                    {special && (
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700/80 dark:text-amber-200/80">
+                        {LABELS[special]}
                       </p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    {isDeparture && !readOnly && (
+                    {isSpecial && !readOnly && (
                       <button
                         type="button"
                         onClick={() => setNewPostDate(date)}
-                        className="flex w-full items-center justify-center gap-1 rounded-xl bg-amber-500/20 py-2 text-[11px] font-bold text-amber-100 hover:bg-amber-500/30"
+                        className="flex w-full items-center justify-center gap-1 rounded-xl bg-amber-500/20 py-2 text-[11px] font-bold text-amber-700 dark:text-amber-100 hover:bg-amber-500/30"
                       >
                         <Clock className="h-3 w-3" /> Ny økt (navn + tid)
                       </button>
                     )}
-                    {isDeparture && dayRows.length === 0 && (
+                    {isSpecial && dayRows.length === 0 && (
                       <p className="rounded-xl border border-dashed border-amber-500/40 p-2 text-[11px] text-muted-foreground">
                         Ingen økter denne dagen — legg inn egne økter med navn og tid.
                       </p>
