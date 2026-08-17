@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Send, Trash2, Users, CalendarDays, Bell, RefreshCw, Link2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Plus, Send, Trash2, Users, CalendarDays, Bell, RefreshCw, CheckCircle2 } from 'lucide-react';
 import {
   useLeirskoleWeeks,
   useLeirskoleSchedule,
