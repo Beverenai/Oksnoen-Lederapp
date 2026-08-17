@@ -21,6 +21,8 @@ import {
   useGenerateLeirskoleSchedule,
 } from '@/hooks/useLeirskole';
 import { LeirskoleAccessCard } from '@/components/admin/LeirskoleAccessCard';
+import { LeirskolePostsCard } from '@/components/admin/LeirskolePostsCard';
+import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
 
 const hhmm = (t: string) => t.slice(0, 5);
 
@@ -334,9 +336,6 @@ export default function LeirskoleAdmin() {
                 {!week.is_active && (
                   <Button variant="secondary" onClick={() => setActive.mutate(week.id)}>Sett som aktiv</Button>
                 )}
-                <Button onClick={runGenerator} disabled={generate.isPending} className="gap-2">
-                  <Play className="h-4 w-4" /> {generate.isPending ? 'Genererer…' : 'Generer vaktplan'}
-                </Button>
               </div>
               <div className="flex items-center justify-between rounded-xl border bg-card/50 px-3 py-2">
                 <div className="flex items-center gap-2 text-sm">
@@ -356,6 +355,10 @@ export default function LeirskoleAdmin() {
             weekName={week.name}
             maxDailyHours={week.max_daily_hours}
           />
+
+          <LeirskolePostsCard week={week} staff={staff ?? []} />
+
+          <LeirskoleSessionInfoCard weekId={week.id} staff={staff ?? []} />
 
           {(staff ?? []).length > 0 && (
             <Card>
@@ -455,31 +458,6 @@ export default function LeirskoleAdmin() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Vaktplan</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {(posts ?? []).length === 0 ? (
-                <p className="text-sm text-muted-foreground">Ingen vaktposter ennå — generatoren lager standardposter.</p>
-              ) : (
-                (posts ?? []).map((p) => (
-                  <div key={p.id} className="rounded-xl border bg-card/40 px-3 py-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-medium">{p.date} · {p.name}</p>
-                      <Badge variant="outline" className="tabular-nums">
-                        {hhmm(p.start_time)}–{hhmm(p.end_time)}
-                      </Badge>
-                    </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {p.assignments.length}/{p.required_leaders} ·{' '}
-                      {p.assignments.map((a) => staffNames.get(a.staff_id) ?? '—').join(', ') || 'ingen'}
-                    </p>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
         </>
       )}
     </div>

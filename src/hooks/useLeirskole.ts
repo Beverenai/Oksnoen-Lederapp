@@ -8,6 +8,7 @@ export type LeirskolePost = Tables<'leirskole_posts'>;
 export type LeirskoleStaff = Tables<'leirskole_staff'>;
 export type LeirskoleAssignment = Tables<'leirskole_assignments'>;
 export type LeirskoleTask = Tables<'leirskole_tasks'>;
+export type LeirskoleSessionInfo = Tables<'leirskole_session_info'>;
 
 /** Alle leirskoleuker (nyeste først). */
 export function useLeirskoleWeeks() {
@@ -193,5 +194,60 @@ export function useIsLeirskoleStaff(weekId?: string | null) {
       if (error) throw error;
       return !!data;
     },
+  });
+}
+
+/**
+ * Øktinfo for uken (hybrid av «Denne økten skal du» i vanlig app).
+ * Returnerer bare det som gjelder meg, med lest-status.
+ */
+export function useLeirskoleSessionInfo(weekId?: string | null) {
+  const { effectiveLeader } = useAuth();
+  return useQuery({
+    queryKey: ['leirskole-session-info', weekId, effectiveLeader?.id],
+    enabled: !!weekId,
+    queryFn: async () => {
+      const [{ data: info, error }, { data: reads }] = await Promise.all([
+        supabase
+          .from('leirskole_session_info')
+          .select('*')
+          .eq('week_id', weekId!)
+          .order('created_at', { ascending: false }),
+        supabase.from('leirskole_session_info_reads').select('info_id, leader_id'),
+      ]);
+      if (error) throw error;
+      const mineRead = new Set(
+        (reads ?? []).filter((r: any) => r.leader_id === effectiveLeader?.id).map((r: any) => r.info_id),
+      );
+      return (info ?? []).map((i: any) => ({
+        ...(i as LeirskoleSessionInfo),
+        readByMe: mineRead.has(i.id),
+        readCount: (reads ?? []).filter((r: any) => r.info_id === i.id).length,
+      }));
+    },
+  });
+}
+
+export function useMarkLeirskoleInfoRead() {
+  const qc = useQueryClient();
+  const { effectiveLeader } = useAuth();
+  return useMutation({
+    mutationFn: async ({ infoId, read }: { infoId: string; read: boolean }) => {
+      if (!effectiveLeader?.id) throw new Error('Ingen leder');
+      if (read) {
+        const { error } = await supabase
+          .from('leirskole_session_info_reads')
+          .insert({ info_id: infoId, leader_id: effectiveLeader.id });
+        if (error && !error.message.includes('duplicate')) throw error;
+      } else {
+        const { error } = await supabase
+          .from('leirskole_session_info_reads')
+          .delete()
+          .eq('info_id', infoId)
+          .eq('leader_id', effectiveLeader.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-session-info'] }),
   });
 }

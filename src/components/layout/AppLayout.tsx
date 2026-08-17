@@ -539,7 +539,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {inactiveForUser ? (
+          {accessMode === 'leirskole' ? (
+            /* Leirskole: kun leirskole-funksjonene */
+            <div className="space-y-1">
+              <NavLinkItem item={{ to: '/', icon: Tent, label: 'Leirskole' }} />
+              <NavLinkItem item={{ to: '/chat', icon: MessageCircle, label: 'Lederhuset' }} />
+              {isAdmin && (
+                <NavLinkItem item={{ to: '/admin/leirskole', icon: LayoutDashboard, label: 'Leirskole-admin' }} />
+              )}
+              <NavLinkItem item={{ to: '/profile', icon: User, label: 'Min Profil' }} />
+              <div className="pt-2">
+                <NavLinkItem item={merNavItem} />
+              </div>
+            </div>
+          ) : inactiveForUser ? (
             <div className="space-y-1">
               <NavLinkItem item={{ to: '/', icon: Home, label: 'Hjem' }} />
               <NavLinkItem item={{ to: '/chat', icon: MessageCircle, label: 'Lederhuset' }} />

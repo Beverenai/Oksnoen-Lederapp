@@ -2189,6 +2189,96 @@ export type Database = {
           },
         ]
       }
+      leirskole_session_info: {
+        Row: {
+          assign_all: boolean
+          assigned_leader_ids: string[]
+          body: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          items: string[]
+          title: string
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          assign_all?: boolean
+          assigned_leader_ids?: string[]
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          items?: string[]
+          title: string
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          assign_all?: boolean
+          assigned_leader_ids?: string[]
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          items?: string[]
+          title?: string
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_session_info_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_session_info_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_session_info_reads: {
+        Row: {
+          created_at: string
+          id: string
+          info_id: string
+          leader_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          info_id: string
+          leader_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          info_id?: string
+          leader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_session_info_reads_info_id_fkey"
+            columns: ["info_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_session_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_session_info_reads_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leirskole_staff: {
         Row: {
           created_at: string
