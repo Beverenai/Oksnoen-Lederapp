@@ -57,7 +57,7 @@ export function useLeirskoleStaff(weekId?: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leirskole_staff')
-        .select('*, leader:leaders(id, name, profile_image_url, leirskole_competencies, phone)')
+        .select('*, leader:leaders(id, name, profile_image_url, leirskole_competencies, phone, snus_user, snus_product_id, snus_custom_label)')
         .eq('week_id', weekId!);
       if (error) throw error;
       return (data ?? []) as (LeirskoleStaff & {
@@ -67,6 +67,9 @@ export function useLeirskoleStaff(weekId?: string | null) {
           profile_image_url: string | null;
           leirskole_competencies: string[] | null;
           phone?: string | null;
+          snus_user?: boolean | null;
+          snus_product_id?: string | null;
+          snus_custom_label?: string | null;
         } | null;
       })[];
     },
