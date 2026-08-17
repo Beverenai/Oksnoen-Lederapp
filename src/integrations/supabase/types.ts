@@ -1876,6 +1876,7 @@ export type Database = {
           last_app_edit_at: string
           last_synced_at: string | null
           leirskole_competencies: string[]
+          leirskole_competencies_confirmed_at: string | null
           ministerpost: string | null
           name: string
           phone: string
@@ -1915,6 +1916,7 @@ export type Database = {
           last_app_edit_at?: string
           last_synced_at?: string | null
           leirskole_competencies?: string[]
+          leirskole_competencies_confirmed_at?: string | null
           ministerpost?: string | null
           name: string
           phone: string
@@ -1954,6 +1956,7 @@ export type Database = {
           last_app_edit_at?: string
           last_synced_at?: string | null
           leirskole_competencies?: string[]
+          leirskole_competencies_confirmed_at?: string | null
           ministerpost?: string | null
           name?: string
           phone?: string

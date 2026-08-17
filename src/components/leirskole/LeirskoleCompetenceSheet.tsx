@@ -14,6 +14,8 @@ interface Props {
   current: string[];
   /** Første gang: må velge minst én før man kan lukke. */
   required?: boolean;
+  /** Marker at lederen selv har bekreftet kompetansen. */
+  confirm?: boolean;
 }
 
 export function LeirskoleCompetenceSheet({
@@ -23,6 +25,7 @@ export function LeirskoleCompetenceSheet({
   leaderName,
   current,
   required = false,
+  confirm = false,
 }: Props) {
   const [selected, setSelected] = useState<string[]>(current);
   const save = useSaveLeirskoleCompetencies();
@@ -40,7 +43,7 @@ export function LeirskoleCompetenceSheet({
       return;
     }
     try {
-      await save.mutateAsync({ leaderId, competencies: selected });
+      await save.mutateAsync({ leaderId, competencies: selected, confirm });
       toast.success('Kompetanse lagret');
       onOpenChange(false);
     } catch (e: any) {

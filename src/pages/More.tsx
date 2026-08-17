@@ -480,7 +480,8 @@ export default function More() {
           open={compOpen}
           onOpenChange={setCompOpen}
           leaderId={effectiveLeader.id}
-          current={myCompetencies ?? []}
+          current={myCompetencies ? [...myCompetencies] : []}
+          confirm
         />
       )}
     </div>

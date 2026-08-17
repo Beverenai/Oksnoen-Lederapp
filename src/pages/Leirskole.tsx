@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,9 @@ import {
   useMarkLeirskoleInfoRead,
   useMyLeirskoleActivities,
   useMyLeirskoleShifts,
+  useMyLeirskoleCompetencies,
 } from '@/hooks/useLeirskole';
+import { LeirskoleCompetenceSheet } from '@/components/leirskole/LeirskoleCompetenceSheet';
 import { activityEmoji, activityLabel, sessionLabel } from '@/lib/leirskoleActivities';
 import { dayLabel, shortDate, hhmm, todayStr } from '@/lib/leirskoleDates';
 
@@ -24,6 +26,17 @@ export default function Leirskole() {
   const { data: sessionInfo } = useLeirskoleSessionInfo(week?.id);
   const { data: myActivities } = useMyLeirskoleActivities(week?.id);
   const markInfoRead = useMarkLeirskoleInfoRead();
+  const { data: myCompetencies } = useMyLeirskoleCompetencies();
+  const [compOpen, setCompOpen] = useState(false);
+
+  // Førstegangs-oppsett: alle har alle kompetanser som utgangspunkt,
+  // men må bekrefte/velge selv første gang de åpner leirskole.
+  const needsCompetenceSetup =
+    !!effectiveLeader?.id && !!myCompetencies && !myCompetencies.confirmedAt;
+
+  useEffect(() => {
+    if (needsCompetenceSetup) setCompOpen(true);
+  }, [needsCompetenceSetup]);
 
   const firstName = (effectiveLeader?.name ?? '').split(' ')[0] || 'leder';
   const today = todayStr();
@@ -256,6 +269,18 @@ export default function Leirskole() {
           </div>
         )}
       </div>
+
+      {effectiveLeader?.id && (
+        <LeirskoleCompetenceSheet
+          open={compOpen}
+          onOpenChange={setCompOpen}
+          leaderId={effectiveLeader.id}
+          leaderName={effectiveLeader.name}
+          current={myCompetencies ? [...myCompetencies] : []}
+          required={needsCompetenceSetup}
+          confirm
+        />
+      )}
     </div>
   );
 }

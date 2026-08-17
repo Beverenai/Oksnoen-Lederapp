@@ -86,11 +86,14 @@ export function useMyLeirskoleCompetencies() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leaders')
-        .select('leirskole_competencies')
+        .select('leirskole_competencies, leirskole_competencies_confirmed_at')
         .eq('id', effectiveLeader!.id)
         .maybeSingle();
       if (error) throw error;
-      return (data?.leirskole_competencies ?? []) as string[];
+      const list = (data?.leirskole_competencies ?? []) as string[];
+      const confirmedAt = (data as { leirskole_competencies_confirmed_at?: string | null } | null)
+        ?.leirskole_competencies_confirmed_at ?? null;
+      return Object.assign(list, { confirmedAt }) as string[] & { confirmedAt: string | null };
     },
   });
 }
@@ -99,10 +102,22 @@ export function useMyLeirskoleCompetencies() {
 export function useSaveLeirskoleCompetencies() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ leaderId, competencies }: { leaderId: string; competencies: string[] }) => {
+    mutationFn: async ({
+      leaderId,
+      competencies,
+      confirm,
+    }: {
+      leaderId: string;
+      competencies: string[];
+      /** Sett når lederen selv bekrefter (fjerner førstegangs-spørsmålet). */
+      confirm?: boolean;
+    }) => {
       const { error } = await supabase
         .from('leaders')
-        .update({ leirskole_competencies: competencies })
+        .update({
+          leirskole_competencies: competencies,
+          ...(confirm ? { leirskole_competencies_confirmed_at: new Date().toISOString() } : {}),
+        })
         .eq('id', leaderId);
       if (error) throw error;
     },
