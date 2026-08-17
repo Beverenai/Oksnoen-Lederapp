@@ -514,14 +514,30 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                 <div key={date} className="space-y-1 rounded-xl border border-border/60 bg-muted/25 p-2">
                   {meals.length === 0 && <p className="text-[11px] text-muted-foreground">—</p>}
                   {meals.map((p) => (
-                    <div key={p.id} className="text-[11px]">
-                      <span className="font-semibold">{p.name}</span>{' '}
-                      <span className="text-muted-foreground">
-                        {p.assignments
-                          .map((a) => firstName(staffToLeader.get(a.staff_id)?.name ?? '?'))
-                          .join(', ') || 'ingen'}
-                      </span>
-                    </div>
+                    <LeirskolePostStaffPicker
+                      key={p.id}
+                      weekId={week.id}
+                      post={{
+                        id: p.id,
+                        name: p.name ?? '',
+                        date: p.date,
+                        duration_hours: p.duration_hours,
+                        assignments: p.assignments ?? [],
+                      }}
+                      staffOptions={staffOptions}
+                      hoursByStaff={staffHoursByDate.get(date) ?? new Map()}
+                      maxHours={maxHours}
+                      title={`${p.name} ${String(p.start_time).slice(0, 5)}`}
+                    >
+                      <button type="button" className="w-full rounded-lg px-1 py-0.5 text-left text-[11px] hover:bg-background/70">
+                        <span className="font-semibold">{p.name}</span>{' '}
+                        <span className="text-muted-foreground">
+                          {p.assignments
+                            .map((a) => firstName(staffToLeader.get(a.staff_id)?.name ?? '?'))
+                            .join(', ') || 'ingen'}
+                        </span>
+                      </button>
+                    </LeirskolePostStaffPicker>
                   ))}
                 </div>
               );
@@ -535,15 +551,50 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             </LabelCell>
             {dates.map((date) => {
               const names = kitchenByDate.get(date) ?? [];
+              const active = kitchenStaffByDate.get(date) ?? new Set<string>();
               return (
-                <div
-                  key={date}
-                  className={`rounded-xl border p-2 text-[11px] ${
-                    names.length ? 'border-primary/40 bg-primary/10 font-semibold' : 'border-border/60 bg-muted/25 text-muted-foreground'
-                  }`}
-                >
-                  {names.length ? names.map(firstName).join(', ') : '—'}
-                </div>
+                <Popover key={date}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={`rounded-xl border p-2 text-left text-[11px] transition-colors hover:brightness-105 ${
+                        names.length
+                          ? 'border-primary/40 bg-primary/10 font-semibold'
+                          : 'border-border/60 bg-muted/25 text-muted-foreground'
+                      }`}
+                    >
+                      {names.length ? names.map(firstName).join(', ') : '—'}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-64 p-2">
+                    <p className="px-1 pb-1.5 text-xs font-semibold">Kjøkken hele dagen</p>
+                    <div className="max-h-[60vh] space-y-0.5 overflow-y-auto">
+                      {staffOptions.map((s) => {
+                        const on = active.has(s.staffId);
+                        return (
+                          <button
+                            key={s.staffId}
+                            type="button"
+                            onClick={() =>
+                              setKitchen.mutate(
+                                { weekId: week.id, staffId: s.staffId, date, active: !on },
+                                { onError: () => toast.error('Kunne ikke oppdatere kjøkken') },
+                              )
+                            }
+                            className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs hover:bg-muted ${
+                              on ? 'bg-primary/10 font-semibold' : ''
+                            }`}
+                          >
+                            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-border">
+                              {on && <ChefHat className="h-3 w-3" />}
+                            </span>
+                            <span className="flex-1 truncate">{s.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               );
             })}
           </div>
@@ -555,17 +606,41 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             </LabelCell>
             {dates.map((date) => {
               const nights = (postsByDate.get(date) ?? []).filter((p) => p.is_night);
+              const night = nights[0];
               const names = nights.flatMap((p) =>
                 p.assignments.map((a) => firstName(staffToLeader.get(a.staff_id)?.name ?? '?')),
               );
+              const cellClass = `rounded-xl border p-2 text-left text-[11px] ${
+                names.length
+                  ? 'border-indigo-500/40 bg-indigo-500/10 font-semibold'
+                  : 'border-border/60 bg-muted/25 text-muted-foreground'
+              }`;
+              if (night) {
+                return (
+                  <LeirskolePostStaffPicker
+                    key={date}
+                    weekId={week.id}
+                    post={{
+                      id: night.id,
+                      name: night.name ?? 'Nattevakt',
+                      date: night.date,
+                      duration_hours: night.duration_hours,
+                      assignments: night.assignments ?? [],
+                    }}
+                    staffOptions={staffOptions}
+                    hoursByStaff={staffHoursByDate.get(date) ?? new Map()}
+                    maxHours={maxHours}
+                    title="Nattevakt 22:30–01:30"
+                  >
+                    <button type="button" className={`${cellClass} transition-colors hover:brightness-105`}>
+                      {names.length ? names.join(', ') : '—'}
+                    </button>
+                  </LeirskolePostStaffPicker>
+                );
+              }
               return (
-                <div
-                  key={date}
-                  className={`rounded-xl border p-2 text-[11px] ${
-                    names.length ? 'border-indigo-500/40 bg-indigo-500/10 font-semibold' : 'border-border/60 bg-muted/25 text-muted-foreground'
-                  }`}
-                >
-                  {names.length ? names.join(', ') : '—'}
+                <div key={date} className={cellClass}>
+                  —
                 </div>
               );
             })}
