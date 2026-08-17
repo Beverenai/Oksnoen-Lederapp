@@ -113,9 +113,18 @@ export async function runLeirskoleGenerate({
     { body: { week_id: weekId, keep_locked: true } },
   );
   if (genError) throw genError;
-  const gen = genData as { error?: string; stats?: { assigned?: number } } | null;
+  const gen = genData as {
+    error?: string;
+    warning?: string;
+    status?: string;
+    stats?: { assigned?: number; missing?: unknown[] };
+  } | null;
   if (gen?.error) throw new Error(gen.error);
   summary.shifts = gen?.stats?.assigned ?? 0;
+  if (gen?.warning) summary.scheduleWarning = gen.warning;
+  else if (gen?.status === 'partial' && (gen?.stats?.missing?.length ?? 0) > 0) {
+    summary.scheduleWarning = 'Vaktplanen ble generert, men noen vakter mangler ledere.';
+  }
 
   // ---- 3. Aktiviteter til lederne ---------------------------------------
   const [{ data: types }, { data: cells }, { data: posts }, { data: weekDays }, { data: staff }, { data: existing }, { data: history }] =

@@ -248,7 +248,7 @@ Deno.serve(async (req) => {
       max_daily_hours: Math.min(8, Number(s.max_daily_hours ?? week.max_daily_hours ?? 8)),
       name: nameMap.get(s.leader_id) ?? "Ukjent",
     }));
-    if (staff.length === 0) return json({ error: "Ingen ledere er lagt til denne uken." }, 400);
+    if (staff.length === 0) return json({ error: "Det er ikke nok ledere til å bemanne denne uken. Legg til flere ledere under «Tilgang»." }, 400);
 
     let { data: postsRaw } = await supa.from("leirskole_posts").select("*")
       .eq("week_id", week_id).order("date").order("start_time");
@@ -587,6 +587,11 @@ Deno.serve(async (req) => {
     }
 
     const status = missing.length === 0 && conflicts.length === 0 ? "success" : "partial";
+    const warning = missing.length > 0
+      ? `Det er ikke nok ledere til å fylle ${missing.reduce((sum, m) => sum + (m.missing ?? 0), 0)} vaktplass(er).`
+      : conflicts.length > 0
+      ? `Noen låste vakter kolliderer med nye vakter (${conflicts.length}).`
+      : undefined;
     const stats = {
       assigned: insertRows.length,
       locked_kept: toKeep.length,
@@ -601,7 +606,7 @@ Deno.serve(async (req) => {
     };
 
     await supa.from("leirskole_generator_runs").update({ status, finished_at: new Date().toISOString(), stats }).eq("id", run.id);
-    return json({ status, run_id: run.id, stats });
+    return json({ status, run_id: run.id, warning, stats });
   } catch (e: any) {
     return json({ error: e?.message ?? String(e) }, 500);
   }
