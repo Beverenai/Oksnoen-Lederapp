@@ -298,6 +298,38 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
         )}
       </div>
 
+      {/* Oversikt per leder for hele dagen */}
+      <div className="space-y-1.5 rounded-2xl bg-muted/30 p-2">
+        <p className="px-1 text-xs font-semibold text-muted-foreground">
+          Oversikt {dayLabel(date)} — hva hver leder fikk i de 3 øktene
+        </p>
+        {perLeaderDay.length === 0 && (
+          <p className="px-1 text-xs text-muted-foreground">Ingen ledere registrert denne dagen.</p>
+        )}
+        {perLeaderDay.map((row) => (
+          <div key={row.leaderId} className="rounded-xl bg-background/70 px-3 py-2">
+            <p className="truncate text-sm font-medium">{row.name}</p>
+            <div className="mt-1 grid grid-cols-3 gap-1.5">
+              {LEIRSKOLE_ACTIVITY_SESSIONS.map((s) => {
+                const acts = row.bySession[s.key] ?? [];
+                return (
+                  <div key={s.key} className="rounded-lg bg-muted/50 px-2 py-1">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</p>
+                    <p className="text-xs font-medium">
+                      {acts.length
+                        ? acts
+                            .map((a) => `${activityEmoji(a, types ?? [])} ${activityLabel(a, types ?? [])}`)
+                            .join(', ')
+                        : 'Fri'}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Lagret */}
       {savedForSession.length > 0 && (
         <div className="space-y-1.5">
