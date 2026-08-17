@@ -408,6 +408,12 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           <p className="text-xs text-muted-foreground">
             Trykk på en rute for å endre aktiviteter eller hvem som tar dem.
           </p>
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+            <span className="rounded-full bg-background/70 px-1.5 py-0.5 font-medium text-foreground">Navn</span>
+            har aktivitet
+            <span className="rounded-full border border-dashed border-muted-foreground/40 px-1.5 py-0.5">Navn</span>
+            på vakt uten aktivitet
+          </p>
         </div>
         <Popover open={menuOpen} onOpenChange={setMenuOpen}>
           <PopoverTrigger asChild>
@@ -454,8 +460,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             </p>
           )}
           {summary.gaps.length > 0 && (
-            <p className="mt-1 flex items-center gap-1 text-destructive">
-              <AlertTriangle className="h-3 w-3" /> {summary.gaps.length} aktiviteter mangler leder
+            <p className="mt-1 flex items-center gap-1 text-muted-foreground">
+              <AlertTriangle className="h-3 w-3" /> {summary.gaps.length} vakter fikk ikke full bemanning ved forrige
+              generering
             </p>
           )}
         </div>
