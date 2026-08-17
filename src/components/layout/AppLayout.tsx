@@ -520,6 +520,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
         leirskoleSurface && 'oks-leirskole-bg min-h-[100dvh]',
       )}
     >
+      {/* Leirskole: velg lyst (standard) eller mørkt tema */}
+      {leirskoleSurface && (
+        <button
+          type="button"
+          onClick={toggleLsTheme}
+          aria-label={lsDark ? 'Bytt til lyst tema' : 'Bytt til mørkt tema'}
+          title={lsDark ? 'Lyst tema' : 'Mørkt tema'}
+          className="fixed right-3 z-[70] rounded-full border border-border bg-card/90 p-2 text-foreground shadow-lg backdrop-blur"
+          style={{ top: 'calc(var(--safe-top) + 8px)' }}
+        >
+          {lsDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+      )}
       {/* View As Banner */}
       {viewAsLeader && (
         <div className="bg-amber-500 dark:bg-amber-600 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
