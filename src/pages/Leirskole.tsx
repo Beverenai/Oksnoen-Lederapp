@@ -323,7 +323,7 @@ export default function Leirskole() {
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${s.chip}`}
                       >
-                        <Icon className="h-3.5 w-3.5" /> {sessionLabel(nextShiftSession)}
+                        <Icon className="h-3.5 w-3.5" /> {sessionLabel(sessionKey)}
                       </span>
                       <span className="shrink-0 text-[11px] font-semibold tabular-nums text-muted-foreground">
                         {s.time}
