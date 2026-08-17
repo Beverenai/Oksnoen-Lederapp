@@ -2227,6 +2227,51 @@ export type Database = {
           },
         ]
       }
+      leirskole_kitchen_days: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          note: string | null
+          staff_id: string
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          note?: string | null
+          staff_id: string
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          note?: string | null
+          staff_id?: string
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_kitchen_days_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_kitchen_days_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leirskole_posts: {
         Row: {
           created_at: string
