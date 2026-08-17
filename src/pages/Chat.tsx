@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
+import { useActiveLeirskoleWeek, useIsLeirskoleStaff } from '@/hooks/useLeirskole';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAccessMode } from '@/hooks/useViewMode';
 import { Button } from '@/components/ui/button';
