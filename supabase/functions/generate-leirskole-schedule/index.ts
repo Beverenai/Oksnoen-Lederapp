@@ -121,7 +121,30 @@ function canAssign(st: Staff, post: Post, s: State, availability: Map<string, Av
   return { ok: true };
 }
 
+// Belønner sammenhengende vakter: en post som starter/slutter der lederen
+// allerede jobber samme dag er mye bedre enn en løsrevet vakt med hull.
+function adjacencyPenalty(post: Post, s: State) {
+  const pi = postInterval(post);
+  const startAbs = absMinutes(post.date, pi.start);
+  const endAbs = absMinutes(post.date, pi.end);
+  const sameDay = s.assigned.filter(a => a.date === post.date);
+  if (sameDay.length === 0) return 0;
+  let bestGap = Infinity;
+  for (const a of sameDay) {
+    const gapAfter = startAbs - a.endAbs;
+    const gapBefore = a.startAbs - endAbs;
+    const gap = Math.min(gapAfter >= 0 ? gapAfter : Infinity, gapBefore >= 0 ? gapBefore : Infinity);
+    if (gap < bestGap) bestGap = gap;
+  }
+  if (!isFinite(bestGap)) return 0;
+  if (bestGap === 0) return -60; // rett i forlengelse av en annen vakt
+  if (bestGap <= 60) return -30; // maks 1 time hull
+  if (bestGap <= 120) return -10;
+  return 20 * (bestGap / 60); // straff lange hull i vakten
+}
+
 function score(st: Staff, post: Post, s: State) {
+  // (se adjacencyPenalty under)
   const daily = s.hoursByDate[post.date] ?? 0;
   const target = Math.min(8, Number(st.max_daily_hours ?? 8));
   const after = daily + Number(post.duration_hours);
@@ -131,6 +154,7 @@ function score(st: Staff, post: Post, s: State) {
     10 * s.totalHours +
     15 * s.nightShifts +
     8 * s.mealShifts +
+    adjacencyPenalty(post, s) +
     hashTie(st.id, post.id)
   );
 }
@@ -360,6 +384,9 @@ Deno.serve(async (req) => {
             const fitA = da <= remaining + 0.001 ? 0 : 1;
             const fitB = db <= remaining + 0.001 ? 0 : 1;
             if (fitA !== fitB) return fitA - fitB;
+            // Sammenhengende vakter først (økt → måltid → økt → nattevakt).
+            const adjA = adjacencyPenalty(a, s), adjB = adjacencyPenalty(b, s);
+            if (Math.abs(adjA - adjB) > 0.001) return adjA - adjB;
             return db - da;
           });
           for (const post of ordered) {
