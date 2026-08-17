@@ -43,7 +43,7 @@ export async function runLeirskoleGenerate({
   startDate,
   endDate,
   mode,
-  perSession = 3,
+  perSession = 6,
   createdBy = null,
   overwritePlan = false,
 }: {

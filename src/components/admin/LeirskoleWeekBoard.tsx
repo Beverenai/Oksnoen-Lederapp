@@ -601,13 +601,21 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                 const selectedTypes = (types ?? []).filter((ty) =>
                   lines.some((l) => l.toLowerCase().includes(ty.label.toLowerCase())),
                 );
-                const withLeader = selectedTypes.filter((ty) =>
+                // Aktiviteter som er fordelt til en leder, men som ikke står i ruteteksten,
+                // vises også — ellers dukker lederen opp som «uten aktivitet» i tillegg.
+                const extraTypes = (types ?? []).filter(
+                  (ty) =>
+                    !selectedTypes.some((s) => s.key === ty.key) &&
+                    slotActivities.some((a) => a.activity === ty.key),
+                );
+                const shownTypes = [...selectedTypes, ...extraTypes];
+                const withLeader = shownTypes.filter((ty) =>
                   slotActivities.some((a) => a.activity === ty.key),
                 ).length;
                 const tone =
                   lines.length === 0
                     ? 'border-border/60 bg-muted/25'
-                    : withLeader >= selectedTypes.length && selectedTypes.length > 0
+                    : withLeader >= shownTypes.length && shownTypes.length > 0
                       ? 'border-emerald-500/50 bg-emerald-500/10'
                       : 'border-amber-500/50 bg-amber-500/10';
                 return (
@@ -625,7 +633,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                     )}
                     {lines.length === 0 && <p className="text-[11px] text-muted-foreground">Tom — trykk for å fylle</p>}
                     <div className="space-y-1">
-                      {selectedTypes.map((ty) => {
+                      {shownTypes.map((ty) => {
                         const holder = slotActivities.find((a) => a.activity === ty.key);
                         return (
                           <div key={ty.key} className="flex items-center gap-1 text-[11px]">
@@ -641,7 +649,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                           </div>
                         );
                       })}
-                      {selectedTypes.length === 0 &&
+                      {shownTypes.length === 0 &&
                         lines.map((l, i) => (
                           <p key={`${l}-${i}`} className="truncate text-[11px]">
                             {l}
