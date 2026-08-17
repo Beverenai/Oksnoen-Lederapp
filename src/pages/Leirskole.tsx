@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Coffee, CalendarDays, Clock, Moon, Settings, Megaphone, Check, Users, Sunrise, Sunset } from 'lucide-react';
+import { Coffee, CalendarDays, ChefHat, Clock, Moon, Settings, Megaphone, Check, Users, Sunrise, Sunset } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
   useLeirskoleSchedule,
   useLeirskoleStaff,
+  useLeirskoleKitchenDays,
   useIsLeirskoleStaff,
   useLeirskoleSessionInfo,
   useMarkLeirskoleInfoRead,
@@ -86,6 +87,7 @@ export default function Leirskole() {
   const { data: myCompetencies } = useMyLeirskoleCompetencies();
   const { data: weekPosts } = useLeirskoleSchedule(week?.id);
   const { data: weekStaff } = useLeirskoleStaff(week?.id);
+  const { data: kitchenDays } = useLeirskoleKitchenDays(week?.id);
   const [compOpen, setCompOpen] = useState(false);
   const [colleagueId, setColleagueId] = useState<string | null>(null);
 
