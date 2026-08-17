@@ -101,7 +101,6 @@ export function LeirskolePostsCard({
 }) {
   const qc = useQueryClient();
   const { showError } = useStatusPopup();
-  const { leader } = useAuth();
   const { data: posts } = useLeirskoleSchedule(week.id);
   const generate = useGenerateLeirskoleSchedule();
 
