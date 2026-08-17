@@ -337,6 +337,8 @@ export function useMyLeirskoleShifts(weekId?: string | null) {
       return assignments
         .map((assignment) => assignment.post)
         .filter(Boolean)
+        // Upubliserte økter (f.eks. 3. økt som settes senere på dagen) vises ikke.
+        .filter((post) => (post as LeirskolePost & { is_published?: boolean }).is_published !== false)
         .sort((a, b) => (a.date === b.date ? a.start_time.localeCompare(b.start_time) : a.date.localeCompare(b.date)));
     },
   });
