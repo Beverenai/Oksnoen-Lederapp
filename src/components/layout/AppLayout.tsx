@@ -192,6 +192,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Leirskole-tema: mørkt tema i leirskole-modus og på alle leirskole-sider
+  const leirskoleSurface =
+    accessMode === 'leirskole' || location.pathname.startsWith('/leirskole') ||
+    location.pathname.startsWith('/admin/leirskole');
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('oks-leirskole-theme', leirskoleSurface);
+    return () => root.classList.remove('oks-leirskole-theme');
+  }, [leirskoleSurface]);
+
   // Collapsible header state (Facebook/Instagram-style)
   const [headerVisible, setHeaderVisible] = useState(true);
   const headerVisibleRef = useRef(true);
