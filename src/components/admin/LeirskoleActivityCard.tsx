@@ -15,7 +15,7 @@ import {
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
 import {
-  LEIRSKOLE_SESSIONS,
+  LEIRSKOLE_ACTIVITY_SESSIONS,
   activitiesForSession,
   activityEmoji,
   activityLabel,
