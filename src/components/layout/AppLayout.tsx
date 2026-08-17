@@ -197,11 +197,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
     accessMode === 'leirskole' || location.pathname.startsWith('/leirskole') ||
     location.pathname.startsWith('/admin/leirskole');
 
+  // Lyst tema er standard på leirskole; brukeren kan velge mørkt og valget huskes.
+  const [lsDark, setLsDark] = useState(
+    () => localStorage.getItem('oks-ls-theme') === 'dark',
+  );
+
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle('oks-leirskole-theme', leirskoleSurface);
-    return () => root.classList.remove('oks-leirskole-theme');
-  }, [leirskoleSurface]);
+    root.classList.toggle('oks-ls-dark', leirskoleSurface && lsDark);
+    return () => {
+      root.classList.remove('oks-leirskole-theme');
+      root.classList.remove('oks-ls-dark');
+    };
+  }, [leirskoleSurface, lsDark]);
+
+  const toggleLsTheme = () => {
+    setLsDark((prev) => {
+      const next = !prev;
+      localStorage.setItem('oks-ls-theme', next ? 'dark' : 'light');
+      return next;
+    });
+  };
 
   // Collapsible header state (Facebook/Instagram-style)
   const [headerVisible, setHeaderVisible] = useState(true);
