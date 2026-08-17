@@ -67,7 +67,6 @@ export function LeirskolePostsCard({
   const { data: posts } = useLeirskoleSchedule(week.id);
   const generate = useGenerateLeirskoleSchedule();
 
-  const weekDates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
   const [keepLocked, setKeepLocked] = useState(true);
   const [publishAfter, setPublishAfter] = useState(true);
 
