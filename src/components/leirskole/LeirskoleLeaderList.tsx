@@ -13,7 +13,7 @@ import {
 import { Phone, MessageSquare, Search, X, Users, Clock, Tent } from 'lucide-react';
 import { SnusBadge } from '@/components/snus/SnusBadge';
 import { useActiveLeirskoleWeek, useLeirskoleStaff, useLeirskoleSchedule } from '@/hooks/useLeirskole';
-import { COMPETENCY_LABELS } from '@/lib/leirskoleCompetencies';
+import { competenceLabel, competenceEmoji } from '@/lib/leirskoleCompetencies';
 import { cn } from '@/lib/utils';
 
 const hhmm = (t: string) => t.slice(0, 5);
@@ -182,7 +182,7 @@ export function LeirskoleLeaderList() {
                             key={c}
                             className="flex h-4 items-center rounded-md border border-border bg-muted px-2 text-[10px] font-semibold leading-none text-muted-foreground"
                           >
-                            {COMPETENCY_LABELS[c] ?? c}
+                            {competenceEmoji(c)} {competenceLabel(c)}
                           </span>
                         ))}
                       </div>
