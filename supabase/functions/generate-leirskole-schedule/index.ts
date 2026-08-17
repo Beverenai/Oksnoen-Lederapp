@@ -122,6 +122,7 @@ function canAssign(st: Staff, post: Post, s: State, availability: Map<string, Av
 }
 
 function score(st: Staff, post: Post, s: State) {
+  // (se adjacencyPenalty under)
   const daily = s.hoursByDate[post.date] ?? 0;
   const target = Math.min(8, Number(st.max_daily_hours ?? 8));
   const after = daily + Number(post.duration_hours);
