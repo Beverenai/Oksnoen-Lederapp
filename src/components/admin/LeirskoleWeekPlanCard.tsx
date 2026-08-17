@@ -99,19 +99,20 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
     return map;
   }, [weekDays]);
 
-  /** Standard: første dag = ankomst, siste dag = avreise (settes én gang per uke). */
+  /** Første dag er alltid ankomst, siste dag alltid avreise. */
+  const first = dates[0];
+  const last = dates[dates.length - 1];
   const seeded = useRef<string | null>(null);
   useEffect(() => {
-    if (readOnly || !weekDays || dates.length < 2 || seeded.current === week.id) return;
-    const known = new Set(weekDays.map((d) => d.date));
-    const first = dates[0];
-    const last = dates[dates.length - 1];
-    if (known.has(first) && known.has(last)) return;
-    seeded.current = week.id;
-    if (!known.has(first)) setDayType.mutate({ weekId: week.id, date: first, dayType: 'arrival' });
-    if (!known.has(last)) setDayType.mutate({ weekId: week.id, date: last, dayType: 'departure' });
+    if (readOnly || !weekDays || dates.length < 2) return;
+    const stamp = `${week.id}:${first}:${last}`;
+    if (seeded.current === stamp) return;
+    const typeOf = (date: string) => weekDays.find((d) => d.date === date)?.day_type ?? 'normal';
+    seeded.current = stamp;
+    if (typeOf(first) !== 'arrival') setDayType.mutate({ weekId: week.id, date: first, dayType: 'arrival' });
+    if (typeOf(last) !== 'departure') setDayType.mutate({ weekId: week.id, date: last, dayType: 'departure' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readOnly, weekDays, dates, week.id]);
+  }, [readOnly, weekDays, first, last, week.id]);
 
   const postsByDate = useMemo(() => {
     const map = new Map<string, { id: string; name: string; start_time: string; end_time: string }[]>();
