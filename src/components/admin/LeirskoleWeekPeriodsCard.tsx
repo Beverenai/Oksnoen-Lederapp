@@ -35,6 +35,7 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
   const { data: weeks } = useLeirskoleWeeks();
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', start_date: '', end_date: '', max_daily_hours: '8' });
 
   const selectedWeek = useMemo(
