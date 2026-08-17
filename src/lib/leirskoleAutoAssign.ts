@@ -9,6 +9,8 @@
  *  5. jevn fordeling av totalt antall aktiviteter
  */
 
+import { activityRequiresCompetence } from './leirskoleCompetencies';
+
 export interface AutoStaff {
   leaderId: string;
   name: string;
