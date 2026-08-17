@@ -333,6 +333,7 @@ export function LeirskoleSpecialDayTimeline({
                     onPointerDown={(e) => {
                       if ((e.target as HTMLElement).closest('[data-resize]')) return;
                       movedRef.current = false;
+                      editStartYRef.current = e.clientY;
                       setEdit({ id: p.id, mode: 'move', from: rawFrom, to: rawTo, grabOffset: slotAt(e.clientY) - rawFrom });
                     }}
                   >
@@ -359,6 +360,8 @@ export function LeirskoleSpecialDayTimeline({
                       data-resize
                       onPointerDown={(e) => {
                         e.stopPropagation();
+                        movedRef.current = false;
+                        editStartYRef.current = e.clientY;
                         setEdit({ id: p.id, mode: 'resize', from: rawFrom, to: rawTo, grabOffset: 0 });
                       }}
                       className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize bg-emerald-600/40"
