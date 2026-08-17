@@ -262,6 +262,29 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke rydde dagen'),
   });
 
+  /** Rydd hele uken: ingen leder over dagstaket noen dag. */
+  const fixWeek = useMutation({
+    mutationFn: async () => {
+      let count = 0;
+      for (const date of dates) {
+        const day = staffHoursByDate.get(date) ?? new Map<string, number>();
+        for (const [staffId, v] of day.entries()) {
+          if (v <= maxHours + 0.01) continue;
+          const removed = await trimDayHours({ weekId: week.id, date, staffId, maxHours });
+          count += removed.length;
+        }
+      }
+      return count;
+    },
+    onSuccess: (count) => {
+      ['leirskole-schedule', 'leirskole-my-shifts', 'leirskole-activities'].forEach((key) =>
+        qc.invalidateQueries({ queryKey: [key] }),
+      );
+      toast.success(count ? `Fjernet ${count} vakter i uken` : 'Alle dager er innenfor taket');
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke rydde uken'),
+  });
+
   /** Radene for en vanlig dag: økt 1–3. Ankomst/avreise bruker kalenderkolonne. */
   const rowsFor = (date: string): (CellTarget | null)[] => {
     if (specialDays.has(date)) return SESSIONS.map(() => null);
