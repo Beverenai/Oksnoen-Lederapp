@@ -28,10 +28,6 @@ function dayLabel(d: string) {
   const x = parse(d);
   return `${WEEKDAYS[x.getDay()]} ${x.getDate()}. ${MONTHS[x.getMonth()]}`;
 }
-function dayShort(d: string) {
-  const x = parse(d);
-  return { day: WEEKDAYS[x.getDay()], num: `${x.getDate()}.` };
-}
 function datesBetween(start: string, end: string) {
   const out: string[] = [];
   const a = parse(start);
