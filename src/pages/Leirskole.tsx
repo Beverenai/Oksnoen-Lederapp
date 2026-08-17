@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarDays, Clock, Moon, Settings, Megaphone, Check, Users } from 'lucide-react';
+import { CalendarDays, Clock, Moon, Settings, Megaphone, Check, Users, Sunrise, Sunset } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
   useLeirskoleSchedule,
@@ -20,6 +20,47 @@ import { LeaderAvatarStack, type AvatarPerson } from '@/components/leirskole/Lea
 import { LeirskoleColleagueSheet } from '@/components/leirskole/LeirskoleColleagueSheet';
 import { activityEmoji, activityLabel, sessionLabel } from '@/lib/leirskoleActivities';
 import { dayLabel, shortDate, hhmm, todayStr } from '@/lib/leirskoleDates';
+
+/** Formiddag/ettermiddag skal se tydelig forskjellige ut. */
+const SESSION_STYLE = {
+  formiddag: {
+    icon: Sunrise,
+    label: 'Formiddag',
+    time: '11–14',
+    card: 'border-amber-500/40 bg-amber-500/10',
+    chip: 'bg-amber-500/20 text-amber-700 dark:text-amber-200',
+    bar: 'bg-amber-500',
+  },
+  ettermiddag: {
+    icon: Sunset,
+    label: 'Ettermiddag',
+    time: '16–19',
+    card: 'border-sky-500/40 bg-sky-500/10',
+    chip: 'bg-sky-500/20 text-sky-700 dark:text-sky-200',
+    bar: 'bg-sky-500',
+  },
+} as const;
+
+const sessionStyle = (key: string) =>
+  SESSION_STYLE[key as keyof typeof SESSION_STYLE] ?? SESSION_STYLE.formiddag;
+
+/** Vakt før 15:00 hører til formiddagsøkta, ellers ettermiddag. */
+const sessionForShift = (startTime: string) =>
+  Number(startTime.slice(0, 2)) < 15 ? 'formiddag' : 'ettermiddag';
+
+/** Alle datoene i uken, slik at fridager også vises. */
+function datesBetween(start: string, end: string) {
+  const out: string[] = [];
+  const d = new Date(`${start}T00:00:00`);
+  const last = new Date(`${end}T00:00:00`);
+  while (d <= last) {
+    out.push(
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+    );
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
 
 export default function Leirskole() {
   const navigate = useNavigate();
@@ -83,6 +124,24 @@ export default function Leirskole() {
     () => (myActivities ?? []).filter((a) => a.date >= today).slice(0, 3),
     [myActivities, today],
   );
+
+  /** Aktiviteten som hører til min neste vakt (samme dag + økt). */
+  const nextShiftActivity = useMemo(() => {
+    if (!nextShift) return null;
+    const session = sessionForShift(nextShift.start_time);
+    return (
+      (myActivities ?? []).find((a) => a.date === nextShift.date && a.session === session) ?? null
+    );
+  }, [nextShift, myActivities]);
+
+  /** Hele uken dag for dag — jobbdager og fridager. */
+  const weekDays = useMemo(() => {
+    const byDay = new Map(shiftsByDay);
+    return datesBetween(week?.start_date ?? today, week?.end_date ?? today).map((date) => ({
+      date,
+      dayShifts: byDay.get(date) ?? [],
+    }));
+  }, [shiftsByDay, week?.start_date, week?.end_date, today]);
 
   /** staff_id → leder (navn + bilde) for hele uken. */
   const staffPeople = useMemo(() => {
@@ -212,18 +271,33 @@ export default function Leirskole() {
             <Megaphone className="h-4 w-4 text-primary" /> Denne økten skal du
           </p>
           <div className="space-y-2">
-            {todayActivities.map((a) => (
-              <div key={a.id} className="rounded-2xl bg-primary/12 p-3">
-                <p className="text-sm font-semibold">
-                  {activityEmoji(a.activity)} {activityLabel(a.activity)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {dayLabel(a.date)} · {sessionLabel(a.session)}
-                  {a.date === today ? ' · i dag' : ''}
-                </p>
-                {a.note && <p className="mt-1 text-xs text-muted-foreground">{a.note}</p>}
-              </div>
-            ))}
+            {todayActivities.map((a) => {
+              const s = sessionStyle(a.session);
+              const Icon = s.icon;
+              return (
+                <div key={a.id} className={`relative overflow-hidden rounded-2xl border p-3 pl-4 ${s.card}`}>
+                  <span className={`absolute left-0 top-0 h-full w-1.5 ${s.bar}`} />
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${s.chip}`}
+                    >
+                      <Icon className="h-3.5 w-3.5" /> {sessionLabel(a.session)}
+                    </span>
+                    <span className="shrink-0 text-[11px] font-semibold tabular-nums text-muted-foreground">
+                      {s.time}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xl font-heading font-bold leading-tight">
+                    {activityEmoji(a.activity)} {activityLabel(a.activity)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {dayLabel(a.date)}
+                    {a.date === today ? ' · i dag' : ''}
+                  </p>
+                  {a.note && <p className="mt-1 text-xs text-muted-foreground">{a.note}</p>}
+                </div>
+              );
+            })}
             {myInfo.map((i) => (
               <div key={i.id} className="rounded-2xl bg-muted/40 p-3">
                 <p className="text-sm font-semibold">{i.title}</p>
@@ -273,6 +347,19 @@ export default function Leirskole() {
               {dayLabel(nextShift.date)} · {Number(nextShift.duration_hours ?? 0).toFixed(1)}t
               {(nextShift.is_night || nextShift.crosses_midnight) && ' · nattevakt'}
             </p>
+            {nextShiftActivity && (
+              <div
+                className={`mt-2.5 flex items-center gap-2 rounded-2xl border px-3 py-2 ${sessionStyle(nextShiftActivity.session).card}`}
+              >
+                <span className="text-lg">{activityEmoji(nextShiftActivity.activity)}</span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold">{activityLabel(nextShiftActivity.activity)}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Din aktivitet · {sessionLabel(nextShiftActivity.session)}
+                  </p>
+                </div>
+              </div>
+            )}
             {nextShiftCrew.length > 0 && (
               <div className="mt-2.5 border-t border-border/50 pt-2.5">
                 <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -319,44 +406,66 @@ export default function Leirskole() {
             {week.schedule_published_at ? 'Du har ingen vakter denne uken.' : 'Vaktplanen er ikke publisert ennå.'}
           </p>
         ) : (
-          <div className="space-y-3">
-            {shiftsByDay.map(([date, dayShifts]) => {
+          <div className="space-y-2.5">
+            {weekDays.map(({ date, dayShifts }) => {
               const hours = hoursByDay.get(date) ?? 0;
+              const isToday = date === today;
+              const works = dayShifts.length > 0;
               return (
-                <div key={date}>
-                  <div className="mb-1 flex items-center justify-between">
+                <div
+                  key={date}
+                  className={`relative overflow-hidden rounded-2xl border pl-4 pr-3 py-2.5 ${
+                    works
+                      ? isToday
+                        ? 'border-primary bg-primary/12 shadow-sm'
+                        : 'border-primary/30 bg-primary/[0.06]'
+                      : 'border-dashed border-border/60 bg-transparent'
+                  }`}
+                >
+                  <span
+                    className={`absolute left-0 top-0 h-full w-1.5 ${
+                      works ? (isToday ? 'bg-primary' : 'bg-primary/50') : 'bg-transparent'
+                    }`}
+                  />
+                  <div className="flex items-center justify-between gap-2">
                     <p
-                      className={`text-xs font-semibold uppercase tracking-wide ${
-                        date === today ? 'text-primary' : 'text-muted-foreground'
+                      className={`text-sm font-bold ${
+                        works ? (isToday ? 'text-primary' : '') : 'text-muted-foreground/70 font-medium'
                       }`}
                     >
                       {dayLabel(date)}
-                      {date === today ? ' · i dag' : ''}
+                      {isToday && <span className="ml-1.5 text-[11px] font-semibold uppercase">i dag</span>}
                     </p>
-                    <span className="text-[11px] tabular-nums text-muted-foreground">
-                      {hours.toFixed(1)}/{maxDaily}t
-                    </span>
+                    {works ? (
+                      <span className="shrink-0 rounded-full bg-primary/20 px-2 py-0.5 text-[11px] font-bold tabular-nums text-primary">
+                        {hours.toFixed(1)}/{maxDaily}t
+                      </span>
+                    ) : (
+                      <span className="shrink-0 rounded-full border border-border/60 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                        Fri
+                      </span>
+                    )}
                   </div>
-                  <div className="space-y-1.5">
-                    {dayShifts.map((p) => (
-                      <div
-                        key={p.id}
-                        className={`flex items-center justify-between rounded-2xl px-3 py-2 ${
-                          date === today ? 'bg-primary/12' : 'bg-muted/40'
-                        }`}
-                      >
-                        <p className="min-w-0 truncate text-sm font-medium">{p.name}</p>
-                        <div className="flex shrink-0 items-center gap-2">
-                          {(p.is_night || p.crosses_midnight) && (
-                            <Moon className="h-3.5 w-3.5 text-muted-foreground" />
-                          )}
-                          <span className="text-xs font-semibold tabular-nums">
-                            {hhmm(p.start_time)}–{hhmm(p.end_time)}
-                          </span>
+                  {works && (
+                    <div className="mt-2 space-y-1.5">
+                      {dayShifts.map((p) => (
+                        <div
+                          key={p.id}
+                          className="flex items-center justify-between rounded-xl bg-background/70 px-3 py-2"
+                        >
+                          <p className="min-w-0 truncate text-sm font-medium">{p.name}</p>
+                          <div className="flex shrink-0 items-center gap-2">
+                            {(p.is_night || p.crosses_midnight) && (
+                              <Moon className="h-3.5 w-3.5 text-muted-foreground" />
+                            )}
+                            <span className="text-xs font-bold tabular-nums">
+                              {hhmm(p.start_time)}–{hhmm(p.end_time)}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
