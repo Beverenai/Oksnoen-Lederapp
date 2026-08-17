@@ -162,7 +162,10 @@ export function LeirskoleDayActivityCard({ week, staff }: Props) {
               {LEIRSKOLE_ACTIVITY_SESSIONS.map((s) => {
                 const current = row.bySession[s.key] ?? '';
                 const lacks =
-                  !!current && row.competencies.length > 0 && !row.competencies.includes(current);
+                  !isArrival &&
+                  !!current &&
+                  row.competencies.length > 0 &&
+                  !row.competencies.includes(current);
                 return (
                   <div key={s.key} className="rounded-xl bg-background/70 p-1.5">
                     <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</p>
