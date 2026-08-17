@@ -327,10 +327,14 @@ export function LeirskolePostsCard({
     return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [posts]);
 
-  const departureDays = useMemo(
-    () => new Set((weekDays ?? []).filter((d) => d.day_type === 'departure').map((d) => d.date)),
-    [weekDays],
-  );
+  const specialDays = useMemo(() => {
+    const map = new Map<string, string>();
+    (weekDays ?? []).forEach((d) => {
+      if (d.day_type === 'departure') map.set(d.date, 'Avreise');
+      if (d.day_type === 'arrival') map.set(d.date, 'Ankomst');
+    });
+    return map;
+  }, [weekDays]);
 
   return (
     <Card>
@@ -440,9 +444,9 @@ export function LeirskolePostsCard({
                 <div className="oks-ls-gradient flex items-center justify-between gap-2 px-3 py-2">
                   <p className="flex items-center gap-2 text-sm font-bold text-white">
                     {dayLabel(date)}
-                    {departureDays.has(date) && (
+                    {specialDays.has(date) && (
                       <span className="rounded-full bg-amber-400/90 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-950">
-                        Avreise
+                        {specialDays.get(date)}
                       </span>
                     )}
                   </p>
