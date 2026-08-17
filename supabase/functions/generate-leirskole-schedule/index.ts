@@ -341,6 +341,46 @@ Deno.serve(async (req) => {
       postsRaw = rows as any;
     }
 
+    // ── Ukeplanleggeren styrer minimumsbemanningen på øktene ──────────────
+    // Antall aktiviteter i ruta for Økt 1/2/3 = minst så mange ledere på vakt
+    // (én per aktivitet). Oppfyllingsrunden legger på flere for å nå 8 timer.
+    {
+      const rows = (postsRaw ?? []) as any[];
+      const { data: types } = await supa.from("leirskole_activity_types")
+        .select("label").eq("is_active", true);
+      const labels = (types ?? []).map((t: any) => String(t.label).toLowerCase());
+      const { data: cells } = await supa.from("leirskole_week_plan_cells")
+        .select("date, row_index, content").eq("week_id", week_id);
+      const ROW_TO_NAME: Record<number, string> = { 0: "Økt 1", 1: "Økt 2", 2: "Økt 3" };
+      const countBySlot = new Map<string, number>();
+      for (const c of (cells ?? []) as any[]) {
+        const name = ROW_TO_NAME[Number(c.row_index)];
+        if (!name) continue;
+        const lines = String(c.content ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+        const n = lines.filter((l) => labels.some((lb) => l.toLowerCase().includes(lb))).length;
+        if (n > 0) countBySlot.set(`${c.date}|${name}`, n);
+      }
+      for (const p of rows) {
+        if (!p.is_main_shift) continue;
+        const wanted = countBySlot.get(`${p.date}|${p.name}`);
+        if (!wanted) continue;
+        const patch: Record<string, unknown> = {};
+        if (Number(p.required_leaders) < wanted) {
+          p.required_leaders = wanted;
+          patch.required_leaders = wanted;
+        }
+        // Har admin lagt inn aktiviteter, er økten klar til å bemannes.
+        if (p.is_published === false) {
+          p.is_published = true;
+          patch.is_published = true;
+        }
+        if (Object.keys(patch).length) {
+          await supa.from("leirskole_posts").update(patch).eq("id", p.id);
+        }
+      }
+      postsRaw = rows as any;
+    }
+
     // Upubliserte økter er ikke satt ennå og skal ikke bemannes.
     const posts: Post[] = ((postsRaw ?? []) as any[]).filter((p) => p.is_published !== false) as any;
     if (posts.length === 0) return json({ error: "Ingen vaktposter for denne uken." }, 400);
