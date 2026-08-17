@@ -301,6 +301,21 @@ export default function LeirskoleAdmin() {
           <Button onClick={() => createWeek.mutate()} disabled={createWeek.isPending} className="gap-2">
             <Plus className="h-4 w-4" /> Ny uke
           </Button>
+
+          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Hent uker og påmeldte ledere direkte fra Øksnøen jobb-plattform. Ledere kobles automatisk på navn.
+            </p>
+            <Button
+              variant="secondary"
+              onClick={() => syncJobb.mutate()}
+              disabled={syncJobb.isPending}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncJobb.isPending ? 'animate-spin' : ''}`} />
+              {syncJobb.isPending ? 'Henter…' : 'Hent fra jobb-plattformen'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
