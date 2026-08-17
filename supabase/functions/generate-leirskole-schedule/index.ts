@@ -216,12 +216,12 @@ Deno.serve(async (req) => {
       const rows: any[] = [];
       for (const date of days) {
         rows.push(
-          { week_id, date, name: "Frokost", post_type: "meal", start_time: "08:00", end_time: "09:00", required_leaders: mealReq, is_main_shift: false, sort_order: 1 },
-          { week_id, date, name: "Økt 1", post_type: "main_shift", start_time: "09:30", end_time: "12:00", required_leaders: shiftReq, is_main_shift: true, sort_order: 2 },
-          { week_id, date, name: "Middag", post_type: "meal", start_time: "13:00", end_time: "14:00", required_leaders: mealReq, is_main_shift: false, sort_order: 3 },
-          { week_id, date, name: "Økt 2", post_type: "main_shift", start_time: "14:30", end_time: "17:00", required_leaders: shiftReq, is_main_shift: true, sort_order: 4 },
-          { week_id, date, name: "Økt 3", post_type: "main_shift", start_time: "17:30", end_time: "19:00", required_leaders: shiftReq, is_main_shift: true, sort_order: 5 },
-          { week_id, date, name: "Kvelds", post_type: "meal", start_time: "19:00", end_time: "20:00", required_leaders: mealReq, is_main_shift: false, sort_order: 6 },
+          { week_id, date, name: "Frokost", post_type: "meal", start_time: "08:00", end_time: "09:00", required_leaders: mealReq, is_main_shift: false, is_night: false, sort_order: 1 },
+          { week_id, date, name: "Økt 1", post_type: "main_shift", start_time: "09:30", end_time: "12:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 2 },
+          { week_id, date, name: "Middag", post_type: "meal", start_time: "13:00", end_time: "14:00", required_leaders: mealReq, is_main_shift: false, is_night: false, sort_order: 3 },
+          { week_id, date, name: "Økt 2", post_type: "main_shift", start_time: "14:30", end_time: "17:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 4 },
+          { week_id, date, name: "Økt 3", post_type: "main_shift", start_time: "17:30", end_time: "19:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 5 },
+          { week_id, date, name: "Kvelds", post_type: "meal", start_time: "19:00", end_time: "20:00", required_leaders: mealReq, is_main_shift: false, is_night: false, sort_order: 6 },
           { week_id, date, name: "Nattevakt", post_type: "night", start_time: "23:00", end_time: "07:00", required_leaders: 1, is_main_shift: false, is_night: true, sort_order: 7 },
         );
       }
