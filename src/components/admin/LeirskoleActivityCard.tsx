@@ -62,7 +62,6 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
   const save = useSaveLeirskoleActivities();
   const removeOne = useDeleteLeirskoleActivity();
 
-  const allKeys = useMemo(() => (types ?? []).map((t) => t.key), [types]);
 
   /** Ukeplanleggeren styrer hva som gjelder: økt 1 = formiddag, økt 2 = ettermiddag. */
   const rowIndexFor = (sessionKey: string) => (sessionKey === 'formiddag' ? 1 : 2);
