@@ -24,7 +24,17 @@ export function isLimitedAccessRoute(path: string): boolean {
 }
 
 /** Sider leirskole-ledere alltid har tilgang til, også utenom sesong. */
-export const LEIRSKOLE_ROUTES = ['/', '/leirskole', '/chat', '/profile', '/mer', '/admin/leirskole'] as const;
+export const LEIRSKOLE_ROUTES = [
+  '/',
+  '/leirskole',
+  '/leirskole/vaktplan',
+  '/leirskole/oppgaver',
+  '/leaders',
+  '/chat',
+  '/profile',
+  '/mer',
+  '/admin/leirskole',
+] as const;
 
 export function isLeirskoleRoute(path: string): boolean {
   const clean = path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;

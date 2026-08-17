@@ -24,6 +24,8 @@ import { LeirskoleAccessCard } from '@/components/admin/LeirskoleAccessCard';
 import { LeirskolePostsCard } from '@/components/admin/LeirskolePostsCard';
 import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
 import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
+import { LeirskoleActivityCard } from '@/components/admin/LeirskoleActivityCard';
+import { SlidersHorizontal } from 'lucide-react';
 
 const hhmm = (t: string) => t.slice(0, 5);
 
@@ -48,6 +50,7 @@ export default function LeirskoleAdmin() {
   const [taskDraft, setTaskDraft] = useState({ title: '', description: '' });
   const [taskAssignAll, setTaskAssignAll] = useState(true);
   const [taskLeaderIds, setTaskLeaderIds] = useState<string[]>([]);
+  const [showSettings, setShowSettings] = useState(false);
 
   const { data: allLeaders } = useQuery({
     queryKey: ['leirskole-all-leaders'],
@@ -262,6 +265,30 @@ export default function LeirskoleAdmin() {
         <p className="text-sm text-muted-foreground">Uker, ledere, vaktplan og oppgaver</p>
       </div>
 
+      {week && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="rounded-2xl border bg-card/60 px-3 py-2">
+            <p className="truncate text-base font-bold">{week.name}</p>
+            <p className="text-[11px] text-muted-foreground">Valgt uke</p>
+          </div>
+          <div className="rounded-2xl border bg-card/60 px-3 py-2">
+            <p className="text-base font-bold tabular-nums">{(staff ?? []).length}</p>
+            <p className="text-[11px] text-muted-foreground">Ledere</p>
+          </div>
+          <div className="rounded-2xl border bg-card/60 px-3 py-2">
+            <p className="text-base font-bold tabular-nums">
+              {[...hoursByStaff.values()].reduce((a, b) => a + b, 0).toFixed(1)}t
+            </p>
+            <p className="text-[11px] text-muted-foreground">Timer i planen</p>
+          </div>
+          <div className="rounded-2xl border bg-card/60 px-3 py-2">
+            <p className="text-base font-bold">{week.schedule_published_at ? 'Ja' : 'Nei'}</p>
+            <p className="text-[11px] text-muted-foreground">Publisert</p>
+          </div>
+        </div>
+      )}
+
+      {showSettings && (
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
@@ -322,6 +349,7 @@ export default function LeirskoleAdmin() {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {week && (
         <>
@@ -366,6 +394,14 @@ export default function LeirskoleAdmin() {
           />
 
           <LeirskolePostsCard week={week} staff={staff ?? []} />
+
+          <LeirskoleActivityCard
+            weekId={week.id}
+            startDate={week.start_date}
+            endDate={week.end_date}
+            staff={staff ?? []}
+            posts={posts ?? []}
+          />
 
           <LeirskoleSessionInfoCard weekId={week.id} staff={staff ?? []} />
 
@@ -469,6 +505,15 @@ export default function LeirskoleAdmin() {
 
         </>
       )}
+
+      <Button
+        variant="ghost"
+        className="w-full justify-center gap-2"
+        onClick={() => setShowSettings((v) => !v)}
+      >
+        <SlidersHorizontal className="h-4 w-4" />
+        {showSettings ? 'Skjul uke-innstillinger' : 'Uke-innstillinger og import'}
+      </Button>
     </div>
   );
 }

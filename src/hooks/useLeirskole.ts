@@ -302,3 +302,156 @@ export function useMarkLeirskoleInfoRead() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-session-info'] }),
   });
 }
+
+/* ============================================================
+   Aktivitetsfordeling (tube, klatring, rappellering, …)
+   ============================================================ */
+
+export type LeirskoleActivityAssignment = Tables<'leirskole_activity_assignments'>;
+
+/** Alle aktivitetstildelinger for en uke. */
+export function useLeirskoleActivityAssignments(weekId?: string | null) {
+  return useQuery({
+    queryKey: ['leirskole-activities', weekId],
+    enabled: !!weekId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leirskole_activity_assignments')
+        .select('*')
+        .eq('week_id', weekId!)
+        .order('date')
+        .order('session');
+      if (error) throw error;
+      return (data ?? []) as LeirskoleActivityAssignment[];
+    },
+  });
+}
+
+/** Historikk på tvers av uker — brukes til rettferdig rotasjon. */
+export function useLeirskoleActivityHistory() {
+  return useQuery({
+    queryKey: ['leirskole-activity-history'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leirskole_activity_assignments')
+        .select('leader_id, activity');
+      if (error) throw error;
+      const map = new Map<string, number>();
+      (data ?? []).forEach((r: any) => {
+        const key = `${r.leader_id}:${r.activity}`;
+        map.set(key, (map.get(key) ?? 0) + 1);
+      });
+      return map;
+    },
+  });
+}
+
+/** Mine aktiviteter i aktiv uke. */
+export function useMyLeirskoleActivities(weekId?: string | null) {
+  const { effectiveLeader } = useAuth();
+  return useQuery({
+    queryKey: ['leirskole-my-activities', weekId, effectiveLeader?.id],
+    enabled: !!weekId && !!effectiveLeader?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leirskole_activity_assignments')
+        .select('*')
+        .eq('week_id', weekId!)
+        .eq('leader_id', effectiveLeader!.id)
+        .order('date')
+        .order('session');
+      if (error) throw error;
+      return (data ?? []) as LeirskoleActivityAssignment[];
+    },
+  });
+}
+
+function invalidateActivities(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['leirskole-activities'] });
+  qc.invalidateQueries({ queryKey: ['leirskole-activity-history'] });
+  qc.invalidateQueries({ queryKey: ['leirskole-my-activities'] });
+}
+
+/** Sett (eller fjern) aktivitet for en leder en gitt dag og økt. */
+export function useSetLeirskoleActivity() {
+  const qc = useQueryClient();
+  const { effectiveLeader } = useAuth();
+  return useMutation({
+    mutationFn: async ({
+      weekId,
+      leaderId,
+      date,
+      session,
+      activity,
+    }: {
+      weekId: string;
+      leaderId: string;
+      date: string;
+      session: string;
+      activity: string | null;
+    }) => {
+      if (!activity) {
+        const { error } = await supabase
+          .from('leirskole_activity_assignments')
+          .delete()
+          .eq('leader_id', leaderId)
+          .eq('date', date)
+          .eq('session', session);
+        if (error) throw error;
+        return;
+      }
+      const { error } = await supabase
+        .from('leirskole_activity_assignments')
+        .upsert(
+          {
+            week_id: weekId,
+            leader_id: leaderId,
+            date,
+            session,
+            activity,
+            auto_generated: false,
+            created_by: effectiveLeader?.id ?? null,
+          },
+          { onConflict: 'leader_id,date,session' },
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateActivities(qc),
+  });
+}
+
+/** Lagre en hel generert fordeling for én dag/økt. */
+export function useSaveLeirskoleActivityPlan() {
+  const qc = useQueryClient();
+  const { effectiveLeader } = useAuth();
+  return useMutation({
+    mutationFn: async ({
+      weekId,
+      date,
+      session,
+      plan,
+    }: {
+      weekId: string;
+      date: string;
+      session: string;
+      plan: Map<string, string>;
+    }) => {
+      const rows = [...plan.entries()].map(([leader_id, activity]) => ({
+        week_id: weekId,
+        leader_id,
+        date,
+        session,
+        activity,
+        auto_generated: true,
+        created_by: effectiveLeader?.id ?? null,
+      }));
+      if (!rows.length) return 0;
+      const { error } = await supabase
+        .from('leirskole_activity_assignments')
+        .upsert(rows, { onConflict: 'leader_id,date,session' });
+      if (error) throw error;
+      return rows.length;
+    },
+    onSuccess: () => invalidateActivities(qc),
+  });
+}

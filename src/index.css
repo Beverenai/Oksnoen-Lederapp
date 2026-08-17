@@ -688,3 +688,62 @@ html.oks-offseason-theme .oks-offseason-bg {
 html.oks-offseason-theme .oks-offseason-bg {
   min-height: 100dvh;
 }
+
+/* ============================================================
+   Leirskole-tema — samme mørke iOS-look som off-season,
+   men med teal aksent slik at modusene skilles visuelt.
+   ============================================================ */
+html.oks-leirskole-theme,
+html.oks-leirskole-theme body,
+html.oks-leirskole-theme .oks-leirskole-bg {
+  --background: var(--oks-night);
+  --foreground: 40 40% 94%;
+  --card: 210 40% 13%;
+  --card-foreground: 40 40% 94%;
+  --muted: 210 32% 18%;
+  --muted-foreground: 205 16% 68%;
+  --border: 205 22% 24%;
+  --input: 205 22% 24%;
+  --popover: 210 40% 12%;
+  --popover-foreground: 40 40% 94%;
+  --secondary: 210 32% 18%;
+  --secondary-foreground: 40 40% 94%;
+  --accent: 210 32% 20%;
+  --accent-foreground: 40 40% 94%;
+  --primary: var(--oks-teal);
+  --primary-foreground: 210 45% 8%;
+  --ring: var(--oks-teal);
+}
+
+html.oks-leirskole-theme,
+html.oks-leirskole-theme body {
+  background-color: hsl(var(--oks-night-deep));
+  color: hsl(var(--foreground));
+}
+
+html.oks-leirskole-theme .oks-leirskole-bg {
+  color: hsl(var(--foreground));
+  background:
+    radial-gradient(110% 48% at 12% -6%, hsl(var(--oks-teal) / 0.28) 0%, transparent 62%),
+    radial-gradient(90% 42% at 92% 2%, hsl(var(--oks-gold) / 0.14) 0%, transparent 60%),
+    radial-gradient(120% 60% at 50% 110%, hsl(var(--oks-forest) / 0.55) 0%, transparent 68%),
+    linear-gradient(180deg, hsl(var(--oks-night)) 0%, hsl(var(--oks-night-deep)) 100%);
+}
+
+/* iOS-aktig glasskort/pill brukt i leirskole- og off-season-flatene */
+.oks-glass-card {
+  border-radius: 24px;
+  border: 1px solid hsl(var(--border) / 0.7);
+  background: hsl(var(--card) / 0.62);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 12px 30px -20px hsl(var(--oks-night-deep) / 0.9);
+}
+
+.oks-pill {
+  border-radius: 999px;
+  border: 1px solid hsl(var(--border) / 0.7);
+  background: hsl(var(--muted) / 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}

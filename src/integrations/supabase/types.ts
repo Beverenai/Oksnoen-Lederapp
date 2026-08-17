@@ -1977,6 +1977,70 @@ export type Database = {
           },
         ]
       }
+      leirskole_activity_assignments: {
+        Row: {
+          activity: string
+          auto_generated: boolean
+          created_at: string
+          created_by: string | null
+          date: string
+          id: string
+          leader_id: string
+          note: string | null
+          session: string
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          activity: string
+          auto_generated?: boolean
+          created_at?: string
+          created_by?: string | null
+          date: string
+          id?: string
+          leader_id: string
+          note?: string | null
+          session?: string
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          activity?: string
+          auto_generated?: boolean
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          leader_id?: string
+          note?: string | null
+          session?: string
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_activity_assignments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_activity_assignments_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_activity_assignments_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leirskole_assignments: {
         Row: {
           assigned_at: string
