@@ -100,7 +100,9 @@ function canAssign(st: Staff, post: Post, s: State, availability: Map<string, Av
     if (startAbs < a.endAbs && a.startAbs < endAbs) {
       return { ok: false, reason: "Overlapper annen vakt" };
     }
-    // Rest rule: min_rest_hours between end of one shift and start of the next
+    // Rest rule only applies between calendar days (daily rest), not between
+    // short posts on the same day (meals + økter belong to the same work day).
+    if (a.date === post.date && !isNight(post) && !a.night) continue;
     const gapAfter = startAbs - a.endAbs;
     const gapBefore = a.startAbs - endAbs;
     if (gapAfter > 0 && gapAfter < minRest * 60) return { ok: false, reason: `Under ${minRest}t hvile` };
@@ -145,7 +147,7 @@ function apply(post: Post, s: State) {
 }
 
 function sortPosts(posts: Post[], candidates: Map<string, number>) {
-  const prio = (p: Post) => (isNight(p) ? 0 : p.is_main_shift ? 2 : isMeal(p) ? 3 : 4);
+  const prio = (p: Post) => (isNight(p) ? 0 : isMeal(p) ? 1 : p.is_main_shift ? 2 : 3);
   return [...posts].sort((a, b) => {
     const pa = prio(a), pb = prio(b);
     if (pa !== pb) return pa - pb;
