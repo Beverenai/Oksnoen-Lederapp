@@ -517,6 +517,148 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             )}
           </div>
 
+          {/* Måltid */}
+          <div className="grid gap-1.5" style={gridStyle}>
+            <LabelCell>Måltid</LabelCell>
+            {dates.map((date) => {
+              const dayPosts = postsByDate.get(date) ?? [];
+              const mealPosts = MEALS.map((m) => ({
+                meal: m,
+                post: dayPosts.find((p) => (p.name ?? '').trim().toLowerCase() === m.toLowerCase()),
+              })).filter((x) => x.post);
+              return (
+                <div key={date} className="rounded-xl border border-border/60 bg-muted/25 p-1.5">
+                  {mealPosts.length === 0 && <p className="text-[11px] text-muted-foreground">—</p>}
+                  <div className="space-y-1">
+                    {mealPosts.map(({ meal, post }) => (
+                      <LeirskolePostStaffPicker
+                        key={meal}
+                        weekId={week.id}
+                        title={`${meal} · ${new Date(`${date}T12:00:00`).getDate()}.`}
+                        maxHours={maxHours}
+                        hoursByStaff={staffHoursByDate.get(date) ?? new Map()}
+                        staffOptions={staffOptions}
+                        post={{
+                          id: post!.id,
+                          name: post!.name ?? meal,
+                          date,
+                          duration_hours: post!.duration_hours,
+                          assignments: post!.assignments ?? [],
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="flex w-full items-start gap-1 rounded-lg px-1 py-0.5 text-left text-[10px] hover:bg-muted"
+                        >
+                          <span className="shrink-0 font-semibold">{meal}</span>
+                          <span className="flex-1 text-muted-foreground">
+                            {(post!.assignments ?? [])
+                              .map((a) => firstName(staffToLeader.get(a.staff_id)?.name ?? '?'))
+                              .join(', ') || 'ingen'}
+                          </span>
+                        </button>
+                      </LeirskolePostStaffPicker>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Kjøkken hele dagen */}
+          <div className="grid gap-1.5" style={gridStyle}>
+            <LabelCell>Kjøkken</LabelCell>
+            {dates.map((date) => {
+              const onDuty = (kitchenDays ?? []).filter((k) => k.date === date);
+              return (
+                <Popover key={date}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="rounded-xl border border-sky-500/40 bg-sky-500/10 p-2 text-left text-[11px] hover:brightness-105"
+                    >
+                      {onDuty.length === 0 ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <span className="font-semibold">
+                          {onDuty.map((k) => firstName(staffToLeader.get(k.staff_id)?.name ?? '?')).join(', ')}
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-64 p-2">
+                    <p className="px-1 pb-1.5 text-xs font-semibold">Kjøkken hele dagen</p>
+                    <div className="max-h-[60vh] space-y-0.5 overflow-y-auto">
+                      {staffOptions.map((s) => {
+                        const on = onDuty.some((k) => k.staff_id === s.staffId);
+                        return (
+                          <button
+                            key={s.staffId}
+                            type="button"
+                            onClick={() =>
+                              setKitchenDay.mutate({ weekId: week.id, staffId: s.staffId, date, active: !on })
+                            }
+                            className={`w-full truncate rounded-lg px-2 py-1.5 text-left text-xs hover:bg-muted ${
+                              on ? 'bg-primary/10 font-semibold' : ''
+                            }`}
+                          >
+                            {on ? '✓ ' : ''}
+                            {s.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              );
+            })}
+          </div>
+
+          {/* Nattevakt */}
+          <div className="grid gap-1.5" style={gridStyle}>
+            <LabelCell>
+              <Moon className="mr-1 h-3 w-3" /> Natt
+            </LabelCell>
+            {dates.map((date) => {
+              const post = (postsByDate.get(date) ?? []).find((p) =>
+                (p.name ?? '').toLowerCase().includes('natt'),
+              );
+              if (!post) {
+                return (
+                  <div key={date} className="rounded-xl border border-border/60 bg-muted/25 p-2 text-[11px] text-muted-foreground">
+                    —
+                  </div>
+                );
+              }
+              return (
+                <LeirskolePostStaffPicker
+                  key={date}
+                  weekId={week.id}
+                  title="Nattevakt"
+                  maxHours={maxHours}
+                  hoursByStaff={staffHoursByDate.get(date) ?? new Map()}
+                  staffOptions={staffOptions}
+                  post={{
+                    id: post.id,
+                    name: post.name ?? 'Nattevakt',
+                    date,
+                    duration_hours: post.duration_hours,
+                    assignments: post.assignments ?? [],
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="rounded-xl border border-indigo-500/40 bg-indigo-500/10 p-2 text-left text-[11px] font-semibold hover:brightness-105"
+                  >
+                    {(post.assignments ?? [])
+                      .map((a) => firstName(staffToLeader.get(a.staff_id)?.name ?? '?'))
+                      .join(', ') || <span className="text-muted-foreground">ingen</span>}
+                  </button>
+                </LeirskolePostStaffPicker>
+              );
+            })}
+          </div>
+
           {/* Timer */}
           <div className="grid gap-1.5" style={gridStyle}>
             <LabelCell>Timer</LabelCell>
