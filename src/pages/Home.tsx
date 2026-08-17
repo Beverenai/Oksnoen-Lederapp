@@ -157,7 +157,7 @@ const formatTeamDisplay = (team: string | null): string => {
 export default function Home() {
   const { leader, effectiveLeader, isAdmin, isNurse, isSuperAdmin, isLimitedAccess } = useAuth();
   const { mode: appMode } = useAppMode();
-  const { limited: limitedView } = useAccessMode();
+  const { limited: limitedView, mode: accessMode } = useAccessMode();
   const navigate = useNavigate();
   const location = useLocation();
   const [content, setContent] = useState<LeaderContent | null>(null);
