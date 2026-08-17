@@ -90,11 +90,12 @@ function timeLabel(iso: string) {
 }
 
 export default function Chat() {
-  const { leader, isLimitedAccess } = useAuth();
+  const { leader, isLimitedAccess, isLeirskole, isAdmin } = useAuth();
   const { showError } = useStatusPopup();
   const canUsePeriodChat = !isLimitedAccess && leader?.is_active !== false;
-  const [channel, setChannel] = useState<'period' | 'offseason'>(
-    canUsePeriodChat ? 'period' : 'offseason',
+  const canUseLeirskoleChat = isLeirskole || isAdmin;
+  const [channel, setChannel] = useState<'period' | 'offseason' | 'leirskole'>(
+    isLeirskole && !isAdmin ? 'leirskole' : canUsePeriodChat ? 'period' : 'offseason',
   );
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -111,8 +112,8 @@ export default function Chat() {
 
   // Inaktive ledere har kun tilgang til off season-chatten
   useEffect(() => {
-    if (!canUsePeriodChat) setChannel('offseason');
-  }, [canUsePeriodChat]);
+    if (!canUsePeriodChat) setChannel((c) => (c === 'period' ? (isLeirskole ? 'leirskole' : 'offseason') : c));
+  }, [canUsePeriodChat, isLeirskole]);
   const shellRef = useRef<HTMLDivElement>(null);
   const [shellHeight, setShellHeight] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -575,11 +576,15 @@ export default function Chat() {
           <p className="truncate text-[11px] text-muted-foreground">
             {channel === 'period'
               ? `Periodechat${periodLabel ? ` · ${periodLabel}` : ''}`
-              : 'Off season — hele året'}
+              : channel === 'leirskole'
+                ? 'Leirskole — egen chat for leirskolelederne'
+                : 'Off season — hele året'}
           </p>
         </div>
-        {canUsePeriodChat && (
+        {(canUsePeriodChat || canUseLeirskoleChat) && (
         <div className="flex shrink-0 gap-1 rounded-full border bg-card/60 p-0.5 backdrop-blur">
+          {canUsePeriodChat && (
+          <>
           <button
             type="button"
             onClick={() => setChannel('period')}
@@ -604,6 +609,22 @@ export default function Chat() {
           >
             Off season
           </button>
+          </>
+          )}
+          {canUseLeirskoleChat && (
+            <button
+              type="button"
+              onClick={() => setChannel('leirskole')}
+              className={cn(
+                'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                channel === 'leirskole'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              Leirskole
+            </button>
+          )}
         </div>
         )}
       </div>
