@@ -186,35 +186,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke generere uken'),
   });
 
-  /** Radene for en dag: økt 1–3, eller dagens egne økter på ankomst/avreise. */
+  /** Radene for en vanlig dag: økt 1–3. Ankomst/avreise bruker kalenderkolonne. */
   const rowsFor = (date: string): (CellTarget | null)[] => {
-    const dayType = specialDays.get(date);
-    if (dayType) {
-      const custom = (postsByDate.get(date) ?? [])
-        .filter((p) => p.is_custom)
-        .sort((a, b) => a.start_time.localeCompare(b.start_time));
-      return SESSIONS.map((_, i) => {
-        const p = custom[i];
-        if (!p) {
-          return {
-            date,
-            session: null,
-            rowIndex: i + 1,
-            postId: null,
-            label: 'Legg til egen økt',
-            dayType: dayType as 'arrival' | 'departure',
-          };
-        }
-        return {
-          date,
-          session: p.id,
-          rowIndex: null,
-          postId: p.id,
-          label: `${p.name} ${hhmm(p.start_time)}–${hhmm(p.end_time)}`,
-          dayType: dayType as 'arrival' | 'departure',
-        };
-      });
-    }
+    if (specialDays.has(date)) return SESSIONS.map(() => null);
     return SESSIONS.map((s) => ({
       date,
       session: s.session,
