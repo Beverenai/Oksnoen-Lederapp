@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertTriangle, Sparkles, Wand2 } from 'lucide-react';
+import { AlertTriangle, Moon, Sparkles, Wand2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useLeirskoleActivities,
@@ -11,6 +11,8 @@ import {
   useLeirskoleSchedule,
   useLeirskoleWeekDays,
   useLeirskoleWeekPlan,
+  useLeirskoleKitchenDays,
+  useSetLeirskoleKitchenDay,
   type LeirskoleStaff,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
@@ -21,7 +23,10 @@ import {
 } from '@/lib/leirskoleGenerateAll';
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
 import { LeirskoleSpecialDayTimeline } from '@/components/admin/LeirskoleSpecialDayTimeline';
+import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
 import { trimDayHours } from '@/lib/leirskoleDayHours';
+
+const MEALS = ['Frokost', 'Middag', 'Kvelds'];
 
 type StaffRow = LeirskoleStaff & {
   leader: {
@@ -61,6 +66,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const { data: weekDays } = useLeirskoleWeekDays(week.id);
   const { data: activities } = useLeirskoleActivities(week.id);
   const { data: types } = useLeirskoleActivityTypes(true);
+  const { data: kitchenDays } = useLeirskoleKitchenDays(week.id);
+  const setKitchenDay = useSetLeirskoleKitchenDay();
   const [target, setTarget] = useState<CellTarget | null>(null);
   const [summary, setSummary] = useState<LeirskoleGenerateSummary | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
