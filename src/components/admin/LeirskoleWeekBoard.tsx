@@ -217,14 +217,22 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
       // Uken må ha ledere før generatoren kan kjøre. Er den tom, kopierer vi
       // staben fra nærmeste tidligere uke som har ledere.
       if (staff.length === 0) {
-        const { data: prev } = await supabase
-          .from('leirskole_staff')
-          .select('leader_id, max_daily_hours, week:leirskole_weeks!inner(start_date)')
-          .lt('leirskole_weeks.start_date', week.start_date)
-          .order('start_date', { ascending: false, referencedTable: 'leirskole_weeks' });
-        const rows = (prev ?? []) as Array<{ leader_id: string; max_daily_hours: number | null }>;
-        const seen = new Set<string>();
-        const unique = rows.filter((r) => !seen.has(r.leader_id) && seen.add(r.leader_id));
+        const { data: prevWeeks } = await supabase
+          .from('leirskole_weeks')
+          .select('id')
+          .lt('start_date', week.start_date)
+          .order('start_date', { ascending: false });
+        let unique: Array<{ leader_id: string; max_daily_hours: number | null }> = [];
+        for (const w of prevWeeks ?? []) {
+          const { data: rows } = await supabase
+            .from('leirskole_staff')
+            .select('leader_id, max_daily_hours')
+            .eq('week_id', w.id);
+          if (rows && rows.length) {
+            unique = rows;
+            break;
+          }
+        }
         if (unique.length === 0) {
           throw new Error('Ingen ledere er lagt til denne uken. Legg til ledere under «Tilgang» først.');
         }
