@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   CalendarDays, MessageCircle, ClipboardList, Clock, Moon, Users, Settings, ChevronRight, Sun,
-  Megaphone, Check,
+  Megaphone, Check, Award, Pencil,
 } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
@@ -22,7 +22,10 @@ import {
   useMarkLeirskoleInfoRead,
   useMyLeirskoleShifts,
   useToggleLeirskoleTask,
+  useMyLeirskoleCompetencies,
 } from '@/hooks/useLeirskole';
+import { LeirskoleCompetenceSheet } from '@/components/leirskole/LeirskoleCompetenceSheet';
+import { competenceEmoji, competenceLabel } from '@/lib/leirskoleCompetencies';
 
 const WEEKDAYS = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
@@ -58,6 +61,14 @@ export default function Leirskole() {
   const toggleTask = useToggleLeirskoleTask();
   const { data: sessionInfo } = useLeirskoleSessionInfo(week?.id);
   const markInfoRead = useMarkLeirskoleInfoRead();
+  const { data: myCompetencies, isLoading: compLoading } = useMyLeirskoleCompetencies();
+  const [compOpen, setCompOpen] = useState(false);
+  const compMissing = !compLoading && (myCompetencies ?? []).length === 0;
+
+  // Første gang: be lederen legge inn kompetansen sin.
+  useEffect(() => {
+    if (compMissing && !!effectiveLeader?.id) setCompOpen(true);
+  }, [compMissing, effectiveLeader?.id]);
 
   const myInfo = useMemo(
     () =>
