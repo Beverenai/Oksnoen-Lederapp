@@ -17,7 +17,7 @@ import {
 import { LEIRSKOLE_COMPETENCIES, competenceEmoji, competenceLabel } from '@/lib/leirskoleCompetencies';
 import {
   LEIRSKOLE_ACTIVITIES,
-  LEIRSKOLE_SESSIONS,
+  LEIRSKOLE_ACTIVITY_SESSIONS,
   activityEmoji,
   activityLabel,
   sessionLabel,
