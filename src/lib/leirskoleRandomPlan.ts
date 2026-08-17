@@ -35,7 +35,7 @@ export const activityLine = (a: RandomPlanActivity) => `${a.emoji ?? ''} ${a.lab
 export function randomWeekPlan({
   dates,
   activities,
-  perSession = 3,
+  perSession = 6,
   filled = new Set<string>(),
   overwrite = false,
 }: {
