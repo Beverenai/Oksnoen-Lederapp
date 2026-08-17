@@ -69,6 +69,8 @@ const Klineliste = lazy(() => import("@/pages/Klineliste"));
 const KlineTinder = lazy(() => import("@/pages/KlineTinder"));
 const PeriodArchive = lazy(() => import("@/pages/admin/PeriodArchive"));
 const Leirskole = lazy(() => import("@/pages/Leirskole"));
+const LeirskoleVaktplan = lazy(() => import("@/pages/LeirskoleVaktplan"));
+const LeirskoleOppgaver = lazy(() => import("@/pages/LeirskoleOppgaver"));
 const LeirskoleAdmin = lazy(() => import("@/pages/admin/LeirskoleAdmin"));
 
 const queryClient = new QueryClient({
@@ -242,6 +244,8 @@ function AppRoutes() {
         <Route path="/admin/dynga" element={<ProtectedRoute><Dynga /></ProtectedRoute>} />
         <Route path="/arkiv" element={<ProtectedRoute><PeriodArchive /></ProtectedRoute>} />
         <Route path="/leirskole" element={<ProtectedRoute><Leirskole /></ProtectedRoute>} />
+        <Route path="/leirskole/vaktplan" element={<ProtectedRoute><LeirskoleVaktplan /></ProtectedRoute>} />
+        <Route path="/leirskole/oppgaver" element={<ProtectedRoute><LeirskoleOppgaver /></ProtectedRoute>} />
         <Route path="/admin/leirskole" element={<ProtectedRoute><LeirskoleAdmin /></ProtectedRoute>} />
         <Route path="/gjenglemt" element={<ProtectedRoute><Gjenglemt /></ProtectedRoute>} />
         <Route path="/gjenglemt-admin" element={<GjenglemtAdmin />} />

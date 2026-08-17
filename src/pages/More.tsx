@@ -314,7 +314,9 @@ export default function More() {
     {
       label: 'Leirskole',
       items: [
-        { to: '/leirskole', icon: Tent, label: 'Leirskole', desc: 'Vakter og oppgaver' },
+        { to: '/leirskole', icon: Tent, label: 'Leirskole', desc: 'Uke, neste vakt og mine vakter' },
+        { to: '/leirskole/vaktplan', icon: CalendarDays, label: 'Hele vaktplanen', desc: 'Alle vakter og aktiviteter' },
+        { to: '/leirskole/oppgaver', icon: ClipboardList, label: 'Oppgaver', desc: 'Oppgaver og min kompetanse' },
         { to: '/leaders', icon: Users, label: 'Ledere', desc: 'Kontakt og vakter' },
         { to: '/chat', icon: MessageCircle, label: 'Leirskole-chat', desc: 'Egen kanal i Lederhuset' },
       ],
