@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +65,7 @@ export function LeirskolePostsCard({
 }) {
   const qc = useQueryClient();
   const { showError } = useStatusPopup();
+  const { leader } = useAuth();
   const { data: posts } = useLeirskoleSchedule(week.id);
   const generate = useGenerateLeirskoleSchedule();
 
@@ -190,6 +192,7 @@ export function LeirskolePostsCard({
         title: 'Leirskole-vaktplan',
         message: 'Vaktplanen er klar — se dine vakter i appen.',
         leader_ids: leaderIds,
+        sender_leader_id: leader?.id,
         url: '/leirskole',
         include_inactive: true,
       },
