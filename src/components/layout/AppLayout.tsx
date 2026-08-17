@@ -506,7 +506,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <div className="bg-amber-500 dark:bg-amber-600 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
           <span className="text-sm font-medium">👁 Du ser appen som {viewAsLeader.name}</span>
           <button
-            onClick={() => { setViewAsLeader(null); navigate('/admin'); }}
+            onClick={() => { setViewAsLeader(null); setViewMode('auto'); navigate('/admin'); }}
             className="text-sm font-bold underline hover:no-underline"
           >
             Avslutt
