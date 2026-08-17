@@ -34,20 +34,30 @@ const SESSION_STYLE = {
   },
   ettermiddag: {
     icon: Sunset,
-    label: 'Ettermiddag',
+    label: '2. økt',
     time: '16–19',
     card: 'border-sky-500/40 bg-sky-500/10',
     chip: 'bg-sky-500/20 text-sky-700 dark:text-sky-200',
     bar: 'bg-sky-500',
+  },
+  kveld: {
+    icon: Sunset,
+    label: '3. økt',
+    time: '20–21:30',
+    card: 'border-violet-500/40 bg-violet-500/10',
+    chip: 'bg-violet-500/20 text-violet-700 dark:text-violet-200',
+    bar: 'bg-violet-500',
   },
 } as const;
 
 const sessionStyle = (key: string) =>
   SESSION_STYLE[key as keyof typeof SESSION_STYLE] ?? SESSION_STYLE.formiddag;
 
-/** Vakt før 15:00 hører til formiddagsøkta, ellers ettermiddag. */
-const sessionForShift = (startTime: string) =>
-  Number(startTime.slice(0, 2)) < 15 ? 'formiddag' : 'ettermiddag';
+/** Vakt før 15:00 = 1. økt, før 20:00 = 2. økt, ellers 3. økt. */
+const sessionForShift = (startTime: string) => {
+  const h = Number(startTime.slice(0, 2));
+  return h < 15 ? 'formiddag' : h < 20 ? 'ettermiddag' : 'kveld';
+};
 
 /** Alle datoene i uken, slik at fridager også vises. */
 function datesBetween(start: string, end: string) {
