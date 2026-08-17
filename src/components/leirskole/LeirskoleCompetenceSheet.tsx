@@ -3,8 +3,7 @@ import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
-import { LEIRSKOLE_COMPETENCIES } from '@/lib/leirskoleCompetencies';
-import { useSaveLeirskoleCompetencies } from '@/hooks/useLeirskole';
+import { useSaveLeirskoleCompetencies, useLeirskoleActivityTypes } from '@/hooks/useLeirskole';
 
 interface Props {
   open: boolean;
@@ -29,6 +28,7 @@ export function LeirskoleCompetenceSheet({
 }: Props) {
   const [selected, setSelected] = useState<string[]>(current);
   const save = useSaveLeirskoleCompetencies();
+  const { data: types } = useLeirskoleActivityTypes(true);
 
   useEffect(() => {
     if (open) setSelected(current);
@@ -68,7 +68,7 @@ export function LeirskoleCompetenceSheet({
         </SheetHeader>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          {LEIRSKOLE_COMPETENCIES.map((c) => {
+          {(types ?? []).map((c) => {
             const active = selected.includes(c.key);
             return (
               <button
