@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Plus, Play, Send, Trash2, Users, CalendarDays, Bell } from 'lucide-react';
+import { ArrowLeft, Plus, Play, Send, Trash2, Users, CalendarDays, Bell, RefreshCw } from 'lucide-react';
 import {
   useLeirskoleWeeks,
   useLeirskoleSchedule,
@@ -92,6 +92,23 @@ export default function LeirskoleAdmin() {
       invalidate();
     },
     onError: (e: any) => showError(e.message),
+  });
+
+  const syncJobb = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('sync-leirskole-jobb');
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data as { imported: number; staff: number; unmatched: string[] };
+    },
+    onSuccess: (res) => {
+      toast.success(`Hentet ${res.imported} uker · ${res.staff} ledere koblet`);
+      if (res.unmatched?.length) {
+        toast.info(`Fant ikke i appen: ${res.unmatched.slice(0, 6).join(', ')}${res.unmatched.length > 6 ? '…' : ''}`);
+      }
+      invalidate();
+    },
+    onError: (e: any) => showError(e.message ?? 'Kunne ikke hente fra jobb-plattformen'),
   });
 
   const setActive = useMutation({
