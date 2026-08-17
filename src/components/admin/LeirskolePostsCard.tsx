@@ -337,8 +337,24 @@ export function LeirskolePostsCard({
         )}
 
         {readOnly && (
+          <></>
+        )}
+        {readOnly && (
           <div className="flex items-center gap-2 rounded-xl border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
             <RefreshCw className="h-4 w-4" /> Administreres i jobbplattformen
+          </div>
+        )}
+
+        {!readOnly && (posts?.length ?? 0) > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card/60 px-3 py-2">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+              <ChevronsLeftRight className="h-3.5 w-3.5" /> Forskyv hele uken
+            </span>
+            {[-60, -30, -15, 15, 30, 60].map((m) => (
+              <Button key={m} size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => shiftDay(null, m)}>
+                {m > 0 ? `+${m}` : m} min
+              </Button>
+            ))}
           </div>
         )}
 
