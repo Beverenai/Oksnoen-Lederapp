@@ -51,6 +51,10 @@ export function LeirskoleSpecialDayTimeline({
   const [draftName, setDraftName] = useState('');
   const [openPost, setOpenPost] = useState<string | null>(null);
   const movedRef = useRef(false);
+  /** Startpunkt for peker – brukes til å skille trykk fra dra. */
+  const pendingRef = useRef<{ slot: number; y: number } | null>(null);
+  const editStartYRef = useRef(0);
+  const DRAG_PX = 6;
 
   /** Sorterte økter — ankomst/avreise har alltid én økt om gangen (ingen overlapp). */
   const sorted = useMemo(() => {
@@ -181,6 +185,7 @@ export function LeirskoleSpecialDayTimeline({
   /** Peker-drag på en eksisterende økt: flytt hele, eller endre slutten. */
   const onEditMove = (clientY: number) => {
     if (!edit) return;
+    if (!movedRef.current && Math.abs(clientY - editStartYRef.current) < DRAG_PX) return;
     const s = slotAt(clientY);
     if (edit.mode === 'move') {
       const length = edit.to - edit.from;
@@ -249,19 +254,24 @@ export function LeirskoleSpecialDayTimeline({
           onPointerDown={(e) => {
             if ((e.target as HTMLElement).closest('[data-post]')) return;
             e.currentTarget.setPointerCapture(e.pointerId);
-            const s = slotAt(e.clientY);
             setDraft(null);
-            setDrag({ from: s, to: s });
+            pendingRef.current = { slot: slotAt(e.clientY), y: e.clientY };
           }}
           onPointerMove={(e) => {
             if (edit) {
               onEditMove(e.clientY);
               return;
             }
-            if (drag) setDrag({ from: drag.from, to: slotAt(e.clientY) });
+            if (drag) {
+              setDrag({ from: drag.from, to: slotAt(e.clientY) });
+              return;
+            }
+            const p = pendingRef.current;
+            if (p && Math.abs(e.clientY - p.y) >= DRAG_PX) setDrag({ from: p.slot, to: slotAt(e.clientY) });
           }}
           onPointerUp={(e) => {
             e.currentTarget.releasePointerCapture?.(e.pointerId);
+            pendingRef.current = null;
             if (edit) {
               commitEdit();
               return;
@@ -323,6 +333,7 @@ export function LeirskoleSpecialDayTimeline({
                     onPointerDown={(e) => {
                       if ((e.target as HTMLElement).closest('[data-resize]')) return;
                       movedRef.current = false;
+                      editStartYRef.current = e.clientY;
                       setEdit({ id: p.id, mode: 'move', from: rawFrom, to: rawTo, grabOffset: slotAt(e.clientY) - rawFrom });
                     }}
                   >
@@ -349,6 +360,8 @@ export function LeirskoleSpecialDayTimeline({
                       data-resize
                       onPointerDown={(e) => {
                         e.stopPropagation();
+                        movedRef.current = false;
+                        editStartYRef.current = e.clientY;
                         setEdit({ id: p.id, mode: 'resize', from: rawFrom, to: rawTo, grabOffset: 0 });
                       }}
                       className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize bg-emerald-600/40"
