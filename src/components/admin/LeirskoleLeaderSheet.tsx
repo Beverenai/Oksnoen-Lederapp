@@ -159,7 +159,7 @@ export function LeirskoleLeaderSheet({
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Tildel aktivitet</p>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             <div className="flex gap-1.5">
-              {LEIRSKOLE_SESSIONS.map((s) => (
+              {LEIRSKOLE_ACTIVITY_SESSIONS.map((s) => (
                 <button
                   key={s.key}
                   onClick={() => setSession(s.key)}
