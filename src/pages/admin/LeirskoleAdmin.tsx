@@ -42,6 +42,8 @@ export default function LeirskoleAdmin() {
 
   const [newWeek, setNewWeek] = useState({ name: '', start_date: '', end_date: '' });
   const [taskDraft, setTaskDraft] = useState({ title: '', description: '' });
+  const [taskAssignAll, setTaskAssignAll] = useState(true);
+  const [taskLeaderIds, setTaskLeaderIds] = useState<string[]>([]);
 
   const { data: allLeaders } = useQuery({
     queryKey: ['leirskole-all-leaders'],
@@ -154,15 +156,18 @@ export default function LeirskoleAdmin() {
     mutationFn: async () => {
       if (!week) throw new Error('Velg en uke');
       if (!taskDraft.title.trim()) throw new Error('Oppgaven må ha en tittel');
+      if (!taskAssignAll && taskLeaderIds.length === 0) throw new Error('Velg minst én leder');
+      const targets = taskAssignAll ? (staff ?? []).map((s) => s.leader_id) : taskLeaderIds;
       const { error } = await supabase.from('leirskole_tasks').insert({
         week_id: week.id,
         title: taskDraft.title.trim(),
         description: taskDraft.description.trim() || null,
-        assign_all: true,
+        assign_all: taskAssignAll,
+        assigned_leader_ids: taskAssignAll ? null : taskLeaderIds,
         created_by: leader?.id ?? null,
       });
       if (error) throw error;
-      const ids = (staff ?? []).map((s) => s.leader_id);
+      const ids = targets;
       if (ids.length) {
         await supabase.functions.invoke('push-send', {
           body: {
@@ -176,7 +181,12 @@ export default function LeirskoleAdmin() {
         }).catch(() => null);
       }
     },
-    onSuccess: () => { toast.success('Oppgave sendt'); setTaskDraft({ title: '', description: '' }); invalidate(); },
+    onSuccess: () => {
+      toast.success('Oppgave sendt');
+      setTaskDraft({ title: '', description: '' });
+      setTaskLeaderIds([]);
+      invalidate();
+    },
     onError: (e: any) => showError(e.message),
   });
 
