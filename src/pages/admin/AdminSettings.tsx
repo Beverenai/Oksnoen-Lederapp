@@ -350,7 +350,7 @@ export default function AdminSettings() {
             localHomeConfig={localHomeConfig}
             setLocalHomeConfig={setLocalHomeConfig}
             setHomeConfig={setHomeConfig}
-            onLeaderUpdated={loadData}
+            onLeaderUpdated={quietReload}
           />
         </div>
 
@@ -358,7 +358,8 @@ export default function AdminSettings() {
           leader={editingLeader}
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
-          onSaved={loadData}
+          onSaved={quietReload}
+          onRoleChanged={(role) => editingLeader && updateLeaderInList(editingLeader.id, { role } as Partial<LeaderWithRole>)}
           currentRole={(editingLeader as any)?.role || 'leader'}
         />
       </>
