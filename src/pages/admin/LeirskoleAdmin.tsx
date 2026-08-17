@@ -503,6 +503,7 @@ export default function LeirskoleAdmin() {
 
       <LeirskoleWeekPeriodsCard
         selectedWeekId={week.id}
+        activeWeekId={activeWeek?.id}
         onSelect={(id) => {
           setPickedWeekId(id);
           setViewDate(null);
