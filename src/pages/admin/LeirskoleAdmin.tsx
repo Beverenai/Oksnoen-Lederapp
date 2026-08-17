@@ -18,9 +18,11 @@ import {
   useLeirskoleSchedule,
   useLeirskoleStaff,
   useLeirskoleWeekPlan,
+  useLeirskoleWeeks,
 } from '@/hooks/useLeirskole';
 import { LeirskoleAccessCard } from '@/components/admin/LeirskoleAccessCard';
 import { LeirskoleActivityTypesCard } from '@/components/admin/LeirskoleActivityTypesCard';
+import { LeirskoleWeekPeriodsCard } from '@/components/admin/LeirskoleWeekPeriodsCard';
 import { LeirskoleGuideCard } from '@/components/admin/LeirskoleGuideCard';
 import { LeirskoleLeaderSheet } from '@/components/admin/LeirskoleLeaderSheet';
 import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
@@ -102,7 +104,14 @@ export default function LeirskoleAdmin() {
   const { isAdmin, leader } = useAuth();
   const { showError } = useStatusPopup();
 
-  const { data: week, isLoading } = useActiveLeirskoleWeek();
+  const { data: activeWeek, isLoading } = useActiveLeirskoleWeek();
+  const { data: weeks } = useLeirskoleWeeks();
+  const [pickedWeekId, setPickedWeekId] = useState<string | null>(null);
+  // Admin planlegger én uke om gangen: valgt uke, ellers uken vi er inne i.
+  const week = useMemo(
+    () => (weeks ?? []).find((w) => w.id === pickedWeekId) ?? activeWeek ?? null,
+    [weeks, pickedWeekId, activeWeek],
+  );
   const { data: staff } = useLeirskoleStaff(week?.id);
   const { data: posts } = useLeirskoleSchedule(week?.id);
   const { data: weekActivities } = useLeirskoleActivities(week?.id);
@@ -328,10 +337,13 @@ export default function LeirskoleAdmin() {
 
   if (!week) {
     return (
-      <div className="py-16 text-center">
-        <CalendarDays className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-        <h1 className="text-xl font-heading font-bold">Ingen aktiv leirskoleuke</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Uken aktiveres automatisk ut fra datoene.</p>
+      <div className="space-y-3 pb-8">
+        <div className="py-10 text-center">
+          <CalendarDays className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+          <h1 className="text-xl font-heading font-bold">Ingen leirskoleuke ennå</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Lag en uke med datoer, og legg til lederne som skal jobbe.</p>
+        </div>
+        <LeirskoleWeekPeriodsCard selectedWeekId={pickedWeekId} onSelect={setPickedWeekId} />
       </div>
     );
   }
@@ -488,6 +500,14 @@ export default function LeirskoleAdmin() {
       </div>
 
       {guideOpen && <LeirskoleGuideCard />}
+
+      <LeirskoleWeekPeriodsCard
+        selectedWeekId={week.id}
+        onSelect={(id) => {
+          setPickedWeekId(id);
+          setViewDate(null);
+        }}
+      />
 
       <LeirskoleWeekBoard week={week} staff={staff ?? []} />
 
