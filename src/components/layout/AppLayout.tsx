@@ -46,7 +46,7 @@ import { useSweatersEnabled } from '@/hooks/useSweatersEnabled';
 import { useAppMode } from '@/hooks/useAppMode';
 import { useAccessMode } from '@/hooks/useViewMode';
 import { useSeasonView } from '@/contexts/SeasonViewContext';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Tent } from 'lucide-react';
 import {
   Collapsible,
   CollapsibleContent,
