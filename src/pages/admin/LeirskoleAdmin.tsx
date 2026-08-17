@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users, ChevronDown, HelpCircle } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
   useLeirskoleActivities,
@@ -30,6 +30,7 @@ import { LeirskoleDayActivityCard } from '@/components/admin/LeirskoleDayActivit
 import { LeirskoleKitchenCard } from '@/components/admin/LeirskoleKitchenCard';
 import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
 import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
+import { LeirskoleWeekBoard } from '@/components/admin/LeirskoleWeekBoard';
 import { formatDue, hhmm, shortDate, todayStr } from '@/lib/leirskoleDates';
 import { LeaderAvatarStack, type AvatarPerson } from '@/components/leirskole/LeaderAvatarStack';
 
@@ -114,6 +115,7 @@ export default function LeirskoleAdmin() {
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [openStep, setOpenStep] = useState<number | null>(1);
   const [todayOpen, setTodayOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const [taskDraft, setTaskDraft] = useState({ title: '', description: '', due_at: '' });
   const [taskAssignAll, setTaskAssignAll] = useState(true);
