@@ -19,7 +19,8 @@ function datesBetween(start: string, end: string) {
 
 /**
  * Sørger for at første og siste dag i en leirskoleuke er markert som ankomst/avreise.
- * Uker som har en tidligere uke før seg får «avreise + ankomst» på første dag.
+ * Hvis en annen uke slutter samme dag som denne starter (eller starter samme dag som denne slutter),
+ * markeres dagen som «avreise + ankomst» — en skole drar og en ny kommer samme dag.
  * Kalles fra både ukeplanen og ukeoversikten, slik at markeringen finnes uansett hvor admin starter.
  */
 export function useSeedLeirskoleSpecialDays(week: LeirskoleWeek, enabled = true) {
@@ -29,23 +30,31 @@ export function useSeedLeirskoleSpecialDays(week: LeirskoleWeek, enabled = true)
   const dates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
   const first = dates[0];
   const last = dates[dates.length - 1];
+  const others = useMemo(() => (allWeeks ?? []).filter((w) => w.id !== week.id), [allWeeks, week.id]);
+  /** En annen uke slutter samme dag som denne starter → avreise + ankomst. */
   const isFollowUpWeek = useMemo(
-    () => (allWeeks ?? []).some((w) => w.id !== week.id && w.start_date < week.start_date),
-    [allWeeks, week.id, week.start_date],
+    () => others.some((w) => w.end_date === week.start_date) || others.some((w) => w.start_date < week.start_date),
+    [others, week.start_date],
+  );
+  /** En annen uke starter samme dag som denne slutter → avreise + ankomst også på siste dag. */
+  const lastDayIsBoth = useMemo(
+    () => others.some((w) => w.start_date === week.end_date),
+    [others, week.end_date],
   );
   const firstDayType: 'arrival' | 'both' = isFollowUpWeek ? 'both' : 'arrival';
+  const lastDayType: 'departure' | 'both' = lastDayIsBoth ? 'both' : 'departure';
   const seeded = useRef<string | null>(null);
 
   useEffect(() => {
     if (!enabled || !weekDays || !allWeeks || dates.length < 2) return;
-    const stamp = `${week.id}:${first}:${last}:${firstDayType}`;
+    const stamp = `${week.id}:${first}:${last}:${firstDayType}:${lastDayType}`;
     if (seeded.current === stamp) return;
     seeded.current = stamp;
     const typeOf = (date: string) => weekDays.find((d) => d.date === date)?.day_type ?? 'normal';
     if (typeOf(first) !== firstDayType) setDayType.mutate({ weekId: week.id, date: first, dayType: firstDayType });
-    if (typeOf(last) !== 'departure') setDayType.mutate({ weekId: week.id, date: last, dayType: 'departure' });
+    if (typeOf(last) !== lastDayType) setDayType.mutate({ weekId: week.id, date: last, dayType: lastDayType });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, weekDays, allWeeks, first, last, week.id, firstDayType]);
+  }, [enabled, weekDays, allWeeks, first, last, week.id, firstDayType, lastDayType]);
 
-  return { firstDayType, isFollowUpWeek };
+  return { firstDayType, lastDayType, isFollowUpWeek };
 }
