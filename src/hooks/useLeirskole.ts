@@ -57,12 +57,54 @@ export function useLeirskoleStaff(weekId?: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leirskole_staff')
-        .select('*, leader:leaders(id, name, profile_image_url)')
+        .select('*, leader:leaders(id, name, profile_image_url, leirskole_competencies, phone)')
         .eq('week_id', weekId!);
       if (error) throw error;
       return (data ?? []) as (LeirskoleStaff & {
-        leader: { id: string; name: string; profile_image_url: string | null } | null;
+        leader: {
+          id: string;
+          name: string;
+          profile_image_url: string | null;
+          leirskole_competencies: string[] | null;
+          phone?: string | null;
+        } | null;
       })[];
+    },
+  });
+}
+
+/** Min leirskole-kompetanse. */
+export function useMyLeirskoleCompetencies() {
+  const { effectiveLeader } = useAuth();
+  return useQuery({
+    queryKey: ['leirskole-competencies', effectiveLeader?.id],
+    enabled: !!effectiveLeader?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leaders')
+        .select('leirskole_competencies')
+        .eq('id', effectiveLeader!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return ((data?.leirskole_competencies ?? []) as string[]) ?? [];
+    },
+  });
+}
+
+/** Lagre kompetanse for en leder (seg selv eller admin på andre). */
+export function useSaveLeirskoleCompetencies() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ leaderId, competencies }: { leaderId: string; competencies: string[] }) => {
+      const { error } = await supabase
+        .from('leaders')
+        .update({ leirskole_competencies: competencies })
+        .eq('id', leaderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['leirskole-competencies'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-staff'] });
     },
   });
 }
