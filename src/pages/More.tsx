@@ -298,6 +298,19 @@ export default function More() {
   ];
 
   const leirskoleSections: MoreSection[] = [
+    ...(isAdmin
+      ? [{
+          label: 'Admin',
+          items: [
+            {
+              to: '/admin/leirskole',
+              icon: LayoutDashboard,
+              label: 'Leirskole-admin',
+              desc: 'Vaktplan, ledere og oppgaver',
+            } as MoreItem,
+          ],
+        }]
+      : []),
     {
       label: 'Leirskole',
       items: [
@@ -307,7 +320,10 @@ export default function More() {
     },
     {
       label: 'Ditt',
-      items: [{ to: '/profile', icon: User, label: 'Min Profil', desc: 'Bilde og innstillinger' }],
+      items: [
+        { to: '/profile', icon: User, label: 'Min Profil', desc: 'Bilde og innstillinger' },
+        { to: '/lederpass', icon: IdCard, label: 'Lederpass', desc: 'Stemplene dine' },
+      ],
     },
     {
       label: 'Konto',
@@ -419,7 +435,7 @@ export default function More() {
         ),
       )}
 
-      {limited && (
+      {limited && accessMode !== 'leirskole' && (
         <section className="space-y-2">
           <div className="flex items-center justify-between px-1">
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
