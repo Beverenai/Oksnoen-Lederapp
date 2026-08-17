@@ -255,6 +255,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         endDate: week.end_date,
         mode,
         createdBy: leader?.id ?? null,
+        // «Tilfeldig ukeplan» skal faktisk lage en ny plan, ikke bare fylle
+        // tomme ruter (ellers ser det ut som ingenting skjer).
+        overwritePlan: mode === 'plan',
       });
     },
     onSuccess: (result) => {
@@ -262,7 +265,13 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
       ['leirskole-week-plan', 'leirskole-schedule', 'leirskole-activities', 'leirskole-activity-history', 'leirskole-my-shifts'].forEach(
         (key) => qc.invalidateQueries({ queryKey: [key] }),
       );
-      toast.success('Uken er generert');
+      const parts = [
+        result.cellsFilled ? `${result.cellsFilled} ruter` : null,
+        result.shifts ? `${result.shifts} vakter` : null,
+        result.activityAssignments ? `${result.activityAssignments} aktiviteter` : null,
+      ].filter(Boolean);
+      if (parts.length) toast.success(`Generert: ${parts.join(' · ')}`);
+      else toast.info('Ingenting ble endret — alt var allerede fylt ut');
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke generere uken'),
   });
@@ -434,7 +443,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                 title: 'Vaktplan fra ukeplanen',
                 sub: 'Ledere fylles inn, roterer på aktiviteter · maks 8t',
               },
-              { mode: 'plan' as const, title: 'Tilfeldig ukeplan', sub: 'Fyll bare tomme ruter' },
+              { mode: 'plan' as const, title: 'Ny tilfeldig ukeplan', sub: 'Lager plan på nytt (overskriver rutene)' },
             ].map((o) => (
               <button
                 key={o.mode}
