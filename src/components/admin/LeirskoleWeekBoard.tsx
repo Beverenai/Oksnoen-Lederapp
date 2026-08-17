@@ -34,6 +34,8 @@ const MEAL_TIMES: Record<string, { start: string; end: string; hours: number }> 
   Kvelds: { start: '19:00', end: '20:00', hours: 1 },
 };
 const TEMPLATE_NAMES = new Set(['Frokost', 'Middag', 'Kvelds', 'Nattevakt', 'Sanitas', 'Økt 1', 'Økt 2', 'Økt 3']);
+/** Navn som har egne rader (måltid/natt) og derfor ikke vises i tidslinjen. */
+const ROW_NAMES = new Set(['Frokost', 'Middag', 'Kvelds', 'Nattevakt', 'Sanitas']);
 
 type StaffRow = LeirskoleStaff & {
   leader: {
