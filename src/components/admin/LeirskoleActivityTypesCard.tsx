@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Plus, ListChecks, ArrowUp, ArrowDown } from 'lucide-react';
+import { Trash2, Plus, ListChecks, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
 import {
   useLeirskoleActivityTypes,
   useAddLeirskoleActivityType,
@@ -17,10 +17,12 @@ export function LeirskoleActivityTypesCard() {
   const update = useUpdateLeirskoleActivityType();
   const remove = useDeleteLeirskoleActivityType();
 
+  const [open, setOpen] = useState(false);
   const [label, setLabel] = useState('');
   const [emoji, setEmoji] = useState('');
 
   const list = types ?? [];
+  const activeCount = list.filter((t) => t.is_active).length;
 
   const addNew = () => {
     if (!label.trim()) {
@@ -49,37 +51,54 @@ export function LeirskoleActivityTypesCard() {
   };
 
   return (
-    <div className="oks-ls-pill space-y-3 p-4">
-      <div>
-        <p className="flex items-center gap-2 text-sm font-semibold">
-          <ListChecks className="h-4 w-4 text-primary" /> Aktiviteter
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Legg til aktivitetene lederne kan settes på. Slå av de du ikke bruker — historikken beholdes.
-        </p>
-      </div>
+    <div className="oks-ls-pill overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 p-4 text-left"
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+          <ListChecks className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold">Aktiviteter</span>
+          <span className="block text-xs text-muted-foreground">
+            {activeCount} aktive · {list.length} totalt
+          </span>
+        </span>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {open ? 'Lukk' : 'Åpne for å endre'}
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
 
-      <div className="flex gap-1.5">
-        <Input
-          value={emoji}
-          onChange={(e) => setEmoji(e.target.value)}
-          placeholder="🛞"
-          className="w-16 text-center"
-          maxLength={4}
-        />
-        <Input
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && addNew()}
-          placeholder="Ny aktivitet…"
-          className="flex-1"
-        />
-        <Button onClick={addNew} disabled={add.isPending} className="gap-1 rounded-full">
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
+      {open && (
+        <div className="space-y-3 border-t border-border/60 p-4 pt-3">
+          <p className="text-xs text-muted-foreground">
+            Legg til aktivitetene lederne kan settes på. Slå av de du ikke bruker — historikken beholdes.
+          </p>
 
-      <div className="space-y-1.5">
+          <div className="flex gap-1.5">
+            <Input
+              value={emoji}
+              onChange={(e) => setEmoji(e.target.value)}
+              placeholder="🛞"
+              className="w-16 text-center"
+              maxLength={4}
+            />
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addNew()}
+              placeholder="Ny aktivitet…"
+              className="flex-1"
+            />
+            <Button onClick={addNew} disabled={add.isPending} className="gap-1 rounded-full">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="space-y-1.5">
         {list.map((t, i) => (
           <div
             key={t.id}
