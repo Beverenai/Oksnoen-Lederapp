@@ -26,7 +26,7 @@ import { dayLabel, shortDate, hhmm, todayStr } from '@/lib/leirskoleDates';
 const SESSION_STYLE = {
   formiddag: {
     icon: Sunrise,
-    label: 'Formiddag',
+    label: '1. økt',
     time: '11–14',
     card: 'border-amber-500/40 bg-amber-500/10',
     chip: 'bg-amber-500/20 text-amber-700 dark:text-amber-200',
