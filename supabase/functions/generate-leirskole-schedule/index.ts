@@ -338,7 +338,12 @@ Deno.serve(async (req) => {
     const postIds = posts.map(p => p.id);
     const { data: existing } = await supa.from("leirskole_assignments").select("*").in("post_id", postIds);
     const existingArr = (existing ?? []) as any[];
-    const toKeep = keepLocked ? existingArr.filter(a => a.is_locked) : [];
+    const postDateById = new Map(posts.map(p => [p.id, p.date]));
+    const onKitchen = (staffId: string, date: string) => kitchenDays.has(`${staffId}|${date}`);
+    // Kjøkkenledere skal ikke ha andre vakter den dagen — også låste fjernes.
+    const toKeep = (keepLocked ? existingArr.filter(a => a.is_locked) : []).filter(
+      a => !onKitchen(a.staff_id, String(postDateById.get(a.post_id) ?? "")),
+    );
     const toDelete = existingArr.filter(a => !toKeep.includes(a));
 
     const stateById = new Map<string, State>();
@@ -381,7 +386,9 @@ Deno.serve(async (req) => {
       need = Math.min(need, staffCap(post) - locked.length);
       if (need <= 0) continue;
 
-      const pool = staff.filter(st => !locked.some(l => l.staff_id === st.id));
+      const pool = staff.filter(
+        st => !locked.some(l => l.staff_id === st.id) && !onKitchen(st.id, post.date),
+      );
       const evaluated = pool.map(st => {
         const s = stateById.get(st.id)!;
         const check = canAssign(st, post, s, availability, minRest);
