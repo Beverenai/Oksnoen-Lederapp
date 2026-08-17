@@ -434,6 +434,11 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           <p className="font-semibold">
             {summary.cellsFilled} ruter fylt · {summary.shifts} vakter · {summary.activityAssignments} aktiviteter fordelt
           </p>
+          {summary.scheduleWarning && (
+            <p className="mt-1 flex items-center gap-1 text-amber-500">
+              <AlertTriangle className="h-3 w-3" /> {summary.scheduleWarning}
+            </p>
+          )}
           {summary.gaps.length > 0 && (
             <p className="mt-1 flex items-center gap-1 text-destructive">
               <AlertTriangle className="h-3 w-3" /> {summary.gaps.length} aktiviteter mangler leder
