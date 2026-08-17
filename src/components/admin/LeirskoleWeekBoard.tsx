@@ -27,6 +27,12 @@ import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffP
 import { trimDayHours } from '@/lib/leirskoleDayHours';
 
 const MEALS = ['Frokost', 'Middag', 'Kvelds'];
+const MEAL_TIMES: Record<string, { start: string; end: string; hours: number }> = {
+  Frokost: { start: '09:00', end: '10:00', hours: 1 },
+  Middag: { start: '14:00', end: '15:00', hours: 1 },
+  Kvelds: { start: '19:00', end: '20:00', hours: 1 },
+};
+const TEMPLATE_NAMES = new Set(['Frokost', 'Middag', 'Kvelds', 'Nattevakt', 'Sanitas', 'Økt 1', 'Økt 2', 'Økt 3']);
 
 type StaffRow = LeirskoleStaff & {
   leader: {
