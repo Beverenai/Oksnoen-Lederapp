@@ -23,6 +23,8 @@ export interface AutoSlotInput {
   activities: string[];
   /** Ledere (leader_id) som har vakt i denne økten. */
   onDuty: string[];
+  /** Ankomst/avreise: ankomst krever ikke kompetanse (alle på vakt kan ta alt). */
+  requireCompetence?: boolean;
 }
 
 export interface AutoAssignmentRow {
