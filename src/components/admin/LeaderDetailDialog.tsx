@@ -543,8 +543,19 @@ export function LeaderDetailDialog({
 
               {/* Role Selection */}
               <div className="space-y-3">
-                <Label className="text-base font-semibold">Rolle</Label>
-                <RadioGroup value={role} onValueChange={(value) => setRole(value as AppRole)}>
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Rolle</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {roleStatus === 'saving' && 'Lagrer rolle…'}
+                    {roleStatus === 'saved' && 'Rolle lagret'}
+                    {roleStatus === 'error' && 'Kunne ikke lagre'}
+                  </span>
+                </div>
+                <RadioGroup
+                  value={role}
+                  disabled={roleStatus === 'saving'}
+                  onValueChange={(value) => setRole(value as AppRole)}
+                >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="leader" id="role-leader" />
                     <Label htmlFor="role-leader" className="flex items-center gap-2 cursor-pointer">
