@@ -188,13 +188,16 @@ Deno.serve(async (req) => {
     });
     const responseText = await res.text();
     if (!res.ok) {
-      return json(
-        {
-          error: `Jobbplattformen svarte ${res.status}`,
-          detail: responseText.slice(0, 400),
-        },
-        502,
-      );
+      const message = res.status === 404
+        ? "Eksport-funksjonen «export-leirskole» er ikke satt opp på jobb-plattformen ennå. Legg den ut der først."
+        : res.status === 401 || res.status === 403
+        ? "Jobb-plattformen avviste nøkkelen (LEIRSKOLE_SYNC_SECRET må være lik i begge appene)."
+        : `Jobb-plattformen svarte ${res.status}`;
+      return json({
+        error: message,
+        status: res.status,
+        detail: responseText.slice(0, 300),
+      });
     }
 
     let payload: {
@@ -205,12 +208,12 @@ Deno.serve(async (req) => {
     try {
       payload = JSON.parse(responseText);
     } catch {
-      return json({ error: "Ugyldig svar fra jobbplattformen" }, 502);
+      return json({ error: "Ugyldig svar fra jobb-plattformen" }, 200);
     }
     if (payload.contract_version !== 2) {
       return json({
         error: "Jobbplattformen bruker en utdatert eksportkontrakt",
-      }, 502);
+      });
     }
 
     const weeks = Array.isArray(payload.weeks) ? payload.weeks : [];
@@ -327,7 +330,7 @@ Deno.serve(async (req) => {
         errors.push(`${week.name}: ugyldig tidspunkt for publisert vaktplan`);
       }
 
-      const { data: existingWeek, error: existingWeekError } = await admin
+      const { data: sourceWeek, error: existingWeekError } = await admin
         .from("leirskole_weeks")
         .select("id")
         .eq("external_ref", week.external_ref)
@@ -337,10 +340,33 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      let existingWeek = sourceWeek;
+      if (!existingWeek) {
+        const { data: matchingWeeks, error: matchingWeeksError } = await admin
+          .from("leirskole_weeks")
+          .select("id")
+          .is("external_ref", null)
+          .eq("start_date", week.start_date)
+          .eq("end_date", week.end_date)
+          .limit(2);
+        if (matchingWeeksError) {
+          errors.push(`${week.name}: ${matchingWeeksError.message}`);
+          continue;
+        }
+        if ((matchingWeeks?.length ?? 0) > 1) {
+          errors.push(
+            `${week.name}: flere eksisterende uker har de samme datoene`,
+          );
+          continue;
+        }
+        existingWeek = matchingWeeks?.[0] ?? null;
+      }
+
       const weekQuery = existingWeek
         ? admin
           .from("leirskole_weeks")
           .update({
+            external_ref: week.external_ref,
             name: week.name.trim(),
             start_date: week.start_date,
             end_date: week.end_date,
@@ -422,6 +448,7 @@ Deno.serve(async (req) => {
               email: person.email?.trim() || null,
               phone: person.phone?.trim() || null,
               role_label: person.role_label ?? null,
+              max_daily_hours: positiveNumber(person.max_daily_hours, 8),
               source_status: person.employment_status ?? "hired",
               availability,
               linked_leader_id: leaderId,
@@ -594,26 +621,69 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const { data: postRow, error: postError } = await admin
+        const postValues = {
+          week_id: weekRow.id,
+          external_ref: post.external_ref,
+          date: post.date,
+          name: post.name.trim(),
+          post_type: post.post_type?.trim() || "other",
+          start_time: post.start_time,
+          end_time: post.end_time,
+          crosses_midnight: post.crosses_midnight === true,
+          required_leaders: integerAtLeast(post.required_leaders, 1, 1),
+          is_main_shift: post.is_main_shift === true,
+          is_night: post.is_night === true,
+          sort_order: integerAtLeast(post.sort_order, 0, 0),
+          notes: post.notes ?? null,
+        };
+
+        const { data: sourcePost, error: sourcePostError } = await admin
           .from("leirskole_posts")
-          .upsert(
-            {
-              week_id: weekRow.id,
-              external_ref: post.external_ref,
-              date: post.date,
-              name: post.name.trim(),
-              post_type: post.post_type?.trim() || "other",
-              start_time: post.start_time,
-              end_time: post.end_time,
-              crosses_midnight: post.crosses_midnight === true,
-              required_leaders: integerAtLeast(post.required_leaders, 1, 1),
-              is_main_shift: post.is_main_shift === true,
-              is_night: post.is_night === true,
-              sort_order: integerAtLeast(post.sort_order, 0, 0),
-              notes: post.notes ?? null,
-            },
-            { onConflict: "week_id,external_ref" },
+          .select("id")
+          .eq("week_id", weekRow.id)
+          .eq("external_ref", post.external_ref)
+          .maybeSingle();
+        if (sourcePostError) {
+          errors.push(
+            `${week.name} / ${post.name}: ${sourcePostError.message}`,
+          );
+          continue;
+        }
+
+        let existingPost = sourcePost;
+        if (!existingPost) {
+          const { data: matchingPosts, error: matchingPostsError } = await admin
+            .from("leirskole_posts")
+            .select("id")
+            .eq("week_id", weekRow.id)
+            .is("external_ref", null)
+            .eq("date", post.date)
+            .eq("name", post.name.trim())
+            .eq("start_time", post.start_time)
+            .eq("end_time", post.end_time)
+            .limit(2);
+          if (matchingPostsError) {
+            errors.push(
+              `${week.name} / ${post.name}: ${matchingPostsError.message}`,
+            );
+            continue;
+          }
+          if ((matchingPosts?.length ?? 0) > 1) {
+            errors.push(
+              `${week.name} / ${post.name}: flere like vaktposter finnes fra før`,
+            );
+            continue;
+          }
+          existingPost = matchingPosts?.[0] ?? null;
+        }
+
+        const postQuery = existingPost
+          ? admin.from("leirskole_posts").update(postValues).eq(
+            "id",
+            existingPost.id,
           )
+          : admin.from("leirskole_posts").insert(postValues);
+        const { data: postRow, error: postError } = await postQuery
           .select("id")
           .single();
         if (postError || !postRow) {

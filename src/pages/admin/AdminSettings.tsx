@@ -202,8 +202,12 @@ export default function AdminSettings() {
     }
   };
 
-  const loadData = async () => {
-    setIsLoading(true);
+  /**
+   * Henter admin-data. `quiet` brukes ved oppfriskning etter en endring —
+   * da unngår vi skjelettvisningen som ellers river ned åpne dialoger.
+   */
+  const loadData = async (opts?: { quiet?: boolean }) => {
+    if (!opts?.quiet) setIsLoading(true);
     try {
       const [leadersRes, rolesRes, configRes] = await Promise.all([
         supabase.from('leaders').select('*').order('created_at'),
@@ -229,9 +233,17 @@ export default function AdminSettings() {
       console.error('Error loading admin data:', error);
       showError('Kunne ikke laste data');
     } finally {
-      setIsLoading(false);
+      if (!opts?.quiet) setIsLoading(false);
     }
   };
+
+  /** Oppdater én leder lokalt (optimistisk) uten å hente alt på nytt. */
+  const updateLeaderInList = (id: string, patch: Partial<LeaderWithRole>) => {
+    setLeaders((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+    setEditingLeader((prev) => (prev && prev.id === id ? { ...prev, ...patch } : prev));
+  };
+
+  const quietReload = () => loadData({ quiet: true });
 
   const addLeader = async () => {
     if (!newLeaderName || !newLeaderPhone) {
@@ -338,7 +350,7 @@ export default function AdminSettings() {
             localHomeConfig={localHomeConfig}
             setLocalHomeConfig={setLocalHomeConfig}
             setHomeConfig={setHomeConfig}
-            onLeaderUpdated={loadData}
+            onLeaderUpdated={quietReload}
           />
         </div>
 
@@ -346,7 +358,8 @@ export default function AdminSettings() {
           leader={editingLeader}
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
-          onSaved={loadData}
+          onSaved={quietReload}
+          onRoleChanged={(role) => editingLeader && updateLeaderInList(editingLeader.id, { role } as Partial<LeaderWithRole>)}
           currentRole={(editingLeader as any)?.role || 'leader'}
         />
       </>

@@ -14,15 +14,17 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Play, Send, Trash2, Users, CalendarDays, Bell, RefreshCw, Link2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Plus, Send, Trash2, Users, CalendarDays, Bell, RefreshCw, Link2, CheckCircle2 } from 'lucide-react';
 import {
   useLeirskoleWeeks,
   useLeirskoleSchedule,
   useLeirskoleStaff,
-  useGenerateLeirskoleSchedule,
 } from '@/hooks/useLeirskole';
+import { LeirskoleAccessCard } from '@/components/admin/LeirskoleAccessCard';
+import { LeirskolePostsCard } from '@/components/admin/LeirskolePostsCard';
+import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
+import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
 
-const hhmm = (t: string) => t.slice(0, 5);
 const formatDue = (value: string) =>
   new Intl.DateTimeFormat('nb-NO', {
     weekday: 'short',
@@ -44,10 +46,25 @@ type JobSyncResult = {
   errors: string[];
 };
 
+function errorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string') return message;
+  }
+  return fallback;
+}
+
+function responseError(data: unknown) {
+  if (!data || typeof data !== 'object' || !('error' in data)) return null;
+  const value = (data as { error?: unknown }).error;
+  return typeof value === 'string' ? value : null;
+}
+
 async function syncFromJobb() {
   const { data, error } = await supabase.functions.invoke('sync-leirskole-jobb');
+  const message = responseError(data);
+  if (message) throw new Error(message);
   if (error) throw error;
-  if ((data as any)?.error) throw new Error((data as any).error);
   return data as JobSyncResult;
 }
 
@@ -83,7 +100,6 @@ export default function LeirskoleAdmin() {
 
   const { data: staff } = useLeirskoleStaff(week?.id);
   const { data: posts } = useLeirskoleSchedule(week?.id);
-  const generate = useGenerateLeirskoleSchedule();
   const isImportedWeek = !!week?.external_ref;
 
   const [newWeek, setNewWeek] = useState({ name: '', start_date: '', end_date: '' });
@@ -165,7 +181,7 @@ export default function LeirskoleAdmin() {
       setNewWeek({ name: '', start_date: '', end_date: '' });
       invalidate();
     },
-    onError: (e: any) => showError(e.message),
+    onError: (error: unknown) => showError(errorMessage(error, 'Kunne ikke opprette uken')),
   });
 
   const syncJobb = useMutation({
@@ -186,7 +202,7 @@ export default function LeirskoleAdmin() {
       }
       invalidate();
     },
-    onError: (e: any) => showError(e.message ?? 'Kunne ikke hente fra jobb-plattformen'),
+    onError: (error: unknown) => showError(errorMessage(error, 'Kunne ikke hente fra jobb-plattformen')),
   });
 
   const linkJobImport = useMutation({
@@ -204,19 +220,25 @@ export default function LeirskoleAdmin() {
       }
     },
     onSuccess: (warning) => {
-      warning ? toast.warning(warning) : toast.success('Personen og vaktplanen er koblet');
+      if (warning) toast.warning(warning);
+      else toast.success('Personen og vaktplanen er koblet');
       invalidate();
     },
-    onError: (e: any) => showError(e.message ?? 'Kunne ikke koble personen'),
+    onError: (error: unknown) => showError(errorMessage(error, 'Kunne ikke koble personen')),
   });
 
   const setActive = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.rpc('set_active_leirskole_week', { _week_id: id });
+      const { error: deactivateError } = await supabase
+        .from('leirskole_weeks')
+        .update({ is_active: false })
+        .neq('id', id);
+      if (deactivateError) throw deactivateError;
+      const { error } = await supabase.from('leirskole_weeks').update({ is_active: true }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success('Uken er aktiv'); invalidate(); },
-    onError: (e: any) => showError(e.message),
+    onError: (error: unknown) => showError(errorMessage(error, 'Kunne ikke aktivere uken')),
   });
 
   const publish = useMutation({
@@ -240,31 +262,11 @@ export default function LeirskoleAdmin() {
       return null;
     },
     onSuccess: (pushWarning) => {
-      pushWarning ? toast.warning(pushWarning) : toast.success('Oppdatert');
+      if (pushWarning) toast.warning(pushWarning);
+      else toast.success('Oppdatert');
       invalidate();
     },
-    onError: (e: any) => showError(e.message),
-  });
-
-  const toggleStaff = useMutation({
-    mutationFn: async ({ leaderId, add }: { leaderId: string; add: boolean }) => {
-      if (!week) return;
-      if (add) {
-        const { error } = await supabase
-          .from('leirskole_staff')
-          .insert({ week_id: week.id, leader_id: leaderId, max_daily_hours: week.max_daily_hours ?? 8 });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('leirskole_staff')
-          .delete()
-          .eq('week_id', week.id)
-          .eq('leader_id', leaderId);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => invalidate(),
-    onError: (e: any) => showError(e.message),
+    onError: (error: unknown) => showError(errorMessage(error, 'Kunne ikke publisere vaktplanen')),
   });
 
   const createTask = useMutation({
@@ -296,12 +298,13 @@ export default function LeirskoleAdmin() {
       return null;
     },
     onSuccess: (pushWarning) => {
-      pushWarning ? toast.warning(pushWarning) : toast.success('Oppgave sendt');
+      if (pushWarning) toast.warning(pushWarning);
+      else toast.success('Oppgave sendt');
       setTaskDraft({ title: '', description: '', due_at: '' });
       setTaskLeaderIds([]);
       invalidate();
     },
-    onError: (e: any) => showError(e.message),
+    onError: (error: unknown) => showError(errorMessage(error, 'Kunne ikke opprette oppgaven')),
   });
 
   const deleteTask = useMutation({
@@ -312,27 +315,6 @@ export default function LeirskoleAdmin() {
     onSuccess: () => invalidate(),
   });
 
-  const runGenerator = async () => {
-    if (!week) return;
-    if (isImportedWeek) {
-      showError('Denne vaktplanen styres fra jobbplattformen');
-      return;
-    }
-    try {
-      const res = await generate.mutateAsync({ weekId: week.id });
-      const missing = res.stats?.missing?.length ?? 0;
-      toast.success(
-        missing === 0
-          ? `Vaktplan generert — ${res.stats?.assigned ?? 0} vakter fordelt`
-          : `Generert med ${missing} udekkede poster`,
-      );
-    } catch (e: any) {
-      showError(e.message ?? 'Kunne ikke generere vaktplan');
-    }
-  };
-
-  const staffIds = new Set((staff ?? []).map((s) => s.leader_id));
-  const staffNames = new Map((staff ?? []).map((s) => [s.id, s.leader?.name ?? 'Ukjent']));
   const unmatchedImports = (jobImports ?? []).filter((row) => !row.linked_leader_id);
 
   const hoursByStaff = useMemo(() => {
@@ -437,11 +419,7 @@ export default function LeirskoleAdmin() {
                   <Badge variant="secondary" className="gap-1.5 py-1.5">
                     <RefreshCw className="h-3.5 w-3.5" /> Fra jobbplattformen
                   </Badge>
-                ) : (
-                  <Button onClick={runGenerator} disabled={generate.isPending} className="gap-2">
-                    <Play className="h-4 w-4" /> {generate.isPending ? 'Genererer…' : 'Generer vaktplan'}
-                  </Button>
-                )}
+                ) : null}
               </div>
               <div className="flex items-center justify-between rounded-xl border bg-card/50 px-3 py-2">
                 <div className="flex items-center gap-2 text-sm">
@@ -501,32 +479,34 @@ export default function LeirskoleAdmin() {
             </Card>
           )}
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Users className="h-4 w-4 text-primary" /> Ledere på leirskole ({staff?.length ?? 0})
-              </CardTitle>
-              <CardDescription>Trykk for å legge til eller fjerne</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex flex-wrap gap-2">
-                {(allLeaders ?? []).map((l) => {
-                  const on = staffIds.has(l.id);
-                  return (
-                    <button
-                      key={l.id}
-                      onClick={() => toggleStaff.mutate({ leaderId: l.id, add: !on })}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                        on ? 'bg-primary text-primary-foreground' : 'bg-card/60 text-muted-foreground'
-                      }`}
-                    >
-                      {l.name}
-                    </button>
-                  );
-                })}
-              </div>
-              {(staff ?? []).length > 0 && (
-                <div className="space-y-1 pt-2">
+          <LeirskoleAccessCard
+            weekId={week.id}
+            weekName={week.name}
+            maxDailyHours={week.max_daily_hours}
+          />
+
+          <LeirskoleStaffPanel
+            weekName={week.name}
+            weekDates={`${week.start_date} – ${week.end_date}`}
+            staff={staff ?? []}
+            hoursByStaff={hoursByStaff}
+            maxDailyHours={week.max_daily_hours}
+          />
+
+          <LeirskolePostsCard week={week} staff={staff ?? []} readOnly={isImportedWeek} />
+
+          <LeirskoleSessionInfoCard weekId={week.id} staff={staff ?? []} />
+
+          {(staff ?? []).length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Users className="h-4 w-4 text-primary" /> Timer per leder
+                </CardTitle>
+                <CardDescription>Ut fra vaktplanen for denne uken</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1">
                   {(staff ?? []).map((s) => (
                     <div key={s.id} className="flex items-center justify-between rounded-xl border bg-card/40 px-3 py-1.5">
                       <span className="text-sm">{s.leader?.name}</span>
@@ -536,9 +516,9 @@ export default function LeirskoleAdmin() {
                     </div>
                   ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="pb-3">
@@ -601,7 +581,7 @@ export default function LeirskoleAdmin() {
               </Button>
 
               <div className="space-y-1">
-                {(tasks ?? []).map((t: any) => (
+                {(tasks ?? []).map((t) => (
                   <div key={t.id} className="flex items-start justify-between gap-2 rounded-xl border bg-card/40 px-3 py-2">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{t.title}</p>
@@ -631,38 +611,6 @@ export default function LeirskoleAdmin() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                Vaktplan
-                {isImportedWeek && <Badge variant="outline">Synkronisert</Badge>}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {(posts ?? []).length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {isImportedWeek
-                    ? 'Ingen publisert vaktplan er hentet fra jobbplattformen ennå.'
-                    : 'Ingen vaktposter ennå — generatoren lager standardposter.'}
-                </p>
-              ) : (
-                (posts ?? []).map((p) => (
-                  <div key={p.id} className="rounded-xl border bg-card/40 px-3 py-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-medium">{p.date} · {p.name}</p>
-                      <Badge variant="outline" className="tabular-nums">
-                        {hhmm(p.start_time)}–{hhmm(p.end_time)}
-                      </Badge>
-                    </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {p.assignments.length}/{p.required_leaders} ·{' '}
-                      {p.assignments.map((a) => staffNames.get(a.staff_id) ?? '—').join(', ') || 'ingen'}
-                    </p>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
         </>
       )}
     </div>

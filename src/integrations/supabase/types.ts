@@ -1875,6 +1875,7 @@ export type Database = {
           is_external: boolean
           last_app_edit_at: string
           last_synced_at: string | null
+          leirskole_competencies: string[]
           ministerpost: string | null
           name: string
           phone: string
@@ -1913,6 +1914,7 @@ export type Database = {
           is_external?: boolean
           last_app_edit_at?: string
           last_synced_at?: string | null
+          leirskole_competencies?: string[]
           ministerpost?: string | null
           name: string
           phone: string
@@ -1951,6 +1953,7 @@ export type Database = {
           is_external?: boolean
           last_app_edit_at?: string
           last_synced_at?: string | null
+          leirskole_competencies?: string[]
           ministerpost?: string | null
           name?: string
           phone?: string
@@ -2136,6 +2139,7 @@ export type Database = {
           id: string
           last_seen_at: string
           linked_leader_id: string | null
+          max_daily_hours: number | null
           name: string
           phone: string | null
           role_label: string | null
@@ -2151,6 +2155,7 @@ export type Database = {
           id?: string
           last_seen_at?: string
           linked_leader_id?: string | null
+          max_daily_hours?: number | null
           name: string
           phone?: string | null
           role_label?: string | null
@@ -2166,6 +2171,7 @@ export type Database = {
           id?: string
           last_seen_at?: string
           linked_leader_id?: string | null
+          max_daily_hours?: number | null
           name?: string
           phone?: string | null
           role_label?: string | null
@@ -2254,6 +2260,96 @@ export type Database = {
             columns: ["week_id"]
             isOneToOne: false
             referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_session_info: {
+        Row: {
+          assign_all: boolean
+          assigned_leader_ids: string[]
+          body: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          items: string[]
+          title: string
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          assign_all?: boolean
+          assigned_leader_ids?: string[]
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          items?: string[]
+          title: string
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          assign_all?: boolean
+          assigned_leader_ids?: string[]
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          items?: string[]
+          title?: string
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_session_info_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_session_info_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_session_info_reads: {
+        Row: {
+          created_at: string
+          id: string
+          info_id: string
+          leader_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          info_id: string
+          leader_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          info_id?: string
+          leader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_session_info_reads_info_id_fkey"
+            columns: ["info_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_session_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_session_info_reads_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
             referencedColumns: ["id"]
           },
         ]
@@ -5437,6 +5533,7 @@ export type Database = {
       is_in_match: { Args: { _match_id: string }; Returns: boolean }
       is_kitchen: { Args: never; Returns: boolean }
       is_leirskole: { Args: never; Returns: boolean }
+      is_leirskole_week_member: { Args: { _week_id: string }; Returns: boolean }
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
       leirskole_post_duration: {

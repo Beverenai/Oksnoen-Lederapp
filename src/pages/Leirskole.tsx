@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,16 +10,22 @@ import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   CalendarDays, MessageCircle, ClipboardList, Clock, Moon, Users, Settings, ChevronRight, Sun,
+  Megaphone, Check, Award, Pencil,
 } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
   useIsLeirskoleStaff,
   useLeirskoleSchedule,
+  useLeirskoleSessionInfo,
   useLeirskoleStaff,
   useLeirskoleTasks,
+  useMarkLeirskoleInfoRead,
   useMyLeirskoleShifts,
   useToggleLeirskoleTask,
+  useMyLeirskoleCompetencies,
 } from '@/hooks/useLeirskole';
+import { LeirskoleCompetenceSheet } from '@/components/leirskole/LeirskoleCompetenceSheet';
+import { competenceEmoji, competenceLabel } from '@/lib/leirskoleCompetencies';
 
 const WEEKDAYS = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
@@ -61,6 +67,24 @@ export default function Leirskole() {
   const { data: staff } = useLeirskoleStaff(week?.id);
   const { data: tasks } = useLeirskoleTasks(week?.id);
   const toggleTask = useToggleLeirskoleTask();
+  const { data: sessionInfo } = useLeirskoleSessionInfo(week?.id);
+  const markInfoRead = useMarkLeirskoleInfoRead();
+  const { data: myCompetencies, isLoading: compLoading } = useMyLeirskoleCompetencies();
+  const [compOpen, setCompOpen] = useState(false);
+  const compMissing = !compLoading && (myCompetencies ?? []).length === 0;
+
+  // Første gang: be lederen legge inn kompetansen sin.
+  useEffect(() => {
+    if (compMissing && !!effectiveLeader?.id) setCompOpen(true);
+  }, [compMissing, effectiveLeader?.id]);
+
+  const myInfo = useMemo(
+    () =>
+      (sessionInfo ?? []).filter(
+        (info) => info.assign_all || (info.assigned_leader_ids ?? []).includes(effectiveLeader?.id ?? ''),
+      ),
+    [sessionInfo, effectiveLeader?.id],
+  );
 
   const staffNames = useMemo(() => {
     const map = new Map<string, string>();
@@ -69,7 +93,7 @@ export default function Leirskole() {
   }, [staff]);
 
   const today = todayStr();
-  const shifts = myShifts ?? [];
+  const shifts = useMemo(() => myShifts ?? [], [myShifts]);
   const myHours = useMemo(
     () => shifts.reduce((sum, p) => sum + Number(p.duration_hours ?? 0), 0),
     [shifts],
@@ -153,6 +177,72 @@ export default function Leirskole() {
         <p className="rounded-2xl border bg-card/40 px-3 py-2.5 text-sm text-muted-foreground">
           Du er ikke satt opp på denne leirskoleuken ennå — du får vakter, oppgaver og chat når admin legger deg inn.
         </p>
+      )}
+
+      {/* Min kompetanse */}
+      <Card className={compMissing ? 'border-destructive/40' : undefined}>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-between gap-2 text-base">
+            <span className="flex items-center gap-2">
+              <Award className="h-4 w-4 text-primary" /> Min kompetanse
+            </span>
+            <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => setCompOpen(true)}>
+              <Pencil className="h-3.5 w-3.5" /> Endre
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {compMissing ? (
+            <p className="text-sm text-muted-foreground">
+              Legg inn hva du kan ha ansvar for — tube, klatring, rappellering, kanotur, båtkjøring og badevakt.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {(myCompetencies ?? []).map((c) => (
+                <span key={c} className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                  {competenceEmoji(c)} {competenceLabel(c)}
+                </span>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Denne økten skal du */}
+      {myInfo.length > 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Megaphone className="h-4 w-4 text-primary" /> Denne økten skal du
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {myInfo.map((i) => (
+              <div key={i.id} className="rounded-2xl border bg-card/60 p-3">
+                <p className="text-sm font-semibold">{i.title}</p>
+                {i.body && <p className="mt-0.5 text-xs text-muted-foreground">{i.body}</p>}
+                {(i.items ?? []).length > 0 && (
+                  <ul className="mt-1.5 space-y-1">
+                    {(i.items as string[]).map((it, idx) => (
+                      <li key={idx} className="flex gap-1.5 text-sm">
+                        <span className="text-primary">•</span>
+                        <span>{it}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <Button
+                  size="sm"
+                  variant={i.readByMe ? 'secondary' : 'default'}
+                  className="mt-2 gap-1.5"
+                  onClick={() => markInfoRead.mutate({ infoId: i.id, read: !i.readByMe })}
+                >
+                  <Check className="h-3.5 w-3.5" /> {i.readByMe ? 'Lest' : 'Marker som lest'}
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       {/* Snarveier */}
@@ -350,6 +440,16 @@ export default function Leirskole() {
             ))}
           </CardContent>
         </Card>
+      )}
+
+      {effectiveLeader?.id && (
+        <LeirskoleCompetenceSheet
+          open={compOpen}
+          onOpenChange={setCompOpen}
+          leaderId={effectiveLeader.id}
+          current={myCompetencies ?? []}
+          required={compMissing}
+        />
       )}
     </div>
   );

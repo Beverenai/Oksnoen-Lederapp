@@ -8,6 +8,7 @@ export type LeirskolePost = Tables<'leirskole_posts'>;
 export type LeirskoleStaff = Tables<'leirskole_staff'>;
 export type LeirskoleAssignment = Tables<'leirskole_assignments'>;
 export type LeirskoleTask = Tables<'leirskole_tasks'>;
+export type LeirskoleSessionInfo = Tables<'leirskole_session_info'>;
 
 /** Alle leirskoleuker (nyeste først). */
 export function useLeirskoleWeeks() {
@@ -24,7 +25,7 @@ export function useLeirskoleWeeks() {
   });
 }
 
-/** Aktiv leirskoleuke. */
+/** Aktiv leirskoleuke — velges automatisk ut fra dagens dato. */
 export function useActiveLeirskoleWeek() {
   return useQuery({
     queryKey: ['leirskole-active-week'],
@@ -33,11 +34,17 @@ export function useActiveLeirskoleWeek() {
         .from('leirskole_weeks')
         .select('*')
         .eq('is_active', true)
-        .order('start_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('start_date', { ascending: true });
       if (error) throw error;
-      return (data as LeirskoleWeek | null) ?? null;
+      const weeks = (data ?? []) as LeirskoleWeek[];
+      if (!weeks.length) return null;
+      const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD lokal tid
+      // 1) uken vi er inne i, 2) neste uke som kommer, 3) siste uke som var
+      return (
+        weeks.find((w) => w.start_date <= today && w.end_date >= today) ??
+        weeks.find((w) => w.start_date > today) ??
+        weeks[weeks.length - 1]
+      );
     },
   });
 }
@@ -50,12 +57,54 @@ export function useLeirskoleStaff(weekId?: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leirskole_staff')
-        .select('*, leader:leaders(id, name, profile_image_url)')
+        .select('*, leader:leaders(id, name, profile_image_url, leirskole_competencies, phone)')
         .eq('week_id', weekId!);
       if (error) throw error;
       return (data ?? []) as (LeirskoleStaff & {
-        leader: { id: string; name: string; profile_image_url: string | null } | null;
+        leader: {
+          id: string;
+          name: string;
+          profile_image_url: string | null;
+          leirskole_competencies: string[] | null;
+          phone?: string | null;
+        } | null;
       })[];
+    },
+  });
+}
+
+/** Min leirskole-kompetanse. */
+export function useMyLeirskoleCompetencies() {
+  const { effectiveLeader } = useAuth();
+  return useQuery({
+    queryKey: ['leirskole-competencies', effectiveLeader?.id],
+    enabled: !!effectiveLeader?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leaders')
+        .select('leirskole_competencies')
+        .eq('id', effectiveLeader!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.leirskole_competencies ?? []) as string[];
+    },
+  });
+}
+
+/** Lagre kompetanse for en leder (seg selv eller admin på andre). */
+export function useSaveLeirskoleCompetencies() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ leaderId, competencies }: { leaderId: string; competencies: string[] }) => {
+      const { error } = await supabase
+        .from('leaders')
+        .update({ leirskole_competencies: competencies })
+        .eq('id', leaderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['leirskole-competencies'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-staff'] });
     },
   });
 }
@@ -97,11 +146,11 @@ export function useLeirskoleTasks(weekId?: string | null) {
       if (error) throw error;
       if (doneError) throw doneError;
       const mine = new Set(
-        (done ?? []).filter((d: any) => d.leader_id === effectiveLeader?.id).map((d: any) => d.task_id),
+        (done ?? []).filter((completion) => completion.leader_id === effectiveLeader?.id).map((completion) => completion.task_id),
       );
-      return (tasks ?? []).map((t: any) => ({
-        ...(t as LeirskoleTask),
-        completedByMe: mine.has(t.id),
+      return (tasks ?? []).map((task) => ({
+        ...(task as LeirskoleTask),
+        completedByMe: mine.has(task.id),
       }));
     },
   });
@@ -150,8 +199,9 @@ export function useMyLeirskoleShifts(weekId?: string | null) {
         .select('id, post:leirskole_posts(*)')
         .eq('staff_id', staff.id);
       if (error) throw error;
-      return (data ?? [])
-        .map((a: any) => a.post as LeirskolePost)
+      const assignments = (data ?? []) as Array<{ post: LeirskolePost | null }>;
+      return assignments
+        .map((assignment) => assignment.post)
         .filter(Boolean)
         .sort((a, b) => (a.date === b.date ? a.start_time.localeCompare(b.start_time) : a.date.localeCompare(b.date)));
     },
@@ -167,8 +217,13 @@ export function useGenerateLeirskoleSchedule() {
         body: { week_id: weekId, keep_locked: keepLocked },
       });
       if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      return data as { status: string; stats: any };
+      const response = data as {
+        error?: string;
+        status: string;
+        stats: { assigned?: number; missing?: unknown[] };
+      };
+      if (response?.error) throw new Error(response.error);
+      return response;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
@@ -196,5 +251,60 @@ export function useIsLeirskoleStaff(weekId?: string | null) {
       if (error) throw error;
       return !!data;
     },
+  });
+}
+
+/**
+ * Øktinfo for uken (hybrid av «Denne økten skal du» i vanlig app).
+ * Returnerer bare det som gjelder meg, med lest-status.
+ */
+export function useLeirskoleSessionInfo(weekId?: string | null) {
+  const { effectiveLeader } = useAuth();
+  return useQuery({
+    queryKey: ['leirskole-session-info', weekId, effectiveLeader?.id],
+    enabled: !!weekId,
+    queryFn: async () => {
+      const [{ data: info, error }, { data: reads }] = await Promise.all([
+        supabase
+          .from('leirskole_session_info')
+          .select('*')
+          .eq('week_id', weekId!)
+          .order('created_at', { ascending: false }),
+        supabase.from('leirskole_session_info_reads').select('info_id, leader_id'),
+      ]);
+      if (error) throw error;
+      const mineRead = new Set(
+        (reads ?? []).filter((read) => read.leader_id === effectiveLeader?.id).map((read) => read.info_id),
+      );
+      return (info ?? []).map((entry) => ({
+        ...(entry as LeirskoleSessionInfo),
+        readByMe: mineRead.has(entry.id),
+        readCount: (reads ?? []).filter((read) => read.info_id === entry.id).length,
+      }));
+    },
+  });
+}
+
+export function useMarkLeirskoleInfoRead() {
+  const qc = useQueryClient();
+  const { effectiveLeader } = useAuth();
+  return useMutation({
+    mutationFn: async ({ infoId, read }: { infoId: string; read: boolean }) => {
+      if (!effectiveLeader?.id) throw new Error('Ingen leder');
+      if (read) {
+        const { error } = await supabase
+          .from('leirskole_session_info_reads')
+          .insert({ info_id: infoId, leader_id: effectiveLeader.id });
+        if (error && !error.message.includes('duplicate')) throw error;
+      } else {
+        const { error } = await supabase
+          .from('leirskole_session_info_reads')
+          .delete()
+          .eq('info_id', infoId)
+          .eq('leader_id', effectiveLeader.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-session-info'] }),
   });
 }

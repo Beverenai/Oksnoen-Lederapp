@@ -7,6 +7,7 @@ CREATE TABLE public.leirskole_job_imports (
   email text,
   phone text,
   role_label text,
+  max_daily_hours numeric CHECK (max_daily_hours IS NULL OR max_daily_hours > 0),
   source_status text,
   availability jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(availability) = 'array'),
   linked_leader_id uuid REFERENCES public.leaders(id) ON DELETE SET NULL,
@@ -144,10 +145,17 @@ BEGIN
     AND external_ref = imported.external_ref
     AND leader_id <> _leader_id;
 
-  INSERT INTO public.leirskole_staff (week_id, leader_id, role_label, external_ref)
-  VALUES (imported.week_id, _leader_id, imported.role_label, imported.external_ref)
+  INSERT INTO public.leirskole_staff (week_id, leader_id, role_label, max_daily_hours, external_ref)
+  VALUES (
+    imported.week_id,
+    _leader_id,
+    imported.role_label,
+    imported.max_daily_hours,
+    imported.external_ref
+  )
   ON CONFLICT (week_id, leader_id) DO UPDATE
   SET role_label = COALESCE(EXCLUDED.role_label, leirskole_staff.role_label),
+      max_daily_hours = COALESCE(EXCLUDED.max_daily_hours, leirskole_staff.max_daily_hours),
       external_ref = EXCLUDED.external_ref,
       updated_at = now()
   RETURNING id INTO linked_staff_id;
