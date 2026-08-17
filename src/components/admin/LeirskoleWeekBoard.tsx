@@ -430,7 +430,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                   </p>
                   {special && (
                     <p className="text-[10px] font-semibold uppercase text-amber-700/80 dark:text-amber-200/80">
-                      {special === 'arrival' ? 'Ankomst' : 'Avreise'}
+                      {special === 'both' ? 'Avreise + ankomst' : special === 'arrival' ? 'Ankomst' : 'Avreise'}
                     </p>
                   )}
                 </div>
