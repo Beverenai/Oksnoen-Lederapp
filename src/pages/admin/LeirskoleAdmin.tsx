@@ -245,9 +245,27 @@ export default function LeirskoleAdmin() {
     [hoursByStaff],
   );
 
-  const todayPosts = useMemo(
-    () => (posts ?? []).filter((p) => p.date === today).sort((a, b) => a.start_time.localeCompare(b.start_time)),
-    [posts, today],
+  /** Alle dagene i uken – for dagvelgeren. */
+  const weekDates = useMemo(() => {
+    if (!week) return [] as string[];
+    const out: string[] = [];
+    const d = new Date(`${week.start_date}T12:00:00`);
+    const last = new Date(`${week.end_date}T12:00:00`);
+    while (d <= last && out.length < 21) {
+      out.push(d.toLocaleDateString('sv-SE'));
+      d.setDate(d.getDate() + 1);
+    }
+    return out;
+  }, [week]);
+
+  const activeDate = viewDate ?? (weekDates.includes(today) ? today : weekDates[0] ?? today);
+
+  const dayPosts = useMemo(
+    () =>
+      (posts ?? [])
+        .filter((p) => p.date === activeDate)
+        .sort((a, b) => a.start_time.localeCompare(b.start_time)),
+    [posts, activeDate],
   );
 
   const staffNames = useMemo(() => {
