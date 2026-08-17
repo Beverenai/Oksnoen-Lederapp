@@ -223,6 +223,8 @@ export function LeaderDetailDialog({
   const showErrorRef = useRef(showError);
   useEffect(() => { onSavedRef.current = onSaved; }, [onSaved]);
   useEffect(() => { showErrorRef.current = showError; }, [showError]);
+  const onRoleChangedRef = useRef(onRoleChanged);
+  useEffect(() => { onRoleChangedRef.current = onRoleChanged; }, [onRoleChanged]);
 
   // Auto-save role changes (separate because it uses edge function)
   useEffect(() => {
@@ -231,23 +233,27 @@ export function LeaderDetailDialog({
 
     if (roleSaveTimerRef.current) clearTimeout(roleSaveTimerRef.current);
     roleSaveTimerRef.current = setTimeout(async () => {
-      setAutoSaveStatus('saving');
+      setRoleStatus('saving');
       try {
         const { error } = await supabase.functions.invoke('manage-roles', {
           body: { action: 'set', leader_id: leaderId, role }
         });
         if (error) throw error;
+        const savedRole = role;
         originalValuesRef.current.role = role;
-        setAutoSaveStatus('saved');
+        setRoleStatus('saved');
         hapticSuccess();
+        onRoleChangedRef.current?.(savedRole);
         onSavedRef.current();
-        setTimeout(() => setAutoSaveStatus('idle'), 2000);
+        setTimeout(() => setRoleStatus('idle'), 2000);
       } catch (err) {
         console.error('Role save error:', err);
-        setAutoSaveStatus('idle');
+        setRoleStatus('error');
+        setRole(originalValuesRef.current.role);
         showErrorRef.current('Kunne ikke lagre rolle');
+        setTimeout(() => setRoleStatus('idle'), 3000);
       }
-    }, 500);
+    }, 400);
   }, [role, leaderId]);
 
   const getFirstName = (fullName: string) => fullName.split(' ')[0];
