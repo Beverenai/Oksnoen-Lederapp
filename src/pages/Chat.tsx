@@ -156,6 +156,24 @@ export default function Chat() {
     };
   }, []);
 
+  /**
+   * Låser side-skrollingen mens man er i chatten. Uten dette kan hele siden
+   * skrolle bak/over meldingslisten (spesielt når tastaturet åpnes på iPhone).
+   */
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtml = html.style.overflow;
+    const prevBody = body.style.overflow;
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    window.scrollTo({ top: 0 });
+    return () => {
+      html.style.overflow = prevHtml;
+      body.style.overflow = prevBody;
+    };
+  }, []);
+
   const scrollToBottom = (force = false) => {
     if (!force && !nearBottomRef.current) return;
     requestAnimationFrame(() => {
