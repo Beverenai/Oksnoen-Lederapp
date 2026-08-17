@@ -38,6 +38,26 @@ export function LeirskolePostStaffPicker({
       qc.invalidateQueries({ queryKey: [key] }),
     );
 
+  /** Oppdater cachen med en gang, slik at timetallene endres live. */
+  const patchCache = (staffId: string, on: boolean) => {
+    qc.setQueriesData<any[]>({ queryKey: ['leirskole-schedule', weekId] }, (old) => {
+      if (!old) return old;
+      return old.map((p) =>
+        p.id !== post.id
+          ? p
+          : {
+              ...p,
+              assignments: on
+                ? [
+                    ...(p.assignments ?? []),
+                    { id: `tmp-${staffId}`, staff_id: staffId, is_locked: true, assigned_manually: true },
+                  ]
+                : (p.assignments ?? []).filter((a: { staff_id: string }) => a.staff_id !== staffId),
+            },
+      );
+    });
+  };
+
   const toggle = useMutation({
     mutationFn: async ({ staffId, on }: { staffId: string; on: boolean }) => {
       if (!on) {
@@ -58,11 +78,15 @@ export function LeirskolePostStaffPicker({
       if (error) throw error;
       return trimDayHours({ weekId, date: post.date, staffId, keepPostId: post.id, maxHours });
     },
+    onMutate: ({ staffId, on }) => patchCache(staffId, on),
     onSuccess: (removed) => {
       invalidate();
       if (removed.length) toast.success(`Fjernet ${removed.join(', ')} for å holde ${maxHours}t`);
     },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke oppdatere bemanning'),
+    onError: (e: unknown) => {
+      invalidate();
+      toast.error(e instanceof Error ? e.message : 'Kunne ikke oppdatere bemanning');
+    },
   });
 
   return (
