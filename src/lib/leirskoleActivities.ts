@@ -22,12 +22,26 @@ export function sessionLabel(key: string) {
   return LEIRSKOLE_ACTIVITY_SESSIONS.find((s) => s.key === key)?.label ?? key;
 }
 
-export function activityLabel(key: string) {
-  return LEIRSKOLE_ACTIVITIES.find((a) => a.key === key)?.label ?? key;
+export interface ActivityTypeLike {
+  key: string;
+  label: string;
+  emoji: string;
 }
 
-export function activityEmoji(key: string) {
-  return LEIRSKOLE_ACTIVITIES.find((a) => a.key === key)?.emoji ?? '•';
+export function activityLabel(key: string, types?: readonly ActivityTypeLike[]) {
+  return (
+    types?.find((a) => a.key === key)?.label ??
+    LEIRSKOLE_ACTIVITIES.find((a) => a.key === key)?.label ??
+    key
+  );
+}
+
+export function activityEmoji(key: string, types?: readonly ActivityTypeLike[]) {
+  return (
+    types?.find((a) => a.key === key)?.emoji ??
+    LEIRSKOLE_ACTIVITIES.find((a) => a.key === key)?.emoji ??
+    '•'
+  );
 }
 
 export interface ActivityCandidate {
