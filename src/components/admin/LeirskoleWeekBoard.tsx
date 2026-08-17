@@ -26,6 +26,7 @@ import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/Leirskol
 import { LeirskoleSpecialDayTimeline } from '@/components/admin/LeirskoleSpecialDayTimeline';
 import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
 import { trimDayHours, fillDayHours, KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
+import { assignMissingActivities } from '@/lib/leirskoleAutoActivity';
 import { useSeedLeirskoleSpecialDays } from '@/hooks/useSeedLeirskoleSpecialDays';
 
 const MEALS = ['Frokost', 'Middag', 'Kvelds'];
@@ -306,15 +307,16 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         count += removed.length;
       }
       const added = await fillDayHours({ weekId: week.id, date, maxHours });
-      return { count, added };
+      const acts = await assignMissingActivities({ weekId: week.id, date });
+      return { count, added, acts };
     },
-    onSuccess: ({ count, added }) => {
-      ['leirskole-schedule', 'leirskole-my-shifts', 'leirskole-activities'].forEach((key) =>
+    onSuccess: ({ count, added, acts }) => {
+      ['leirskole-schedule', 'leirskole-my-shifts', 'leirskole-activities', 'leirskole-week-plan'].forEach((key) =>
         qc.invalidateQueries({ queryKey: [key] }),
       );
       toast.success(
-        count || added
-          ? `Fjernet ${count} vakter · la til ${added} for å nå ${maxHours}t`
+        count || added || acts
+          ? `Fjernet ${count} vakter · la til ${added} mot ${maxHours}t · ${acts} fikk aktivitet`
           : 'Dagen er allerede balansert',
       );
     },
