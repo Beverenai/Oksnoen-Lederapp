@@ -131,6 +131,7 @@ function score(st: Staff, post: Post, s: State) {
     10 * s.totalHours +
     15 * s.nightShifts +
     8 * s.mealShifts +
+    adjacencyPenalty(post, s) +
     hashTie(st.id, post.id)
   );
 }
