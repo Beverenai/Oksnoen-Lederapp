@@ -201,7 +201,7 @@ export default function More() {
         { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
         { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
         { to: '/my-shifts', icon: ClipboardList, label: 'Min vakt' },
-        ...(isLeirskole
+        ...(leirskoleView
           ? [{ to: '/leirskole', icon: Tent, label: 'Leirskole' } as MoreItem]
           : []),
       ],
@@ -276,7 +276,7 @@ export default function More() {
   // Off-season: hjemskjermen har allerede POV, Tinder, Slurker, Klineliste og Snus,
   // så «Mer» er en kompakt liste med resten – ingen doble knapper.
   const limitedSections: MoreSection[] = [
-    ...(isLeirskole
+    ...(leirskoleView
       ? [{
           label: 'Leirskole',
           items: [

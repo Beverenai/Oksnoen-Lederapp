@@ -40,6 +40,7 @@ import { MessageSquareWarning } from 'lucide-react';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
 import { useAppMode } from '@/hooks/useAppMode';
+import { useAccessMode } from '@/hooks/useViewMode';
 import { Link as LinkIcon } from 'lucide-react';
 import { LederPass } from '@/components/passport/LederPass';
 import { OffSeasonHome } from '@/components/home/OffSeasonHome';
@@ -156,6 +157,7 @@ const formatTeamDisplay = (team: string | null): string => {
 export default function Home() {
   const { leader, effectiveLeader, isAdmin, isNurse, isSuperAdmin, isLimitedAccess } = useAuth();
   const { mode: appMode } = useAppMode();
+  const { limited: limitedView } = useAccessMode();
   const navigate = useNavigate();
   const location = useLocation();
   const [content, setContent] = useState<LeaderContent | null>(null);
