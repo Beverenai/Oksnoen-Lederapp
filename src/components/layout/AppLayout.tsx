@@ -31,6 +31,8 @@ import {
   Archive,
   ChefHat,
   LayoutDashboard,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -197,11 +199,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
     accessMode === 'leirskole' || location.pathname.startsWith('/leirskole') ||
     location.pathname.startsWith('/admin/leirskole');
 
+  // Lyst tema er standard på leirskole; brukeren kan velge mørkt og valget huskes.
+  const [lsDark, setLsDark] = useState(
+    () => localStorage.getItem('oks-ls-theme') === 'dark',
+  );
+
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle('oks-leirskole-theme', leirskoleSurface);
-    return () => root.classList.remove('oks-leirskole-theme');
-  }, [leirskoleSurface]);
+    root.classList.toggle('oks-ls-dark', leirskoleSurface && lsDark);
+    return () => {
+      root.classList.remove('oks-leirskole-theme');
+      root.classList.remove('oks-ls-dark');
+    };
+  }, [leirskoleSurface, lsDark]);
+
+  const toggleLsTheme = () => {
+    setLsDark((prev) => {
+      const next = !prev;
+      localStorage.setItem('oks-ls-theme', next ? 'dark' : 'light');
+      return next;
+    });
+  };
 
   // Collapsible header state (Facebook/Instagram-style)
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -501,6 +520,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
         leirskoleSurface && 'oks-leirskole-bg min-h-[100dvh]',
       )}
     >
+      {/* Leirskole: velg lyst (standard) eller mørkt tema */}
+      {leirskoleSurface && (
+        <button
+          type="button"
+          onClick={toggleLsTheme}
+          aria-label={lsDark ? 'Bytt til lyst tema' : 'Bytt til mørkt tema'}
+          title={lsDark ? 'Lyst tema' : 'Mørkt tema'}
+          className="fixed right-3 z-[70] rounded-full border border-border bg-card/90 p-2 text-foreground shadow-lg backdrop-blur"
+          style={{ top: 'calc(var(--safe-top) + 8px)' }}
+        >
+          {lsDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+      )}
       {/* View As Banner */}
       {viewAsLeader && (
         <div className="bg-amber-500 dark:bg-amber-600 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
