@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tent, Search, Wrench, ShieldCheck } from 'lucide-react';
+import { Tent, Search, Wrench, ShieldCheck, UserMinus } from 'lucide-react';
 
 type Props = {
   weekId: string;
@@ -118,8 +118,58 @@ export function LeirskoleAccessCard({ weekId, weekName, maxDailyHours }: Props) 
       }
       await setLeirskoleRole(leaderId, on);
     },
+    onMutate: async ({ leaderId, on }) => {
+      // Optimistisk: bryteren skal svare umiddelbart selv om nettverket henger.
+      const key = ['leirskole-access-staff', weekId];
+      const prev = qc.getQueryData<{ id: string; leader_id: string }[]>(key);
+      qc.setQueryData<{ id: string; leader_id: string }[]>(key, (old) => {
+        const list = old ?? [];
+        return on
+          ? [...list, { id: `optimistic-${leaderId}`, leader_id: leaderId }]
+          : list.filter((s) => s.leader_id !== leaderId);
+      });
+      return { prev, key };
+    },
     onSuccess: (_d, v) => {
       toast.success(v.on ? 'Lagt til på leirskole' : 'Fjernet fra leirskole');
+      refresh();
+    },
+    onError: (e: any, _v, ctx: any) => {
+      if (ctx?.key) qc.setQueryData(ctx.key, ctx.prev);
+      showError(e.message ?? 'Kunne ikke oppdatere');
+    },
+  });
+
+  /** Legg til alle som er aktive i perioden, eller tøm uken. */
+  const bulk = useMutation({
+    mutationFn: async (mode: 'add-active' | 'remove-all') => {
+      const targets =
+        mode === 'add-active'
+          ? (leaders ?? []).filter((l) => l.is_active && !staffIds.has(l.id))
+          : (leaders ?? []).filter((l) => staffIds.has(l.id));
+      for (const l of targets) {
+        if (mode === 'add-active') {
+          const { error } = await supabase
+            .from('leirskole_staff')
+            .insert({ week_id: weekId, leader_id: l.id, max_daily_hours: maxDailyHours ?? 8 });
+          if (error && !error.message.includes('duplicate')) throw error;
+          await setLeirskoleRole(l.id, true);
+        } else {
+          const { error } = await supabase
+            .from('leirskole_staff')
+            .delete()
+            .eq('week_id', weekId)
+            .eq('leader_id', l.id);
+          if (error) throw error;
+          await setLeirskoleRole(l.id, false);
+        }
+      }
+      return targets.length;
+    },
+    onSuccess: (count, mode) => {
+      toast.success(
+        mode === 'add-active' ? `La til ${count} aktive ledere` : `Fjernet ${count} ledere fra uken`,
+      );
       refresh();
     },
     onError: (e: any) => showError(e.message ?? 'Kunne ikke oppdatere'),
@@ -153,11 +203,10 @@ export function LeirskoleAccessCard({ weekId, weekName, maxDailyHours }: Props) 
 
   const q = search.trim().toLowerCase();
   const filtered = (leaders ?? []).filter((l) => (q ? l.name.toLowerCase().includes(q) : true));
-  const sorted = [...filtered].sort((a, b) => {
-    const aOn = staffIds.has(a.id) ? 0 : 1;
-    const bOn = staffIds.has(b.id) ? 0 : 1;
-    return aOn === bOn ? a.name.localeCompare(b.name) : aOn - bOn;
-  });
+  const sorted = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+  const onWeek = sorted.filter((l) => staffIds.has(l.id));
+  const others = sorted.filter((l) => !staffIds.has(l.id));
+  const activeNotOnWeek = (leaders ?? []).filter((l) => l.is_active && !staffIds.has(l.id)).length;
 
   return (
     <Card>
@@ -193,6 +242,25 @@ export function LeirskoleAccessCard({ weekId, weekName, maxDailyHours }: Props) 
           </Button>
         )}
 
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={bulk.isPending || activeNotOnWeek === 0}
+            onClick={() => bulk.mutate('add-active')}
+          >
+            <Tent className="mr-1.5 h-4 w-4" /> Legg til aktive ({activeNotOnWeek})
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulk.isPending || staffIds.size === 0}
+            onClick={() => bulk.mutate('remove-all')}
+          >
+            <UserMinus className="mr-1.5 h-4 w-4" /> Fjern alle
+          </Button>
+        </div>
+
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -203,12 +271,24 @@ export function LeirskoleAccessCard({ weekId, weekName, maxDailyHours }: Props) 
           />
         </div>
 
-        <div className="max-h-[420px] space-y-1.5 overflow-y-auto pr-0.5">
-          {sorted.map((l) => {
+        <div className="max-h-[460px] space-y-1.5 overflow-y-auto pr-0.5">
+          {onWeek.length > 0 && (
+            <p className="pt-1 text-[11px] font-bold uppercase tracking-wider text-primary">
+              På leirskole ({onWeek.length})
+            </p>
+          )}
+          {[...onWeek, ...others].map((l, index) => {
+            const showOthersHeader = index === onWeek.length && others.length > 0;
             const on = staffIds.has(l.id);
             const r = rolesByLeader.get(l.id) ?? new Set<string>();
             const privileged = [...r].some((x) => PRIVILEGED.has(x));
             return (
+              <div key={`wrap-${l.id}`}>
+              {showOthersHeader && (
+                <p className="pb-1.5 pt-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Andre ledere ({others.length})
+                </p>
+              )}
               <div
                 key={l.id}
                 className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${on ? 'border-primary/40 bg-primary/5' : 'bg-card/40'}`}
@@ -241,6 +321,7 @@ export function LeirskoleAccessCard({ weekId, weekName, maxDailyHours }: Props) 
                   disabled={toggle.isPending}
                   onCheckedChange={(v) => toggle.mutate({ leaderId: l.id, on: v })}
                 />
+              </div>
               </div>
             );
           })}
