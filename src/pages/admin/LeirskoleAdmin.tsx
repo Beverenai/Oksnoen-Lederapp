@@ -23,6 +23,7 @@ import {
 import { LeirskoleAccessCard } from '@/components/admin/LeirskoleAccessCard';
 import { LeirskolePostsCard } from '@/components/admin/LeirskolePostsCard';
 import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
+import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
 
 const hhmm = (t: string) => t.slice(0, 5);
 
@@ -353,6 +354,14 @@ export default function LeirskoleAdmin() {
           <LeirskoleAccessCard
             weekId={week.id}
             weekName={week.name}
+            maxDailyHours={week.max_daily_hours}
+          />
+
+          <LeirskoleStaffPanel
+            weekName={week.name}
+            weekDates={`${week.start_date} – ${week.end_date}`}
+            staff={staff ?? []}
+            hoursByStaff={hoursByStaff}
             maxDailyHours={week.max_daily_hours}
           />
 
