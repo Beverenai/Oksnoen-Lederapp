@@ -508,14 +508,24 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                         {(dutyBySlot.get(`${date}|${t.session}`) ?? []).length === 0 && (
                           <span className="text-[10px] text-muted-foreground">Ingen ledere</span>
                         )}
-                        {(dutyBySlot.get(`${date}|${t.session}`) ?? []).map((l) => (
-                          <span
-                            key={l.id}
-                            className="truncate max-w-[5.5rem] rounded-full bg-background/70 px-1.5 py-0.5 text-[10px] font-medium text-foreground"
-                          >
-                            {firstName(l.name)}
-                          </span>
-                        ))}
+                        {(dutyBySlot.get(`${date}|${t.session}`) ?? []).map((l) => {
+                          const act = slotActivities.find((a) => a.leader_id === l.id);
+                          const ty = act ? (types ?? []).find((x) => x.key === act.activity) : null;
+                          return (
+                            <span
+                              key={l.id}
+                              title={ty ? `${l.name} – ${ty.label}` : `${l.name} – uten aktivitet`}
+                              className={`truncate max-w-[6.5rem] rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                                act
+                                  ? 'bg-background/70 text-foreground'
+                                  : 'border border-dashed border-muted-foreground/40 bg-transparent text-muted-foreground'
+                              }`}
+                            >
+                              {ty?.emoji ? `${ty.emoji} ` : ''}
+                              {firstName(l.name)}
+                            </span>
+                          );
+                        })}
                       </div>
                     )}
                   </button>
