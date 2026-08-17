@@ -322,7 +322,6 @@ export default function More() {
       label: 'Ditt',
       items: [
         { to: '/profile', icon: User, label: 'Min Profil', desc: 'Bilde og innstillinger' },
-        { to: '/lederpass', icon: IdCard, label: 'Lederpass', desc: 'Stemplene dine' },
       ],
     },
     {
