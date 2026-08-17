@@ -5,6 +5,16 @@ export const LEIRSKOLE_ACTIVITIES = LEIRSKOLE_COMPETENCIES;
 
 export type LeirskoleActivityKey = (typeof LEIRSKOLE_ACTIVITIES)[number]['key'];
 
+/** Kveldsprogram — ikke vannaktiviteter. Fordeles på kveldsøkta. */
+export const LEIRSKOLE_EVENING_ACTIVITIES = [
+  { key: 'leirbal', label: 'Leirbål', emoji: '🔥' },
+  { key: 'kveldslek', label: 'Kveldslek', emoji: '🎯' },
+  { key: 'quiz', label: 'Quiz', emoji: '❓' },
+  { key: 'film', label: 'Filmkveld', emoji: '🎬' },
+  { key: 'kiosk', label: 'Kiosk', emoji: '🍫' },
+  { key: 'diskotek', label: 'Diskotek', emoji: '🪩' },
+] as const;
+
 export const LEIRSKOLE_SESSIONS = [
   { key: 'formiddag', label: 'Formiddag' },
   { key: 'ettermiddag', label: 'Ettermiddag' },
@@ -13,16 +23,31 @@ export const LEIRSKOLE_SESSIONS = [
 
 export type LeirskoleSessionKey = (typeof LEIRSKOLE_SESSIONS)[number]['key'];
 
+/** Aktivitetene som kan velges på en gitt økt. Kveld = kveldsprogram. */
+export function activitiesForSession(session: string) {
+  return session === 'kveld'
+    ? (LEIRSKOLE_EVENING_ACTIVITIES as readonly { key: string; label: string; emoji: string }[])
+    : (LEIRSKOLE_ACTIVITIES as readonly { key: string; label: string; emoji: string }[]);
+}
+
 export function sessionLabel(key: string) {
   return LEIRSKOLE_SESSIONS.find((s) => s.key === key)?.label ?? key;
 }
 
 export function activityLabel(key: string) {
-  return LEIRSKOLE_ACTIVITIES.find((a) => a.key === key)?.label ?? key;
+  return (
+    LEIRSKOLE_ACTIVITIES.find((a) => a.key === key)?.label ??
+    LEIRSKOLE_EVENING_ACTIVITIES.find((a) => a.key === key)?.label ??
+    key
+  );
 }
 
 export function activityEmoji(key: string) {
-  return LEIRSKOLE_ACTIVITIES.find((a) => a.key === key)?.emoji ?? '•';
+  return (
+    LEIRSKOLE_ACTIVITIES.find((a) => a.key === key)?.emoji ??
+    LEIRSKOLE_EVENING_ACTIVITIES.find((a) => a.key === key)?.emoji ??
+    '•'
+  );
 }
 
 export interface ActivityCandidate {

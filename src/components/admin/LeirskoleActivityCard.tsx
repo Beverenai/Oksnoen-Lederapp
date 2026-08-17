@@ -15,8 +15,8 @@ import {
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
 import {
-  LEIRSKOLE_ACTIVITIES,
   LEIRSKOLE_SESSIONS,
+  activitiesForSession,
   activityEmoji,
   activityLabel,
   generateActivityAssignments,
@@ -84,12 +84,13 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
   );
 
   const generate = () => {
+    const isEvening = session === 'kveld';
     const candidates = onDuty
       .filter((s) => s.leader)
       .map((s) => ({
         leaderId: s.leader!.id,
         name: s.leader!.name,
-        competencies: s.leader!.leirskole_competencies ?? [],
+        competencies: isEvening ? [] : (s.leader!.leirskole_competencies ?? []),
       }));
     if (candidates.length === 0) {
       toast.error('Ingen ledere på vakt denne datoen');
@@ -98,6 +99,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
     const result = generateActivityAssignments(
       candidates,
       (history ?? []).map((h) => ({ leader_id: h.leader_id, activity: h.activity })),
+      activitiesForSession(session).map((a) => a.key),
     );
     setDraft(result);
   };
@@ -132,20 +134,27 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
   /** Én knapp: fordeler aktiviteter på alle øktene denne dagen og varsler lederne. */
   const generateDay = useMutation({
     mutationFn: async () => {
-      const candidates = onDuty
-        .filter((s) => s.leader)
-        .map((s) => ({
-          leaderId: s.leader!.id,
-          name: s.leader!.name,
-          competencies: s.leader!.leirskole_competencies ?? [],
-        }));
+      const buildCandidates = (isEvening: boolean) =>
+        onDuty
+          .filter((s) => s.leader)
+          .map((s) => ({
+            leaderId: s.leader!.id,
+            name: s.leader!.name,
+            competencies: isEvening ? [] : (s.leader!.leirskole_competencies ?? []),
+          }));
+      const candidates = buildCandidates(false);
       if (candidates.length === 0) throw new Error('Ingen ledere på vakt denne datoen');
 
       const running = (history ?? []).map((h) => ({ leader_id: h.leader_id, activity: h.activity }));
       const notified = new Set<string>();
 
       for (const s of LEIRSKOLE_SESSIONS) {
-        const rows = generateActivityAssignments(candidates, running);
+        const isEvening = s.key === 'kveld';
+        const rows = generateActivityAssignments(
+          buildCandidates(isEvening),
+          running,
+          activitiesForSession(s.key).map((a) => a.key),
+        );
         if (!rows.length) continue;
         await save.mutateAsync({
           weekId: week.id,
@@ -185,7 +194,8 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
           <Wand2 className="h-4 w-4 text-primary" /> Aktiviteter per økt
         </p>
         <p className="text-xs text-muted-foreground">
-          Tube, Klatring, Rappellering, Kanotur, Båtkjøring og Badevakt fordeles rettferdig
+          Formiddag og ettermiddag: Tube, Klatring, Rappellering, Kanotur, Båtkjøring og Badevakt.
+          Kveld: leirbål, kveldslek, quiz, film, kiosk og diskotek.
         </p>
       </div>
 
@@ -262,7 +272,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
                     }
                     className="rounded-full border border-border bg-background px-2 py-1 text-xs"
                   >
-                    {LEIRSKOLE_ACTIVITIES.map((a) => (
+                    {activitiesForSession(session).map((a) => (
                       <option key={a.key} value={a.key}>
                         {a.emoji} {a.label}
                       </option>
