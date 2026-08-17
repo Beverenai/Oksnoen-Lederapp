@@ -13,10 +13,9 @@ import {
   useSaveLeirskoleActivities,
   useDeleteLeirskoleActivity,
   useSaveLeirskoleCompetencies,
+  useLeirskoleActivityTypes,
 } from '@/hooks/useLeirskole';
-import { LEIRSKOLE_COMPETENCIES, competenceEmoji, competenceLabel } from '@/lib/leirskoleCompetencies';
 import {
-  LEIRSKOLE_ACTIVITIES,
   LEIRSKOLE_ACTIVITY_SESSIONS,
   activityEmoji,
   activityLabel,
@@ -53,11 +52,13 @@ export function LeirskoleLeaderSheet({
   const saveActivities = useSaveLeirskoleActivities();
   const deleteActivity = useDeleteLeirskoleActivity();
   const saveComps = useSaveLeirskoleCompetencies();
+  const { data: types } = useLeirskoleActivityTypes(true);
+  const activityTypes = types ?? [];
 
   const today = new Date().toLocaleDateString('sv-SE');
   const [date, setDate] = useState(today);
   const [session, setSession] = useState<string>('formiddag');
-  const [activity, setActivity] = useState<string>(LEIRSKOLE_ACTIVITIES[0].key);
+  const [activity, setActivity] = useState<string>('');
   const [taskTitle, setTaskTitle] = useState('');
 
   const mine = useMemo(
