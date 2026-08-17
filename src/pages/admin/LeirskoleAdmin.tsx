@@ -100,22 +100,10 @@ export default function LeirskoleAdmin() {
         .update({ schedule_published_at: published ? new Date().toISOString() : null })
         .eq('id', id);
       if (error) throw error;
-      if (published) {
-        const ids = (staff ?? []).map((s) => s.leader_id);
-        if (ids.length) {
-          return sendLeirskolePush({
-            title: 'Leirskole-vaktplan',
-            message: 'Vaktplanen for leirskolen er publisert. Se dine vakter i appen.',
-            leader_ids: ids,
-            sender_leader_id: leader?.id,
-          });
-        }
-      }
       return null;
     },
-    onSuccess: (pushWarning) => {
-      if (pushWarning) toast.warning(pushWarning);
-      else toast.success('Oppdatert');
+    onSuccess: () => {
+      toast.success('Oppdatert');
       invalidate();
     },
     onError: (error: unknown) => showError(errorMessage(error, 'Kunne ikke publisere vaktplanen')),
