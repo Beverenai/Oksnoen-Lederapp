@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { useSeedLeirskoleSpecialDays } from '@/hooks/useSeedLeirskoleSpecialDays';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
@@ -108,23 +109,7 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
    */
   const first = dates[0];
   const last = dates[dates.length - 1];
-  const isFollowUpWeek = useMemo(
-    () => (allWeeks ?? []).some((w) => w.id !== week.id && w.start_date < week.start_date),
-    [allWeeks, week.id, week.start_date],
-  );
-  const firstDayType: 'arrival' | 'both' = isFollowUpWeek ? 'both' : 'arrival';
-  const seeded = useRef<string | null>(null);
-  useEffect(() => {
-    if (readOnly || !weekDays || !allWeeks || dates.length < 2) return;
-    const stamp = `${week.id}:${first}:${last}:${firstDayType}`;
-    if (seeded.current === stamp) return;
-    const typeOf = (date: string) => weekDays.find((d) => d.date === date)?.day_type ?? 'normal';
-    seeded.current = stamp;
-    if (typeOf(first) !== firstDayType)
-      setDayType.mutate({ weekId: week.id, date: first, dayType: firstDayType });
-    if (typeOf(last) !== 'departure') setDayType.mutate({ weekId: week.id, date: last, dayType: 'departure' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readOnly, weekDays, allWeeks, first, last, week.id, firstDayType]);
+  const { firstDayType } = useSeedLeirskoleSpecialDays(week, !readOnly);
 
   const postsByDate = useMemo(() => {
     const map = new Map<string, { id: string; name: string; start_time: string; end_time: string }[]>();

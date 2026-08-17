@@ -26,6 +26,7 @@ import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/Leirskol
 import { LeirskoleSpecialDayTimeline } from '@/components/admin/LeirskoleSpecialDayTimeline';
 import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
 import { trimDayHours } from '@/lib/leirskoleDayHours';
+import { useSeedLeirskoleSpecialDays } from '@/hooks/useSeedLeirskoleSpecialDays';
 
 const MEALS = ['Frokost', 'Middag', 'Kvelds'];
 const MEAL_TIMES: Record<string, { start: string; end: string; hours: number }> = {
@@ -82,6 +83,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const [menuOpen, setMenuOpen] = useState(false);
 
   const dates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
+
+  useSeedLeirskoleSpecialDays(week);
 
   const specialDays = useMemo(() => {
     const map = new Map<string, string>();
