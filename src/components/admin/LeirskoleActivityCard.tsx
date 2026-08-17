@@ -65,7 +65,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
   const removeOne = useDeleteLeirskoleActivity();
 
   const dayType = weekDays?.find((d) => d.date === date)?.day_type ?? 'normal';
-  const isArrival = dayType === 'arrival' || dayType === 'departure';
+  const isArrival = dayType !== 'normal';
   const requireCompetence = !isArrival;
 
 
