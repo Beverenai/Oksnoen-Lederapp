@@ -472,6 +472,7 @@ export default function LeirskoleAdmin() {
             </div>
           )}
           <LeirskoleActivityCard week={week} staff={staff ?? []} />
+          <LeirskoleWeekPlanCard week={week} />
           <LeirskoleActivityTypesCard />
           <LeirskoleSessionInfoCard weekId={week.id} staff={staff ?? []} />
         </TabsContent>
