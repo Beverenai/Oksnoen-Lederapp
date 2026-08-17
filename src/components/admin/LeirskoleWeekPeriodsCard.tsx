@@ -7,12 +7,20 @@ import { useLeirskoleWeeks, type LeirskoleWeek } from '@/hooks/useLeirskole';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { shortDate } from '@/lib/leirskoleDates';
-import { CalendarRange, Plus, Trash2, Users, Check, ChevronDown, Settings2 } from 'lucide-react';
+import { CalendarRange, Plus, Trash2, Users, Check, ChevronDown, Settings2, Crown, Edit3 } from 'lucide-react';
 
 type Props = {
   selectedWeekId: string | null;
+  activeWeekId?: string | null;
   onSelect: (weekId: string) => void;
 };
 
@@ -21,12 +29,13 @@ type Props = {
  * Vises som en horisontal rad med toggles, og valgt ukes detaljer
  * kan ekspanderes om nødvendig.
  */
-export function LeirskoleWeekPeriodsCard({ selectedWeekId, onSelect }: Props) {
+export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelect }: Props) {
   const qc = useQueryClient();
   const { showError } = useStatusPopup();
   const { data: weeks } = useLeirskoleWeeks();
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', start_date: '', end_date: '', max_daily_hours: '8' });
 
   const selectedWeek = useMemo(
@@ -105,21 +114,46 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, onSelect }: Props) {
     onError: (e: unknown) => showError(e instanceof Error ? e.message : 'Kunne ikke slette uken'),
   });
 
+  const setActive = useMutation({
+    mutationFn: async (id: string) => {
+      const { error: offError } = await supabase.from('leirskole_weeks').update({ is_active: false }).neq('id', id);
+      if (offError) throw offError;
+      const { error } = await supabase.from('leirskole_weeks').update({ is_active: true }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Aktiv uke endret');
+      invalidate();
+      setDialogOpen(false);
+    },
+    onError: (e: unknown) => showError(e instanceof Error ? e.message : 'Kunne ikke endre aktiv uke'),
+  });
+
   return (
     <div className="space-y-2">
-      {/* Tittelrad med kompakt + knapp */}
+      {/* Tittelrad med aktiv-uke-knapp og ny uke */}
       <div className="flex items-center justify-between gap-2 px-1">
         <p className="flex items-center gap-2 text-sm font-semibold">
           <CalendarRange className="h-4 w-4 text-primary" /> Leirskoleuker
         </p>
-        <Button
-          size="sm"
-          variant={adding ? 'default' : 'secondary'}
-          className="h-8 shrink-0 gap-1 rounded-full px-3 text-xs"
-          onClick={() => setAdding((v) => !v)}
-        >
-          <Plus className="h-3.5 w-3.5" /> {adding ? 'Lukk' : 'Ny uke'}
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button
+            size="sm"
+            variant="default"
+            className="h-8 shrink-0 gap-1 rounded-full px-3 text-xs oks-ls-gradient"
+            onClick={() => setDialogOpen(true)}
+          >
+            <Crown className="h-3.5 w-3.5" /> Bytt aktiv uke
+          </Button>
+          <Button
+            size="sm"
+            variant={adding ? 'default' : 'secondary'}
+            className="h-8 shrink-0 gap-1 rounded-full px-3 text-xs"
+            onClick={() => setAdding((v) => !v)}
+          >
+            <Plus className="h-3.5 w-3.5" /> {adding ? 'Lukk' : 'Ny uke'}
+          </Button>
+        </div>
       </div>
 
       {/* Horisontal ukevelger — rask å bytte mellom */}
@@ -128,7 +162,8 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, onSelect }: Props) {
           <p className="py-2 text-xs text-muted-foreground">Ingen uker lagt inn ennå.</p>
         )}
         {(weeks ?? []).map((w) => {
-          const on = w.id === selectedWeekId;
+          const isPlanning = w.id === selectedWeekId;
+          const isActive = w.id === activeWeekId;
           return (
             <button
               key={w.id}
@@ -138,17 +173,21 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, onSelect }: Props) {
                 setEditing(false);
               }}
               className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
-                on
+                isPlanning
                   ? 'oks-ls-gradient text-white shadow-md'
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                  : isActive
+                    ? 'bg-primary/15 text-primary ring-1 ring-primary/40 hover:bg-primary/20'
+                    : 'bg-muted/60 text-muted-foreground hover:bg-muted'
               }`}
             >
               <span className="flex items-center gap-1.5">
-                {on && <Check className="h-3 w-3 shrink-0" />}
+                {isPlanning && <Edit3 className="h-3 w-3 shrink-0" />}
+                {isActive && !isPlanning && <Crown className="h-3 w-3 shrink-0" />}
                 <span>{w.name}</span>
               </span>
-              <span className={`mt-0.5 block text-[10px] font-normal ${on ? 'text-white/80' : 'text-muted-foreground/80'}`}>
+              <span className={`mt-0.5 block text-[10px] font-normal ${isPlanning ? 'text-white/80' : isActive ? 'text-primary/80' : 'text-muted-foreground/80'}`}>
                 {shortDate(w.start_date)}–{shortDate(w.end_date)}
+                {isActive && <span className="ml-1 font-semibold">· aktiv</span>}
               </span>
             </button>
           );
@@ -241,12 +280,23 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, onSelect }: Props) {
                   }
                 />
               </div>
-              <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2">
-                <span className="text-xs">Uken er i bruk (gir tilgang)</span>
-                <Switch
-                  checked={selectedWeek.is_active}
-                  onCheckedChange={(v) => patch.mutate({ id: selectedWeek.id, values: { is_active: v } })}
-                />
+              <div className="rounded-xl bg-muted/40 px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs">
+                    {selectedWeek.is_active ? 'Denne uken er aktiv for lederne' : 'Denne uken er ikke aktiv'}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant={selectedWeek.is_active ? 'secondary' : 'default'}
+                    className={`h-7 rounded-full px-2.5 text-[11px] ${selectedWeek.is_active ? '' : 'oks-ls-gradient'}`}
+                    onClick={() => setDialogOpen(true)}
+                  >
+                    {selectedWeek.is_active ? 'Endre aktiv uke' : 'Sett aktiv'}
+                  </Button>
+                </div>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Aktiv uke = den lederne ser i appen. Du kan fortsatt planlegge andre uker uten at de blir aktive.
+                </p>
               </div>
               <Button
                 variant="ghost"
@@ -262,6 +312,63 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, onSelect }: Props) {
           )}
         </div>
       )}
+
+      {/* Dialog for å bytte hvilken uke som er aktiv for lederne */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-primary" /> Velg aktiv uke
+            </DialogTitle>
+            <DialogDescription>
+              Dette er den uken lederne ser i appen. Du kan fortsatt planlegge andre uker uten at de blir aktive.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-1">
+            {(weeks ?? []).map((w) => {
+              const isActive = w.id === activeWeekId;
+              return (
+                <div
+                  key={w.id}
+                  className={`flex items-center gap-3 rounded-2xl border p-3 ${
+                    isActive ? 'border-primary/40 bg-primary/10' : 'border-border/60 bg-muted/30'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-1.5 text-sm font-semibold">
+                      {w.name}
+                      {isActive && (
+                        <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
+                          AKTIV
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {shortDate(w.start_date)} – {shortDate(w.end_date)} · {staffCount.get(w.id) ?? 0} ledere
+                    </p>
+                  </div>
+                  {isActive ? (
+                    <Check className="h-5 w-5 shrink-0 text-primary" />
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="h-8 rounded-full px-3 text-xs oks-ls-gradient"
+                      disabled={setActive.isPending}
+                      onClick={() => setActive.mutate(w.id)}
+                    >
+                      Sett aktiv
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+            {(weeks ?? []).length === 0 && (
+              <p className="py-4 text-center text-sm text-muted-foreground">Ingen uker lagt inn ennå.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
