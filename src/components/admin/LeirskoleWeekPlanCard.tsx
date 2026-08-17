@@ -62,8 +62,18 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
     return map;
   }, [cells]);
 
+  const filledCount = useMemo(
+    () =>
+      dates.reduce(
+        (sum, date) =>
+          sum +
+          ROWS.filter((r) => (stored.get(cellKey(date, r.index))?.content ?? '').trim().length > 0).length,
+        0,
+      ),
+    [dates, stored],
+  );
+
   const persist = (date: string, row: number, content: string, color: string) => {
-    void 0;
     save.mutate(
       { weekId: week.id, date, rowIndex: row, content, color },
       { onError: () => toast.error('Kunne ikke lagre ruten') },
