@@ -500,6 +500,38 @@ export function LeirskoleCellSheet({
                   );
                 })}
               </div>
+
+              {withoutActivity.length > 0 && (
+                <div className="mt-3 rounded-2xl border border-dashed border-muted-foreground/40 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      {withoutActivity.length} på vakt uten aktivitet (stiplet i oversikten)
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-full"
+                      disabled={giveActivity.isPending}
+                      onClick={() => giveActivity.mutate(withoutActivity)}
+                    >
+                      Gi alle en aktivitet
+                    </Button>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {withoutActivity.map((l) => (
+                      <button
+                        key={l.id}
+                        type="button"
+                        disabled={giveActivity.isPending}
+                        onClick={() => giveActivity.mutate([l])}
+                        className="rounded-full border border-dashed border-muted-foreground/50 px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+                      >
+                        {l.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
