@@ -18,7 +18,7 @@ export interface CellTarget {
   postId?: string | null;
   label: string;
   /** 'normal' | 'arrival' | 'departure' — ankomst krever ikke kompetanse. */
-  dayType?: 'normal' | 'arrival' | 'departure';
+  dayType?: 'normal' | 'arrival' | 'departure' | 'both';
 }
 
 export interface CellLeader {
@@ -59,7 +59,7 @@ export function LeirskoleCellSheet({
 }) {
   const qc = useQueryClient();
   const savePlan = useSaveLeirskoleWeekPlanCell();
-  const isSpecial = target?.dayType === 'arrival' || target?.dayType === 'departure';
+  const isSpecial = target?.dayType != null && target.dayType !== 'normal';
   const [name, setName] = useState('');
   const [start, setStart] = useState('09:00');
   const [end, setEnd] = useState('11:00');
@@ -220,7 +220,7 @@ export function LeirskoleCellSheet({
   const leaderFor = (activity: string) =>
     assignments.find((a) => a.activity === activity)?.leader_id ?? '';
 
-  const isArrival = target?.dayType === 'arrival' || target?.dayType === 'departure';
+  const isArrival = target?.dayType != null && target.dayType !== 'normal';
 
   /** Ledere som ikke står på denne vakten, men som er med i uken. */
   const offDuty = useMemo(
@@ -243,7 +243,12 @@ export function LeirskoleCellSheet({
             <div className="space-y-3 rounded-2xl border border-amber-500/50 bg-amber-500/10 p-3">
               <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">
                 <Clock className="h-3.5 w-3.5" />
-                {target?.dayType === 'arrival' ? 'Ankomstdag' : 'Avreisedag'} — egen økt
+                {target?.dayType === 'both'
+                  ? 'Avreise + ankomst'
+                  : target?.dayType === 'arrival'
+                    ? 'Ankomstdag'
+                    : 'Avreisedag'}{' '}
+                — egen økt
               </p>
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Navn på økten (f.eks. Innsjekk)" />
               <div className="flex items-center gap-2">
