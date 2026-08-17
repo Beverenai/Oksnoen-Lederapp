@@ -3,8 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, CalendarDays, Moon } from 'lucide-react';
-import { useActiveLeirskoleWeek, useLeirskoleSchedule, useLeirskoleStaff } from '@/hooks/useLeirskole';
+import { ArrowLeft, CalendarDays, ChefHat, Moon } from 'lucide-react';
+import {
+  useActiveLeirskoleWeek,
+  useLeirskoleKitchenDays,
+  useLeirskoleSchedule,
+  useLeirskoleStaff,
+} from '@/hooks/useLeirskole';
 import { dayLabel, hhmm, todayStr } from '@/lib/leirskoleDates';
 
 export default function LeirskoleVaktplan() {
@@ -14,6 +19,7 @@ export default function LeirskoleVaktplan() {
   const published = !!week?.schedule_published_at || isAdmin;
   const { data: posts, isLoading } = useLeirskoleSchedule(published ? week?.id : null);
   const { data: staff } = useLeirskoleStaff(week?.id);
+  const { data: kitchenDays } = useLeirskoleKitchenDays(week?.id);
   const today = todayStr();
 
   const staffNames = useMemo(() => {
@@ -54,6 +60,15 @@ export default function LeirskoleVaktplan() {
             <p className={`mb-2 flex items-center gap-2 text-sm font-semibold ${date === today ? 'text-primary' : ''}`}>
               <CalendarDays className="h-4 w-4 text-primary" /> {dayLabel(date)}{date === today ? ' · i dag' : ''}
             </p>
+            {(kitchenDays ?? []).some((k) => k.date === date) && (
+              <p className="mb-2 flex items-center gap-1.5 rounded-2xl bg-[hsl(var(--oks-ls-green))]/15 px-3 py-1.5 text-xs font-semibold text-[hsl(var(--oks-ls-green))]">
+                <ChefHat className="h-3.5 w-3.5" /> Kjøkken hele dagen:{' '}
+                {(kitchenDays ?? [])
+                  .filter((k) => k.date === date)
+                  .map((k) => staffNames.get(k.staff_id) ?? '—')
+                  .join(', ')}
+              </p>
+            )}
             <div className="space-y-1.5">
               {(dayPosts ?? []).map((p) => (
                 <div key={p.id} className="rounded-2xl bg-muted/40 px-3 py-2">
