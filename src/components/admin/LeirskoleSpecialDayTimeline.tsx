@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -196,6 +196,18 @@ export function LeirskoleSpecialDayTimeline({
     });
   };
 
+  useEffect(() => {
+    if (!edit) return;
+    const move = (e: PointerEvent) => onEditMove(e.clientY);
+    const up = () => commitEdit();
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+  });
+
   return (
     <div className="flex h-full flex-col gap-1">
       <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">
@@ -292,7 +304,6 @@ export function LeirskoleSpecialDayTimeline({
                     onPointerDown={(e) => {
                       if ((e.target as HTMLElement).closest('[data-resize]')) return;
                       movedRef.current = false;
-                      gridRef.current?.setPointerCapture(e.pointerId);
                       setEdit({ id: p.id, mode: 'move', from: rawFrom, to: rawTo, grabOffset: slotAt(e.clientY) - rawFrom });
                     }}
                   >
@@ -319,7 +330,6 @@ export function LeirskoleSpecialDayTimeline({
                       data-resize
                       onPointerDown={(e) => {
                         e.stopPropagation();
-                        gridRef.current?.setPointerCapture(e.pointerId);
                         setEdit({ id: p.id, mode: 'resize', from: rawFrom, to: rawTo, grabOffset: 0 });
                       }}
                       className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize bg-emerald-600/40"
