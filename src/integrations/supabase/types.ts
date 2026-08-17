@@ -2044,6 +2044,39 @@ export type Database = {
           },
         ]
       }
+      leirskole_activity_types: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          is_active: boolean
+          key: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          is_active?: boolean
+          key: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          is_active?: boolean
+          key?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leirskole_assignments: {
         Row: {
           assigned_at: string
@@ -2252,6 +2285,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "leirskole_posts_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_session_activities: {
+        Row: {
+          activity_keys: string[]
+          created_at: string
+          date: string
+          id: string
+          session: string
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          activity_keys?: string[]
+          created_at?: string
+          date: string
+          id?: string
+          session: string
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          activity_keys?: string[]
+          created_at?: string
+          date?: string
+          id?: string
+          session?: string
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_session_activities_week_id_fkey"
             columns: ["week_id"]
             isOneToOne: false
             referencedRelation: "leirskole_weeks"
