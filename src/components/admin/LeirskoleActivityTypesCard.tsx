@@ -151,5 +151,7 @@ export function LeirskoleActivityTypesCard() {
         )}
       </div>
     </div>
+  )}
+</div>
   );
 }
