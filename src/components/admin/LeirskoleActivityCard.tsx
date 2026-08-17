@@ -11,12 +11,14 @@ import {
   useLeirskoleSchedule,
   useSaveLeirskoleActivities,
   useDeleteLeirskoleActivity,
+  useLeirskoleActivityTypes,
+  useLeirskoleSessionActivities,
+  useSaveLeirskoleSessionActivities,
   type LeirskoleStaff,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
 import {
   LEIRSKOLE_ACTIVITY_SESSIONS,
-  activitiesForSession,
   activityEmoji,
   activityLabel,
   generateActivityAssignments,
@@ -56,8 +58,30 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
   const { data: posts } = useLeirskoleSchedule(week.id);
   const { data: saved } = useLeirskoleActivities(week.id);
   const { data: history } = useLeirskoleActivityHistory();
+  const { data: types } = useLeirskoleActivityTypes(true);
+  const { data: sessionPicks } = useLeirskoleSessionActivities(week.id);
+  const savePicks = useSaveLeirskoleSessionActivities();
   const save = useSaveLeirskoleActivities();
   const removeOne = useDeleteLeirskoleActivity();
+
+  const allKeys = useMemo(() => (types ?? []).map((t) => t.key), [types]);
+
+  /** Valgte aktiviteter for en gitt økt — tom/ingen rad = alle aktive. */
+  const keysFor = (sessionKey: string) => {
+    const row = (sessionPicks ?? []).find((p) => p.date === date && p.session === sessionKey);
+    const picked = (row?.activity_keys ?? []).filter((k) => allKeys.includes(k));
+    return picked.length ? picked : allKeys;
+  };
+
+  const selectedKeys = keysFor(session);
+
+  const toggleKey = (key: string) => {
+    const next = selectedKeys.includes(key)
+      ? selectedKeys.filter((k) => k !== key)
+      : [...allKeys.filter((k) => selectedKeys.includes(k) || k === key)];
+    savePicks.mutate({ weekId: week.id, date, session, activityKeys: next });
+    setDraft(null);
+  };
 
   const staffIdToLeader = useMemo(() => {
     const map = new Map<string, StaffRow>();
@@ -98,7 +122,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
     const result = generateActivityAssignments(
       candidates,
       (history ?? []).map((h) => ({ leader_id: h.leader_id, activity: h.activity })),
-      activitiesForSession(session).map((a) => a.key),
+      selectedKeys,
     );
     setDraft(result);
   };
@@ -149,7 +173,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
         const rows = generateActivityAssignments(
           candidates,
           running,
-          activitiesForSession(s.key).map((a) => a.key),
+          keysFor(s.key),
         );
         if (!rows.length) continue;
         await save.mutateAsync({
@@ -190,7 +214,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
           <Wand2 className="h-4 w-4 text-primary" /> Aktiviteter per økt
         </p>
         <p className="text-xs text-muted-foreground">
-          Formiddag og ettermiddag: Tube, Klatring, Rappellering, Kanotur, Båtkjøring og Badevakt.
+          Velg dag og økt, og trykk aktivitetene av/på for å bestemme hva som skal fordeles.
           Kveldsøkten håndteres utenom appen.
         </p>
       </div>
@@ -226,8 +250,32 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
       </div>
 
       <p className="text-[11px] text-muted-foreground">
-        {onDuty.length} ledere tilgjengelig · {savedForSession.length} lagret på denne økten
+        {onDuty.length} ledere tilgjengelig · {selectedKeys.length} aktiviteter valgt ·{' '}
+        {savedForSession.length} lagret på denne økten
       </p>
+
+      {/* Aktiviteter av/på for denne økten */}
+      <div className="flex flex-wrap gap-1.5">
+        {(types ?? []).map((t) => {
+          const on = selectedKeys.includes(t.key);
+          return (
+            <button
+              key={t.key}
+              onClick={() => toggleKey(t.key)}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                on
+                  ? 'border-primary bg-primary/15 text-foreground'
+                  : 'border-border bg-muted/40 text-muted-foreground opacity-60'
+              }`}
+            >
+              {t.emoji} {t.label}
+            </button>
+          );
+        })}
+        {(types ?? []).length === 0 && (
+          <p className="text-xs text-muted-foreground">Ingen aktiviteter er lagt inn ennå.</p>
+        )}
+      </div>
 
       {/* Lagret */}
       {savedForSession.length > 0 && (
@@ -236,7 +284,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
             <div key={a.id} className="flex items-center justify-between gap-2 rounded-2xl bg-muted/40 px-3 py-2">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">
-                  {activityEmoji(a.activity)} {activityLabel(a.activity)}
+                  {activityEmoji(a.activity, types ?? [])} {activityLabel(a.activity, types ?? [])}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
                   {staff.find((s) => s.leader?.id === a.leader_id)?.leader?.name ?? 'Ukjent'}
@@ -268,7 +316,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
                     }
                     className="rounded-full border border-border bg-background px-2 py-1 text-xs"
                   >
-                    {activitiesForSession(session).map((a) => (
+                    {(types ?? []).map((a) => (
                       <option key={a.key} value={a.key}>
                         {a.emoji} {a.label}
                       </option>

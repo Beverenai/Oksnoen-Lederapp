@@ -12,6 +12,7 @@ import {
   useLeirskoleSessionInfo,
   useMarkLeirskoleInfoRead,
   useMyLeirskoleActivities,
+  useLeirskoleActivityTypes,
   useMyLeirskoleShifts,
   useMyLeirskoleCompetencies,
 } from '@/hooks/useLeirskole';
@@ -70,6 +71,7 @@ export default function Leirskole() {
   const { data: myShifts, isLoading: shiftsLoading } = useMyLeirskoleShifts(week?.id);
   const { data: sessionInfo } = useLeirskoleSessionInfo(week?.id);
   const { data: myActivities } = useMyLeirskoleActivities(week?.id);
+  const { data: activityTypes } = useLeirskoleActivityTypes(true);
   const markInfoRead = useMarkLeirskoleInfoRead();
   const { data: myCompetencies } = useMyLeirskoleCompetencies();
   const { data: weekPosts } = useLeirskoleSchedule(week?.id);
@@ -306,7 +308,7 @@ export default function Leirskole() {
                       </span>
                     </div>
                     <p className="mt-2 text-xl font-heading font-bold leading-tight">
-                      {activityEmoji(nextShiftActivity.activity)} {activityLabel(nextShiftActivity.activity)}
+                      {activityEmoji(nextShiftActivity.activity, activityTypes ?? [])} {activityLabel(nextShiftActivity.activity, activityTypes ?? [])}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {dayLabel(nextShiftActivity.date)}
@@ -402,9 +404,9 @@ export default function Leirskole() {
               <div
                 className={`mt-2.5 flex items-center gap-2 rounded-2xl border px-3 py-2 ${sessionStyle(nextShiftActivity.session).card}`}
               >
-                <span className="text-lg">{activityEmoji(nextShiftActivity.activity)}</span>
+                <span className="text-lg">{activityEmoji(nextShiftActivity.activity, activityTypes ?? [])}</span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold">{activityLabel(nextShiftActivity.activity)}</p>
+                  <p className="truncate text-sm font-bold">{activityLabel(nextShiftActivity.activity, activityTypes ?? [])}</p>
                   <p className="text-[11px] text-muted-foreground">
                     Din aktivitet · {sessionLabel(nextShiftActivity.session)}
                   </p>

@@ -21,6 +21,7 @@ import {
 } from '@/hooks/useLeirskole';
 import { LeirskoleAccessCard } from '@/components/admin/LeirskoleAccessCard';
 import { LeirskoleActivityCard } from '@/components/admin/LeirskoleActivityCard';
+import { LeirskoleActivityTypesCard } from '@/components/admin/LeirskoleActivityTypesCard';
 import { LeirskoleLeaderSheet } from '@/components/admin/LeirskoleLeaderSheet';
 import { LeirskolePostsCard } from '@/components/admin/LeirskolePostsCard';
 import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
@@ -469,6 +470,7 @@ export default function LeirskoleAdmin() {
             </div>
           )}
           <LeirskoleActivityCard week={week} staff={staff ?? []} />
+          <LeirskoleActivityTypesCard />
           <LeirskoleSessionInfoCard weekId={week.id} staff={staff ?? []} />
         </TabsContent>
 

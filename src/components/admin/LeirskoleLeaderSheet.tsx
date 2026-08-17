@@ -13,10 +13,9 @@ import {
   useSaveLeirskoleActivities,
   useDeleteLeirskoleActivity,
   useSaveLeirskoleCompetencies,
+  useLeirskoleActivityTypes,
 } from '@/hooks/useLeirskole';
-import { LEIRSKOLE_COMPETENCIES, competenceEmoji, competenceLabel } from '@/lib/leirskoleCompetencies';
 import {
-  LEIRSKOLE_ACTIVITIES,
   LEIRSKOLE_ACTIVITY_SESSIONS,
   activityEmoji,
   activityLabel,
@@ -53,11 +52,13 @@ export function LeirskoleLeaderSheet({
   const saveActivities = useSaveLeirskoleActivities();
   const deleteActivity = useDeleteLeirskoleActivity();
   const saveComps = useSaveLeirskoleCompetencies();
+  const { data: types } = useLeirskoleActivityTypes(true);
+  const activityTypes = types ?? [];
 
   const today = new Date().toLocaleDateString('sv-SE');
   const [date, setDate] = useState(today);
   const [session, setSession] = useState<string>('formiddag');
-  const [activity, setActivity] = useState<string>(LEIRSKOLE_ACTIVITIES[0].key);
+  const [activity, setActivity] = useState<string>('');
   const [taskTitle, setTaskTitle] = useState('');
 
   const mine = useMemo(
@@ -65,13 +66,15 @@ export function LeirskoleLeaderSheet({
     [activities, leaderId],
   );
 
+  const effectiveActivity = activity || activityTypes[0]?.key || '';
+
   const assign = useMutation({
     mutationFn: async () => {
       await saveActivities.mutateAsync({
         weekId,
         date,
         session,
-        rows: [{ leader_id: leaderId, activity }],
+        rows: [{ leader_id: leaderId, activity: effectiveActivity }],
         replace: false,
       });
     },
@@ -137,7 +140,7 @@ export function LeirskoleLeaderSheet({
           <div>
             <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Kompetanse</p>
             <div className="flex flex-wrap gap-1.5">
-              {LEIRSKOLE_COMPETENCIES.map((c) => {
+              {activityTypes.map((c) => {
                 const on = competencies.includes(c.key);
                 return (
                   <button
@@ -147,7 +150,7 @@ export function LeirskoleLeaderSheet({
                       on ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground'
                     }`}
                   >
-                    {competenceEmoji(c.key)} {competenceLabel(c.key)}
+                    {c.emoji} {c.label}
                   </button>
                 );
               })}
@@ -172,12 +175,12 @@ export function LeirskoleLeaderSheet({
               ))}
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {LEIRSKOLE_ACTIVITIES.map((a) => (
+              {activityTypes.map((a) => (
                 <button
                   key={a.key}
                   onClick={() => setActivity(a.key)}
                   className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-                    a.key === activity ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground'
+                    a.key === effectiveActivity ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground'
                   }`}
                 >
                   {a.emoji} {a.label}
@@ -202,7 +205,7 @@ export function LeirskoleLeaderSheet({
                   <div key={a.id} className="flex items-center justify-between gap-2 rounded-2xl bg-muted/40 px-3 py-2">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">
-                        {activityEmoji(a.activity)} {activityLabel(a.activity)}
+                        {activityEmoji(a.activity, activityTypes)} {activityLabel(a.activity, activityTypes)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {dayLabel(a.date)} · {sessionLabel(a.session)}

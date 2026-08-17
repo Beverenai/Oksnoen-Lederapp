@@ -10,6 +10,121 @@ export type LeirskoleAssignment = Tables<'leirskole_assignments'>;
 export type LeirskoleTask = Tables<'leirskole_tasks'>;
 export type LeirskoleSessionInfo = Tables<'leirskole_session_info'>;
 export type LeirskoleActivityAssignment = Tables<'leirskole_activity_assignments'>;
+export type LeirskoleActivityType = Tables<'leirskole_activity_types'>;
+export type LeirskoleSessionActivities = Tables<'leirskole_session_activities'>;
+
+/** Aktivitetstypene admin kan legge til / endre. */
+export function useLeirskoleActivityTypes(onlyActive = false) {
+  return useQuery({
+    queryKey: ['leirskole-activity-types', onlyActive],
+    queryFn: async () => {
+      let q = supabase.from('leirskole_activity_types').select('*').order('sort_order');
+      if (onlyActive) q = q.eq('is_active', true);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as LeirskoleActivityType[];
+    },
+  });
+}
+
+function slugifyActivity(label: string) {
+  return label
+    .toLowerCase()
+    .replace(/[æå]/g, 'a')
+    .replace(/ø/g, 'o')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 40);
+}
+
+export function useAddLeirskoleActivityType() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      label,
+      emoji,
+      sortOrder,
+    }: {
+      label: string;
+      emoji: string;
+      sortOrder: number;
+    }) => {
+      const key = slugifyActivity(label) || `aktivitet_${Date.now()}`;
+      const { error } = await supabase
+        .from('leirskole_activity_types')
+        .insert({ key, label: label.trim(), emoji: emoji || '•', sort_order: sortOrder });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-activity-types'] }),
+  });
+}
+
+export function useUpdateLeirskoleActivityType() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...patch
+    }: { id: string } & Partial<Pick<LeirskoleActivityType, 'label' | 'emoji' | 'is_active' | 'sort_order'>>) => {
+      const { error } = await supabase.from('leirskole_activity_types').update(patch).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-activity-types'] }),
+  });
+}
+
+export function useDeleteLeirskoleActivityType() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('leirskole_activity_types').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-activity-types'] }),
+  });
+}
+
+/** Hvilke aktiviteter som er valgt per dag + økt i en uke. */
+export function useLeirskoleSessionActivities(weekId?: string | null) {
+  return useQuery({
+    queryKey: ['leirskole-session-activities', weekId],
+    enabled: !!weekId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leirskole_session_activities')
+        .select('*')
+        .eq('week_id', weekId!);
+      if (error) throw error;
+      return (data ?? []) as LeirskoleSessionActivities[];
+    },
+  });
+}
+
+export function useSaveLeirskoleSessionActivities() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      weekId,
+      date,
+      session,
+      activityKeys,
+    }: {
+      weekId: string;
+      date: string;
+      session: string;
+      activityKeys: string[];
+    }) => {
+      const { error } = await supabase
+        .from('leirskole_session_activities')
+        .upsert(
+          { week_id: weekId, date, session, activity_keys: activityKeys, updated_at: new Date().toISOString() },
+          { onConflict: 'week_id,date,session' },
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-session-activities'] }),
+  });
+}
 
 /** Alle leirskoleuker (nyeste først). */
 export function useLeirskoleWeeks() {
