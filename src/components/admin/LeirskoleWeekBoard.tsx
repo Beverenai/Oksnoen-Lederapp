@@ -213,14 +213,48 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   }, [posts, staffToLeader, kitchenDays]);
 
   const generate = useMutation({
-    mutationFn: (mode: LeirskoleGenerateMode) =>
-      runLeirskoleGenerate({
+    mutationFn: async (mode: LeirskoleGenerateMode) => {
+      // Uken må ha ledere før generatoren kan kjøre. Er den tom, kopierer vi
+      // staben fra nærmeste tidligere uke som har ledere.
+      if (staff.length === 0) {
+        const { data: prevWeeks } = await supabase
+          .from('leirskole_weeks')
+          .select('id')
+          .lt('start_date', week.start_date)
+          .order('start_date', { ascending: false });
+        let unique: Array<{ leader_id: string; max_daily_hours: number | null }> = [];
+        for (const w of prevWeeks ?? []) {
+          const { data: rows } = await supabase
+            .from('leirskole_staff')
+            .select('leader_id, max_daily_hours')
+            .eq('week_id', w.id);
+          if (rows && rows.length) {
+            unique = rows;
+            break;
+          }
+        }
+        if (unique.length === 0) {
+          throw new Error('Ingen ledere er lagt til denne uken. Legg til ledere under «Tilgang» først.');
+        }
+        const { error: copyError } = await supabase.from('leirskole_staff').insert(
+          unique.map((r) => ({
+            week_id: week.id,
+            leader_id: r.leader_id,
+            max_daily_hours: r.max_daily_hours ?? 8,
+          })),
+        );
+        if (copyError) throw copyError;
+        qc.invalidateQueries({ queryKey: ['leirskole-staff'] });
+        toast.info(`Kopierte ${unique.length} ledere fra forrige uke`);
+      }
+      return runLeirskoleGenerate({
         weekId: week.id,
         startDate: week.start_date,
         endDate: week.end_date,
         mode,
         createdBy: leader?.id ?? null,
-      }),
+      });
+    },
     onSuccess: (result) => {
       setSummary(result);
       ['leirskole-week-plan', 'leirskole-schedule', 'leirskole-activities', 'leirskole-activity-history', 'leirskole-my-shifts'].forEach(
