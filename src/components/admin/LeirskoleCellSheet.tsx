@@ -118,7 +118,7 @@ export function LeirskoleCellSheet({
   const leaderFor = (activity: string) =>
     assignments.find((a) => a.activity === activity)?.leader_id ?? '';
 
-  const isArrival = target?.dayType === 'arrival';
+  const isArrival = target?.dayType === 'arrival' || target?.dayType === 'departure';
 
   /** Ledere som ikke står på denne vakten, men som er med i uken. */
   const offDuty = useMemo(

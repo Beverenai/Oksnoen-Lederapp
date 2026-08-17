@@ -176,7 +176,7 @@ export async function runLeirskoleGenerate({
         session,
         activities,
         onDuty: dutyBySlot.get(`${cell.date}|${session}`) ?? [],
-        requireCompetence: dayType !== 'arrival',
+        requireCompetence: dayType === 'normal' || !dayType,
       };
     })
     .filter(Boolean) as { date: string; session: string; activities: string[]; onDuty: string[]; requireCompetence: boolean }[];

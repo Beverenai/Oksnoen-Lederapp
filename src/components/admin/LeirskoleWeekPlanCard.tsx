@@ -76,6 +76,7 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
   const addPost = useAddLeirskolePost();
   const deletePost = useDeleteLeirskolePost();
   const [newPostDate, setNewPostDate] = useState<string | null>(null);
+  const [freeText, setFreeText] = useState<Record<string, string>>({});
   const [form, setForm] = useState({ name: '', start: '09:00', end: '10:00' });
   const dates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
 
@@ -324,7 +325,25 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
                                 <span className="ml-1 normal-case text-muted-foreground/70">{row.sub}</span>
                               )}
                             </span>
-                            {!readOnly && (
+                            {!readOnly && isSpecial && (
+                              <form
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  const text = (freeText[key] ?? '').trim();
+                                  if (!text) return;
+                                  setLines([...lines, text]);
+                                  setFreeText((s) => ({ ...s, [key]: '' }));
+                                }}
+                              >
+                                <input
+                                  value={freeText[key] ?? ''}
+                                  onChange={(e) => setFreeText((s) => ({ ...s, [key]: e.target.value }))}
+                                  placeholder="Skriv aktivitet + Enter"
+                                  className="w-full rounded-lg border border-dashed border-border bg-background/60 px-2 py-1 text-[11px] outline-none focus:border-primary"
+                                />
+                              </form>
+                            )}
+                            {!readOnly && !isSpecial && (
                               <div className="flex items-center gap-1">
                                 {COLORS.map((c) => (
                                   <button
