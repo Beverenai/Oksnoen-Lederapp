@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -101,7 +100,6 @@ export function LeirskolePostsCard({
 }) {
   const qc = useQueryClient();
   const { showError } = useStatusPopup();
-  const { leader } = useAuth();
   const { data: posts } = useLeirskoleSchedule(week.id);
   const generate = useGenerateLeirskoleSchedule();
 
@@ -200,17 +198,17 @@ export function LeirskolePostsCard({
           ? `Vaktplan generert — ${res.stats?.assigned ?? 0} vakter fordelt`
           : `Generert med ${missing} udekkede vakter`,
       );
-      if (publishAfter) await publishAndNotify();
+      if (publishAfter) await publishSchedule();
     } catch (error: unknown) {
       showError(errorMessage(error, 'Kunne ikke generere vaktplan'));
     }
   };
 
   /**
-   * Publiserer planen og varsler lederne — men kun de som faktisk er satt opp
-   * på denne uken, og bare når uken er den aktive.
+   * Publiserer vaktplanen uten å sende varsling. Vaktplanen genereres én gang
+   * i uken, så lederne sjekker den direkte i appen.
    */
-  const publishAndNotify = async () => {
+  const publishSchedule = async () => {
     const { error } = await supabase
       .from('leirskole_weeks')
       .update({ schedule_published_at: new Date().toISOString() })
@@ -221,24 +219,7 @@ export function LeirskolePostsCard({
     }
     qc.invalidateQueries({ queryKey: ['leirskole-weeks'] });
     qc.invalidateQueries({ queryKey: ['leirskole-active-week'] });
-
-    const leaderIds = staff.map((s) => s.leader_id);
-    if (!week.is_active || leaderIds.length === 0) {
-      toast.info('Vaktplanen er publisert. Varsling sendes kun for den aktive uken.');
-      return;
-    }
-    const { data, error: pushError } = await supabase.functions.invoke('push-send', {
-      body: {
-        title: 'Leirskole-vaktplan',
-        message: 'Vaktplanen er klar — se dine vakter i appen.',
-        leader_ids: leaderIds,
-        sender_leader_id: leader?.id,
-        url: '/leirskole',
-        include_inactive: true,
-      },
-    });
-    if (pushError || data?.error) toast.warning('Publisert, men varslingen kunne ikke sendes.');
-    else toast.success(`Publisert og varslet ${leaderIds.length} ledere`);
+    toast.success('Vaktplanen er publisert');
   };
 
   const byDay = useMemo(() => {
@@ -285,7 +266,7 @@ export function LeirskolePostsCard({
             <Switch checked={keepLocked} onCheckedChange={setKeepLocked} />
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm">Publiser og varsle lederne</span>
+            <span className="text-sm">Publiser vaktplanen</span>
             <Switch checked={publishAfter} onCheckedChange={setPublishAfter} />
           </div>
           <Button className="w-full gap-2" onClick={run} disabled={generate.isPending || staff.length === 0}>
