@@ -200,7 +200,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           rowIndex: null,
           postId: p.id,
           label: `${p.name} ${hhmm(p.start_time)}–${hhmm(p.end_time)}`,
-          dayType,
+          dayType: dayType as 'arrival' | 'departure',
         };
       });
     }
