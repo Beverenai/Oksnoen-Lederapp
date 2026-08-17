@@ -280,12 +280,23 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
                   }
                 />
               </div>
-              <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2">
-                <span className="text-xs">Uken er i bruk (gir tilgang)</span>
-                <Switch
-                  checked={selectedWeek.is_active}
-                  onCheckedChange={(v) => patch.mutate({ id: selectedWeek.id, values: { is_active: v } })}
-                />
+              <div className="rounded-xl bg-muted/40 px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs">
+                    {selectedWeek.is_active ? 'Denne uken er aktiv for lederne' : 'Denne uken er ikke aktiv'}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant={selectedWeek.is_active ? 'secondary' : 'default'}
+                    className={`h-7 rounded-full px-2.5 text-[11px] ${selectedWeek.is_active ? '' : 'oks-ls-gradient'}`}
+                    onClick={() => setDialogOpen(true)}
+                  >
+                    {selectedWeek.is_active ? 'Endre aktiv uke' : 'Sett aktiv'}
+                  </Button>
+                </div>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Aktiv uke = den lederne ser i appen. Du kan fortsatt planlegge andre uker uten at de blir aktive.
+                </p>
               </div>
               <Button
                 variant="ghost"
