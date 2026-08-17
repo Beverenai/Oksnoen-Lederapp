@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users, ChevronRight } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
   useLeirskoleActivities,
