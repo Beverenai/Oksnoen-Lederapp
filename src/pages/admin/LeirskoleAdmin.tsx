@@ -98,8 +98,8 @@ export default function LeirskoleAdmin() {
   const syncJobb = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('sync-leirskole-jobb');
-      if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
+      if (error) throw new Error(error.message || 'Kunne ikke kontakte jobb-plattformen');
       return data as { imported: number; staff: number; unmatched: string[] };
     },
     onSuccess: (res) => {
