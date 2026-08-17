@@ -41,6 +41,8 @@ interface LeaderDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
+  /** Kalles med ny rolle så lista kan oppdateres uten full oppfriskning. */
+  onRoleChanged?: (role: AppRole) => void;
   currentRole?: AppRole;
 }
 
@@ -49,6 +51,7 @@ export function LeaderDetailDialog({
   open, 
   onOpenChange, 
   onSaved,
+  onRoleChanged,
   currentRole = 'leader'
 }: LeaderDetailDialogProps) {
   const { showSuccess, showError, showInfo } = useStatusPopup();
@@ -56,6 +59,7 @@ export function LeaderDetailDialog({
   const [isUploading, setIsUploading] = useState(false);
   const [isResettingPin, setIsResettingPin] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [roleStatus, setRoleStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   
   // Change notification state
   const [showNotifyDialog, setShowNotifyDialog] = useState(false);
@@ -219,6 +223,8 @@ export function LeaderDetailDialog({
   const showErrorRef = useRef(showError);
   useEffect(() => { onSavedRef.current = onSaved; }, [onSaved]);
   useEffect(() => { showErrorRef.current = showError; }, [showError]);
+  const onRoleChangedRef = useRef(onRoleChanged);
+  useEffect(() => { onRoleChangedRef.current = onRoleChanged; }, [onRoleChanged]);
 
   // Auto-save role changes (separate because it uses edge function)
   useEffect(() => {
@@ -227,23 +233,27 @@ export function LeaderDetailDialog({
 
     if (roleSaveTimerRef.current) clearTimeout(roleSaveTimerRef.current);
     roleSaveTimerRef.current = setTimeout(async () => {
-      setAutoSaveStatus('saving');
+      setRoleStatus('saving');
       try {
         const { error } = await supabase.functions.invoke('manage-roles', {
           body: { action: 'set', leader_id: leaderId, role }
         });
         if (error) throw error;
+        const savedRole = role;
         originalValuesRef.current.role = role;
-        setAutoSaveStatus('saved');
+        setRoleStatus('saved');
         hapticSuccess();
+        onRoleChangedRef.current?.(savedRole);
         onSavedRef.current();
-        setTimeout(() => setAutoSaveStatus('idle'), 2000);
+        setTimeout(() => setRoleStatus('idle'), 2000);
       } catch (err) {
         console.error('Role save error:', err);
-        setAutoSaveStatus('idle');
+        setRoleStatus('error');
+        setRole(originalValuesRef.current.role);
         showErrorRef.current('Kunne ikke lagre rolle');
+        setTimeout(() => setRoleStatus('idle'), 3000);
       }
-    }, 500);
+    }, 400);
   }, [role, leaderId]);
 
   const getFirstName = (fullName: string) => fullName.split(' ')[0];
@@ -533,8 +543,19 @@ export function LeaderDetailDialog({
 
               {/* Role Selection */}
               <div className="space-y-3">
-                <Label className="text-base font-semibold">Rolle</Label>
-                <RadioGroup value={role} onValueChange={(value) => setRole(value as AppRole)}>
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Rolle</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {roleStatus === 'saving' && 'Lagrer rolle…'}
+                    {roleStatus === 'saved' && 'Rolle lagret'}
+                    {roleStatus === 'error' && 'Kunne ikke lagre'}
+                  </span>
+                </div>
+                <RadioGroup
+                  value={role}
+                  disabled={roleStatus === 'saving'}
+                  onValueChange={(value) => setRole(value as AppRole)}
+                >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="leader" id="role-leader" />
                     <Label htmlFor="role-leader" className="flex items-center gap-2 cursor-pointer">

@@ -20,6 +20,7 @@ import {
   useLeirskoleStaff,
   useGenerateLeirskoleSchedule,
 } from '@/hooks/useLeirskole';
+import { LeirskoleAccessCard } from '@/components/admin/LeirskoleAccessCard';
 
 const hhmm = (t: string) => t.slice(0, 5);
 
@@ -350,32 +351,22 @@ export default function LeirskoleAdmin() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Users className="h-4 w-4 text-primary" /> Ledere på leirskole ({staff?.length ?? 0})
-              </CardTitle>
-              <CardDescription>Trykk for å legge til eller fjerne</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex flex-wrap gap-2">
-                {(allLeaders ?? []).map((l) => {
-                  const on = staffIds.has(l.id);
-                  return (
-                    <button
-                      key={l.id}
-                      onClick={() => toggleStaff.mutate({ leaderId: l.id, add: !on })}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                        on ? 'bg-primary text-primary-foreground' : 'bg-card/60 text-muted-foreground'
-                      }`}
-                    >
-                      {l.name}
-                    </button>
-                  );
-                })}
-              </div>
-              {(staff ?? []).length > 0 && (
-                <div className="space-y-1 pt-2">
+          <LeirskoleAccessCard
+            weekId={week.id}
+            weekName={week.name}
+            maxDailyHours={week.max_daily_hours}
+          />
+
+          {(staff ?? []).length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Users className="h-4 w-4 text-primary" /> Timer per leder
+                </CardTitle>
+                <CardDescription>Ut fra vaktplanen for denne uken</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1">
                   {(staff ?? []).map((s) => (
                     <div key={s.id} className="flex items-center justify-between rounded-xl border bg-card/40 px-3 py-1.5">
                       <span className="text-sm">{s.leader?.name}</span>
@@ -385,9 +376,9 @@ export default function LeirskoleAdmin() {
                     </div>
                   ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="pb-3">
