@@ -98,6 +98,11 @@ export default function Chat() {
   const canUsePeriodChat = !limited;
   const { data: activeLeirskoleWeek } = useActiveLeirskoleWeek();
   const { data: isLeirskoleStaff } = useIsLeirskoleStaff(activeLeirskoleWeek?.id);
+  const { data: leirskoleStaff } = useLeirskoleStaff(activeLeirskoleWeek?.id);
+  const leirskoleLeaderIds = useMemo(
+    () => new Set((leirskoleStaff ?? []).map((s) => s.leader_id)),
+    [leirskoleStaff],
+  );
   // Leirskole-chatten er kun for de som er satt opp på den aktive leirskoleuken (+ admin).
   const canUseLeirskoleChat =
     (isAdmin && accessMode !== 'offseason') || (leirskoleView && !!isLeirskoleStaff);
