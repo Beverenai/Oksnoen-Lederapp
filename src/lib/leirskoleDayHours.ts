@@ -140,6 +140,39 @@ export async function fillDayHours({
   };
 
   let added = 0;
+
+  // 1) Fyll først vakter som mangler pålagt bemanning (Sanitas 4, måltid 2 osv.),
+  //    uansett hvor nær taket lederen er — disse er bemanningskritiske.
+  const understaffed = usable
+    .map((p) => ({ post: p, need: postCapacity(p.name, Number(p.required_leaders ?? 1)) }))
+    .filter((x) => (onPost.get(x.post.id) ?? new Set()).size < x.need)
+    .sort((a, b) => Number(a.post.duration_hours ?? 0) - Number(b.post.duration_hours ?? 0));
+
+  for (const { post, need } of understaffed) {
+    while ((onPost.get(post.id) ?? new Set()).size < need) {
+      const dur = Number(post.duration_hours ?? 0);
+      const candidate = staff
+        .filter((s) => !kitchenStaff.has(s.id))
+        .filter((s) => !(onPost.get(post.id) ?? new Set()).has(s.id))
+        .map((s) => ({ id: s.id, hours: hours.get(s.id) ?? 0, cap: capFor(s.id) }))
+        .filter((s) => s.hours + dur <= s.cap + 0.01)
+        .sort((a, b) => a.hours - b.hours)[0];
+      if (!candidate) break;
+      const { error } = await supabase.from('leirskole_assignments').insert({
+        post_id: post.id,
+        staff_id: candidate.id,
+        assigned_manually: false,
+      });
+      if (error) break;
+      const set = onPost.get(post.id) ?? new Set<string>();
+      set.add(candidate.id);
+      onPost.set(post.id, set);
+      hours.set(candidate.id, candidate.hours + dur);
+      added++;
+    }
+  }
+
+  // 2) Fyll deretter opp de som ligger langt under taket.
   for (let i = 0; i < 200; i++) {
     const candidates = staff
       .filter((s) => !kitchenStaff.has(s.id))
