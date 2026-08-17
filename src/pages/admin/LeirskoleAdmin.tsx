@@ -209,6 +209,16 @@ export default function LeirskoleAdmin() {
     return map;
   }, [staff]);
 
+  const activitiesByLeader = useMemo(() => {
+    const map = new Map<string, string[]>();
+    (weekActivities ?? []).forEach((a) => {
+      map.set(a.leader_id, [...(map.get(a.leader_id) ?? []), a.activity]);
+    });
+    return map;
+  }, [weekActivities]);
+
+  const selectedStaff = (staff ?? []).find((s) => s.id === selectedStaffId) ?? null;
+
   if (!isAdmin) {
     return <p className="py-16 text-center text-muted-foreground">Kun for admin.</p>;
   }
@@ -311,7 +321,12 @@ export default function LeirskoleAdmin() {
         staff={staff ?? []}
         hoursByStaff={hoursByStaff}
         maxDailyHours={week.max_daily_hours}
+        activitiesByLeader={activitiesByLeader}
+        onSelect={(s) => setSelectedStaffId(s.id)}
       />
+
+      {/* Aktivitetsgenerator */}
+      <LeirskoleActivityCard week={week} staff={staff ?? []} />
 
       <LeirskoleAccessCard
         weekId={week.id}
