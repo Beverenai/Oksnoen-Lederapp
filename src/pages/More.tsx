@@ -377,7 +377,9 @@ export default function More() {
         </NavLink>
       )}
 
-      <LederPassMini leader={effectiveLeader ?? leader} periodLabel={periodLabel} />
+      {accessMode !== 'leirskole' && (
+        <LederPassMini leader={effectiveLeader ?? leader} periodLabel={periodLabel} />
+      )}
 
       {sections.map((section) =>
         section.items.length === 0 ? null : (
