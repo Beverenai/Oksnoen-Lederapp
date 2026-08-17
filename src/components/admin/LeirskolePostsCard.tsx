@@ -15,6 +15,7 @@ import { CalendarClock, Play, Trash2, Lock, LockOpen, Moon, RefreshCw, Pencil, U
 import { LeaderAvatarStack } from '@/components/leirskole/LeaderAvatarStack';
 import {
   useLeirskoleSchedule,
+  useLeirskoleWeekDays,
   useGenerateLeirskoleSchedule,
   useAddLeirskolePost,
   useUpdateLeirskolePost,
