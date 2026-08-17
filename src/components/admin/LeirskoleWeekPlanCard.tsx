@@ -1,16 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Grid3X3 } from 'lucide-react';
-import { useLeirskoleWeekPlan, useSaveLeirskoleWeekPlanCell, type LeirskoleWeek } from '@/hooks/useLeirskole';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Grid3X3, Plus, X } from 'lucide-react';
+import {
+  useLeirskoleActivityTypes,
+  useLeirskoleWeekPlan,
+  useSaveLeirskoleWeekPlanCell,
+  type LeirskoleWeek,
+} from '@/hooks/useLeirskole';
 
 const WEEKDAYS = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'];
 const ROWS = [
   { index: 1, label: '1. økt' },
   { index: 2, label: '2. økt' },
   { index: 3, label: '3. økt' },
-  { index: 4, label: 'Legging' },
 ];
 
 const COLORS: { key: string; label: string; cell: string; dot: string }[] = [
@@ -36,27 +40,27 @@ function datesBetween(start: string, end: string) {
   return out;
 }
 const cellKey = (date: string, row: number) => `${date}|${row}`;
+const splitLines = (content: string) =>
+  content
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
 
 /**
- * Ukeplanleggeren: rutenett med dagene som kolonner og øktene + legging som
- * rader — som regnearket vi bruker på sommerleir. Fritekst + farge per rute.
+ * Ukeplanleggeren: rutenett med dagene som kolonner og økt 1–3 som rader.
+ * Innholdet velges fra aktivitetslista (ingen manuell skriving) + farge per rute.
  */
 export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: LeirskoleWeek; readOnly?: boolean }) {
   const { data: cells } = useLeirskoleWeekPlan(week.id);
+  const { data: activityTypes } = useLeirskoleActivityTypes(true);
   const save = useSaveLeirskoleWeekPlanCell();
   const dates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
-
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
 
   const stored = useMemo(() => {
     const map = new Map<string, { content: string; color: string }>();
     (cells ?? []).forEach((c) => map.set(cellKey(c.date, c.row_index), { content: c.content, color: c.color }));
     return map;
   }, [cells]);
-
-  useEffect(() => {
-    setDrafts({});
-  }, [week.id]);
 
   const persist = (date: string, row: number, content: string, color: string) => {
     save.mutate(
@@ -72,7 +76,8 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
           <Grid3X3 className="h-4 w-4 text-primary" /> Ukeplanlegger
         </CardTitle>
         <CardDescription>
-          Fyll ut rutene som i regnearket. Trykk på fargeprikkene for å markere ruten. Lagres automatisk.
+          Velg aktiviteter fra lista i hver rute (økt 1–3). Trykk på fargeprikkene for å markere ruten. Lagres
+          automatisk.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -93,7 +98,9 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
                       const current = stored.get(key);
                       const color = current?.color ?? 'neutral';
                       const style = COLORS.find((c) => c.key === color) ?? COLORS[0];
-                      const value = drafts[key] ?? current?.content ?? '';
+                      const value = current?.content ?? '';
+                      const lines = splitLines(value);
+                      const setLines = (next: string[]) => persist(date, row.index, next.join('\n'), color);
                       return (
                         <div key={row.index} className={`rounded-xl border p-1.5 ${style.cell}`}>
                           <div className="mb-1 flex items-center justify-between gap-1">
@@ -116,21 +123,69 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
                               </div>
                             )}
                           </div>
-                          {readOnly ? (
-                            <p className="min-h-[3rem] whitespace-pre-wrap text-xs">{value || '—'}</p>
-                          ) : (
-                            <Textarea
-                              value={value}
-                              rows={3}
-                              placeholder="—"
-                              className="min-h-[3.5rem] resize-none border-0 bg-transparent p-1 text-xs focus-visible:ring-0"
-                              onChange={(e) => setDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
-                              onBlur={() => {
-                                if ((current?.content ?? '') === value) return;
-                                persist(date, row.index, value, color);
-                              }}
-                            />
-                          )}
+                          <div className="min-h-[3rem] space-y-1">
+                            {lines.length === 0 && (
+                              <p className="px-1 text-xs text-muted-foreground">—</p>
+                            )}
+                            {lines.map((line, i) => (
+                              <div
+                                key={`${line}-${i}`}
+                                className="flex items-center gap-1 rounded-lg bg-background/70 px-1.5 py-1 text-xs font-medium"
+                              >
+                                <span className="flex-1 truncate">{line}</span>
+                                {!readOnly && (
+                                  <button
+                                    type="button"
+                                    aria-label={`Fjern ${line}`}
+                                    onClick={() => setLines(lines.filter((_, idx) => idx !== i))}
+                                    className="text-muted-foreground hover:text-destructive"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            {!readOnly && (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border py-1 text-[11px] font-semibold text-muted-foreground hover:bg-background/60"
+                                  >
+                                    <Plus className="h-3 w-3" /> Aktivitet
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent align="start" className="w-56 p-1">
+                                  <div className="max-h-64 space-y-0.5 overflow-y-auto">
+                                    {(activityTypes ?? []).length === 0 && (
+                                      <p className="p-2 text-xs text-muted-foreground">
+                                        Ingen aktiviteter — legg dem inn i «Aktiviteter».
+                                      </p>
+                                    )}
+                                    {(activityTypes ?? []).map((a) => {
+                                      const text = `${a.emoji ?? ''} ${a.label}`.trim();
+                                      const active = lines.includes(text);
+                                      return (
+                                        <button
+                                          key={a.id}
+                                          type="button"
+                                          onClick={() =>
+                                            setLines(active ? lines.filter((l) => l !== text) : [...lines, text])
+                                          }
+                                          className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${
+                                            active ? 'bg-primary/15 font-semibold' : 'hover:bg-muted'
+                                          }`}
+                                        >
+                                          <span>{a.emoji ?? '•'}</span>
+                                          <span className="flex-1 truncate">{a.label}</span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
