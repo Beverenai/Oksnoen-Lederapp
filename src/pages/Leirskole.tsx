@@ -432,6 +432,16 @@ export default function Leirskole() {
           </CardContent>
         </Card>
       )}
+
+      {effectiveLeader?.id && (
+        <LeirskoleCompetenceSheet
+          open={compOpen}
+          onOpenChange={setCompOpen}
+          leaderId={effectiveLeader.id}
+          current={myCompetencies ?? []}
+          required={compMissing}
+        />
+      )}
     </div>
   );
 }
