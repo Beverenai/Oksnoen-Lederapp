@@ -405,6 +405,70 @@ export function LeirskolePostsCard({
                 </div>
 
                 <div className="space-y-2 p-2.5">
+                  {!readOnly && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 gap-1 px-2 text-[11px]"
+                        onClick={() => setNewPostDay(newPostDay === date ? null : date)}
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Ny økt
+                      </Button>
+                      {[-30, -15, 15, 30].map((m) => (
+                        <Button
+                          key={m}
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={() => shiftDay(date, m)}
+                        >
+                          {m > 0 ? `+${m}` : m}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+
+                  {!readOnly && newPostDay === date && (
+                    <div className="space-y-2 rounded-2xl border border-primary/40 bg-primary/5 p-2.5">
+                      <Input
+                        placeholder="Navn (f.eks. Økt 3 – Vannkrig)"
+                        value={draft.name}
+                        onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                        className="h-8 text-xs"
+                      />
+                      <div className="grid grid-cols-3 gap-2">
+                        <Input type="time" value={draft.start} onChange={(e) => setDraft({ ...draft, start: e.target.value })} className="h-8 text-xs" />
+                        <Input type="time" value={draft.end} onChange={(e) => setDraft({ ...draft, end: e.target.value })} className="h-8 text-xs" />
+                        <Input
+                          type="number"
+                          min={1}
+                          value={draft.required}
+                          onChange={(e) => setDraft({ ...draft, required: Number(e.target.value) || 1 })}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <Select value={draft.type} onValueChange={(v) => setDraft({ ...draft, type: v as typeof draft.type })}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="main_shift">Økt</SelectItem>
+                          <SelectItem value="meal">Måltid</SelectItem>
+                          <SelectItem value="night">Nattevakt</SelectItem>
+                          <SelectItem value="other">Annet</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs">Publiser med en gang</span>
+                        <Switch checked={draft.publish} onCheckedChange={(v) => setDraft({ ...draft, publish: v })} />
+                      </div>
+                      <Button size="sm" className="w-full" onClick={() => saveNewPost(date)} disabled={addPost.isPending}>
+                        Legg til
+                      </Button>
+                    </div>
+                  )}
+
                   {dayPosts.map((p) => {
                     const kind = postKind(p);
                     const style = KIND_STYLE[kind];
