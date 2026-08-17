@@ -48,6 +48,8 @@ export function LeirskoleDayActivityCard({ week, staff }: Props) {
   const { data: posts } = useLeirskoleSchedule(week.id);
   const { data: saved } = useLeirskoleActivities(week.id);
   const { data: types } = useLeirskoleActivityTypes(true);
+  const { data: weekDays } = useLeirskoleWeekDays(week.id);
+  const isArrival = (weekDays ?? []).find((d) => d.date === date)?.day_type === 'arrival';
 
   const setActivity = useMutation({
     mutationFn: async ({ leaderId, session, activity }: { leaderId: string; session: string; activity: string }) => {
