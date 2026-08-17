@@ -253,6 +253,24 @@ Deno.serve(async (req) => {
     let { data: postsRaw } = await supa.from("leirskole_posts").select("*")
       .eq("week_id", week_id).order("date").order("start_time");
 
+    // Ankomst-/avreisedager skal KUN ha admins egne økter. Rydd bort
+    // standardmalene (Frokost, Økt 1-3, Middag, Kvelds, Sanitas, Nattevakt)
+    // om de ble laget før dagen ble merket som ankomst/avreise.
+    if (departureDays.size && (postsRaw ?? []).length) {
+      const TEMPLATE_NAMES = new Set([
+        "Frokost", "Økt 1", "Økt 2", "Økt 3", "Middag", "Kvelds", "Sanitas", "Nattevakt",
+      ]);
+      const stale = (postsRaw ?? []).filter(
+        (p: any) => departureDays.has(String(p.date)) && TEMPLATE_NAMES.has(String(p.name)),
+      );
+      if (stale.length) {
+        const staleIds = stale.map((p: any) => p.id);
+        await supa.from("leirskole_assignments").delete().in("post_id", staleIds);
+        await supa.from("leirskole_posts").delete().in("id", staleIds);
+        postsRaw = (postsRaw ?? []).filter((p: any) => !staleIds.includes(p.id)) as any;
+      }
+    }
+
     if ((postsRaw ?? []).length === 0) {
       const N = staff.length;
       // Mål: hver leder skal fylle 8 timer per dag. Skaler bemanningen på
