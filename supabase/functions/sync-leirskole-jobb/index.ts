@@ -48,14 +48,21 @@ Deno.serve(async (req) => {
     });
     const text = await res.text();
     if (!res.ok) {
-      return json({ error: `Jobb-plattformen svarte ${res.status}`, detail: text.slice(0, 400) }, 502);
+      const message =
+        res.status === 404
+          ? "Eksport-funksjonen «export-leirskole» er ikke satt opp på jobb-plattformen ennå. Legg den ut der først."
+          : res.status === 401 || res.status === 403
+            ? "Jobb-plattformen avviste nøkkelen (LEIRSKOLE_SYNC_SECRET må være lik i begge appene)."
+            : `Jobb-plattformen svarte ${res.status}`;
+      // 200 så klienten får lest meldingen i stedet for en generisk 502-feil
+      return json({ error: message, status: res.status, detail: text.slice(0, 300) }, 200);
     }
 
     let payload: { weeks?: ExportWeek[] };
     try {
       payload = JSON.parse(text);
     } catch {
-      return json({ error: "Ugyldig svar fra jobb-plattformen" }, 502);
+      return json({ error: "Ugyldig svar fra jobb-plattformen" }, 200);
     }
     const weeks = Array.isArray(payload.weeks) ? payload.weeks : [];
     if (!weeks.length) return json({ imported: 0, staff: 0, unmatched: [], message: "Ingen uker å hente" });
