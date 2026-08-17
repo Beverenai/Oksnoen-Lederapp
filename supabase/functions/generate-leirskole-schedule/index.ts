@@ -213,9 +213,9 @@ Deno.serve(async (req) => {
       // øktene slik at total kapasitet per dag ≈ 8 timer * antall ledere.
       const mealReq = Math.max(1, Math.min(3, Math.ceil(N / 4)));
       const frokostReq = Math.min(2, mealReq); // Maks 2 stk på frokost
-      const mealHours = 3 * mealReq; // Frokost + Middag + Kvelds (1t hver)
-      const nightHours = 3; // Nattevakt 22:30-01:30, 1 leder
-      const shiftHoursPerLeader = 2.5 + 2.5 + 1.5; // Økt 1 + 2 + 3
+      const mealHours = 2 * mealReq + frokostReq; // Middag + Kvelds (1t) + Frokost (1t)
+      const nightHours = 3 + 2 * 0.5; // Nattevakt 3t + Sanitas 0,5t x2
+      const shiftHoursPerLeader = 3 + 3 + 1.5; // Økt 1 + Økt 2 + Økt 3
       const needed = 8 * N - mealHours - nightHours;
       const shiftReq = Math.max(1, Math.min(N, Math.ceil(needed / shiftHoursPerLeader)));
       const days: string[] = [];
@@ -225,13 +225,14 @@ Deno.serve(async (req) => {
       const rows: any[] = [];
       for (const date of days) {
         rows.push(
-          { week_id, date, name: "Frokost", post_type: "meal", start_time: "08:00", end_time: "09:00", required_leaders: frokostReq, is_main_shift: false, is_night: false, sort_order: 1 },
-          { week_id, date, name: "Økt 1", post_type: "main_shift", start_time: "09:30", end_time: "12:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 2 },
-          { week_id, date, name: "Middag", post_type: "meal", start_time: "13:00", end_time: "14:00", required_leaders: mealReq, is_main_shift: false, is_night: false, sort_order: 3 },
-          { week_id, date, name: "Økt 2", post_type: "main_shift", start_time: "14:30", end_time: "17:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 4 },
-          { week_id, date, name: "Økt 3", post_type: "main_shift", start_time: "17:30", end_time: "19:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 5 },
+          { week_id, date, name: "Frokost", post_type: "meal", start_time: "09:00", end_time: "10:00", required_leaders: frokostReq, is_main_shift: false, is_night: false, sort_order: 1 },
+          { week_id, date, name: "Økt 1", post_type: "main_shift", start_time: "11:00", end_time: "14:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 2 },
+          { week_id, date, name: "Middag", post_type: "meal", start_time: "14:00", end_time: "15:00", required_leaders: mealReq, is_main_shift: false, is_night: false, sort_order: 3 },
+          { week_id, date, name: "Økt 2", post_type: "main_shift", start_time: "16:00", end_time: "19:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 4 },
           { week_id, date, name: "Kvelds", post_type: "meal", start_time: "19:00", end_time: "20:00", required_leaders: mealReq, is_main_shift: false, is_night: false, sort_order: 6 },
-          { week_id, date, name: "Nattevakt", post_type: "night", start_time: "22:30", end_time: "01:30", required_leaders: 1, is_main_shift: false, is_night: true, sort_order: 7 },
+          { week_id, date, name: "Økt 3", post_type: "main_shift", start_time: "20:00", end_time: "21:30", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 5 },
+          { week_id, date, name: "Sanitas", post_type: "other", start_time: "22:30", end_time: "23:00", required_leaders: 2, is_main_shift: false, is_night: false, sort_order: 7 },
+          { week_id, date, name: "Nattevakt", post_type: "night", start_time: "22:30", end_time: "01:30", required_leaders: 1, is_main_shift: false, is_night: true, sort_order: 8 },
         );
       }
       const { data: inserted, error: insErr } = await supa.from("leirskole_posts").insert(rows).select("*");
