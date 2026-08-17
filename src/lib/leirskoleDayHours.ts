@@ -1,5 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 
+/** Kjøkkenvakt en hel dag regnes som en full arbeidsdag. */
+export const KITCHEN_DAY_HOURS = 8;
+
 /** Vakter som aldri fjernes automatisk – de er bemanningskritiske. */
 const PROTECTED = ['nattevakt', 'middag', 'frokost', 'kvelds', 'sanitas', 'kjøkken'];
 
@@ -48,7 +51,15 @@ export async function trimDayHours({
     name: byId.get(r.post_id)?.name ?? 'Vakt',
   }));
 
-  let total = mine.reduce((sum, r) => sum + r.hours, 0);
+  const { data: kitchen } = await supabase
+    .from('leirskole_kitchen_days')
+    .select('id')
+    .eq('week_id', weekId)
+    .eq('date', date)
+    .eq('staff_id', staffId);
+  const kitchenHours = (kitchen ?? []).length ? KITCHEN_DAY_HOURS : 0;
+
+  let total = mine.reduce((sum, r) => sum + r.hours, 0) + kitchenHours;
   if (total <= maxHours + 0.01) return [];
 
   const removable = mine
