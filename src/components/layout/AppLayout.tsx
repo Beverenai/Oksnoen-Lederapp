@@ -173,7 +173,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const sweatersEnabled = useSweatersEnabled();
   const { mode: appMode } = useAppMode();
   const { seasonView, setSeasonView } = useSeasonView();
-  const { limited: inactiveForUser, mode: accessMode } = useAccessMode();
+  const { limited: inactiveForUser, mode: accessMode, setViewMode } = useAccessMode();
 
   // Off-season-tema på <html> slik at ark/dialoger (portaler) ikke blir hvite
   useEffect(() => {
