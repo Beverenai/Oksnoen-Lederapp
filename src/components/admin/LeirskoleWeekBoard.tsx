@@ -22,6 +22,7 @@ import {
   type LeirskoleGenerateSummary,
 } from '@/lib/leirskoleGenerateAll';
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
+import { LeirskoleSpecialDayTimeline } from '@/components/admin/LeirskoleSpecialDayTimeline';
 
 type StaffRow = LeirskoleStaff & {
   leader: {
@@ -555,6 +556,29 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           </div>
         </div>
       </div>
+
+      {dates
+        .filter((date) => specialDays.has(date))
+        .map((date) => (
+          <LeirskoleSpecialDayTimeline
+            key={date}
+            weekId={week.id}
+            date={date}
+            dayType={specialDays.get(date) as 'arrival' | 'departure'}
+            posts={(postsByDate.get(date) ?? [])
+              .filter((p) => p.is_custom)
+              .map((p) => ({
+                id: p.id,
+                name: p.name ?? '',
+                start_time: p.start_time,
+                end_time: p.end_time,
+                assignments: p.assignments ?? [],
+              }))}
+            staffOptions={staff
+              .filter((s) => s.leader)
+              .map((s) => ({ staffId: s.id, name: s.leader!.name }))}
+          />
+        ))}
 
       <LeirskoleCellSheet
         open={!!target}
