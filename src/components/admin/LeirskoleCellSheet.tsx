@@ -32,6 +32,7 @@ export function LeirskoleCellSheet({
   content,
   types,
   onDuty,
+  allStaff,
   assignments,
 }: {
   open: boolean;
@@ -41,6 +42,8 @@ export function LeirskoleCellSheet({
   content: string;
   types: LeirskoleActivityType[];
   onDuty: CellLeader[];
+  /** Alle ledere som jobber denne uken — kan velges selv om de ikke står på vakten. */
+  allStaff?: CellLeader[];
   /** Aktivitetstildelinger for denne dagen + økten. */
   assignments: { leader_id: string; activity: string }[];
 }) {
@@ -113,6 +116,13 @@ export function LeirskoleCellSheet({
   const leaderFor = (activity: string) =>
     assignments.find((a) => a.activity === activity)?.leader_id ?? '';
 
+  /** Ledere som ikke står på denne vakten, men som er med i uken. */
+  const offDuty = useMemo(
+    () => (allStaff ?? []).filter((l) => !onDuty.some((d) => d.id === l.id)),
+    [allStaff, onDuty],
+  );
+  const pool = useMemo(() => [...onDuty, ...offDuty], [onDuty, offDuty]);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-3xl">
@@ -171,7 +181,7 @@ export function LeirskoleCellSheet({
               <div className="space-y-2">
                 {selected.map((t) => {
                   const current = leaderFor(t.key);
-                  const leader = onDuty.find((l) => l.id === current);
+                  const leader = pool.find((l) => l.id === current);
                   const lacks =
                     !!leader && leader.competencies.length > 0 && !leader.competencies.includes(t.key);
                   return (
@@ -193,14 +203,32 @@ export function LeirskoleCellSheet({
                         className="mt-1.5 w-full rounded-xl border border-border bg-background px-2 py-2 text-sm"
                       >
                         <option value="">Ingen valgt</option>
-                        {onDuty.map((l) => (
-                          <option key={l.id} value={l.id}>
-                            {l.name}
-                            {l.competencies.length > 0 && !l.competencies.includes(t.key) ? ' (uten kompetanse)' : ''}
-                          </option>
-                        ))}
-                        {current && !onDuty.some((l) => l.id === current) && (
-                          <option value={current}>Leder utenfor vakt</option>
+                        {onDuty.length > 0 && (
+                          <optgroup label="På vakt">
+                            {onDuty.map((l) => (
+                              <option key={l.id} value={l.id}>
+                                {l.name}
+                                {l.competencies.length > 0 && !l.competencies.includes(t.key)
+                                  ? ' (uten kompetanse)'
+                                  : ''}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {offDuty.length > 0 && (
+                          <optgroup label="Andre i uken">
+                            {offDuty.map((l) => (
+                              <option key={l.id} value={l.id}>
+                                {l.name}
+                                {l.competencies.length > 0 && !l.competencies.includes(t.key)
+                                  ? ' (uten kompetanse)'
+                                  : ''}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {current && !pool.some((l) => l.id === current) && (
+                          <option value={current}>Leder utenfor uken</option>
                         )}
                       </select>
                     </div>
