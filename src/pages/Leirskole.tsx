@@ -171,6 +171,35 @@ export default function Leirskole() {
         </p>
       )}
 
+      {/* Min kompetanse */}
+      <Card className={compMissing ? 'border-destructive/40' : undefined}>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-between gap-2 text-base">
+            <span className="flex items-center gap-2">
+              <Award className="h-4 w-4 text-primary" /> Min kompetanse
+            </span>
+            <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => setCompOpen(true)}>
+              <Pencil className="h-3.5 w-3.5" /> Endre
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {compMissing ? (
+            <p className="text-sm text-muted-foreground">
+              Legg inn hva du kan ha ansvar for — tube, klatring, rappellering, kanotur, båtkjøring og badevakt.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {(myCompetencies ?? []).map((c) => (
+                <span key={c} className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                  {competenceEmoji(c)} {competenceLabel(c)}
+                </span>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Denne økten skal du */}
       {myInfo.length > 0 && (
         <Card className="border-primary/30 bg-primary/5">
