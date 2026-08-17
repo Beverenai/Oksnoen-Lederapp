@@ -8,11 +8,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   useLeirskoleActivities,
   useLeirskoleActivityTypes,
-  useLeirskoleKitchenDays,
   useLeirskoleSchedule,
   useLeirskoleWeekDays,
   useLeirskoleWeekPlan,
-  useSetLeirskoleKitchenDay,
   type LeirskoleStaff,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
