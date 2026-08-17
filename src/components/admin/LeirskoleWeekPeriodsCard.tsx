@@ -131,19 +131,29 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
 
   return (
     <div className="space-y-2">
-      {/* Tittelrad med kompakt + knapp */}
+      {/* Tittelrad med aktiv-uke-knapp og ny uke */}
       <div className="flex items-center justify-between gap-2 px-1">
         <p className="flex items-center gap-2 text-sm font-semibold">
           <CalendarRange className="h-4 w-4 text-primary" /> Leirskoleuker
         </p>
-        <Button
-          size="sm"
-          variant={adding ? 'default' : 'secondary'}
-          className="h-8 shrink-0 gap-1 rounded-full px-3 text-xs"
-          onClick={() => setAdding((v) => !v)}
-        >
-          <Plus className="h-3.5 w-3.5" /> {adding ? 'Lukk' : 'Ny uke'}
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button
+            size="sm"
+            variant="default"
+            className="h-8 shrink-0 gap-1 rounded-full px-3 text-xs oks-ls-gradient"
+            onClick={() => setDialogOpen(true)}
+          >
+            <Crown className="h-3.5 w-3.5" /> Bytt aktiv uke
+          </Button>
+          <Button
+            size="sm"
+            variant={adding ? 'default' : 'secondary'}
+            className="h-8 shrink-0 gap-1 rounded-full px-3 text-xs"
+            onClick={() => setAdding((v) => !v)}
+          >
+            <Plus className="h-3.5 w-3.5" /> {adding ? 'Lukk' : 'Ny uke'}
+          </Button>
+        </div>
       </div>
 
       {/* Horisontal ukevelger — rask å bytte mellom */}
