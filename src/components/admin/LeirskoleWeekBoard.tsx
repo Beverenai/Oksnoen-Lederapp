@@ -332,8 +332,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         )}
       </div>
 
-      <div className="-mx-2 overflow-x-auto px-2">
-        <div className="min-w-max space-y-1.5">
+      <div className="-mx-2 px-2">
+        <div className="space-y-1.5">
           {/* Dagoverskrifter */}
           <div className="grid gap-1.5" style={gridStyle}>
             <div className="sticky left-0 z-10 bg-card" />
