@@ -4,28 +4,28 @@ import { ChevronDown, HelpCircle } from 'lucide-react';
 
 const STEPS: { title: string; where: string; body: string }[] = [
   {
-    title: '1. Ledere',
+    title: '1. Ukeplan',
     where: 'Steg 1',
-    body:
-      'Legg inn hvem som jobber denne uken, og sett kompetansen deres. Kompetansen bestemmer hvilke aktiviteter de kan få. Her gir du også tilgang og kan «se som» en leder.',
-  },
-  {
-    title: '2. Ukeplan',
-    where: 'Steg 2',
     body:
       'Rutenettet med dagene bortover og økt 1–3 nedover. Velg aktivitetene fra lista — dette er programmet for uka, og styrer hva lederne kan settes på. Nye aktivitetsnavn legges inn nederst i samme steg.',
   },
   {
-    title: '3. Vaktplan',
-    where: 'Steg 3',
+    title: '2. Vaktplan',
+    where: 'Steg 2',
     body:
       'Først «Generer vaktplan»: lederne fordeles på frokost, økt 1, middag, økt 2, kvelds, økt 3, Sanitas og nattevakt — maks ca. 8 timer per dag, 11 timer hvile og helst sammenhengende vakter. Deretter «Fordel aktiviteter»: aktivitetene fra ukeplanen gis til ledere med riktig kompetanse som er på vakt i økten, og rullerer så ingen har det samme to økter på rad. Nederst kan du endre hver enkelt manuelt.',
   },
   {
-    title: '4. Oppgaver',
-    where: 'Steg 4',
+    title: '3. Oppgaver',
+    where: 'Steg 3',
     body:
       'Gi konkrete oppgaver til alle eller enkeltledere med frist, og legg inn info til en økt. Lederne ser dette på hjemskjermen og får varsling.',
+  },
+  {
+    title: '4. Ledere',
+    where: 'Steg 4',
+    body:
+      'Legg inn hvem som jobber denne uken, og sett kompetansen deres. Kompetansen bestemmer hvilke aktiviteter de kan få. Her gir du også tilgang og kan «se som» en leder.',
   },
 ];
 
