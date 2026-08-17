@@ -372,7 +372,7 @@ export function LeirskoleSpecialDayTimeline({
                 </PopoverTrigger>
                 <PopoverContent
                   align="start"
-                  className="w-72 space-y-2 p-3"
+                  className="w-80 max-h-[70vh] space-y-2 overflow-y-auto p-3"
                   onPointerDown={(e) => e.stopPropagation()}
                   onPointerMove={(e) => e.stopPropagation()}
                   onPointerUp={(e) => e.stopPropagation()}
