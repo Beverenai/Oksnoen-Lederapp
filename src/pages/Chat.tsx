@@ -384,10 +384,13 @@ export default function Chat() {
       .maybeSingle();
     setSending(false);
     if (error) {
+      // Vis den faktiske årsaken — den generiske teksten skjulte hva som feilet.
+      console.error('chat insert failed', { channel, leaderId: leader.id, error });
       showError(
         channel === 'period'
-          ? 'Kunne ikke sende melding. Bare ledere som er aktive denne perioden kan skrive i periodechatten.'
+          ? 'Kunne ikke sende melding i periodechatten'
           : 'Kunne ikke sende melding',
+        error.message || 'Prøv igjen',
       );
       return;
     }
