@@ -9,6 +9,8 @@
  *  5. jevn fordeling av totalt antall aktiviteter
  */
 
+import { activityRequiresCompetence } from './leirskoleCompetencies';
+
 export interface AutoStaff {
   leaderId: string;
   name: string;
@@ -59,7 +61,9 @@ const sessionRank = (s: string) => {
 };
 
 const canDo = (staff: AutoStaff, activity: string) =>
-  staff.competencies.length === 0 || staff.competencies.includes(activity);
+  !activityRequiresCompetence(activity) ||
+  staff.competencies.length === 0 ||
+  staff.competencies.includes(activity);
 
 export function autoAssignWeek({
   slots,
@@ -167,7 +171,11 @@ export function autoAssignWeek({
         activity,
         leaderId: best.leaderId,
         name: best.name,
-        outsideCompetence: requireComp && best.competencies.length > 0 && !best.competencies.includes(activity),
+        outsideCompetence:
+          requireComp &&
+          activityRequiresCompetence(activity) &&
+          best.competencies.length > 0 &&
+          !best.competencies.includes(activity),
         repeat: before > 0,
       });
     }

@@ -16,3 +16,11 @@ export function competenceLabel(key: string) {
 export function competenceEmoji(key: string) {
   return LEIRSKOLE_COMPETENCIES.find((c) => c.key === key)?.emoji ?? '•';
 }
+
+/**
+ * Kun aktiviteter som finnes i kompetanselista krever kompetanse.
+ * Aktiviteter som Gomla, Bruskasser og Pil og bue kan alle ta.
+ */
+export function activityRequiresCompetence(activity: string) {
+  return LEIRSKOLE_COMPETENCIES.some((c) => c.key === activity);
+}

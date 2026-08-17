@@ -1,4 +1,4 @@
-import { LEIRSKOLE_COMPETENCIES } from '@/lib/leirskoleCompetencies';
+import { LEIRSKOLE_COMPETENCIES, activityRequiresCompetence } from '@/lib/leirskoleCompetencies';
 
 /** Aktivitetene lederne kan settes på — samme nøkler som kompetansene. */
 export const LEIRSKOLE_ACTIVITIES = LEIRSKOLE_COMPETENCIES;
@@ -87,7 +87,9 @@ export function generateActivityAssignments(
   });
 
   const can = (c: ActivityCandidate, activity: string) =>
-    c.competencies.length === 0 || c.competencies.includes(activity);
+    !activityRequiresCompetence(activity) ||
+    c.competencies.length === 0 ||
+    c.competencies.includes(activity);
 
   const result: GeneratedActivity[] = [];
   const taken = new Set<string>(); // ledere som allerede har fått i denne runden
@@ -126,7 +128,10 @@ export function generateActivityAssignments(
       activity,
       repeat: (counts.get(`${best.leaderId}|${activity}`) ?? 0) > 0,
       outsideCompetence:
-        requireCompetence && best.competencies.length > 0 && !best.competencies.includes(activity),
+        requireCompetence &&
+        activityRequiresCompetence(activity) &&
+        best.competencies.length > 0 &&
+        !best.competencies.includes(activity),
     });
   }
 
