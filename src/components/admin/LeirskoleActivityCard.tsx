@@ -4,7 +4,8 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Trash2, Wand2, Send, Repeat, AlertTriangle, Zap } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Trash2, Wand2, Send, Repeat, AlertTriangle, Zap, Plus } from 'lucide-react';
 import {
   useLeirskoleActivities,
   useLeirskoleActivityHistory,
@@ -12,6 +13,7 @@ import {
   useSaveLeirskoleActivities,
   useDeleteLeirskoleActivity,
   useLeirskoleActivityTypes,
+  useAddLeirskoleActivityType,
   useLeirskoleSessionActivities,
   useSaveLeirskoleSessionActivities,
   type LeirskoleStaff,
@@ -63,6 +65,8 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
   const savePicks = useSaveLeirskoleSessionActivities();
   const save = useSaveLeirskoleActivities();
   const removeOne = useDeleteLeirskoleActivity();
+  const addType = useAddLeirskoleActivityType();
+  const [newActivity, setNewActivity] = useState({ emoji: '🎯', label: '' });
 
   const allKeys = useMemo(() => (types ?? []).map((t) => t.key), [types]);
 
@@ -275,6 +279,43 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
         {(types ?? []).length === 0 && (
           <p className="text-xs text-muted-foreground">Ingen aktiviteter er lagt inn ennå.</p>
         )}
+      </div>
+
+      {/* Ny aktivitet direkte fra økten (f.eks. noe spesielt til 3. økt) */}
+      <div className="flex items-center gap-1.5">
+        <Input
+          value={newActivity.emoji}
+          onChange={(e) => setNewActivity({ ...newActivity, emoji: e.target.value.slice(0, 2) })}
+          className="h-8 w-12 text-center text-xs"
+          aria-label="Emoji"
+        />
+        <Input
+          value={newActivity.label}
+          onChange={(e) => setNewActivity({ ...newActivity, label: e.target.value })}
+          placeholder="Ny aktivitet (f.eks. Vannkrig)"
+          className="h-8 flex-1 text-xs"
+        />
+        <Button
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          disabled={!newActivity.label.trim() || addType.isPending}
+          onClick={async () => {
+            try {
+              await addType.mutateAsync({
+                label: newActivity.label,
+                emoji: newActivity.emoji || '🎯',
+                sortOrder: (types ?? []).length + 1,
+              });
+              setNewActivity({ emoji: '🎯', label: '' });
+              toast.success('Aktivitet lagt inn');
+            } catch {
+              toast.error('Kunne ikke legge inn aktiviteten');
+            }
+          }}
+          aria-label="Legg til aktivitet"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Lagret */}
