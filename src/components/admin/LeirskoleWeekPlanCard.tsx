@@ -417,8 +417,7 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
                 Legg til
               </Button>
             </DialogFooter>
-          </DialogFooter>
-        </DialogContent>
+          </DialogContent>
         </Dialog>
       </CardContent>
     </Card>
