@@ -20,6 +20,7 @@ import { CalendarRange, Plus, Trash2, Users, Check, ChevronDown, Settings2, Crow
 
 type Props = {
   selectedWeekId: string | null;
+  activeWeekId?: string | null;
   onSelect: (weekId: string) => void;
 };
 
