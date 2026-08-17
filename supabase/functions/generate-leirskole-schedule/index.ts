@@ -219,6 +219,13 @@ Deno.serve(async (req) => {
     if (!week) return json({ error: "Fant ikke uken" }, 404);
     const minRest = Number(week.min_rest_hours ?? 11);
 
+    // Avreisedager: admin lager egne økter der, så vi hopper over standardoppsettet.
+    const { data: dayRows } = await supa.from("leirskole_week_days")
+      .select("date, day_type").eq("week_id", week_id);
+    const departureDays = new Set(
+      (dayRows ?? []).filter((d: any) => d.day_type === "departure").map((d: any) => String(d.date)),
+    );
+
     const { data: staffRaw } = await supa.from("leirskole_staff")
       .select("id, leader_id, max_daily_hours").eq("week_id", week_id);
     const leaderIds = (staffRaw ?? []).map((s: any) => s.leader_id);
@@ -256,6 +263,7 @@ Deno.serve(async (req) => {
       for (const d = new Date(d0); d <= d1; d.setUTCDate(d.getUTCDate() + 1)) days.push(d.toISOString().slice(0, 10));
       const rows: any[] = [];
       for (const date of days) {
+        if (departureDays.has(date)) continue;
         rows.push(
           { week_id, date, name: "Frokost", post_type: "meal", start_time: "09:00", end_time: "10:00", required_leaders: frokostReq, is_main_shift: false, is_night: false, sort_order: 1 },
           { week_id, date, name: "Økt 1", post_type: "main_shift", start_time: "11:00", end_time: "14:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 2 },
@@ -268,9 +276,11 @@ Deno.serve(async (req) => {
           { week_id, date, name: "Nattevakt", post_type: "night", start_time: "22:30", end_time: "01:30", required_leaders: 1, is_main_shift: false, is_night: true, sort_order: 8 },
         );
       }
-      const { data: inserted, error: insErr } = await supa.from("leirskole_posts").insert(rows).select("*");
-      if (insErr) return json({ error: `Kunne ikke opprette standardposter: ${insErr.message}` }, 500);
-      postsRaw = inserted;
+      if (rows.length) {
+        const { data: inserted, error: insErr } = await supa.from("leirskole_posts").insert(rows).select("*");
+        if (insErr) return json({ error: `Kunne ikke opprette standardposter: ${insErr.message}` }, 500);
+        postsRaw = inserted;
+      }
     }
 
     // Sørg for at Middag (14-15) finnes, og at bemanningstakene holdes:
@@ -279,7 +289,7 @@ Deno.serve(async (req) => {
       const rows = (postsRaw ?? []) as any[];
       const dates = [...new Set(rows.map((p) => p.date))];
       const missingMiddag = dates.filter(
-        (d) => !rows.some((p) => p.date === d && p.name === "Middag"),
+        (d) => !departureDays.has(d) && !rows.some((p) => p.date === d && p.name === "Middag"),
       );
       if (missingMiddag.length) {
         const { data: ins } = await supa.from("leirskole_posts").insert(
