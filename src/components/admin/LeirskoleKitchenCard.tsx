@@ -2,9 +2,8 @@ import { useMemo } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChefHat } from 'lucide-react';
+import { Check, ChefHat } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
-import { LeaderAvatarStack } from '@/components/leirskole/LeaderAvatarStack';
 import {
   useLeirskoleKitchenDays,
   useSetLeirskoleKitchenDay,
@@ -27,6 +26,10 @@ function parse(d: string) {
 function dayLabel(d: string) {
   const x = parse(d);
   return `${WEEKDAYS[x.getDay()]} ${x.getDate()}. ${MONTHS[x.getMonth()]}`;
+}
+function dayShort(d: string) {
+  const x = parse(d);
+  return { day: WEEKDAYS[x.getDay()], num: `${x.getDate()}.` };
 }
 function datesBetween(start: string, end: string) {
   const out: string[] = [];
@@ -81,61 +84,95 @@ export function LeirskoleKitchenCard({ week, staff }: { week: LeirskoleWeek; sta
           )}
         </CardTitle>
         <CardDescription>
-          Velg per dag hvem som står på kjøkkenet. De tas ut av alle andre økter den dagen.
+          Kryss av i rutenettet: leder i rad, dag i kolonne. Grønn rute = kjøkken hele dagen, og
+          lederen tas ut av alle andre økter den dagen.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {staff.length === 0 && (
           <p className="text-sm text-muted-foreground">Legg til ledere på uken først.</p>
         )}
-        {days.map((date) => {
-          const onKitchen = staff.filter((s) => isKitchen(s.id, date));
-          return (
-            <div key={date} className="overflow-hidden rounded-2xl border bg-card/40">
-              <div className="flex items-center justify-between gap-2 bg-[hsl(var(--oks-ls-green))]/12 px-3 py-2">
-                <p className="text-sm font-bold">{dayLabel(date)}</p>
-                {onKitchen.length > 0 ? (
-                  <div className="flex items-center gap-1.5">
-                    <LeaderAvatarStack
-                      people={onKitchen.map((s) => ({
-                        id: s.id,
-                        name: s.leader?.name ?? 'Ukjent',
-                        imageUrl: s.leader?.profile_image_url ?? null,
-                      }))}
-                      size="sm"
-                    />
-                    <span className="text-[11px] font-semibold text-[hsl(var(--oks-ls-green))]">
-                      Kjøkken
+
+        {staff.length > 0 && (
+          <>
+            <div className="-mx-1 overflow-x-auto px-1">
+              <table className="w-full border-separate border-spacing-0 text-left">
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 z-10 bg-card pb-2 pr-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Leder
+                    </th>
+                    {days.map((d) => {
+                      const s = dayShort(d);
+                      return (
+                        <th key={d} className="pb-2 text-center">
+                          <span className="block text-[11px] font-semibold">{s.day}</span>
+                          <span className="block text-[10px] text-muted-foreground">{s.num}</span>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {staff.map((s) => (
+                    <tr key={s.id}>
+                      <td className="sticky left-0 z-10 max-w-[7.5rem] truncate bg-card py-1 pr-2 text-xs font-medium">
+                        {s.leader?.name ?? 'Ukjent'}
+                      </td>
+                      {days.map((date) => {
+                        const active = isKitchen(s.id, date);
+                        return (
+                          <td key={date} className="p-0.5 text-center">
+                            <button
+                              type="button"
+                              onClick={() => toggle(s.id, date)}
+                              disabled={setKitchen.isPending}
+                              aria-label={`${s.leader?.name ?? 'Leder'} kjøkken ${dayLabel(date)}`}
+                              aria-pressed={active}
+                              className={`flex h-8 w-9 items-center justify-center rounded-xl border transition-colors ${
+                                active
+                                  ? 'border-[hsl(var(--oks-ls-green))] bg-[hsl(var(--oks-ls-green))]/25 text-[hsl(var(--oks-ls-green))]'
+                                  : 'border-border/60 bg-muted/30 text-muted-foreground/40 hover:bg-muted/60'
+                              }`}
+                            >
+                              {active ? (
+                                <ChefHat className="h-4 w-4" />
+                              ) : (
+                                <Check className="h-3.5 w-3.5 opacity-40" />
+                              )}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="space-y-1 rounded-2xl bg-muted/30 p-2.5">
+              {days.map((date) => {
+                const onKitchen = staff.filter((s) => isKitchen(s.id, date));
+                return (
+                  <div key={date} className="flex items-baseline justify-between gap-2 text-[11px]">
+                    <span className="font-semibold">{dayLabel(date)}</span>
+                    <span
+                      className={
+                        onKitchen.length
+                          ? 'truncate font-medium text-[hsl(var(--oks-ls-green))]'
+                          : 'text-muted-foreground'
+                      }
+                    >
+                      {onKitchen.length
+                        ? onKitchen.map((s) => s.leader?.name?.split(' ')[0] ?? 'Ukjent').join(', ')
+                        : 'Ingen på kjøkken'}
                     </span>
                   </div>
-                ) : (
-                  <span className="text-[11px] text-muted-foreground">Ingen på kjøkken</span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-1.5 p-2.5">
-                {staff.map((s) => {
-                  const active = isKitchen(s.id, date);
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => toggle(s.id, date)}
-                      disabled={setKitchen.isPending}
-                      className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-medium transition-colors ${
-                        active
-                          ? 'border-[hsl(var(--oks-ls-green))] bg-[hsl(var(--oks-ls-green))]/20 text-[hsl(var(--oks-ls-green))]'
-                          : 'bg-card/60 text-muted-foreground'
-                      }`}
-                    >
-                      {active && <ChefHat className="h-3 w-3" />}
-                      {s.leader?.name?.split(' ')[0] ?? 'Ukjent'}
-                    </button>
-                  );
-                })}
-              </div>
+                );
+              })}
             </div>
-          );
-        })}
+          </>
+        )}
       </CardContent>
     </Card>
   );
