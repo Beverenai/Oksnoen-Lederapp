@@ -12,8 +12,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users } from 'lucide-react';
-import { useActiveLeirskoleWeek, useLeirskoleSchedule, useLeirskoleStaff } from '@/hooks/useLeirskole';
+import {
+  useActiveLeirskoleWeek,
+  useLeirskoleActivities,
+  useLeirskoleSchedule,
+  useLeirskoleStaff,
+} from '@/hooks/useLeirskole';
 import { LeirskoleAccessCard } from '@/components/admin/LeirskoleAccessCard';
+import { LeirskoleActivityCard } from '@/components/admin/LeirskoleActivityCard';
+import { LeirskoleLeaderSheet } from '@/components/admin/LeirskoleLeaderSheet';
 import { LeirskolePostsCard } from '@/components/admin/LeirskolePostsCard';
 import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
 import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
@@ -44,6 +51,8 @@ export default function LeirskoleAdmin() {
   const { data: week, isLoading } = useActiveLeirskoleWeek();
   const { data: staff } = useLeirskoleStaff(week?.id);
   const { data: posts } = useLeirskoleSchedule(week?.id);
+  const { data: weekActivities } = useLeirskoleActivities(week?.id);
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
 
   const [taskDraft, setTaskDraft] = useState({ title: '', description: '', due_at: '' });
   const [taskAssignAll, setTaskAssignAll] = useState(true);
