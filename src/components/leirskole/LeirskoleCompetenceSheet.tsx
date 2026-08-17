@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
 import { useSaveLeirskoleCompetencies, useLeirskoleActivityTypes } from '@/hooks/useLeirskole';
+import { LEIRSKOLE_COMPETENCIES } from '@/lib/leirskoleCompetencies';
 
 interface Props {
   open: boolean;
@@ -28,7 +29,26 @@ export function LeirskoleCompetenceSheet({
 }: Props) {
   const [selected, setSelected] = useState<string[]>(current);
   const save = useSaveLeirskoleCompetencies();
-  const { data: types } = useLeirskoleActivityTypes(true);
+  const { data: types } = useLeirskoleActivityTypes();
+
+  /** Alle aktiviteter — både nye fra databasen og de gamle standardene. */
+  const options = (() => {
+    const list = (types ?? []).map((t) => ({ key: t.key, label: t.label, emoji: t.emoji ?? '•' }));
+    const seen = new Set(list.map((o) => o.key));
+    LEIRSKOLE_COMPETENCIES.forEach((c) => {
+      if (!seen.has(c.key)) {
+        seen.add(c.key);
+        list.push({ key: c.key, label: c.label, emoji: c.emoji });
+      }
+    });
+    selected.forEach((k) => {
+      if (!seen.has(k)) {
+        seen.add(k);
+        list.push({ key: k, label: k, emoji: '•' });
+      }
+    });
+    return list;
+  })();
 
   useEffect(() => {
     if (open) setSelected(current);
@@ -68,7 +88,7 @@ export function LeirskoleCompetenceSheet({
         </SheetHeader>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          {(types ?? []).map((c) => {
+          {options.map((c) => {
             const active = selected.includes(c.key);
             return (
               <button
