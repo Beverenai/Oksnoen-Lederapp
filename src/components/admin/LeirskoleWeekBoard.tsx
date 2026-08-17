@@ -557,15 +557,27 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             <LabelCell>Måltid</LabelCell>
             {dates.map((date) => {
               const dayPosts = postsByDate.get(date) ?? [];
-              const mealPosts = MEALS.map((m) => ({
+              const special = specialDays.has(date);
+              const mealRows = MEALS.map((m) => ({
                 meal: m,
                 post: dayPosts.find((p) => (p.name ?? '').trim().toLowerCase() === m.toLowerCase()),
-              })).filter((x) => x.post);
+              })).filter((x) => x.post || !special || x.meal === 'Middag');
               return (
                 <div key={date} className="rounded-xl border border-border/60 bg-muted/25 p-1.5">
-                  {mealPosts.length === 0 && <p className="text-[11px] text-muted-foreground">—</p>}
+                  {mealRows.length === 0 && <p className="text-[11px] text-muted-foreground">—</p>}
                   <div className="space-y-1">
-                    {mealPosts.map(({ meal, post }) => (
+                    {mealRows.map(({ meal, post }) =>
+                      !post ? (
+                        <button
+                          key={meal}
+                          type="button"
+                          onClick={() => createPost.mutate({ date, name: meal })}
+                          disabled={createPost.isPending}
+                          className="w-full rounded-lg border border-dashed border-border px-1 py-0.5 text-left text-[10px] text-muted-foreground hover:bg-muted"
+                        >
+                          + {meal}
+                        </button>
+                      ) : (
                       <LeirskolePostStaffPicker
                         key={meal}
                         weekId={week.id}
@@ -574,11 +586,11 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                         hoursByStaff={staffHoursByDate.get(date) ?? new Map()}
                         staffOptions={staffOptions}
                         post={{
-                          id: post!.id,
-                          name: post!.name ?? meal,
+                          id: post.id,
+                          name: post.name ?? meal,
                           date,
-                          duration_hours: post!.duration_hours,
-                          assignments: post!.assignments ?? [],
+                          duration_hours: post.duration_hours,
+                          assignments: post.assignments ?? [],
                         }}
                       >
                         <button
@@ -587,13 +599,14 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                         >
                           <span className="shrink-0 font-semibold">{meal}</span>
                           <span className="flex-1 text-muted-foreground">
-                            {(post!.assignments ?? [])
+                            {(post.assignments ?? [])
                               .map((a) => firstName(staffToLeader.get(a.staff_id)?.name ?? '?'))
                               .join(', ') || 'ingen'}
                           </span>
                         </button>
                       </LeirskolePostStaffPicker>
-                    ))}
+                      ),
+                    )}
                   </div>
                 </div>
               );
