@@ -341,9 +341,16 @@ Deno.serve(async (req) => {
     const postDateById = new Map(posts.map(p => [p.id, p.date]));
     const onKitchen = (staffId: string, date: string) => kitchenDays.has(`${staffId}|${date}`);
     // Kjøkkenledere skal ikke ha andre vakter den dagen — også låste fjernes.
-    const toKeep = (keepLocked ? existingArr.filter(a => a.is_locked) : []).filter(
-      a => !onKitchen(a.staff_id, String(postDateById.get(a.post_id) ?? "")),
-    );
+    const seenKeep = new Set<string>();
+    const toKeep = (keepLocked ? existingArr.filter(a => a.is_locked) : [])
+      .filter(a => !onKitchen(a.staff_id, String(postDateById.get(a.post_id) ?? "")))
+      // Dedupe: samme leder kan bare stå én gang på samme vakt.
+      .filter(a => {
+        const key = `${a.post_id}|${a.staff_id}`;
+        if (seenKeep.has(key)) return false;
+        seenKeep.add(key);
+        return true;
+      });
     const toDelete = existingArr.filter(a => !toKeep.includes(a));
 
     const stateById = new Map<string, State>();
@@ -492,8 +499,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (newAssignments.length) {
-      const { error: insErr } = await supa.from("leirskole_assignments").insert(newAssignments);
+    // Sikkerhetsnett mot duplikater (unik nøkkel post_id + staff_id).
+    const seenNew = new Set<string>(toKeep.map((a: any) => `${a.post_id}|${a.staff_id}`));
+    const insertRows = newAssignments.filter((a: any) => {
+      const key = `${a.post_id}|${a.staff_id}`;
+      if (seenNew.has(key)) return false;
+      seenNew.add(key);
+      return true;
+    });
+
+    if (insertRows.length) {
+      const { error: insErr } = await supa.from("leirskole_assignments").insert(insertRows);
       if (insErr) {
         const { error: restoreError } = toDelete.length
           ? await supa.from("leirskole_assignments").insert(toDelete)
