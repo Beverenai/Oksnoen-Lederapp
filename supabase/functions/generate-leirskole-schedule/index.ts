@@ -212,6 +212,7 @@ Deno.serve(async (req) => {
       // Mål: hver leder skal fylle 8 timer per dag. Skaler bemanningen på
       // øktene slik at total kapasitet per dag ≈ 8 timer * antall ledere.
       const mealReq = Math.max(1, Math.min(3, Math.ceil(N / 4)));
+      const frokostReq = Math.min(2, mealReq); // Maks 2 stk på frokost
       const mealHours = 3 * mealReq; // Frokost + Middag + Kvelds (1t hver)
       const nightHours = 3; // Nattevakt 22:30-01:30, 1 leder
       const shiftHoursPerLeader = 2.5 + 2.5 + 1.5; // Økt 1 + 2 + 3
@@ -224,7 +225,7 @@ Deno.serve(async (req) => {
       const rows: any[] = [];
       for (const date of days) {
         rows.push(
-          { week_id, date, name: "Frokost", post_type: "meal", start_time: "08:00", end_time: "09:00", required_leaders: mealReq, is_main_shift: false, is_night: false, sort_order: 1 },
+          { week_id, date, name: "Frokost", post_type: "meal", start_time: "08:00", end_time: "09:00", required_leaders: frokostReq, is_main_shift: false, is_night: false, sort_order: 1 },
           { week_id, date, name: "Økt 1", post_type: "main_shift", start_time: "09:30", end_time: "12:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 2 },
           { week_id, date, name: "Middag", post_type: "meal", start_time: "13:00", end_time: "14:00", required_leaders: mealReq, is_main_shift: false, is_night: false, sort_order: 3 },
           { week_id, date, name: "Økt 2", post_type: "main_shift", start_time: "14:30", end_time: "17:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 4 },
@@ -294,7 +295,8 @@ Deno.serve(async (req) => {
 
     for (const post of sortPosts(posts, candidates)) {
       const locked = lockedByPost.get(post.id) ?? [];
-      const need = post.required_leaders - locked.length;
+      let need = post.required_leaders - locked.length;
+      if (isBreakfast(post)) need = Math.min(need, 2 - locked.length); // Maks 2 stk på frokost
       if (need <= 0) continue;
 
       const pool = staff.filter(st => !locked.some(l => l.staff_id === st.id));
@@ -330,7 +332,7 @@ Deno.serve(async (req) => {
     const allDates = [...new Set(posts.map(p => p.date))].sort();
     const fillPosts = (date: string) =>
       posts
-        .filter(p => p.date === date && !isNight(p))
+        .filter(p => p.date === date && !isNight(p) && !isBreakfast(p)) // ikke fyll frokost, den er maks 2
         .sort((a, b) => {
           if (a.is_main_shift !== b.is_main_shift) return a.is_main_shift ? -1 : 1;
           return Number(b.duration_hours) - Number(a.duration_hours);
