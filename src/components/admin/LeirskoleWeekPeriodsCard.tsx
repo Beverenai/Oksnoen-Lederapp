@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { shortDate } from '@/lib/leirskoleDates';
-import { CalendarRange, Plus, Trash2, Users, Check } from 'lucide-react';
+import { CalendarRange, Plus, Trash2, Users, Check, ChevronDown, Settings2 } from 'lucide-react';
 
 type Props = {
   selectedWeekId: string | null;
@@ -17,16 +17,22 @@ type Props = {
 };
 
 /**
- * Leirskoleuker som «perioder»: velg hvilken uke du planlegger,
- * lag nye uker med datoer, og se hvor mange ledere som har tilgang
- * i den perioden (tilgangen styres av datoene på uken).
+ * Kompakt ukevelger for Leirskole-admin.
+ * Vises som en horisontal rad med toggles, og valgt ukes detaljer
+ * kan ekspanderes om nødvendig.
  */
 export function LeirskoleWeekPeriodsCard({ selectedWeekId, onSelect }: Props) {
   const qc = useQueryClient();
   const { showError } = useStatusPopup();
   const { data: weeks } = useLeirskoleWeeks();
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ name: '', start_date: '', end_date: '', max_daily_hours: '8' });
+
+  const selectedWeek = useMemo(
+    () => (weeks ?? []).find((w) => w.id === selectedWeekId) ?? null,
+    [weeks, selectedWeekId],
+  );
 
   const { data: staffRows } = useQuery({
     queryKey: ['leirskole-week-staff-counts'],
@@ -100,23 +106,58 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, onSelect }: Props) {
   });
 
   return (
-    <div className="oks-ls-pill oks-ls-stripe space-y-3 p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="flex items-center gap-2 text-sm font-semibold">
-            <CalendarRange className="h-4 w-4 text-primary" /> Leirskoleuker (perioder)
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Velg uken du planlegger. Datoene bestemmer når lederne har tilgang til leirskole-appen.
-          </p>
-        </div>
-        <Button size="sm" variant="secondary" className="shrink-0 gap-1.5 rounded-full" onClick={() => setAdding((v) => !v)}>
-          <Plus className="h-4 w-4" /> Ny uke
+    <div className="space-y-2">
+      {/* Tittelrad med kompakt + knapp */}
+      <div className="flex items-center justify-between gap-2 px-1">
+        <p className="flex items-center gap-2 text-sm font-semibold">
+          <CalendarRange className="h-4 w-4 text-primary" /> Leirskoleuker
+        </p>
+        <Button
+          size="sm"
+          variant={adding ? 'default' : 'secondary'}
+          className="h-8 shrink-0 gap-1 rounded-full px-3 text-xs"
+          onClick={() => setAdding((v) => !v)}
+        >
+          <Plus className="h-3.5 w-3.5" /> {adding ? 'Lukk' : 'Ny uke'}
         </Button>
       </div>
 
+      {/* Horisontal ukevelger — rask å bytte mellom */}
+      <div className="flex gap-1.5 overflow-x-auto px-1 pb-1 -mx-1">
+        {(weeks ?? []).length === 0 && !adding && (
+          <p className="py-2 text-xs text-muted-foreground">Ingen uker lagt inn ennå.</p>
+        )}
+        {(weeks ?? []).map((w) => {
+          const on = w.id === selectedWeekId;
+          return (
+            <button
+              key={w.id}
+              type="button"
+              onClick={() => {
+                onSelect(w.id);
+                setEditing(false);
+              }}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                on
+                  ? 'oks-ls-gradient text-white shadow-md'
+                  : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                {on && <Check className="h-3 w-3 shrink-0" />}
+                <span>{w.name}</span>
+              </span>
+              <span className={`mt-0.5 block text-[10px] font-normal ${on ? 'text-white/80' : 'text-muted-foreground/80'}`}>
+                {shortDate(w.start_date)}–{shortDate(w.end_date)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Ny uke-skjema */}
       {adding && (
-        <div className="space-y-2 rounded-2xl bg-muted/40 p-3">
+        <div className="oks-ls-pill space-y-2 rounded-2xl bg-muted/40 p-3">
           <Input
             placeholder="Navn (f.eks. Leirskole uke 36)"
             value={draft.name}
@@ -148,81 +189,79 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, onSelect }: Props) {
         </div>
       )}
 
-      <div className="space-y-1.5">
-        {(weeks ?? []).length === 0 && (
-          <p className="py-3 text-center text-xs text-muted-foreground">Ingen uker lagt inn ennå.</p>
-        )}
-        {(weeks ?? []).map((w) => {
-          const on = w.id === selectedWeekId;
-          return (
-            <div
-              key={w.id}
-              className={`rounded-2xl border px-3 py-2 transition-colors ${
-                on ? 'border-primary/50 bg-primary/10' : 'border-border/60 bg-muted/30'
-              }`}
-            >
-              <button type="button" onClick={() => onSelect(w.id)} className="flex w-full items-center gap-2 text-left">
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5">
-                    {on && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
-                    <span className="truncate text-sm font-semibold">{w.name}</span>
-                  </span>
-                  <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-muted-foreground">
-                    <span>
-                      {shortDate(w.start_date)} – {shortDate(w.end_date)}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Users className="h-3 w-3" /> {staffCount.get(w.id) ?? 0} ledere
-                    </span>
-                    <span>maks {Number(w.max_daily_hours ?? 8)}t/dag</span>
-                    {w.schedule_published_at && <span className="text-primary">Publisert</span>}
-                  </span>
-                </span>
-              </button>
+      {/* Valgt uke — kompakt sammendrag, redigering skjult */}
+      {selectedWeek && !adding && (
+        <div className="oks-ls-pill overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setEditing((v) => !v)}
+            className="flex w-full items-center gap-2 p-3 text-left"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold">{selectedWeek.name}</span>
+              <span className="block truncate text-[11px] text-muted-foreground">
+                {shortDate(selectedWeek.start_date)} – {shortDate(selectedWeek.end_date)} ·{' '}
+                {staffCount.get(selectedWeek.id) ?? 0} ledere · maks {Number(selectedWeek.max_daily_hours ?? 8)}t/dag
+                {selectedWeek.schedule_published_at && <span className="ml-1.5 text-primary">· Publisert</span>}
+              </span>
+            </span>
+            <Settings2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${editing ? 'rotate-180' : ''}`} />
+          </button>
 
-              {on && (
-                <div className="mt-2 space-y-2 border-t border-border/60 pt-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-[11px]">Fra</Label>
-                      <Input
-                        type="date"
-                        value={w.start_date}
-                        onChange={(e) => patch.mutate({ id: w.id, values: { start_date: e.target.value } })}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-[11px]">Til</Label>
-                      <Input
-                        type="date"
-                        value={w.end_date}
-                        onChange={(e) => patch.mutate({ id: w.id, values: { end_date: e.target.value } })}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2">
-                    <span className="text-xs">Uken er i bruk (gir tilgang)</span>
-                    <Switch
-                      checked={w.is_active}
-                      onCheckedChange={(v) => patch.mutate({ id: w.id, values: { is_active: v } })}
-                    />
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full gap-1.5 text-destructive"
-                    onClick={() => {
-                      if (confirm(`Slette ${w.name} med vaktplan og oppsett?`)) remove.mutate(w.id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" /> Slett uken
-                  </Button>
+          {editing && (
+            <div className="space-y-2 border-t border-border/60 p-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-[11px]">Fra</Label>
+                  <Input
+                    type="date"
+                    value={selectedWeek.start_date}
+                    onChange={(e) => patch.mutate({ id: selectedWeek.id, values: { start_date: e.target.value } })}
+                  />
                 </div>
-              )}
+                <div>
+                  <Label className="text-[11px]">Til</Label>
+                  <Input
+                    type="date"
+                    value={selectedWeek.end_date}
+                    onChange={(e) => patch.mutate({ id: selectedWeek.id, values: { end_date: e.target.value } })}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-[11px]">Maks timer per dag</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={16}
+                  value={selectedWeek.max_daily_hours}
+                  onChange={(e) =>
+                    patch.mutate({ id: selectedWeek.id, values: { max_daily_hours: Number(e.target.value) } })
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2">
+                <span className="text-xs">Uken er i bruk (gir tilgang)</span>
+                <Switch
+                  checked={selectedWeek.is_active}
+                  onCheckedChange={(v) => patch.mutate({ id: selectedWeek.id, values: { is_active: v } })}
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full gap-1.5 text-destructive"
+                onClick={() => {
+                  if (confirm(`Slette ${selectedWeek.name} med vaktplan og oppsett?`)) remove.mutate(selectedWeek.id);
+                }}
+              >
+                <Trash2 className="h-4 w-4" /> Slett uken
+              </Button>
             </div>
-          );
-        })}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
