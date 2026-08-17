@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarDays, Clock, Moon, Settings, Megaphone, Check } from 'lucide-react';
+import { CalendarDays, Clock, Moon, Settings, Megaphone, Check, Users } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
+  useLeirskoleSchedule,
+  useLeirskoleStaff,
   useIsLeirskoleStaff,
   useLeirskoleSessionInfo,
   useMarkLeirskoleInfoRead,
@@ -14,6 +16,8 @@ import {
   useMyLeirskoleCompetencies,
 } from '@/hooks/useLeirskole';
 import { LeirskoleCompetenceSheet } from '@/components/leirskole/LeirskoleCompetenceSheet';
+import { LeaderAvatarStack, type AvatarPerson } from '@/components/leirskole/LeaderAvatarStack';
+import { LeirskoleColleagueSheet } from '@/components/leirskole/LeirskoleColleagueSheet';
 import { activityEmoji, activityLabel, sessionLabel } from '@/lib/leirskoleActivities';
 import { dayLabel, shortDate, hhmm, todayStr } from '@/lib/leirskoleDates';
 
@@ -27,7 +31,10 @@ export default function Leirskole() {
   const { data: myActivities } = useMyLeirskoleActivities(week?.id);
   const markInfoRead = useMarkLeirskoleInfoRead();
   const { data: myCompetencies } = useMyLeirskoleCompetencies();
+  const { data: weekPosts } = useLeirskoleSchedule(week?.id);
+  const { data: weekStaff } = useLeirskoleStaff(week?.id);
   const [compOpen, setCompOpen] = useState(false);
+  const [colleagueId, setColleagueId] = useState<string | null>(null);
 
   // Førstegangs-oppsett: alle har alle kompetanser som utgangspunkt,
   // men må bekrefte/velge selv første gang de åpner leirskole.
@@ -76,6 +83,66 @@ export default function Leirskole() {
     () => (myActivities ?? []).filter((a) => a.date >= today).slice(0, 3),
     [myActivities, today],
   );
+
+  /** staff_id → leder (navn + bilde) for hele uken. */
+  const staffPeople = useMemo(() => {
+    const map = new Map<string, AvatarPerson>();
+    (weekStaff ?? []).forEach((s) => {
+      if (s.leader) map.set(s.id, { id: s.id, name: s.leader.name, imageUrl: s.leader.profile_image_url });
+    });
+    return map;
+  }, [weekStaff]);
+
+  const myStaffId = useMemo(
+    () => (weekStaff ?? []).find((s) => s.leader_id === effectiveLeader?.id)?.id ?? null,
+    [weekStaff, effectiveLeader?.id],
+  );
+
+  /** Kollegaer på min neste vakt. */
+  const nextShiftCrew = useMemo(() => {
+    if (!nextShift) return [] as AvatarPerson[];
+    const post = (weekPosts ?? []).find((p) => p.id === nextShift.id);
+    if (!post) return [];
+    return post.assignments
+      .filter((a) => a.staff_id !== myStaffId)
+      .map((a) => staffPeople.get(a.staff_id))
+      .filter(Boolean) as AvatarPerson[];
+  }, [nextShift, weekPosts, staffPeople, myStaffId]);
+
+  /** Alle som jobber i dag, sortert etter første vakt. */
+  const onDutyToday = useMemo(() => {
+    const first = new Map<string, string>();
+    (weekPosts ?? [])
+      .filter((p) => p.date === today)
+      .forEach((p) => {
+        p.assignments.forEach((a) => {
+          const cur = first.get(a.staff_id);
+          if (!cur || p.start_time < cur) first.set(a.staff_id, p.start_time);
+        });
+      });
+    return [...first.entries()]
+      .sort((a, b) => a[1].localeCompare(b[1]))
+      .map(([staffId]) => staffPeople.get(staffId))
+      .filter(Boolean) as AvatarPerson[];
+  }, [weekPosts, today, staffPeople]);
+
+  const colleagueShifts = useMemo(() => {
+    if (!colleagueId) return [];
+    return (weekPosts ?? [])
+      .filter((p) => p.assignments.some((a) => a.staff_id === colleagueId))
+      .map((p) => ({
+        id: p.id,
+        date: p.date,
+        name: p.name,
+        start_time: p.start_time,
+        end_time: p.end_time,
+        duration_hours: Number(p.duration_hours ?? 0),
+        is_night: p.is_night,
+        crosses_midnight: p.crosses_midnight,
+      }));
+  }, [colleagueId, weekPosts]);
+
+  const colleague = colleagueId ? staffPeople.get(colleagueId) ?? null : null;
 
   if (weekLoading) {
     return (
@@ -206,9 +273,36 @@ export default function Leirskole() {
               {dayLabel(nextShift.date)} · {Number(nextShift.duration_hours ?? 0).toFixed(1)}t
               {(nextShift.is_night || nextShift.crosses_midnight) && ' · nattevakt'}
             </p>
+            {nextShiftCrew.length > 0 && (
+              <div className="mt-2.5 border-t border-border/50 pt-2.5">
+                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Du jobber med
+                </p>
+                <LeaderAvatarStack
+                  people={nextShiftCrew}
+                  withNames
+                  onSelect={(person) => setColleagueId(person.id)}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Hvem jobber i dag */}
+      {onDutyToday.length > 0 && (
+        <div className="oks-ls-pill p-4">
+          <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
+            <Users className="h-4 w-4 text-primary" /> Hvem jobber i dag
+          </p>
+          <LeaderAvatarStack
+            people={onDutyToday}
+            withNames
+            onSelect={(person) => setColleagueId(person.id)}
+          />
+          <p className="mt-2 text-[11px] text-muted-foreground">Trykk på en leder for å se vaktene deres.</p>
+        </div>
+      )}
 
       {/* Mine vakter */}
       <div className="oks-ls-pill p-4">
@@ -269,6 +363,16 @@ export default function Leirskole() {
           </div>
         )}
       </div>
+
+      {colleague && (
+        <LeirskoleColleagueSheet
+          open={!!colleague}
+          onOpenChange={(v) => !v && setColleagueId(null)}
+          name={colleague.name}
+          imageUrl={colleague.imageUrl}
+          shifts={colleagueShifts}
+        />
+      )}
 
       {effectiveLeader?.id && (
         <LeirskoleCompetenceSheet

@@ -26,6 +26,7 @@ import { LeirskolePostsCard } from '@/components/admin/LeirskolePostsCard';
 import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
 import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
 import { formatDue, hhmm, shortDate, todayStr } from '@/lib/leirskoleDates';
+import { LeaderAvatarStack, type AvatarPerson } from '@/components/leirskole/LeaderAvatarStack';
 
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) return error.message;
@@ -207,6 +208,19 @@ export default function LeirskoleAdmin() {
   const staffNames = useMemo(() => {
     const map = new Map<string, string>();
     (staff ?? []).forEach((s) => map.set(s.id, s.leader?.name ?? 'Ukjent'));
+    return map;
+  }, [staff]);
+
+  /** staff_id → leder med bilde, for avatarrekkene. */
+  const staffPeople = useMemo(() => {
+    const map = new Map<string, AvatarPerson>();
+    (staff ?? []).forEach((s) => {
+      map.set(s.id, {
+        id: s.id,
+        name: s.leader?.name ?? 'Ukjent',
+        imageUrl: s.leader?.profile_image_url ?? null,
+      });
+    });
     return map;
   }, [staff]);
 
@@ -419,11 +433,16 @@ export default function LeirskoleAdmin() {
                         {hhmm(p.start_time)}–{hhmm(p.end_time)}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {p.assignments.length === 0
-                        ? 'Ingen satt opp'
-                        : p.assignments.map((a) => staffNames.get(a.staff_id) ?? '—').join(', ')}
-                    </p>
+                    <div className="mt-1.5">
+                      <LeaderAvatarStack
+                        people={p.assignments
+                          .map((a) => staffPeople.get(a.staff_id))
+                          .filter(Boolean) as AvatarPerson[]}
+                        withNames
+                        onSelect={(person) => setSelectedStaffId(person.id)}
+                        emptyLabel="Ingen satt opp"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -448,7 +467,11 @@ export default function LeirskoleAdmin() {
         </TabsContent>
 
         <TabsContent value="vaktplan" className="mt-3 space-y-3">
-          <LeirskolePostsCard week={week} staff={staff ?? []} />
+          <LeirskolePostsCard
+            week={week}
+            staff={staff ?? []}
+            onSelectStaff={(staffId) => setSelectedStaffId(staffId)}
+          />
         </TabsContent>
 
         <TabsContent value="okter" className="mt-3 space-y-3">
