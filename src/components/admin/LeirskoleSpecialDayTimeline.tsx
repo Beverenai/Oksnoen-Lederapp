@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Check, Trash2, X } from 'lucide-react';
+import { trimDayHours } from '@/lib/leirskoleDayHours';
 
 const START_HOUR = 7;
 const END_HOUR = 24;
@@ -165,6 +166,10 @@ export function LeirskoleSpecialDayTimeline({
           is_locked: true,
         });
         if (error) throw error;
+        // Ankomst/avreise-økter er ofte lange: rydd bort automatiske vakter samme dag
+        // slik at lederen ikke går over dagstaket.
+        const removed = await trimDayHours({ weekId, date, staffId, keepPostId: postId });
+        if (removed.length) toast.success(`Fjernet ${removed.join(', ')} for å holde 8t`);
       } else {
         const { error } = await supabase
           .from('leirskole_assignments')
