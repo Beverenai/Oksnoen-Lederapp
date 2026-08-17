@@ -16,6 +16,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import { useStatusBarTheme } from "@/hooks/useStatusBarTheme";
 import { useAppMode } from "@/hooks/useAppMode";
 import { isLimitedAccessRoute, isLeirskoleRoute } from "@/lib/limitedAccess";
+import { useAccessMode } from "@/hooks/useViewMode";
 
 // Critical path - load immediately
 import Login from "@/pages/Login";
