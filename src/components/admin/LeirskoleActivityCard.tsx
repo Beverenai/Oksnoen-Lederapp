@@ -13,6 +13,7 @@ import {
   useDeleteLeirskoleActivity,
   useLeirskoleActivityTypes,
   useLeirskoleWeekPlan,
+  useLeirskoleWeekDays,
   type LeirskoleStaff,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
