@@ -5,10 +5,11 @@ export const LEIRSKOLE_ACTIVITIES = LEIRSKOLE_COMPETENCIES;
 
 export type LeirskoleActivityKey = (typeof LEIRSKOLE_ACTIVITIES)[number]['key'];
 
-/** Økter som får aktiviteter tildelt i appen. Kveldsøkten håndteres utenom appen. */
+/** Øktene som får aktiviteter tildelt i appen (økt 1–3 i ukeplanleggeren). */
 export const LEIRSKOLE_ACTIVITY_SESSIONS = [
-  { key: 'formiddag', label: 'Formiddag' },
-  { key: 'ettermiddag', label: 'Ettermiddag' },
+  { key: 'formiddag', label: '1. økt' },
+  { key: 'ettermiddag', label: '2. økt' },
+  { key: 'kveld', label: '3. økt' },
 ] as const;
 
 export type LeirskoleActivitySessionKey = (typeof LEIRSKOLE_ACTIVITY_SESSIONS)[number]['key'];
