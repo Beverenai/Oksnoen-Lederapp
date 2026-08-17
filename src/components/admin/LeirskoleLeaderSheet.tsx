@@ -66,6 +66,8 @@ export function LeirskoleLeaderSheet({
     [activities, leaderId],
   );
 
+  const effectiveActivity = activity || activityTypes[0]?.key || '';
+
   const assign = useMutation({
     mutationFn: async () => {
       await saveActivities.mutateAsync({
