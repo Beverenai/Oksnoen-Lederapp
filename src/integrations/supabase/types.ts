@@ -5019,7 +5019,13 @@ export type Database = {
       void_kiosk_sale: { Args: { _sale_id: string }; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "leader" | "nurse" | "superadmin" | "kitchen"
+      app_role:
+        | "admin"
+        | "leader"
+        | "nurse"
+        | "superadmin"
+        | "kitchen"
+        | "leirskole"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5147,7 +5153,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "leader", "nurse", "superadmin", "kitchen"],
+      app_role: [
+        "admin",
+        "leader",
+        "nurse",
+        "superadmin",
+        "kitchen",
+        "leirskole",
+      ],
     },
   },
 } as const
