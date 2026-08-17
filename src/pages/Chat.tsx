@@ -7,7 +7,7 @@ import { useAccessMode } from '@/hooks/useViewMode';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowDown, AtSign, ImagePlus, Loader2, Reply, Send, Users, X } from 'lucide-react';
+import { ArrowDown, ImagePlus, Loader2, Reply, Send, Users, X } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { cn } from '@/lib/utils';
 import { compressImage } from '@/lib/imageUtils';
@@ -589,7 +589,7 @@ export default function Chat() {
   return (
     <div
       ref={shellRef}
-      className="-mx-4 -my-4 flex flex-col gap-2 px-3 pt-2 pb-1 animate-fade-in lg:mx-0 lg:my-0 lg:px-0 lg:pt-0"
+      className="-mx-4 -my-4 flex flex-col gap-2 overflow-hidden px-3 pt-2 pb-1 animate-fade-in lg:mx-0 lg:my-0 lg:px-0 lg:pt-0"
       style={shellHeight ? { height: shellHeight } : { height: '70svh' }}
     >
       {/* Kompakt topplinje: tittel + kanalvelger på én rad (mindre skroll på iPhone) */}
@@ -657,7 +657,7 @@ export default function Chat() {
       <div className="relative flex-1 min-h-0">
         <div
           ref={listRef}
-          className="h-full overflow-y-auto overscroll-contain rounded-2xl border bg-card/40 px-2.5 py-3 lg:px-3 lg:py-4"
+          className="h-full overflow-y-auto overscroll-contain rounded-2xl bg-muted/20 px-2.5 py-3 lg:px-3 lg:py-4"
         >
           {messages.length === 0 && (
             <div className="flex h-full items-center justify-center">
@@ -922,7 +922,7 @@ export default function Chat() {
                 setTimeout(() => scrollToBottom(true), 250);
               }}
               onClick={(e) => syncMention(input, (e.target as HTMLTextAreaElement).selectionStart ?? 0)}
-              placeholder={replyTo ? 'Skriv svaret…' : 'Skriv en melding… bruk @ for å tagge'}
+              placeholder={replyTo ? 'Skriv svaret…' : 'Skriv en melding…'}
               maxLength={4000}
               rows={1}
               disabled={sending || uploading || !leader}
