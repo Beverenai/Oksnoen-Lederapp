@@ -76,6 +76,7 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
   const addPost = useAddLeirskolePost();
   const deletePost = useDeleteLeirskolePost();
   const [newPostDate, setNewPostDate] = useState<string | null>(null);
+  const [freeText, setFreeText] = useState<Record<string, string>>({});
   const [form, setForm] = useState({ name: '', start: '09:00', end: '10:00' });
   const dates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
 
