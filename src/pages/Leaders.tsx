@@ -14,6 +14,7 @@ import { OffSeasonLeaderList } from '@/components/leaders/OffSeasonLeaderList';
 import { LeaderContentSheet } from '@/components/admin/LeaderContentSheet';
 import { SnusBadge } from '@/components/snus/SnusBadge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAccessMode } from '@/hooks/useViewMode';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -758,7 +759,7 @@ function LeadersFull() {
  * Off season (inaktiv app) viser en enkel lederliste uten periodedata.
  */
 export default function Leaders() {
-  const { isLimitedAccess } = useAuth();
-  if (isLimitedAccess) return <OffSeasonLeaderList />;
+  const { limited } = useAccessMode();
+  if (limited) return <OffSeasonLeaderList />;
   return <LeadersFull />;
 }
