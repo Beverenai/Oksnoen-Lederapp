@@ -43,7 +43,7 @@ import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute, isLeirskoleRoute } from '@/lib/limitedAccess';
 import { useAccessMode } from '@/hooks/useViewMode';
 import ViewModeSwitcher from '@/components/layout/ViewModeSwitcher';
-import { IdCard, MessageCircle, Circle, Crown, Camera, ChevronRight, Tent, Users } from 'lucide-react';
+import { IdCard, MessageCircle, Circle, Crown, Camera, ChevronRight, Tent, Users, CalendarDays } from 'lucide-react';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { TinderIcon } from '@/components/icons/TinderIcon';
 import { usePovCurrentRoll } from '@/hooks/usePov';
