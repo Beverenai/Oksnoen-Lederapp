@@ -17,6 +17,7 @@ interface Post {
   id: string; week_id: string; date: string; name: string; post_type: string;
   start_time: string; end_time: string; crosses_midnight: boolean;
   duration_hours: number; required_leaders: number; is_main_shift: boolean; is_night: boolean;
+  is_published?: boolean;
 }
 interface Staff { id: string; leader_id: string; max_daily_hours: number; name: string }
 interface Availability {
@@ -261,7 +262,8 @@ Deno.serve(async (req) => {
           { week_id, date, name: "Middag", post_type: "meal", start_time: "14:00", end_time: "15:00", required_leaders: mealReq, is_main_shift: false, is_night: false, sort_order: 3 },
           { week_id, date, name: "Økt 2", post_type: "main_shift", start_time: "16:00", end_time: "19:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 4 },
           { week_id, date, name: "Kvelds", post_type: "meal", start_time: "19:00", end_time: "20:00", required_leaders: mealReq, is_main_shift: false, is_night: false, sort_order: 6 },
-          { week_id, date, name: "Økt 3", post_type: "main_shift", start_time: "20:00", end_time: "21:30", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 5 },
+          // Siste økt står tom (upublisert) til admin fyller den ut senere på dagen.
+          { week_id, date, name: "Økt 3", post_type: "main_shift", start_time: "20:00", end_time: "21:30", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 5, is_published: false },
           { week_id, date, name: "Sanitas", post_type: "other", start_time: "22:30", end_time: "23:00", required_leaders: sanitasReq, is_main_shift: false, is_night: false, sort_order: 7 },
           { week_id, date, name: "Nattevakt", post_type: "night", start_time: "22:30", end_time: "01:30", required_leaders: 1, is_main_shift: false, is_night: true, sort_order: 8 },
         );
@@ -301,7 +303,8 @@ Deno.serve(async (req) => {
       postsRaw = rows as any;
     }
 
-    const posts: Post[] = (postsRaw ?? []) as any;
+    // Upubliserte økter er ikke satt ennå og skal ikke bemannes.
+    const posts: Post[] = ((postsRaw ?? []) as any[]).filter((p) => p.is_published !== false) as any;
     if (posts.length === 0) return json({ error: "Ingen vaktposter for denne uken." }, 400);
 
     const staffIds = staff.map(s => s.id);

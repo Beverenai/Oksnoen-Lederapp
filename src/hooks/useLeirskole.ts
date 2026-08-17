@@ -337,6 +337,8 @@ export function useMyLeirskoleShifts(weekId?: string | null) {
       return assignments
         .map((assignment) => assignment.post)
         .filter(Boolean)
+        // Upubliserte økter (f.eks. 3. økt som settes senere på dagen) vises ikke.
+        .filter((post) => (post as LeirskolePost & { is_published?: boolean }).is_published !== false)
         .sort((a, b) => (a.date === b.date ? a.start_time.localeCompare(b.start_time) : a.date.localeCompare(b.date)));
     },
   });
@@ -567,5 +569,148 @@ export function useDeleteLeirskoleActivity() {
       if (error) throw error;
     },
     onSuccess: () => invalidateActivities(qc),
+  });
+}
+
+export type LeirskoleWeekPlanCell = Tables<'leirskole_week_plan_cells'>;
+
+/** Rutene i ukeplanleggeren (dag × rad). */
+export function useLeirskoleWeekPlan(weekId?: string | null) {
+  return useQuery({
+    queryKey: ['leirskole-week-plan', weekId],
+    enabled: !!weekId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leirskole_week_plan_cells')
+        .select('*')
+        .eq('week_id', weekId!);
+      if (error) throw error;
+      return (data ?? []) as LeirskoleWeekPlanCell[];
+    },
+  });
+}
+
+export function useSaveLeirskoleWeekPlanCell() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      weekId,
+      date,
+      rowIndex,
+      content,
+      color,
+    }: {
+      weekId: string;
+      date: string;
+      rowIndex: number;
+      content: string;
+      color: string;
+    }) => {
+      const { error } = await supabase
+        .from('leirskole_week_plan_cells')
+        .upsert(
+          { week_id: weekId, date, row_index: rowIndex, content, color, updated_at: new Date().toISOString() },
+          { onConflict: 'week_id,date,row_index' },
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-week-plan'] }),
+  });
+}
+
+function invalidateSchedule(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
+  qc.invalidateQueries({ queryKey: ['leirskole-my-shifts'] });
+}
+
+/** Legg til en egendefinert vakt/økt på en dag. */
+export function useAddLeirskolePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (row: {
+      weekId: string;
+      date: string;
+      name: string;
+      postType: 'meal' | 'main_shift' | 'night' | 'other';
+      startTime: string;
+      endTime: string;
+      requiredLeaders: number;
+      isPublished?: boolean;
+    }) => {
+      const { error } = await supabase.from('leirskole_posts').insert({
+        week_id: row.weekId,
+        date: row.date,
+        name: row.name.trim(),
+        post_type: row.postType,
+        start_time: row.startTime,
+        end_time: row.endTime,
+        required_leaders: Math.max(1, row.requiredLeaders),
+        is_main_shift: row.postType === 'main_shift',
+        is_night: row.postType === 'night',
+        is_custom: true,
+        is_published: row.isPublished ?? true,
+        sort_order: Number(row.startTime.slice(0, 2)) * 60 + Number(row.startTime.slice(3, 5)),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateSchedule(qc),
+  });
+}
+
+/** Endre en vakt (tider, navn, bemanning, publisert). */
+export function useUpdateLeirskolePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...patch
+    }: { id: string } & Partial<
+      Pick<LeirskolePost, 'name' | 'start_time' | 'end_time' | 'required_leaders' | 'is_published' | 'notes'>
+    >) => {
+      const { error } = await supabase.from('leirskole_posts').update(patch).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateSchedule(qc),
+  });
+}
+
+function shiftClock(value: string, minutes: number) {
+  const [h, m] = value.slice(0, 5).split(':').map(Number);
+  let total = (h * 60 + m + minutes) % 1440;
+  if (total < 0) total += 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/** Forskyv alle vaktene en dag (eller hele uken) med X minutter. */
+export function useShiftLeirskolePosts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      weekId,
+      date,
+      minutes,
+    }: {
+      weekId: string;
+      /** null = hele uken */
+      date: string | null;
+      minutes: number;
+    }) => {
+      let q = supabase.from('leirskole_posts').select('id, start_time, end_time').eq('week_id', weekId);
+      if (date) q = q.eq('date', date);
+      const { data, error } = await q;
+      if (error) throw error;
+      for (const post of data ?? []) {
+        const { error: upErr } = await supabase
+          .from('leirskole_posts')
+          .update({
+            start_time: shiftClock(post.start_time, minutes),
+            end_time: shiftClock(post.end_time, minutes),
+          })
+          .eq('id', post.id);
+        if (upErr) throw upErr;
+      }
+      return (data ?? []).length;
+    },
+    onSuccess: () => invalidateSchedule(qc),
   });
 }

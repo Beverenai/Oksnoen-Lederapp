@@ -2235,8 +2235,10 @@ export type Database = {
           duration_hours: number
           end_time: string
           id: string
+          is_custom: boolean
           is_main_shift: boolean
           is_night: boolean
+          is_published: boolean
           name: string
           notes: string | null
           post_type: string
@@ -2253,8 +2255,10 @@ export type Database = {
           duration_hours?: number
           end_time: string
           id?: string
+          is_custom?: boolean
           is_main_shift?: boolean
           is_night?: boolean
+          is_published?: boolean
           name: string
           notes?: string | null
           post_type?: string
@@ -2271,8 +2275,10 @@ export type Database = {
           duration_hours?: number
           end_time?: string
           id?: string
+          is_custom?: boolean
           is_main_shift?: boolean
           is_night?: boolean
+          is_published?: boolean
           name?: string
           notes?: string | null
           post_type?: string
@@ -2551,6 +2557,47 @@ export type Database = {
           },
           {
             foreignKeyName: "leirskole_tasks_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_week_plan_cells: {
+        Row: {
+          color: string
+          content: string
+          created_at: string
+          date: string
+          id: string
+          row_index: number
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          color?: string
+          content?: string
+          created_at?: string
+          date: string
+          id?: string
+          row_index: number
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          color?: string
+          content?: string
+          created_at?: string
+          date?: string
+          id?: string
+          row_index?: number
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_week_plan_cells_week_id_fkey"
             columns: ["week_id"]
             isOneToOne: false
             referencedRelation: "leirskole_weeks"

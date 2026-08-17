@@ -10,11 +10,15 @@ import { Switch } from '@/components/ui/switch';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { CalendarClock, Play, Trash2, Lock, LockOpen, Moon, RefreshCw, Pencil, UtensilsCrossed, Sun, AlertTriangle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { CalendarClock, Play, Trash2, Lock, LockOpen, Moon, RefreshCw, Pencil, UtensilsCrossed, Sun, AlertTriangle, Plus, ChevronsLeftRight, EyeOff } from 'lucide-react';
 import { LeaderAvatarStack } from '@/components/leirskole/LeaderAvatarStack';
 import {
   useLeirskoleSchedule,
   useGenerateLeirskoleSchedule,
+  useAddLeirskolePost,
+  useUpdateLeirskolePost,
+  useShiftLeirskolePosts,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
 
@@ -106,10 +110,48 @@ export function LeirskolePostsCard({
   const [keepLocked, setKeepLocked] = useState(true);
   const [publishAfter, setPublishAfter] = useState(true);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [newPostDay, setNewPostDay] = useState<string | null>(null);
+  const [draft, setDraft] = useState({ name: '', start: '20:00', end: '21:30', required: 2, type: 'main_shift' as 'meal' | 'main_shift' | 'night' | 'other', publish: false });
+  const addPost = useAddLeirskolePost();
+  const updatePost = useUpdateLeirskolePost();
+  const shiftPosts = useShiftLeirskolePosts();
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
     qc.invalidateQueries({ queryKey: ['leirskole-my-shifts'] });
+  };
+
+  const saveNewPost = async (date: string) => {
+    if (!draft.name.trim()) {
+      showError('Gi økten et navn');
+      return;
+    }
+    try {
+      await addPost.mutateAsync({
+        weekId: week.id,
+        date,
+        name: draft.name,
+        postType: draft.type,
+        startTime: draft.start,
+        endTime: draft.end,
+        requiredLeaders: draft.required,
+        isPublished: draft.publish,
+      });
+      toast.success(draft.publish ? 'Økt lagt inn' : 'Økt lagt inn som utkast');
+      setNewPostDay(null);
+      setDraft((d) => ({ ...d, name: '' }));
+    } catch (error: unknown) {
+      showError(errorMessage(error, 'Kunne ikke legge inn økten'));
+    }
+  };
+
+  const shiftDay = async (date: string | null, minutes: number) => {
+    try {
+      const n = await shiftPosts.mutateAsync({ weekId: week.id, date, minutes });
+      toast.success(`${n} vakter forskjøvet ${minutes > 0 ? '+' : ''}${minutes} min`);
+    } catch (error: unknown) {
+      showError(errorMessage(error, 'Kunne ikke forskyve vaktene'));
+    }
   };
 
   const staffPerson = (id: string) => {
@@ -300,6 +342,19 @@ export function LeirskolePostsCard({
           </div>
         )}
 
+        {!readOnly && (posts?.length ?? 0) > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card/60 px-3 py-2">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+              <ChevronsLeftRight className="h-3.5 w-3.5" /> Forskyv hele uken
+            </span>
+            {[-60, -30, -15, 15, 30, 60].map((m) => (
+              <Button key={m} size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => shiftDay(null, m)}>
+                {m > 0 ? `+${m}` : m} min
+              </Button>
+            ))}
+          </div>
+        )}
+
         {/* Timer per leder — med ansikter */}
         {staff.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -350,6 +405,70 @@ export function LeirskolePostsCard({
                 </div>
 
                 <div className="space-y-2 p-2.5">
+                  {!readOnly && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 gap-1 px-2 text-[11px]"
+                        onClick={() => setNewPostDay(newPostDay === date ? null : date)}
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Ny økt
+                      </Button>
+                      {[-30, -15, 15, 30].map((m) => (
+                        <Button
+                          key={m}
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={() => shiftDay(date, m)}
+                        >
+                          {m > 0 ? `+${m}` : m}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+
+                  {!readOnly && newPostDay === date && (
+                    <div className="space-y-2 rounded-2xl border border-primary/40 bg-primary/5 p-2.5">
+                      <Input
+                        placeholder="Navn (f.eks. Økt 3 – Vannkrig)"
+                        value={draft.name}
+                        onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                        className="h-8 text-xs"
+                      />
+                      <div className="grid grid-cols-3 gap-2">
+                        <Input type="time" value={draft.start} onChange={(e) => setDraft({ ...draft, start: e.target.value })} className="h-8 text-xs" />
+                        <Input type="time" value={draft.end} onChange={(e) => setDraft({ ...draft, end: e.target.value })} className="h-8 text-xs" />
+                        <Input
+                          type="number"
+                          min={1}
+                          value={draft.required}
+                          onChange={(e) => setDraft({ ...draft, required: Number(e.target.value) || 1 })}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <Select value={draft.type} onValueChange={(v) => setDraft({ ...draft, type: v as typeof draft.type })}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="main_shift">Økt</SelectItem>
+                          <SelectItem value="meal">Måltid</SelectItem>
+                          <SelectItem value="night">Nattevakt</SelectItem>
+                          <SelectItem value="other">Annet</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs">Publiser med en gang</span>
+                        <Switch checked={draft.publish} onCheckedChange={(v) => setDraft({ ...draft, publish: v })} />
+                      </div>
+                      <Button size="sm" className="w-full" onClick={() => saveNewPost(date)} disabled={addPost.isPending}>
+                        Legg til
+                      </Button>
+                    </div>
+                  )}
+
                   {dayPosts.map((p) => {
                     const kind = postKind(p);
                     const style = KIND_STYLE[kind];
@@ -369,6 +488,11 @@ export function LeirskolePostsCard({
                                 {style.icon} {style.label}
                               </span>
                               <p className="truncate text-sm font-semibold">{p.name}</p>
+                              {(p as { is_published?: boolean }).is_published === false && (
+                                <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                  <EyeOff className="h-3 w-3" /> Ikke satt
+                                </span>
+                              )}
                             </div>
                             <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">
                               {hhmm(p.start_time)}–{hhmm(p.end_time)} · {Number(p.duration_hours ?? 0).toFixed(1)} t ·{' '}
@@ -416,6 +540,43 @@ export function LeirskolePostsCard({
 
                         {!readOnly && editing && (
                           <div className="mt-2.5 space-y-1.5 border-t border-border/60 pt-2.5">
+                            <div className="grid grid-cols-3 gap-2">
+                              <Input
+                                type="time"
+                                defaultValue={hhmm(p.start_time)}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  e.target.value !== hhmm(p.start_time) &&
+                                  updatePost.mutate({ id: p.id, start_time: e.target.value })
+                                }
+                              />
+                              <Input
+                                type="time"
+                                defaultValue={hhmm(p.end_time)}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  e.target.value !== hhmm(p.end_time) &&
+                                  updatePost.mutate({ id: p.id, end_time: e.target.value })
+                                }
+                              />
+                              <Input
+                                type="number"
+                                min={1}
+                                defaultValue={required}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  Number(e.target.value) !== required &&
+                                  updatePost.mutate({ id: p.id, required_leaders: Math.max(1, Number(e.target.value) || 1) })
+                                }
+                              />
+                            </div>
+                            <div className="flex items-center justify-between rounded-xl bg-muted/40 px-2.5 py-1.5">
+                              <span className="text-xs">Publisert for lederne</span>
+                              <Switch
+                                checked={(p as { is_published?: boolean }).is_published !== false}
+                                onCheckedChange={(v) => updatePost.mutate({ id: p.id, is_published: v })}
+                              />
+                            </div>
                             {Array.from({ length: slots }).map((_, i) => {
                               const a = p.assignments[i];
                               return (
