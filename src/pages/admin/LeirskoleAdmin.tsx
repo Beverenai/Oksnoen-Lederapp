@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Plus, Play, Send, Trash2, Users, CalendarDays, Bell } from 'lucide-react';
+import { ArrowLeft, Plus, Play, Send, Trash2, Users, CalendarDays, Bell, RefreshCw } from 'lucide-react';
 import {
   useLeirskoleWeeks,
   useLeirskoleSchedule,
@@ -92,6 +92,23 @@ export default function LeirskoleAdmin() {
       invalidate();
     },
     onError: (e: any) => showError(e.message),
+  });
+
+  const syncJobb = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('sync-leirskole-jobb');
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data as { imported: number; staff: number; unmatched: string[] };
+    },
+    onSuccess: (res) => {
+      toast.success(`Hentet ${res.imported} uker · ${res.staff} ledere koblet`);
+      if (res.unmatched?.length) {
+        toast.info(`Fant ikke i appen: ${res.unmatched.slice(0, 6).join(', ')}${res.unmatched.length > 6 ? '…' : ''}`);
+      }
+      invalidate();
+    },
+    onError: (e: any) => showError(e.message ?? 'Kunne ikke hente fra jobb-plattformen'),
   });
 
   const setActive = useMutation({
@@ -284,6 +301,21 @@ export default function LeirskoleAdmin() {
           <Button onClick={() => createWeek.mutate()} disabled={createWeek.isPending} className="gap-2">
             <Plus className="h-4 w-4" /> Ny uke
           </Button>
+
+          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Hent uker og påmeldte ledere direkte fra Øksnøen jobb-plattform. Ledere kobles automatisk på navn.
+            </p>
+            <Button
+              variant="secondary"
+              onClick={() => syncJobb.mutate()}
+              disabled={syncJobb.isPending}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncJobb.isPending ? 'animate-spin' : ''}`} />
+              {syncJobb.isPending ? 'Henter…' : 'Hent fra jobb-plattformen'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
