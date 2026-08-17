@@ -194,7 +194,16 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         .sort((a, b) => a.start_time.localeCompare(b.start_time));
       return SESSIONS.map((_, i) => {
         const p = custom[i];
-        if (!p) return null;
+        if (!p) {
+          return {
+            date,
+            session: null,
+            rowIndex: i + 1,
+            postId: null,
+            label: 'Legg til egen økt',
+            dayType: dayType as 'arrival' | 'departure',
+          };
+        }
         return {
           date,
           session: p.id,
@@ -563,6 +572,25 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             competencies: s.leader!.leirskole_competencies ?? [],
           }))}
         assignments={target?.session ? activityBySlot.get(`${target.date}|${target.session}`) ?? [] : []}
+        post={
+          target?.postId
+            ? (() => {
+                const p = (posts ?? []).find((x) => x.id === target.postId);
+                return p
+                  ? {
+                      id: p.id,
+                      name: p.name ?? '',
+                      start_time: p.start_time,
+                      end_time: p.end_time,
+                      assignments: p.assignments ?? [],
+                    }
+                  : null;
+              })()
+            : null
+        }
+        staffOptions={staff
+          .filter((s) => s.leader)
+          .map((s) => ({ staffId: s.id, leaderId: s.leader!.id, name: s.leader!.name }))}
       />
     </div>
   );

@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { AlertTriangle, Check } from 'lucide-react';
+import { AlertTriangle, Check, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useSaveLeirskoleWeekPlanCell, type LeirskoleActivityType } from '@/hooks/useLeirskole';
 import { dayLabel } from '@/lib/leirskoleDates';
 import { activityLine } from '@/lib/leirskoleRandomPlan';
@@ -36,6 +38,8 @@ export function LeirskoleCellSheet({
   onDuty,
   allStaff,
   assignments,
+  post,
+  staffOptions,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -48,9 +52,108 @@ export function LeirskoleCellSheet({
   allStaff?: CellLeader[];
   /** Aktivitetstildelinger for denne dagen + økten. */
   assignments: { leader_id: string; activity: string }[];
+  /** Egen økt (ankomst/avreise) som redigeres, hvis den finnes. */
+  post?: { id: string; name: string; start_time: string; end_time: string; assignments: { staff_id: string }[] } | null;
+  /** Bemanningsvalg for egne økter: leirskole_staff-id + navn. */
+  staffOptions?: { staffId: string; leaderId: string; name: string }[];
 }) {
   const qc = useQueryClient();
   const savePlan = useSaveLeirskoleWeekPlanCell();
+  const isSpecial = target?.dayType === 'arrival' || target?.dayType === 'departure';
+  const [name, setName] = useState('');
+  const [start, setStart] = useState('09:00');
+  const [end, setEnd] = useState('11:00');
+
+  useEffect(() => {
+    if (!open) return;
+    setName(post?.name ?? '');
+    setStart((post?.start_time ?? '09:00').slice(0, 5));
+    setEnd((post?.end_time ?? '11:00').slice(0, 5));
+  }, [open, post?.id, post?.name, post?.start_time, post?.end_time]);
+
+  const invalidateAll = () =>
+    ['leirskole-schedule', 'leirskole-my-shifts', 'leirskole-week-plan', 'leirskole-activities'].forEach((key) =>
+      qc.invalidateQueries({ queryKey: [key] }),
+    );
+
+  /** Opprett eller oppdater den egne økten (navn + tid). */
+  const savePost = useMutation({
+    mutationFn: async () => {
+      if (!target) throw new Error('Ingen rute valgt');
+      const label = name.trim() || 'Økt';
+      if (post?.id) {
+        const { error } = await supabase
+          .from('leirskole_posts')
+          .update({ name: label, start_time: start, end_time: end })
+          .eq('id', post.id);
+        if (error) throw error;
+        return post.id;
+      }
+      const { data, error } = await supabase
+        .from('leirskole_posts')
+        .insert({
+          week_id: weekId,
+          date: target.date,
+          name: label,
+          post_type: 'other',
+          start_time: start,
+          end_time: end,
+          required_leaders: 1,
+          is_custom: true,
+          is_published: true,
+          sort_order: Number(start.slice(0, 2)) * 60 + Number(start.slice(3, 5)),
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      return data.id as string;
+    },
+    onSuccess: () => {
+      invalidateAll();
+      toast.success('Økten er lagret');
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke lagre økten'),
+  });
+
+  /** Legg til / fjern leder på den egne økten. */
+  const toggleStaff = useMutation({
+    mutationFn: async ({ staffId, on }: { staffId: string; on: boolean }) => {
+      if (!post?.id) throw new Error('Lagre økten først');
+      if (on) {
+        const { error } = await supabase.from('leirskole_assignments').insert({
+          week_id: weekId,
+          post_id: post.id,
+          staff_id: staffId,
+          assigned_manually: true,
+          is_locked: true,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('leirskole_assignments')
+          .delete()
+          .eq('post_id', post.id)
+          .eq('staff_id', staffId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: invalidateAll,
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke oppdatere bemanning'),
+  });
+
+  const deletePost = useMutation({
+    mutationFn: async () => {
+      if (!post?.id) return;
+      const { error } = await supabase.from('leirskole_posts').delete().eq('id', post.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateAll();
+      onOpenChange(false);
+      toast.success('Økten er slettet');
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke slette økten'),
+  });
 
   const lines = useMemo(
     () => content.split('\n').map((l) => l.trim()).filter(Boolean),
@@ -137,6 +240,65 @@ export function LeirskoleCellSheet({
         </SheetHeader>
 
         <div className="mt-3 space-y-4 pb-6">
+          {isSpecial && (
+            <div className="space-y-3 rounded-2xl border border-amber-500/50 bg-amber-500/10 p-3">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">
+                <Clock className="h-3.5 w-3.5" />
+                {target?.dayType === 'arrival' ? 'Ankomstdag' : 'Avreisedag'} — egen økt
+              </p>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Navn på økten (f.eks. Innsjekk)" />
+              <div className="flex items-center gap-2">
+                <Input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="flex-1" />
+                <span className="text-muted-foreground">–</span>
+                <Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="flex-1" />
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" className="rounded-full" onClick={() => savePost.mutate()} disabled={savePost.isPending}>
+                  {post?.id ? 'Lagre endringer' : 'Opprett økt'}
+                </Button>
+                {post?.id && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="rounded-full text-destructive"
+                    onClick={() => deletePost.mutate()}
+                    disabled={deletePost.isPending}
+                  >
+                    Slett
+                  </Button>
+                )}
+              </div>
+              <div>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Ledere på økten
+                </p>
+                {!post?.id ? (
+                  <p className="text-sm text-muted-foreground">Opprett økten først, så kan du velge ledere.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {(staffOptions ?? []).map((s) => {
+                      const on = (post.assignments ?? []).some((a) => a.staff_id === s.staffId);
+                      return (
+                        <button
+                          key={s.staffId}
+                          type="button"
+                          disabled={toggleStaff.isPending}
+                          onClick={() => toggleStaff.mutate({ staffId: s.staffId, on: !on })}
+                          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                            on ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                          }`}
+                        >
+                          {s.name}
+                          {on && <Check className="h-3.5 w-3.5" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Aktiviteter i økten
