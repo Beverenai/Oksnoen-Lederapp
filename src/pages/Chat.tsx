@@ -7,7 +7,7 @@ import { useAccessMode } from '@/hooks/useViewMode';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowDown, AtSign, ImagePlus, Loader2, Reply, Send, Users, X } from 'lucide-react';
+import { ArrowDown, ImagePlus, Loader2, Reply, Send, Users, X } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { cn } from '@/lib/utils';
 import { compressImage } from '@/lib/imageUtils';
@@ -153,6 +153,24 @@ export default function Chat() {
     return () => {
       window.removeEventListener('resize', measure);
       window.visualViewport?.removeEventListener('resize', measure);
+    };
+  }, []);
+
+  /**
+   * Låser side-skrollingen mens man er i chatten. Uten dette kan hele siden
+   * skrolle bak/over meldingslisten (spesielt når tastaturet åpnes på iPhone).
+   */
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtml = html.style.overflow;
+    const prevBody = body.style.overflow;
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    window.scrollTo({ top: 0 });
+    return () => {
+      html.style.overflow = prevHtml;
+      body.style.overflow = prevBody;
     };
   }, []);
 
@@ -521,21 +539,6 @@ export default function Chat() {
     requestAnimationFrame(() => el?.focus());
   };
 
-  const openMentionPicker = () => {
-    const el = textareaRef.current;
-    const caret = el?.selectionStart ?? input.length;
-    const needsSpace = caret > 0 && !/\s$/.test(input.slice(0, caret));
-    const insert = `${needsSpace ? ' ' : ''}@`;
-    const next = input.slice(0, caret) + insert + input.slice(caret);
-    setInput(next);
-    const newCaret = caret + insert.length;
-    setMention({ start: newCaret - 1, query: '' });
-    requestAnimationFrame(() => {
-      el?.focus();
-      el?.setSelectionRange(newCaret, newCaret);
-    });
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (mention && mentionMatches.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
       e.preventDefault();
@@ -586,7 +589,7 @@ export default function Chat() {
   return (
     <div
       ref={shellRef}
-      className="-mx-4 -my-4 flex flex-col gap-2 px-3 pt-2 pb-1 animate-fade-in lg:mx-0 lg:my-0 lg:px-0 lg:pt-0"
+      className="-mx-4 -my-4 flex flex-col gap-2 overflow-hidden px-3 pt-2 pb-1 animate-fade-in lg:mx-0 lg:my-0 lg:px-0 lg:pt-0"
       style={shellHeight ? { height: shellHeight } : { height: '70svh' }}
     >
       {/* Kompakt topplinje: tittel + kanalvelger på én rad (mindre skroll på iPhone) */}
@@ -654,7 +657,7 @@ export default function Chat() {
       <div className="relative flex-1 min-h-0">
         <div
           ref={listRef}
-          className="h-full overflow-y-auto overscroll-contain rounded-2xl border bg-card/40 px-2.5 py-3 lg:px-3 lg:py-4"
+          className="h-full overflow-y-auto overscroll-contain rounded-2xl bg-muted/20 px-2.5 py-3 lg:px-3 lg:py-4"
         >
           {messages.length === 0 && (
             <div className="flex h-full items-center justify-center">
@@ -908,16 +911,6 @@ export default function Chat() {
                 <ImagePlus className="h-4 w-4" />
               )}
             </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={openMentionPicker}
-              aria-label="Tagg en leder"
-              className="h-9 w-9 shrink-0 rounded-full text-muted-foreground"
-            >
-              <AtSign className="h-4 w-4" />
-            </Button>
             <Textarea
               ref={textareaRef}
               value={input}
@@ -929,7 +922,7 @@ export default function Chat() {
                 setTimeout(() => scrollToBottom(true), 250);
               }}
               onClick={(e) => syncMention(input, (e.target as HTMLTextAreaElement).selectionStart ?? 0)}
-              placeholder={replyTo ? 'Skriv svaret…' : 'Skriv en melding… bruk @ for å tagge'}
+              placeholder={replyTo ? 'Skriv svaret…' : 'Skriv en melding…'}
               maxLength={4000}
               rows={1}
               disabled={sending || uploading || !leader}
