@@ -694,6 +694,14 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                           .map(([id, v]) => `${firstName(leaderName.get(id) ?? '?')} ${v.toFixed(1)}t`)
                           .join(' · ')}
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => fixDay.mutate(date)}
+                        disabled={fixDay.isPending}
+                        className="mt-1 rounded-full border border-destructive/50 bg-background/70 px-2 py-0.5 text-[10px] font-semibold hover:bg-destructive/10"
+                      >
+                        Fiks timer
+                      </button>
                     </>
                   )}
                 </div>
