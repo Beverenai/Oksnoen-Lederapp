@@ -164,8 +164,21 @@ export function LeirskolePostsCard({
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      toast.success('Vakt oppdatert');
+    onSuccess: async () => {
+      invalidate();
+      // Manuelle endringer låses, og resten av planen balanseres på nytt slik
+      // at en annen leder tar den vakten som ble frigjort.
+      try {
+        const res = await generate.mutateAsync({ weekId: week.id, keepLocked: true });
+        const missing = res.stats?.missing?.length ?? 0;
+        toast.success(
+          missing === 0
+            ? 'Vakt oppdatert — planen er rebalansert'
+            : `Vakt oppdatert — ${missing} udekkede vakter igjen`,
+        );
+      } catch {
+        toast.success('Vakt oppdatert');
+      }
       invalidate();
     },
     onError: (error: unknown) => showError(errorMessage(error, 'Kunne ikke oppdatere vakten')),
