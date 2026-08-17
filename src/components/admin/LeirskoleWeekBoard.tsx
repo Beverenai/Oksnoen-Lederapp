@@ -22,6 +22,7 @@ import {
   type LeirskoleGenerateSummary,
 } from '@/lib/leirskoleGenerateAll';
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
+import { LeirskoleSpecialDayTimeline } from '@/components/admin/LeirskoleSpecialDayTimeline';
 
 type StaffRow = LeirskoleStaff & {
   leader: {
