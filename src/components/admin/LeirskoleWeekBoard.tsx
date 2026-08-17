@@ -895,6 +895,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                       {perDay.map((h, i) => (
                         <td
                           key={dates[i]}
+                          title={kitchenSet.has(`${dates[i]}|${s.id}`) ? 'Kjøkken hele dagen' : undefined}
                           className={`px-1 py-1 text-center tabular-nums ${
                             h > maxHours + 0.01
                               ? 'font-bold text-destructive'
@@ -906,6 +907,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                           }`}
                         >
                           {h.toFixed(1)}
+                          {kitchenSet.has(`${dates[i]}|${s.id}`) && (
+                            <span className="ml-0.5 text-[9px] font-semibold text-sky-500">K</span>
+                          )}
                         </td>
                       ))}
                       <td className="px-2 py-1 text-right font-semibold tabular-nums">{total.toFixed(1)}t</td>
