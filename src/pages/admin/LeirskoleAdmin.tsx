@@ -11,16 +11,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users, ChevronDown } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
   useLeirskoleActivities,
   useLeirskoleSchedule,
   useLeirskoleStaff,
+  useLeirskoleWeekPlan,
 } from '@/hooks/useLeirskole';
 import { LeirskoleAccessCard } from '@/components/admin/LeirskoleAccessCard';
-import { LeirskoleActivityCard } from '@/components/admin/LeirskoleActivityCard';
+import { LeirskoleAutoActivityCard } from '@/components/admin/LeirskoleAutoActivityCard';
 import { LeirskoleActivityTypesCard } from '@/components/admin/LeirskoleActivityTypesCard';
 import { LeirskoleGuideCard } from '@/components/admin/LeirskoleGuideCard';
 import { LeirskoleLeaderSheet } from '@/components/admin/LeirskoleLeaderSheet';
@@ -48,6 +48,57 @@ async function sendLeirskolePush(body: {
   return null;
 }
 
+
+type StepTone = 'todo' | 'warn' | 'done';
+
+const TONE: Record<StepTone, string> = {
+  todo: 'bg-muted/60 text-muted-foreground',
+  warn: 'bg-amber-500/20 text-amber-500',
+  done: 'bg-primary/20 text-primary',
+};
+
+/** Ett steg i arbeidsflyten — åpnes/lukkes og viser status. */
+function Step({
+  n,
+  title,
+  subtitle,
+  status,
+  open,
+  onToggle,
+  children,
+}: {
+  n: number;
+  title: string;
+  subtitle: string;
+  status: { label: string; tone: StepTone };
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="oks-ls-pill overflow-hidden">
+      <button type="button" onClick={onToggle} className="flex w-full items-center gap-3 p-4 text-left">
+        <span
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+            status.tone === 'done' ? 'oks-ls-gradient' : 'bg-muted/60 text-muted-foreground'
+          }`}
+        >
+          {n}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold">{title}</span>
+          <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
+        </span>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${TONE[status.tone]}`}>
+          {status.label}
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="space-y-3 border-t border-border/60 p-4 pt-3">{children}</div>}
+    </div>
+  );
+}
+
 export default function LeirskoleAdmin() {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -58,7 +109,10 @@ export default function LeirskoleAdmin() {
   const { data: staff } = useLeirskoleStaff(week?.id);
   const { data: posts } = useLeirskoleSchedule(week?.id);
   const { data: weekActivities } = useLeirskoleActivities(week?.id);
+  const { data: planCells } = useLeirskoleWeekPlan(week?.id);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const [openStep, setOpenStep] = useState<number | null>(1);
+  const [todayOpen, setTodayOpen] = useState(false);
 
   const [taskDraft, setTaskDraft] = useState({ title: '', description: '', due_at: '' });
   const [taskAssignAll, setTaskAssignAll] = useState(true);
@@ -223,6 +277,22 @@ export default function LeirskoleAdmin() {
     });
     return map;
   }, [weekActivities]);
+
+  const missingCompetence = (staff ?? []).filter(
+    (s) => (s.leader?.leirskole_competencies ?? []).length === 0,
+  ).length;
+
+  /** Hvor mange ruter i ukeplanen som er fylt ut (3 økter per dag). */
+  const { planFilled, planTotal } = useMemo(() => {
+    if (!week) return { planFilled: 0, planTotal: 0 };
+    const start = new Date(`${week.start_date}T12:00:00`);
+    const end = new Date(`${week.end_date}T12:00:00`);
+    const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+    const filled = (planCells ?? []).filter(
+      (c) => c.row_index >= 1 && c.row_index <= 3 && (c.content ?? '').trim().length > 0,
+    ).length;
+    return { planFilled: filled, planTotal: days * 3 };
+  }, [week, planCells]);
 
   const selectedStaff = (staff ?? []).find((s) => s.id === selectedStaffId) ?? null;
 
@@ -393,56 +463,61 @@ export default function LeirskoleAdmin() {
 
       <LeirskoleGuideCard />
 
-      {/* Arbeidsflyt: 1) vaktplan → 2) oppgaver per økt */}
-      <div className="oks-ls-pill flex items-center gap-2 p-3 text-xs">
-        <span className={`rounded-full px-2.5 py-1 font-semibold ${hasSchedule ? 'bg-primary/20 text-primary' : 'bg-muted/60 text-muted-foreground'}`}>
-          1. Vaktplan {hasSchedule ? '✓' : ''}
-        </span>
-        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-        <span className={`rounded-full px-2.5 py-1 font-semibold ${(weekActivities ?? []).length ? 'bg-primary/20 text-primary' : 'bg-muted/60 text-muted-foreground'}`}>
-          2. Oppgaver per økt
-        </span>
-      </div>
-
-      <Tabs defaultValue="oversikt" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 rounded-2xl">
-          <TabsTrigger value="oversikt" className="rounded-xl text-xs">Oversikt</TabsTrigger>
-          <TabsTrigger value="vaktplan" className="rounded-xl text-xs">Vaktplan</TabsTrigger>
-          <TabsTrigger value="okter" className="rounded-xl text-xs">Økter</TabsTrigger>
-          <TabsTrigger value="oppgaver" className="rounded-xl text-xs">Oppgaver</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="oversikt" className="mt-3 space-y-3">
-          {todayPosts.length > 0 && (
-            <div className="oks-ls-pill oks-ls-stripe p-4">
-              <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                <Clock className="h-4 w-4 text-primary" /> I dag
-              </p>
-              <div className="space-y-1.5">
-                {todayPosts.map((p) => (
-                  <div key={p.id} className="rounded-2xl bg-muted/40 px-3 py-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="min-w-0 truncate text-sm font-medium">{p.name}</p>
-                      <span className="shrink-0 text-xs font-semibold tabular-nums">
-                        {hhmm(p.start_time)}–{hhmm(p.end_time)}
-                      </span>
-                    </div>
-                    <div className="mt-1.5">
-                      <LeaderAvatarStack
-                        people={p.assignments
-                          .map((a) => staffPeople.get(a.staff_id))
-                          .filter(Boolean) as AvatarPerson[]}
-                        withNames
-                        onSelect={(person) => setSelectedStaffId(person.id)}
-                        emptyLabel="Ingen satt opp"
-                      />
-                    </div>
-                  </div>
-                ))}
+      {todayPosts.length > 0 && (
+        <div className="oks-ls-pill oks-ls-stripe overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setTodayOpen((v) => !v)}
+            className="flex w-full items-center gap-2 p-4 text-left"
+          >
+            <Clock className="h-4 w-4 shrink-0 text-primary" />
+            <span className="flex-1 text-sm font-semibold">I dag</span>
+            <span className="shrink-0 rounded-full bg-muted/60 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+              {todayPosts.length} vakter
+            </span>
+            <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${todayOpen ? 'rotate-180' : ''}`} />
+          </button>
+          <div className={`space-y-1.5 px-4 pb-4 ${todayOpen ? '' : 'hidden'}`}>
+            {todayPosts.map((p) => (
+              <div key={p.id} className="rounded-2xl bg-muted/40 px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="min-w-0 truncate text-sm font-medium">{p.name}</p>
+                  <span className="shrink-0 text-xs font-semibold tabular-nums">
+                    {hhmm(p.start_time)}–{hhmm(p.end_time)}
+                  </span>
+                </div>
+                <div className="mt-1.5">
+                  <LeaderAvatarStack
+                    people={p.assignments
+                      .map((a) => staffPeople.get(a.staff_id))
+                      .filter(Boolean) as AvatarPerson[]}
+                    withNames
+                    onSelect={(person) => setSelectedStaffId(person.id)}
+                    emptyLabel="Ingen satt opp"
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            ))}
+          </div>
+        </div>
+      )}
 
+      {/* Stegvis arbeidsflyt */}
+      <div className="space-y-2">
+        <Step
+          n={1}
+          title="Ledere"
+          subtitle="Hvem jobber denne uken + kompetanse"
+          status={
+            (staff ?? []).length === 0
+              ? { label: 'Ingen ledere', tone: 'todo' }
+              : missingCompetence > 0
+                ? { label: `${missingCompetence} mangler kompetanse`, tone: 'warn' }
+                : { label: `${(staff ?? []).length} ledere`, tone: 'done' }
+          }
+          open={openStep === 1}
+          onToggle={() => setOpenStep(openStep === 1 ? null : 1)}
+        >
           <LeirskoleStaffPanel
             weekName={week.name}
             weekDates={`${week.start_date} – ${week.end_date}`}
@@ -452,40 +527,64 @@ export default function LeirskoleAdmin() {
             activitiesByLeader={activitiesByLeader}
             onSelect={(s) => setSelectedStaffId(s.id)}
           />
-
           <LeirskoleAccessCard
             weekId={week.id}
             weekName={week.name}
             maxDailyHours={week.max_daily_hours}
           />
-        </TabsContent>
+        </Step>
 
-        <TabsContent value="vaktplan" className="mt-3 space-y-3">
+        <Step
+          n={2}
+          title="Ukeplan"
+          subtitle="Hvilke aktiviteter i økt 1–3 hver dag"
+          status={
+            planFilled === 0
+              ? { label: 'Ikke fylt ut', tone: 'todo' }
+              : { label: `${planFilled} av ${planTotal} ruter`, tone: planFilled >= planTotal ? 'done' : 'warn' }
+          }
+          open={openStep === 2}
+          onToggle={() => setOpenStep(openStep === 2 ? null : 2)}
+        >
           <LeirskoleWeekPlanCard week={week} />
+          <LeirskoleActivityTypesCard />
+        </Step>
+
+        <Step
+          n={3}
+          title="Vaktplan"
+          subtitle={`Generer vakter (maks ${Number(week.max_daily_hours ?? 8)}t/dag) og fordel aktiviteter`}
+          status={
+            !hasSchedule
+              ? { label: 'Ikke generert', tone: 'todo' }
+              : (weekActivities ?? []).length === 0
+                ? { label: 'Mangler aktiviteter', tone: 'warn' }
+                : { label: `${(posts ?? []).length} vakter`, tone: 'done' }
+          }
+          open={openStep === 3}
+          onToggle={() => setOpenStep(openStep === 3 ? null : 3)}
+        >
           <LeirskolePostsCard
             week={week}
             staff={staff ?? []}
             onSelectStaff={(staffId) => setSelectedStaffId(staffId)}
           />
+          <LeirskoleAutoActivityCard week={week} staff={staff ?? []} />
           <LeirskoleDayActivityCard week={week} staff={staff ?? []} />
-        </TabsContent>
+        </Step>
 
-        <TabsContent value="okter" className="mt-3 space-y-3">
-          {!hasSchedule && (
-            <div className="oks-ls-pill p-4 text-sm text-muted-foreground">
-              Generer vaktplanen først — da vet vi hvilke ledere som er på vakt hver økt.
-            </div>
-          )}
-          <LeirskoleActivityCard week={week} staff={staff ?? []} />
-          <LeirskoleWeekPlanCard week={week} />
-          <LeirskoleActivityTypesCard />
-          <LeirskoleSessionInfoCard weekId={week.id} staff={staff ?? []} />
-        </TabsContent>
-
-        <TabsContent value="oppgaver" className="mt-3 space-y-3">
+        <Step
+          n={4}
+          title="Oppgaver"
+          subtitle="Beskjeder og oppgaver til lederne"
+          status={{ label: `${(tasks ?? []).length} sendt`, tone: (tasks ?? []).length ? 'done' : 'todo' }}
+          open={openStep === 4}
+          onToggle={() => setOpenStep(openStep === 4 ? null : 4)}
+        >
           {taskPanel}
-        </TabsContent>
-      </Tabs>
+          <LeirskoleSessionInfoCard weekId={week.id} staff={staff ?? []} />
+        </Step>
+      </div>
 
       {selectedStaff?.leader && (
         <LeirskoleLeaderSheet

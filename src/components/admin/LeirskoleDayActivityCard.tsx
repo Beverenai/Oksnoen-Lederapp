@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { ListChecks } from 'lucide-react';
+import { AlertTriangle, ListChecks } from 'lucide-react';
 import {
   useLeirskoleActivities,
   useLeirskoleSchedule,
@@ -104,6 +104,8 @@ export function LeirskoleDayActivityCard({ week, staff }: Props) {
       .map((leaderId) => ({
         leaderId,
         name: staff.find((s) => s.leader?.id === leaderId)?.leader?.name ?? 'Ukjent',
+        competencies:
+          staff.find((s) => s.leader?.id === leaderId)?.leader?.leirskole_competencies ?? [],
         shifts: shiftsByLeader.get(leaderId) ?? [],
         bySession: Object.fromEntries(
           LEIRSKOLE_ACTIVITY_SESSIONS.map((s) => [
@@ -156,6 +158,8 @@ export function LeirskoleDayActivityCard({ week, staff }: Props) {
             <div className="mt-1.5 grid grid-cols-3 gap-1.5">
               {LEIRSKOLE_ACTIVITY_SESSIONS.map((s) => {
                 const current = row.bySession[s.key] ?? '';
+                const lacks =
+                  !!current && row.competencies.length > 0 && !row.competencies.includes(current);
                 return (
                   <div key={s.key} className="rounded-xl bg-background/70 p-1.5">
                     <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</p>
@@ -179,6 +183,11 @@ export function LeirskoleDayActivityCard({ week, staff }: Props) {
                         </option>
                       )}
                     </select>
+                    {lacks && (
+                      <p className="mt-1 flex items-center gap-1 text-[10px] text-destructive">
+                        <AlertTriangle className="h-3 w-3" /> mangler kompetanse
+                      </p>
+                    )}
                   </div>
                 );
               })}

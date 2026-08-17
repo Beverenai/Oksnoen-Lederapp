@@ -62,6 +62,17 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
     return map;
   }, [cells]);
 
+  const filledCount = useMemo(
+    () =>
+      dates.reduce(
+        (sum, date) =>
+          sum +
+          ROWS.filter((r) => (stored.get(cellKey(date, r.index))?.content ?? '').trim().length > 0).length,
+        0,
+      ),
+    [dates, stored],
+  );
+
   const persist = (date: string, row: number, content: string, color: string) => {
     save.mutate(
       { weekId: week.id, date, rowIndex: row, content, color },
@@ -79,6 +90,9 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
           Velg aktiviteter fra lista i hver rute (økt 1–3). Trykk på fargeprikkene for å markere ruten. Lagres
           automatisk.
         </CardDescription>
+        <p className="mt-1 text-xs font-semibold text-primary">
+          {filledCount} av {dates.length * ROWS.length} ruter fylt ut
+        </p>
       </CardHeader>
       <CardContent>
         <div className="-mx-2 overflow-x-auto px-2 pb-2">

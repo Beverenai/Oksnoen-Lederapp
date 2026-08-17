@@ -4,46 +4,28 @@ import { ChevronDown, HelpCircle } from 'lucide-react';
 
 const STEPS: { title: string; where: string; body: string }[] = [
   {
-    title: '1. Uke og bemanning',
-    where: 'Fanen «Oversikt»',
+    title: '1. Ledere',
+    where: 'Steg 1',
     body:
-      'Velg/opprett uka og legg inn hvem som jobber (staff). Kompetansen til hver leder bestemmer hvilke aktiviteter de kan få. Her gir du også tilgang og kan «se som» en leder.',
+      'Legg inn hvem som jobber denne uken, og sett kompetansen deres. Kompetansen bestemmer hvilke aktiviteter de kan få. Her gir du også tilgang og kan «se som» en leder.',
   },
   {
-    title: '2. Vakter (øktene i døgnet)',
-    where: 'Fanen «Vaktplan» → kortet «Økter/vakter»',
+    title: '2. Ukeplan',
+    where: 'Steg 2',
     body:
-      'Dette er tidene: frokost, økt 1, middag, økt 2, kvelds, økt 3, Sanitas og nattevakt. Du kan endre klokkeslett, antall ledere, legge inn egne økter og forskyve hele dagen eller uka. Økt 3 lages upublisert — lederne ser den først når du slår på «Publisert for lederne».',
+      'Rutenettet med dagene bortover og økt 1–3 nedover. Velg aktivitetene fra lista — dette er programmet for uka, og styrer hva lederne kan settes på. Nye aktivitetsnavn legges inn nederst i samme steg.',
   },
   {
-    title: '3. Ukeplanlegger (hva som skjer)',
-    where: 'Fanen «Vaktplan» → «Ukeplanlegger» (øverst)',
+    title: '3. Vaktplan',
+    where: 'Steg 3',
     body:
-      'Rutenettet med dagene bortover og økt 1–3 nedover. Her velger du aktivitetene fra lista (ingen skriving) og fargekoder rutene. Dette er programmet for uka, og gjøres før vaktplanen fordeles.',
+      'Først «Generer vaktplan»: lederne fordeles på frokost, økt 1, middag, økt 2, kvelds, økt 3, Sanitas og nattevakt — maks ca. 8 timer per dag, 11 timer hvile og helst sammenhengende vakter. Deretter «Fordel aktiviteter»: aktivitetene fra ukeplanen gis til ledere med riktig kompetanse som er på vakt i økten, og rullerer så ingen har det samme to økter på rad. Nederst kan du endre hver enkelt manuelt.',
   },
   {
-    title: '4. Vaktplan-generator',
-    where: 'Fanen «Vaktplan» → «Generer vaktplan»',
+    title: '4. Oppgaver',
+    where: 'Steg 4',
     body:
-      'Fordeler lederne på vaktene automatisk: maks ca. 8 timer per dag, 11 timer hvile, sammenhengende vakter foretrekkes, maks 2 på måltider og 4 på Sanitas. Endrer du en leder manuelt, låses valget og resten rebalanseres. Under ligger «Hvem har hvilken økt», hvor du kan endre aktiviteten til hver leder manuelt.',
-  },
-  {
-    title: '5. Aktiviteter til lederne',
-    where: 'Fanen «Økter» → «Aktiviteter per økt»',
-    body:
-      'Henter aktivitetene rett fra ukeplanleggeren (økt 1 = formiddag, økt 2 = ettermiddag) og fordeler dem rettferdig på lederne som er på vakt — færrest ganger først, og kompetanse respekteres. «Generer dagen + varsle» sender push til lederne.',
-  },
-  {
-    title: '6. Aktivitetslista',
-    where: 'Fanen «Økter» → «Aktiviteter»',
-    body:
-      'Her ligger alle aktivitetsnavnene (Tube, Klatring, Pil og bue …). Legg til nye, endre navn/emoji, sorter eller slå av. Alt annet velger fra denne lista.',
-  },
-  {
-    title: '7. Oppgaver og info',
-    where: 'Fanen «Oppgaver»',
-    body:
-      'Gi konkrete oppgaver til enkeltledere med frist, og legg inn info til en økt. Lederne ser dette på sin hjemskjerm og får varsling.',
+      'Gi konkrete oppgaver til alle eller enkeltledere med frist, og legg inn info til en økt. Lederne ser dette på hjemskjermen og får varsling.',
   },
 ];
 
@@ -67,7 +49,7 @@ export function LeirskoleGuideCard() {
           </div>
         ))}
         <p className="px-1 text-[11px] text-muted-foreground">
-          Rekkefølge: bemanning → vakter → generer vaktplan → ukeplanlegger → aktiviteter + varsling.
+          Rekkefølge: ledere → ukeplan → vaktplan + aktiviteter → oppgaver.
         </p>
       </CollapsibleContent>
     </Collapsible>
