@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { activityLine } from '@/lib/leirskoleRandomPlan';
+import { activityLine, isSessionActivity } from '@/lib/leirskoleRandomPlan';
 
 const SESSION_ROWS: { row: number; label: string; session: string }[] = [
   { row: 1, label: 'Økt 1', session: 'formiddag' },
@@ -59,7 +59,9 @@ export async function assignMissingActivities({
     const inPlan = (types ?? []).filter((t) => lines.some((l) => l.toLowerCase().includes(t.label.toLowerCase())));
     const usedKeys = new Set(slotAssignments.map((a) => a.activity));
     const free = inPlan.filter((t) => !usedKeys.has(t.key));
-    const spare = (types ?? []).filter((t) => !inPlan.some((p) => p.key === t.key));
+    const spare = (types ?? [])
+      .filter(isSessionActivity)
+      .filter((t) => !inPlan.some((p) => p.key === t.key));
     const nextLines = [...lines];
 
     for (const leader of onDuty) {
