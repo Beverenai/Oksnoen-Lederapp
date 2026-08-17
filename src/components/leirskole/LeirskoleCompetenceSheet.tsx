@@ -2,25 +2,8 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Check, Plus } from 'lucide-react';
-import {
-  useSaveLeirskoleCompetencies,
-  useLeirskoleActivityTypes,
-  useAddLeirskoleActivityType,
-} from '@/hooks/useLeirskole';
-import { LEIRSKOLE_COMPETENCIES } from '@/lib/leirskoleCompetencies';
-
-function slugify(label: string) {
-  return (
-    label
-      .toLowerCase()
-      .replace(/[æå]/g, 'a')
-      .replace(/ø/g, 'o')
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_|_$/g, '') || `aktivitet_${Date.now()}`
-  );
-}
+import { Check } from 'lucide-react';
+import { useSaveLeirskoleCompetencies, useLeirskoleActivityTypes } from '@/hooks/useLeirskole';
 
 interface Props {
   open: boolean;
@@ -46,20 +29,11 @@ export function LeirskoleCompetenceSheet({
   const [selected, setSelected] = useState<string[]>(current);
   const save = useSaveLeirskoleCompetencies();
   const { data: types } = useLeirskoleActivityTypes();
-  const addType = useAddLeirskoleActivityType();
-  const [newLabel, setNewLabel] = useState('');
-  const [newEmoji, setNewEmoji] = useState('');
 
-  /** Alle aktiviteter — både nye fra databasen og de gamle standardene. */
+  /** Kun aktiviteter admin har lagt inn (+ evt. eldre valg lederen alt har). */
   const options = (() => {
     const list = (types ?? []).map((t) => ({ key: t.key, label: t.label, emoji: t.emoji ?? '•' }));
     const seen = new Set(list.map((o) => o.key));
-    LEIRSKOLE_COMPETENCIES.forEach((c) => {
-      if (!seen.has(c.key)) {
-        seen.add(c.key);
-        list.push({ key: c.key, label: c.label, emoji: c.emoji });
-      }
-    });
     selected.forEach((k) => {
       if (!seen.has(k)) {
         seen.add(k);
@@ -75,24 +49,6 @@ export function LeirskoleCompetenceSheet({
 
   const toggle = (key: string) =>
     setSelected((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
-
-  const addActivity = async () => {
-    const label = newLabel.trim();
-    if (!label) return;
-    if (options.some((o) => o.label.toLowerCase() === label.toLowerCase())) {
-      toast.error('Aktiviteten finnes allerede');
-      return;
-    }
-    try {
-      await addType.mutateAsync({ label, emoji: newEmoji.trim() || '⭐', sortOrder: options.length });
-      setSelected((prev) => [...prev, slugify(label)]);
-      setNewLabel('');
-      setNewEmoji('');
-      toast.success('Aktivitet lagt til');
-    } catch (e: any) {
-      toast.error(e.message ?? 'Kunne ikke legge til');
-    }
-  };
 
   const submit = async () => {
     if (required && selected.length === 0) {
@@ -144,39 +100,11 @@ export function LeirskoleCompetenceSheet({
           })}
         </div>
 
-        <div className="mt-3 rounded-2xl border border-dashed border-border/60 p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Legg til aktivitet
+        {options.length === 0 && (
+          <p className="mt-4 rounded-2xl border border-dashed border-border/60 p-3 text-sm text-muted-foreground">
+            Ingen aktiviteter er lagt inn ennå. Admin legger dem inn under Leirskole → Økter.
           </p>
-          <div className="flex gap-2">
-            <Input
-              value={newEmoji}
-              onChange={(e) => setNewEmoji(e.target.value)}
-              placeholder="⭐"
-              className="w-16 text-center"
-              maxLength={4}
-            />
-            <Input
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              placeholder="Navn på aktivitet"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addActivity();
-                }
-              }}
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={addActivity}
-              disabled={!newLabel.trim() || addType.isPending}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        )}
 
         <div className="mt-5 flex gap-2 pb-2">
           {!required && (

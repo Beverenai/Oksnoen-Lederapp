@@ -236,10 +236,13 @@ Deno.serve(async (req) => {
       const N = staff.length;
       // Mål: hver leder skal fylle 8 timer per dag. Skaler bemanningen på
       // øktene slik at total kapasitet per dag ≈ 8 timer * antall ledere.
-      const mealReq = Math.max(1, Math.min(3, Math.ceil(N / 4)));
-      const frokostReq = Math.min(2, mealReq); // Maks 2 stk på frokost
+      // Maks 2 stk på frokost, middag og kvelds.
+      const mealReq = Math.max(1, Math.min(2, Math.ceil(N / 4)));
+      const frokostReq = mealReq;
+      // Maks 4 stk på Sanitas.
+      const sanitasReq = Math.max(1, Math.min(4, Math.ceil(N / 3)));
       const mealHours = 2 * mealReq + frokostReq; // Middag + Kvelds (1t) + Frokost (1t)
-      const nightHours = 3 + 2 * 0.5; // Nattevakt 3t + Sanitas 0,5t x2
+      const nightHours = 3 + sanitasReq * 0.5; // Nattevakt 3t + Sanitas 0,5t
       const shiftHoursPerLeader = 3 + 3 + 1.5; // Økt 1 + Økt 2 + Økt 3
       const needed = 8 * N - mealHours - nightHours;
       const shiftReq = Math.max(1, Math.min(N, Math.ceil(needed / shiftHoursPerLeader)));
@@ -256,7 +259,7 @@ Deno.serve(async (req) => {
           { week_id, date, name: "Økt 2", post_type: "main_shift", start_time: "16:00", end_time: "19:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 4 },
           { week_id, date, name: "Kvelds", post_type: "meal", start_time: "19:00", end_time: "20:00", required_leaders: mealReq, is_main_shift: false, is_night: false, sort_order: 6 },
           { week_id, date, name: "Økt 3", post_type: "main_shift", start_time: "20:00", end_time: "21:30", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 5 },
-          { week_id, date, name: "Sanitas", post_type: "other", start_time: "22:30", end_time: "23:00", required_leaders: 2, is_main_shift: false, is_night: false, sort_order: 7 },
+          { week_id, date, name: "Sanitas", post_type: "other", start_time: "22:30", end_time: "23:00", required_leaders: sanitasReq, is_main_shift: false, is_night: false, sort_order: 7 },
           { week_id, date, name: "Nattevakt", post_type: "night", start_time: "22:30", end_time: "01:30", required_leaders: 1, is_main_shift: false, is_night: true, sort_order: 8 },
         );
       }
