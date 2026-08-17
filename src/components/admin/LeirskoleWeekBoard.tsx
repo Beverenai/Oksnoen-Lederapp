@@ -551,6 +551,13 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         content={target ? cellContent(target) : ''}
         types={types ?? []}
         onDuty={target?.session ? dutyBySlot.get(`${target.date}|${target.session}`) ?? [] : []}
+        allStaff={staff
+          .filter((s) => s.leader)
+          .map((s) => ({
+            id: s.leader!.id,
+            name: s.leader!.name,
+            competencies: s.leader!.leirskole_competencies ?? [],
+          }))}
         assignments={target?.session ? activityBySlot.get(`${target.date}|${target.session}`) ?? [] : []}
       />
     </div>
