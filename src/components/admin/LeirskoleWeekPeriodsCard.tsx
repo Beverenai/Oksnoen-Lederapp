@@ -162,7 +162,8 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
           <p className="py-2 text-xs text-muted-foreground">Ingen uker lagt inn ennå.</p>
         )}
         {(weeks ?? []).map((w) => {
-          const on = w.id === selectedWeekId;
+          const isPlanning = w.id === selectedWeekId;
+          const isActive = w.id === activeWeekId;
           return (
             <button
               key={w.id}
@@ -172,17 +173,21 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
                 setEditing(false);
               }}
               className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
-                on
+                isPlanning
                   ? 'oks-ls-gradient text-white shadow-md'
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                  : isActive
+                    ? 'bg-primary/15 text-primary ring-1 ring-primary/40 hover:bg-primary/20'
+                    : 'bg-muted/60 text-muted-foreground hover:bg-muted'
               }`}
             >
               <span className="flex items-center gap-1.5">
-                {on && <Check className="h-3 w-3 shrink-0" />}
+                {isPlanning && <Edit3 className="h-3 w-3 shrink-0" />}
+                {isActive && !isPlanning && <Crown className="h-3 w-3 shrink-0" />}
                 <span>{w.name}</span>
               </span>
-              <span className={`mt-0.5 block text-[10px] font-normal ${on ? 'text-white/80' : 'text-muted-foreground/80'}`}>
+              <span className={`mt-0.5 block text-[10px] font-normal ${isPlanning ? 'text-white/80' : isActive ? 'text-primary/80' : 'text-muted-foreground/80'}`}>
                 {shortDate(w.start_date)}–{shortDate(w.end_date)}
+                {isActive && <span className="ml-1 font-semibold">· aktiv</span>}
               </span>
             </button>
           );
