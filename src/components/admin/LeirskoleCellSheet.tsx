@@ -10,11 +10,13 @@ import { activityLine } from '@/lib/leirskoleRandomPlan';
 
 export interface CellTarget {
   date: string;
-  /** formiddag | ettermiddag | kveld — null for egne økter på ankomst/avreise. */
+  /** formiddag | ettermiddag | kveld | postId for egne økter på ankomst/avreise. */
   session: string | null;
   rowIndex: number | null;
   postId?: string | null;
   label: string;
+  /** 'normal' | 'arrival' | 'departure' — ankomst krever ikke kompetanse. */
+  dayType?: 'normal' | 'arrival' | 'departure';
 }
 
 export interface CellLeader {
@@ -116,6 +118,8 @@ export function LeirskoleCellSheet({
   const leaderFor = (activity: string) =>
     assignments.find((a) => a.activity === activity)?.leader_id ?? '';
 
+  const isArrival = target?.dayType === 'arrival';
+
   /** Ledere som ikke står på denne vakten, men som er med i uken. */
   const offDuty = useMemo(
     () => (allStaff ?? []).filter((l) => !onDuty.some((d) => d.id === l.id)),
@@ -183,7 +187,10 @@ export function LeirskoleCellSheet({
                   const current = leaderFor(t.key);
                   const leader = pool.find((l) => l.id === current);
                   const lacks =
-                    !!leader && leader.competencies.length > 0 && !leader.competencies.includes(t.key);
+                    !isArrival &&
+                    !!leader &&
+                    leader.competencies.length > 0 &&
+                    !leader.competencies.includes(t.key);
                   return (
                     <div key={t.key} className="rounded-2xl bg-muted/40 px-3 py-2">
                       <div className="flex items-center justify-between gap-2">
@@ -194,6 +201,9 @@ export function LeirskoleCellSheet({
                           <span className="flex items-center gap-1 text-[11px] text-destructive">
                             <AlertTriangle className="h-3 w-3" /> mangler kompetanse
                           </span>
+                        )}
+                        {isArrival && (
+                          <span className="text-[11px] text-emerald-600 dark:text-emerald-400">Ankomst — kompetanse fri</span>
                         )}
                       </div>
                       <select
@@ -208,7 +218,7 @@ export function LeirskoleCellSheet({
                             {onDuty.map((l) => (
                               <option key={l.id} value={l.id}>
                                 {l.name}
-                                {l.competencies.length > 0 && !l.competencies.includes(t.key)
+                                {!isArrival && l.competencies.length > 0 && !l.competencies.includes(t.key)
                                   ? ' (uten kompetanse)'
                                   : ''}
                               </option>
@@ -220,7 +230,7 @@ export function LeirskoleCellSheet({
                             {offDuty.map((l) => (
                               <option key={l.id} value={l.id}>
                                 {l.name}
-                                {l.competencies.length > 0 && !l.competencies.includes(t.key)
+                                {!isArrival && l.competencies.length > 0 && !l.competencies.includes(t.key)
                                   ? ' (uten kompetanse)'
                                   : ''}
                               </option>

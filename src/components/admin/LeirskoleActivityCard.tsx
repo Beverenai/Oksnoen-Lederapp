@@ -13,6 +13,7 @@ import {
   useDeleteLeirskoleActivity,
   useLeirskoleActivityTypes,
   useLeirskoleWeekPlan,
+  useLeirskoleWeekDays,
   type LeirskoleStaff,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
@@ -59,8 +60,13 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
   const { data: history } = useLeirskoleActivityHistory();
   const { data: types } = useLeirskoleActivityTypes(true);
   const { data: planCells } = useLeirskoleWeekPlan(week.id);
+  const { data: weekDays } = useLeirskoleWeekDays(week.id);
   const save = useSaveLeirskoleActivities();
   const removeOne = useDeleteLeirskoleActivity();
+
+  const dayType = weekDays?.find((d) => d.date === date)?.day_type ?? 'normal';
+  const isArrival = dayType === 'arrival';
+  const requireCompetence = !isArrival;
 
 
   /** Ukeplanleggeren styrer hva som gjelder: økt 1/2/3 = formiddag/ettermiddag/kveld. */
@@ -129,6 +135,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
       candidates,
       (history ?? []).map((h) => ({ leader_id: h.leader_id, activity: h.activity })),
       selectedKeys,
+      requireCompetence,
     );
     setDraft(result);
   };
@@ -182,6 +189,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
           candidates,
           running,
           keys,
+          requireCompetence,
         );
         if (!rows.length) continue;
         await save.mutateAsync({

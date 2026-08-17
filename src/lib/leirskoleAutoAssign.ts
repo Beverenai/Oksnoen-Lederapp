@@ -23,6 +23,8 @@ export interface AutoSlotInput {
   activities: string[];
   /** Ledere (leader_id) som har vakt i denne økten. */
   onDuty: string[];
+  /** Ankomst/avreise: ankomst krever ikke kompetanse (alle på vakt kan ta alt). */
+  requireCompetence?: boolean;
 }
 
 export interface AutoAssignmentRow {
@@ -126,8 +128,11 @@ export function autoAssignWeek({
         });
         continue;
       }
-      const qualified = free.filter((s) => canDo(s, activity));
-      if (qualified.length === 0) {
+
+      const requireComp = slot.requireCompetence !== false;
+      const qualified = requireComp ? free.filter((s) => canDo(s, activity)) : free;
+
+      if (qualified.length === 0 && requireComp) {
         gaps.push({
           date: slot.date,
           session: slot.session,
@@ -162,7 +167,7 @@ export function autoAssignWeek({
         activity,
         leaderId: best.leaderId,
         name: best.name,
-        outsideCompetence: best.competencies.length > 0 && !best.competencies.includes(activity),
+        outsideCompetence: requireComp && best.competencies.length > 0 && !best.competencies.includes(activity),
         repeat: before > 0,
       });
     }

@@ -76,6 +76,7 @@ export function generateActivityAssignments(
   candidates: ActivityCandidate[],
   history: ActivityHistoryRow[],
   activities: readonly string[] = LEIRSKOLE_ACTIVITIES.map((a) => a.key),
+  requireCompetence = true,
 ): GeneratedActivity[] {
   const counts = new Map<string, number>(); // `${leaderId}|${activity}`
   const totals = new Map<string, number>(); // leaderId -> antall tildelinger totalt
@@ -92,17 +93,20 @@ export function generateActivityAssignments(
   const taken = new Set<string>(); // ledere som allerede har fått i denne runden
 
   // Aktiviteter med færrest kvalifiserte ledere fordeles først (vanskeligst å dekke).
-  const ordered = [...activities].sort(
-    (a, b) =>
-      candidates.filter((c) => can(c, a)).length - candidates.filter((c) => can(c, b)).length,
-  );
+  // På ankomst kreves ikke kompetanse, så vi sorterer ikke etter kvalifiserte.
+  const ordered = requireCompetence
+    ? [...activities].sort(
+        (a, b) =>
+          candidates.filter((c) => can(c, a)).length - candidates.filter((c) => can(c, b)).length,
+      )
+    : [...activities];
 
   for (const activity of ordered) {
     const pool = candidates.filter((c) => !taken.has(c.leaderId));
     if (pool.length === 0) break;
 
-    const qualified = pool.filter((c) => can(c, activity));
-    const usePool = qualified.length > 0 ? qualified : pool;
+    const qualified = requireCompetence ? pool.filter((c) => can(c, activity)) : [];
+    const usePool = requireCompetence && qualified.length > 0 ? qualified : pool;
 
     const best = [...usePool].sort((a, b) => {
       const ca = counts.get(`${a.leaderId}|${activity}`) ?? 0;
@@ -121,7 +125,8 @@ export function generateActivityAssignments(
       name: best.name,
       activity,
       repeat: (counts.get(`${best.leaderId}|${activity}`) ?? 0) > 0,
-      outsideCompetence: best.competencies.length > 0 && !best.competencies.includes(activity),
+      outsideCompetence:
+        requireCompetence && best.competencies.length > 0 && !best.competencies.includes(activity),
     });
   }
 

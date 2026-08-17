@@ -7,6 +7,7 @@ import {
   useLeirskoleActivities,
   useLeirskoleSchedule,
   useLeirskoleActivityTypes,
+  useLeirskoleWeekDays,
   type LeirskoleStaff,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
@@ -47,6 +48,8 @@ export function LeirskoleDayActivityCard({ week, staff }: Props) {
   const { data: posts } = useLeirskoleSchedule(week.id);
   const { data: saved } = useLeirskoleActivities(week.id);
   const { data: types } = useLeirskoleActivityTypes(true);
+  const { data: weekDays } = useLeirskoleWeekDays(week.id);
+  const isArrival = (weekDays ?? []).find((d) => d.date === date)?.day_type === 'arrival';
 
   const setActivity = useMutation({
     mutationFn: async ({ leaderId, session, activity }: { leaderId: string; session: string; activity: string }) => {
@@ -159,7 +162,10 @@ export function LeirskoleDayActivityCard({ week, staff }: Props) {
               {LEIRSKOLE_ACTIVITY_SESSIONS.map((s) => {
                 const current = row.bySession[s.key] ?? '';
                 const lacks =
-                  !!current && row.competencies.length > 0 && !row.competencies.includes(current);
+                  !isArrival &&
+                  !!current &&
+                  row.competencies.length > 0 &&
+                  !row.competencies.includes(current);
                 return (
                   <div key={s.key} className="rounded-xl bg-background/70 p-1.5">
                     <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</p>

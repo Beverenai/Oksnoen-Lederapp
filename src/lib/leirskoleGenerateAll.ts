@@ -118,14 +118,15 @@ export async function runLeirskoleGenerate({
   summary.shifts = gen?.stats?.assigned ?? 0;
 
   // ---- 3. Aktiviteter til lederne ---------------------------------------
-  const [{ data: types }, { data: cells }, { data: posts }, { data: staff }, { data: existing }, { data: history }] =
+  const [{ data: types }, { data: cells }, { data: posts }, { data: weekDays }, { data: staff }, { data: existing }, { data: history }] =
     await Promise.all([
       supabase.from('leirskole_activity_types').select('key, label, emoji').eq('is_active', true),
-      supabase.from('leirskole_week_plan_cells').select('date, row_index, content').eq('week_id', weekId),
+      supabase.from('leirskole_week_plan_cells').select('date, row_index, content, post_id').eq('week_id', weekId),
       supabase
         .from('leirskole_posts')
-        .select('date, name, assignments:leirskole_assignments(staff_id)')
+        .select('id, date, name, is_custom, assignments:leirskole_assignments(staff_id)')
         .eq('week_id', weekId),
+      supabase.from('leirskole_week_days').select('date, day_type').eq('week_id', weekId),
       supabase
         .from('leirskole_staff')
         .select('id, leader_id, leader:leaders(id, name, leirskole_competencies)')
@@ -145,7 +146,7 @@ export async function runLeirskoleGenerate({
 
   const dutyBySlot = new Map<string, string[]>();
   (posts ?? []).forEach((p) => {
-    const session = POST_TO_SESSION[(p.name ?? '').trim().toLowerCase()];
+    const session = p.is_custom ? p.id : POST_TO_SESSION[(p.name ?? '').trim().toLowerCase()];
     if (!session) return;
     const ids = ((p.assignments ?? []) as { staff_id: string }[])
       .map((a) => staffToLeader.get(a.staff_id))
@@ -155,9 +156,10 @@ export async function runLeirskoleGenerate({
   });
 
   const activeTypes = (types ?? []) as RandomPlanActivity[];
+  const dayTypeMap = new Map((weekDays ?? []).map((d) => [d.date, d.day_type]));
   const slots = (cells ?? [])
     .map((cell) => {
-      const session = cell.row_index != null ? ROW_TO_SESSION[cell.row_index] : undefined;
+      const session = cell.row_index != null ? ROW_TO_SESSION[cell.row_index] : cell.post_id ? cell.post_id : undefined;
       if (!session) return null;
       const lines = (cell.content ?? '')
         .split('\n')
@@ -168,14 +170,16 @@ export async function runLeirskoleGenerate({
         .filter((t) => lines.some((l) => l.includes(t.label.toLowerCase())))
         .map((t) => t.key);
       if (!activities.length) return null;
+      const dayType = dayTypeMap.get(cell.date) ?? 'normal';
       return {
         date: cell.date,
         session,
         activities,
         onDuty: dutyBySlot.get(`${cell.date}|${session}`) ?? [],
+        requireCompetence: dayType !== 'arrival',
       };
     })
-    .filter(Boolean) as { date: string; session: string; activities: string[]; onDuty: string[] }[];
+    .filter(Boolean) as { date: string; session: string; activities: string[]; onDuty: string[]; requireCompetence: boolean }[];
 
   const manual = (existing ?? [])
     .filter((a) => !a.auto_generated)

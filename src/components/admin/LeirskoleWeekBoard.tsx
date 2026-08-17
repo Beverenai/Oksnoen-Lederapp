@@ -108,12 +108,13 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     return map;
   }, [posts]);
 
-  /** `${date}|${session}` -> ledere på vakt. */
+  /** `${date}|${session}` -> ledere på vakt. Session = formiddag/ettermiddag/kveld, eller postId for egne økter. */
   const dutyBySlot = useMemo(() => {
     const map = new Map<string, { id: string; name: string; competencies: string[] }[]>();
     (posts ?? []).forEach((p) => {
-      const name = (p.name ?? '').trim().toLowerCase();
-      const session = SESSIONS.find((s) => s.label.toLowerCase() === name)?.session;
+      const session = p.is_custom
+        ? p.id
+        : SESSIONS.find((s) => s.label.toLowerCase() === (p.name ?? '').trim().toLowerCase())?.session;
       if (!session) return;
       const list = map.get(`${p.date}|${session}`) ?? [];
       p.assignments.forEach((a) => {
@@ -186,19 +187,21 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
 
   /** Radene for en dag: økt 1–3, eller dagens egne økter på ankomst/avreise. */
   const rowsFor = (date: string): (CellTarget | null)[] => {
-    if (specialDays.has(date)) {
+    const dayType = specialDays.get(date);
+    if (dayType) {
       const custom = (postsByDate.get(date) ?? [])
-        .filter((p) => (p as { is_custom?: boolean }).is_custom)
+        .filter((p) => p.is_custom)
         .sort((a, b) => a.start_time.localeCompare(b.start_time));
       return SESSIONS.map((_, i) => {
         const p = custom[i];
         if (!p) return null;
         return {
           date,
-          session: null,
+          session: p.id,
           rowIndex: null,
           postId: p.id,
           label: `${p.name} ${hhmm(p.start_time)}–${hhmm(p.end_time)}`,
+          dayType: dayType as 'arrival' | 'departure',
         };
       });
     }
@@ -207,6 +210,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
       session: s.session,
       rowIndex: s.row,
       label: s.label,
+      dayType: 'normal' as const,
     }));
   };
 
