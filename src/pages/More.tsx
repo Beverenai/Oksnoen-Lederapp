@@ -40,8 +40,8 @@ import { useMailboxUnreadCount } from '@/hooks/useMailbox';
 import { useHookupsEnabled, useIncomingHookupCount } from '@/hooks/useHookups';
 import { useUnopenedSipCount } from '@/hooks/useSips';
 import { useAppMode } from '@/hooks/useAppMode';
-import { isLimitedAccessRoute } from '@/lib/limitedAccess';
-import { IdCard, MessageCircle, Circle, Crown, Camera, ChevronRight } from 'lucide-react';
+import { isLimitedAccessRoute, isLeirskoleRoute } from '@/lib/limitedAccess';
+import { IdCard, MessageCircle, Circle, Crown, Camera, ChevronRight, Tent } from 'lucide-react';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { TinderIcon } from '@/components/icons/TinderIcon';
 import { usePovCurrentRoll } from '@/hooks/usePov';
@@ -102,7 +102,7 @@ function Tile({ item }: { item: MoreItem }) {
 }
 
 export default function More() {
-  const { isAdmin, isNurse, isKitchen, isSuperAdmin, isLimitedAccess, logout, leader, effectiveLeader } = useAuth();
+  const { isAdmin, isNurse, isKitchen, isSuperAdmin, isLimitedAccess, isLeirskole, logout, leader, effectiveLeader } = useAuth();
   const navigate = useNavigate();
   const { mode: appMode } = useAppMode();
   const limited = isLimitedAccess || (appMode === 'inactive' && !isSuperAdmin);
