@@ -252,12 +252,14 @@ export function LeirskoleSpecialDayTimeline({
           className="relative flex-1 cursor-crosshair touch-none select-none overflow-hidden rounded-xl border border-dashed border-amber-500/60 bg-amber-500/5"
           style={{ height: SLOTS * SLOT_PX }}
           onPointerDown={(e) => {
+            if (!gridRef.current?.contains(e.target as Node)) return;
             if ((e.target as HTMLElement).closest('[data-post]')) return;
             e.currentTarget.setPointerCapture(e.pointerId);
             setDraft(null);
             pendingRef.current = { slot: slotAt(e.clientY), y: e.clientY };
           }}
           onPointerMove={(e) => {
+            if (!gridRef.current?.contains(e.target as Node)) return;
             if (edit) {
               onEditMove(e.clientY);
               return;
@@ -270,6 +272,7 @@ export function LeirskoleSpecialDayTimeline({
             if (p && Math.abs(e.clientY - p.y) >= DRAG_PX) setDrag({ from: p.slot, to: slotAt(e.clientY) });
           }}
           onPointerUp={(e) => {
+            if (!gridRef.current?.contains(e.target as Node)) return;
             e.currentTarget.releasePointerCapture?.(e.pointerId);
             pendingRef.current = null;
             if (edit) {
@@ -368,7 +371,13 @@ export function LeirskoleSpecialDayTimeline({
                     />
                   </button>
                 </PopoverTrigger>
-                <PopoverContent align="start" className="w-72 space-y-2 p-3">
+                <PopoverContent
+                  align="start"
+                  className="w-72 space-y-2 p-3"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onPointerMove={(e) => e.stopPropagation()}
+                  onPointerUp={(e) => e.stopPropagation()}
+                >
                   <Input
                     key={`${p.id}-${p.name}`}
                     defaultValue={p.name}
