@@ -101,8 +101,9 @@ function canAssign(st: Staff, post: Post, s: State, availability: Map<string, Av
       return { ok: false, reason: "Overlapper annen vakt" };
     }
     // Rest rule only applies between calendar days (daily rest), not between
-    // short posts on the same day (meals + økter belong to the same work day).
-    if (a.date === post.date && !isNight(post) && !a.night) continue;
+    // posts on the same work day. Nattevakt (22:30-01:30) hører til samme
+    // arbeidsdag som øktene tidligere samme dag, så den skal ikke blokkere dem.
+    if (a.date === post.date) continue;
     const gapAfter = startAbs - a.endAbs;
     const gapBefore = a.startAbs - endAbs;
     if (gapAfter > 0 && gapAfter < minRest * 60) return { ok: false, reason: `Under ${minRest}t hvile` };
