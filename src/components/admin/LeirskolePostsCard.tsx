@@ -10,11 +10,15 @@ import { Switch } from '@/components/ui/switch';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { CalendarClock, Play, Trash2, Lock, LockOpen, Moon, RefreshCw, Pencil, UtensilsCrossed, Sun, AlertTriangle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { CalendarClock, Play, Trash2, Lock, LockOpen, Moon, RefreshCw, Pencil, UtensilsCrossed, Sun, AlertTriangle, Plus, ChevronsLeftRight, EyeOff } from 'lucide-react';
 import { LeaderAvatarStack } from '@/components/leirskole/LeaderAvatarStack';
 import {
   useLeirskoleSchedule,
   useGenerateLeirskoleSchedule,
+  useAddLeirskolePost,
+  useUpdateLeirskolePost,
+  useShiftLeirskolePosts,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
 
