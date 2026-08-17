@@ -602,7 +602,7 @@ export function useSetLeirskoleDayType() {
     }: {
       weekId: string;
       date: string;
-      dayType: 'normal' | 'arrival' | 'departure';
+      dayType: 'normal' | 'arrival' | 'departure' | 'both';
     }) => {
       const { error } = await supabase
         .from('leirskole_week_days')
