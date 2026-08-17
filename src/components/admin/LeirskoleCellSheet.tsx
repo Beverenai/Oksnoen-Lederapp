@@ -259,6 +259,65 @@ export function LeirskoleCellSheet({
   );
   const pool = useMemo(() => [...onDuty, ...offDuty], [onDuty, offDuty]);
 
+  /** Ledere på vakt som ikke har fått en aktivitet i denne økten. */
+  const withoutActivity = useMemo(
+    () => onDuty.filter((l) => !assignments.some((a) => a.leader_id === l.id)),
+    [onDuty, assignments],
+  );
+
+  /** Aktiviteter som ikke er i økten ennå. */
+  const unusedTypes = useMemo(
+    () => types.filter((t) => !selected.some((s) => s.key === t.key)),
+    [types, selected],
+  );
+
+  /** Gi en leder en aktivitet: bruk først en ledig aktivitet i økten, ellers legg til en ny. */
+  const giveActivity = useMutation({
+    mutationFn: async (leaders: CellLeader[]) => {
+      if (!target?.session) throw new Error('Denne økten kan ikke få aktivitetsansvar');
+      const usedKeys = new Set(assignments.map((a) => a.activity));
+      const freeInSlot = selected.filter((t) => !usedKeys.has(t.key));
+      const spare = [...unusedTypes];
+      const nextLines = [...lines];
+      const picks: { leaderId: string; key: string }[] = [];
+
+      for (const leader of leaders) {
+        const pickFrom = (list: LeirskoleActivityType[]) => {
+          const i = list.findIndex(
+            (t) => leader.competencies.length === 0 || leader.competencies.includes(t.key),
+          );
+          return list.splice(i >= 0 ? i : 0, 1)[0];
+        };
+        let type: LeirskoleActivityType | undefined;
+        if (freeInSlot.length) type = pickFrom(freeInSlot);
+        else if (spare.length) {
+          type = pickFrom(spare);
+          if (type) nextLines.push(activityLine(type));
+        }
+        if (!type) break;
+        picks.push({ leaderId: leader.id, key: type.key });
+      }
+      if (!picks.length) throw new Error('Ingen ledige aktiviteter å gi');
+
+      if (nextLines.length !== lines.length) {
+        await savePlan.mutateAsync({
+          weekId,
+          date: target.date,
+          rowIndex: target.rowIndex,
+          content: nextLines.join('\n'),
+          color: 'neutral',
+          postId: target.postId ?? undefined,
+        });
+      }
+      for (const p of picks) {
+        await setLeader.mutateAsync({ activity: p.key, leaderId: p.leaderId });
+      }
+      return picks.length;
+    },
+    onSuccess: (n) => toast.success(`${n} leder(e) fikk aktivitet`),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke gi aktivitet'),
+  });
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-3xl">
