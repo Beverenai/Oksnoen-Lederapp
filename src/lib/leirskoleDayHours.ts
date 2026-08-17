@@ -1,8 +1,17 @@
 import { supabase } from '@/integrations/supabase/client';
 
+/** Vakter som aldri fjernes automatisk – de er bemanningskritiske. */
+const PROTECTED = ['nattevakt', 'middag', 'frokost', 'kvelds', 'sanitas', 'kjøkken'];
+
+function isProtected(name: string) {
+  const n = name.trim().toLowerCase();
+  return PROTECTED.some((p) => n.includes(p));
+}
+
 /**
  * Sørger for at en leder ikke går over dagstaket etter en manuell tildeling.
- * Fjerner automatiske (ulåste) vakter samme dag – største først – til vi er innenfor.
+ * Fjerner automatiske (ulåste) økter samme dag – største først – til vi er innenfor.
+ * Nattevakt, måltider (middag/frokost/kvelds), Sanitas og kjøkken røres ikke.
  * Returnerer navnene på vaktene som ble fjernet.
  */
 export async function trimDayHours({
@@ -43,7 +52,7 @@ export async function trimDayHours({
   if (total <= maxHours + 0.01) return [];
 
   const removable = mine
-    .filter((r) => !r.is_locked && r.post_id !== keepPostId)
+    .filter((r) => !r.is_locked && r.post_id !== keepPostId && !isProtected(r.name))
     .sort((a, b) => b.hours - a.hours);
 
   const removed: string[] = [];
