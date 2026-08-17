@@ -190,7 +190,7 @@ export function LeirskoleSpecialDayTimeline({
   return (
     <div className="flex h-full flex-col gap-1">
       <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">
-        Dra for å lage · dra økten for å flytte
+        Dra for å lage økt
       </p>
       <div className="flex flex-1 gap-1">
         {/* Klokkeskala */}
