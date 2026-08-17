@@ -1,0 +1,1 @@
+ALTER TABLE public.leaders ADD COLUMN IF NOT EXISTS leirskole_competencies text[] NOT NULL DEFAULT '{}'::text[];

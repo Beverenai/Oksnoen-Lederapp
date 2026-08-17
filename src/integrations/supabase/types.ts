@@ -1875,6 +1875,7 @@ export type Database = {
           is_external: boolean
           last_app_edit_at: string
           last_synced_at: string | null
+          leirskole_competencies: string[]
           ministerpost: string | null
           name: string
           phone: string
@@ -1913,6 +1914,7 @@ export type Database = {
           is_external?: boolean
           last_app_edit_at?: string
           last_synced_at?: string | null
+          leirskole_competencies?: string[]
           ministerpost?: string | null
           name: string
           phone: string
@@ -1951,6 +1953,7 @@ export type Database = {
           is_external?: boolean
           last_app_edit_at?: string
           last_synced_at?: string | null
+          leirskole_competencies?: string[]
           ministerpost?: string | null
           name?: string
           phone?: string
