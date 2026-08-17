@@ -145,28 +145,12 @@ export default function LeirskoleAdmin() {
     },
   });
 
-  const { data: jobImports } = useQuery({
-    queryKey: ['leirskole-job-imports', week?.id],
-    enabled: !!week?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('leirskole_job_imports')
-        .select('*')
-        .eq('week_id', week!.id)
-        .eq('source_status', 'hired')
-        .order('name');
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['leirskole-weeks'] });
     qc.invalidateQueries({ queryKey: ['leirskole-active-week'] });
     qc.invalidateQueries({ queryKey: ['leirskole-staff'] });
     qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
     qc.invalidateQueries({ queryKey: ['leirskole-admin-tasks'] });
-    qc.invalidateQueries({ queryKey: ['leirskole-job-imports'] });
   };
 
   const createWeek = useMutation({
