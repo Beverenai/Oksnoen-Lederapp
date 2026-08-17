@@ -25,7 +25,7 @@ export function useLeirskoleWeeks() {
   });
 }
 
-/** Aktiv leirskoleuke. */
+/** Aktiv leirskoleuke — velges automatisk ut fra dagens dato. */
 export function useActiveLeirskoleWeek() {
   return useQuery({
     queryKey: ['leirskole-active-week'],
@@ -34,11 +34,17 @@ export function useActiveLeirskoleWeek() {
         .from('leirskole_weeks')
         .select('*')
         .eq('is_active', true)
-        .order('start_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('start_date', { ascending: true });
       if (error) throw error;
-      return (data as LeirskoleWeek | null) ?? null;
+      const weeks = (data ?? []) as LeirskoleWeek[];
+      if (!weeks.length) return null;
+      const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD lokal tid
+      // 1) uken vi er inne i, 2) neste uke som kommer, 3) siste uke som var
+      return (
+        weeks.find((w) => w.start_date <= today && w.end_date >= today) ??
+        weeks.find((w) => w.start_date > today) ??
+        weeks[weeks.length - 1]
+      );
     },
   });
 }
