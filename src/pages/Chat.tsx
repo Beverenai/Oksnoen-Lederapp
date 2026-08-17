@@ -539,21 +539,6 @@ export default function Chat() {
     requestAnimationFrame(() => el?.focus());
   };
 
-  const openMentionPicker = () => {
-    const el = textareaRef.current;
-    const caret = el?.selectionStart ?? input.length;
-    const needsSpace = caret > 0 && !/\s$/.test(input.slice(0, caret));
-    const insert = `${needsSpace ? ' ' : ''}@`;
-    const next = input.slice(0, caret) + insert + input.slice(caret);
-    setInput(next);
-    const newCaret = caret + insert.length;
-    setMention({ start: newCaret - 1, query: '' });
-    requestAnimationFrame(() => {
-      el?.focus();
-      el?.setSelectionRange(newCaret, newCaret);
-    });
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (mention && mentionMatches.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
       e.preventDefault();
