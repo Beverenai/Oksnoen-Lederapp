@@ -63,8 +63,9 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
   const removeOne = useDeleteLeirskoleActivity();
 
 
-  /** Ukeplanleggeren styrer hva som gjelder: økt 1 = formiddag, økt 2 = ettermiddag. */
-  const rowIndexFor = (sessionKey: string) => (sessionKey === 'formiddag' ? 1 : 2);
+  /** Ukeplanleggeren styrer hva som gjelder: økt 1/2/3 = formiddag/ettermiddag/kveld. */
+  const rowIndexFor = (sessionKey: string) =>
+    sessionKey === 'formiddag' ? 1 : sessionKey === 'ettermiddag' ? 2 : 3;
 
   /** Aktivitetene som er lagt inn i ukeplanleggeren for denne dagen + økten. */
   const keysFor = (sessionKey: string) => {
@@ -106,6 +107,25 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
     () => (saved ?? []).filter((a) => a.date === date && a.session === session),
     [saved, date, session],
   );
+
+  /** Oversikt: hva hver leder fikk i hver av de 3 øktene denne dagen. */
+  const perLeaderDay = useMemo(() => {
+    const forDay = (saved ?? []).filter((a) => a.date === date);
+    const ids = new Set<string>(forDay.map((a) => a.leader_id));
+    onDuty.forEach((s) => s.leader && ids.add(s.leader.id));
+    return [...ids]
+      .map((leaderId) => ({
+        leaderId,
+        name: staff.find((s) => s.leader?.id === leaderId)?.leader?.name ?? 'Ukjent',
+        bySession: Object.fromEntries(
+          LEIRSKOLE_ACTIVITY_SESSIONS.map((s) => [
+            s.key,
+            forDay.filter((a) => a.leader_id === leaderId && a.session === s.key).map((a) => a.activity),
+          ]),
+        ) as Record<string, string[]>,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+  }, [saved, date, onDuty, staff]);
 
   const generate = () => {
     const candidates = onDuty
