@@ -33,6 +33,7 @@ const MEAL_TIMES: Record<string, { start: string; end: string; hours: number }> 
   Frokost: { start: '09:00', end: '10:00', hours: 1 },
   Middag: { start: '14:00', end: '15:00', hours: 1 },
   Kvelds: { start: '19:00', end: '20:00', hours: 1 },
+  Sanitas: { start: '22:30', end: '23:00', hours: 0.5 },
 };
 const TEMPLATE_NAMES = new Set(['Frokost', 'Middag', 'Kvelds', 'Nattevakt', 'Sanitas', 'Økt 1', 'Økt 2', 'Økt 3']);
 /** Navn som har egne rader (måltid/natt) og derfor ikke vises i tidslinjen. */
@@ -49,9 +50,9 @@ type StaffRow = LeirskoleStaff & {
 
 const WEEKDAYS = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'];
 const SESSIONS = [
-  { row: 1, label: 'Økt 1', session: 'formiddag' },
-  { row: 2, label: 'Økt 2', session: 'ettermiddag' },
-  { row: 3, label: 'Økt 3', session: 'kveld' },
+  { row: 1, label: 'Økt 1', session: 'formiddag', time: '11–14' },
+  { row: 2, label: 'Økt 2', session: 'ettermiddag', time: '16–19' },
+  { row: 3, label: 'Økt 3', session: 'kveld', time: '20–21.30' },
 ];
 
 function datesBetween(start: string, end: string) {
@@ -270,6 +271,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     mutationFn: async ({ date, name }: { date: string; name: string }) => {
       const t = MEAL_TIMES[name] ?? { start: '22:30', end: '01:30', hours: 3 };
       const night = name === 'Nattevakt';
+      const sanitas = name === 'Sanitas';
       const { error } = await supabase.from('leirskole_posts').insert({
         week_id: week.id,
         date,
@@ -281,9 +283,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         crosses_midnight: night,
         is_custom: true,
         is_published: true,
-        post_type: night ? 'night' : 'meal',
-        required_leaders: night ? 1 : 2,
-        sort_order: night ? 90 : 50,
+        post_type: night ? 'night' : sanitas ? 'other' : 'meal',
+        required_leaders: night ? 1 : sanitas ? 4 : 2,
+        sort_order: night ? 90 : sanitas ? 70 : 50,
       });
       if (error) throw error;
     },
@@ -537,7 +539,12 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           <div className="grid gap-1.5" style={gridStyle}>
             {SESSIONS.map((s, rowIdx) => (
               <div key={`label-${s.row}`} style={{ gridColumn: 1, gridRow: rowIdx + 1 }} className="flex items-center">
-                <LabelCell>{s.label}</LabelCell>
+                <LabelCell>
+                  <span className="leading-tight">
+                    {s.label}
+                    <span className="block text-[9px] font-medium normal-case text-muted-foreground/70">{s.time}</span>
+                  </span>
+                </LabelCell>
               </div>
             ))}
             {dates.map((date, dayIdx) =>
@@ -788,6 +795,60 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                     </div>
                   </PopoverContent>
                 </Popover>
+              );
+            })}
+          </div>
+
+          {/* Nattevakt */}
+          <div className="grid gap-1.5" style={gridStyle}>
+            <LabelCell>
+              <span className="leading-tight">
+                Sanitas
+                <span className="block text-[9px] font-medium normal-case text-muted-foreground/70">22.30–23</span>
+              </span>
+            </LabelCell>
+            {dates.map((date) => {
+              const post = (postsByDate.get(date) ?? []).find((p) =>
+                (p.name ?? '').toLowerCase().includes('sanitas'),
+              );
+              if (!post) {
+                return (
+                  <button
+                    key={date}
+                    type="button"
+                    onClick={() => createPost.mutate({ date, name: 'Sanitas' })}
+                    disabled={createPost.isPending}
+                    className="rounded-xl border border-dashed border-teal-500/40 bg-muted/25 p-2 text-left text-[11px] text-muted-foreground hover:bg-muted"
+                  >
+                    + Sanitas
+                  </button>
+                );
+              }
+              return (
+                <LeirskolePostStaffPicker
+                  key={date}
+                  weekId={week.id}
+                  title="Sanitas · 22.30–23 (maks 4)"
+                  maxHours={maxHours}
+                  hoursByStaff={staffHoursByDate.get(date) ?? new Map()}
+                  staffOptions={staffOptions}
+                  post={{
+                    id: post.id,
+                    name: post.name ?? 'Sanitas',
+                    date,
+                    duration_hours: post.duration_hours,
+                    assignments: post.assignments ?? [],
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="rounded-xl border border-teal-500/40 bg-teal-500/10 p-2 text-left text-[11px] font-semibold hover:brightness-105"
+                  >
+                    {(post.assignments ?? [])
+                      .map((a) => firstName(staffToLeader.get(a.staff_id)?.name ?? '?'))
+                      .join(', ') || <span className="text-muted-foreground">ingen</span>}
+                  </button>
+                </LeirskolePostStaffPicker>
               );
             })}
           </div>
