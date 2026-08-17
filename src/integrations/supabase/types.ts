@@ -2192,6 +2192,7 @@ export type Database = {
       leirskole_staff: {
         Row: {
           created_at: string
+          external_ref: string | null
           id: string
           leader_id: string
           max_daily_hours: number | null
@@ -2201,6 +2202,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          external_ref?: string | null
           id?: string
           leader_id: string
           max_daily_hours?: number | null
@@ -2210,6 +2212,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          external_ref?: string | null
           id?: string
           leader_id?: string
           max_daily_hours?: number | null
@@ -2328,6 +2331,7 @@ export type Database = {
         Row: {
           created_at: string
           end_date: string
+          external_ref: string | null
           id: string
           is_active: boolean
           max_daily_hours: number
@@ -2341,6 +2345,7 @@ export type Database = {
         Insert: {
           created_at?: string
           end_date: string
+          external_ref?: string | null
           id?: string
           is_active?: boolean
           max_daily_hours?: number
@@ -2354,6 +2359,7 @@ export type Database = {
         Update: {
           created_at?: string
           end_date?: string
+          external_ref?: string | null
           id?: string
           is_active?: boolean
           max_daily_hours?: number
