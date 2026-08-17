@@ -25,7 +25,7 @@ import {
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
 import { LeirskoleSpecialDayTimeline } from '@/components/admin/LeirskoleSpecialDayTimeline';
 import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
-import { trimDayHours, KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
+import { trimDayHours, fillDayHours, KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import { useSeedLeirskoleSpecialDays } from '@/hooks/useSeedLeirskoleSpecialDays';
 
 const MEALS = ['Frokost', 'Middag', 'Kvelds'];
@@ -303,13 +303,18 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         const removed = await trimDayHours({ weekId: week.id, date, staffId, maxHours });
         count += removed.length;
       }
-      return count;
+      const added = await fillDayHours({ weekId: week.id, date, maxHours });
+      return { count, added };
     },
-    onSuccess: (count) => {
+    onSuccess: ({ count, added }) => {
       ['leirskole-schedule', 'leirskole-my-shifts', 'leirskole-activities'].forEach((key) =>
         qc.invalidateQueries({ queryKey: [key] }),
       );
-      toast.success(count ? `Fjernet ${count} vakter` : 'Ingen ulåste vakter å fjerne');
+      toast.success(
+        count || added
+          ? `Fjernet ${count} vakter · la til ${added} for å nå ${maxHours}t`
+          : 'Dagen er allerede balansert',
+      );
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke rydde dagen'),
   });
@@ -317,22 +322,29 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   /** Rydd hele uken: ingen leder over dagstaket noen dag. */
   const fixWeek = useMutation({
     mutationFn: async () => {
-      let count = 0;
+      let removed = 0;
+      let added = 0;
       for (const date of dates) {
         const day = staffHoursByDate.get(date) ?? new Map<string, number>();
         for (const [staffId, v] of day.entries()) {
           if (v <= maxHours + 0.01) continue;
-          const removed = await trimDayHours({ weekId: week.id, date, staffId, maxHours });
-          count += removed.length;
+          const gone = await trimDayHours({ weekId: week.id, date, staffId, maxHours });
+          removed += gone.length;
         }
+        // Fyll deretter opp de som ligger langt under taket.
+        added += await fillDayHours({ weekId: week.id, date, maxHours });
       }
-      return count;
+      return { removed, added };
     },
-    onSuccess: (count) => {
+    onSuccess: ({ removed, added }) => {
       ['leirskole-schedule', 'leirskole-my-shifts', 'leirskole-activities'].forEach((key) =>
         qc.invalidateQueries({ queryKey: [key] }),
       );
-      toast.success(count ? `Fjernet ${count} vakter i uken` : 'Alle dager er innenfor taket');
+      toast.success(
+        removed || added
+          ? `Balansert uken: −${removed} vakter, +${added} vakter mot ${maxHours}t`
+          : `Alle ledere ligger nær ${maxHours}t`,
+      );
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke rydde uken'),
   });
