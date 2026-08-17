@@ -5,14 +5,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { CalendarClock, Play, Plus, Trash2, Lock, LockOpen, Moon, RefreshCw } from 'lucide-react';
+import { CalendarClock, Play, Trash2, Lock, LockOpen, Moon, RefreshCw } from 'lucide-react';
 import {
   useLeirskoleSchedule,
   useGenerateLeirskoleSchedule,
@@ -69,15 +67,6 @@ export function LeirskolePostsCard({
   const { data: posts } = useLeirskoleSchedule(week.id);
   const generate = useGenerateLeirskoleSchedule();
 
-  const weekDates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
-  const [draft, setDraft] = useState({
-    name: '',
-    date: weekDates[0] ?? week.start_date,
-    start_time: '08:00',
-    end_time: '16:00',
-    required_leaders: 1,
-    is_night: false,
-  });
   const [keepLocked, setKeepLocked] = useState(true);
   const [publishAfter, setPublishAfter] = useState(true);
 
@@ -102,54 +91,6 @@ export function LeirskolePostsCard({
     () => (posts ?? []).filter((p) => p.assignments.length < (p.required_leaders ?? 1)).length,
     [posts],
   );
-
-  const addPost = useMutation({
-    mutationFn: async () => {
-      if (readOnly) throw new Error('Denne vaktplanen styres fra jobbplattformen');
-      if (!draft.name.trim()) throw new Error('Vakten må ha et navn');
-      const { error } = await supabase.from('leirskole_posts').insert({
-        week_id: week.id,
-        name: draft.name.trim(),
-        date: draft.date,
-        start_time: draft.start_time,
-        end_time: draft.end_time,
-        required_leaders: Math.max(1, Number(draft.required_leaders) || 1),
-        is_night: draft.is_night,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Vakt lagt til');
-      setDraft((d) => ({ ...d, name: '' }));
-      invalidate();
-    },
-    onError: (error: unknown) => showError(errorMessage(error, 'Kunne ikke legge til vakten')),
-  });
-
-  const copyDay = useMutation({
-    mutationFn: async ({ from, to }: { from: string; to: string }) => {
-      if (readOnly) throw new Error('Denne vaktplanen styres fra jobbplattformen');
-      const source = (posts ?? []).filter((p) => p.date === from);
-      if (!source.length) throw new Error('Ingen vakter å kopiere');
-      const rows = source.map((p) => ({
-        week_id: week.id,
-        name: p.name,
-        date: to,
-        start_time: p.start_time,
-        end_time: p.end_time,
-        required_leaders: p.required_leaders,
-        is_night: p.is_night,
-        post_type: p.post_type,
-      }));
-      const { error } = await supabase.from('leirskole_posts').insert(rows);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Dagen er kopiert');
-      invalidate();
-    },
-    onError: (error: unknown) => showError(errorMessage(error, 'Kunne ikke kopiere dagen')),
-  });
 
   const deletePost = useMutation({
     mutationFn: async (id: string) => {
@@ -293,70 +234,6 @@ export function LeirskolePostsCard({
             <p className="text-[11px] text-muted-foreground">Udekket</p>
           </div>
         </div>
-
-        {!readOnly && (
-          <div className="space-y-2 rounded-xl border border-border/60 bg-muted/30 p-3">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div>
-              <Label className="text-xs">Navn</Label>
-              <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Aktivitet / kjøkken / nattevakt" />
-            </div>
-            <div>
-              <Label className="text-xs">Dag</Label>
-              <Select value={draft.date} onValueChange={(v) => setDraft({ ...draft, date: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {weekDates.map((d) => (
-                    <SelectItem key={d} value={d}>{dayLabel(d)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <Label className="text-xs">Fra</Label>
-              <Input type="time" value={draft.start_time} onChange={(e) => setDraft({ ...draft, start_time: e.target.value })} />
-            </div>
-            <div>
-              <Label className="text-xs">Til</Label>
-              <Input type="time" value={draft.end_time} onChange={(e) => setDraft({ ...draft, end_time: e.target.value })} />
-            </div>
-            <div>
-              <Label className="text-xs">Ledere</Label>
-              <Input
-                type="number"
-                min={1}
-                value={draft.required_leaders}
-                onChange={(e) => setDraft({ ...draft, required_leaders: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-between rounded-xl border bg-card/50 px-3 py-2">
-            <span className="flex items-center gap-1.5 text-sm"><Moon className="h-3.5 w-3.5" /> Nattevakt</span>
-            <Switch checked={draft.is_night} onCheckedChange={(v) => setDraft({ ...draft, is_night: v })} />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" className="gap-2" onClick={() => addPost.mutate()} disabled={addPost.isPending}>
-              <Plus className="h-4 w-4" /> Legg til vakt
-            </Button>
-            {byDay.length > 0 && (
-              <Select
-                onValueChange={(to) => copyDay.mutate({ from: byDay[0][0], to })}
-              >
-                <SelectTrigger className="h-9 w-[190px] text-xs">
-                  <SelectValue placeholder={`Kopier ${dayLabel(byDay[0][0])} til…`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {weekDates.filter((d) => d !== byDay[0][0]).map((d) => (
-                    <SelectItem key={d} value={d}>{dayLabel(d)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-          </div>
-        )}
 
         {!readOnly && (
           <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
