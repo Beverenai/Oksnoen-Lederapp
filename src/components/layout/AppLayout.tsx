@@ -211,6 +211,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const bottomNavItems: BottomNavItem[] = accessMode === 'leirskole'
     ? [
         { to: '/', icon: Tent, label: 'Leirskole' },
+        { to: '/leaders', icon: Users, label: 'Ledere' },
         { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
         ...(isAdmin
           ? [{ to: '/admin/leirskole', icon: LayoutDashboard, label: 'Admin' } as BottomNavItem]
