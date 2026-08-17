@@ -34,17 +34,18 @@ export function LeirskoleLeaderList() {
   // Hvem jobber nå + neste vakt per staff
   const { nowByStaff, nextByStaff } = useMemo(() => {
     const now = new Date();
-    const today = now.toLocaleDateString('sv-SE');
-    const clock = now.toTimeString().slice(0, 5);
     const nowMap = new Map<string, string>();
     const nextMap = new Map<string, string>();
     (posts ?? []).forEach((p) => {
       const start = hhmm(p.start_time);
       const end = hhmm(p.end_time);
-      const isNow =
-        p.date === today &&
-        (p.crosses_midnight ? clock >= start || clock <= end : clock >= start && clock <= end);
-      const isFuture = p.date > today || (p.date === today && start > clock);
+      const startsAt = new Date(`${p.date}T${p.start_time}`);
+      const endsAt = new Date(`${p.date}T${p.end_time}`);
+      if (p.crosses_midnight || endsAt <= startsAt) {
+        endsAt.setDate(endsAt.getDate() + 1);
+      }
+      const isNow = now >= startsAt && now <= endsAt;
+      const isFuture = startsAt > now;
       p.assignments.forEach((a) => {
         if (isNow) nowMap.set(a.staff_id, `${p.name} · ${start}–${end}`);
         else if (isFuture && !nextMap.has(a.staff_id)) {
@@ -165,10 +166,10 @@ export function LeirskoleLeaderList() {
                       <h3 className="truncate text-[17px] font-bold leading-tight text-foreground">
                         {firstName(l?.name ?? 'Ukjent')}
                       </h3>
-                      {(l as any)?.snus_user && (
+                      {l?.snus_user && (
                         <SnusBadge
-                          productId={(l as any).snus_product_id}
-                          customLabel={(l as any).snus_custom_label}
+                          productId={l.snus_product_id}
+                          customLabel={l.snus_custom_label}
                           compact
                           className="shrink-0"
                         />
@@ -205,7 +206,7 @@ export function LeirskoleLeaderList() {
                     ) : null}
                   </div>
 
-                  <div className="flex shrink-0 items-center">
+                  {l?.phone && <div className="flex shrink-0 items-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -218,15 +219,15 @@ export function LeirskoleLeaderList() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { window.location.href = `tel:${(l as any)?.phone ?? ''}`; }}>
+                        <DropdownMenuItem onClick={() => { window.location.href = `tel:${l?.phone ?? ''}`; }}>
                           <Phone className="mr-2 h-4 w-4 text-green-600" /> Ring
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { window.location.href = `sms:${(l as any)?.phone ?? ''}`; }}>
+                        <DropdownMenuItem onClick={() => { window.location.href = `sms:${l?.phone ?? ''}`; }}>
                           <MessageSquare className="mr-2 h-4 w-4 text-blue-600" /> Send SMS
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </div>
+                  </div>}
                 </div>
               </CardContent>
             </Card>
