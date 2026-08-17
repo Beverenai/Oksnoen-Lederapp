@@ -50,6 +50,7 @@ export function LeirskoleSpecialDayTimeline({
   const [draft, setDraft] = useState<{ from: number; to: number } | null>(null);
   const [draftName, setDraftName] = useState('');
   const [openPost, setOpenPost] = useState<string | null>(null);
+  const movedRef = useRef(false);
 
   /** Sorterte økter — ankomst/avreise har alltid én økt om gangen (ingen overlapp). */
   const sorted = useMemo(() => {
@@ -86,7 +87,7 @@ export function LeirskoleSpecialDayTimeline({
   const createPost = useMutation({
     mutationFn: async ({ from, to, name }: { from: number; to: number; name: string }) => {
       const start = toClock(from);
-      const end = toClock(to + 1);
+      const end = toClock(to);
       const { error } = await supabase.from('leirskole_posts').insert({
         week_id: weekId,
         date,
@@ -162,6 +163,7 @@ export function LeirskoleSpecialDayTimeline({
   const onEditMove = (clientY: number) => {
     if (!edit) return;
     const s = slotAt(clientY);
+    movedRef.current = true;
     if (edit.mode === 'move') {
       const length = edit.to - edit.from;
       const from = Math.max(0, Math.min(SLOTS - length, s - edit.grabOffset));
@@ -272,8 +274,15 @@ export function LeirskoleSpecialDayTimeline({
                       live ? 'ring-2 ring-primary' : ''
                     }`}
                     style={{ top: from * SLOT_PX, height: (to - from) * SLOT_PX, cursor: 'grab' }}
+                    onClick={(e) => {
+                      if (movedRef.current) {
+                        e.preventDefault();
+                        movedRef.current = false;
+                      }
+                    }}
                     onPointerDown={(e) => {
                       if ((e.target as HTMLElement).closest('[data-resize]')) return;
+                      movedRef.current = false;
                       gridRef.current?.setPointerCapture(e.pointerId);
                       setEdit({ id: p.id, mode: 'move', from: rawFrom, to: rawTo, grabOffset: slotAt(e.clientY) - rawFrom });
                     }}
@@ -358,7 +367,7 @@ export function LeirskoleSpecialDayTimeline({
       {draft && (
         <div className="space-y-1 rounded-lg border border-primary/50 bg-primary/10 p-1.5">
           <p className="text-[10px] font-bold">
-            {toClock(draft.from)}–{toClock(draft.to + 1)}
+            {toClock(draft.from)}–{toClock(draft.to)}
           </p>
           <Input
             autoFocus
