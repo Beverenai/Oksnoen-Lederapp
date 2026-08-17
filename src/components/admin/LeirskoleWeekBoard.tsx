@@ -673,9 +673,15 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
               );
               if (!post) {
                 return (
-                  <div key={date} className="rounded-xl border border-border/60 bg-muted/25 p-2 text-[11px] text-muted-foreground">
-                    —
-                  </div>
+                  <button
+                    key={date}
+                    type="button"
+                    onClick={() => createPost.mutate({ date, name: 'Nattevakt' })}
+                    disabled={createPost.isPending}
+                    className="rounded-xl border border-dashed border-indigo-500/40 bg-muted/25 p-2 text-left text-[11px] text-muted-foreground hover:bg-muted"
+                  >
+                    + Nattevakt
+                  </button>
                 );
               }
               return (
