@@ -497,8 +497,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div
       className={cn(
         'bg-background flex min-h-[100svh] lg:min-h-dvh flex-col overflow-x-hidden w-full max-w-full pl-safe pr-safe',
-        inactiveForUser && accessMode !== 'leirskole' && 'oks-offseason-bg min-h-[100dvh]',
-        accessMode === 'leirskole' && 'oks-leirskole-bg min-h-[100dvh]',
+        inactiveForUser && !leirskoleSurface && 'oks-offseason-bg min-h-[100dvh]',
+        leirskoleSurface && 'oks-leirskole-bg min-h-[100dvh]',
       )}
     >
       {/* View As Banner */}
