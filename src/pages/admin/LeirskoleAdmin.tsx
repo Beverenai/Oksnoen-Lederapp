@@ -434,17 +434,26 @@ export default function LeirskoleAdmin() {
               {shortDate(week.start_date)} – {shortDate(week.end_date)} · maks {Number(week.max_daily_hours ?? 8)}t/dag
             </p>
           </div>
-          <span className="shrink-0 rounded-full bg-white/20 px-3 py-1 text-[11px] font-semibold">
-            {week.schedule_published_at ? 'Publisert' : 'Utkast'}
-          </span>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <span className="rounded-full bg-white/20 px-3 py-1 text-[11px] font-semibold">
+              {week.schedule_published_at ? 'Publisert' : 'Utkast'}
+            </span>
+            <button
+              type="button"
+              aria-label="Hvordan fungerer dette?"
+              onClick={() => setGuideOpen((v) => !v)}
+              className="rounded-full bg-white/20 p-1.5 hover:bg-white/30"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-4 gap-2">
+        <div className="mt-3 grid grid-cols-3 gap-2">
           {[
             { v: `${(staff ?? []).length}`, l: 'Ledere' },
-            { v: `${onDutyCount}`, l: 'På vakt nå' },
-            { v: `${totalHours.toFixed(0)}t`, l: 'Timer' },
             { v: `${(posts ?? []).length}`, l: 'Vakter' },
+            { v: `${totalHours.toFixed(0)}t`, l: 'Timer' },
           ].map((s) => (
             <div key={s.l} className="rounded-2xl bg-white/15 px-2.5 py-2">
               <p className="text-lg font-bold tabular-nums">{s.v}</p>
@@ -464,7 +473,9 @@ export default function LeirskoleAdmin() {
         </div>
       </div>
 
-      <LeirskoleGuideCard />
+      {guideOpen && <LeirskoleGuideCard />}
+
+      <LeirskoleWeekBoard week={week} staff={staff ?? []} />
 
       {todayPosts.length > 0 && (
         <div className="oks-ls-pill oks-ls-stripe overflow-hidden">
@@ -509,8 +520,8 @@ export default function LeirskoleAdmin() {
       <div className="space-y-2">
         <Step
           n={1}
-          title="Ukeplan"
-          subtitle="Hvilke aktiviteter i økt 1–3 hver dag"
+          title="Uken i detalj"
+          subtitle="Ukeplan, aktivitetstyper, kjøkken og vaktplan"
           status={
             planFilled === 0
               ? { label: 'Ikke fylt ut', tone: 'todo' }
@@ -521,22 +532,6 @@ export default function LeirskoleAdmin() {
         >
           <LeirskoleWeekPlanCard week={week} />
           <LeirskoleActivityTypesCard />
-        </Step>
-
-        <Step
-          n={2}
-          title="Vaktplan"
-          subtitle={`Generer vakter (maks ${Number(week.max_daily_hours ?? 8)}t/dag) og fordel aktiviteter`}
-          status={
-            !hasSchedule
-              ? { label: 'Ikke generert', tone: 'todo' }
-              : (weekActivities ?? []).length === 0
-                ? { label: 'Mangler aktiviteter', tone: 'warn' }
-                : { label: `${(posts ?? []).length} vakter`, tone: 'done' }
-          }
-          open={openStep === 2}
-          onToggle={() => setOpenStep(openStep === 2 ? null : 2)}
-        >
           <LeirskoleKitchenCard week={week} staff={staff ?? []} />
           <LeirskolePostsCard
             week={week}
@@ -548,19 +543,19 @@ export default function LeirskoleAdmin() {
         </Step>
 
         <Step
-          n={3}
+          n={2}
           title="Oppgaver"
           subtitle="Beskjeder og oppgaver til lederne"
           status={{ label: `${(tasks ?? []).length} sendt`, tone: (tasks ?? []).length ? 'done' : 'todo' }}
-          open={openStep === 3}
-          onToggle={() => setOpenStep(openStep === 3 ? null : 3)}
+          open={openStep === 2}
+          onToggle={() => setOpenStep(openStep === 2 ? null : 2)}
         >
           {taskPanel}
           <LeirskoleSessionInfoCard weekId={week.id} staff={staff ?? []} />
         </Step>
 
         <Step
-          n={4}
+          n={3}
           title="Ledere"
           subtitle="Hvem jobber denne uken + kompetanse"
           status={
@@ -570,8 +565,8 @@ export default function LeirskoleAdmin() {
                 ? { label: `${missingCompetence} mangler kompetanse`, tone: 'warn' }
                 : { label: `${(staff ?? []).length} ledere`, tone: 'done' }
           }
-          open={openStep === 4}
-          onToggle={() => setOpenStep(openStep === 4 ? null : 4)}
+          open={openStep === 3}
+          onToggle={() => setOpenStep(openStep === 3 ? null : 3)}
         >
           <LeirskoleStaffPanel
             weekName={week.name}
