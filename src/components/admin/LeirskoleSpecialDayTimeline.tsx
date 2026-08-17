@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check, Trash2 } from 'lucide-react';
+import { Check, Trash2, X } from 'lucide-react';
 
 const START_HOUR = 7;
 const END_HOUR = 24;
@@ -163,18 +163,27 @@ export function LeirskoleSpecialDayTimeline({
   const onEditMove = (clientY: number) => {
     if (!edit) return;
     const s = slotAt(clientY);
-    movedRef.current = true;
     if (edit.mode === 'move') {
       const length = edit.to - edit.from;
       const from = Math.max(0, Math.min(SLOTS - length, s - edit.grabOffset));
+      if (from === edit.from) return;
+      movedRef.current = true;
       setEdit({ ...edit, from, to: from + length });
     } else {
-      setEdit({ ...edit, to: Math.max(edit.from + 2, Math.min(SLOTS, s)) });
+      const to = Math.max(edit.from + 2, Math.min(SLOTS, s));
+      if (to === edit.to) return;
+      movedRef.current = true;
+      setEdit({ ...edit, to });
     }
   };
 
   const commitEdit = () => {
     if (!edit) return;
+    if (!movedRef.current) {
+      // Kun et trykk – la popoveren åpne seg i stedet for å lagre.
+      setEdit(null);
+      return;
+    }
     const next = clampRange(edit.from, edit.to, edit.id);
     setEdit(null);
     if (!next) {
@@ -292,6 +301,20 @@ export function LeirskoleSpecialDayTimeline({
                       {toClock(from)}–{toClock(to)}
                     </p>
                     <p className="truncate text-[9px] leading-tight">{names.length ? names.join(', ') : 'ingen ledere'}</p>
+                    <span
+                      data-post-delete
+                      role="button"
+                      aria-label="Slett økten"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removePost.mutate(p.id);
+                      }}
+                      className="absolute right-0.5 top-0.5 rounded-full bg-background/80 p-0.5 text-destructive hover:bg-destructive/20"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </span>
                     <span
                       data-resize
                       onPointerDown={(e) => {
