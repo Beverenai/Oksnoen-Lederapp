@@ -911,16 +911,6 @@ export default function Chat() {
                 <ImagePlus className="h-4 w-4" />
               )}
             </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={openMentionPicker}
-              aria-label="Tagg en leder"
-              className="h-9 w-9 shrink-0 rounded-full text-muted-foreground"
-            >
-              <AtSign className="h-4 w-4" />
-            </Button>
             <Textarea
               ref={textareaRef}
               value={input}
