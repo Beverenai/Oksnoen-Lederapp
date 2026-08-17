@@ -95,11 +95,13 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
 
   const postsByDate = useMemo(() => {
     const map = new Map<string, { id: string; name: string; start_time: string; end_time: string }[]>();
-    (posts ?? []).forEach((p) => {
-      const list = map.get(p.date) ?? [];
-      list.push({ id: p.id, name: p.name, start_time: p.start_time, end_time: p.end_time });
-      map.set(p.date, list);
-    });
+    (posts ?? [])
+      .filter((p) => (p as { is_custom?: boolean }).is_custom)
+      .forEach((p) => {
+        const list = map.get(p.date) ?? [];
+        list.push({ id: p.id, name: p.name, start_time: p.start_time, end_time: p.end_time });
+        map.set(p.date, list);
+      });
     map.forEach((list) => list.sort((a, b) => a.start_time.localeCompare(b.start_time)));
     return map;
   }, [posts]);
