@@ -85,20 +85,23 @@ export function useLeirskoleTasks(weekId?: string | null) {
   const { effectiveLeader } = useAuth();
   return useQuery({
     queryKey: ['leirskole-tasks', weekId, effectiveLeader?.id],
-    enabled: !!weekId,
+    enabled: !!weekId && !!effectiveLeader?.id,
     queryFn: async () => {
-      const [{ data: tasks, error }, { data: done }] = await Promise.all([
+      const [{ data: tasks, error }, { data: done, error: doneError }] = await Promise.all([
         supabase.from('leirskole_tasks').select('*').eq('week_id', weekId!).order('created_at', { ascending: false }),
-        supabase.from('leirskole_task_completions').select('task_id, leader_id, completed_at'),
+        supabase
+          .from('leirskole_task_completions')
+          .select('task_id, leader_id, completed_at')
+          .eq('leader_id', effectiveLeader!.id),
       ]);
       if (error) throw error;
+      if (doneError) throw doneError;
       const mine = new Set(
         (done ?? []).filter((d: any) => d.leader_id === effectiveLeader?.id).map((d: any) => d.task_id),
       );
       return (tasks ?? []).map((t: any) => ({
         ...(t as LeirskoleTask),
         completedByMe: mine.has(t.id),
-        completedCount: (done ?? []).filter((d: any) => d.task_id === t.id).length,
       }));
     },
   });

@@ -19,6 +19,13 @@ interface Post {
   duration_hours: number; required_leaders: number; is_main_shift: boolean; is_night: boolean;
 }
 interface Staff { id: string; leader_id: string; max_daily_hours: number; name: string }
+interface Availability {
+  staff_id: string;
+  date: string;
+  available: boolean;
+  from_time: string | null;
+  to_time: string | null;
+}
 
 function postInterval(p: Post) {
   const [sh, sm] = p.start_time.split(":").map(Number);
@@ -30,7 +37,6 @@ function dateAdd(dateStr: string, days: number) {
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
-const overlap = (a: any, b: any) => a.start < b.end && b.start < a.end;
 const isNight = (p: Post) => p.is_night || p.post_type === "night" || p.crosses_midnight;
 const isMeal = (p: Post) => p.post_type === "meal";
 function isBreakfast(p: Post) {
@@ -56,8 +62,31 @@ function absMinutes(date: string, minutes: number) {
   return Date.parse(date + "T00:00:00Z") / 60000 + minutes;
 }
 
-function canAssign(st: Staff, post: Post, s: State, unavailable: Set<string>, minRest: number) {
-  if (unavailable.has(`${st.id}|${post.date}`)) return { ok: false, reason: "Utilgjengelig" };
+function clockMinutes(value: string) {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function availabilityReason(staffId: string, post: Post, availability: Map<string, Availability>) {
+  const window = availability.get(`${staffId}|${post.date}`);
+  if (!window) return null;
+  if (!window.available) return "Utilgjengelig";
+
+  const interval = postInterval(post);
+  if (window.from_time && interval.start < clockMinutes(window.from_time)) {
+    return `Tilgjengelig fra ${window.from_time.slice(0, 5)}`;
+  }
+  if (window.to_time) {
+    let availableUntil = clockMinutes(window.to_time);
+    if (window.from_time && availableUntil <= clockMinutes(window.from_time)) availableUntil += 1440;
+    if (interval.end > availableUntil) return `Tilgjengelig til ${window.to_time.slice(0, 5)}`;
+  }
+  return null;
+}
+
+function canAssign(st: Staff, post: Post, s: State, availability: Map<string, Availability>, minRest: number) {
+  const unavailableReason = availabilityReason(st.id, post, availability);
+  if (unavailableReason) return { ok: false, reason: unavailableReason };
   const dailyMax = Number(st.max_daily_hours ?? 8);
   const cur = s.hoursByDate[post.date] ?? 0;
   if (cur + Number(post.duration_hours) > dailyMax + 0.001)
@@ -68,7 +97,9 @@ function canAssign(st: Staff, post: Post, s: State, unavailable: Set<string>, mi
   const endAbs = absMinutes(post.date, pi.end);
 
   for (const a of s.assigned) {
-    if (a.date === post.date && overlap(a.interval, pi)) return { ok: false, reason: "Overlapper annen vakt" };
+    if (startAbs < a.endAbs && a.startAbs < endAbs) {
+      return { ok: false, reason: "Overlapper annen vakt" };
+    }
     // Rest rule: min_rest_hours between end of one shift and start of the next
     const gapAfter = startAbs - a.endAbs;
     const gapBefore = a.startAbs - endAbs;
@@ -138,7 +169,11 @@ Deno.serve(async (req) => {
 
     const { data: leaderRow } = await supa.from("leaders").select("id").eq("auth_user_id", userData.user.id).maybeSingle();
     if (!leaderRow) return json({ error: "Fant ikke lederprofil" }, 403);
-    const { data: roles } = await supa.from("user_roles").select("role").eq("user_id", leaderRow.id);
+    const { data: roles, error: rolesError } = await supa
+      .from("user_roles")
+      .select("role")
+      .eq("leader_id", leaderRow.id);
+    if (rolesError) return json({ error: rolesError.message }, 500);
     const roleList = (roles ?? []).map((r: any) => r.role);
     if (!roleList.includes("admin") && !roleList.includes("superadmin")) return json({ error: "Kun admin" }, 403);
 
@@ -170,7 +205,8 @@ Deno.serve(async (req) => {
 
     if ((postsRaw ?? []).length === 0) {
       const N = staff.length;
-      const shiftReq = Math.max(1, Math.min(N - 1 > 0 ? N - 1 : 1, Math.ceil(N / 2)));
+      const scale = (target: number) => Math.max(1, Math.min(target, Math.max(1, Math.ceil(N * (target / 6)))));
+      const shiftReq = Math.max(1, Math.min(N > 1 ? N - 1 : 1, scale(6)));
       const mealReq = Math.max(1, Math.min(2, Math.ceil(N / 4)));
       const days: string[] = [];
       const d0 = new Date(week.start_date + "T00:00:00Z");
@@ -183,8 +219,9 @@ Deno.serve(async (req) => {
           { week_id, date, name: "Økt 1", post_type: "main_shift", start_time: "09:30", end_time: "12:00", required_leaders: shiftReq, is_main_shift: true, sort_order: 2 },
           { week_id, date, name: "Middag", post_type: "meal", start_time: "13:00", end_time: "14:00", required_leaders: mealReq, is_main_shift: false, sort_order: 3 },
           { week_id, date, name: "Økt 2", post_type: "main_shift", start_time: "14:30", end_time: "17:00", required_leaders: shiftReq, is_main_shift: true, sort_order: 4 },
-          { week_id, date, name: "Kvelds", post_type: "meal", start_time: "19:00", end_time: "20:00", required_leaders: mealReq, is_main_shift: false, sort_order: 5 },
-          { week_id, date, name: "Nattevakt", post_type: "night", start_time: "23:00", end_time: "07:00", required_leaders: 1, is_main_shift: false, is_night: true, sort_order: 6 },
+          { week_id, date, name: "Økt 3", post_type: "main_shift", start_time: "17:30", end_time: "19:00", required_leaders: shiftReq, is_main_shift: true, sort_order: 5 },
+          { week_id, date, name: "Kvelds", post_type: "meal", start_time: "19:00", end_time: "20:00", required_leaders: mealReq, is_main_shift: false, sort_order: 6 },
+          { week_id, date, name: "Nattevakt", post_type: "night", start_time: "23:00", end_time: "07:00", required_leaders: 1, is_main_shift: false, is_night: true, sort_order: 7 },
         );
       }
       const { data: inserted, error: insErr } = await supa.from("leirskole_posts").insert(rows).select("*");
@@ -196,16 +233,21 @@ Deno.serve(async (req) => {
     if (posts.length === 0) return json({ error: "Ingen vaktposter for denne uken." }, 400);
 
     const staffIds = staff.map(s => s.id);
-    const { data: avRaw } = await supa.from("leirskole_availability").select("*").in("staff_id", staffIds);
-    const unavailable = new Set<string>();
-    for (const av of (avRaw ?? []) as any[]) if (av.available === false) unavailable.add(`${av.staff_id}|${av.date}`);
+    const { data: avRaw, error: availabilityError } = await supa
+      .from("leirskole_availability")
+      .select("staff_id, date, available, from_time, to_time")
+      .in("staff_id", staffIds);
+    if (availabilityError) return json({ error: availabilityError.message }, 500);
+    const availability = new Map<string, Availability>();
+    for (const row of (avRaw ?? []) as Availability[]) {
+      availability.set(`${row.staff_id}|${row.date}`, row);
+    }
 
     const postIds = posts.map(p => p.id);
     const { data: existing } = await supa.from("leirskole_assignments").select("*").in("post_id", postIds);
     const existingArr = (existing ?? []) as any[];
     const toKeep = keepLocked ? existingArr.filter(a => a.is_locked) : [];
     const toDelete = existingArr.filter(a => !toKeep.includes(a));
-    if (toDelete.length) await supa.from("leirskole_assignments").delete().in("id", toDelete.map(a => a.id));
 
     const stateById = new Map<string, State>();
     for (const s of staff) stateById.set(s.id, { totalHours: 0, hoursByDate: {}, nightShifts: 0, mealShifts: 0, assigned: [] });
@@ -218,7 +260,7 @@ Deno.serve(async (req) => {
       const st = staff.find(x => x.id === a.staff_id);
       if (!p || !st) continue;
       const s = stateById.get(st.id)!;
-      const check = canAssign(st, p, s, unavailable, minRest);
+      const check = canAssign(st, p, s, availability, minRest);
       if (!check.ok) conflicts.push({ post: p.name, date: p.date, leader: st.name, reason: check.reason });
       apply(p, s);
       lockedByPost.set(p.id, [...(lockedByPost.get(p.id) ?? []), a]);
@@ -227,13 +269,16 @@ Deno.serve(async (req) => {
     const candidates = new Map<string, number>();
     for (const p of posts) {
       let n = 0;
-      for (const st of staff) if (!unavailable.has(`${st.id}|${p.date}`)) n++;
+      for (const st of staff) if (!availabilityReason(st.id, p, availability)) n++;
       candidates.set(p.id, n);
     }
 
-    const { data: run } = await supa.from("leirskole_generator_runs")
+    const { data: run, error: runError } = await supa.from("leirskole_generator_runs")
       .insert({ week_id, status: "running", keep_locked: keepLocked, run_by: leaderRow.id })
       .select().single();
+    if (runError || !run) {
+      return json({ error: runError?.message ?? "Kunne ikke starte genereringen" }, 500);
+    }
 
     const newAssignments: any[] = [];
     const missing: any[] = [];
@@ -246,7 +291,7 @@ Deno.serve(async (req) => {
       const pool = staff.filter(st => !locked.some(l => l.staff_id === st.id));
       const evaluated = pool.map(st => {
         const s = stateById.get(st.id)!;
-        const check = canAssign(st, post, s, unavailable, minRest);
+        const check = canAssign(st, post, s, availability, minRest);
         return { st, ok: check.ok, reason: check.reason, sc: score(st, post, s) };
       });
       const ranked = evaluated.filter(c => c.ok).sort((a, b) => a.sc - b.sc);
@@ -254,7 +299,7 @@ Deno.serve(async (req) => {
 
       for (const c of picked) {
         apply(post, stateById.get(c.st.id)!);
-        newAssignments.push({ post_id: post.id, staff_id: c.st.id, is_locked: false, assigned_manually: false, generator_run_id: run?.id ?? null });
+        newAssignments.push({ post_id: post.id, staff_id: c.st.id, is_locked: false, assigned_manually: false, generator_run_id: run.id });
       }
 
       if (picked.length < need) {
@@ -265,11 +310,32 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (toDelete.length) {
+      const { error: deleteError } = await supa
+        .from("leirskole_assignments")
+        .delete()
+        .in("id", toDelete.map((assignment) => assignment.id));
+      if (deleteError) {
+        await supa.from("leirskole_generator_runs").update({
+          status: "failed",
+          finished_at: new Date().toISOString(),
+          stats: { error: deleteError.message },
+        }).eq("id", run.id);
+        return json({ error: deleteError.message }, 500);
+      }
+    }
+
     if (newAssignments.length) {
       const { error: insErr } = await supa.from("leirskole_assignments").insert(newAssignments);
       if (insErr) {
-        await supa.from("leirskole_generator_runs").update({ status: "failed", finished_at: new Date().toISOString(), stats: { error: insErr.message } }).eq("id", run!.id);
-        return json({ error: insErr.message }, 500);
+        const { error: restoreError } = toDelete.length
+          ? await supa.from("leirskole_assignments").insert(toDelete)
+          : { error: null };
+        await supa.from("leirskole_generator_runs").update({ status: "failed", finished_at: new Date().toISOString(), stats: { error: insErr.message } }).eq("id", run.id);
+        return json({
+          error: insErr.message,
+          restore_error: restoreError?.message ?? null,
+        }, 500);
       }
     }
 
@@ -287,8 +353,8 @@ Deno.serve(async (req) => {
       })).sort((a, b) => b.total_hours - a.total_hours),
     };
 
-    await supa.from("leirskole_generator_runs").update({ status, finished_at: new Date().toISOString(), stats }).eq("id", run!.id);
-    return json({ status, run_id: run!.id, stats });
+    await supa.from("leirskole_generator_runs").update({ status, finished_at: new Date().toISOString(), stats }).eq("id", run.id);
+    return json({ status, run_id: run.id, stats });
   } catch (e: any) {
     return json({ error: e?.message ?? String(e) }, 500);
   }

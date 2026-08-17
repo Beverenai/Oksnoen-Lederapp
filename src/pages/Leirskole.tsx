@@ -37,6 +37,14 @@ function shortDate(dateStr: string) {
   return `${date.getDate()}. ${MONTHS[date.getMonth()]}`;
 }
 const hhmm = (t: string) => t.slice(0, 5);
+const formatDue = (value: string) =>
+  new Intl.DateTimeFormat('nb-NO', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
 const todayStr = () => {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
@@ -272,6 +280,7 @@ export default function Leirskole() {
                     {t.title}
                   </p>
                   {t.description && <p className="text-xs text-muted-foreground">{t.description}</p>}
+                  {t.due_at && <p className="mt-0.5 text-[11px] text-muted-foreground">Frist {formatDue(t.due_at)}</p>}
                 </div>
               </label>
             ))

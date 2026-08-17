@@ -1,91 +1,142 @@
-# Kobling: hent leirskole-uker fra jobb-plattformen (oksnoen-leder-flow)
+# Kobling mot jobbplattformen
 
-LederApp har en edge-funksjon `sync-leirskole-jobb` som kaller:
+Lederappen henter leirskoleuker og ansatte fra Lovable-prosjektet
+`oksnoen-leder-flow` via en privat Edge Function:
 
-    POST https://<jobb-plattform>/functions/v1/export-leirskole
-    header: x-sync-secret: <LEIRSKOLE_SYNC_SECRET>
+```text
+POST https://hiifcjletsoklagflnvn.supabase.co/functions/v1/export-leirskole
+x-sync-secret: <LEIRSKOLE_SYNC_SECRET>
+```
 
-Jobb-plattformen må derfor få en ny edge-funksjon `export-leirskole` med
-den SAMME hemmelige nøkkelen lagret som `LEIRSKOLE_SYNC_SECRET`.
+Begge Supabase-prosjektene skal ha samme, tilfeldig genererte
+`LEIRSKOLE_SYNC_SECRET`. Nøkkelen skal ikke ligge i kode, dokumentasjon,
+commit-meldinger eller logger. Roter nøkkelen i begge prosjektene dersom den
+har blitt delt eller brukt som en kort testkode.
 
-Forventet svar:
+## Datakilde
+
+Eksporten skal bruke de faktiske tabellene i jobbplattformen:
+
+- `leirskole_weeks` for navn, datoer og beskrivelse
+- `leirskole_applications` for bemanning
+- `profiles` for lederens navn
+- `leirskole_week_availability` for tilgjengelighet
+- `schedule_posts` for vaktposter
+- `schedule_assignments` for vaktfordeling
+
+Kun søknader med status `accepted` eller `contracted` er ansatte og kan
+eksporteres. Statusene `applied` og `offered` betyr ikke at personen har
+akseptert jobben.
+
+## Kontrakt
 
 ```json
 {
+  "contract_version": 2,
+  "full_snapshot": true,
   "weeks": [
     {
-      "external_ref": "<uuid fra leirskole_weeks>",
+      "external_ref": "<leirskole_weeks.id>",
       "name": "Uke 34",
       "start_date": "2026-08-17",
       "end_date": "2026-08-21",
       "notes": null,
+      "source_schedule_published_at": "2026-08-16T18:00:00.000Z",
       "staff": [
-        { "external_ref": "<profil-uuid>", "name": "Fornavn Etternavn", "role_label": "Leder" }
+        {
+          "external_ref": "<profiles.id>",
+          "name": "Fornavn Etternavn",
+          "role_label": "Leder",
+          "max_daily_hours": 8,
+          "employment_status": "hired",
+          "availability": [
+            {
+              "date": "2026-08-18",
+              "available": true,
+              "from_time": "09:00:00",
+              "to_time": "20:00:00"
+            }
+          ]
+        }
+      ],
+      "posts": [
+        {
+          "external_ref": "<schedule_posts.id>",
+          "date": "2026-08-18",
+          "name": "Økt 1",
+          "post_type": "activity",
+          "start_time": "11:00:00",
+          "end_time": "14:00:00",
+          "crosses_midnight": false,
+          "required_leaders": 4,
+          "is_main_shift": true,
+          "is_night": false,
+          "sort_order": 6,
+          "notes": null
+        }
+      ],
+      "assignments": [
+        {
+          "external_ref": "<schedule_assignments.id>",
+          "post_ref": "<schedule_posts.id>",
+          "leader_ref": "<profiles.id>",
+          "is_locked": false,
+          "assigned_manually": false
+        }
       ]
     }
   ]
 }
 ```
 
-## Kode å legge inn i jobb-plattformen (supabase/functions/export-leirskole/index.ts)
+`full_snapshot: true` betyr at bemanning og vaktplan er komplette. Lederappen
+kan da fjerne synkroniserte personer, poster og tildelinger som ikke lenger
+finnes i kilden. Innhold admin har lagt til manuelt i lederappen berøres ikke.
 
-```ts
-import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+`external_ref` for ansatte skal være `profiles.id`, ikke søknads-ID-en. Da
+kan en manuell kobling til appbrukeren gjenbrukes på tvers av flere uker.
+Eksporten skal ikke inneholde e-post, telefon, fødselsdato, søknadstekst eller
+andre personopplysninger.
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+Tilgjengelighet hentes fra `leirskole_week_availability` for de ansatte
+søknadene. Eventuelle fritekstnotater eksporteres ikke. En tildeling bruker
+`post_ref` for å peke på en vaktpost og `leader_ref` for å peke på den samme
+`profiles.id` som den ansatte har i `staff`.
 
-  const secret = Deno.env.get("LEIRSKOLE_SYNC_SECRET");
-  if (!secret || req.headers.get("x-sync-secret") !== secret) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+Når `source_schedule_published_at` er `null`, er planen ikke publisert for
+lederne. Når feltet har et tidspunkt, kopieres det til lederappen og planen blir
+synlig. Importerte vaktplaner styres videre i jobbplattformen.
 
-  const admin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+## Funksjonsoppsett
 
-  const { data: weeks } = await admin
-    .from("leirskole_weeks")
-    .select("id, name, start_date, end_date, description")
-    .order("start_date");
+`export-leirskole` autentiseres med `x-sync-secret`, og skal derfor være den
+eneste funksjonen som får JWT-kontroll slått av i jobbplattformens
+`supabase/config.toml`:
 
-  const weekIds = (weeks ?? []).map((w) => w.id);
+```toml
+[functions.export-leirskole]
+verify_jwt = false
+```
 
-  // Hvem som er satt opp / godkjent for hver uke
-  const { data: avail } = await admin
-    .from("leirskole_week_availability")
-    .select("week_id, user_id, is_available")
-    .in("week_id", weekIds);
+Funksjonen skal bare godta `POST`, returnere `401` ved manglende eller feil
+secret, og returnere en JSON-feil dersom en databaseforespørsel feiler. Den må
+aldri skrive secret til respons eller logger.
 
-  const userIds = [...new Set((avail ?? []).map((a) => a.user_id))];
-  const { data: profiles } = await admin
-    .from("profiles")
-    .select("id, first_name, last_name")
-    .in("id", userIds);
-  const nameById = new Map(
-    (profiles ?? []).map((p) => [p.id, `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim()]),
-  );
+## Verifisering
 
-  const payload = {
-    weeks: (weeks ?? []).map((w) => ({
-      external_ref: w.id,
-      name: w.name,
-      start_date: w.start_date,
-      end_date: w.end_date,
-      notes: w.description ?? null,
-      staff: (avail ?? [])
-        .filter((a) => a.week_id === w.id && a.is_available)
-        .map((a) => ({ external_ref: a.user_id, name: nameById.get(a.user_id) ?? null })),
-    })),
-  };
+Etter deploy skal et kall uten secret gi `401`, ikke `404`:
 
-  return new Response(JSON.stringify(payload), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-});
+```sh
+curl -i -X POST \
+  https://hiifcjletsoklagflnvn.supabase.co/functions/v1/export-leirskole
+```
+
+Et autorisert kall kan testes uten å skrive nøkkelen direkte i kommandoen:
+
+```sh
+read -s LEIRSKOLE_SYNC_SECRET
+curl -i -X POST \
+  -H "x-sync-secret: $LEIRSKOLE_SYNC_SECRET" \
+  https://hiifcjletsoklagflnvn.supabase.co/functions/v1/export-leirskole
+unset LEIRSKOLE_SYNC_SECRET
 ```

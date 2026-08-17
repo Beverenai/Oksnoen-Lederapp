@@ -1979,6 +1979,7 @@ export type Database = {
           assigned_at: string
           assigned_manually: boolean
           created_at: string
+          external_ref: string | null
           generator_run_id: string | null
           id: string
           is_locked: boolean
@@ -1990,6 +1991,7 @@ export type Database = {
           assigned_at?: string
           assigned_manually?: boolean
           created_at?: string
+          external_ref?: string | null
           generator_run_id?: string | null
           id?: string
           is_locked?: boolean
@@ -2001,6 +2003,7 @@ export type Database = {
           assigned_at?: string
           assigned_manually?: boolean
           created_at?: string
+          external_ref?: string | null
           generator_run_id?: string | null
           id?: string
           is_locked?: boolean
@@ -2124,6 +2127,69 @@ export type Database = {
           },
         ]
       }
+      leirskole_job_imports: {
+        Row: {
+          availability: Json
+          created_at: string
+          email: string | null
+          external_ref: string
+          id: string
+          last_seen_at: string
+          linked_leader_id: string | null
+          name: string
+          phone: string | null
+          role_label: string | null
+          source_status: string | null
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          availability?: Json
+          created_at?: string
+          email?: string | null
+          external_ref: string
+          id?: string
+          last_seen_at?: string
+          linked_leader_id?: string | null
+          name: string
+          phone?: string | null
+          role_label?: string | null
+          source_status?: string | null
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          availability?: Json
+          created_at?: string
+          email?: string | null
+          external_ref?: string
+          id?: string
+          last_seen_at?: string
+          linked_leader_id?: string | null
+          name?: string
+          phone?: string | null
+          role_label?: string | null
+          source_status?: string | null
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_job_imports_linked_leader_id_fkey"
+            columns: ["linked_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_job_imports_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leirskole_posts: {
         Row: {
           created_at: string
@@ -2131,6 +2197,7 @@ export type Database = {
           date: string
           duration_hours: number
           end_time: string
+          external_ref: string | null
           id: string
           is_main_shift: boolean
           is_night: boolean
@@ -2149,6 +2216,7 @@ export type Database = {
           date: string
           duration_hours?: number
           end_time: string
+          external_ref?: string | null
           id?: string
           is_main_shift?: boolean
           is_night?: boolean
@@ -2167,6 +2235,7 @@ export type Database = {
           date?: string
           duration_hours?: number
           end_time?: string
+          external_ref?: string | null
           id?: string
           is_main_shift?: boolean
           is_night?: boolean
@@ -5364,6 +5433,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_active_leirskole_staff: { Args: never; Returns: boolean }
       is_in_match: { Args: { _match_id: string }; Returns: boolean }
       is_kitchen: { Args: never; Returns: boolean }
       is_leirskole: { Args: never; Returns: boolean }
@@ -5372,6 +5442,10 @@ export type Database = {
       leirskole_post_duration: {
         Args: { _end: string; _start: string }
         Returns: number
+      }
+      link_leirskole_job_import: {
+        Args: { _import_id: string; _leader_id: string }
+        Returns: undefined
       }
       mark_fix_task_fixed: { Args: { _task_id: string }; Returns: undefined }
       my_sips_left: { Args: never; Returns: number }
