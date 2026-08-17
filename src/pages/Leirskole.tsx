@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarDays, Clock, Moon, Settings, Megaphone, Check, Users, Sunrise, Sunset } from 'lucide-react';
+import { Coffee, CalendarDays, Clock, Moon, Settings, Megaphone, Check, Users, Sunrise, Sunset } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
   useLeirskoleSchedule,
@@ -104,9 +104,36 @@ export default function Leirskole() {
   );
   const todayShifts = shifts.filter((p) => p.date === today);
   const upcoming = shifts.filter((p) => p.date > today);
-  const nextShift = todayShifts[0] ?? upcoming[0] ?? null;
   const todayHours = todayShifts.reduce((s, p) => s + Number(p.duration_hours ?? 0), 0);
   const maxDaily = Number(week?.max_daily_hours ?? 8);
+
+  const nowTime = useMemo(() => {
+    const n = new Date();
+    return `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
+  }, []);
+
+  /** Aktiv eller neste vakt (i dag eller senere). */
+  const nextShift = useMemo(() => {
+    const sorted = [...shifts].sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time));
+    return (
+      sorted.find(
+        (p) => p.date > today || (p.date === today && (p.start_time >= nowTime || p.end_time > nowTime)),
+      ) ?? null
+    );
+  }, [shifts, today, nowTime]);
+
+  const nextShiftSession = useMemo(
+    () => (nextShift ? sessionForShift(nextShift.start_time) : null),
+    [nextShift],
+  );
+
+  /** Aktiviteten som hører til neste vakt. */
+  const nextShiftActivity = useMemo(() => {
+    if (!nextShift || !nextShiftSession) return null;
+    return (
+      (myActivities ?? []).find((a) => a.date === nextShift.date && a.session === nextShiftSession) ?? null
+    );
+  }, [nextShift, nextShiftSession, myActivities]);
 
   const hoursByDay = useMemo(() => {
     const map = new Map<string, number>();
@@ -119,20 +146,6 @@ export default function Leirskole() {
     shifts.forEach((p) => map.set(p.date, [...(map.get(p.date) ?? []), p]));
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [shifts]);
-
-  const todayActivities = useMemo(
-    () => (myActivities ?? []).filter((a) => a.date >= today).slice(0, 3),
-    [myActivities, today],
-  );
-
-  /** Aktiviteten som hører til min neste vakt (samme dag + økt). */
-  const nextShiftActivity = useMemo(() => {
-    if (!nextShift) return null;
-    const session = sessionForShift(nextShift.start_time);
-    return (
-      (myActivities ?? []).find((a) => a.date === nextShift.date && a.session === session) ?? null
-    );
-  }, [nextShift, myActivities]);
 
   /** Hele uken dag for dag — jobbdager og fridager. */
   const weekDays = useMemo(() => {
@@ -265,39 +278,77 @@ export default function Leirskole() {
       )}
 
       {/* Denne økten skal du */}
-      {(todayActivities.length > 0 || myInfo.length > 0) && (
+      {(nextShift || myInfo.length > 0) && (
         <div className="oks-ls-pill p-4">
           <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
             <Megaphone className="h-4 w-4 text-primary" /> Denne økten skal du
           </p>
           <div className="space-y-2">
-            {todayActivities.map((a) => {
-              const s = sessionStyle(a.session);
-              const Icon = s.icon;
-              return (
-                <div key={a.id} className={`relative overflow-hidden rounded-2xl border p-3 pl-4 ${s.card}`}>
-                  <span className={`absolute left-0 top-0 h-full w-1.5 ${s.bar}`} />
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${s.chip}`}
-                    >
-                      <Icon className="h-3.5 w-3.5" /> {sessionLabel(a.session)}
-                    </span>
-                    <span className="shrink-0 text-[11px] font-semibold tabular-nums text-muted-foreground">
-                      {s.time}
-                    </span>
+            {nextShift ? (
+              (() => {
+                const sessionKey = nextShiftSession!;
+                const s = sessionStyle(sessionKey);
+                const Icon = s.icon;
+                return nextShiftActivity ? (
+                  <div
+                    key={nextShiftActivity.id}
+                    className={`relative overflow-hidden rounded-2xl border p-3 pl-4 ${s.card}`}
+                  >
+                    <span className={`absolute left-0 top-0 h-full w-1.5 ${s.bar}`} />
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${s.chip}`}
+                      >
+                        <Icon className="h-3.5 w-3.5" /> {sessionLabel(sessionKey)}
+                      </span>
+                      <span className="shrink-0 text-[11px] font-semibold tabular-nums text-muted-foreground">
+                        {s.time}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xl font-heading font-bold leading-tight">
+                      {activityEmoji(nextShiftActivity.activity)} {activityLabel(nextShiftActivity.activity)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {dayLabel(nextShiftActivity.date)}
+                      {nextShiftActivity.date === today ? ' · i dag' : ''}
+                    </p>
+                    {nextShiftActivity.note && (
+                      <p className="mt-1 text-xs text-muted-foreground">{nextShiftActivity.note}</p>
+                    )}
                   </div>
-                  <p className="mt-2 text-xl font-heading font-bold leading-tight">
-                    {activityEmoji(a.activity)} {activityLabel(a.activity)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {dayLabel(a.date)}
-                    {a.date === today ? ' · i dag' : ''}
-                  </p>
-                  {a.note && <p className="mt-1 text-xs text-muted-foreground">{a.note}</p>}
+                ) : (
+                  <div className={`relative overflow-hidden rounded-2xl border border-dashed p-3 pl-4 ${s.card}`}>
+                    <span className={`absolute left-0 top-0 h-full w-1.5 ${s.bar}`} />
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${s.chip}`}
+                      >
+                        <Icon className="h-3.5 w-3.5" /> {sessionLabel(sessionKey)}
+                      </span>
+                      <span className="shrink-0 text-[11px] font-semibold tabular-nums text-muted-foreground">
+                        {s.time}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xl font-heading font-bold leading-tight">Fri</p>
+                    <p className="text-xs text-muted-foreground">
+                      {dayLabel(nextShift.date)}
+                      {nextShift.date === today ? ' · i dag' : ' · neste'} · ingen aktivitet tildelt
+                    </p>
+                  </div>
+                );
+              })()
+            ) : (
+              <div className="relative overflow-hidden rounded-2xl border border-dashed border-border/60 bg-muted/30 p-3 pl-4">
+                <span className="absolute left-0 top-0 h-full w-1.5 bg-muted-foreground/30" />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                    <Coffee className="h-3.5 w-3.5" /> Fri
+                  </span>
                 </div>
-              );
-            })}
+                <p className="mt-2 text-xl font-heading font-bold leading-tight">Ingen vakter nå</p>
+                <p className="text-xs text-muted-foreground">Sjekk ukeplanen nedenfor for neste vakt.</p>
+              </div>
+            )}
             {myInfo.map((i) => (
               <div key={i.id} className="rounded-2xl bg-muted/40 p-3">
                 <p className="text-sm font-semibold">{i.title}</p>
