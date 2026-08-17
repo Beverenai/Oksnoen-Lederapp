@@ -688,3 +688,60 @@ html.oks-offseason-theme .oks-offseason-bg {
 html.oks-offseason-theme .oks-offseason-bg {
   min-height: 100dvh;
 }
+
+/* ===== Leirskole: mørkt iOS-tema med teal aksent =====
+   Egen flate for leirskole-modus, slik at den skiller seg tydelig
+   fra sommerleir (lys) og off-season (retro rød/gull). */
+:root {
+  --oks-ls-night: 205 44% 8%;
+  --oks-ls-night-deep: 206 50% 5%;
+  --oks-ls-teal: 176 62% 46%;
+  --oks-ls-sea: 196 60% 34%;
+}
+
+html.oks-leirskole-theme,
+html.oks-leirskole-theme body,
+html.oks-leirskole-theme .oks-leirskole-bg {
+  --background: var(--oks-ls-night);
+  --foreground: 190 20% 96%;
+  --card: 205 36% 12%;
+  --card-foreground: 190 20% 96%;
+  --muted: 205 28% 17%;
+  --muted-foreground: 199 14% 70%;
+  --border: 200 20% 22%;
+  --input: 200 20% 22%;
+  --popover: 205 36% 11%;
+  --popover-foreground: 190 20% 96%;
+  --secondary: 205 28% 17%;
+  --secondary-foreground: 190 20% 96%;
+  --accent: 205 28% 20%;
+  --accent-foreground: 190 20% 96%;
+  --primary: var(--oks-ls-teal);
+  --primary-foreground: 206 50% 6%;
+  --ring: var(--oks-ls-teal);
+}
+
+html.oks-leirskole-theme,
+html.oks-leirskole-theme body {
+  background-color: hsl(var(--oks-ls-night-deep));
+  color: hsl(var(--foreground));
+}
+
+html.oks-leirskole-theme .oks-leirskole-bg {
+  color: hsl(var(--foreground));
+  min-height: 100dvh;
+  background:
+    radial-gradient(115% 46% at 12% -8%, hsl(var(--oks-ls-teal) / 0.26) 0%, transparent 62%),
+    radial-gradient(95% 40% at 92% 2%, hsl(var(--oks-ls-sea) / 0.28) 0%, transparent 60%),
+    radial-gradient(120% 58% at 50% 112%, hsl(var(--oks-ls-sea) / 0.22) 0%, transparent 70%),
+    linear-gradient(180deg, hsl(var(--oks-ls-night)) 0%, hsl(var(--oks-ls-night-deep)) 100%);
+}
+
+/* Glass-pill flate brukt i leirskole-UI */
+.oks-ls-pill {
+  border-radius: 1.5rem;
+  border: 1px solid hsl(var(--border) / 0.7);
+  background: hsl(var(--card) / 0.72);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 14px 34px -22px hsl(0 0% 0% / 0.9);
+}

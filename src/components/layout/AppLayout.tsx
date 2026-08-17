@@ -181,6 +181,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
     root.classList.toggle('oks-offseason-theme', accessMode === 'offseason');
     return () => root.classList.remove('oks-offseason-theme');
   }, [accessMode]);
+
+  // Leirskole-tema: eget mørkt tema med teal aksent
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('oks-leirskole-theme', accessMode === 'leirskole');
+    return () => root.classList.remove('oks-leirskole-theme');
+  }, [accessMode]);
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
@@ -485,7 +492,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div
       className={cn(
         'bg-background flex min-h-[100svh] lg:min-h-dvh flex-col overflow-x-hidden w-full max-w-full pl-safe pr-safe',
-        inactiveForUser && 'oks-offseason-bg min-h-[100dvh]',
+        inactiveForUser && accessMode !== 'leirskole' && 'oks-offseason-bg min-h-[100dvh]',
+        accessMode === 'leirskole' && 'oks-leirskole-bg min-h-[100dvh]',
       )}
     >
       {/* View As Banner */}
