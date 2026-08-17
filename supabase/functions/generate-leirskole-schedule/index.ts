@@ -268,6 +268,36 @@ Deno.serve(async (req) => {
       postsRaw = inserted;
     }
 
+    // Sørg for at Middag (14-15) finnes, og at bemanningstakene holdes:
+    // maks 2 på Frokost/Middag/Kvelds, maks 4 på Sanitas.
+    {
+      const rows = (postsRaw ?? []) as any[];
+      const dates = [...new Set(rows.map((p) => p.date))];
+      const missingMiddag = dates.filter(
+        (d) => !rows.some((p) => p.date === d && p.name === "Middag"),
+      );
+      if (missingMiddag.length) {
+        const { data: ins } = await supa.from("leirskole_posts").insert(
+          missingMiddag.map((date) => ({
+            week_id, date, name: "Middag", post_type: "meal",
+            start_time: "14:00", end_time: "15:00", required_leaders: 2,
+            is_main_shift: false, is_night: false, sort_order: 3,
+          })),
+        ).select("*");
+        rows.push(...((ins ?? []) as any[]));
+      }
+      for (const p of rows) {
+        const cap = ["Frokost", "Middag", "Kvelds"].includes(p.name)
+          ? 2
+          : p.name === "Sanitas" ? 4 : null;
+        if (cap !== null && Number(p.required_leaders) > cap) {
+          p.required_leaders = cap;
+          await supa.from("leirskole_posts").update({ required_leaders: cap }).eq("id", p.id);
+        }
+      }
+      postsRaw = rows as any;
+    }
+
     const posts: Post[] = (postsRaw ?? []) as any;
     if (posts.length === 0) return json({ error: "Ingen vaktposter for denne uken." }, 400);
 
