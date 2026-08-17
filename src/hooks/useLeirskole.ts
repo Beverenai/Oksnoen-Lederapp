@@ -8,6 +8,7 @@ export type LeirskolePost = Tables<'leirskole_posts'>;
 export type LeirskoleStaff = Tables<'leirskole_staff'>;
 export type LeirskoleAssignment = Tables<'leirskole_assignments'>;
 export type LeirskoleTask = Tables<'leirskole_tasks'>;
+export type LeirskoleSessionInfo = Tables<'leirskole_session_info'>;
 
 /** Alle leirskoleuker (nyeste først). */
 export function useLeirskoleWeeks() {
