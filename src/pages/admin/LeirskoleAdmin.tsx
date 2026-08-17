@@ -22,6 +22,7 @@ import {
 import { LeirskoleAccessCard } from '@/components/admin/LeirskoleAccessCard';
 import { LeirskoleActivityCard } from '@/components/admin/LeirskoleActivityCard';
 import { LeirskoleActivityTypesCard } from '@/components/admin/LeirskoleActivityTypesCard';
+import { LeirskoleGuideCard } from '@/components/admin/LeirskoleGuideCard';
 import { LeirskoleLeaderSheet } from '@/components/admin/LeirskoleLeaderSheet';
 import { LeirskolePostsCard } from '@/components/admin/LeirskolePostsCard';
 import { LeirskoleWeekPlanCard } from '@/components/admin/LeirskoleWeekPlanCard';
@@ -388,6 +389,8 @@ export default function LeirskoleAdmin() {
           />
         </div>
       </div>
+
+      <LeirskoleGuideCard />
 
       {/* Arbeidsflyt: 1) vaktplan → 2) oppgaver per økt */}
       <div className="oks-ls-pill flex items-center gap-2 p-3 text-xs">
