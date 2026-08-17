@@ -114,6 +114,21 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
     onError: (e: unknown) => showError(e instanceof Error ? e.message : 'Kunne ikke slette uken'),
   });
 
+  const setActive = useMutation({
+    mutationFn: async (id: string) => {
+      const { error: offError } = await supabase.from('leirskole_weeks').update({ is_active: false }).neq('id', id);
+      if (offError) throw offError;
+      const { error } = await supabase.from('leirskole_weeks').update({ is_active: true }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Aktiv uke endret');
+      invalidate();
+      setDialogOpen(false);
+    },
+    onError: (e: unknown) => showError(e instanceof Error ? e.message : 'Kunne ikke endre aktiv uke'),
+  });
+
   return (
     <div className="space-y-2">
       {/* Tittelrad med kompakt + knapp */}
