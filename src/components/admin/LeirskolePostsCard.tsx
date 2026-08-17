@@ -114,7 +114,6 @@ export function LeirskolePostsCard({
     qc.invalidateQueries({ queryKey: ['leirskole-my-shifts'] });
   };
 
-  const staffName = (id: string) => staff.find((s) => s.id === id)?.leader?.name ?? 'Ukjent';
   const staffPerson = (id: string) => {
     const row = staff.find((s) => s.id === id);
     return { id, name: row?.leader?.name ?? 'Ukjent', imageUrl: row?.leader?.profile_image_url ?? null };
