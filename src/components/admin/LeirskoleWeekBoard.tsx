@@ -208,6 +208,34 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   });
 
   /** Rydd en dag: fjern automatiske vakter til ingen ligger over dagstaket. */
+  const createPost = useMutation({
+    mutationFn: async ({ date, name }: { date: string; name: string }) => {
+      const t = MEAL_TIMES[name] ?? { start: '22:30', end: '01:30', hours: 3 };
+      const night = name === 'Nattevakt';
+      const { error } = await supabase.from('leirskole_posts').insert({
+        week_id: week.id,
+        date,
+        name,
+        start_time: t.start,
+        end_time: t.end,
+        duration_hours: t.hours,
+        is_night: night,
+        crosses_midnight: night,
+        is_custom: true,
+        is_published: true,
+        post_type: night ? 'night' : 'meal',
+        required_leaders: night ? 1 : 2,
+        sort_order: night ? 90 : 50,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
+      toast.success('Økt lagt til');
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke legge til økten'),
+  });
+
   const fixDay = useMutation({
     mutationFn: async (date: string) => {
       const day = staffHoursByDate.get(date) ?? new Map<string, number>();
