@@ -337,10 +337,13 @@ export default function LeirskoleAdmin() {
 
   if (!week) {
     return (
-      <div className="py-16 text-center">
-        <CalendarDays className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-        <h1 className="text-xl font-heading font-bold">Ingen aktiv leirskoleuke</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Uken aktiveres automatisk ut fra datoene.</p>
+      <div className="space-y-3 pb-8">
+        <div className="py-10 text-center">
+          <CalendarDays className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+          <h1 className="text-xl font-heading font-bold">Ingen leirskoleuke ennå</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Lag en uke med datoer, og legg til lederne som skal jobbe.</p>
+        </div>
+        <LeirskoleWeekPeriodsCard selectedWeekId={pickedWeekId} onSelect={setPickedWeekId} />
       </div>
     );
   }
@@ -497,6 +500,14 @@ export default function LeirskoleAdmin() {
       </div>
 
       {guideOpen && <LeirskoleGuideCard />}
+
+      <LeirskoleWeekPeriodsCard
+        selectedWeekId={week.id}
+        onSelect={(id) => {
+          setPickedWeekId(id);
+          setViewDate(null);
+        }}
+      />
 
       <LeirskoleWeekBoard week={week} staff={staff ?? []} />
 
