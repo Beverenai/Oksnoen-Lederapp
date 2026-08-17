@@ -15,6 +15,7 @@ import { CalendarClock, Play, Trash2, Lock, LockOpen, Moon, RefreshCw, Pencil, U
 import { LeaderAvatarStack } from '@/components/leirskole/LeaderAvatarStack';
 import {
   useLeirskoleSchedule,
+  useLeirskoleWeekDays,
   useGenerateLeirskoleSchedule,
   useAddLeirskolePost,
   useUpdateLeirskolePost,
@@ -105,6 +106,7 @@ export function LeirskolePostsCard({
   const qc = useQueryClient();
   const { showError } = useStatusPopup();
   const { data: posts } = useLeirskoleSchedule(week.id);
+  const { data: weekDays } = useLeirskoleWeekDays(week.id);
   const generate = useGenerateLeirskoleSchedule();
 
   const [keepLocked, setKeepLocked] = useState(true);
@@ -285,6 +287,11 @@ export function LeirskolePostsCard({
     return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [posts]);
 
+  const departureDays = useMemo(
+    () => new Set((weekDays ?? []).filter((d) => d.day_type === 'departure').map((d) => d.date)),
+    [weekDays],
+  );
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -391,7 +398,14 @@ export function LeirskolePostsCard({
             return (
               <div key={date} className="overflow-hidden rounded-2xl border bg-card/40">
                 <div className="oks-ls-gradient flex items-center justify-between gap-2 px-3 py-2">
-                  <p className="text-sm font-bold text-white">{dayLabel(date)}</p>
+                  <p className="flex items-center gap-2 text-sm font-bold text-white">
+                    {dayLabel(date)}
+                    {departureDays.has(date) && (
+                      <span className="rounded-full bg-amber-400/90 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-950">
+                        Avreise
+                      </span>
+                    )}
+                  </p>
                   <div className="flex items-center gap-1.5">
                     {dayMissing > 0 && (
                       <span className="rounded-full bg-white/25 px-2 py-0.5 text-[10.5px] font-semibold text-white">

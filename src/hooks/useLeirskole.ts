@@ -573,6 +573,48 @@ export function useDeleteLeirskoleActivity() {
 }
 
 export type LeirskoleWeekPlanCell = Tables<'leirskole_week_plan_cells'>;
+export type LeirskoleWeekDay = Tables<'leirskole_week_days'>;
+
+/** Dagtyper for uken (vanlig dag vs. avreisedag). */
+export function useLeirskoleWeekDays(weekId?: string | null) {
+  return useQuery({
+    queryKey: ['leirskole-week-days', weekId],
+    enabled: !!weekId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leirskole_week_days')
+        .select('*')
+        .eq('week_id', weekId!);
+      if (error) throw error;
+      return (data ?? []) as LeirskoleWeekDay[];
+    },
+  });
+}
+
+/** Marker en dag som avreisedag eller vanlig dag. */
+export function useSetLeirskoleDayType() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      weekId,
+      date,
+      dayType,
+    }: {
+      weekId: string;
+      date: string;
+      dayType: 'normal' | 'departure';
+    }) => {
+      const { error } = await supabase
+        .from('leirskole_week_days')
+        .upsert(
+          { week_id: weekId, date, day_type: dayType, updated_at: new Date().toISOString() },
+          { onConflict: 'week_id,date' },
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-week-days'] }),
+  });
+}
 
 /** Rutene i ukeplanleggeren (dag × rad). */
 export function useLeirskoleWeekPlan(weekId?: string | null) {
@@ -599,22 +641,54 @@ export function useSaveLeirskoleWeekPlanCell() {
       rowIndex,
       content,
       color,
+      postId,
     }: {
       weekId: string;
       date: string;
-      rowIndex: number;
+      rowIndex: number | null;
       content: string;
       color: string;
+      postId?: string | null;
     }) => {
+      if (postId) {
+        const { error } = await supabase
+          .from('leirskole_week_plan_cells')
+          .upsert(
+            {
+              week_id: weekId,
+              date,
+              post_id: postId,
+              row_index: null,
+              content,
+              color,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'week_id,date,post_id' },
+          );
+        if (error) throw error;
+        return;
+      }
       const { error } = await supabase
         .from('leirskole_week_plan_cells')
         .upsert(
-          { week_id: weekId, date, row_index: rowIndex, content, color, updated_at: new Date().toISOString() },
+          { week_id: weekId, date, row_index: rowIndex!, content, color, updated_at: new Date().toISOString() },
           { onConflict: 'week_id,date,row_index' },
         );
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-week-plan'] }),
+  });
+}
+
+/** Slett en vakt/økt. */
+export function useDeleteLeirskolePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('leirskole_posts').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateSchedule(qc),
   });
 }
 

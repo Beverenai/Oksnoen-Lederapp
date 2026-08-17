@@ -2564,6 +2564,41 @@ export type Database = {
           },
         ]
       }
+      leirskole_week_days: {
+        Row: {
+          created_at: string
+          date: string
+          day_type: string
+          id: string
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          day_type?: string
+          id?: string
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          day_type?: string
+          id?: string
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_week_days_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leirskole_week_plan_cells: {
         Row: {
           color: string
@@ -2571,7 +2606,8 @@ export type Database = {
           created_at: string
           date: string
           id: string
-          row_index: number
+          post_id: string | null
+          row_index: number | null
           updated_at: string
           week_id: string
         }
@@ -2581,7 +2617,8 @@ export type Database = {
           created_at?: string
           date: string
           id?: string
-          row_index: number
+          post_id?: string | null
+          row_index?: number | null
           updated_at?: string
           week_id: string
         }
@@ -2591,11 +2628,19 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
-          row_index?: number
+          post_id?: string | null
+          row_index?: number | null
           updated_at?: string
           week_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "leirskole_week_plan_cells_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_posts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "leirskole_week_plan_cells_week_id_fkey"
             columns: ["week_id"]

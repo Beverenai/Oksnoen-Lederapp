@@ -1,12 +1,27 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Grid3X3, Plus, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Grid3X3, Plus, X, PlaneTakeoff, Trash2, Clock } from 'lucide-react';
 import {
   useLeirskoleActivityTypes,
   useLeirskoleWeekPlan,
   useSaveLeirskoleWeekPlanCell,
+  useLeirskoleWeekDays,
+  useSetLeirskoleDayType,
+  useLeirskoleSchedule,
+  useAddLeirskolePost,
+  useDeleteLeirskolePost,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
 
@@ -40,6 +55,7 @@ function datesBetween(start: string, end: string) {
   return out;
 }
 const cellKey = (date: string, row: number) => `${date}|${row}`;
+const postKey = (postId: string) => `post|${postId}`;
 const splitLines = (content: string) =>
   content
     .split('\n')
@@ -53,30 +69,113 @@ const splitLines = (content: string) =>
 export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: LeirskoleWeek; readOnly?: boolean }) {
   const { data: cells } = useLeirskoleWeekPlan(week.id);
   const { data: activityTypes } = useLeirskoleActivityTypes(true);
+  const { data: weekDays } = useLeirskoleWeekDays(week.id);
+  const { data: posts } = useLeirskoleSchedule(week.id);
   const save = useSaveLeirskoleWeekPlanCell();
+  const setDayType = useSetLeirskoleDayType();
+  const addPost = useAddLeirskolePost();
+  const deletePost = useDeleteLeirskolePost();
+  const [newPostDate, setNewPostDate] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: '', start: '09:00', end: '10:00' });
   const dates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
 
   const stored = useMemo(() => {
     const map = new Map<string, { content: string; color: string }>();
-    (cells ?? []).forEach((c) => map.set(cellKey(c.date, c.row_index), { content: c.content, color: c.color }));
+    (cells ?? []).forEach((c) => {
+      const key = c.post_id ? postKey(c.post_id) : c.row_index != null ? cellKey(c.date, c.row_index) : null;
+      if (key) map.set(key, { content: c.content, color: c.color });
+    });
     return map;
   }, [cells]);
 
+  const departure = useMemo(
+    () => new Set((weekDays ?? []).filter((d) => d.day_type === 'departure').map((d) => d.date)),
+    [weekDays],
+  );
+
+  const postsByDate = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; start_time: string; end_time: string }[]>();
+    (posts ?? []).forEach((p) => {
+      const list = map.get(p.date) ?? [];
+      list.push({ id: p.id, name: p.name, start_time: p.start_time, end_time: p.end_time });
+      map.set(p.date, list);
+    });
+    map.forEach((list) => list.sort((a, b) => a.start_time.localeCompare(b.start_time)));
+    return map;
+  }, [posts]);
+
+  /** Radene for en dag: faste økter 1–3, eller dagens egne økter på avreisedager. */
+  const rowsFor = (date: string): { key: string; label: string; sub?: string; postId?: string }[] => {
+    if (departure.has(date)) {
+      return (postsByDate.get(date) ?? []).map((p) => ({
+        key: postKey(p.id),
+        label: p.name,
+        sub: `${p.start_time.slice(0, 5)}–${p.end_time.slice(0, 5)}`,
+        postId: p.id,
+      }));
+    }
+    return ROWS.map((r) => ({ key: cellKey(date, r.index), label: r.label }));
+  };
+
+  const totalCells = useMemo(
+    () => dates.reduce((sum, date) => sum + rowsFor(date).length, 0),
+    [dates, departure, postsByDate],
+  );
   const filledCount = useMemo(
     () =>
       dates.reduce(
         (sum, date) =>
-          sum +
-          ROWS.filter((r) => (stored.get(cellKey(date, r.index))?.content ?? '').trim().length > 0).length,
+          sum + rowsFor(date).filter((r) => (stored.get(r.key)?.content ?? '').trim().length > 0).length,
         0,
       ),
-    [dates, stored],
+    [dates, stored, departure, postsByDate],
   );
 
-  const persist = (date: string, row: number, content: string, color: string) => {
+  const persist = (
+    date: string,
+    row: number | null,
+    content: string,
+    color: string,
+    postId?: string,
+  ) => {
     save.mutate(
-      { weekId: week.id, date, rowIndex: row, content, color },
+      { weekId: week.id, date, rowIndex: row, content, color, postId },
       { onError: () => toast.error('Kunne ikke lagre ruten') },
+    );
+  };
+
+  const toggleDeparture = (date: string) => {
+    const next = departure.has(date) ? 'normal' : 'departure';
+    setDayType.mutate(
+      { weekId: week.id, date, dayType: next },
+      {
+        onSuccess: () =>
+          toast.success(next === 'departure' ? 'Markert som avreisedag' : 'Satt til vanlig dag'),
+        onError: () => toast.error('Kunne ikke endre dagen'),
+      },
+    );
+  };
+
+  const submitPost = () => {
+    if (!newPostDate || !form.name.trim()) return;
+    addPost.mutate(
+      {
+        weekId: week.id,
+        date: newPostDate,
+        name: form.name.trim(),
+        postType: 'other',
+        startTime: form.start,
+        endTime: form.end,
+        requiredLeaders: 1,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Økt lagt til');
+          setNewPostDate(null);
+          setForm({ name: '', start: '09:00', end: '10:00' });
+        },
+        onError: () => toast.error('Kunne ikke legge til økten'),
+      },
     );
   };
 
@@ -87,11 +186,11 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
           <Grid3X3 className="h-4 w-4 text-primary" /> Ukeplanlegger
         </CardTitle>
         <CardDescription>
-          Velg aktiviteter fra lista i hver rute (økt 1–3). Trykk på fargeprikkene for å markere ruten. Lagres
-          automatisk.
+          Velg aktiviteter fra lista i hver rute (økt 1–3). Trykk på fargeprikkene for å markere ruten. Marker
+          avreisedager med fly-ikonet — der lager du egne økter med navn og tid. Lagres automatisk.
         </CardDescription>
         <p className="mt-1 text-xs font-semibold text-primary">
-          {filledCount} av {dates.length * ROWS.length} ruter fylt ut
+          {filledCount} av {totalCells} ruter fylt ut · {dates.length} dager
         </p>
       </CardHeader>
       <CardContent>
@@ -99,27 +198,73 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
           <div className="flex min-w-max gap-2">
             {dates.map((date) => {
               const d = parse(date);
+              const isDeparture = departure.has(date);
+              const dayRows = rowsFor(date);
               return (
                 <div key={date} className="w-44 shrink-0">
-                  <div className="oks-ls-gradient mb-2 rounded-xl px-2 py-1.5 text-center">
-                    <p className="text-xs font-bold text-white">
-                      {WEEKDAYS[d.getDay()]} {d.getDate()}.
-                    </p>
+                  <div
+                    className={`mb-2 rounded-xl px-2 py-1.5 ${
+                      isDeparture
+                        ? 'border border-dashed border-amber-500/70 bg-amber-500/15'
+                        : 'oks-ls-gradient'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <p
+                        className={`text-xs font-bold ${
+                          isDeparture ? 'text-amber-200' : 'text-white'
+                        }`}
+                      >
+                        {WEEKDAYS[d.getDay()]} {d.getDate()}.
+                      </p>
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          aria-label={isDeparture ? 'Gjør til vanlig dag' : 'Marker som avreisedag'}
+                          title={isDeparture ? 'Gjør til vanlig dag' : 'Marker som avreisedag'}
+                          onClick={() => toggleDeparture(date)}
+                          className={`rounded-md p-1 ${
+                            isDeparture
+                              ? 'bg-amber-500/30 text-amber-100'
+                              : 'bg-white/20 text-white hover:bg-white/30'
+                          }`}
+                        >
+                          <PlaneTakeoff className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                    {isDeparture && (
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-200/80">
+                        Avreisedag
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    {ROWS.map((row) => {
-                      const key = cellKey(date, row.index);
+                    {isDeparture && dayRows.length === 0 && (
+                      <p className="rounded-xl border border-dashed border-amber-500/40 p-2 text-[11px] text-muted-foreground">
+                        Ingen økter denne dagen — legg inn egne økter med navn og tid.
+                      </p>
+                    )}
+                    {dayRows.map((row) => {
+                      const key = row.key;
                       const current = stored.get(key);
                       const color = current?.color ?? 'neutral';
                       const style = COLORS.find((c) => c.key === color) ?? COLORS[0];
                       const value = current?.content ?? '';
                       const lines = splitLines(value);
-                      const setLines = (next: string[]) => persist(date, row.index, next.join('\n'), color);
+                      const rowIndex = row.postId
+                        ? null
+                        : ROWS.find((r) => cellKey(date, r.index) === key)?.index ?? null;
+                      const setLines = (next: string[]) =>
+                        persist(date, rowIndex, next.join('\n'), color, row.postId);
                       return (
-                        <div key={row.index} className={`rounded-xl border p-1.5 ${style.cell}`}>
+                        <div key={key} className={`rounded-xl border p-1.5 ${style.cell}`}>
                           <div className="mb-1 flex items-center justify-between gap-1">
-                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                               {row.label}
+                              {row.sub && (
+                                <span className="ml-1 normal-case text-muted-foreground/70">{row.sub}</span>
+                              )}
                             </span>
                             {!readOnly && (
                               <div className="flex items-center gap-1">
@@ -128,12 +273,22 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
                                     key={c.key}
                                     type="button"
                                     aria-label={c.label}
-                                    onClick={() => persist(date, row.index, value, c.key)}
+                                    onClick={() => persist(date, rowIndex, value, c.key, row.postId)}
                                     className={`h-3 w-3 rounded-full ${c.dot} ${
                                       color === c.key ? 'ring-2 ring-foreground/50' : 'opacity-60'
                                     }`}
                                   />
                                 ))}
+                                {row.postId && (
+                                  <button
+                                    type="button"
+                                    aria-label={`Slett ${row.label}`}
+                                    onClick={() => deletePost.mutate(row.postId!)}
+                                    className="text-muted-foreground hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>
@@ -203,12 +358,67 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
                         </div>
                       );
                     })}
+                    {isDeparture && !readOnly && (
+                      <button
+                        type="button"
+                        onClick={() => setNewPostDate(date)}
+                        className="flex w-full items-center justify-center gap-1 rounded-xl border border-dashed border-amber-500/60 py-1.5 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/10"
+                      >
+                        <Clock className="h-3 w-3" /> Ny økt (navn + tid)
+                      </button>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
         </div>
+        <Dialog open={!!newPostDate} onOpenChange={(o) => !o && setNewPostDate(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Ny økt på avreisedagen</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="ls-post-name">Navn</Label>
+                <Input
+                  id="ls-post-name"
+                  value={form.name}
+                  placeholder="F.eks. Rydding, Bagasje ut, Avreise buss"
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="ls-post-start">Fra</Label>
+                  <Input
+                    id="ls-post-start"
+                    type="time"
+                    value={form.start}
+                    onChange={(e) => setForm((f) => ({ ...f, start: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="ls-post-end">Til</Label>
+                  <Input
+                    id="ls-post-end"
+                    type="time"
+                    value={form.end}
+                    onChange={(e) => setForm((f) => ({ ...f, end: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setNewPostDate(null)}>
+                Avbryt
+              </Button>
+              <Button onClick={submitPost} disabled={!form.name.trim() || addPost.isPending}>
+                Legg til
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
