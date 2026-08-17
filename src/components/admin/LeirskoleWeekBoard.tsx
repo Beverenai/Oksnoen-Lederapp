@@ -449,9 +449,19 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                         ))}
                     </div>
                     {t.session && (
-                      <p className="mt-1 text-[10px] text-muted-foreground">
-                        {(dutyBySlot.get(`${date}|${t.session}`) ?? []).length} på vakt
-                      </p>
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {(dutyBySlot.get(`${date}|${t.session}`) ?? []).length === 0 && (
+                          <span className="text-[10px] text-muted-foreground">Ingen ledere</span>
+                        )}
+                        {(dutyBySlot.get(`${date}|${t.session}`) ?? []).map((l) => (
+                          <span
+                            key={l.id}
+                            className="truncate max-w-[5.5rem] rounded-full bg-background/70 px-1.5 py-0.5 text-[10px] font-medium text-foreground"
+                          >
+                            {firstName(l.name)}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </button>
                 );
