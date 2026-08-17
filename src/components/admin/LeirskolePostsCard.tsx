@@ -110,10 +110,48 @@ export function LeirskolePostsCard({
   const [keepLocked, setKeepLocked] = useState(true);
   const [publishAfter, setPublishAfter] = useState(true);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [newPostDay, setNewPostDay] = useState<string | null>(null);
+  const [draft, setDraft] = useState({ name: '', start: '20:00', end: '21:30', required: 2, type: 'main_shift' as 'meal' | 'main_shift' | 'night' | 'other', publish: false });
+  const addPost = useAddLeirskolePost();
+  const updatePost = useUpdateLeirskolePost();
+  const shiftPosts = useShiftLeirskolePosts();
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
     qc.invalidateQueries({ queryKey: ['leirskole-my-shifts'] });
+  };
+
+  const saveNewPost = async (date: string) => {
+    if (!draft.name.trim()) {
+      showError('Gi økten et navn');
+      return;
+    }
+    try {
+      await addPost.mutateAsync({
+        weekId: week.id,
+        date,
+        name: draft.name,
+        postType: draft.type,
+        startTime: draft.start,
+        endTime: draft.end,
+        requiredLeaders: draft.required,
+        isPublished: draft.publish,
+      });
+      toast.success(draft.publish ? 'Økt lagt inn' : 'Økt lagt inn som utkast');
+      setNewPostDay(null);
+      setDraft((d) => ({ ...d, name: '' }));
+    } catch (error: unknown) {
+      showError(errorMessage(error, 'Kunne ikke legge inn økten'));
+    }
+  };
+
+  const shiftDay = async (date: string | null, minutes: number) => {
+    try {
+      const n = await shiftPosts.mutateAsync({ weekId: week.id, date, minutes });
+      toast.success(`${n} vakter forskjøvet ${minutes > 0 ? '+' : ''}${minutes} min`);
+    } catch (error: unknown) {
+      showError(errorMessage(error, 'Kunne ikke forskyve vaktene'));
+    }
   };
 
   const staffPerson = (id: string) => {
