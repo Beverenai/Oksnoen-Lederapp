@@ -701,10 +701,37 @@ html.oks-offseason-theme .oks-offseason-bg {
   --oks-ls-yellow: 42 92% 58%;
 }
 
+/* Lys palett (standard) — bare aksentfargene fra logoen. */
+html.oks-leirskole-theme:not(.oks-ls-dark),
+html.oks-leirskole-theme:not(.oks-ls-dark) body,
+html.oks-leirskole-theme:not(.oks-ls-dark) .oks-leirskole-bg {
+  --primary: var(--oks-ls-blue);
+  --primary-foreground: 0 0% 100%;
+  --ring: var(--oks-ls-blue);
+  --destructive: var(--oks-ls-red);
+  --destructive-foreground: 0 0% 100%;
+}
+
+html.oks-leirskole-theme:not(.oks-ls-dark),
+html.oks-leirskole-theme:not(.oks-ls-dark) body {
+  background-color: hsl(0 0% 100%);
+  color: hsl(var(--foreground));
+}
+
+html.oks-leirskole-theme:not(.oks-ls-dark) .oks-leirskole-bg {
+  color: hsl(var(--foreground));
+  min-height: 100dvh;
+  background:
+    radial-gradient(95% 40% at 8% -6%, hsl(var(--oks-ls-red) / 0.08) 0%, transparent 60%),
+    radial-gradient(90% 36% at 92% 0%, hsl(var(--oks-ls-blue) / 0.1) 0%, transparent 60%),
+    radial-gradient(110% 50% at 50% 106%, hsl(var(--oks-ls-green) / 0.09) 0%, transparent 66%),
+    linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 30% 98%) 100%);
+}
+
 /* Mørk palett med blå primær og rød/grønn som støttefarger. */
-html.oks-leirskole-theme,
-html.oks-leirskole-theme body,
-html.oks-leirskole-theme .oks-leirskole-bg {
+html.oks-leirskole-theme.oks-ls-dark,
+html.oks-leirskole-theme.oks-ls-dark body,
+html.oks-leirskole-theme.oks-ls-dark .oks-leirskole-bg {
   --background: var(--oks-ls-night);
   --foreground: 40 44% 97%;
   --card: 217 28% 23%;
@@ -726,13 +753,13 @@ html.oks-leirskole-theme .oks-leirskole-bg {
   --destructive-foreground: 0 0% 100%;
 }
 
-html.oks-leirskole-theme,
-html.oks-leirskole-theme body {
+html.oks-leirskole-theme.oks-ls-dark,
+html.oks-leirskole-theme.oks-ls-dark body {
   background-color: hsl(var(--oks-ls-night-deep));
   color: hsl(var(--foreground));
 }
 
-html.oks-leirskole-theme .oks-leirskole-bg {
+html.oks-leirskole-theme.oks-ls-dark .oks-leirskole-bg {
   color: hsl(var(--foreground));
   min-height: 100dvh;
   background:
