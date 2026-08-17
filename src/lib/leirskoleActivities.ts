@@ -125,7 +125,8 @@ export function generateActivityAssignments(
       name: best.name,
       activity,
       repeat: (counts.get(`${best.leaderId}|${activity}`) ?? 0) > 0,
-      outsideCompetence: best.competencies.length > 0 && !best.competencies.includes(activity),
+      outsideCompetence:
+        requireCompetence && best.competencies.length > 0 && !best.competencies.includes(activity),
     });
   }
 
