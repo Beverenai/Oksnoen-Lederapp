@@ -95,11 +95,13 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
 
   const postsByDate = useMemo(() => {
     const map = new Map<string, { id: string; name: string; start_time: string; end_time: string }[]>();
-    (posts ?? []).forEach((p) => {
-      const list = map.get(p.date) ?? [];
-      list.push({ id: p.id, name: p.name, start_time: p.start_time, end_time: p.end_time });
-      map.set(p.date, list);
-    });
+    (posts ?? [])
+      .filter((p) => (p as { is_custom?: boolean }).is_custom)
+      .forEach((p) => {
+        const list = map.get(p.date) ?? [];
+        list.push({ id: p.id, name: p.name, start_time: p.start_time, end_time: p.end_time });
+        map.set(p.date, list);
+      });
     map.forEach((list) => list.sort((a, b) => a.start_time.localeCompare(b.start_time)));
     return map;
   }, [posts]);
@@ -240,6 +242,15 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
                     )}
                   </div>
                   <div className="space-y-2">
+                    {isDeparture && !readOnly && (
+                      <button
+                        type="button"
+                        onClick={() => setNewPostDate(date)}
+                        className="flex w-full items-center justify-center gap-1 rounded-xl bg-amber-500/20 py-2 text-[11px] font-bold text-amber-100 hover:bg-amber-500/30"
+                      >
+                        <Clock className="h-3 w-3" /> Ny økt (navn + tid)
+                      </button>
+                    )}
                     {isDeparture && dayRows.length === 0 && (
                       <p className="rounded-xl border border-dashed border-amber-500/40 p-2 text-[11px] text-muted-foreground">
                         Ingen økter denne dagen — legg inn egne økter med navn og tid.
@@ -358,15 +369,6 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
                         </div>
                       );
                     })}
-                    {isDeparture && !readOnly && (
-                      <button
-                        type="button"
-                        onClick={() => setNewPostDate(date)}
-                        className="flex w-full items-center justify-center gap-1 rounded-xl border border-dashed border-amber-500/60 py-1.5 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/10"
-                      >
-                        <Clock className="h-3 w-3" /> Ny økt (navn + tid)
-                      </button>
-                    )}
                   </div>
                 </div>
               );
