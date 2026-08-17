@@ -15,7 +15,7 @@ import {
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
 import { activityEmoji, activityLabel, sessionLabel } from '@/lib/leirskoleActivities';
-import { autoAssignWeek, type AutoAssignResult } from '@/lib/leirskoleAutoAssign';
+import { autoAssignWeek, type AutoAssignResult, type AutoAssignmentRow } from '@/lib/leirskoleAutoAssign';
 import { dayLabel } from '@/lib/leirskoleDates';
 
 type StaffRow = LeirskoleStaff & {
@@ -164,7 +164,7 @@ export function LeirskoleAutoActivityCard({ week, staff }: { week: LeirskoleWeek
   });
 
   const grouped = useMemo(() => {
-    const map = new Map<string, typeof preview extends null ? never : NonNullable<typeof preview>['assignments']>();
+    const map = new Map<string, AutoAssignmentRow[]>();
     (preview?.assignments ?? []).forEach((a) => {
       const key = `${a.date}|${a.session}`;
       map.set(key, [...(map.get(key) ?? []), a]);
