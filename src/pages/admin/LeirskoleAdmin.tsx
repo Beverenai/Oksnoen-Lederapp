@@ -507,6 +507,58 @@ export default function LeirskoleAdmin() {
       <div className="space-y-2">
         <Step
           n={1}
+          title="Ukeplan"
+          subtitle="Hvilke aktiviteter i økt 1–3 hver dag"
+          status={
+            planFilled === 0
+              ? { label: 'Ikke fylt ut', tone: 'todo' }
+              : { label: `${planFilled} av ${planTotal} ruter`, tone: planFilled >= planTotal ? 'done' : 'warn' }
+          }
+          open={openStep === 1}
+          onToggle={() => setOpenStep(openStep === 1 ? null : 1)}
+        >
+          <LeirskoleWeekPlanCard week={week} />
+          <LeirskoleActivityTypesCard />
+        </Step>
+
+        <Step
+          n={2}
+          title="Vaktplan"
+          subtitle={`Generer vakter (maks ${Number(week.max_daily_hours ?? 8)}t/dag) og fordel aktiviteter`}
+          status={
+            !hasSchedule
+              ? { label: 'Ikke generert', tone: 'todo' }
+              : (weekActivities ?? []).length === 0
+                ? { label: 'Mangler aktiviteter', tone: 'warn' }
+                : { label: `${(posts ?? []).length} vakter`, tone: 'done' }
+          }
+          open={openStep === 2}
+          onToggle={() => setOpenStep(openStep === 2 ? null : 2)}
+        >
+          <LeirskoleKitchenCard week={week} staff={staff ?? []} />
+          <LeirskolePostsCard
+            week={week}
+            staff={staff ?? []}
+            onSelectStaff={(staffId) => setSelectedStaffId(staffId)}
+          />
+          <LeirskoleAutoActivityCard week={week} staff={staff ?? []} />
+          <LeirskoleDayActivityCard week={week} staff={staff ?? []} />
+        </Step>
+
+        <Step
+          n={3}
+          title="Oppgaver"
+          subtitle="Beskjeder og oppgaver til lederne"
+          status={{ label: `${(tasks ?? []).length} sendt`, tone: (tasks ?? []).length ? 'done' : 'todo' }}
+          open={openStep === 3}
+          onToggle={() => setOpenStep(openStep === 3 ? null : 3)}
+        >
+          {taskPanel}
+          <LeirskoleSessionInfoCard weekId={week.id} staff={staff ?? []} />
+        </Step>
+
+        <Step
+          n={4}
           title="Ledere"
           subtitle="Hvem jobber denne uken + kompetanse"
           status={
@@ -516,8 +568,8 @@ export default function LeirskoleAdmin() {
                 ? { label: `${missingCompetence} mangler kompetanse`, tone: 'warn' }
                 : { label: `${(staff ?? []).length} ledere`, tone: 'done' }
           }
-          open={openStep === 1}
-          onToggle={() => setOpenStep(openStep === 1 ? null : 1)}
+          open={openStep === 4}
+          onToggle={() => setOpenStep(openStep === 4 ? null : 4)}
         >
           <LeirskoleStaffPanel
             weekName={week.name}
@@ -533,58 +585,6 @@ export default function LeirskoleAdmin() {
             weekName={week.name}
             maxDailyHours={week.max_daily_hours}
           />
-        </Step>
-
-        <Step
-          n={2}
-          title="Ukeplan"
-          subtitle="Hvilke aktiviteter i økt 1–3 hver dag"
-          status={
-            planFilled === 0
-              ? { label: 'Ikke fylt ut', tone: 'todo' }
-              : { label: `${planFilled} av ${planTotal} ruter`, tone: planFilled >= planTotal ? 'done' : 'warn' }
-          }
-          open={openStep === 2}
-          onToggle={() => setOpenStep(openStep === 2 ? null : 2)}
-        >
-          <LeirskoleWeekPlanCard week={week} />
-          <LeirskoleActivityTypesCard />
-        </Step>
-
-        <Step
-          n={3}
-          title="Vaktplan"
-          subtitle={`Generer vakter (maks ${Number(week.max_daily_hours ?? 8)}t/dag) og fordel aktiviteter`}
-          status={
-            !hasSchedule
-              ? { label: 'Ikke generert', tone: 'todo' }
-              : (weekActivities ?? []).length === 0
-                ? { label: 'Mangler aktiviteter', tone: 'warn' }
-                : { label: `${(posts ?? []).length} vakter`, tone: 'done' }
-          }
-          open={openStep === 3}
-          onToggle={() => setOpenStep(openStep === 3 ? null : 3)}
-        >
-          <LeirskoleKitchenCard week={week} staff={staff ?? []} />
-          <LeirskolePostsCard
-            week={week}
-            staff={staff ?? []}
-            onSelectStaff={(staffId) => setSelectedStaffId(staffId)}
-          />
-          <LeirskoleAutoActivityCard week={week} staff={staff ?? []} />
-          <LeirskoleDayActivityCard week={week} staff={staff ?? []} />
-        </Step>
-
-        <Step
-          n={4}
-          title="Oppgaver"
-          subtitle="Beskjeder og oppgaver til lederne"
-          status={{ label: `${(tasks ?? []).length} sendt`, tone: (tasks ?? []).length ? 'done' : 'todo' }}
-          open={openStep === 4}
-          onToggle={() => setOpenStep(openStep === 4 ? null : 4)}
-        >
-          {taskPanel}
-          <LeirskoleSessionInfoCard weekId={week.id} staff={staff ?? []} />
         </Step>
       </div>
 
