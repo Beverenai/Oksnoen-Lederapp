@@ -474,6 +474,15 @@ export default function More() {
       />
 
       <OksnoenPlusDialog open={plusOpen} onOpenChange={setPlusOpen} />
+
+      {effectiveLeader?.id && accessMode === 'leirskole' && (
+        <LeirskoleCompetenceSheet
+          open={compOpen}
+          onOpenChange={setCompOpen}
+          leaderId={effectiveLeader.id}
+          current={myCompetencies ?? []}
+        />
+      )}
     </div>
   );
 }
