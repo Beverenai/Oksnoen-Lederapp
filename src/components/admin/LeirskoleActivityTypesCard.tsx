@@ -69,7 +69,9 @@ export function LeirskoleActivityTypesCard() {
         <span className="shrink-0 text-xs text-muted-foreground">
           {open ? 'Lukk' : 'Åpne for å endre'}
         </span>
-        <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {open && (
@@ -99,59 +101,59 @@ export function LeirskoleActivityTypesCard() {
           </div>
 
           <div className="space-y-1.5">
-        {list.map((t, i) => (
-          <div
-            key={t.id}
-            className={`flex items-center gap-2 rounded-2xl bg-muted/40 px-3 py-2 ${
-              t.is_active ? '' : 'opacity-60'
-            }`}
-          >
-            <Input
-              value={t.emoji}
-              onChange={(e) => update.mutate({ id: t.id, emoji: e.target.value || '•' })}
-              className="h-8 w-12 border-none bg-transparent px-0 text-center"
-              maxLength={4}
-            />
-            <Input
-              defaultValue={t.label}
-              onBlur={(e) => {
-                const v = e.target.value.trim();
-                if (v && v !== t.label) update.mutate({ id: t.id, label: v });
-              }}
-              className="h-8 flex-1 border-none bg-transparent px-0 text-sm font-medium"
-            />
-            <div className="flex items-center gap-0.5">
-              <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Opp" onClick={() => move(i, -1)}>
-                <ArrowUp className="h-3.5 w-3.5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Ned" onClick={() => move(i, 1)}>
-                <ArrowDown className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-            <Switch
-              checked={t.is_active}
-              onCheckedChange={(v) => update.mutate({ id: t.id, is_active: v })}
-              aria-label="Aktiv"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              aria-label="Slett"
-              onClick={() => {
-                if (confirm(`Slette "${t.label}"?`)) remove.mutate(t.id);
-              }}
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+            {list.map((t, i) => (
+              <div
+                key={t.id}
+                className={`flex items-center gap-2 rounded-2xl bg-muted/40 px-3 py-2 ${
+                  t.is_active ? '' : 'opacity-60'
+                }`}
+              >
+                <Input
+                  value={t.emoji}
+                  onChange={(e) => update.mutate({ id: t.id, emoji: e.target.value || '•' })}
+                  className="h-8 w-12 border-none bg-transparent px-0 text-center"
+                  maxLength={4}
+                />
+                <Input
+                  defaultValue={t.label}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v && v !== t.label) update.mutate({ id: t.id, label: v });
+                  }}
+                  className="h-8 flex-1 border-none bg-transparent px-0 text-sm font-medium"
+                />
+                <div className="flex items-center gap-0.5">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Opp" onClick={() => move(i, -1)}>
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Ned" onClick={() => move(i, 1)}>
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <Switch
+                  checked={t.is_active}
+                  onCheckedChange={(v) => update.mutate({ id: t.id, is_active: v })}
+                  aria-label="Aktiv"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  aria-label="Slett"
+                  onClick={() => {
+                    if (confirm(`Slette "${t.label}"?`)) remove.mutate(t.id);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+            {list.length === 0 && (
+              <p className="py-4 text-center text-xs text-muted-foreground">Ingen aktiviteter lagt inn ennå.</p>
+            )}
           </div>
-        ))}
-        {list.length === 0 && (
-          <p className="py-4 text-center text-xs text-muted-foreground">Ingen aktiviteter lagt inn ennå.</p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
-  )}
-</div>
   );
 }
