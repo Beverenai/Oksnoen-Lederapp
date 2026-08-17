@@ -182,6 +182,12 @@ export default function Leirskole() {
     [weekStaff, effectiveLeader?.id],
   );
 
+  /** Har jeg kjøkken hele dagen i dag? */
+  const kitchenToday = useMemo(
+    () => !!myStaffId && (kitchenDays ?? []).some((k) => k.staff_id === myStaffId && k.date === today),
+    [kitchenDays, myStaffId, today],
+  );
+
   /** Kollegaer på min neste vakt. */
   const nextShiftCrew = useMemo(() => {
     if (!nextShift) return [] as AvatarPerson[];
@@ -290,6 +296,16 @@ export default function Leirskole() {
       )}
 
       {/* Denne økten skal du */}
+      {kitchenToday && (
+        <div className="oks-ls-pill flex items-center gap-2 border-[hsl(var(--oks-ls-green))]/50 p-4">
+          <ChefHat className="h-5 w-5 text-[hsl(var(--oks-ls-green))]" />
+          <div>
+            <p className="text-sm font-bold">Kjøkken hele dagen</p>
+            <p className="text-xs text-muted-foreground">Du står på kjøkkenet i dag — ingen andre økter.</p>
+          </div>
+        </div>
+      )}
+
       {(nextShift || myInfo.length > 0) && (
         <div className="oks-ls-pill p-4">
           <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
