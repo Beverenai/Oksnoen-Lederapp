@@ -15,7 +15,6 @@ import {
   type LeirskoleStaff,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
-import { hhmm } from '@/lib/leirskoleDates';
 import {
   runLeirskoleGenerate,
   type LeirskoleGenerateMode,
