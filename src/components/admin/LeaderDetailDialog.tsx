@@ -41,6 +41,8 @@ interface LeaderDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
+  /** Kalles med ny rolle så lista kan oppdateres uten full oppfriskning. */
+  onRoleChanged?: (role: AppRole) => void;
   currentRole?: AppRole;
 }
 
@@ -49,6 +51,7 @@ export function LeaderDetailDialog({
   open, 
   onOpenChange, 
   onSaved,
+  onRoleChanged,
   currentRole = 'leader'
 }: LeaderDetailDialogProps) {
   const { showSuccess, showError, showInfo } = useStatusPopup();
@@ -56,6 +59,7 @@ export function LeaderDetailDialog({
   const [isUploading, setIsUploading] = useState(false);
   const [isResettingPin, setIsResettingPin] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [roleStatus, setRoleStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   
   // Change notification state
   const [showNotifyDialog, setShowNotifyDialog] = useState(false);
