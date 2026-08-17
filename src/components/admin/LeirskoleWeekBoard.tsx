@@ -325,8 +325,12 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           <PopoverContent align="end" className="w-64 p-1">
             {[
               { mode: 'all' as const, title: 'Generer alt', sub: 'Ukeplan + vaktplan + aktiviteter' },
+              {
+                mode: 'schedule' as const,
+                title: 'Vaktplan fra ukeplanen',
+                sub: 'Ledere fylles inn, roterer på aktiviteter · maks 8t',
+              },
               { mode: 'plan' as const, title: 'Tilfeldig ukeplan', sub: 'Fyll bare tomme ruter' },
-              { mode: 'schedule' as const, title: 'Kun vaktplan + aktiviteter', sub: 'Behold ukeplanen som den er' },
             ].map((o) => (
               <button
                 key={o.mode}
