@@ -512,6 +512,15 @@ export default function Home() {
   // App-wide inactive mode (off-season): the real interactive 3D lederpass
   // fills the entire home surface. Chat remains reachable via bottom nav.
   // Superadmin keeps the full home to manage the app.
+  // Leirskole-modus: helt egen app-flate.
+  if (accessMode === 'leirskole') {
+    return (
+      <div className="mx-auto w-full max-w-2xl">
+        <LeirskolePage />
+      </div>
+    );
+  }
+
   if (limitedView) {
     return (
       <div className="mx-auto w-full max-w-2xl">
