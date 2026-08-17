@@ -64,6 +64,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const { data: types } = useLeirskoleActivityTypes(true);
   const [target, setTarget] = useState<CellTarget | null>(null);
   const [summary, setSummary] = useState<LeirskoleGenerateSummary | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const dates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
 
@@ -231,7 +232,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             Trykk på en rute for å endre aktiviteter eller hvem som tar dem.
           </p>
         </div>
-        <Popover>
+        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
           <PopoverTrigger asChild>
             <Button className="gap-2 rounded-full" disabled={generate.isPending}>
               <Wand2 className="h-4 w-4" />
@@ -247,7 +248,10 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
               <button
                 key={o.mode}
                 type="button"
-                onClick={() => generate.mutate(o.mode)}
+                onClick={() => {
+                  setMenuOpen(false);
+                  generate.mutate(o.mode);
+                }}
                 className="w-full rounded-xl px-3 py-2 text-left hover:bg-muted"
               >
                 <p className="text-sm font-semibold">{o.title}</p>
