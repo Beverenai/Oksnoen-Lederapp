@@ -1,0 +1,109 @@
+import { LEIRSKOLE_COMPETENCIES } from '@/lib/leirskoleCompetencies';
+
+/** Aktivitetene lederne kan settes på — samme nøkler som kompetansene. */
+export const LEIRSKOLE_ACTIVITIES = LEIRSKOLE_COMPETENCIES;
+
+export type LeirskoleActivityKey = (typeof LEIRSKOLE_ACTIVITIES)[number]['key'];
+
+export const LEIRSKOLE_SESSIONS = [
+  { key: 'formiddag', label: 'Formiddag' },
+  { key: 'ettermiddag', label: 'Ettermiddag' },
+  { key: 'kveld', label: 'Kveld' },
+] as const;
+
+export type LeirskoleSessionKey = (typeof LEIRSKOLE_SESSIONS)[number]['key'];
+
+export function sessionLabel(key: string) {
+  return LEIRSKOLE_SESSIONS.find((s) => s.key === key)?.label ?? key;
+}
+
+export function activityLabel(key: string) {
+  return LEIRSKOLE_ACTIVITIES.find((a) => a.key === key)?.label ?? key;
+}
+
+export function activityEmoji(key: string) {
+  return LEIRSKOLE_ACTIVITIES.find((a) => a.key === key)?.emoji ?? '•';
+}
+
+export interface ActivityCandidate {
+  leaderId: string;
+  name: string;
+  /** Kompetanser lederen har. Tom liste = kan alt (ingen registrert kompetanse). */
+  competencies: string[];
+}
+
+export interface ActivityHistoryRow {
+  leader_id: string;
+  activity: string;
+}
+
+export interface GeneratedActivity {
+  leaderId: string;
+  name: string;
+  activity: LeirskoleActivityKey | string;
+  /** true hvis lederen har hatt aktiviteten før (alle har fått den minst én gang). */
+  repeat: boolean;
+  /** true hvis lederen mangler registrert kompetanse på aktiviteten. */
+  outsideCompetence: boolean;
+}
+
+/**
+ * Rettferdig fordeling: lederen som har hatt aktiviteten færrest ganger får den først,
+ * og ingen får samme aktivitet igjen før alle (som kan den) har hatt den.
+ * Kompetanse respekteres når noen faktisk har kompetansen.
+ */
+export function generateActivityAssignments(
+  candidates: ActivityCandidate[],
+  history: ActivityHistoryRow[],
+  activities: readonly string[] = LEIRSKOLE_ACTIVITIES.map((a) => a.key),
+): GeneratedActivity[] {
+  const counts = new Map<string, number>(); // `${leaderId}|${activity}`
+  const totals = new Map<string, number>(); // leaderId -> antall tildelinger totalt
+  history.forEach((row) => {
+    const key = `${row.leader_id}|${row.activity}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    totals.set(row.leader_id, (totals.get(row.leader_id) ?? 0) + 1);
+  });
+
+  const can = (c: ActivityCandidate, activity: string) =>
+    c.competencies.length === 0 || c.competencies.includes(activity);
+
+  const result: GeneratedActivity[] = [];
+  const taken = new Set<string>(); // ledere som allerede har fått i denne runden
+
+  // Aktiviteter med færrest kvalifiserte ledere fordeles først (vanskeligst å dekke).
+  const ordered = [...activities].sort(
+    (a, b) =>
+      candidates.filter((c) => can(c, a)).length - candidates.filter((c) => can(c, b)).length,
+  );
+
+  for (const activity of ordered) {
+    const pool = candidates.filter((c) => !taken.has(c.leaderId));
+    if (pool.length === 0) break;
+
+    const qualified = pool.filter((c) => can(c, activity));
+    const usePool = qualified.length > 0 ? qualified : pool;
+
+    const best = [...usePool].sort((a, b) => {
+      const ca = counts.get(`${a.leaderId}|${activity}`) ?? 0;
+      const cb = counts.get(`${b.leaderId}|${activity}`) ?? 0;
+      if (ca !== cb) return ca - cb; // færrest ganger på denne aktiviteten
+      const ta = totals.get(a.leaderId) ?? 0;
+      const tb = totals.get(b.leaderId) ?? 0;
+      if (ta !== tb) return ta - tb; // deretter færrest aktiviteter totalt
+      return a.name.localeCompare(b.name);
+    })[0];
+
+    if (!best) continue;
+    taken.add(best.leaderId);
+    result.push({
+      leaderId: best.leaderId,
+      name: best.name,
+      activity,
+      repeat: (counts.get(`${best.leaderId}|${activity}`) ?? 0) > 0,
+      outsideCompetence: best.competencies.length > 0 && !best.competencies.includes(activity),
+    });
+  }
+
+  return result;
+}

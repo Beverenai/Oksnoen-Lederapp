@@ -182,12 +182,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return () => root.classList.remove('oks-offseason-theme');
   }, [accessMode]);
 
-  // Leirskole-tema: eget mørkt tema med teal aksent
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle('oks-leirskole-theme', accessMode === 'leirskole');
-    return () => root.classList.remove('oks-leirskole-theme');
-  }, [accessMode]);
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
@@ -197,6 +191,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [showHajoloTooltip, setShowHajoloTooltip] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Leirskole-tema: mørkt tema i leirskole-modus og på alle leirskole-sider
+  const leirskoleSurface =
+    accessMode === 'leirskole' || location.pathname.startsWith('/leirskole') ||
+    location.pathname.startsWith('/admin/leirskole');
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('oks-leirskole-theme', leirskoleSurface);
+    return () => root.classList.remove('oks-leirskole-theme');
+  }, [leirskoleSurface]);
 
   // Collapsible header state (Facebook/Instagram-style)
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -492,8 +497,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div
       className={cn(
         'bg-background flex min-h-[100svh] lg:min-h-dvh flex-col overflow-x-hidden w-full max-w-full pl-safe pr-safe',
-        inactiveForUser && accessMode !== 'leirskole' && 'oks-offseason-bg min-h-[100dvh]',
-        accessMode === 'leirskole' && 'oks-leirskole-bg min-h-[100dvh]',
+        inactiveForUser && !leirskoleSurface && 'oks-offseason-bg min-h-[100dvh]',
+        leirskoleSurface && 'oks-leirskole-bg min-h-[100dvh]',
       )}
     >
       {/* View As Banner */}

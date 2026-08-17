@@ -12,8 +12,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users } from 'lucide-react';
-import { useActiveLeirskoleWeek, useLeirskoleSchedule, useLeirskoleStaff } from '@/hooks/useLeirskole';
+import {
+  useActiveLeirskoleWeek,
+  useLeirskoleActivities,
+  useLeirskoleSchedule,
+  useLeirskoleStaff,
+} from '@/hooks/useLeirskole';
 import { LeirskoleAccessCard } from '@/components/admin/LeirskoleAccessCard';
+import { LeirskoleActivityCard } from '@/components/admin/LeirskoleActivityCard';
+import { LeirskoleLeaderSheet } from '@/components/admin/LeirskoleLeaderSheet';
 import { LeirskolePostsCard } from '@/components/admin/LeirskolePostsCard';
 import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
 import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
@@ -44,6 +51,8 @@ export default function LeirskoleAdmin() {
   const { data: week, isLoading } = useActiveLeirskoleWeek();
   const { data: staff } = useLeirskoleStaff(week?.id);
   const { data: posts } = useLeirskoleSchedule(week?.id);
+  const { data: weekActivities } = useLeirskoleActivities(week?.id);
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
 
   const [taskDraft, setTaskDraft] = useState({ title: '', description: '', due_at: '' });
   const [taskAssignAll, setTaskAssignAll] = useState(true);
@@ -200,6 +209,16 @@ export default function LeirskoleAdmin() {
     return map;
   }, [staff]);
 
+  const activitiesByLeader = useMemo(() => {
+    const map = new Map<string, string[]>();
+    (weekActivities ?? []).forEach((a) => {
+      map.set(a.leader_id, [...(map.get(a.leader_id) ?? []), a.activity]);
+    });
+    return map;
+  }, [weekActivities]);
+
+  const selectedStaff = (staff ?? []).find((s) => s.id === selectedStaffId) ?? null;
+
   if (!isAdmin) {
     return <p className="py-16 text-center text-muted-foreground">Kun for admin.</p>;
   }
@@ -302,7 +321,12 @@ export default function LeirskoleAdmin() {
         staff={staff ?? []}
         hoursByStaff={hoursByStaff}
         maxDailyHours={week.max_daily_hours}
+        activitiesByLeader={activitiesByLeader}
+        onSelect={(s) => setSelectedStaffId(s.id)}
       />
+
+      {/* Aktivitetsgenerator */}
+      <LeirskoleActivityCard week={week} staff={staff ?? []} />
 
       <LeirskoleAccessCard
         weekId={week.id}
@@ -408,6 +432,19 @@ export default function LeirskoleAdmin() {
           ))}
         </div>
       </div>
+
+      {selectedStaff?.leader && (
+        <LeirskoleLeaderSheet
+          open={!!selectedStaff}
+          onOpenChange={(v) => !v && setSelectedStaffId(null)}
+          weekId={week.id}
+          leaderId={selectedStaff.leader.id}
+          leaderName={selectedStaff.leader.name}
+          imageUrl={selectedStaff.leader.profile_image_url}
+          competencies={selectedStaff.leader.leirskole_competencies ?? []}
+          hours={hoursByStaff.get(selectedStaff.id) ?? 0}
+        />
+      )}
     </div>
   );
 }

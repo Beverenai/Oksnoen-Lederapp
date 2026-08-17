@@ -44,6 +44,9 @@ import { isLimitedAccessRoute, isLeirskoleRoute } from '@/lib/limitedAccess';
 import { useAccessMode } from '@/hooks/useViewMode';
 import ViewModeSwitcher from '@/components/layout/ViewModeSwitcher';
 import { IdCard, MessageCircle, Circle, Crown, Camera, ChevronRight, Tent, Users } from 'lucide-react';
+import { Award } from 'lucide-react';
+import { LeirskoleCompetenceSheet } from '@/components/leirskole/LeirskoleCompetenceSheet';
+import { useMyLeirskoleCompetencies } from '@/hooks/useLeirskole';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { TinderIcon } from '@/components/icons/TinderIcon';
 import { usePovCurrentRoll } from '@/hooks/usePov';
@@ -120,6 +123,8 @@ export default function More() {
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
   const [plusOpen, setPlusOpen] = useState(false);
+  const [compOpen, setCompOpen] = useState(false);
+  const { data: myCompetencies } = useMyLeirskoleCompetencies();
 
   useEffect(() => {
     let cancelled = false;
@@ -324,6 +329,12 @@ export default function More() {
     {
       label: 'Ditt',
       items: [
+        {
+          icon: Award,
+          label: 'Min kompetanse',
+          desc: 'Hva du kan ha ansvar for',
+          onClick: () => setCompOpen(true),
+        },
         { to: '/profile', icon: User, label: 'Min Profil', desc: 'Bilde og innstillinger' },
       ],
     },
@@ -463,6 +474,15 @@ export default function More() {
       />
 
       <OksnoenPlusDialog open={plusOpen} onOpenChange={setPlusOpen} />
+
+      {effectiveLeader?.id && accessMode === 'leirskole' && (
+        <LeirskoleCompetenceSheet
+          open={compOpen}
+          onOpenChange={setCompOpen}
+          leaderId={effectiveLeader.id}
+          current={myCompetencies ?? []}
+        />
+      )}
     </div>
   );
 }

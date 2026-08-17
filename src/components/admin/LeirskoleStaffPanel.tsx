@@ -27,12 +27,23 @@ interface Props {
   /** timer per staff-id fra vaktplanen */
   hoursByStaff: Map<string, number>;
   maxDailyHours?: number | null;
+  /** aktiviteter lederen har fått (leader_id -> aktivitetsnøkler) */
+  activitiesByLeader?: Map<string, string[]>;
+  /** åpne detaljark for en leder */
+  onSelect?: (staff: StaffRow) => void;
 }
 
 const initials = (name: string) =>
   name.split(' ').filter(Boolean).slice(0, 2).map((n) => n[0]?.toUpperCase()).join('');
 
-export function LeirskoleStaffPanel({ weekName, weekDates, staff, hoursByStaff }: Props) {
+export function LeirskoleStaffPanel({
+  weekName,
+  weekDates,
+  staff,
+  hoursByStaff,
+  activitiesByLeader,
+  onSelect,
+}: Props) {
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [filter, setFilter] = useState<'alle' | 'mangler'>('alle');
@@ -116,10 +127,14 @@ export function LeirskoleStaffPanel({ weekName, weekDates, staff, hoursByStaff }
           {filtered.map((s) => {
             const comps = s.leader?.leirskole_competencies ?? [];
             const hours = hoursByStaff.get(s.id) ?? 0;
+            const acts = (s.leader?.id && activitiesByLeader?.get(s.leader.id)) || [];
             return (
               <Card
                 key={s.id}
-                className={`overflow-hidden border-2 ${comps.length ? 'border-primary/40' : 'border-destructive/40'}`}
+                onClick={() => onSelect?.(s)}
+                className={`cursor-pointer overflow-hidden border-2 transition-colors hover:bg-card ${
+                  comps.length ? 'border-primary/40' : 'border-destructive/40'
+                }`}
               >
                 <CardContent className={view === 'grid' ? 'space-y-3 p-4' : 'flex items-center gap-3 p-3'}>
                   <div className="flex items-start gap-3">
@@ -138,7 +153,12 @@ export function LeirskoleStaffPanel({ weekName, weekDates, staff, hoursByStaff }
                         <Clock className="h-3 w-3" /> {hours.toFixed(1)} t denne uken
                       </p>
                     </div>
-                    <Button size="icon" variant="ghost" onClick={() => setEditing(s)} aria-label="Rediger kompetanse">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={(e) => { e.stopPropagation(); setEditing(s); }}
+                      aria-label="Rediger kompetanse"
+                    >
                       <Pencil className="h-4 w-4" />
                     </Button>
                   </div>
@@ -159,6 +179,12 @@ export function LeirskoleStaffPanel({ weekName, weekDates, staff, hoursByStaff }
                       ))
                     )}
                   </div>
+
+                  {acts.length > 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Har hatt: {acts.map(competenceLabel).join(', ')}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             );
