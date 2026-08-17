@@ -59,7 +59,9 @@ const sessionRank = (s: string) => {
 };
 
 const canDo = (staff: AutoStaff, activity: string) =>
-  staff.competencies.length === 0 || staff.competencies.includes(activity);
+  !activityRequiresCompetence(activity) ||
+  staff.competencies.length === 0 ||
+  staff.competencies.includes(activity);
 
 export function autoAssignWeek({
   slots,
