@@ -175,11 +175,8 @@ Deno.serve(async (req) => {
       .eq("leader_id", leaderRow.id);
     if (rolesError) return json({ error: rolesError.message }, 500);
     const roleList = (roles ?? []).map((r: any) => r.role);
-    console.log("[auth] leader", leaderRow.id, "roles", JSON.stringify(roleList));
     const isAdmin = roleList.some((r: any) => String(r) === "admin" || String(r) === "superadmin");
-    if (!isAdmin) {
-      return json({ error: `Kun admin (leder ${leaderRow.id}, roller: ${roleList.join(", ") || "ingen"})` }, 403);
-    }
+    if (!isAdmin) return json({ error: "Kun admin" }, 403);
 
     const body = await req.json().catch(() => ({}));
     const week_id: string = body.week_id;
