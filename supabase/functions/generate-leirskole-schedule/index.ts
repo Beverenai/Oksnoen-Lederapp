@@ -319,6 +319,51 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Oppfyllingsrunde: alle ledere skal jobbe opp mot 8 timer hver dag ──
+    // Legger til ekstra ledere på økter/måltider (utover minimumsbemanningen)
+    // så lenge 8t-taket og 11t hvile-regelen holdes.
+    const takenPairs = new Set<string>([
+      ...toKeep.map((a: any) => `${a.post_id}|${a.staff_id}`),
+      ...newAssignments.map((a: any) => `${a.post_id}|${a.staff_id}`),
+    ]);
+
+    const allDates = [...new Set(posts.map(p => p.date))].sort();
+    const fillPosts = (date: string) =>
+      posts
+        .filter(p => p.date === date && !isNight(p))
+        .sort((a, b) => {
+          if (a.is_main_shift !== b.is_main_shift) return a.is_main_shift ? -1 : 1;
+          return Number(b.duration_hours) - Number(a.duration_hours);
+        });
+
+    for (const date of allDates) {
+      const dayPosts = fillPosts(date);
+      let progress = true;
+      while (progress) {
+        progress = false;
+        // Ta den lederen som har minst timer denne dagen først.
+        const hungry = staff
+          .map(st => ({ st, s: stateById.get(st.id)!, target: Math.min(8, Number(st.max_daily_hours ?? 8)) }))
+          .filter(x => (x.s.hoursByDate[date] ?? 0) < x.target - 0.001)
+          .sort((a, b) => (a.s.hoursByDate[date] ?? 0) - (b.s.hoursByDate[date] ?? 0));
+
+        for (const { st, s } of hungry) {
+          for (const post of dayPosts) {
+            if (takenPairs.has(`${post.id}|${st.id}`)) continue;
+            if (!canAssign(st, post, s, availability, minRest).ok) continue;
+            apply(post, s);
+            takenPairs.add(`${post.id}|${st.id}`);
+            newAssignments.push({
+              post_id: post.id, staff_id: st.id, is_locked: false,
+              assigned_manually: false, generator_run_id: run.id,
+            });
+            progress = true;
+            break;
+          }
+        }
+      }
+    }
+
     if (toDelete.length) {
       const { error: deleteError } = await supa
         .from("leirskole_assignments")
