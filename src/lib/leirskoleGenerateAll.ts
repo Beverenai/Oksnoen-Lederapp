@@ -118,14 +118,15 @@ export async function runLeirskoleGenerate({
   summary.shifts = gen?.stats?.assigned ?? 0;
 
   // ---- 3. Aktiviteter til lederne ---------------------------------------
-  const [{ data: types }, { data: cells }, { data: posts }, { data: staff }, { data: existing }, { data: history }] =
+  const [{ data: types }, { data: cells }, { data: posts }, { data: weekDays }, { data: staff }, { data: existing }, { data: history }] =
     await Promise.all([
       supabase.from('leirskole_activity_types').select('key, label, emoji').eq('is_active', true),
-      supabase.from('leirskole_week_plan_cells').select('date, row_index, content').eq('week_id', weekId),
+      supabase.from('leirskole_week_plan_cells').select('date, row_index, content, post_id').eq('week_id', weekId),
       supabase
         .from('leirskole_posts')
-        .select('date, name, assignments:leirskole_assignments(staff_id)')
+        .select('id, date, name, is_custom, assignments:leirskole_assignments(staff_id)')
         .eq('week_id', weekId),
+      supabase.from('leirskole_week_days').select('date, day_type').eq('week_id', weekId),
       supabase
         .from('leirskole_staff')
         .select('id, leader_id, leader:leaders(id, name, leirskole_competencies)')
