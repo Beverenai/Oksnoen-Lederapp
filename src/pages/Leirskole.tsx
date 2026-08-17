@@ -104,6 +104,15 @@ export default function Leirskole() {
   const todayHours = todayShifts.reduce((s, p) => s + Number(p.duration_hours ?? 0), 0);
   const maxDaily = Number(week?.max_daily_hours ?? 8);
 
+  /** Timer per dag for mine vakter — så lederen ser at maks 8t/dag holdes. */
+  const hoursByDay = useMemo(() => {
+    const map = new Map<string, number>();
+    shifts.forEach((p) => {
+      map.set(p.date, (map.get(p.date) ?? 0) + Number(p.duration_hours ?? 0));
+    });
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [shifts]);
+
   const byDay = useMemo(() => {
     const groups = new Map<string, NonNullable<typeof posts>>();
     (posts ?? []).forEach((p) => {
@@ -307,6 +316,19 @@ export default function Leirskole() {
           <CardDescription>
             {myHours.toFixed(1)} timer denne uken · maks {maxDaily}t per dag
           </CardDescription>
+          {hoursByDay.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {hoursByDay.map(([date, hours]) => (
+                <Badge
+                  key={date}
+                  variant={date === today ? 'default' : 'secondary'}
+                  className="tabular-nums text-[10.5px]"
+                >
+                  {dayLabel(date)} · {hours.toFixed(1)}/{maxDaily}t
+                </Badge>
+              ))}
+            </div>
+          )}
         </CardHeader>
         <CardContent className="space-y-2">
           {shiftsLoading ? (

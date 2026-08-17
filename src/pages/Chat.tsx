@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
-import { useActiveLeirskoleWeek, useIsLeirskoleStaff } from '@/hooks/useLeirskole';
+import { useActiveLeirskoleWeek, useIsLeirskoleStaff, useLeirskoleStaff } from '@/hooks/useLeirskole';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAccessMode } from '@/hooks/useViewMode';
 import { Button } from '@/components/ui/button';
@@ -98,6 +98,11 @@ export default function Chat() {
   const canUsePeriodChat = !limited;
   const { data: activeLeirskoleWeek } = useActiveLeirskoleWeek();
   const { data: isLeirskoleStaff } = useIsLeirskoleStaff(activeLeirskoleWeek?.id);
+  const { data: leirskoleStaff } = useLeirskoleStaff(activeLeirskoleWeek?.id);
+  const leirskoleLeaderIds = useMemo(
+    () => new Set((leirskoleStaff ?? []).map((s) => s.leader_id)),
+    [leirskoleStaff],
+  );
   // Leirskole-chatten er kun for de som er satt opp på den aktive leirskoleuken (+ admin).
   const canUseLeirskoleChat =
     (isAdmin && accessMode !== 'offseason') || (leirskoleView && !!isLeirskoleStaff);
@@ -292,12 +297,20 @@ export default function Chat() {
     };
   }, [channel, load]);
 
-  /** Ledere som kan tagges: periodechat = aktive, off season = alle med konto. */
+  /**
+   * Ledere som kan tagges: periodechat = aktive, leirskole = kun de som er satt
+   * opp på den aktive leirskoleuken, off season = alle med konto.
+   */
   const taggableLeaders = useMemo(() => {
     const all = Object.values(leaders).filter((l) => !l.is_external);
-    const pool = channel === 'period' ? all.filter((l) => l.is_active !== false) : all;
+    const pool =
+      channel === 'period'
+        ? all.filter((l) => l.is_active !== false)
+        : channel === 'leirskole'
+          ? all.filter((l) => leirskoleLeaderIds.has(l.id))
+          : all;
     return pool.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
-  }, [leaders, channel]);
+  }, [leaders, channel, leirskoleLeaderIds]);
 
   const mentionMatches = useMemo(() => {
     if (!mention) return [];

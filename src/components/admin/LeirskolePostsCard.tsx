@@ -79,6 +79,7 @@ export function LeirskolePostsCard({
     is_night: false,
   });
   const [keepLocked, setKeepLocked] = useState(true);
+  const [publishAfter, setPublishAfter] = useState(true);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
@@ -204,6 +205,10 @@ export function LeirskolePostsCard({
       showError('Denne vaktplanen styres fra jobbplattformen');
       return;
     }
+    if (staff.length === 0) {
+      showError('Legg til ledere på uken før du genererer');
+      return;
+    }
     try {
       const res = await generate.mutateAsync({ weekId: week.id, keepLocked });
       const missing = res.stats?.missing?.length ?? 0;
@@ -212,9 +217,44 @@ export function LeirskolePostsCard({
           ? `Vaktplan generert — ${res.stats?.assigned ?? 0} vakter fordelt`
           : `Generert med ${missing} udekkede vakter`,
       );
+      if (publishAfter) await publishAndNotify();
     } catch (error: unknown) {
       showError(errorMessage(error, 'Kunne ikke generere vaktplan'));
     }
+  };
+
+  /**
+   * Publiserer planen og varsler lederne — men kun de som faktisk er satt opp
+   * på denne uken, og bare når uken er den aktive.
+   */
+  const publishAndNotify = async () => {
+    const { error } = await supabase
+      .from('leirskole_weeks')
+      .update({ schedule_published_at: new Date().toISOString() })
+      .eq('id', week.id);
+    if (error) {
+      toast.warning('Vaktplanen ble generert, men kunne ikke publiseres.');
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ['leirskole-weeks'] });
+    qc.invalidateQueries({ queryKey: ['leirskole-active-week'] });
+
+    const leaderIds = staff.map((s) => s.leader_id);
+    if (!week.is_active || leaderIds.length === 0) {
+      toast.info('Vaktplanen er publisert. Varsling sendes kun for den aktive uken.');
+      return;
+    }
+    const { data, error: pushError } = await supabase.functions.invoke('push-send', {
+      body: {
+        title: 'Leirskole-vaktplan',
+        message: 'Vaktplanen er klar — se dine vakter i appen.',
+        leader_ids: leaderIds,
+        url: '/leirskole',
+        include_inactive: true,
+      },
+    });
+    if (pushError || data?.error) toast.warning('Publisert, men varslingen kunne ikke sendes.');
+    else toast.success(`Publisert og varslet ${leaderIds.length} ledere`);
   };
 
   const byDay = useMemo(() => {
@@ -324,11 +364,18 @@ export function LeirskolePostsCard({
             <span className="text-sm">Behold låste vakter</span>
             <Switch checked={keepLocked} onCheckedChange={setKeepLocked} />
           </div>
-          <Button className="w-full gap-2" onClick={run} disabled={generate.isPending || !posts?.length}>
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Publiser og varsle lederne</span>
+            <Switch checked={publishAfter} onCheckedChange={setPublishAfter} />
+          </div>
+          <Button className="w-full gap-2" onClick={run} disabled={generate.isPending || staff.length === 0}>
             <Play className="h-4 w-4" /> {generate.isPending ? 'Genererer…' : 'Generer vaktplan'}
           </Button>
           {!posts?.length && (
-            <p className="text-[11px] text-muted-foreground">Legg inn minst én vakt før du genererer.</p>
+            <p className="text-[11px] text-muted-foreground">
+              Ingen vakter er lagt inn — generatoren lager standardplan (frokost, økt 1–3, middag, kvelds og nattevakt)
+              for alle dagene i uken, med maks {Number(week.max_daily_hours ?? 8)}t per leder per dag.
+            </p>
           )}
           </div>
         )}

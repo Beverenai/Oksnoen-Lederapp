@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Send, Trash2, Users, CalendarDays, Bell, RefreshCw, Link2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Plus, Send, Trash2, Users, CalendarDays, Bell, RefreshCw, CheckCircle2 } from 'lucide-react';
 import {
   useLeirskoleWeeks,
   useLeirskoleSchedule,
@@ -145,28 +145,12 @@ export default function LeirskoleAdmin() {
     },
   });
 
-  const { data: jobImports } = useQuery({
-    queryKey: ['leirskole-job-imports', week?.id],
-    enabled: !!week?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('leirskole_job_imports')
-        .select('*')
-        .eq('week_id', week!.id)
-        .eq('source_status', 'hired')
-        .order('name');
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['leirskole-weeks'] });
     qc.invalidateQueries({ queryKey: ['leirskole-active-week'] });
     qc.invalidateQueries({ queryKey: ['leirskole-staff'] });
     qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
     qc.invalidateQueries({ queryKey: ['leirskole-admin-tasks'] });
-    qc.invalidateQueries({ queryKey: ['leirskole-job-imports'] });
   };
 
   const createWeek = useMutation({
@@ -203,28 +187,6 @@ export default function LeirskoleAdmin() {
       invalidate();
     },
     onError: (error: unknown) => showError(errorMessage(error, 'Kunne ikke hente fra jobb-plattformen')),
-  });
-
-  const linkJobImport = useMutation({
-    mutationFn: async ({ importId, leaderId }: { importId: string; leaderId: string }) => {
-      const { error } = await supabase.rpc('link_leirskole_job_import', {
-        _import_id: importId,
-        _leader_id: leaderId,
-      });
-      if (error) throw error;
-      try {
-        await syncFromJobb();
-        return null;
-      } catch {
-        return 'Personen er koblet, men vaktplanen må hentes på nytt.';
-      }
-    },
-    onSuccess: (warning) => {
-      if (warning) toast.warning(warning);
-      else toast.success('Personen og vaktplanen er koblet');
-      invalidate();
-    },
-    onError: (error: unknown) => showError(errorMessage(error, 'Kunne ikke koble personen')),
   });
 
   const setActive = useMutation({
@@ -314,8 +276,6 @@ export default function LeirskoleAdmin() {
     },
     onSuccess: () => invalidate(),
   });
-
-  const unmatchedImports = (jobImports ?? []).filter((row) => !row.linked_leader_id);
 
   const hoursByStaff = useMemo(() => {
     const map = new Map<string, number>();
@@ -435,49 +395,6 @@ export default function LeirskoleAdmin() {
             </CardContent>
           </Card>
 
-          {(jobImports ?? []).length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Link2 className="h-4 w-4 text-primary" /> Koble personer
-                  {unmatchedImports.length > 0 && ` (${unmatchedImports.length} mangler)`}
-                </CardTitle>
-                <CardDescription>Kontroller eller endre hvilken appbruker hver ansatt er koblet til.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {(jobImports ?? []).map((imported) => (
-                  <div
-                    key={imported.id}
-                    className="grid gap-2 rounded-lg border bg-card/40 px-3 py-2 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,1fr)] sm:items-center"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{imported.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {[imported.phone, imported.email].filter(Boolean).join(' · ') || 'Ingen kontaktinfo'}
-                      </p>
-                    </div>
-                    <Select
-                      disabled={linkJobImport.isPending}
-                      value={imported.linked_leader_id ?? undefined}
-                      onValueChange={(leaderId) => linkJobImport.mutate({ importId: imported.id, leaderId })}
-                    >
-                      <SelectTrigger aria-label={`Koble ${imported.name} til appbruker`}>
-                        <SelectValue placeholder="Velg appbruker" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(allLeaders ?? []).map((candidate) => (
-                          <SelectItem key={candidate.id} value={candidate.id}>
-                            {candidate.name}
-                            {candidate.phone ? ` · ${candidate.phone}` : ''}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
 
           <LeirskoleAccessCard
             weekId={week.id}
