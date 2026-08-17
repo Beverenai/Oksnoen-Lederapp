@@ -215,6 +215,30 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
 
   const gridStyle = { gridTemplateColumns: `88px repeat(${dates.length}, minmax(150px, 1fr))` };
 
+  /** Aktiviteter i ukeplanen som ingen leder har fått ennå. */
+  const missing = useMemo(() => {
+    const out: { target: CellTarget; label: string; emoji: string | null }[] = [];
+    dates.forEach((date) => {
+      rowsFor(date).forEach((t) => {
+        if (!t || !t.session) return;
+        const lines = cellContent(t).split('\n').map((l) => l.trim()).filter(Boolean);
+        if (!lines.length) return;
+        const slotActivities = activityBySlot.get(`${date}|${t.session}`) ?? [];
+        (types ?? [])
+          .filter((ty) => lines.some((l) => l.toLowerCase().includes(ty.label.toLowerCase())))
+          .filter((ty) => !slotActivities.some((a) => a.activity === ty.key))
+          .forEach((ty) => out.push({ target: t, label: ty.label, emoji: ty.emoji }));
+      });
+    });
+    return out;
+  }, [dates, activityBySlot, types, planContent, postsByDate, specialDays]);
+
+  const missingByDay = useMemo(() => {
+    const map = new Map<string, typeof missing>();
+    missing.forEach((m) => map.set(m.target.date, [...(map.get(m.target.date) ?? []), m]));
+    return map;
+  }, [missing]);
+
   const LabelCell = ({ children }: { children: React.ReactNode }) => (
     <div className="sticky left-0 z-10 flex items-center bg-card px-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
       {children}
