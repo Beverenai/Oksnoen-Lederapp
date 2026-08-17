@@ -187,13 +187,30 @@ export function LeirskolePostsCard({
   });
 
   const setAssignment = useMutation({
-    mutationFn: async ({ postId, assignmentId, staffId }: { postId: string; assignmentId?: string; staffId: string }) => {
+    mutationFn: async ({
+      postId,
+      assignmentId,
+      staffId,
+      remainingAfterRemoval,
+    }: {
+      postId: string;
+      assignmentId?: string;
+      staffId: string;
+      remainingAfterRemoval?: number;
+    }) => {
       if (readOnly) throw new Error('Denne vaktplanen styres fra jobbplattformen');
       if (staffId === 'none') {
-        if (!assignmentId) return;
+        if (!assignmentId) return { removed: true } as const;
         const { error } = await supabase.from('leirskole_assignments').delete().eq('id', assignmentId);
         if (error) throw error;
-        return;
+        // Senk behovet slik at generatoren ikke fyller plassen igjen automatisk.
+        if (remainingAfterRemoval != null) {
+          await supabase
+            .from('leirskole_posts')
+            .update({ required_leaders: Math.max(0, remainingAfterRemoval) })
+            .eq('id', postId);
+        }
+        return { removed: true } as const;
       }
       if (assignmentId) {
         const { error } = await supabase
@@ -207,9 +224,14 @@ export function LeirskolePostsCard({
           .insert({ post_id: postId, staff_id: staffId, assigned_manually: true, is_locked: true });
         if (error) throw error;
       }
+      return { removed: false } as const;
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       invalidate();
+      if (result?.removed) {
+        toast.success('Vakten står nå tom');
+        return;
+      }
       // Manuelle endringer låses, og resten av planen balanseres på nytt slik
       // at en annen leder tar den vakten som ble frigjort.
       try {
@@ -575,12 +597,12 @@ export function LeirskolePostsCard({
                               />
                               <Input
                                 type="number"
-                                min={1}
+                                min={0}
                                 defaultValue={required}
                                 className="h-8 text-xs"
                                 onBlur={(e) =>
                                   Number(e.target.value) !== required &&
-                                  updatePost.mutate({ id: p.id, required_leaders: Math.max(1, Number(e.target.value) || 1) })
+                                  updatePost.mutate({ id: p.id, required_leaders: Math.max(0, Number(e.target.value) || 0) })
                                 }
                               />
                             </div>
@@ -598,7 +620,12 @@ export function LeirskolePostsCard({
                                   <Select
                                     value={a?.staff_id ?? 'none'}
                                     onValueChange={(v) =>
-                                      setAssignment.mutate({ postId: p.id, assignmentId: a?.id, staffId: v })
+                                      setAssignment.mutate({
+                                        postId: p.id,
+                                        assignmentId: a?.id,
+                                        staffId: v,
+                                        remainingAfterRemoval: Math.max(0, p.assignments.length - 1),
+                                      })
                                     }
                                   >
                                     <SelectTrigger className="h-8 flex-1 text-xs">
