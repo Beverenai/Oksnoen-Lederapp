@@ -659,6 +659,14 @@ export function useSetLeirskoleKitchenDay() {
         if (error) throw error;
         return;
       }
+      // Kun én leder på kjøkken per dag — bytt ut den som eventuelt står der.
+      await supabase
+        .from('leirskole_kitchen_days')
+        .delete()
+        .eq('week_id', weekId)
+        .eq('date', date)
+        .neq('staff_id', staffId);
+
       const { error } = await supabase
         .from('leirskole_kitchen_days')
         .upsert({ week_id: weekId, staff_id: staffId, date }, { onConflict: 'staff_id,date' });
