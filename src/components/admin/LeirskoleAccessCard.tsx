@@ -1,15 +1,18 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { useAuth } from '@/contexts/AuthContext';
+import { useViewMode } from '@/hooks/useViewMode';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tent, Search, Wrench, ShieldCheck, UserMinus } from 'lucide-react';
+import { Tent, Search, Wrench, ShieldCheck, UserMinus, Eye } from 'lucide-react';
 
 type Props = {
   weekId: string;
@@ -35,6 +38,21 @@ export function LeirskoleAccessCard({ weekId, weekName, maxDailyHours }: Props) 
   const qc = useQueryClient();
   const { showError } = useStatusPopup();
   const [search, setSearch] = useState('');
+  const navigate = useNavigate();
+  const { setViewAsLeader } = useAuth();
+  const { setViewMode } = useViewMode();
+
+  /** Se appen slik en leirskole-leder ser den: bytt til leirskole-visning og hopp hjem. */
+  const viewAsLeirskole = async (leaderId: string) => {
+    const { data, error } = await supabase.from('leaders').select('*').eq('id', leaderId).maybeSingle();
+    if (error || !data) {
+      showError(error?.message ?? 'Fant ikke lederen');
+      return;
+    }
+    setViewAsLeader(data);
+    setViewMode('leirskole');
+    navigate('/');
+  };
 
   const { data: leaders } = useQuery({
     queryKey: ['leirskole-access-leaders'],
@@ -321,6 +339,17 @@ export function LeirskoleAccessCard({ weekId, weekName, maxDailyHours }: Props) 
                   disabled={toggle.isPending}
                   onCheckedChange={(v) => toggle.mutate({ leaderId: l.id, on: v })}
                 />
+                {on && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    title="Se leirskole-appen som denne lederen"
+                    onClick={() => viewAsLeirskole(l.id)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
               </div>
             );
