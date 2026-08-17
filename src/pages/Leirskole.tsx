@@ -104,9 +104,36 @@ export default function Leirskole() {
   );
   const todayShifts = shifts.filter((p) => p.date === today);
   const upcoming = shifts.filter((p) => p.date > today);
-  const nextShift = todayShifts[0] ?? upcoming[0] ?? null;
   const todayHours = todayShifts.reduce((s, p) => s + Number(p.duration_hours ?? 0), 0);
   const maxDaily = Number(week?.max_daily_hours ?? 8);
+
+  const nowTime = useMemo(() => {
+    const n = new Date();
+    return `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
+  }, []);
+
+  /** Aktiv eller neste vakt (i dag eller senere). */
+  const nextShift = useMemo(() => {
+    const sorted = [...shifts].sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time));
+    return (
+      sorted.find(
+        (p) => p.date > today || (p.date === today && (p.start_time >= nowTime || p.end_time > nowTime)),
+      ) ?? null
+    );
+  }, [shifts, today, nowTime]);
+
+  const nextShiftSession = useMemo(
+    () => (nextShift ? sessionForShift(nextShift.start_time) : null),
+    [nextShift],
+  );
+
+  /** Aktiviteten som hører til neste vakt. */
+  const nextShiftActivity = useMemo(() => {
+    if (!nextShift || !nextShiftSession) return null;
+    return (
+      (myActivities ?? []).find((a) => a.date === nextShift.date && a.session === nextShiftSession) ?? null
+    );
+  }, [nextShift, nextShiftSession, myActivities]);
 
   const hoursByDay = useMemo(() => {
     const map = new Map<string, number>();
@@ -119,20 +146,6 @@ export default function Leirskole() {
     shifts.forEach((p) => map.set(p.date, [...(map.get(p.date) ?? []), p]));
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [shifts]);
-
-  const todayActivities = useMemo(
-    () => (myActivities ?? []).filter((a) => a.date >= today).slice(0, 3),
-    [myActivities, today],
-  );
-
-  /** Aktiviteten som hører til min neste vakt (samme dag + økt). */
-  const nextShiftActivity = useMemo(() => {
-    if (!nextShift) return null;
-    const session = sessionForShift(nextShift.start_time);
-    return (
-      (myActivities ?? []).find((a) => a.date === nextShift.date && a.session === session) ?? null
-    );
-  }, [nextShift, myActivities]);
 
   /** Hele uken dag for dag — jobbdager og fridager. */
   const weekDays = useMemo(() => {
