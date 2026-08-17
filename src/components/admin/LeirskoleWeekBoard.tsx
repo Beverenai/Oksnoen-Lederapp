@@ -25,7 +25,7 @@ import {
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
 import { LeirskoleSpecialDayTimeline } from '@/components/admin/LeirskoleSpecialDayTimeline';
 import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
-import { trimDayHours } from '@/lib/leirskoleDayHours';
+import { trimDayHours, KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import { useSeedLeirskoleSpecialDays } from '@/hooks/useSeedLeirskoleSpecialDays';
 
 const MEALS = ['Frokost', 'Middag', 'Kvelds'];
@@ -166,7 +166,13 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
 
   const maxHours = Number(week.max_daily_hours ?? 8);
 
-  /** Timer per leirskole_staff-id per dag — vises i bemanningsvelgerne. */
+  /** `${date}|${staffId}` for de som står på kjøkken hele dagen. */
+  const kitchenSet = useMemo(
+    () => new Set((kitchenDays ?? []).map((k) => `${k.date}|${k.staff_id}`)),
+    [kitchenDays],
+  );
+
+  /** Timer per leirskole_staff-id per dag — kjøkkenvakt teller som en full dag. */
   const staffHoursByDate = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
     (posts ?? []).forEach((p) => {
@@ -176,8 +182,13 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
       });
       map.set(p.date, day);
     });
+    (kitchenDays ?? []).forEach((k) => {
+      const day = map.get(k.date) ?? new Map<string, number>();
+      day.set(k.staff_id, (day.get(k.staff_id) ?? 0) + KITCHEN_DAY_HOURS);
+      map.set(k.date, day);
+    });
     return map;
-  }, [posts]);
+  }, [posts, kitchenDays]);
 
   /** Timer per leder per dag, for å se om noen er langt fra 8t. */
   const hoursByDate = useMemo(() => {
@@ -191,8 +202,15 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
       });
       map.set(p.date, day);
     });
+    (kitchenDays ?? []).forEach((k) => {
+      const l = staffToLeader.get(k.staff_id);
+      if (!l) return;
+      const day = map.get(k.date) ?? new Map<string, number>();
+      day.set(l.id, (day.get(l.id) ?? 0) + KITCHEN_DAY_HOURS);
+      map.set(k.date, day);
+    });
     return map;
-  }, [posts, staffToLeader]);
+  }, [posts, staffToLeader, kitchenDays]);
 
   const generate = useMutation({
     mutationFn: (mode: LeirskoleGenerateMode) =>
