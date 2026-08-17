@@ -135,6 +135,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
       candidates,
       (history ?? []).map((h) => ({ leader_id: h.leader_id, activity: h.activity })),
       selectedKeys,
+      requireCompetence,
     );
     setDraft(result);
   };
