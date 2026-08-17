@@ -208,10 +208,40 @@ export function LeirskoleCellSheet({
         auto_generated: false,
       });
       if (error) throw error;
+
+      // Sørg for at lederen faktisk står på vakten, slik at timene teller med.
+      const staffId = (staffOptions ?? []).find((s) => s.leaderId === leaderId)?.staffId;
+      if (!staffId) return;
+      let postId = post?.id ?? null;
+      if (!postId) {
+        const { data: found } = await supabase
+          .from('leirskole_posts')
+          .select('id, name')
+          .eq('week_id', weekId)
+          .eq('date', target.date);
+        postId =
+          (found ?? []).find((p) => (p.name ?? '').trim().toLowerCase() === target.label.trim().toLowerCase())?.id ??
+          null;
+      }
+      if (!postId) return;
+      const { data: existing } = await supabase
+        .from('leirskole_assignments')
+        .select('id')
+        .eq('post_id', postId)
+        .eq('staff_id', staffId)
+        .maybeSingle();
+      if (existing) return;
+      await supabase.from('leirskole_assignments').insert({
+        post_id: postId,
+        staff_id: staffId,
+        assigned_manually: true,
+        is_locked: true,
+      });
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['leirskole-activities'] });
-      qc.invalidateQueries({ queryKey: ['leirskole-activity-history'] });
+      ['leirskole-activities', 'leirskole-activity-history', 'leirskole-schedule', 'leirskole-my-shifts'].forEach(
+        (key) => qc.invalidateQueries({ queryKey: [key] }),
+      );
       toast.success('Oppdatert');
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke lagre'),
