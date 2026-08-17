@@ -189,6 +189,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
           candidates,
           running,
           keys,
+          requireCompetence,
         );
         if (!rows.length) continue;
         await save.mutateAsync({
