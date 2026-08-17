@@ -182,12 +182,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return () => root.classList.remove('oks-offseason-theme');
   }, [accessMode]);
 
-  // Leirskole-tema: eget mørkt tema med teal aksent
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle('oks-leirskole-theme', accessMode === 'leirskole');
-    return () => root.classList.remove('oks-leirskole-theme');
-  }, [accessMode]);
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
