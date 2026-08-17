@@ -159,7 +159,6 @@ export function LeirskoleSpecialDayTimeline({
     mutationFn: async ({ postId, staffId, on }: { postId: string; staffId: string; on: boolean }) => {
       if (on) {
         const { error } = await supabase.from('leirskole_assignments').insert({
-          week_id: weekId,
           post_id: postId,
           staff_id: staffId,
           assigned_manually: true,

@@ -121,7 +121,6 @@ export function LeirskoleCellSheet({
       if (!post?.id) throw new Error('Lagre økten først');
       if (on) {
         const { error } = await supabase.from('leirskole_assignments').insert({
-          week_id: weekId,
           post_id: post.id,
           staff_id: staffId,
           assigned_manually: true,
