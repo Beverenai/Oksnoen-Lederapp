@@ -51,6 +51,10 @@ export function LeirskoleSpecialDayTimeline({
   const [draftName, setDraftName] = useState('');
   const [openPost, setOpenPost] = useState<string | null>(null);
   const movedRef = useRef(false);
+  /** Startpunkt for peker – brukes til å skille trykk fra dra. */
+  const pendingRef = useRef<{ slot: number; y: number } | null>(null);
+  const editStartYRef = useRef(0);
+  const DRAG_PX = 6;
 
   /** Sorterte økter — ankomst/avreise har alltid én økt om gangen (ingen overlapp). */
   const sorted = useMemo(() => {
