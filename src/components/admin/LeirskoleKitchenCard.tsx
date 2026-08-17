@@ -75,6 +75,50 @@ export function LeirskoleKitchenCard({ week, staff }: { week: LeirskoleWeek; sta
     }
   };
 
+  const today = new Date().toLocaleDateString('sv-SE');
+  const [date, setDate] = useState(days.includes(today) ? today : days[0]);
+
+  const countFor = (d: string) => staff.filter((s) => isKitchen(s.id, d)).length;
+  const onKitchen = staff.filter((s) => isKitchen(s.id, date));
+  const free = staff.filter((s) => !isKitchen(s.id, date));
+
+  const row = (s: StaffRow, active: boolean) => (
+    <button
+      key={s.id}
+      type="button"
+      onClick={() => toggle(s.id, date)}
+      disabled={setKitchen.isPending}
+      aria-pressed={active}
+      className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left transition-colors ${
+        active
+          ? 'border-[hsl(var(--oks-ls-green))] bg-[hsl(var(--oks-ls-green))]/12'
+          : 'border-border/60 bg-muted/25 hover:bg-muted/50'
+      }`}
+    >
+      <Avatar className="h-9 w-9">
+        <AvatarImage src={s.leader?.profile_image_url ?? undefined} alt="" />
+        <AvatarFallback className="text-[10px]">
+          {(s.leader?.name ?? '?')
+            .split(' ')
+            .slice(0, 2)
+            .map((p) => p[0]?.toUpperCase())
+            .join('')}
+        </AvatarFallback>
+      </Avatar>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">{s.leader?.name ?? 'Ukjent'}</span>
+      <span
+        className={`flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${
+          active
+            ? 'bg-[hsl(var(--oks-ls-green))]/20 text-[hsl(var(--oks-ls-green))]'
+            : 'bg-background text-muted-foreground'
+        }`}
+      >
+        {active ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+        {active ? 'Ta av' : 'Sett på'}
+      </span>
+    </button>
+  );
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -85,8 +129,7 @@ export function LeirskoleKitchenCard({ week, staff }: { week: LeirskoleWeek; sta
           )}
         </CardTitle>
         <CardDescription>
-          Kryss av i rutenettet: leder i rad, dag i kolonne. Grønn rute = kjøkken hele dagen, og
-          lederen tas ut av alle andre økter den dagen.
+          Velg dag øverst, så setter du ledere på kjøkken. De tas ut av alle andre økter den dagen.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -96,77 +139,78 @@ export function LeirskoleKitchenCard({ week, staff }: { week: LeirskoleWeek; sta
 
         {staff.length > 0 && (
           <>
-            <div className="-mx-1 overflow-x-auto px-1">
-              <table className="w-full border-separate border-spacing-0 text-left">
-                <thead>
-                  <tr>
-                    <th className="sticky left-0 z-10 bg-card pb-2 pr-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                      Leder
-                    </th>
-                    {days.map((d) => {
-                      const s = dayShort(d);
-                      return (
-                        <th key={d} className="pb-2 text-center">
-                          <span className="block text-[11px] font-semibold">{s.day}</span>
-                          <span className="block text-[10px] text-muted-foreground">{s.num}</span>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {staff.map((s) => (
-                    <tr key={s.id}>
-                      <td className="sticky left-0 z-10 max-w-[7.5rem] truncate bg-card py-1 pr-2 text-xs font-medium">
-                        {s.leader?.name ?? 'Ukjent'}
-                      </td>
-                      {days.map((date) => {
-                        const active = isKitchen(s.id, date);
-                        return (
-                          <td key={date} className="p-0.5 text-center">
-                            <button
-                              type="button"
-                              onClick={() => toggle(s.id, date)}
-                              disabled={setKitchen.isPending}
-                              aria-label={`${s.leader?.name ?? 'Leder'} kjøkken ${dayLabel(date)}`}
-                              aria-pressed={active}
-                              className={`flex h-8 w-9 items-center justify-center rounded-xl border transition-colors ${
-                                active
-                                  ? 'border-[hsl(var(--oks-ls-green))] bg-[hsl(var(--oks-ls-green))]/25 text-[hsl(var(--oks-ls-green))]'
-                                  : 'border-border/60 bg-muted/30 text-muted-foreground/40 hover:bg-muted/60'
-                              }`}
-                            >
-                              {active ? (
-                                <ChefHat className="h-4 w-4" />
-                              ) : (
-                                <Check className="h-3.5 w-3.5 opacity-40" />
-                              )}
-                            </button>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Dagvelger med antall på kjøkken */}
+            <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+              {days.map((d) => {
+                const n = countFor(d);
+                const selected = d === date;
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setDate(d)}
+                    className={`flex shrink-0 flex-col items-center gap-0.5 rounded-2xl border px-3 py-2 ${
+                      selected
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border/60 bg-muted/30'
+                    }`}
+                  >
+                    <span className="text-[11px] font-semibold">{dayLabel(d)}</span>
+                    <span
+                      className={`flex items-center gap-1 text-[10px] font-medium ${
+                        selected
+                          ? 'text-primary-foreground/85'
+                          : n
+                            ? 'text-[hsl(var(--oks-ls-green))]'
+                            : 'text-muted-foreground'
+                      }`}
+                    >
+                      <ChefHat className="h-3 w-3" /> {n}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
+            {/* Valgt dag */}
+            <div className="space-y-2 rounded-2xl border bg-card/40 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                På kjøkken {dayLabel(date)}
+              </p>
+              {onKitchen.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Ingen satt på kjøkken denne dagen.</p>
+              ) : (
+                <div className="space-y-1.5">{onKitchen.map((s) => row(s, true))}</div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Tilgjengelige ledere
+              </p>
+              <div className="space-y-1.5">{free.map((s) => row(s, false))}</div>
+            </div>
+
+            {/* Ukesoppsummering */}
             <div className="space-y-1 rounded-2xl bg-muted/30 p-2.5">
-              {days.map((date) => {
-                const onKitchen = staff.filter((s) => isKitchen(s.id, date));
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Uken
+              </p>
+              {days.map((d) => {
+                const names = staff.filter((s) => isKitchen(s.id, d));
                 return (
-                  <div key={date} className="flex items-baseline justify-between gap-2 text-[11px]">
-                    <span className="font-semibold">{dayLabel(date)}</span>
+                  <div key={d} className="flex items-baseline justify-between gap-2 text-[11px]">
+                    <span className="font-semibold">{dayLabel(d)}</span>
                     <span
                       className={
-                        onKitchen.length
+                        names.length
                           ? 'truncate font-medium text-[hsl(var(--oks-ls-green))]'
                           : 'text-muted-foreground'
                       }
                     >
-                      {onKitchen.length
-                        ? onKitchen.map((s) => s.leader?.name?.split(' ')[0] ?? 'Ukjent').join(', ')
-                        : 'Ingen på kjøkken'}
+                      {names.length
+                        ? names.map((s) => s.leader?.name?.split(' ')[0] ?? 'Ukjent').join(', ')
+                        : '—'}
                     </span>
                   </div>
                 );
