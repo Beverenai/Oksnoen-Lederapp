@@ -348,7 +348,17 @@ Deno.serve(async (req) => {
           .sort((a, b) => (a.s.hoursByDate[date] ?? 0) - (b.s.hoursByDate[date] ?? 0));
 
         for (const { st, s } of hungry) {
-          for (const post of dayPosts) {
+          const remaining = Math.min(8, Number(st.max_daily_hours ?? 8)) - (s.hoursByDate[date] ?? 0);
+          // Best-fit: velg posten som fyller opp mest av gjenstående tid uten å
+          // sprenge 8t-taket, slik at ledere lander så nær 8 timer som mulig.
+          const ordered = [...dayPosts].sort((a, b) => {
+            const da = Number(a.duration_hours), db = Number(b.duration_hours);
+            const fitA = da <= remaining + 0.001 ? 0 : 1;
+            const fitB = db <= remaining + 0.001 ? 0 : 1;
+            if (fitA !== fitB) return fitA - fitB;
+            return db - da;
+          });
+          for (const post of ordered) {
             if (takenPairs.has(`${post.id}|${st.id}`)) continue;
             if (!canAssign(st, post, s, availability, minRest).ok) continue;
             apply(post, s);
