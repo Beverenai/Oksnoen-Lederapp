@@ -39,6 +39,9 @@ function dateAdd(dateStr: string, days: number) {
 }
 const isNight = (p: Post) => p.is_night || p.post_type === "night" || p.crosses_midnight;
 const isMeal = (p: Post) => p.post_type === "meal";
+/** Harde bemanningstak: maks 2 på måltider, maks 4 på Sanitas. */
+const staffCap = (p: Post) =>
+  isMeal(p) ? 2 : /sanitas/i.test(p.name ?? "") ? 4 : Infinity;
 function isBreakfast(p: Post) {
   if (!isMeal(p)) return false;
   const [h] = p.start_time.split(":").map(Number);
