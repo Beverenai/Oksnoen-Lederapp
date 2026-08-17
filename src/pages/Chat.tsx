@@ -292,12 +292,20 @@ export default function Chat() {
     };
   }, [channel, load]);
 
-  /** Ledere som kan tagges: periodechat = aktive, off season = alle med konto. */
+  /**
+   * Ledere som kan tagges: periodechat = aktive, leirskole = kun de som er satt
+   * opp på den aktive leirskoleuken, off season = alle med konto.
+   */
   const taggableLeaders = useMemo(() => {
     const all = Object.values(leaders).filter((l) => !l.is_external);
-    const pool = channel === 'period' ? all.filter((l) => l.is_active !== false) : all;
+    const pool =
+      channel === 'period'
+        ? all.filter((l) => l.is_active !== false)
+        : channel === 'leirskole'
+          ? all.filter((l) => leirskoleLeaderIds.has(l.id))
+          : all;
     return pool.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
-  }, [leaders, channel]);
+  }, [leaders, channel, leirskoleLeaderIds]);
 
   const mentionMatches = useMemo(() => {
     if (!mention) return [];
