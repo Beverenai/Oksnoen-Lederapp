@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertTriangle, ChefHat, Moon, Sparkles, Utensils, Wand2 } from 'lucide-react';
+import { AlertTriangle, Sparkles, Wand2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useLeirskoleActivities,
@@ -144,26 +144,6 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     staff.forEach((s) => s.leader && map.set(s.leader.id, s.leader.name));
     return map;
   }, [staff]);
-
-  const kitchenByDate = useMemo(() => {
-    const map = new Map<string, string[]>();
-    (kitchen ?? []).forEach((k) => {
-      const name = staffToLeader.get(k.staff_id)?.name;
-      if (!name) return;
-      map.set(k.date, [...(map.get(k.date) ?? []), name]);
-    });
-    return map;
-  }, [kitchen, staffToLeader]);
-
-  const kitchenStaffByDate = useMemo(() => {
-    const map = new Map<string, Set<string>>();
-    (kitchen ?? []).forEach((k) => {
-      const set = map.get(k.date) ?? new Set<string>();
-      set.add(k.staff_id);
-      map.set(k.date, set);
-    });
-    return map;
-  }, [kitchen]);
 
   const staffOptions = useMemo(
     () => staff.filter((s) => s.leader).map((s) => ({ staffId: s.id, name: s.leader!.name })),
