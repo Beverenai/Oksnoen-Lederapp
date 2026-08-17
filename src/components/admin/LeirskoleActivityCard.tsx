@@ -4,8 +4,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Trash2, Wand2, Send, Repeat, AlertTriangle, Zap, Plus } from 'lucide-react';
+import { Trash2, Wand2, Send, Repeat, AlertTriangle, Zap } from 'lucide-react';
 import {
   useLeirskoleActivities,
   useLeirskoleActivityHistory,
@@ -13,9 +12,7 @@ import {
   useSaveLeirskoleActivities,
   useDeleteLeirskoleActivity,
   useLeirskoleActivityTypes,
-  useAddLeirskoleActivityType,
-  useLeirskoleSessionActivities,
-  useSaveLeirskoleSessionActivities,
+  useLeirskoleWeekPlan,
   type LeirskoleStaff,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
@@ -61,31 +58,31 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
   const { data: saved } = useLeirskoleActivities(week.id);
   const { data: history } = useLeirskoleActivityHistory();
   const { data: types } = useLeirskoleActivityTypes(true);
-  const { data: sessionPicks } = useLeirskoleSessionActivities(week.id);
-  const savePicks = useSaveLeirskoleSessionActivities();
+  const { data: planCells } = useLeirskoleWeekPlan(week.id);
   const save = useSaveLeirskoleActivities();
   const removeOne = useDeleteLeirskoleActivity();
-  const addType = useAddLeirskoleActivityType();
-  const [newActivity, setNewActivity] = useState({ emoji: '🎯', label: '' });
 
   const allKeys = useMemo(() => (types ?? []).map((t) => t.key), [types]);
 
-  /** Valgte aktiviteter for en gitt økt — tom/ingen rad = alle aktive. */
+  /** Ukeplanleggeren styrer hva som gjelder: økt 1 = formiddag, økt 2 = ettermiddag. */
+  const rowIndexFor = (sessionKey: string) => (sessionKey === 'formiddag' ? 1 : 2);
+
+  /** Aktivitetene som er lagt inn i ukeplanleggeren for denne dagen + økten. */
   const keysFor = (sessionKey: string) => {
-    const row = (sessionPicks ?? []).find((p) => p.date === date && p.session === sessionKey);
-    const picked = (row?.activity_keys ?? []).filter((k) => allKeys.includes(k));
-    return picked.length ? picked : allKeys;
+    const cell = (planCells ?? []).find(
+      (c) => c.date === date && c.row_index === rowIndexFor(sessionKey),
+    );
+    const lines = (cell?.content ?? '')
+      .split('\n')
+      .map((l) => l.trim().toLowerCase())
+      .filter(Boolean);
+    if (!lines.length) return [] as string[];
+    return (types ?? [])
+      .filter((t) => lines.some((l) => l.includes(t.label.toLowerCase())))
+      .map((t) => t.key);
   };
 
   const selectedKeys = keysFor(session);
-
-  const toggleKey = (key: string) => {
-    const next = selectedKeys.includes(key)
-      ? selectedKeys.filter((k) => k !== key)
-      : [...allKeys.filter((k) => selectedKeys.includes(k) || k === key)];
-    savePicks.mutate({ weekId: week.id, date, session, activityKeys: next });
-    setDraft(null);
-  };
 
   const staffIdToLeader = useMemo(() => {
     const map = new Map<string, StaffRow>();
@@ -121,6 +118,10 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
       }));
     if (candidates.length === 0) {
       toast.error('Ingen ledere på vakt denne datoen');
+      return;
+    }
+    if (selectedKeys.length === 0) {
+      toast.error('Legg inn aktiviteter for denne økten i ukeplanleggeren først');
       return;
     }
     const result = generateActivityAssignments(
@@ -174,10 +175,12 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
       const notified = new Set<string>();
 
       for (const s of LEIRSKOLE_ACTIVITY_SESSIONS) {
+        const keys = keysFor(s.key);
+        if (!keys.length) continue;
         const rows = generateActivityAssignments(
           candidates,
           running,
-          keysFor(s.key),
+          keys,
         );
         if (!rows.length) continue;
         await save.mutateAsync({
@@ -192,7 +195,8 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
         });
       }
 
-      if (notified.size === 0) throw new Error('Ingen aktiviteter kunne fordeles');
+      if (notified.size === 0)
+        throw new Error('Ingen aktiviteter i ukeplanleggeren for denne dagen');
       const { error } = await supabase.functions.invoke('push-send', {
         body: {
           title: 'Leirskole — aktiviteter',
@@ -218,8 +222,8 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
           <Wand2 className="h-4 w-4 text-primary" /> Aktiviteter per økt
         </p>
         <p className="text-xs text-muted-foreground">
-          Velg dag og økt, og trykk aktivitetene av/på for å bestemme hva som skal fordeles.
-          Kveldsøkten håndteres utenom appen.
+          Aktivitetene hentes fra ukeplanleggeren: økt 1 = formiddag, økt 2 = ettermiddag.
+          Endre rutene i ukeplanleggeren, så fordeles nettopp de aktivitetene til lederne.
         </p>
       </div>
 
@@ -258,64 +262,21 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
         {savedForSession.length} lagret på denne økten
       </p>
 
-      {/* Aktiviteter av/på for denne økten */}
+      {/* Aktivitetene som ligger i ukeplanleggeren for denne økten */}
       <div className="flex flex-wrap gap-1.5">
-        {(types ?? []).map((t) => {
-          const on = selectedKeys.includes(t.key);
-          return (
-            <button
-              key={t.key}
-              onClick={() => toggleKey(t.key)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                on
-                  ? 'border-primary bg-primary/15 text-foreground'
-                  : 'border-border bg-muted/40 text-muted-foreground opacity-60'
-              }`}
-            >
-              {t.emoji} {t.label}
-            </button>
-          );
-        })}
-        {(types ?? []).length === 0 && (
-          <p className="text-xs text-muted-foreground">Ingen aktiviteter er lagt inn ennå.</p>
+        {selectedKeys.map((key) => (
+          <span
+            key={key}
+            className="rounded-full border border-primary bg-primary/15 px-3 py-1.5 text-xs font-medium"
+          >
+            {activityEmoji(key, types ?? [])} {activityLabel(key, types ?? [])}
+          </span>
+        ))}
+        {selectedKeys.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            Ingen aktiviteter i ukeplanleggeren for {dayLabel(date)} {sessionLabel(session).toLowerCase()}.
+          </p>
         )}
-      </div>
-
-      {/* Ny aktivitet direkte fra økten (f.eks. noe spesielt til 3. økt) */}
-      <div className="flex items-center gap-1.5">
-        <Input
-          value={newActivity.emoji}
-          onChange={(e) => setNewActivity({ ...newActivity, emoji: e.target.value.slice(0, 2) })}
-          className="h-8 w-12 text-center text-xs"
-          aria-label="Emoji"
-        />
-        <Input
-          value={newActivity.label}
-          onChange={(e) => setNewActivity({ ...newActivity, label: e.target.value })}
-          placeholder="Ny aktivitet (f.eks. Vannkrig)"
-          className="h-8 flex-1 text-xs"
-        />
-        <Button
-          size="icon"
-          className="h-8 w-8 shrink-0"
-          disabled={!newActivity.label.trim() || addType.isPending}
-          onClick={async () => {
-            try {
-              await addType.mutateAsync({
-                label: newActivity.label,
-                emoji: newActivity.emoji || '🎯',
-                sortOrder: (types ?? []).length + 1,
-              });
-              setNewActivity({ emoji: '🎯', label: '' });
-              toast.success('Aktivitet lagt inn');
-            } catch {
-              toast.error('Kunne ikke legge inn aktiviteten');
-            }
-          }}
-          aria-label="Legg til aktivitet"
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
       </div>
 
       {/* Lagret */}
