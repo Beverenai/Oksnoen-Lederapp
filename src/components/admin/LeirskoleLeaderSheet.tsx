@@ -74,7 +74,7 @@ export function LeirskoleLeaderSheet({
         weekId,
         date,
         session,
-        rows: [{ leader_id: leaderId, activity }],
+        rows: [{ leader_id: leaderId, activity: effectiveActivity }],
         replace: false,
       });
     },
@@ -180,7 +180,7 @@ export function LeirskoleLeaderSheet({
                   key={a.key}
                   onClick={() => setActivity(a.key)}
                   className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-                    a.key === activity ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground'
+                    a.key === effectiveActivity ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground'
                   }`}
                 >
                   {a.emoji} {a.label}
@@ -205,7 +205,7 @@ export function LeirskoleLeaderSheet({
                   <div key={a.id} className="flex items-center justify-between gap-2 rounded-2xl bg-muted/40 px-3 py-2">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">
-                        {activityEmoji(a.activity)} {activityLabel(a.activity)}
+                        {activityEmoji(a.activity, activityTypes)} {activityLabel(a.activity, activityTypes)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {dayLabel(a.date)} · {sessionLabel(a.session)}
