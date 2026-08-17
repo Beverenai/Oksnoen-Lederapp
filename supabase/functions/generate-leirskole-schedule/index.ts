@@ -39,6 +39,9 @@ function dateAdd(dateStr: string, days: number) {
 }
 const isNight = (p: Post) => p.is_night || p.post_type === "night" || p.crosses_midnight;
 const isMeal = (p: Post) => p.post_type === "meal";
+/** Harde bemanningstak: maks 2 på måltider, maks 4 på Sanitas. */
+const staffCap = (p: Post) =>
+  isMeal(p) ? 2 : /sanitas/i.test(p.name ?? "") ? 4 : Infinity;
 function isBreakfast(p: Post) {
   if (!isMeal(p)) return false;
   const [h] = p.start_time.split(":").map(Number);
@@ -355,7 +358,7 @@ Deno.serve(async (req) => {
     for (const post of sortPosts(posts, candidates)) {
       const locked = lockedByPost.get(post.id) ?? [];
       let need = post.required_leaders - locked.length;
-      if (isBreakfast(post)) need = Math.min(need, 2 - locked.length); // Maks 2 stk på frokost
+      need = Math.min(need, staffCap(post) - locked.length);
       if (need <= 0) continue;
 
       const pool = staff.filter(st => !locked.some(l => l.staff_id === st.id));
@@ -387,11 +390,18 @@ Deno.serve(async (req) => {
       ...toKeep.map((a: any) => `${a.post_id}|${a.staff_id}`),
       ...newAssignments.map((a: any) => `${a.post_id}|${a.staff_id}`),
     ]);
+    // Hold styr på hvor mange som er satt opp per post, slik at måltider (2) og
+    // Sanitas (4) ikke overfylles i oppfyllingsrunden.
+    const countByPost = new Map<string, number>();
+    for (const key of takenPairs) {
+      const postId = key.split("|")[0];
+      countByPost.set(postId, (countByPost.get(postId) ?? 0) + 1);
+    }
 
     const allDates = [...new Set(posts.map(p => p.date))].sort();
     const fillPosts = (date: string) =>
       posts
-        .filter(p => p.date === date && !isNight(p) && !isBreakfast(p)) // ikke fyll frokost, den er maks 2
+        .filter(p => p.date === date && !isNight(p))
         .sort((a, b) => {
           if (a.is_main_shift !== b.is_main_shift) return a.is_main_shift ? -1 : 1;
           return Number(b.duration_hours) - Number(a.duration_hours);
@@ -424,9 +434,11 @@ Deno.serve(async (req) => {
           });
           for (const post of ordered) {
             if (takenPairs.has(`${post.id}|${st.id}`)) continue;
+            if ((countByPost.get(post.id) ?? 0) >= staffCap(post)) continue;
             if (!canAssign(st, post, s, availability, minRest).ok) continue;
             apply(post, s);
             takenPairs.add(`${post.id}|${st.id}`);
+            countByPost.set(post.id, (countByPost.get(post.id) ?? 0) + 1);
             newAssignments.push({
               post_id: post.id, staff_id: st.id, is_locked: false,
               assigned_manually: false, generator_run_id: run.id,
