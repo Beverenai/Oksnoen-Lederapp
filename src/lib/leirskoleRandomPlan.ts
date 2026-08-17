@@ -21,6 +21,16 @@ export interface RandomPlanCell {
 
 const ROWS = [1, 2, 3];
 
+/**
+ * Aktiviteter som ikke hører til i øktene (Økt 1–3).
+ * Sanitas og hyttevask har egne poster/custom-økter, og Gomla er kiosk.
+ */
+export const SESSION_EXCLUDED_ACTIVITY_KEYS = ['sanitas', 'hyttevask', 'gomla'];
+
+export const isSessionActivity = (a: { key: string; label: string }) =>
+  !SESSION_EXCLUDED_ACTIVITY_KEYS.includes(a.key.toLowerCase()) &&
+  !SESSION_EXCLUDED_ACTIVITY_KEYS.includes(a.label.trim().toLowerCase());
+
 function shuffle<T>(list: T[]): T[] {
   const out = [...list];
   for (let i = out.length - 1; i > 0; i -= 1) {
