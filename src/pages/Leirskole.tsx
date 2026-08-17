@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarDays, Clock, Moon, Settings, Megaphone, Check, Users, Sunrise, Sunset } from 'lucide-react';
+import { Coffee, CalendarDays, Clock, Moon, Settings, Megaphone, Check, Users, Sunrise, Sunset } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
   useLeirskoleSchedule,
