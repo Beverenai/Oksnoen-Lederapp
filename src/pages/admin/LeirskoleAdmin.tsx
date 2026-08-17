@@ -11,16 +11,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users, ChevronDown } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
   useLeirskoleActivities,
   useLeirskoleSchedule,
   useLeirskoleStaff,
+  useLeirskoleWeekPlan,
 } from '@/hooks/useLeirskole';
 import { LeirskoleAccessCard } from '@/components/admin/LeirskoleAccessCard';
-import { LeirskoleActivityCard } from '@/components/admin/LeirskoleActivityCard';
+import { LeirskoleAutoActivityCard } from '@/components/admin/LeirskoleAutoActivityCard';
 import { LeirskoleActivityTypesCard } from '@/components/admin/LeirskoleActivityTypesCard';
 import { LeirskoleGuideCard } from '@/components/admin/LeirskoleGuideCard';
 import { LeirskoleLeaderSheet } from '@/components/admin/LeirskoleLeaderSheet';
@@ -48,6 +48,57 @@ async function sendLeirskolePush(body: {
   return null;
 }
 
+
+type StepTone = 'todo' | 'warn' | 'done';
+
+const TONE: Record<StepTone, string> = {
+  todo: 'bg-muted/60 text-muted-foreground',
+  warn: 'bg-amber-500/20 text-amber-500',
+  done: 'bg-primary/20 text-primary',
+};
+
+/** Ett steg i arbeidsflyten — åpnes/lukkes og viser status. */
+function Step({
+  n,
+  title,
+  subtitle,
+  status,
+  open,
+  onToggle,
+  children,
+}: {
+  n: number;
+  title: string;
+  subtitle: string;
+  status: { label: string; tone: StepTone };
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="oks-ls-pill overflow-hidden">
+      <button type="button" onClick={onToggle} className="flex w-full items-center gap-3 p-4 text-left">
+        <span
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+            status.tone === 'done' ? 'oks-ls-gradient' : 'bg-muted/60 text-muted-foreground'
+          }`}
+        >
+          {n}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold">{title}</span>
+          <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
+        </span>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${TONE[status.tone]}`}>
+          {status.label}
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="space-y-3 border-t border-border/60 p-4 pt-3">{children}</div>}
+    </div>
+  );
+}
+
 export default function LeirskoleAdmin() {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -58,7 +109,9 @@ export default function LeirskoleAdmin() {
   const { data: staff } = useLeirskoleStaff(week?.id);
   const { data: posts } = useLeirskoleSchedule(week?.id);
   const { data: weekActivities } = useLeirskoleActivities(week?.id);
+  const { data: planCells } = useLeirskoleWeekPlan(week?.id);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const [openStep, setOpenStep] = useState<number | null>(1);
 
   const [taskDraft, setTaskDraft] = useState({ title: '', description: '', due_at: '' });
   const [taskAssignAll, setTaskAssignAll] = useState(true);
@@ -223,6 +276,22 @@ export default function LeirskoleAdmin() {
     });
     return map;
   }, [weekActivities]);
+
+  const missingCompetence = (staff ?? []).filter(
+    (s) => (s.leader?.leirskole_competencies ?? []).length === 0,
+  ).length;
+
+  /** Hvor mange ruter i ukeplanen som er fylt ut (3 økter per dag). */
+  const { planFilled, planTotal } = useMemo(() => {
+    if (!week) return { planFilled: 0, planTotal: 0 };
+    const start = new Date(`${week.start_date}T12:00:00`);
+    const end = new Date(`${week.end_date}T12:00:00`);
+    const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+    const filled = (planCells ?? []).filter(
+      (c) => c.row_index >= 1 && c.row_index <= 3 && (c.content ?? '').trim().length > 0,
+    ).length;
+    return { planFilled: filled, planTotal: days * 3 };
+  }, [week, planCells]);
 
   const selectedStaff = (staff ?? []).find((s) => s.id === selectedStaffId) ?? null;
 
