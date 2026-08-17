@@ -87,7 +87,7 @@ function availabilityReason(staffId: string, post: Post, availability: Map<strin
 function canAssign(st: Staff, post: Post, s: State, availability: Map<string, Availability>, minRest: number) {
   const unavailableReason = availabilityReason(st.id, post, availability);
   if (unavailableReason) return { ok: false, reason: unavailableReason };
-  const dailyMax = Number(st.max_daily_hours ?? 8);
+  const dailyMax = Math.min(8, Number(st.max_daily_hours ?? 8));
   const cur = s.hoursByDate[post.date] ?? 0;
   if (cur + Number(post.duration_hours) > dailyMax + 0.001)
     return { ok: false, reason: `${cur}/${dailyMax}t brukt denne dagen` };
@@ -198,7 +198,8 @@ Deno.serve(async (req) => {
     const nameMap = new Map((leaders ?? []).map((l: any) => [l.id, l.name]));
     const staff: Staff[] = (staffRaw ?? []).map((s: any) => ({
       id: s.id, leader_id: s.leader_id,
-      max_daily_hours: Number(s.max_daily_hours ?? week.max_daily_hours ?? 8),
+      // Harde tak: ingen skal ha mer enn 8 timer på én dag.
+      max_daily_hours: Math.min(8, Number(s.max_daily_hours ?? week.max_daily_hours ?? 8)),
       name: nameMap.get(s.leader_id) ?? "Ukjent",
     }));
     if (staff.length === 0) return json({ error: "Ingen ledere er lagt til denne uken." }, 400);
@@ -224,7 +225,7 @@ Deno.serve(async (req) => {
           { week_id, date, name: "Økt 2", post_type: "main_shift", start_time: "14:30", end_time: "17:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 4 },
           { week_id, date, name: "Økt 3", post_type: "main_shift", start_time: "17:30", end_time: "19:00", required_leaders: shiftReq, is_main_shift: true, is_night: false, sort_order: 5 },
           { week_id, date, name: "Kvelds", post_type: "meal", start_time: "19:00", end_time: "20:00", required_leaders: mealReq, is_main_shift: false, is_night: false, sort_order: 6 },
-          { week_id, date, name: "Nattevakt", post_type: "night", start_time: "23:00", end_time: "07:00", required_leaders: 1, is_main_shift: false, is_night: true, sort_order: 7 },
+          { week_id, date, name: "Nattevakt", post_type: "night", start_time: "22:30", end_time: "01:30", required_leaders: 1, is_main_shift: false, is_night: true, sort_order: 7 },
         );
       }
       const { data: inserted, error: insErr } = await supa.from("leirskole_posts").insert(rows).select("*");
