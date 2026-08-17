@@ -8,7 +8,7 @@
  */
 import { supabase } from '@/integrations/supabase/client';
 import { autoAssignWeek, type AutoGapRow } from '@/lib/leirskoleAutoAssign';
-import { randomWeekPlan, type RandomPlanActivity } from '@/lib/leirskoleRandomPlan';
+import { isSessionActivity, randomWeekPlan, type RandomPlanActivity } from '@/lib/leirskoleRandomPlan';
 
 export type LeirskoleGenerateMode = 'plan' | 'schedule' | 'all';
 
@@ -82,7 +82,7 @@ export async function runLeirskoleGenerate({
 
     const planned = randomWeekPlan({
       dates,
-      activities: (types ?? []) as RandomPlanActivity[],
+      activities: ((types ?? []) as RandomPlanActivity[]).filter(isSessionActivity),
       perSession,
       filled,
       overwrite: overwritePlan,
