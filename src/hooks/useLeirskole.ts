@@ -312,3 +312,130 @@ export function useMarkLeirskoleInfoRead() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-session-info'] }),
   });
 }
+
+/** Aktivitetstildelinger (Tube, Klatring …) for en uke. */
+export function useLeirskoleActivities(weekId?: string | null) {
+  return useQuery({
+    queryKey: ['leirskole-activities', weekId],
+    enabled: !!weekId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leirskole_activity_assignments')
+        .select('*')
+        .eq('week_id', weekId!)
+        .order('date', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as LeirskoleActivityAssignment[];
+    },
+  });
+}
+
+/** Hele historikken (alle uker) — brukes til rettferdig fordeling. */
+export function useLeirskoleActivityHistory() {
+  return useQuery({
+    queryKey: ['leirskole-activity-history'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leirskole_activity_assignments')
+        .select('leader_id, activity, date, session, week_id');
+      if (error) throw error;
+      return (data ?? []) as Pick<
+        LeirskoleActivityAssignment,
+        'leader_id' | 'activity' | 'date' | 'session' | 'week_id'
+      >[];
+    },
+  });
+}
+
+/** Mine aktiviteter i aktiv uke. */
+export function useMyLeirskoleActivities(weekId?: string | null) {
+  const { effectiveLeader } = useAuth();
+  return useQuery({
+    queryKey: ['leirskole-my-activities', weekId, effectiveLeader?.id],
+    enabled: !!weekId && !!effectiveLeader?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leirskole_activity_assignments')
+        .select('*')
+        .eq('week_id', weekId!)
+        .eq('leader_id', effectiveLeader!.id)
+        .order('date');
+      if (error) throw error;
+      return (data ?? []) as LeirskoleActivityAssignment[];
+    },
+  });
+}
+
+function invalidateActivities(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['leirskole-activities'] });
+  qc.invalidateQueries({ queryKey: ['leirskole-activity-history'] });
+  qc.invalidateQueries({ queryKey: ['leirskole-my-activities'] });
+}
+
+export interface SaveActivityRow {
+  leader_id: string;
+  activity: string;
+  note?: string | null;
+  auto_generated?: boolean;
+}
+
+/** Lagre (erstatt) aktivitetene for en dato + økt. */
+export function useSaveLeirskoleActivities() {
+  const qc = useQueryClient();
+  const { leader } = useAuth();
+  return useMutation({
+    mutationFn: async ({
+      weekId,
+      date,
+      session,
+      rows,
+      replace = true,
+    }: {
+      weekId: string;
+      date: string;
+      session: string;
+      rows: SaveActivityRow[];
+      replace?: boolean;
+    }) => {
+      if (replace) {
+        const { error: delError } = await supabase
+          .from('leirskole_activity_assignments')
+          .delete()
+          .eq('week_id', weekId)
+          .eq('date', date)
+          .eq('session', session);
+        if (delError) throw delError;
+      }
+      if (rows.length === 0) return [];
+      const { data, error } = await supabase
+        .from('leirskole_activity_assignments')
+        .insert(
+          rows.map((row) => ({
+            week_id: weekId,
+            date,
+            session,
+            leader_id: row.leader_id,
+            activity: row.activity,
+            note: row.note ?? null,
+            auto_generated: row.auto_generated ?? false,
+            created_by: leader?.id ?? null,
+          })),
+        )
+        .select('id, leader_id');
+      if (error) throw error;
+      return data ?? [];
+    },
+    onSuccess: () => invalidateActivities(qc),
+  });
+}
+
+export function useDeleteLeirskoleActivity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('leirskole_activity_assignments').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateActivities(qc),
+  });
+}
