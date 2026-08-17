@@ -12,6 +12,7 @@ import {
   useLeirskoleSchedule,
   useLeirskoleWeekDays,
   useLeirskoleWeekPlan,
+  useSetLeirskoleKitchenDay,
   type LeirskoleStaff,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
@@ -22,6 +23,7 @@ import {
 } from '@/lib/leirskoleGenerateAll';
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
 import { LeirskoleSpecialDayTimeline } from '@/components/admin/LeirskoleSpecialDayTimeline';
+import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
 
 type StaffRow = LeirskoleStaff & {
   leader: {
@@ -62,6 +64,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const { data: kitchen } = useLeirskoleKitchenDays(week.id);
   const { data: activities } = useLeirskoleActivities(week.id);
   const { data: types } = useLeirskoleActivityTypes(true);
+  const setKitchen = useSetLeirskoleKitchenDay();
   const [target, setTarget] = useState<CellTarget | null>(null);
   const [summary, setSummary] = useState<LeirskoleGenerateSummary | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -150,6 +153,36 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     });
     return map;
   }, [kitchen, staffToLeader]);
+
+  const kitchenStaffByDate = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    (kitchen ?? []).forEach((k) => {
+      const set = map.get(k.date) ?? new Set<string>();
+      set.add(k.staff_id);
+      map.set(k.date, set);
+    });
+    return map;
+  }, [kitchen]);
+
+  const staffOptions = useMemo(
+    () => staff.filter((s) => s.leader).map((s) => ({ staffId: s.id, name: s.leader!.name })),
+    [staff],
+  );
+
+  const maxHours = Number(week.max_daily_hours ?? 8);
+
+  /** Timer per leirskole_staff-id per dag — vises i bemanningsvelgerne. */
+  const staffHoursByDate = useMemo(() => {
+    const map = new Map<string, Map<string, number>>();
+    (posts ?? []).forEach((p) => {
+      const day = map.get(p.date) ?? new Map<string, number>();
+      p.assignments.forEach((a) => {
+        day.set(a.staff_id, (day.get(a.staff_id) ?? 0) + Number(p.duration_hours ?? 0));
+      });
+      map.set(p.date, day);
+    });
+    return map;
+  }, [posts]);
 
   /** Timer per leder per dag, for å se om noen er langt fra 8t. */
   const hoursByDate = useMemo(() => {
