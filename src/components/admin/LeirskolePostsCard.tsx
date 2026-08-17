@@ -11,14 +11,19 @@ import { Switch } from '@/components/ui/switch';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { CalendarClock, Play, Trash2, Lock, LockOpen, Moon, RefreshCw } from 'lucide-react';
+import { CalendarClock, Play, Trash2, Lock, LockOpen, Moon, RefreshCw, Pencil, UtensilsCrossed, Sun, AlertTriangle } from 'lucide-react';
+import { LeaderAvatarStack } from '@/components/leirskole/LeaderAvatarStack';
 import {
   useLeirskoleSchedule,
   useGenerateLeirskoleSchedule,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
 
-type StaffRow = { id: string; leader_id: string; leader?: { name: string } | null };
+type StaffRow = {
+  id: string;
+  leader_id: string;
+  leader?: { id?: string; name: string; profile_image_url?: string | null } | null;
+};
 
 const WEEKDAYS = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'];
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
@@ -49,6 +54,35 @@ function errorMessage(error: unknown, fallback: string) {
   }
   return fallback;
 }
+
+type PostKind = 'meal' | 'night' | 'shift';
+
+function postKind(post: { post_type?: string | null; is_night?: boolean | null; name: string }): PostKind {
+  if (post.is_night || post.post_type === 'night') return 'night';
+  if (post.post_type === 'meal') return 'meal';
+  return 'shift';
+}
+
+const KIND_STYLE: Record<PostKind, { ring: string; chip: string; icon: JSX.Element; label: string }> = {
+  meal: {
+    ring: 'border-[hsl(var(--oks-ls-green))]/45 bg-[hsl(var(--oks-ls-green))]/10',
+    chip: 'bg-[hsl(var(--oks-ls-green))]/20 text-[hsl(var(--oks-ls-green))]',
+    icon: <UtensilsCrossed className="h-3.5 w-3.5" />,
+    label: 'Måltid',
+  },
+  shift: {
+    ring: 'border-[hsl(var(--oks-ls-blue))]/45 bg-[hsl(var(--oks-ls-blue))]/10',
+    chip: 'bg-[hsl(var(--oks-ls-blue))]/20 text-[hsl(var(--oks-ls-blue))]',
+    icon: <Sun className="h-3.5 w-3.5" />,
+    label: 'Økt',
+  },
+  night: {
+    ring: 'border-primary/40 bg-primary/10',
+    chip: 'bg-primary/20 text-primary',
+    icon: <Moon className="h-3.5 w-3.5" />,
+    label: 'Natt',
+  },
+};
 
 /**
  * Vaktplan-generatoren for leirskole: vaktposter per dag, kjør generator
