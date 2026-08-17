@@ -49,10 +49,25 @@ export function LeirskoleSpecialDayTimeline({
   const [draftName, setDraftName] = useState('');
   const [openPost, setOpenPost] = useState<string | null>(null);
 
-  const sorted = useMemo(
-    () => [...posts].sort((a, b) => a.start_time.localeCompare(b.start_time)),
-    [posts],
-  );
+  /** Sorterte økter med kolonnespor, slik at overlappende økter vises side om side. */
+  const sorted = useMemo(() => {
+    const list = [...posts].sort((a, b) => a.start_time.localeCompare(b.start_time));
+    const laneEnds: number[] = [];
+    const placed = list.map((p) => {
+      const from = toSlot(p.start_time);
+      const to = Math.max(from + 3, toSlot(p.end_time));
+      let lane = laneEnds.findIndex((end) => end <= from);
+      if (lane === -1) {
+        lane = laneEnds.length;
+        laneEnds.push(to);
+      } else {
+        laneEnds[lane] = to;
+      }
+      return { post: p, from, to, lane };
+    });
+    const lanes = Math.max(1, laneEnds.length);
+    return placed.map((row) => ({ ...row, lanes }));
+  }, [posts]);
 
   const invalidate = () =>
     ['leirskole-schedule', 'leirskole-my-shifts', 'leirskole-week-plan'].forEach((key) =>
@@ -197,9 +212,7 @@ export function LeirskoleSpecialDayTimeline({
             </div>
           )}
 
-          {sorted.map((p) => {
-            const from = toSlot(p.start_time);
-            const to = toSlot(p.end_time);
+          {sorted.map(({ post: p, from, to, lane, lanes }) => {
             const names = staffOptions
               .filter((s) => p.assignments.some((a) => a.staff_id === s.staffId))
               .map((s) => s.name.split(' ')[0]);
@@ -209,8 +222,13 @@ export function LeirskoleSpecialDayTimeline({
                   <button
                     data-post
                     type="button"
-                    className="absolute left-0.5 right-0.5 overflow-hidden rounded-md border border-emerald-500/60 bg-emerald-500/20 px-1 py-0.5 text-left hover:bg-emerald-500/30"
-                    style={{ top: from * SLOT_PX, height: Math.max(SLOT_PX * 3, (to - from) * SLOT_PX) }}
+                    className="absolute overflow-hidden rounded-md border border-emerald-500/60 bg-emerald-500/20 px-1 py-0.5 text-left hover:bg-emerald-500/30"
+                    style={{
+                      top: from * SLOT_PX,
+                      height: (to - from) * SLOT_PX,
+                      left: `calc(${(lane / lanes) * 100}% + 2px)`,
+                      width: `calc(${100 / lanes}% - 4px)`,
+                    }}
                   >
                     <p className="truncate text-[10px] font-bold leading-tight">{p.name}</p>
                     <p className="truncate text-[9px] leading-tight text-muted-foreground">
