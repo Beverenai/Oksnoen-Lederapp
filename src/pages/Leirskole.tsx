@@ -533,6 +533,7 @@ export default function Leirskole() {
           name={colleague.name}
           imageUrl={colleague.imageUrl}
           shifts={colleagueShifts}
+          weekDates={weekDays.map((d) => d.date)}
         />
       )}
 
