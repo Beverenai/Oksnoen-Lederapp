@@ -510,7 +510,7 @@ export default function Home() {
   // App-wide inactive mode (off-season): the real interactive 3D lederpass
   // fills the entire home surface. Chat remains reachable via bottom nav.
   // Superadmin keeps the full home to manage the app.
-  if (isLimitedAccess || (appMode === 'inactive' && !isSuperAdmin)) {
+  if (limitedView) {
     return (
       <div className="mx-auto w-full max-w-2xl">
         <OffSeasonHome leader={effectiveLeader} periodLabel={activePeriodLabel} />

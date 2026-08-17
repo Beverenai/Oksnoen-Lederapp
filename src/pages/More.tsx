@@ -41,6 +41,8 @@ import { useHookupsEnabled, useIncomingHookupCount } from '@/hooks/useHookups';
 import { useUnopenedSipCount } from '@/hooks/useSips';
 import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute, isLeirskoleRoute } from '@/lib/limitedAccess';
+import { useAccessMode } from '@/hooks/useViewMode';
+import ViewModeSwitcher from '@/components/layout/ViewModeSwitcher';
 import { IdCard, MessageCircle, Circle, Crown, Camera, ChevronRight, Tent } from 'lucide-react';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { TinderIcon } from '@/components/icons/TinderIcon';
@@ -105,7 +107,7 @@ export default function More() {
   const { isAdmin, isNurse, isKitchen, isSuperAdmin, isLimitedAccess, isLeirskole, logout, leader, effectiveLeader } = useAuth();
   const navigate = useNavigate();
   const { mode: appMode } = useAppMode();
-  const limited = isLimitedAccess || (appMode === 'inactive' && !isSuperAdmin);
+  const { limited, leirskoleView } = useAccessMode();
   const sweatersEnabled = useSweatersEnabled();
   const { data: murderState } = useMyMurderState();
   const { data: mailboxUnread } = useMailboxUnreadCount(!!isAdmin);
@@ -306,7 +308,7 @@ export default function More() {
   const sections: MoreSection[] = limited
     ? limitedSections.map((s) => ({
         ...s,
-        items: s.items.filter((i) => !i.to || isLimitedAccessRoute(i.to) || (isLeirskole && isLeirskoleRoute(i.to))),
+        items: s.items.filter((i) => !i.to || isLimitedAccessRoute(i.to) || (leirskoleView && isLeirskoleRoute(i.to))),
       }))
     : fullSections;
 

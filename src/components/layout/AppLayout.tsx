@@ -44,6 +44,7 @@ import { useCheckoutEnabled } from '@/hooks/useCheckoutEnabled';
 import { useAppBadge } from '@/hooks/useAppBadge';
 import { useSweatersEnabled } from '@/hooks/useSweatersEnabled';
 import { useAppMode } from '@/hooks/useAppMode';
+import { useAccessMode } from '@/hooks/useViewMode';
 import { useSeasonView } from '@/contexts/SeasonViewContext';
 import { MessageCircle } from 'lucide-react';
 import {
@@ -172,7 +173,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const sweatersEnabled = useSweatersEnabled();
   const { mode: appMode } = useAppMode();
   const { seasonView, setSeasonView } = useSeasonView();
-  const inactiveForUser = isLimitedAccess || (appMode === 'inactive' && !isSuperAdmin);
+  const { limited: inactiveForUser } = useAccessMode();
 
   // Off-season-tema på <html> slik at ark/dialoger (portaler) ikke blir hvite
   useEffect(() => {
