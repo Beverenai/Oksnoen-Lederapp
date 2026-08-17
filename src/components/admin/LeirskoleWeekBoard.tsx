@@ -299,6 +299,52 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         </div>
       )}
 
+      {/* Mangler leder */}
+      <div
+        className={`rounded-2xl border px-3 py-2 text-xs ${
+          missing.length
+            ? 'border-amber-500/60 bg-amber-500/10'
+            : 'border-emerald-500/50 bg-emerald-500/10'
+        }`}
+      >
+        {missing.length === 0 ? (
+          <p className="flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-300">
+            <Sparkles className="h-3.5 w-3.5" /> Alle aktiviteter i ukeplanen har en leder
+          </p>
+        ) : (
+          <>
+            <p className="flex items-center gap-1.5 font-semibold text-amber-700 dark:text-amber-200">
+              <AlertTriangle className="h-3.5 w-3.5" /> {missing.length} aktiviteter mangler leder
+            </p>
+            <div className="mt-2 space-y-1.5">
+              {dates
+                .filter((date) => (missingByDay.get(date) ?? []).length > 0)
+                .map((date) => {
+                  const d = new Date(`${date}T12:00:00`);
+                  return (
+                    <div key={date} className="flex flex-wrap items-center gap-1.5">
+                      <span className="w-16 shrink-0 text-[11px] font-bold uppercase text-muted-foreground">
+                        {WEEKDAYS[d.getDay()]} {d.getDate()}.
+                      </span>
+                      {(missingByDay.get(date) ?? []).map((m, i) => (
+                        <button
+                          key={`${m.target.label}-${m.label}-${i}`}
+                          type="button"
+                          onClick={() => setTarget(m.target)}
+                          className="rounded-full border border-amber-500/50 bg-background/70 px-2 py-0.5 text-[11px] font-medium hover:bg-amber-500/20"
+                        >
+                          {m.emoji ?? '•'} {m.label}
+                          <span className="ml-1 text-[10px] text-muted-foreground">{m.target.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+            </div>
+          </>
+        )}
+      </div>
+
       <div className="-mx-2 overflow-x-auto px-2">
         <div className="min-w-max space-y-1.5">
           {/* Dagoverskrifter */}
