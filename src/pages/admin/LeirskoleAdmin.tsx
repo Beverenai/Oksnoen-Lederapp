@@ -432,6 +432,19 @@ export default function LeirskoleAdmin() {
           ))}
         </div>
       </div>
+
+      {selectedStaff?.leader && (
+        <LeirskoleLeaderSheet
+          open={!!selectedStaff}
+          onOpenChange={(v) => !v && setSelectedStaffId(null)}
+          weekId={week.id}
+          leaderId={selectedStaff.leader.id}
+          leaderName={selectedStaff.leader.name}
+          imageUrl={selectedStaff.leader.profile_image_url}
+          competencies={selectedStaff.leader.leirskole_competencies ?? []}
+          hours={hoursByStaff.get(selectedStaff.id) ?? 0}
+        />
+      )}
     </div>
   );
 }
