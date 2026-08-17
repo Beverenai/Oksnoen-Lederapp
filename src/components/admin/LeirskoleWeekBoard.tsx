@@ -23,7 +23,6 @@ import {
 } from '@/lib/leirskoleGenerateAll';
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
 import { LeirskoleSpecialDayTimeline } from '@/components/admin/LeirskoleSpecialDayTimeline';
-import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
 import { trimDayHours } from '@/lib/leirskoleDayHours';
 
 type StaffRow = LeirskoleStaff & {
@@ -62,10 +61,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const { data: posts } = useLeirskoleSchedule(week.id);
   const { data: cells } = useLeirskoleWeekPlan(week.id);
   const { data: weekDays } = useLeirskoleWeekDays(week.id);
-  const { data: kitchen } = useLeirskoleKitchenDays(week.id);
   const { data: activities } = useLeirskoleActivities(week.id);
   const { data: types } = useLeirskoleActivityTypes(true);
-  const setKitchen = useSetLeirskoleKitchenDay();
   const [target, setTarget] = useState<CellTarget | null>(null);
   const [summary, setSummary] = useState<LeirskoleGenerateSummary | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
