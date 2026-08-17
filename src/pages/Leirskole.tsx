@@ -10,13 +10,16 @@ import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   CalendarDays, MessageCircle, ClipboardList, Clock, Moon, Users, Settings, ChevronRight, Sun,
+  Megaphone, Check,
 } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
   useIsLeirskoleStaff,
   useLeirskoleSchedule,
+  useLeirskoleSessionInfo,
   useLeirskoleStaff,
   useLeirskoleTasks,
+  useMarkLeirskoleInfoRead,
   useMyLeirskoleShifts,
   useToggleLeirskoleTask,
 } from '@/hooks/useLeirskole';
@@ -53,6 +56,16 @@ export default function Leirskole() {
   const { data: staff } = useLeirskoleStaff(week?.id);
   const { data: tasks } = useLeirskoleTasks(week?.id);
   const toggleTask = useToggleLeirskoleTask();
+  const { data: sessionInfo } = useLeirskoleSessionInfo(week?.id);
+  const markInfoRead = useMarkLeirskoleInfoRead();
+
+  const myInfo = useMemo(
+    () =>
+      (sessionInfo ?? []).filter(
+        (i: any) => i.assign_all || (i.assigned_leader_ids ?? []).includes(effectiveLeader?.id),
+      ),
+    [sessionInfo, effectiveLeader?.id],
+  );
 
   const staffNames = useMemo(() => {
     const map = new Map<string, string>();
@@ -145,6 +158,43 @@ export default function Leirskole() {
         <p className="rounded-2xl border bg-card/40 px-3 py-2.5 text-sm text-muted-foreground">
           Du er ikke satt opp på denne leirskoleuken ennå — du får vakter, oppgaver og chat når admin legger deg inn.
         </p>
+      )}
+
+      {/* Denne økten skal du */}
+      {myInfo.length > 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Megaphone className="h-4 w-4 text-primary" /> Denne økten skal du
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {myInfo.map((i: any) => (
+              <div key={i.id} className="rounded-2xl border bg-card/60 p-3">
+                <p className="text-sm font-semibold">{i.title}</p>
+                {i.body && <p className="mt-0.5 text-xs text-muted-foreground">{i.body}</p>}
+                {(i.items ?? []).length > 0 && (
+                  <ul className="mt-1.5 space-y-1">
+                    {(i.items as string[]).map((it, idx) => (
+                      <li key={idx} className="flex gap-1.5 text-sm">
+                        <span className="text-primary">•</span>
+                        <span>{it}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <Button
+                  size="sm"
+                  variant={i.readByMe ? 'secondary' : 'default'}
+                  className="mt-2 gap-1.5"
+                  onClick={() => markInfoRead.mutate({ infoId: i.id, read: !i.readByMe })}
+                >
+                  <Check className="h-3.5 w-3.5" /> {i.readByMe ? 'Lest' : 'Marker som lest'}
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       {/* Snarveier */}
