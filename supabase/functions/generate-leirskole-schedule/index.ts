@@ -261,7 +261,10 @@ Deno.serve(async (req) => {
         "Frokost", "Økt 1", "Økt 2", "Økt 3", "Middag", "Kvelds", "Sanitas", "Nattevakt",
       ]);
       const stale = (postsRaw ?? []).filter(
-        (p: any) => departureDays.has(String(p.date)) && TEMPLATE_NAMES.has(String(p.name)),
+        (p: any) =>
+          departureDays.has(String(p.date)) &&
+          TEMPLATE_NAMES.has(String(p.name)) &&
+          !p.is_custom,
       );
       if (stale.length) {
         const staleIds = stale.map((p: any) => p.id);
