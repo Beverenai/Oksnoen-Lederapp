@@ -84,13 +84,12 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
   );
 
   const generate = () => {
-    const isEvening = session === 'kveld';
     const candidates = onDuty
       .filter((s) => s.leader)
       .map((s) => ({
         leaderId: s.leader!.id,
         name: s.leader!.name,
-        competencies: isEvening ? [] : (s.leader!.leirskole_competencies ?? []),
+        competencies: s.leader!.leirskole_competencies ?? [],
       }));
     if (candidates.length === 0) {
       toast.error('Ingen ledere på vakt denne datoen');
