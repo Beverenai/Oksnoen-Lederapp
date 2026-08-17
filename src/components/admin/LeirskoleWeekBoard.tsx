@@ -539,7 +539,12 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           <div className="grid gap-1.5" style={gridStyle}>
             {SESSIONS.map((s, rowIdx) => (
               <div key={`label-${s.row}`} style={{ gridColumn: 1, gridRow: rowIdx + 1 }} className="flex items-center">
-                <LabelCell>{s.label}</LabelCell>
+                <LabelCell>
+                  <span className="leading-tight">
+                    {s.label}
+                    <span className="block text-[9px] font-medium normal-case text-muted-foreground/70">{s.time}</span>
+                  </span>
+                </LabelCell>
               </div>
             ))}
             {dates.map((date, dayIdx) =>
