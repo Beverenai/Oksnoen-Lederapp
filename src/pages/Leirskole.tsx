@@ -307,6 +307,19 @@ export default function Leirskole() {
           <CardDescription>
             {myHours.toFixed(1)} timer denne uken · maks {maxDaily}t per dag
           </CardDescription>
+          {hoursByDay.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {hoursByDay.map(([date, hours]) => (
+                <Badge
+                  key={date}
+                  variant={date === today ? 'default' : 'secondary'}
+                  className="tabular-nums text-[10.5px]"
+                >
+                  {dayLabel(date)} · {hours.toFixed(1)}/{maxDaily}t
+                </Badge>
+              ))}
+            </div>
+          )}
         </CardHeader>
         <CardContent className="space-y-2">
           {shiftsLoading ? (
