@@ -450,7 +450,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                     weekId={week.id}
                     date={date}
                     posts={(postsByDate.get(date) ?? [])
-                      .filter((p) => p.is_custom)
+                      .filter((p) => p.is_custom && !TEMPLATE_NAMES.has((p.name ?? '').trim()))
                       .map((p) => ({
                         id: p.id,
                         name: p.name ?? '',
