@@ -86,7 +86,7 @@ export function useMyLeirskoleCompetencies() {
         .eq('id', effectiveLeader!.id)
         .maybeSingle();
       if (error) throw error;
-      return ((data?.leirskole_competencies ?? []) as string[]) ?? [];
+      return (data?.leirskole_competencies ?? []) as string[];
     },
   });
 }
