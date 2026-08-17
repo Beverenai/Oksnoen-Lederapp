@@ -20,14 +20,9 @@ import {
   useLeirskoleWeekPlan,
 } from '@/hooks/useLeirskole';
 import { LeirskoleAccessCard } from '@/components/admin/LeirskoleAccessCard';
-import { LeirskoleAutoActivityCard } from '@/components/admin/LeirskoleAutoActivityCard';
 import { LeirskoleActivityTypesCard } from '@/components/admin/LeirskoleActivityTypesCard';
 import { LeirskoleGuideCard } from '@/components/admin/LeirskoleGuideCard';
 import { LeirskoleLeaderSheet } from '@/components/admin/LeirskoleLeaderSheet';
-import { LeirskolePostsCard } from '@/components/admin/LeirskolePostsCard';
-import { LeirskoleWeekPlanCard } from '@/components/admin/LeirskoleWeekPlanCard';
-import { LeirskoleDayActivityCard } from '@/components/admin/LeirskoleDayActivityCard';
-import { LeirskoleKitchenCard } from '@/components/admin/LeirskoleKitchenCard';
 import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
 import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
 import { LeirskoleWeekBoard } from '@/components/admin/LeirskoleWeekBoard';
@@ -520,26 +515,17 @@ export default function LeirskoleAdmin() {
       <div className="space-y-2">
         <Step
           n={1}
-          title="Uken i detalj"
-          subtitle="Ukeplan, aktivitetstyper, kjøkken og vaktplan"
+          title="Aktivitetstyper"
+          subtitle="Hvilke aktiviteter kan gis til lederne"
           status={
             planFilled === 0
-              ? { label: 'Ikke fylt ut', tone: 'todo' }
+              ? { label: 'Ukeplan ikke fylt ut', tone: 'todo' }
               : { label: `${planFilled} av ${planTotal} ruter`, tone: planFilled >= planTotal ? 'done' : 'warn' }
           }
           open={openStep === 1}
           onToggle={() => setOpenStep(openStep === 1 ? null : 1)}
         >
-          <LeirskoleWeekPlanCard week={week} />
           <LeirskoleActivityTypesCard />
-          <LeirskoleKitchenCard week={week} staff={staff ?? []} />
-          <LeirskolePostsCard
-            week={week}
-            staff={staff ?? []}
-            onSelectStaff={(staffId) => setSelectedStaffId(staffId)}
-          />
-          <LeirskoleAutoActivityCard week={week} staff={staff ?? []} />
-          <LeirskoleDayActivityCard week={week} staff={staff ?? []} />
         </Step>
 
         <Step
