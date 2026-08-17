@@ -16,16 +16,16 @@ const STEPS: { title: string; where: string; body: string }[] = [
       'Dette er tidene: frokost, økt 1, middag, økt 2, kvelds, økt 3, Sanitas og nattevakt. Du kan endre klokkeslett, antall ledere, legge inn egne økter og forskyve hele dagen eller uka. Økt 3 lages upublisert — lederne ser den først når du slår på «Publisert for lederne».',
   },
   {
-    title: '3. Vaktplan-generator',
-    where: 'Fanen «Vaktplan» → «Generer vaktplan»',
+    title: '3. Ukeplanlegger (hva som skjer)',
+    where: 'Fanen «Vaktplan» → «Ukeplanlegger» (øverst)',
     body:
-      'Fordeler lederne på vaktene automatisk: maks ca. 8 timer per dag, 11 timer hvile, sammenhengende vakter foretrekkes, maks 2 på måltider og 4 på Sanitas. Endrer du en leder manuelt, låses valget og resten rebalanseres.',
+      'Rutenettet med dagene bortover og økt 1–3 nedover. Her velger du aktivitetene fra lista (ingen skriving) og fargekoder rutene. Dette er programmet for uka, og gjøres før vaktplanen fordeles.',
   },
   {
-    title: '4. Ukeplanlegger (hva som skjer)',
-    where: 'Fanen «Økter» eller «Vaktplan» → «Ukeplanlegger»',
+    title: '4. Vaktplan-generator',
+    where: 'Fanen «Vaktplan» → «Generer vaktplan»',
     body:
-      'Rutenettet med dagene bortover og økt 1–3 nedover. Her velger du aktivitetene fra lista (ingen skriving) og fargekoder rutene. Dette er selve programmet for uka.',
+      'Fordeler lederne på vaktene automatisk: maks ca. 8 timer per dag, 11 timer hvile, sammenhengende vakter foretrekkes, maks 2 på måltider og 4 på Sanitas. Endrer du en leder manuelt, låses valget og resten rebalanseres. Under ligger «Hvem har hvilken økt», hvor du kan endre aktiviteten til hver leder manuelt.',
   },
   {
     title: '5. Aktiviteter til lederne',

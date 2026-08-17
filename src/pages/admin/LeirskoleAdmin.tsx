@@ -461,13 +461,13 @@ export default function LeirskoleAdmin() {
         </TabsContent>
 
         <TabsContent value="vaktplan" className="mt-3 space-y-3">
+          <LeirskoleWeekPlanCard week={week} />
           <LeirskolePostsCard
             week={week}
             staff={staff ?? []}
             onSelectStaff={(staffId) => setSelectedStaffId(staffId)}
           />
           <LeirskoleDayActivityCard week={week} staff={staff ?? []} />
-          <LeirskoleWeekPlanCard week={week} />
         </TabsContent>
 
         <TabsContent value="okter" className="mt-3 space-y-3">
