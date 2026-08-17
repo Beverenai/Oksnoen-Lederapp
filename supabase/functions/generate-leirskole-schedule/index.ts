@@ -248,7 +248,7 @@ Deno.serve(async (req) => {
       max_daily_hours: Math.min(8, Number(s.max_daily_hours ?? week.max_daily_hours ?? 8)),
       name: nameMap.get(s.leader_id) ?? "Ukjent",
     }));
-    if (staff.length === 0) return json({ error: "Ingen ledere er lagt til denne uken." }, 400);
+    if (staff.length === 0) return json({ error: "Det er ikke nok ledere til å bemanne denne uken. Legg til flere ledere under «Tilgang»." }, 400);
 
     let { data: postsRaw } = await supa.from("leirskole_posts").select("*")
       .eq("week_id", week_id).order("date").order("start_time");

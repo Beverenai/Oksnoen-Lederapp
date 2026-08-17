@@ -234,7 +234,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           }
         }
         if (unique.length === 0) {
-          throw new Error('Ingen ledere er lagt til denne uken. Legg til ledere under «Tilgang» først.');
+          throw new Error('Det er ikke nok ledere til å bemanne denne uken. Legg til flere ledere under «Tilgang» først.');
         }
         const { error: copyError } = await supabase.from('leirskole_staff').insert(
           unique.map((r) => ({
