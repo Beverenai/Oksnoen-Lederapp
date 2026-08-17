@@ -1974,6 +1974,398 @@ export type Database = {
           },
         ]
       }
+      leirskole_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_manually: boolean
+          created_at: string
+          generator_run_id: string | null
+          id: string
+          is_locked: boolean
+          post_id: string
+          staff_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_manually?: boolean
+          created_at?: string
+          generator_run_id?: string | null
+          id?: string
+          is_locked?: boolean
+          post_id: string
+          staff_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_manually?: boolean
+          created_at?: string
+          generator_run_id?: string | null
+          id?: string
+          is_locked?: boolean
+          post_id?: string
+          staff_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_assignments_generator_run_id_fkey"
+            columns: ["generator_run_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_generator_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_assignments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_assignments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_availability: {
+        Row: {
+          available: boolean
+          created_at: string
+          date: string
+          from_time: string | null
+          id: string
+          note: string | null
+          staff_id: string
+          to_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          available?: boolean
+          created_at?: string
+          date: string
+          from_time?: string | null
+          id?: string
+          note?: string | null
+          staff_id: string
+          to_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          available?: boolean
+          created_at?: string
+          date?: string
+          from_time?: string | null
+          id?: string
+          note?: string | null
+          staff_id?: string
+          to_time?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_availability_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_generator_runs: {
+        Row: {
+          finished_at: string | null
+          id: string
+          keep_locked: boolean
+          run_by: string | null
+          started_at: string
+          stats: Json
+          status: string
+          week_id: string
+        }
+        Insert: {
+          finished_at?: string | null
+          id?: string
+          keep_locked?: boolean
+          run_by?: string | null
+          started_at?: string
+          stats?: Json
+          status?: string
+          week_id: string
+        }
+        Update: {
+          finished_at?: string | null
+          id?: string
+          keep_locked?: boolean
+          run_by?: string | null
+          started_at?: string
+          stats?: Json
+          status?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_generator_runs_run_by_fkey"
+            columns: ["run_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_generator_runs_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_posts: {
+        Row: {
+          created_at: string
+          crosses_midnight: boolean
+          date: string
+          duration_hours: number
+          end_time: string
+          id: string
+          is_main_shift: boolean
+          is_night: boolean
+          name: string
+          notes: string | null
+          post_type: string
+          required_leaders: number
+          sort_order: number
+          start_time: string
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          crosses_midnight?: boolean
+          date: string
+          duration_hours?: number
+          end_time: string
+          id?: string
+          is_main_shift?: boolean
+          is_night?: boolean
+          name: string
+          notes?: string | null
+          post_type?: string
+          required_leaders?: number
+          sort_order?: number
+          start_time: string
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          crosses_midnight?: boolean
+          date?: string
+          duration_hours?: number
+          end_time?: string
+          id?: string
+          is_main_shift?: boolean
+          is_night?: boolean
+          name?: string
+          notes?: string | null
+          post_type?: string
+          required_leaders?: number
+          sort_order?: number
+          start_time?: string
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_posts_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_staff: {
+        Row: {
+          created_at: string
+          id: string
+          leader_id: string
+          max_daily_hours: number | null
+          role_label: string | null
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leader_id: string
+          max_daily_hours?: number | null
+          role_label?: string | null
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leader_id?: string
+          max_daily_hours?: number | null
+          role_label?: string | null
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_staff_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_staff_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_task_completions: {
+        Row: {
+          completed_at: string
+          id: string
+          leader_id: string
+          task_id: string
+        }
+        Insert: {
+          completed_at?: string
+          id?: string
+          leader_id: string
+          task_id: string
+        }
+        Update: {
+          completed_at?: string
+          id?: string
+          leader_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_task_completions_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_task_completions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_tasks: {
+        Row: {
+          assign_all: boolean
+          assigned_leader_ids: string[]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_at: string | null
+          id: string
+          title: string
+          updated_at: string
+          week_id: string | null
+        }
+        Insert: {
+          assign_all?: boolean
+          assigned_leader_ids?: string[]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_at?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+          week_id?: string | null
+        }
+        Update: {
+          assign_all?: boolean
+          assigned_leader_ids?: string[]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_at?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+          week_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_tasks_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_weeks: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          is_active: boolean
+          max_daily_hours: number
+          min_rest_hours: number
+          name: string
+          notes: string | null
+          schedule_published_at: string | null
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          is_active?: boolean
+          max_daily_hours?: number
+          min_rest_hours?: number
+          name: string
+          notes?: string | null
+          schedule_published_at?: string | null
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          max_daily_hours?: number
+          min_rest_hours?: number
+          name?: string
+          notes?: string | null
+          schedule_published_at?: string | null
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mailbox_messages: {
         Row: {
           admin_reply: string | null
@@ -4968,8 +5360,13 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_in_match: { Args: { _match_id: string }; Returns: boolean }
       is_kitchen: { Args: never; Returns: boolean }
+      is_leirskole: { Args: never; Returns: boolean }
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      leirskole_post_duration: {
+        Args: { _end: string; _start: string }
+        Returns: number
+      }
       mark_fix_task_fixed: { Args: { _task_id: string }; Returns: undefined }
       my_sips_left: { Args: never; Returns: number }
       pov_current_roll: {
