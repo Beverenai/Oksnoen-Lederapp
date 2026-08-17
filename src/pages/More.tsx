@@ -107,7 +107,7 @@ export default function More() {
   const { isAdmin, isNurse, isKitchen, isSuperAdmin, isLimitedAccess, isLeirskole, logout, leader, effectiveLeader } = useAuth();
   const navigate = useNavigate();
   const { mode: appMode } = useAppMode();
-  const { limited, leirskoleView } = useAccessMode();
+  const { limited, leirskoleView, mode: accessMode } = useAccessMode();
   const sweatersEnabled = useSweatersEnabled();
   const { data: murderState } = useMyMurderState();
   const { data: mailboxUnread } = useMailboxUnreadCount(!!isAdmin);
@@ -276,14 +276,6 @@ export default function More() {
   // Off-season: hjemskjermen har allerede POV, Tinder, Slurker, Klineliste og Snus,
   // så «Mer» er en kompakt liste med resten – ingen doble knapper.
   const limitedSections: MoreSection[] = [
-    ...(leirskoleView
-      ? [{
-          label: 'Leirskole',
-          items: [
-            { to: '/leirskole', icon: Tent, label: 'Leirskole', desc: 'Vakter og oppgaver' } as MoreItem,
-          ],
-        }]
-      : []),
     {
       label: 'Ditt',
       items: [
@@ -305,10 +297,30 @@ export default function More() {
     },
   ];
 
-  const sections: MoreSection[] = limited
+  const leirskoleSections: MoreSection[] = [
+    {
+      label: 'Leirskole',
+      items: [
+        { to: '/leirskole', icon: Tent, label: 'Leirskole', desc: 'Vakter og oppgaver' },
+        { to: '/chat', icon: MessageCircle, label: 'Leirskole-chat', desc: 'Egen kanal i Lederhuset' },
+      ],
+    },
+    {
+      label: 'Ditt',
+      items: [{ to: '/profile', icon: User, label: 'Min Profil', desc: 'Bilde og innstillinger' }],
+    },
+    {
+      label: 'Konto',
+      items: [{ icon: LogOut, label: 'Logg ut', onClick: () => logout() }],
+    },
+  ];
+
+  const sections: MoreSection[] = accessMode === 'leirskole'
+    ? leirskoleSections
+    : limited
     ? limitedSections.map((s) => ({
         ...s,
-        items: s.items.filter((i) => !i.to || isLimitedAccessRoute(i.to) || (leirskoleView && isLeirskoleRoute(i.to))),
+        items: s.items.filter((i) => !i.to || isLimitedAccessRoute(i.to)),
       }))
     : fullSections;
 
