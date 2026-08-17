@@ -200,7 +200,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const cellContent = (t: CellTarget) =>
     planContent.get(t.postId ? `post|${t.postId}` : `${t.date}|${t.rowIndex}`) ?? '';
 
-  const gridStyle = { gridTemplateColumns: `88px repeat(${dates.length}, minmax(150px, 1fr))` };
+  const gridStyle = { gridTemplateColumns: `64px repeat(${dates.length}, minmax(0, 1fr))` };
 
   /** Aktiviteter i ukeplanen som ingen leder har fått ennå. */
   const missing = useMemo(() => {
@@ -332,8 +332,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         )}
       </div>
 
-      <div className="-mx-2 overflow-x-auto px-2">
-        <div className="min-w-max space-y-1.5">
+      <div className="-mx-2 px-2">
+        <div className="space-y-1.5">
           {/* Dagoverskrifter */}
           <div className="grid gap-1.5" style={gridStyle}>
             <div className="sticky left-0 z-10 bg-card" />
@@ -545,18 +545,27 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
               const day = hoursByDate.get(date) ?? new Map<string, number>();
               const values = [...day.values()];
               const max = Number(week.max_daily_hours ?? 8);
-              const over = values.filter((v) => v > max + 0.01).length;
+              const over = [...day.entries()].filter(([, v]) => v > max + 0.01);
               const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
               return (
                 <div
                   key={date}
                   className={`rounded-xl border p-2 text-[11px] ${
-                    over ? 'border-destructive/50 bg-destructive/10 text-destructive' : 'border-border/60 bg-muted/25'
+                    over.length ? 'border-destructive/50 bg-destructive/10 text-destructive' : 'border-border/60 bg-muted/25'
                   }`}
                 >
                   <span className="font-bold tabular-nums">{avg.toFixed(1)}t</span>
                   <span className="text-muted-foreground"> snitt · {values.length} ledere</span>
-                  {over > 0 && <p className="font-semibold">{over} over {max}t</p>}
+                  {over.length > 0 && (
+                    <>
+                      <p className="font-semibold">{over.length} over {max}t</p>
+                      <p className="text-[10px] leading-tight">
+                        {over
+                          .map(([id, v]) => `${firstName(leaderName.get(id) ?? '?')} ${v.toFixed(1)}t`)
+                          .join(' · ')}
+                      </p>
+                    </>
+                  )}
                 </div>
               );
             })}
