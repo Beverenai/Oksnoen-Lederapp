@@ -328,6 +328,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     mutationFn: async () => {
       let removed = 0;
       let added = 0;
+      let acts = 0;
       for (const date of dates) {
         const day = staffHoursByDate.get(date) ?? new Map<string, number>();
         for (const [staffId, v] of day.entries()) {
@@ -337,16 +338,17 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         }
         // Fyll deretter opp de som ligger langt under taket.
         added += await fillDayHours({ weekId: week.id, date, maxHours });
+        acts += await assignMissingActivities({ weekId: week.id, date });
       }
-      return { removed, added };
+      return { removed, added, acts };
     },
-    onSuccess: ({ removed, added }) => {
-      ['leirskole-schedule', 'leirskole-my-shifts', 'leirskole-activities'].forEach((key) =>
+    onSuccess: ({ removed, added, acts }) => {
+      ['leirskole-schedule', 'leirskole-my-shifts', 'leirskole-activities', 'leirskole-week-plan'].forEach((key) =>
         qc.invalidateQueries({ queryKey: [key] }),
       );
       toast.success(
-        removed || added
-          ? `Balansert uken: −${removed} vakter, +${added} vakter mot ${maxHours}t`
+        removed || added || acts
+          ? `Balansert uken: −${removed} / +${added} vakter mot ${maxHours}t · ${acts} fikk aktivitet`
           : `Alle ledere ligger nær ${maxHours}t`,
       );
     },
