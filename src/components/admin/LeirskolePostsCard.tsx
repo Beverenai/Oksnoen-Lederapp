@@ -337,9 +337,6 @@ export function LeirskolePostsCard({
         )}
 
         {readOnly && (
-          <></>
-        )}
-        {readOnly && (
           <div className="flex items-center gap-2 rounded-xl border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
             <RefreshCw className="h-4 w-4" /> Administreres i jobbplattformen
           </div>
