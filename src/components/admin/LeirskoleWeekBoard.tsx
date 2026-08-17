@@ -33,6 +33,7 @@ const MEAL_TIMES: Record<string, { start: string; end: string; hours: number }> 
   Frokost: { start: '09:00', end: '10:00', hours: 1 },
   Middag: { start: '14:00', end: '15:00', hours: 1 },
   Kvelds: { start: '19:00', end: '20:00', hours: 1 },
+  Sanitas: { start: '22:30', end: '23:00', hours: 0.5 },
 };
 const TEMPLATE_NAMES = new Set(['Frokost', 'Middag', 'Kvelds', 'Nattevakt', 'Sanitas', 'Økt 1', 'Økt 2', 'Økt 3']);
 /** Navn som har egne rader (måltid/natt) og derfor ikke vises i tidslinjen. */
@@ -49,9 +50,9 @@ type StaffRow = LeirskoleStaff & {
 
 const WEEKDAYS = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'];
 const SESSIONS = [
-  { row: 1, label: 'Økt 1', session: 'formiddag' },
-  { row: 2, label: 'Økt 2', session: 'ettermiddag' },
-  { row: 3, label: 'Økt 3', session: 'kveld' },
+  { row: 1, label: 'Økt 1', session: 'formiddag', time: '11–14' },
+  { row: 2, label: 'Økt 2', session: 'ettermiddag', time: '16–19' },
+  { row: 3, label: 'Økt 3', session: 'kveld', time: '20–21.30' },
 ];
 
 function datesBetween(start: string, end: string) {
