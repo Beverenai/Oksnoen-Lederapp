@@ -26,6 +26,7 @@ import { LeirskoleGuideCard } from '@/components/admin/LeirskoleGuideCard';
 import { LeirskoleLeaderSheet } from '@/components/admin/LeirskoleLeaderSheet';
 import { LeirskolePostsCard } from '@/components/admin/LeirskolePostsCard';
 import { LeirskoleWeekPlanCard } from '@/components/admin/LeirskoleWeekPlanCard';
+import { LeirskoleDayActivityCard } from '@/components/admin/LeirskoleDayActivityCard';
 import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
 import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
 import { formatDue, hhmm, shortDate, todayStr } from '@/lib/leirskoleDates';
@@ -465,6 +466,7 @@ export default function LeirskoleAdmin() {
             staff={staff ?? []}
             onSelectStaff={(staffId) => setSelectedStaffId(staffId)}
           />
+          <LeirskoleDayActivityCard week={week} staff={staff ?? []} />
           <LeirskoleWeekPlanCard week={week} />
         </TabsContent>
 
