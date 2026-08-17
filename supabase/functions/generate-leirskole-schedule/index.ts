@@ -222,8 +222,11 @@ Deno.serve(async (req) => {
     // Avreisedager: admin lager egne økter der, så vi hopper over standardoppsettet.
     const { data: dayRows } = await supa.from("leirskole_week_days")
       .select("date, day_type").eq("week_id", week_id);
+    // Ankomst- og avreisedager har bare egne økter — ingen standard maler.
     const departureDays = new Set(
-      (dayRows ?? []).filter((d: any) => d.day_type === "departure").map((d: any) => String(d.date)),
+      (dayRows ?? [])
+        .filter((d: any) => d.day_type === "departure" || d.day_type === "arrival")
+        .map((d: any) => String(d.date)),
     );
 
     const { data: staffRaw } = await supa.from("leirskole_staff")
