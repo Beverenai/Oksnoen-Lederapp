@@ -212,7 +212,25 @@ export function LeirskolePostsCard({
         }
         return { removed: true } as const;
       }
-      if (assignmentId) {
+      // Samme leder kan bare stå én gang på samme vakt.
+      const { data: existing } = await supabase
+        .from('leirskole_assignments')
+        .select('id')
+        .eq('post_id', postId)
+        .eq('staff_id', staffId)
+        .maybeSingle();
+
+      if (existing?.id) {
+        // Lederen står allerede på vakten: lås den raden, og fjern raden
+        // vi skulle overskrive slik at vi ikke får en duplikat.
+        await supabase
+          .from('leirskole_assignments')
+          .update({ assigned_manually: true, is_locked: true })
+          .eq('id', existing.id);
+        if (assignmentId && assignmentId !== existing.id) {
+          await supabase.from('leirskole_assignments').delete().eq('id', assignmentId);
+        }
+      } else if (assignmentId) {
         const { error } = await supabase
           .from('leirskole_assignments')
           .update({ staff_id: staffId, assigned_manually: true, is_locked: true })
