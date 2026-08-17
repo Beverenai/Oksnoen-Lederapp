@@ -488,6 +488,11 @@ export function LeirskolePostsCard({
                                 {style.icon} {style.label}
                               </span>
                               <p className="truncate text-sm font-semibold">{p.name}</p>
+                              {(p as { is_published?: boolean }).is_published === false && (
+                                <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                  <EyeOff className="h-3 w-3" /> Ikke satt
+                                </span>
+                              )}
                             </div>
                             <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">
                               {hhmm(p.start_time)}–{hhmm(p.end_time)} · {Number(p.duration_hours ?? 0).toFixed(1)} t ·{' '}
@@ -535,6 +540,43 @@ export function LeirskolePostsCard({
 
                         {!readOnly && editing && (
                           <div className="mt-2.5 space-y-1.5 border-t border-border/60 pt-2.5">
+                            <div className="grid grid-cols-3 gap-2">
+                              <Input
+                                type="time"
+                                defaultValue={hhmm(p.start_time)}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  e.target.value !== hhmm(p.start_time) &&
+                                  updatePost.mutate({ id: p.id, start_time: e.target.value })
+                                }
+                              />
+                              <Input
+                                type="time"
+                                defaultValue={hhmm(p.end_time)}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  e.target.value !== hhmm(p.end_time) &&
+                                  updatePost.mutate({ id: p.id, end_time: e.target.value })
+                                }
+                              />
+                              <Input
+                                type="number"
+                                min={1}
+                                defaultValue={required}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  Number(e.target.value) !== required &&
+                                  updatePost.mutate({ id: p.id, required_leaders: Math.max(1, Number(e.target.value) || 1) })
+                                }
+                              />
+                            </div>
+                            <div className="flex items-center justify-between rounded-xl bg-muted/40 px-2.5 py-1.5">
+                              <span className="text-xs">Publisert for lederne</span>
+                              <Switch
+                                checked={(p as { is_published?: boolean }).is_published !== false}
+                                onCheckedChange={(v) => updatePost.mutate({ id: p.id, is_published: v })}
+                              />
+                            </div>
                             {Array.from({ length: slots }).map((_, i) => {
                               const a = p.assignments[i];
                               return (
