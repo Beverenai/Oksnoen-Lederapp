@@ -108,12 +108,13 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     return map;
   }, [posts]);
 
-  /** `${date}|${session}` -> ledere på vakt. */
+  /** `${date}|${session}` -> ledere på vakt. Session = formiddag/ettermiddag/kveld, eller postId for egne økter. */
   const dutyBySlot = useMemo(() => {
     const map = new Map<string, { id: string; name: string; competencies: string[] }[]>();
     (posts ?? []).forEach((p) => {
-      const name = (p.name ?? '').trim().toLowerCase();
-      const session = SESSIONS.find((s) => s.label.toLowerCase() === name)?.session;
+      const session = p.is_custom
+        ? p.id
+        : SESSIONS.find((s) => s.label.toLowerCase() === (p.name ?? '').trim().toLowerCase())?.session;
       if (!session) return;
       const list = map.get(`${p.date}|${session}`) ?? [];
       p.assignments.forEach((a) => {
