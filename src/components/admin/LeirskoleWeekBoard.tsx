@@ -15,7 +15,6 @@ import {
   type LeirskoleStaff,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
-import { hhmm } from '@/lib/leirskoleDates';
 import {
   runLeirskoleGenerate,
   type LeirskoleGenerateMode,
@@ -186,35 +185,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke generere uken'),
   });
 
-  /** Radene for en dag: økt 1–3, eller dagens egne økter på ankomst/avreise. */
+  /** Radene for en vanlig dag: økt 1–3. Ankomst/avreise bruker kalenderkolonne. */
   const rowsFor = (date: string): (CellTarget | null)[] => {
-    const dayType = specialDays.get(date);
-    if (dayType) {
-      const custom = (postsByDate.get(date) ?? [])
-        .filter((p) => p.is_custom)
-        .sort((a, b) => a.start_time.localeCompare(b.start_time));
-      return SESSIONS.map((_, i) => {
-        const p = custom[i];
-        if (!p) {
-          return {
-            date,
-            session: null,
-            rowIndex: i + 1,
-            postId: null,
-            label: 'Legg til egen økt',
-            dayType: dayType as 'arrival' | 'departure',
-          };
-        }
-        return {
-          date,
-          session: p.id,
-          rowIndex: null,
-          postId: p.id,
-          label: `${p.name} ${hhmm(p.start_time)}–${hhmm(p.end_time)}`,
-          dayType: dayType as 'arrival' | 'departure',
-        };
-      });
-    }
+    if (specialDays.has(date)) return SESSIONS.map(() => null);
     return SESSIONS.map((s) => ({
       date,
       session: s.session,
@@ -387,19 +360,41 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             })}
           </div>
 
-          {/* Øktrader */}
-          {SESSIONS.map((s, rowIdx) => (
-            <div key={s.row} className="grid gap-1.5" style={gridStyle}>
-              <LabelCell>{s.label}</LabelCell>
-              {dates.map((date) => {
-                const t = rowsFor(date)[rowIdx];
-                if (!t) {
-                  return (
-                    <div key={date} className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-2 text-[11px] text-muted-foreground">
-                      —
-                    </div>
-                  );
-                }
+          {/* Øktrader — ankomst/avreise vises som kalenderkolonne over alle tre radene */}
+          <div className="grid gap-1.5" style={gridStyle}>
+            {SESSIONS.map((s, rowIdx) => (
+              <div key={`label-${s.row}`} style={{ gridColumn: 1, gridRow: rowIdx + 1 }} className="flex items-center">
+                <LabelCell>{s.label}</LabelCell>
+              </div>
+            ))}
+            {dates.map((date, dayIdx) =>
+              specialDays.has(date) ? (
+                <div
+                  key={`cal-${date}`}
+                  style={{ gridColumn: dayIdx + 2, gridRow: '1 / span 3' }}
+                  className="rounded-xl border border-amber-500/50 bg-amber-500/5 p-1.5"
+                >
+                  <LeirskoleSpecialDayTimeline
+                    weekId={week.id}
+                    date={date}
+                    posts={(postsByDate.get(date) ?? [])
+                      .filter((p) => p.is_custom)
+                      .map((p) => ({
+                        id: p.id,
+                        name: p.name ?? '',
+                        start_time: p.start_time,
+                        end_time: p.end_time,
+                        assignments: p.assignments ?? [],
+                      }))}
+                    staffOptions={staff
+                      .filter((s) => s.leader)
+                      .map((s) => ({ staffId: s.id, name: s.leader!.name }))}
+                  />
+                </div>
+              ) : (
+                SESSIONS.map((s, rowIdx) => {
+                  const t = rowsFor(date)[rowIdx];
+                  if (!t) return null;
                 const content = cellContent(t);
                 const lines = content.split('\n').map((l) => l.trim()).filter(Boolean);
                 const slotActivities = t.session ? activityBySlot.get(`${date}|${t.session}`) ?? [] : [];
@@ -417,8 +412,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                       : 'border-amber-500/50 bg-amber-500/10';
                 return (
                   <button
-                    key={date}
+                    key={`${date}-${s.row}`}
                     type="button"
+                    style={{ gridColumn: dayIdx + 2, gridRow: rowIdx + 1 }}
                     onClick={() => setTarget(t)}
                     className={`rounded-xl border p-2 text-left transition-colors hover:brightness-105 ${tone}`}
                   >
@@ -459,9 +455,10 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                     )}
                   </button>
                 );
-              })}
-            </div>
-          ))}
+                })
+              ),
+            )}
+          </div>
 
           {/* Måltider */}
           <div className="grid gap-1.5" style={gridStyle}>
@@ -556,29 +553,6 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           </div>
         </div>
       </div>
-
-      {dates
-        .filter((date) => specialDays.has(date))
-        .map((date) => (
-          <LeirskoleSpecialDayTimeline
-            key={date}
-            weekId={week.id}
-            date={date}
-            dayType={specialDays.get(date) as 'arrival' | 'departure'}
-            posts={(postsByDate.get(date) ?? [])
-              .filter((p) => p.is_custom)
-              .map((p) => ({
-                id: p.id,
-                name: p.name ?? '',
-                start_time: p.start_time,
-                end_time: p.end_time,
-                assignments: p.assignments ?? [],
-              }))}
-            staffOptions={staff
-              .filter((s) => s.leader)
-              .map((s) => ({ staffId: s.id, name: s.leader!.name }))}
-          />
-        ))}
 
       <LeirskoleCellSheet
         open={!!target}
