@@ -384,6 +384,9 @@ Deno.serve(async (req) => {
             const fitA = da <= remaining + 0.001 ? 0 : 1;
             const fitB = db <= remaining + 0.001 ? 0 : 1;
             if (fitA !== fitB) return fitA - fitB;
+            // Sammenhengende vakter først (økt → måltid → økt → nattevakt).
+            const adjA = adjacencyPenalty(a, s), adjB = adjacencyPenalty(b, s);
+            if (Math.abs(adjA - adjB) > 0.001) return adjA - adjB;
             return db - da;
           });
           for (const post of ordered) {
