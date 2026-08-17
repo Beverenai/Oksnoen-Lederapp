@@ -137,7 +137,7 @@ export function LeirskoleLeaderSheet({
           <div>
             <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Kompetanse</p>
             <div className="flex flex-wrap gap-1.5">
-              {LEIRSKOLE_COMPETENCIES.map((c) => {
+              {activityTypes.map((c) => {
                 const on = competencies.includes(c.key);
                 return (
                   <button
@@ -147,7 +147,7 @@ export function LeirskoleLeaderSheet({
                       on ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground'
                     }`}
                   >
-                    {competenceEmoji(c.key)} {competenceLabel(c.key)}
+                    {c.emoji} {c.label}
                   </button>
                 );
               })}
@@ -172,7 +172,7 @@ export function LeirskoleLeaderSheet({
               ))}
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {LEIRSKOLE_ACTIVITIES.map((a) => (
+              {activityTypes.map((a) => (
                 <button
                   key={a.key}
                   onClick={() => setActivity(a.key)}
