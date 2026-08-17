@@ -802,6 +802,60 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           {/* Nattevakt */}
           <div className="grid gap-1.5" style={gridStyle}>
             <LabelCell>
+              <span className="leading-tight">
+                Sanitas
+                <span className="block text-[9px] font-medium normal-case text-muted-foreground/70">22.30–23</span>
+              </span>
+            </LabelCell>
+            {dates.map((date) => {
+              const post = (postsByDate.get(date) ?? []).find((p) =>
+                (p.name ?? '').toLowerCase().includes('sanitas'),
+              );
+              if (!post) {
+                return (
+                  <button
+                    key={date}
+                    type="button"
+                    onClick={() => createPost.mutate({ date, name: 'Sanitas' })}
+                    disabled={createPost.isPending}
+                    className="rounded-xl border border-dashed border-teal-500/40 bg-muted/25 p-2 text-left text-[11px] text-muted-foreground hover:bg-muted"
+                  >
+                    + Sanitas
+                  </button>
+                );
+              }
+              return (
+                <LeirskolePostStaffPicker
+                  key={date}
+                  weekId={week.id}
+                  title="Sanitas · 22.30–23 (maks 4)"
+                  maxHours={maxHours}
+                  hoursByStaff={staffHoursByDate.get(date) ?? new Map()}
+                  staffOptions={staffOptions}
+                  post={{
+                    id: post.id,
+                    name: post.name ?? 'Sanitas',
+                    date,
+                    duration_hours: post.duration_hours,
+                    assignments: post.assignments ?? [],
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="rounded-xl border border-teal-500/40 bg-teal-500/10 p-2 text-left text-[11px] font-semibold hover:brightness-105"
+                  >
+                    {(post.assignments ?? [])
+                      .map((a) => firstName(staffToLeader.get(a.staff_id)?.name ?? '?'))
+                      .join(', ') || <span className="text-muted-foreground">ingen</span>}
+                  </button>
+                </LeirskolePostStaffPicker>
+              );
+            })}
+          </div>
+
+          {/* Nattevakt */}
+          <div className="grid gap-1.5" style={gridStyle}>
+            <LabelCell>
               <Moon className="mr-1 h-3 w-3" /> Natt
             </LabelCell>
             {dates.map((date) => {
