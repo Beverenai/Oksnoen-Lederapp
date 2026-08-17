@@ -63,6 +63,7 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
   }, [cells]);
 
   const persist = (date: string, row: number, content: string, color: string) => {
+    void 0;
     save.mutate(
       { weekId: week.id, date, rowIndex: row, content, color },
       { onError: () => toast.error('Kunne ikke lagre ruten') },
