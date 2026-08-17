@@ -1,24 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  CalendarDays, MessageCircle, ClipboardList, Clock, Moon, Users, Settings,
-  ChevronRight, Megaphone, Check, Award, Pencil,
-} from 'lucide-react';
+import { CalendarDays, Clock, Moon, Settings, Megaphone, Check } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
   useIsLeirskoleStaff,
   useLeirskoleSessionInfo,
-  useLeirskoleStaff,
-  useLeirskoleTasks,
   useMarkLeirskoleInfoRead,
+  useMyLeirskoleActivities,
   useMyLeirskoleShifts,
-  useMyLeirskoleCompetencies,
 } from '@/hooks/useLeirskole';
-import { LeirskoleCompetenceSheet } from '@/components/leirskole/LeirskoleCompetenceSheet';
-import { competenceEmoji, competenceLabel } from '@/lib/leirskoleCompetencies';
+import { activityEmoji, activityLabel, sessionLabel } from '@/lib/leirskoleActivities';
 import { dayLabel, shortDate, hhmm, todayStr } from '@/lib/leirskoleDates';
 
 export default function Leirskole() {
@@ -27,20 +21,12 @@ export default function Leirskole() {
   const { data: week, isLoading: weekLoading } = useActiveLeirskoleWeek();
   const { data: isStaff } = useIsLeirskoleStaff(week?.id);
   const { data: myShifts, isLoading: shiftsLoading } = useMyLeirskoleShifts(week?.id);
-  const { data: staff } = useLeirskoleStaff(week?.id);
-  const { data: tasks } = useLeirskoleTasks(week?.id);
   const { data: sessionInfo } = useLeirskoleSessionInfo(week?.id);
+  const { data: myActivities } = useMyLeirskoleActivities(week?.id);
   const markInfoRead = useMarkLeirskoleInfoRead();
-  const { data: myCompetencies, isLoading: compLoading } = useMyLeirskoleCompetencies();
-  const [compOpen, setCompOpen] = useState(false);
-  const compMissing = !compLoading && (myCompetencies ?? []).length === 0;
-
-  // Første gang: be lederen legge inn kompetansen sin.
-  useEffect(() => {
-    if (compMissing && !!effectiveLeader?.id) setCompOpen(true);
-  }, [compMissing, effectiveLeader?.id]);
 
   const firstName = (effectiveLeader?.name ?? '').split(' ')[0] || 'leder';
+  const today = todayStr();
 
   const myInfo = useMemo(
     () =>
@@ -50,7 +36,6 @@ export default function Leirskole() {
     [sessionInfo, effectiveLeader?.id],
   );
 
-  const today = todayStr();
   const shifts = useMemo(() => myShifts ?? [], [myShifts]);
   const myHours = useMemo(
     () => shifts.reduce((sum, p) => sum + Number(p.duration_hours ?? 0), 0),
@@ -65,7 +50,7 @@ export default function Leirskole() {
   const hoursByDay = useMemo(() => {
     const map = new Map<string, number>();
     shifts.forEach((p) => map.set(p.date, (map.get(p.date) ?? 0) + Number(p.duration_hours ?? 0)));
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    return map;
   }, [shifts]);
 
   const shiftsByDay = useMemo(() => {
@@ -74,10 +59,10 @@ export default function Leirskole() {
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [shifts]);
 
-  const myTasks = (tasks ?? []).filter(
-    (t) => t.assign_all || (t.assigned_leader_ids ?? []).includes(effectiveLeader?.id ?? ''),
+  const todayActivities = useMemo(
+    () => (myActivities ?? []).filter((a) => a.date >= today).slice(0, 3),
+    [myActivities, today],
   );
-  const openTasks = myTasks.filter((t) => !t.completedByMe).length;
 
   if (weekLoading) {
     return (
@@ -106,7 +91,7 @@ export default function Leirskole() {
 
   return (
     <div className="space-y-3 animate-fade-in pb-6">
-      {/* Ukeheader */}
+      {/* Uke */}
       <div className="oks-ls-pill overflow-hidden p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -121,11 +106,10 @@ export default function Leirskole() {
           </span>
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-2">
           {[
             { v: `${myHours.toFixed(1)}t`, l: 'Min uke' },
             { v: `${todayHours.toFixed(1)}/${maxDaily}t`, l: 'I dag' },
-            { v: `${(staff ?? []).length}`, l: 'Ledere' },
           ].map((s) => (
             <div key={s.l} className="rounded-2xl bg-muted/40 px-3 py-2">
               <p className="text-lg font-bold tabular-nums">{s.v}</p>
@@ -142,12 +126,24 @@ export default function Leirskole() {
       )}
 
       {/* Denne økten skal du */}
-      {myInfo.length > 0 && (
+      {(todayActivities.length > 0 || myInfo.length > 0) && (
         <div className="oks-ls-pill p-4">
           <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
             <Megaphone className="h-4 w-4 text-primary" /> Denne økten skal du
           </p>
           <div className="space-y-2">
+            {todayActivities.map((a) => (
+              <div key={a.id} className="rounded-2xl bg-primary/12 p-3">
+                <p className="text-sm font-semibold">
+                  {activityEmoji(a.activity)} {activityLabel(a.activity)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {dayLabel(a.date)} · {sessionLabel(a.session)}
+                  {a.date === today ? ' · i dag' : ''}
+                </p>
+                {a.note && <p className="mt-1 text-xs text-muted-foreground">{a.note}</p>}
+              </div>
+            ))}
             {myInfo.map((i) => (
               <div key={i.id} className="rounded-2xl bg-muted/40 p-3">
                 <p className="text-sm font-semibold">{i.title}</p>
@@ -218,14 +214,21 @@ export default function Leirskole() {
         ) : (
           <div className="space-y-3">
             {shiftsByDay.map(([date, dayShifts]) => {
-              const hours = hoursByDay.find(([d]) => d === date)?.[1] ?? 0;
+              const hours = hoursByDay.get(date) ?? 0;
               return (
                 <div key={date}>
                   <div className="mb-1 flex items-center justify-between">
-                    <p className={`text-xs font-semibold uppercase tracking-wide ${date === today ? 'text-primary' : 'text-muted-foreground'}`}>
-                      {dayLabel(date)}{date === today ? ' · i dag' : ''}
+                    <p
+                      className={`text-xs font-semibold uppercase tracking-wide ${
+                        date === today ? 'text-primary' : 'text-muted-foreground'
+                      }`}
+                    >
+                      {dayLabel(date)}
+                      {date === today ? ' · i dag' : ''}
                     </p>
-                    <span className="text-[11px] tabular-nums text-muted-foreground">{hours.toFixed(1)}/{maxDaily}t</span>
+                    <span className="text-[11px] tabular-nums text-muted-foreground">
+                      {hours.toFixed(1)}/{maxDaily}t
+                    </span>
                   </div>
                   <div className="space-y-1.5">
                     {dayShifts.map((p) => (
@@ -237,7 +240,9 @@ export default function Leirskole() {
                       >
                         <p className="min-w-0 truncate text-sm font-medium">{p.name}</p>
                         <div className="flex shrink-0 items-center gap-2">
-                          {(p.is_night || p.crosses_midnight) && <Moon className="h-3.5 w-3.5 text-muted-foreground" />}
+                          {(p.is_night || p.crosses_midnight) && (
+                            <Moon className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
                           <span className="text-xs font-semibold tabular-nums">
                             {hhmm(p.start_time)}–{hhmm(p.end_time)}
                           </span>
@@ -251,80 +256,6 @@ export default function Leirskole() {
           </div>
         )}
       </div>
-
-      {/* Min kompetanse */}
-      <button
-        onClick={() => setCompOpen(true)}
-        className={`oks-ls-pill flex w-full items-center justify-between gap-3 p-4 text-left ${
-          compMissing ? 'ring-1 ring-destructive/50' : ''
-        }`}
-      >
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 text-sm font-semibold">
-            <Award className="h-4 w-4 text-primary" /> Min kompetanse
-          </p>
-          {compMissing ? (
-            <p className="mt-1 text-xs text-muted-foreground">Legg inn hva du kan ha ansvar for</p>
-          ) : (
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {(myCompetencies ?? []).map((c) => (
-                <span key={c} className="rounded-full bg-muted/60 px-2.5 py-1 text-xs font-medium">
-                  {competenceEmoji(c)} {competenceLabel(c)}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        <Pencil className="h-4 w-4 shrink-0 text-muted-foreground" />
-      </button>
-
-      {/* Snarveier */}
-      <div className="grid grid-cols-2 gap-2">
-        {[
-          { to: '/leirskole/vaktplan', icon: CalendarDays, label: 'Vaktplan' },
-          { to: '/leirskole/oppgaver', icon: ClipboardList, label: 'Oppgaver', badge: openTasks || undefined },
-          { to: '/leaders', icon: Users, label: 'Ledere' },
-          { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
-        ].map((s) => (
-          <button
-            key={s.to}
-            onClick={() => navigate(s.to)}
-            className="oks-ls-pill flex items-center justify-between gap-2 px-4 py-3 text-left"
-          >
-            <span className="flex items-center gap-2 text-sm font-medium">
-              <s.icon className="h-4 w-4 text-primary" /> {s.label}
-            </span>
-            {s.badge ? (
-              <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
-                {s.badge}
-              </span>
-            ) : (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            )}
-          </button>
-        ))}
-        {isAdmin && (
-          <button
-            onClick={() => navigate('/admin/leirskole')}
-            className="oks-ls-pill col-span-2 flex items-center justify-between px-4 py-3 text-left"
-          >
-            <span className="flex items-center gap-2 text-sm font-medium">
-              <Settings className="h-4 w-4 text-primary" /> Leirskole-admin
-            </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </button>
-        )}
-      </div>
-
-      {effectiveLeader?.id && (
-        <LeirskoleCompetenceSheet
-          open={compOpen}
-          onOpenChange={setCompOpen}
-          leaderId={effectiveLeader.id}
-          current={myCompetencies ?? []}
-          required={compMissing}
-        />
-      )}
     </div>
   );
 }
