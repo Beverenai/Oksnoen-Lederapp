@@ -332,6 +332,8 @@ export default function More() {
         <p className="mt-1 text-sm text-muted-foreground">Alle sider og funksjoner</p>
       </header>
 
+      <ViewModeSwitcher />
+
       {isAdmin && !limited && (
         <NavLink
           to="/admin"
