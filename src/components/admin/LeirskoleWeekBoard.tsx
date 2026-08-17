@@ -788,7 +788,6 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         </div>
       </div>
 
-      <LeirskoleCellSheet
       {/* Timer per leder — enkel kontroll på at alle ligger nær dagstaket */}
       <div className="rounded-2xl border border-border/60 bg-muted/20 p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
