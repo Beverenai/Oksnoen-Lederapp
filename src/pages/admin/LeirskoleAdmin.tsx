@@ -20,14 +20,9 @@ import {
   useLeirskoleWeekPlan,
 } from '@/hooks/useLeirskole';
 import { LeirskoleAccessCard } from '@/components/admin/LeirskoleAccessCard';
-import { LeirskoleAutoActivityCard } from '@/components/admin/LeirskoleAutoActivityCard';
 import { LeirskoleActivityTypesCard } from '@/components/admin/LeirskoleActivityTypesCard';
 import { LeirskoleGuideCard } from '@/components/admin/LeirskoleGuideCard';
 import { LeirskoleLeaderSheet } from '@/components/admin/LeirskoleLeaderSheet';
-import { LeirskolePostsCard } from '@/components/admin/LeirskolePostsCard';
-import { LeirskoleWeekPlanCard } from '@/components/admin/LeirskoleWeekPlanCard';
-import { LeirskoleDayActivityCard } from '@/components/admin/LeirskoleDayActivityCard';
-import { LeirskoleKitchenCard } from '@/components/admin/LeirskoleKitchenCard';
 import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
 import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
 import { LeirskoleWeekBoard } from '@/components/admin/LeirskoleWeekBoard';
