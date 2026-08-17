@@ -454,8 +454,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             </p>
           )}
           {summary.gaps.length > 0 && (
-            <p className="mt-1 flex items-center gap-1 text-destructive">
-              <AlertTriangle className="h-3 w-3" /> {summary.gaps.length} aktiviteter mangler leder
+            <p className="mt-1 flex items-center gap-1 text-muted-foreground">
+              <AlertTriangle className="h-3 w-3" /> {summary.gaps.length} vakter fikk ikke full bemanning ved forrige
+              generering
             </p>
           )}
         </div>
