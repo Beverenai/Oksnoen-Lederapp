@@ -209,9 +209,14 @@ Deno.serve(async (req) => {
 
     if ((postsRaw ?? []).length === 0) {
       const N = staff.length;
-      const scale = (target: number) => Math.max(1, Math.min(target, Math.max(1, Math.ceil(N * (target / 6)))));
-      const shiftReq = Math.max(1, Math.min(N > 1 ? N - 1 : 1, scale(6)));
-      const mealReq = Math.max(1, Math.min(2, Math.ceil(N / 4)));
+      // Mål: hver leder skal fylle 8 timer per dag. Skaler bemanningen på
+      // øktene slik at total kapasitet per dag ≈ 8 timer * antall ledere.
+      const mealReq = Math.max(1, Math.min(3, Math.ceil(N / 4)));
+      const mealHours = 3 * mealReq; // Frokost + Middag + Kvelds (1t hver)
+      const nightHours = 3; // Nattevakt 22:30-01:30, 1 leder
+      const shiftHoursPerLeader = 2.5 + 2.5 + 1.5; // Økt 1 + 2 + 3
+      const needed = 8 * N - mealHours - nightHours;
+      const shiftReq = Math.max(1, Math.min(N, Math.ceil(needed / shiftHoursPerLeader)));
       const days: string[] = [];
       const d0 = new Date(week.start_date + "T00:00:00Z");
       const d1 = new Date(week.end_date + "T00:00:00Z");
@@ -311,6 +316,61 @@ Deno.serve(async (req) => {
           post_name: post.name, date: post.date, missing: need - picked.length,
           reasons: evaluated.filter(c => !c.ok).map(c => `${c.st.name}: ${c.reason}`),
         });
+      }
+    }
+
+    // ── Oppfyllingsrunde: alle ledere skal jobbe opp mot 8 timer hver dag ──
+    // Legger til ekstra ledere på økter/måltider (utover minimumsbemanningen)
+    // så lenge 8t-taket og 11t hvile-regelen holdes.
+    const takenPairs = new Set<string>([
+      ...toKeep.map((a: any) => `${a.post_id}|${a.staff_id}`),
+      ...newAssignments.map((a: any) => `${a.post_id}|${a.staff_id}`),
+    ]);
+
+    const allDates = [...new Set(posts.map(p => p.date))].sort();
+    const fillPosts = (date: string) =>
+      posts
+        .filter(p => p.date === date && !isNight(p))
+        .sort((a, b) => {
+          if (a.is_main_shift !== b.is_main_shift) return a.is_main_shift ? -1 : 1;
+          return Number(b.duration_hours) - Number(a.duration_hours);
+        });
+
+    for (const date of allDates) {
+      const dayPosts = fillPosts(date);
+      let progress = true;
+      while (progress) {
+        progress = false;
+        // Ta den lederen som har minst timer denne dagen først.
+        const hungry = staff
+          .map(st => ({ st, s: stateById.get(st.id)!, target: Math.min(8, Number(st.max_daily_hours ?? 8)) }))
+          .filter(x => (x.s.hoursByDate[date] ?? 0) < x.target - 0.001)
+          .sort((a, b) => (a.s.hoursByDate[date] ?? 0) - (b.s.hoursByDate[date] ?? 0));
+
+        for (const { st, s } of hungry) {
+          const remaining = Math.min(8, Number(st.max_daily_hours ?? 8)) - (s.hoursByDate[date] ?? 0);
+          // Best-fit: velg posten som fyller opp mest av gjenstående tid uten å
+          // sprenge 8t-taket, slik at ledere lander så nær 8 timer som mulig.
+          const ordered = [...dayPosts].sort((a, b) => {
+            const da = Number(a.duration_hours), db = Number(b.duration_hours);
+            const fitA = da <= remaining + 0.001 ? 0 : 1;
+            const fitB = db <= remaining + 0.001 ? 0 : 1;
+            if (fitA !== fitB) return fitA - fitB;
+            return db - da;
+          });
+          for (const post of ordered) {
+            if (takenPairs.has(`${post.id}|${st.id}`)) continue;
+            if (!canAssign(st, post, s, availability, minRest).ok) continue;
+            apply(post, s);
+            takenPairs.add(`${post.id}|${st.id}`);
+            newAssignments.push({
+              post_id: post.id, staff_id: st.id, is_locked: false,
+              assigned_manually: false, generator_run_id: run.id,
+            });
+            progress = true;
+            break;
+          }
+        }
       }
     }
 
