@@ -360,6 +360,7 @@ export default function LeirskoleAdmin() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Oppgaver til lederne</CardTitle>
+              <CardDescription>Send til alle på uken, eller velg spesifikke ledere</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <Input
@@ -373,6 +374,37 @@ export default function LeirskoleAdmin() {
                 onChange={(e) => setTaskDraft({ ...taskDraft, description: e.target.value })}
                 rows={2}
               />
+              <div className="flex items-center justify-between rounded-xl border bg-card/50 px-3 py-2">
+                <span className="text-sm">Til alle på leirskolen</span>
+                <Switch checked={taskAssignAll} onCheckedChange={setTaskAssignAll} />
+              </div>
+              {!taskAssignAll && (
+                <div className="flex flex-wrap gap-2">
+                  {(staff ?? []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Legg til ledere på uken først.</p>
+                  ) : (
+                    (staff ?? []).map((s) => {
+                      const on = taskLeaderIds.includes(s.leader_id);
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() =>
+                            setTaskLeaderIds((prev) =>
+                              on ? prev.filter((id) => id !== s.leader_id) : [...prev, s.leader_id],
+                            )
+                          }
+                          className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                            on ? 'bg-primary text-primary-foreground' : 'bg-card/60 text-muted-foreground'
+                          }`}
+                        >
+                          {s.leader?.name ?? 'Ukjent'}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
               <Button onClick={() => createTask.mutate()} disabled={createTask.isPending} className="gap-2">
                 <Send className="h-4 w-4" /> Send oppgave + varsling
               </Button>
@@ -383,6 +415,13 @@ export default function LeirskoleAdmin() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{t.title}</p>
                       {t.description && <p className="text-xs text-muted-foreground">{t.description}</p>}
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {t.assign_all
+                          ? 'Alle på leirskolen'
+                          : (t.assigned_leader_ids ?? [])
+                              .map((id: string) => (allLeaders ?? []).find((l) => l.id === id)?.name ?? '—')
+                              .join(', ')}
+                      </p>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => deleteTask.mutate(t.id)} aria-label="Slett">
                       <Trash2 className="h-4 w-4 text-destructive" />
