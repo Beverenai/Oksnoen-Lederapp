@@ -112,6 +112,7 @@ export default function LeirskoleAdmin() {
   const { data: planCells } = useLeirskoleWeekPlan(week?.id);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [openStep, setOpenStep] = useState<number | null>(1);
+  const [todayOpen, setTodayOpen] = useState(false);
 
   const [taskDraft, setTaskDraft] = useState({ title: '', description: '', due_at: '' });
   const [taskAssignAll, setTaskAssignAll] = useState(true);
@@ -463,11 +464,20 @@ export default function LeirskoleAdmin() {
       <LeirskoleGuideCard />
 
       {todayPosts.length > 0 && (
-        <div className="oks-ls-pill oks-ls-stripe p-4">
-          <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
-            <Clock className="h-4 w-4 text-primary" /> I dag
-          </p>
-          <div className="space-y-1.5">
+        <div className="oks-ls-pill oks-ls-stripe overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setTodayOpen((v) => !v)}
+            className="flex w-full items-center gap-2 p-4 text-left"
+          >
+            <Clock className="h-4 w-4 shrink-0 text-primary" />
+            <span className="flex-1 text-sm font-semibold">I dag</span>
+            <span className="shrink-0 rounded-full bg-muted/60 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+              {todayPosts.length} vakter
+            </span>
+            <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${todayOpen ? 'rotate-180' : ''}`} />
+          </button>
+          <div className={`space-y-1.5 px-4 pb-4 ${todayOpen ? '' : 'hidden'}`}>
             {todayPosts.map((p) => (
               <div key={p.id} className="rounded-2xl bg-muted/40 px-3 py-2">
                 <div className="flex items-center justify-between gap-2">
