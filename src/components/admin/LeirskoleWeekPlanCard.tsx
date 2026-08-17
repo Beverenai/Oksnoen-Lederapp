@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Grid3X3, Plus, X, PlaneTakeoff, Trash2, Clock } from 'lucide-react';
+import { Grid3X3, Plus, X, PlaneTakeoff, PlaneLanding, Trash2, Clock } from 'lucide-react';
 import {
   useLeirskoleActivityTypes,
   useLeirskoleWeekPlan,
@@ -88,10 +88,16 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
     return map;
   }, [cells]);
 
-  const departure = useMemo(
-    () => new Set((weekDays ?? []).filter((d) => d.day_type === 'departure').map((d) => d.date)),
-    [weekDays],
-  );
+  /** Ankomst- og avreisedager har egne økter i stedet for økt 1–3. */
+  const specialDays = useMemo(() => {
+    const map = new Map<string, 'arrival' | 'departure'>();
+    (weekDays ?? []).forEach((d) => {
+      if (d.day_type === 'departure' || d.day_type === 'arrival') {
+        map.set(d.date, d.day_type as 'arrival' | 'departure');
+      }
+    });
+    return map;
+  }, [weekDays]);
 
   const postsByDate = useMemo(() => {
     const map = new Map<string, { id: string; name: string; start_time: string; end_time: string }[]>();
@@ -108,7 +114,7 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
 
   /** Radene for en dag: faste økter 1–3, eller dagens egne økter på avreisedager. */
   const rowsFor = (date: string): { key: string; label: string; sub?: string; postId?: string }[] => {
-    if (departure.has(date)) {
+    if (specialDays.has(date)) {
       return (postsByDate.get(date) ?? []).map((p) => ({
         key: postKey(p.id),
         label: p.name,
@@ -121,7 +127,7 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
 
   const totalCells = useMemo(
     () => dates.reduce((sum, date) => sum + rowsFor(date).length, 0),
-    [dates, departure, postsByDate],
+    [dates, specialDays, postsByDate],
   );
   const filledCount = useMemo(
     () =>
@@ -130,7 +136,7 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
           sum + rowsFor(date).filter((r) => (stored.get(r.key)?.content ?? '').trim().length > 0).length,
         0,
       ),
-    [dates, stored, departure, postsByDate],
+    [dates, stored, specialDays, postsByDate],
   );
 
   const persist = (
@@ -146,13 +152,18 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
     );
   };
 
-  const toggleDeparture = (date: string) => {
-    const next = departure.has(date) ? 'normal' : 'departure';
+  const LABELS: Record<'arrival' | 'departure', string> = {
+    arrival: 'Ankomstdag',
+    departure: 'Avreisedag',
+  };
+
+  const toggleDayType = (date: string, type: 'arrival' | 'departure') => {
+    const next = specialDays.get(date) === type ? 'normal' : type;
     setDayType.mutate(
       { weekId: week.id, date, dayType: next },
       {
         onSuccess: () =>
-          toast.success(next === 'departure' ? 'Markert som avreisedag' : 'Satt til vanlig dag'),
+          toast.success(next === 'normal' ? 'Satt til vanlig dag' : `Markert som ${LABELS[type].toLowerCase()}`),
         onError: () => toast.error('Kunne ikke endre dagen'),
       },
     );
