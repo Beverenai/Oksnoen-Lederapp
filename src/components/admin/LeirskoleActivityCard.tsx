@@ -191,7 +191,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
         </p>
         <p className="text-xs text-muted-foreground">
           Formiddag og ettermiddag: Tube, Klatring, Rappellering, Kanotur, Båtkjøring og Badevakt.
-          Kveld: leirbål, kveldslek, quiz, film, kiosk og diskotek.
+          Kveldsøkten håndteres utenom appen.
         </p>
       </div>
 
@@ -212,7 +212,7 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
 
       {/* Økt */}
       <div className="flex gap-1.5">
-        {LEIRSKOLE_SESSIONS.map((s) => (
+        {LEIRSKOLE_ACTIVITY_SESSIONS.map((s) => (
           <button
             key={s.key}
             onClick={() => { setSession(s.key); setDraft(null); }}
