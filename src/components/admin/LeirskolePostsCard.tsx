@@ -92,10 +92,12 @@ export function LeirskolePostsCard({
   week,
   staff,
   readOnly = false,
+  onSelectStaff,
 }: {
   week: LeirskoleWeek;
   staff: StaffRow[];
   readOnly?: boolean;
+  onSelectStaff?: (staffId: string) => void;
 }) {
   const qc = useQueryClient();
   const { showError } = useStatusPopup();
@@ -105,6 +107,7 @@ export function LeirskolePostsCard({
 
   const [keepLocked, setKeepLocked] = useState(true);
   const [publishAfter, setPublishAfter] = useState(true);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
@@ -112,6 +115,10 @@ export function LeirskolePostsCard({
   };
 
   const staffName = (id: string) => staff.find((s) => s.id === id)?.leader?.name ?? 'Ukjent';
+  const staffPerson = (id: string) => {
+    const row = staff.find((s) => s.id === id);
+    return { id, name: row?.leader?.name ?? 'Ukjent', imageUrl: row?.leader?.profile_image_url ?? null };
+  };
 
   const hoursByStaff = useMemo(() => {
     const map = new Map<string, number>();
