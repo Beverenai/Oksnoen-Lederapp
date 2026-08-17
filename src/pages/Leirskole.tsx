@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   CalendarDays, MessageCircle, ClipboardList, Clock, Moon, Users, Settings, ChevronRight, Sun,
-  Megaphone, Check,
+  Megaphone, Check, Award, Pencil,
 } from 'lucide-react';
 import {
   useActiveLeirskoleWeek,
@@ -22,7 +22,10 @@ import {
   useMarkLeirskoleInfoRead,
   useMyLeirskoleShifts,
   useToggleLeirskoleTask,
+  useMyLeirskoleCompetencies,
 } from '@/hooks/useLeirskole';
+import { LeirskoleCompetenceSheet } from '@/components/leirskole/LeirskoleCompetenceSheet';
+import { competenceEmoji, competenceLabel } from '@/lib/leirskoleCompetencies';
 
 const WEEKDAYS = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
@@ -58,6 +61,14 @@ export default function Leirskole() {
   const toggleTask = useToggleLeirskoleTask();
   const { data: sessionInfo } = useLeirskoleSessionInfo(week?.id);
   const markInfoRead = useMarkLeirskoleInfoRead();
+  const { data: myCompetencies, isLoading: compLoading } = useMyLeirskoleCompetencies();
+  const [compOpen, setCompOpen] = useState(false);
+  const compMissing = !compLoading && (myCompetencies ?? []).length === 0;
+
+  // Første gang: be lederen legge inn kompetansen sin.
+  useEffect(() => {
+    if (compMissing && !!effectiveLeader?.id) setCompOpen(true);
+  }, [compMissing, effectiveLeader?.id]);
 
   const myInfo = useMemo(
     () =>
@@ -159,6 +170,35 @@ export default function Leirskole() {
           Du er ikke satt opp på denne leirskoleuken ennå — du får vakter, oppgaver og chat når admin legger deg inn.
         </p>
       )}
+
+      {/* Min kompetanse */}
+      <Card className={compMissing ? 'border-destructive/40' : undefined}>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-between gap-2 text-base">
+            <span className="flex items-center gap-2">
+              <Award className="h-4 w-4 text-primary" /> Min kompetanse
+            </span>
+            <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => setCompOpen(true)}>
+              <Pencil className="h-3.5 w-3.5" /> Endre
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {compMissing ? (
+            <p className="text-sm text-muted-foreground">
+              Legg inn hva du kan ha ansvar for — tube, klatring, rappellering, kanotur, båtkjøring og badevakt.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {(myCompetencies ?? []).map((c) => (
+                <span key={c} className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                  {competenceEmoji(c)} {competenceLabel(c)}
+                </span>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Denne økten skal du */}
       {myInfo.length > 0 && (
@@ -391,6 +431,16 @@ export default function Leirskole() {
             ))}
           </CardContent>
         </Card>
+      )}
+
+      {effectiveLeader?.id && (
+        <LeirskoleCompetenceSheet
+          open={compOpen}
+          onOpenChange={setCompOpen}
+          leaderId={effectiveLeader.id}
+          current={myCompetencies ?? []}
+          required={compMissing}
+        />
       )}
     </div>
   );

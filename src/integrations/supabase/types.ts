@@ -1875,6 +1875,7 @@ export type Database = {
           is_external: boolean
           last_app_edit_at: string
           last_synced_at: string | null
+          leirskole_competencies: string[]
           ministerpost: string | null
           name: string
           phone: string
@@ -1913,6 +1914,7 @@ export type Database = {
           is_external?: boolean
           last_app_edit_at?: string
           last_synced_at?: string | null
+          leirskole_competencies?: string[]
           ministerpost?: string | null
           name: string
           phone: string
@@ -1951,6 +1953,7 @@ export type Database = {
           is_external?: boolean
           last_app_edit_at?: string
           last_synced_at?: string | null
+          leirskole_competencies?: string[]
           ministerpost?: string | null
           name?: string
           phone?: string
@@ -5457,6 +5460,7 @@ export type Database = {
       is_in_match: { Args: { _match_id: string }; Returns: boolean }
       is_kitchen: { Args: never; Returns: boolean }
       is_leirskole: { Args: never; Returns: boolean }
+      is_leirskole_week_member: { Args: { _week_id: string }; Returns: boolean }
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
       leirskole_post_duration: {
