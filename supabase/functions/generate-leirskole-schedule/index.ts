@@ -228,6 +228,13 @@ Deno.serve(async (req) => {
 
     const { data: staffRaw } = await supa.from("leirskole_staff")
       .select("id, leader_id, max_daily_hours").eq("week_id", week_id);
+
+    // Kjøkkenvakt hele dagen: disse skal ikke fordeles på andre økter den dagen.
+    const { data: kitchenRaw } = await supa.from("leirskole_kitchen_days")
+      .select("staff_id, date").eq("week_id", week_id);
+    const kitchenDays = new Set(
+      (kitchenRaw ?? []).map((k: any) => `${k.staff_id}|${String(k.date)}`),
+    );
     const leaderIds = (staffRaw ?? []).map((s: any) => s.leader_id);
     const { data: leaders } = await supa.from("leaders").select("id, name")
       .in("id", leaderIds.length ? leaderIds : ["00000000-0000-0000-0000-000000000000"]);
