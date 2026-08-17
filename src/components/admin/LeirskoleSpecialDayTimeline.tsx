@@ -322,7 +322,7 @@ export function LeirskoleSpecialDayTimeline({
                   <button
                     data-post
                     type="button"
-                    className={`absolute left-0.5 right-0.5 overflow-hidden rounded-md border border-emerald-500/60 bg-emerald-500/20 px-1 py-0.5 text-left hover:bg-emerald-500/30 ${
+                    className={`absolute left-0.5 right-0.5 rounded-md border border-emerald-500/60 bg-emerald-500/20 px-1 py-0.5 text-left hover:bg-emerald-500/30 ${
                       live ? 'ring-2 ring-primary' : ''
                     }`}
                     style={{ top: from * SLOT_PX, height: (to - from) * SLOT_PX, cursor: 'grab' }}
@@ -343,7 +343,9 @@ export function LeirskoleSpecialDayTimeline({
                     <p className="truncate text-[9px] leading-tight text-muted-foreground">
                       {toClock(from)}–{toClock(to)}
                     </p>
-                    <p className="truncate text-[9px] leading-tight">{names.length ? names.join(', ') : 'ingen ledere'}</p>
+                    <p className="text-[8px] leading-[1.15] text-foreground">
+                      {names.length ? names.join(', ') : 'ingen ledere'}
+                    </p>
                     <span
                       data-post-delete
                       role="button"
