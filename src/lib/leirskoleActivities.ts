@@ -1,4 +1,4 @@
-import { LEIRSKOLE_COMPETENCIES } from '@/lib/leirskoleCompetencies';
+import { LEIRSKOLE_COMPETENCIES, activityRequiresCompetence } from '@/lib/leirskoleCompetencies';
 
 /** Aktivitetene lederne kan settes på — samme nøkler som kompetansene. */
 export const LEIRSKOLE_ACTIVITIES = LEIRSKOLE_COMPETENCIES;
