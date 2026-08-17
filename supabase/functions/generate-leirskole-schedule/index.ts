@@ -121,6 +121,28 @@ function canAssign(st: Staff, post: Post, s: State, availability: Map<string, Av
   return { ok: true };
 }
 
+// Belønner sammenhengende vakter: en post som starter/slutter der lederen
+// allerede jobber samme dag er mye bedre enn en løsrevet vakt med hull.
+function adjacencyPenalty(post: Post, s: State) {
+  const pi = postInterval(post);
+  const startAbs = absMinutes(post.date, pi.start);
+  const endAbs = absMinutes(post.date, pi.end);
+  const sameDay = s.assigned.filter(a => a.date === post.date);
+  if (sameDay.length === 0) return 0;
+  let bestGap = Infinity;
+  for (const a of sameDay) {
+    const gapAfter = startAbs - a.endAbs;
+    const gapBefore = a.startAbs - endAbs;
+    const gap = Math.min(gapAfter >= 0 ? gapAfter : Infinity, gapBefore >= 0 ? gapBefore : Infinity);
+    if (gap < bestGap) bestGap = gap;
+  }
+  if (!isFinite(bestGap)) return 0;
+  if (bestGap === 0) return -60; // rett i forlengelse av en annen vakt
+  if (bestGap <= 60) return -30; // maks 1 time hull
+  if (bestGap <= 120) return -10;
+  return 20 * (bestGap / 60); // straff lange hull i vakten
+}
+
 function score(st: Staff, post: Post, s: State) {
   // (se adjacencyPenalty under)
   const daily = s.hoursByDate[post.date] ?? 0;
