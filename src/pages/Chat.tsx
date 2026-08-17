@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAccessMode } from '@/hooks/useViewMode';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -92,10 +93,11 @@ function timeLabel(iso: string) {
 export default function Chat() {
   const { leader, isLimitedAccess, isLeirskole, isAdmin } = useAuth();
   const { showError } = useStatusPopup();
-  const canUsePeriodChat = !isLimitedAccess && leader?.is_active !== false;
-  const canUseLeirskoleChat = isLeirskole || isAdmin;
+  const { limited, leirskoleView } = useAccessMode();
+  const canUsePeriodChat = !limited;
+  const canUseLeirskoleChat = leirskoleView || isAdmin;
   const [channel, setChannel] = useState<'period' | 'offseason' | 'leirskole'>(
-    isLeirskole && !isAdmin ? 'leirskole' : canUsePeriodChat ? 'period' : 'offseason',
+    limited && leirskoleView ? 'leirskole' : canUsePeriodChat ? 'period' : 'offseason',
   );
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -112,8 +114,8 @@ export default function Chat() {
 
   // Inaktive ledere har kun tilgang til off season-chatten
   useEffect(() => {
-    if (!canUsePeriodChat) setChannel((c) => (c === 'period' ? (isLeirskole ? 'leirskole' : 'offseason') : c));
-  }, [canUsePeriodChat, isLeirskole]);
+    if (!canUsePeriodChat) setChannel((c) => (c === 'period' ? (leirskoleView ? 'leirskole' : 'offseason') : c));
+  }, [canUsePeriodChat, leirskoleView]);
   const shellRef = useRef<HTMLDivElement>(null);
   const [shellHeight, setShellHeight] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);

@@ -16,6 +16,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import { useStatusBarTheme } from "@/hooks/useStatusBarTheme";
 import { useAppMode } from "@/hooks/useAppMode";
 import { isLimitedAccessRoute, isLeirskoleRoute } from "@/lib/limitedAccess";
+import { useAccessMode } from "@/hooks/useViewMode";
 
 // Critical path - load immediately
 import Login from "@/pages/Login";
@@ -106,6 +107,7 @@ function PageLoader() {
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { leader, isLoading, isInitialized, isProfileComplete, authError, deactivatedMessage, retryAuth, isSuperAdmin, isLimitedAccess, isLeirskole, isAdmin } = useAuth();
   const { mode } = useAppMode();
+  const { limited, leirskoleView } = useAccessMode();
 
   // Only show full-page loader during initial app load, never between page navigations
   if (!isInitialized && isLoading) {
@@ -135,9 +137,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   // Limited access: app-wide inactive mode, or a leader who is not active this
   // period. Only the off-season surfaces are reachable for non-superadmins.
-  if (isLimitedAccess || (mode === 'inactive' && !isSuperAdmin)) {
+  if (limited) {
     const path = window.location.pathname;
-    const leirskoleOk = isLeirskole && isLeirskoleRoute(path);
+    const leirskoleOk = leirskoleView && isLeirskoleRoute(path);
     if (!isLimitedAccessRoute(path) && !leirskoleOk) {
       return <Navigate to="/" replace />;
     }
