@@ -597,12 +597,12 @@ export function LeirskolePostsCard({
                               />
                               <Input
                                 type="number"
-                                min={1}
+                                min={0}
                                 defaultValue={required}
                                 className="h-8 text-xs"
                                 onBlur={(e) =>
                                   Number(e.target.value) !== required &&
-                                  updatePost.mutate({ id: p.id, required_leaders: Math.max(1, Number(e.target.value) || 1) })
+                                  updatePost.mutate({ id: p.id, required_leaders: Math.max(0, Number(e.target.value) || 0) })
                                 }
                               />
                             </div>
@@ -620,7 +620,12 @@ export function LeirskolePostsCard({
                                   <Select
                                     value={a?.staff_id ?? 'none'}
                                     onValueChange={(v) =>
-                                      setAssignment.mutate({ postId: p.id, assignmentId: a?.id, staffId: v })
+                                      setAssignment.mutate({
+                                        postId: p.id,
+                                        assignmentId: a?.id,
+                                        staffId: v,
+                                        remainingAfterRemoval: Math.max(0, p.assignments.length - 1),
+                                      })
                                     }
                                   >
                                     <SelectTrigger className="h-8 flex-1 text-xs">
