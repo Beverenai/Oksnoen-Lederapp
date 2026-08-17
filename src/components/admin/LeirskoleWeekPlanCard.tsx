@@ -173,6 +173,12 @@ export function LeirskoleWeekPlanCard({ week, readOnly = false }: { week: Leirsk
   };
 
   const toggleDayType = (date: string, type: 'arrival' | 'departure') => {
+    if (date === first || date === last) {
+      toast.info(
+        date === first ? 'Første dag er alltid ankomstdag' : 'Siste dag er alltid avreisedag',
+      );
+      return;
+    }
     const next = specialDays.get(date) === type ? 'normal' : type;
     setDayType.mutate(
       { weekId: week.id, date, dayType: next },
