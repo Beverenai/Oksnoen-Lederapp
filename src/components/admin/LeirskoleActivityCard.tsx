@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Trash2, Wand2, Send, Repeat, AlertTriangle } from 'lucide-react';
+import { Trash2, Wand2, Send, Repeat, AlertTriangle, Zap } from 'lucide-react';
 import {
   useLeirskoleActivities,
   useLeirskoleActivityHistory,
@@ -129,6 +129,55 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke lagre'),
   });
 
+  /** Én knapp: fordeler aktiviteter på alle øktene denne dagen og varsler lederne. */
+  const generateDay = useMutation({
+    mutationFn: async () => {
+      const candidates = onDuty
+        .filter((s) => s.leader)
+        .map((s) => ({
+          leaderId: s.leader!.id,
+          name: s.leader!.name,
+          competencies: s.leader!.leirskole_competencies ?? [],
+        }));
+      if (candidates.length === 0) throw new Error('Ingen ledere på vakt denne datoen');
+
+      const running = (history ?? []).map((h) => ({ leader_id: h.leader_id, activity: h.activity }));
+      const notified = new Set<string>();
+
+      for (const s of LEIRSKOLE_SESSIONS) {
+        const rows = generateActivityAssignments(candidates, running);
+        if (!rows.length) continue;
+        await save.mutateAsync({
+          weekId: week.id,
+          date,
+          session: s.key,
+          rows: rows.map((d) => ({ leader_id: d.leaderId, activity: d.activity, auto_generated: true })),
+        });
+        rows.forEach((d) => {
+          running.push({ leader_id: d.leaderId, activity: d.activity });
+          notified.add(d.leaderId);
+        });
+      }
+
+      if (notified.size === 0) throw new Error('Ingen aktiviteter kunne fordeles');
+      const { error } = await supabase.functions.invoke('push-send', {
+        body: {
+          title: 'Leirskole — aktiviteter',
+          message: `${dayLabel(date)}: aktivitetene for dagen er klare.`,
+          leader_ids: [...notified],
+          sender_leader_id: leader?.id,
+        },
+      });
+      return error ? 'Lagret, men varslingen kunne ikke sendes.' : null;
+    },
+    onSuccess: (warning) => {
+      if (warning) toast.warning(warning);
+      else toast.success('Aktiviteter for hele dagen er lagret og varslet');
+      setDraft(null);
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke generere dagen'),
+  });
+
   return (
     <div className="oks-ls-pill space-y-3 p-4">
       <div>
@@ -247,8 +296,19 @@ export function LeirskoleActivityCard({ week, staff }: Props) {
       )}
 
       <div className="flex gap-2">
+        <Button
+          className="w-full gap-2 rounded-full"
+          disabled={generateDay.isPending}
+          onClick={() => generateDay.mutate()}
+        >
+          <Zap className="h-4 w-4" />
+          {generateDay.isPending ? 'Genererer…' : 'Generer dagen + varsle'}
+        </Button>
+      </div>
+
+      <div className="flex gap-2">
         <Button variant="secondary" className="flex-1 gap-2 rounded-full" onClick={generate}>
-          <Wand2 className="h-4 w-4" /> Generer
+          <Wand2 className="h-4 w-4" /> Kun denne økten
         </Button>
         <Button
           className="flex-1 gap-2 rounded-full"
