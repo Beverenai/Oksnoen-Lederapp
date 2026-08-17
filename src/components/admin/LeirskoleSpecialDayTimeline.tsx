@@ -45,29 +45,32 @@ export function LeirskoleSpecialDayTimeline({
   const qc = useQueryClient();
   const gridRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ from: number; to: number } | null>(null);
+  /** Flytting/endring av en eksisterende økt. */
+  const [edit, setEdit] = useState<{ id: string; mode: 'move' | 'resize'; from: number; to: number; grabOffset: number } | null>(null);
   const [draft, setDraft] = useState<{ from: number; to: number } | null>(null);
   const [draftName, setDraftName] = useState('');
   const [openPost, setOpenPost] = useState<string | null>(null);
 
-  /** Sorterte økter med kolonnespor, slik at overlappende økter vises side om side. */
+  /** Sorterte økter — ankomst/avreise har alltid én økt om gangen (ingen overlapp). */
   const sorted = useMemo(() => {
-    const list = [...posts].sort((a, b) => a.start_time.localeCompare(b.start_time));
-    const laneEnds: number[] = [];
-    const placed = list.map((p) => {
-      const from = toSlot(p.start_time);
-      const to = Math.max(from + 3, toSlot(p.end_time));
-      let lane = laneEnds.findIndex((end) => end <= from);
-      if (lane === -1) {
-        lane = laneEnds.length;
-        laneEnds.push(to);
-      } else {
-        laneEnds[lane] = to;
-      }
-      return { post: p, from, to, lane };
-    });
-    const lanes = Math.max(1, laneEnds.length);
-    return placed.map((row) => ({ ...row, lanes }));
+    return [...posts]
+      .sort((a, b) => a.start_time.localeCompare(b.start_time))
+      .map((p) => {
+        const from = toSlot(p.start_time);
+        return { post: p, from, to: Math.max(from + 2, toSlot(p.end_time)) };
+      });
   }, [posts]);
+
+  /** Klemmer et tidsrom slik at det aldri overlapper en annen økt. */
+  const clampRange = (from: number, to: number, ignoreId?: string) => {
+    const others = sorted.filter((r) => r.post.id !== ignoreId);
+    const prevEnd = Math.max(0, ...others.filter((r) => r.to <= from).map((r) => r.to));
+    const nextStart = Math.min(SLOTS, ...others.filter((r) => r.from >= prevEnd && r.from > from).map((r) => r.from));
+    const start = Math.max(prevEnd, Math.min(from, nextStart - 2));
+    const end = Math.max(start + 2, Math.min(to, nextStart));
+    const blocked = others.some((r) => start < r.to && end > r.from);
+    return blocked ? null : { from: start, to: end };
+  };
 
   const invalidate = () =>
     ['leirskole-schedule', 'leirskole-my-shifts', 'leirskole-week-plan'].forEach((key) =>
@@ -77,7 +80,7 @@ export function LeirskoleSpecialDayTimeline({
   const slotAt = (clientY: number) => {
     const box = gridRef.current?.getBoundingClientRect();
     if (!box) return 0;
-    return Math.max(0, Math.min(SLOTS - 1, Math.floor((clientY - box.top) / SLOT_PX)));
+    return Math.max(0, Math.min(SLOTS, Math.round((clientY - box.top) / SLOT_PX)));
   };
 
   const createPost = useMutation({
@@ -153,11 +156,39 @@ export function LeirskoleSpecialDayTimeline({
   });
 
   const preview = drag ?? draft;
+  const editPreview = edit;
+
+  /** Peker-drag på en eksisterende økt: flytt hele, eller endre slutten. */
+  const onEditMove = (clientY: number) => {
+    if (!edit) return;
+    const s = slotAt(clientY);
+    if (edit.mode === 'move') {
+      const length = edit.to - edit.from;
+      const from = Math.max(0, Math.min(SLOTS - length, s - edit.grabOffset));
+      setEdit({ ...edit, from, to: from + length });
+    } else {
+      setEdit({ ...edit, to: Math.max(edit.from + 2, Math.min(SLOTS, s)) });
+    }
+  };
+
+  const commitEdit = () => {
+    if (!edit) return;
+    const next = clampRange(edit.from, edit.to, edit.id);
+    setEdit(null);
+    if (!next) {
+      toast.error('Økter kan ikke overlappe');
+      return;
+    }
+    updatePost.mutate({
+      id: edit.id,
+      patch: { start_time: toClock(next.from), end_time: toClock(next.to) },
+    });
+  };
 
   return (
     <div className="flex h-full flex-col gap-1">
       <p className="text-center text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">
-        Dra for å lage økt
+        Dra for å lage · dra økten for å flytte
       </p>
       <div className="flex flex-1 gap-1">
         {/* Klokkeskala */}
@@ -181,16 +212,28 @@ export function LeirskoleSpecialDayTimeline({
             setDrag({ from: s, to: s });
           }}
           onPointerMove={(e) => {
-            if (!drag) return;
-            setDrag({ from: drag.from, to: slotAt(e.clientY) });
+            if (edit) {
+              onEditMove(e.clientY);
+              return;
+            }
+            if (drag) setDrag({ from: drag.from, to: slotAt(e.clientY) });
           }}
           onPointerUp={(e) => {
             e.currentTarget.releasePointerCapture?.(e.pointerId);
+            if (edit) {
+              commitEdit();
+              return;
+            }
             if (!drag) return;
             const from = Math.min(drag.from, drag.to);
             const to = Math.max(drag.from, drag.to);
             setDrag(null);
-            setDraft({ from, to: Math.max(to, from + 3) });
+            const next = clampRange(from, Math.max(to, from + 4));
+            if (!next) {
+              toast.error('Det ligger allerede en økt her');
+              return;
+            }
+            setDraft(next);
             setDraftName('');
           }}
         >
@@ -198,7 +241,7 @@ export function LeirskoleSpecialDayTimeline({
             <div key={i} className="absolute left-0 right-0 border-t border-border/40" style={{ top: i * SLOT_PX * 4 }} />
           ))}
 
-          {preview && (
+          {preview && !edit && (
             <div
               className="pointer-events-none absolute left-0.5 right-0.5 rounded-md border-2 border-dashed border-primary bg-primary/20"
               style={{
@@ -212,7 +255,10 @@ export function LeirskoleSpecialDayTimeline({
             </div>
           )}
 
-          {sorted.map(({ post: p, from, to, lane, lanes }) => {
+          {sorted.map(({ post: p, from: rawFrom, to: rawTo }) => {
+            const live = editPreview?.id === p.id ? editPreview : null;
+            const from = live ? live.from : rawFrom;
+            const to = live ? live.to : rawTo;
             const names = staffOptions
               .filter((s) => p.assignments.some((a) => a.staff_id === s.staffId))
               .map((s) => s.name.split(' ')[0]);
@@ -222,19 +268,30 @@ export function LeirskoleSpecialDayTimeline({
                   <button
                     data-post
                     type="button"
-                    className="absolute overflow-hidden rounded-md border border-emerald-500/60 bg-emerald-500/20 px-1 py-0.5 text-left hover:bg-emerald-500/30"
-                    style={{
-                      top: from * SLOT_PX,
-                      height: (to - from) * SLOT_PX,
-                      left: `calc(${(lane / lanes) * 100}% + 2px)`,
-                      width: `calc(${100 / lanes}% - 4px)`,
+                    className={`absolute left-0.5 right-0.5 overflow-hidden rounded-md border border-emerald-500/60 bg-emerald-500/20 px-1 py-0.5 text-left hover:bg-emerald-500/30 ${
+                      live ? 'ring-2 ring-primary' : ''
+                    }`}
+                    style={{ top: from * SLOT_PX, height: (to - from) * SLOT_PX, cursor: 'grab' }}
+                    onPointerDown={(e) => {
+                      if ((e.target as HTMLElement).closest('[data-resize]')) return;
+                      gridRef.current?.setPointerCapture(e.pointerId);
+                      setEdit({ id: p.id, mode: 'move', from: rawFrom, to: rawTo, grabOffset: slotAt(e.clientY) - rawFrom });
                     }}
                   >
                     <p className="truncate text-[10px] font-bold leading-tight">{p.name}</p>
                     <p className="truncate text-[9px] leading-tight text-muted-foreground">
-                      {p.start_time.slice(0, 5)}–{p.end_time.slice(0, 5)}
+                      {toClock(from)}–{toClock(to)}
                     </p>
                     <p className="truncate text-[9px] leading-tight">{names.length ? names.join(', ') : 'ingen ledere'}</p>
+                    <span
+                      data-resize
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        gridRef.current?.setPointerCapture(e.pointerId);
+                        setEdit({ id: p.id, mode: 'resize', from: rawFrom, to: rawTo, grabOffset: 0 });
+                      }}
+                      className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize bg-emerald-600/40"
+                    />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-72 space-y-2 p-3">
