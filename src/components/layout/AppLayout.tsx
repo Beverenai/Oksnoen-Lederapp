@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { hapticImpact } from '@/lib/capacitorHaptics';
+import { isNativeIOS } from '@/lib/capacitor';
 import { PassIcon } from '@/components/icons/PassIcon';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
 import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
@@ -520,8 +521,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         leirskoleSurface && 'oks-leirskole-bg min-h-[100dvh]',
       )}
     >
-      {/* Leirskole: velg lyst (standard) eller mørkt tema */}
-      {leirskoleSurface && (
+      {/* Leirskole: velg lyst (standard) eller mørkt tema — skjules på iPhone fordi systemet styrer det */}
+      {leirskoleSurface && !isNativeIOS() && (
         <button
           type="button"
           onClick={toggleLsTheme}
