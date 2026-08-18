@@ -95,6 +95,13 @@ const isMeal = (p: SessionPost) => MEAL_NAMES.has((p.name ?? '').trim().toLowerC
 const NO_ACTIVITY_NAMES = new Set([...MEAL_NAMES, 'sanitas', 'nattevakt']);
 const hasActivities = (p: SessionPost) => !NO_ACTIVITY_NAMES.has((p.name ?? '').trim().toLowerCase());
 
+/** Sanitas og nattevakt kan gå oppå andre vakter — de skal kunne dobbeltbookes. */
+const OVERLAP_OK = ['sanitas', 'nattevakt'];
+const overlapAllowed = (p: SessionPost) => {
+  const n = (p.name ?? '').trim().toLowerCase();
+  return OVERLAP_OK.some((x) => n.includes(x));
+};
+
 /**
  * Dagsvisning: øktene nedover etter klokkeslett. Plassene i hver økt kommer fra
  * «Dag til dag» — «Klatring x2» gir to plasser — og hver plass har én leder
