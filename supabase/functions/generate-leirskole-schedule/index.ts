@@ -221,7 +221,12 @@ Deno.serve(async (req) => {
 
     // Avreisedager: admin lager egne økter der, så vi hopper over standardoppsettet.
     const { data: dayRows } = await supa.from("leirskole_week_days")
-      .select("date, day_type").eq("week_id", week_id);
+      .select("date, day_type, is_locked").eq("week_id", week_id);
+    // Låste dager røres ikke: alt som står der beholdes, og generatoren
+    // bemanner kun de andre dagene (timene teller likevel med).
+    const lockedDates = new Set(
+      (dayRows ?? []).filter((d: any) => d.is_locked).map((d: any) => String(d.date)),
+    );
     // Ankomst- og avreisedager har bare egne økter — ingen standard maler.
     const departureDays = new Set(
       (dayRows ?? [])
@@ -407,8 +412,17 @@ Deno.serve(async (req) => {
     const onKitchen = (staffId: string, date: string) => kitchenDays.has(`${staffId}|${date}`);
     // Kjøkkenledere skal ikke ha andre vakter den dagen — også låste fjernes.
     const seenKeep = new Set<string>();
-    const toKeep = (keepLocked ? existingArr.filter(a => a.is_locked) : [])
-      .filter(a => !onKitchen(a.staff_id, String(postDateById.get(a.post_id) ?? "")))
+    const toKeep = existingArr
+      .filter(a => {
+        const date = String(postDateById.get(a.post_id) ?? "");
+        if (lockedDates.has(date)) return true;
+        return keepLocked && a.is_locked;
+      })
+      .filter(a => {
+        const date = String(postDateById.get(a.post_id) ?? "");
+        if (lockedDates.has(date)) return true;
+        return !onKitchen(a.staff_id, date);
+      })
       // Dedupe: samme leder kan bare stå én gang på samme vakt.
       .filter(a => {
         const key = `${a.post_id}|${a.staff_id}`;
@@ -453,6 +467,7 @@ Deno.serve(async (req) => {
     const missing: any[] = [];
 
     for (const post of sortPosts(posts, candidates)) {
+      if (lockedDates.has(post.date)) continue;
       const locked = lockedByPost.get(post.id) ?? [];
       let need = post.required_leaders - locked.length;
       need = Math.min(need, staffCap(post) - locked.length);
@@ -507,6 +522,7 @@ Deno.serve(async (req) => {
         });
 
     for (const date of allDates) {
+      if (lockedDates.has(date)) continue;
       const dayPosts = fillPosts(date);
       let progress = true;
       while (progress) {
