@@ -125,22 +125,7 @@ export function HomeNotifications() {
       });
     });
 
-    matches.slice(0, 5).forEach((m) => {
-      list.push({
-        id: `match-${m.id}`,
-        type: 'match',
-        title: `Du har match med ${m.name}`,
-        subtitle: 'Åpne chatten',
-        image: m.profile_image_url,
-        initials: m.name.slice(0, 2).toUpperCase(),
-        createdAt: m.created_at,
-        action: () => {
-          setOpen(false);
-          navigate('/kline-tinder');
-        },
-        icon: <Heart className="h-4 w-4 text-rose-500" />,
-      });
-    });
+    // Tinder er deaktivert, så match-varsler vises ikke lenger.
 
     mailboxMessages
       .filter((m) => !!m.admin_reply && !m.read_at)

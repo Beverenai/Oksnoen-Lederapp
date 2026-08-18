@@ -48,7 +48,6 @@ import { Award } from 'lucide-react';
 import { LeirskoleCompetenceSheet } from '@/components/leirskole/LeirskoleCompetenceSheet';
 import { useMyLeirskoleCompetencies } from '@/hooks/useLeirskole';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
-import { TinderIcon } from '@/components/icons/TinderIcon';
 import { usePovCurrentRoll } from '@/hooks/usePov';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import { BentoTile, type BentoTone, type BentoSize } from '@/components/offseason/BentoTile';
@@ -263,7 +262,6 @@ export default function More() {
               } as MoreItem,
             ]
           : []),
-        { to: '/kline-tinder', icon: TinderIcon, label: 'Tinder' } as MoreItem,
         { to: '/pov', icon: Camera, label: 'POV' } as MoreItem,
         { icon: Crown, label: 'Øksnøen +', onClick: () => setPlusOpen(true) } as MoreItem,
         { to: '/feedback', icon: Lightbulb, label: 'Feedback' } as MoreItem,
@@ -278,7 +276,7 @@ export default function More() {
   const firstName = (leader?.name || '').split(' ')[0] || '';
 
   // Off-season / inactive leaders: only the allowed surfaces.
-  // Off-season: hjemskjermen har allerede POV, Tinder, Slurker, Klineliste og Snus,
+  // Off-season: hjemskjermen har allerede POV, Slurker, Klineliste og Snus,
   // så «Mer» er en kompakt liste med resten – ingen doble knapper.
   const limitedSections: MoreSection[] = [
     {

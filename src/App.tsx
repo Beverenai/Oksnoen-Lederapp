@@ -66,7 +66,6 @@ const LederpassPage = lazy(() => import("@/pages/Lederpass"));
 const Kiosk = lazy(() => import("@/pages/Kiosk"));
 const Kjokken = lazy(() => import("@/pages/Kjokken"));
 const Klineliste = lazy(() => import("@/pages/Klineliste"));
-const KlineTinder = lazy(() => import("@/pages/KlineTinder"));
 const PeriodArchive = lazy(() => import("@/pages/admin/PeriodArchive"));
 const Leirskole = lazy(() => import("@/pages/Leirskole"));
 const LeirskoleAdmin = lazy(() => import("@/pages/admin/LeirskoleAdmin"));
@@ -267,7 +266,8 @@ function AppRoutes() {
         <Route path="/kjokken" element={<ProtectedRoute><Kjokken /></ProtectedRoute>} />
         <Route path="/postkasse" element={<ProtectedRoute><Mailbox /></ProtectedRoute>} />
         <Route path="/klineliste" element={<ProtectedRoute><Klineliste /></ProtectedRoute>} />
-        <Route path="/kline-tinder" element={<ProtectedRoute><KlineTinder /></ProtectedRoute>} />
+        {/* Tinder er deaktivert for alle ledere — gamle lenker går til klinelista. */}
+        <Route path="/kline-tinder" element={<Navigate to="/klineliste" replace />} />
         <Route path="/snus" element={<ProtectedRoute><SnusPage /></ProtectedRoute>} />
         <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
         <Route path="/pov" element={<ProtectedRoute><PovPage /></ProtectedRoute>} />
