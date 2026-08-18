@@ -95,6 +95,13 @@ const isMeal = (p: SessionPost) => MEAL_NAMES.has((p.name ?? '').trim().toLowerC
 const NO_ACTIVITY_NAMES = new Set([...MEAL_NAMES, 'sanitas', 'nattevakt']);
 const hasActivities = (p: SessionPost) => !NO_ACTIVITY_NAMES.has((p.name ?? '').trim().toLowerCase());
 
+/** Sanitas og nattevakt kan gå oppå andre vakter — de skal kunne dobbeltbookes. */
+const OVERLAP_OK = ['sanitas', 'nattevakt'];
+const overlapAllowed = (p: SessionPost) => {
+  const n = (p.name ?? '').trim().toLowerCase();
+  return OVERLAP_OK.some((x) => n.includes(x));
+};
+
 /**
  * Dagsvisning: øktene nedover etter klokkeslett. Plassene i hver økt kommer fra
  * «Dag til dag» — «Klatring x2» gir to plasser — og hver plass har én leder
@@ -272,10 +279,13 @@ export function LeirskoleDaySessions({
         const b = ranges[j];
         if (a.p.id === b.p.id) continue;
         if (a.start < b.end && b.start < a.end) {
-          out.push(`Dobbeltbooket: ${a.p.name} og ${b.p.name}`);
+          if (!overlapAllowed(a.p) && !overlapAllowed(b.p)) {
+            out.push(`Dobbeltbooket: ${a.p.name} og ${b.p.name}`);
+          }
           continue;
         }
-        if (a.p.date === b.p.date) continue;
+        const isSanitas = (p: SessionPost) => (p.name ?? '').toLowerCase().includes('sanitas');
+        if (a.p.date === b.p.date || isSanitas(a.p) || isSanitas(b.p)) continue;
         const gap = (a.start < b.start ? b.start - a.end : a.start - b.end) / 60;
         if (gap < MIN_REST_HOURS) {
           out.push(
