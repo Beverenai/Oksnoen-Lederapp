@@ -19,6 +19,7 @@ type StaffRow = {
 
 const WEEKDAYS = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'];
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
+const HOUR_CHOICES = [1, 2, 3, 4, 6, 8];
 
 function parse(d: string) {
   const [y, m, day] = d.split('-').map(Number);
@@ -57,11 +58,22 @@ export function LeirskoleKitchenCard({ week, staff }: { week: LeirskoleWeek; sta
   const isKitchen = (staffId: string, date: string) =>
     (kitchenDays ?? []).some((k) => k.staff_id === staffId && k.date === date);
 
-  const toggle = async (staffId: string, date: string) => {
-    const active = !isKitchen(staffId, date);
+  const hoursFor = (staffId: string, date: string) =>
+    Number(
+      (kitchenDays ?? []).find((k) => k.staff_id === staffId && k.date === date)?.hours ?? 8,
+    );
+
+  const toggle = async (staffId: string, date: string, hours?: number) => {
+    const active = hours !== undefined ? true : !isKitchen(staffId, date);
     try {
-      await setKitchen.mutateAsync({ weekId: week.id, staffId, date, active });
-      toast.success(active ? 'Satt på kjøkken hele dagen' : 'Kjøkkenvakt fjernet');
+      await setKitchen.mutateAsync({ weekId: week.id, staffId, date, active, hours });
+      toast.success(
+        !active
+          ? 'Kjøkkenvakt fjernet'
+          : (hours ?? 8) >= 8
+            ? 'Satt på kjøkken hele dagen'
+            : `Satt på kjøkken i ${hours}t`,
+      );
     } catch (error) {
       showError(
         error && typeof error === 'object' && 'message' in error
@@ -78,42 +90,72 @@ export function LeirskoleKitchenCard({ week, staff }: { week: LeirskoleWeek; sta
   const onKitchen = staff.filter((s) => isKitchen(s.id, date));
   const free = staff.filter((s) => !isKitchen(s.id, date));
 
-  const row = (s: StaffRow, active: boolean) => (
-    <button
-      key={s.id}
-      type="button"
-      onClick={() => toggle(s.id, date)}
-      disabled={setKitchen.isPending}
-      aria-pressed={active}
-      className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left transition-colors ${
-        active
-          ? 'border-[hsl(var(--oks-ls-green))] bg-[hsl(var(--oks-ls-green))]/12'
-          : 'border-border/60 bg-muted/25 hover:bg-muted/50'
-      }`}
-    >
-      <Avatar className="h-9 w-9">
-        <AvatarImage src={s.leader?.profile_image_url ?? undefined} alt="" />
-        <AvatarFallback className="text-[10px]">
-          {(s.leader?.name ?? '?')
-            .split(' ')
-            .slice(0, 2)
-            .map((p) => p[0]?.toUpperCase())
-            .join('')}
-        </AvatarFallback>
-      </Avatar>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">{s.leader?.name ?? 'Ukjent'}</span>
-      <span
-        className={`flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${
+  const row = (s: StaffRow, active: boolean) => {
+    const hours = active ? hoursFor(s.id, date) : 0;
+    return (
+      <div
+        key={s.id}
+        className={`space-y-1.5 rounded-2xl border px-3 py-2 transition-colors ${
           active
-            ? 'bg-[hsl(var(--oks-ls-green))]/20 text-[hsl(var(--oks-ls-green))]'
-            : 'bg-background text-muted-foreground'
+            ? 'border-[hsl(var(--oks-ls-green))] bg-[hsl(var(--oks-ls-green))]/12'
+            : 'border-border/60 bg-muted/25'
         }`}
       >
-        {active ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-        {active ? 'Ta av' : 'Sett på'}
-      </span>
-    </button>
-  );
+        <div className="flex items-center gap-3">
+          <Avatar className="h-9 w-9">
+            <AvatarImage src={s.leader?.profile_image_url ?? undefined} alt="" />
+            <AvatarFallback className="text-[10px]">
+              {(s.leader?.name ?? '?')
+                .split(' ')
+                .slice(0, 2)
+                .map((p) => p[0]?.toUpperCase())
+                .join('')}
+            </AvatarFallback>
+          </Avatar>
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+            {s.leader?.name ?? 'Ukjent'}
+            {active && (
+              <span className="ml-1.5 text-[11px] font-semibold tabular-nums text-[hsl(var(--oks-ls-green))]">
+                {hours}t
+              </span>
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={() => toggle(s.id, date, active ? undefined : 8)}
+            disabled={setKitchen.isPending}
+            aria-pressed={active}
+            className={`flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${
+              active
+                ? 'bg-[hsl(var(--oks-ls-green))]/20 text-[hsl(var(--oks-ls-green))]'
+                : 'bg-background text-muted-foreground'
+            }`}
+          >
+            {active ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            {active ? 'Ta av' : 'Hele dagen'}
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-1">
+          {HOUR_CHOICES.map((h) => (
+            <button
+              key={h}
+              type="button"
+              onClick={() => toggle(s.id, date, h)}
+              disabled={setKitchen.isPending}
+              className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums ${
+                active && hours === h
+                  ? 'border-[hsl(var(--oks-ls-green))] bg-[hsl(var(--oks-ls-green))]/20 text-[hsl(var(--oks-ls-green))]'
+                  : 'border-border/60 bg-background text-muted-foreground hover:bg-muted/50'
+              }`}
+            >
+              {h}t
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Card>
@@ -125,7 +167,8 @@ export function LeirskoleKitchenCard({ week, staff }: { week: LeirskoleWeek; sta
           )}
         </CardTitle>
         <CardDescription>
-          Velg dag øverst, så setter du ledere på kjøkken. De tas ut av alle andre økter den dagen.
+          Velg dag øverst, så setter du ledere på kjøkken. Hele dagen (8t) tar dem ut av alle andre
+          økter – færre timer betyr at de bare hjelper til og beholder resten av vaktene.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -205,7 +248,12 @@ export function LeirskoleKitchenCard({ week, staff }: { week: LeirskoleWeek; sta
                       }
                     >
                       {names.length
-                        ? names.map((s) => s.leader?.name?.split(' ')[0] ?? 'Ukjent').join(', ')
+                        ? names
+                            .map(
+                              (s) =>
+                                `${s.leader?.name?.split(' ')[0] ?? 'Ukjent'} ${hoursFor(s.id, d)}t`,
+                            )
+                            .join(', ')
                         : '—'}
                     </span>
                   </div>

@@ -786,9 +786,34 @@ export function LeirskoleDaySessions({
               <span className="shrink-0 rounded-full bg-background/60 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
                 {Number(p.duration_hours ?? 0).toFixed(1)}t
               </span>
-              <span className="shrink-0 rounded-full bg-background/60 px-2 py-0.5 text-[11px] font-semibold tabular-nums">
-                {hhmm(p.start_time)}–{hhmm(p.end_time)}
-              </span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Endre tid på økten"
+                    className="shrink-0 rounded-full bg-background/60 px-2 py-0.5 text-[11px] font-semibold tabular-nums underline decoration-dotted underline-offset-2"
+                  >
+                    {hhmm(p.start_time)}–{hhmm(p.end_time)}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  collisionPadding={12}
+                  className="z-50 w-[min(20rem,calc(100vw-2rem))] space-y-2 p-2.5"
+                >
+                  <p className="text-xs font-semibold">Tid på «{p.name}»</p>
+                  <TimeRangeField
+                    start={hhmm(p.start_time)}
+                    end={hhmm(p.end_time)}
+                    onStartChange={(v) => guard() && updatePost.mutate({ id: p.id, start_time: `${v}:00` })}
+                    onEndChange={(v) => guard() && updatePost.mutate({ id: p.id, end_time: `${v}:00` })}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Varer økten en time lengre (f.eks. disco), endrer du bare sluttiden – timene oppdateres
+                    automatisk.
+                  </p>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Plassene fra «Dag til dag» */}
