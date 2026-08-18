@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ChevronDown, Minus, NotebookPen, Plus } from 'lucide-react';
@@ -19,8 +19,12 @@ const ROWS = [
   { row: 3, label: 'Økt 3', time: '20–21.30' },
 ];
 
-/** Sebrafarge på annenhver økt-kolonne, så det er lett å skille dem. */
-const COLUMN_TINT = ['bg-muted/25', 'bg-primary/[0.06]', 'bg-muted/25'];
+/** Fargekode på annenhver økt-rad, som i regnearket. */
+const ROW_TINT = [
+  'bg-destructive/10 dark:bg-destructive/20',
+  'bg-amber-500/15 dark:bg-amber-500/20',
+  'bg-destructive/10 dark:bg-destructive/20',
+];
 
 function datesBetween(start: string, end: string) {
   const out: string[] = [];
