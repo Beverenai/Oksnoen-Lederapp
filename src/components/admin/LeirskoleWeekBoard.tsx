@@ -57,6 +57,7 @@ import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffP
 import { trimDayHours, fillDayHours, KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import { assignMissingActivities } from '@/lib/leirskoleAutoActivity';
 import { cellInstances } from '@/lib/leirskoleCellInstances';
+import { hhmm } from '@/lib/leirskoleDates';
 import { useSeedLeirskoleSpecialDays } from '@/hooks/useSeedLeirskoleSpecialDays';
 
 const MEAL_TIMES: Record<string, { start: string; end: string; hours: number }> = {
