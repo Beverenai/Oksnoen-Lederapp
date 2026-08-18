@@ -212,6 +212,12 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const week_id: string = body.week_id;
     const keepLocked: boolean = body.keep_locked !== false;
+    // Begrens genereringen til utvalgte datoer (f.eks. bare én dag).
+    const onlyDates: string[] | null = Array.isArray(body.only_dates) && body.only_dates.length
+      ? body.only_dates.map((d: unknown) => String(d))
+      : null;
+    // «Alt på nytt»: ignorer dagslåsene og bygg hele uken opp igjen.
+    const ignoreLocked: boolean = body.ignore_locked === true;
     if (!week_id) return json({ error: "week_id mangler" }, 400);
 
     const { data: week } = await supa.from("leirskole_weeks")
@@ -224,9 +230,16 @@ Deno.serve(async (req) => {
       .select("date, day_type, is_locked").eq("week_id", week_id);
     // Låste dager røres ikke: alt som står der beholdes, og generatoren
     // bemanner kun de andre dagene (timene teller likevel med).
-    const lockedDates = new Set(
-      (dayRows ?? []).filter((d: any) => d.is_locked).map((d: any) => String(d.date)),
+    const lockedDates = new Set<string>(
+      ignoreLocked ? [] : (dayRows ?? []).filter((d: any) => d.is_locked).map((d: any) => String(d.date)),
     );
+    // Datoer utenfor utvalget behandles som låst: de røres ikke.
+    if (onlyDates) {
+      for (const d of dayRows ?? []) {
+        const date = String((d as any).date);
+        if (!onlyDates.includes(date)) lockedDates.add(date);
+      }
+    }
     // Ankomst- og avreisedager har bare egne økter — ingen standard maler.
     const departureDays = new Set(
       (dayRows ?? [])
