@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS public.leirskole_kitchen_days_one_per_day;
