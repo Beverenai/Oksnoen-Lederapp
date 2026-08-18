@@ -24,10 +24,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AlertTriangle, ChevronDown, Clock, GripVertical, LayoutGrid, Lock, LockOpen, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, ChevronDown, Clock, GripVertical, LayoutGrid, Lock, LockOpen, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
 import { LeirskoleDayLeaderList } from '@/components/admin/LeirskoleDayLeaderList';
 import { LeirskoleDaySessions } from '@/components/admin/LeirskoleDaySessions';
 import { LeirskoleDayMatrix } from '@/components/admin/LeirskoleDayMatrix';
+import { LeirskoleWeekImpact } from '@/components/admin/LeirskoleWeekImpact';
+import { LeirskoleWeekBoard } from '@/components/admin/LeirskoleWeekBoard';
 import { hhmm, shortDate, todayStr } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import {
@@ -192,7 +194,7 @@ export function LeirskoleDayEditor({
   const [date, setDate] = useState<string>(() => (dates.includes(today) ? today : dates[0]));
   const activeDate = dates.includes(date) ? date : dates[0];
   const [open, setOpen] = useState(true);
-  const [mode, setMode] = useState<'dag' | 'okter' | 'ledere' | 'rediger'>('okter');
+  const [mode, setMode] = useState<'dag' | 'okter' | 'ledere' | 'rediger' | 'uke'>('okter');
   const [newOpen, setNewOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', start: '10:00', end: '12:00' });
 
@@ -211,6 +213,10 @@ export function LeirskoleDayEditor({
     [kitchenDays, activeDate],
   );
   const isLocked = !!(weekDays ?? []).find((d) => d.date === activeDate)?.is_locked;
+  const lockedDates = useMemo(
+    () => new Set((weekDays ?? []).filter((d) => d.is_locked).map((d) => d.date)),
+    [weekDays],
+  );
 
   /** Timer per leder denne dagen. */
   const hoursByStaff = useMemo(() => {
