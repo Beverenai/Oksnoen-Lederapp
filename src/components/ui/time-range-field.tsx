@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Input } from '@/components/ui/input';
 import { Clock, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -22,6 +23,19 @@ function fmtDur(mins: number) {
   return `${h > 0 ? `${h}t` : ''}${m > 0 ? ` ${m}m` : ''}`.trim();
 }
 
+/** Godtar «9», «930», «9:3», «21.00» osv. og gjør det om til HH:MM. */
+function parseTyped(raw: string): string | null {
+  const s = raw.trim().replace(/[.,\s]/g, ':');
+  const m = s.match(/^(\d{1,2})(?::?(\d{0,2}))?$/);
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  let min = m[2] ? parseInt(m[2].padEnd(2, '0'), 10) : 0;
+  if (Number.isNaN(h) || Number.isNaN(min)) return null;
+  if (h === 24) h = 0;
+  if (h > 23 || min > 59) return null;
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
 function TimePicker({
   label,
   value,
@@ -38,6 +52,18 @@ function TimePicker({
   const mins = toMin(value);
   const hour = Math.floor(mins / 60);
   const minute = mins % 60;
+  const [text, setText] = useState(value);
+  useEffect(() => setText(value), [value]);
+
+  const commit = (raw: string) => {
+    const parsed = parseTyped(raw);
+    if (parsed) {
+      setText(parsed);
+      if (parsed !== value) onChange(parsed);
+    } else {
+      setText(value);
+    }
+  };
 
   return (
     <div className="min-w-0 flex-1">
@@ -54,18 +80,43 @@ function TimePicker({
           <Minus className="h-4 w-4" />
         </Button>
 
-        <button
+        <Input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onFocus={(e) => e.currentTarget.select()}
+          onBlur={(e) => commit(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              commit(text);
+              e.currentTarget.blur();
+            }
+            if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              onChange(fromMin(mins + 15));
+            }
+            if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              onChange(fromMin(mins - 15));
+            }
+          }}
+          inputMode="numeric"
+          placeholder="--:--"
+          aria-label={`${label} klokkeslett`}
+          className="h-11 min-w-0 flex-1 rounded-xl text-center text-lg font-semibold tabular-nums"
+        />
+
+        <Button
           type="button"
-          onClick={onToggle}
+          variant={open ? 'default' : 'outline'}
+          size="icon"
+          aria-label={`Velg ${label} fra liste`}
           aria-expanded={open}
-          className={cn(
-            'flex h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-xl border text-lg font-semibold tabular-nums transition-colors',
-            open ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background hover:bg-muted',
-          )}
+          className="h-11 w-9 shrink-0 rounded-xl"
+          onClick={onToggle}
         >
-          <Clock className="h-4 w-4 shrink-0 opacity-60" />
-          {value || '--:--'}
-        </button>
+          <Clock className="h-4 w-4" />
+        </Button>
 
         <Button
           type="button"
