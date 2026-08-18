@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -54,6 +54,17 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
   const qc = useQueryClient();
   useSeedLeirskoleSpecialDays(week);
   const dates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
+  /** Ruter som nettopp er endret — vises med en gang, byttes ut når serveren svarer. */
+  const [pending, setPending] = useState<Record<string, string[]>>({});
+  /** Aktivitetsfordelingen samles opp, så raske klikk ikke gir en storm av kall. */
+  const assignTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(
+    () => () => {
+      Object.values(assignTimers.current).forEach(clearTimeout);
+    },
+    [],
+  );
 
   const stored = useMemo(() => {
     const map = new Map<string, { content: string; color: string }>();
@@ -62,6 +73,22 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
     });
     return map;
   }, [cells]);
+
+  // Når serveren har svart med samme innhold, slipper vi den optimistiske ruten.
+  useEffect(() => {
+    setPending((prev) => {
+      const keys = Object.keys(prev);
+      if (!keys.length) return prev;
+      const next: Record<string, string[]> = {};
+      let changed = false;
+      keys.forEach((key) => {
+        const server = splitLines(stored.get(key)?.content ?? '').join('\n');
+        if (server === prev[key].join('\n')) changed = true;
+        else next[key] = prev[key];
+      });
+      return changed ? next : prev;
+    });
+  }, [stored]);
 
   const specialDays = useMemo(() => {
     const map = new Map<string, string>();
@@ -89,27 +116,45 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
     });
   };
 
-  const persist = (date: string, row: number, lines: string[], color: string) => {
-    save.mutate(
-      { weekId: week.id, date, rowIndex: row, content: lines.join('\n'), color },
-      {
-        onError: () => toast.error('Kunne ikke lagre ruten'),
-        // Aktiviteten skal straks få en leder som er på vakt i den økten.
-        // Er ingen ledig, står den tom til vaktplanen genereres.
-        onSuccess: async () => {
-          try {
-            const n = await assignMissingActivities({ weekId: week.id, date });
-            ['leirskole-activities', 'leirskole-week-plan', 'leirskole-schedule'].forEach((key) =>
-              qc.invalidateQueries({ queryKey: [key] }),
-            );
-            if (n > 0) toast.success(`${n} aktivitet${n === 1 ? '' : 'er'} fikk leder`);
-          } catch {
-            /* Ingen leder på vakt ennå — aktiviteten står tom. */
-          }
+  const persist = useCallback(
+    (date: string, row: number, lines: string[], color: string) => {
+      const key = `${date}|${row}`;
+      setPending((prev) => ({ ...prev, [key]: lines }));
+      save.mutate(
+        { weekId: week.id, date, rowIndex: row, content: lines.join('\n'), color },
+        {
+          onError: () => {
+            setPending((prev) => {
+              const next = { ...prev };
+              delete next[key];
+              return next;
+            });
+            toast.error('Kunne ikke lagre ruten');
+          },
+          // Aktiviteten skal få en leder som er på vakt i den økten. Er ingen
+          // ledig, står den tom til vaktplanen genereres. Vi venter litt, slik
+          // at flere raske klikk i samme dag blir én fordeling.
+          onSuccess: () => {
+            clearTimeout(assignTimers.current[date]);
+            assignTimers.current[date] = setTimeout(async () => {
+              try {
+                const n = await assignMissingActivities({ weekId: week.id, date });
+                if (n > 0) {
+                  ['leirskole-activities', 'leirskole-schedule'].forEach((k) =>
+                    qc.invalidateQueries({ queryKey: [k] }),
+                  );
+                  toast.success(`${n} aktivitet${n === 1 ? '' : 'er'} fikk leder`);
+                }
+              } catch {
+                /* Ingen leder på vakt ennå — aktiviteten står tom. */
+              }
+            }, 900);
+          },
         },
-      },
-    );
-  };
+      );
+    },
+    [qc, save, week.id],
+  );
 
   return (
     <div className="oks-ls-pill oks-ls-stripe overflow-hidden">
@@ -161,10 +206,11 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
                 </div>
                 {dates.map((date) => {
                   const cell = stored.get(`${date}|${r.row}`);
+                  const key = `${date}|${r.row}`;
                   return (
                     <PlanCell
                       key={date}
-                      lines={splitLines(cell?.content ?? '')}
+                      lines={pending[key] ?? splitLines(cell?.content ?? '')}
                       tint={ROW_TINT[rowIdx]}
                       types={types ?? []}
                       onChange={(next) => persist(date, r.row, next, cell?.color ?? 'neutral')}
