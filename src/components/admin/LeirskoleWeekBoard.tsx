@@ -34,7 +34,6 @@ import { assignMissingActivities } from '@/lib/leirskoleAutoActivity';
 import { cellInstances } from '@/lib/leirskoleCellInstances';
 import { useSeedLeirskoleSpecialDays } from '@/hooks/useSeedLeirskoleSpecialDays';
 
-const MEALS = ['Frokost', 'Middag', 'Kvelds'];
 const MEAL_TIMES: Record<string, { start: string; end: string; hours: number }> = {
   Frokost: { start: '09:00', end: '10:00', hours: 1 },
   Middag: { start: '14:00', end: '15:00', hours: 1 },
@@ -44,6 +43,8 @@ const MEAL_TIMES: Record<string, { start: string; end: string; hours: number }> 
 const TEMPLATE_NAMES = new Set(['Frokost', 'Middag', 'Kvelds', 'Nattevakt', 'Sanitas', 'Økt 1', 'Økt 2', 'Økt 3']);
 /** Navn som har egne rader (måltid/natt) og derfor ikke vises i tidslinjen. */
 const ROW_NAMES = new Set(['Frokost', 'Middag', 'Kvelds', 'Nattevakt', 'Sanitas']);
+/** Kveld/natt har egne rader nederst og skal aldri inn i dagtidslinjen. */
+const NIGHT_ROW_NAMES = new Set(['Nattevakt', 'Sanitas']);
 
 type StaffRow = LeirskoleStaff & {
   leader: {
@@ -59,6 +60,19 @@ const SESSIONS = [
   { row: 1, label: 'Økt 1', session: 'formiddag', time: '11–14' },
   { row: 2, label: 'Økt 2', session: 'ettermiddag', time: '16–19' },
   { row: 3, label: 'Økt 3', session: 'kveld', time: '20–21.30' },
+];
+
+/** Radene i dagbordet i kronologisk rekkefølge — måltidene ligger mellom øktene. */
+const BOARD_ROWS: (
+  | { kind: 'session'; sessionIdx: number; label: string; time: string }
+  | { kind: 'meal'; meal: string; label: string; time: string }
+)[] = [
+  { kind: 'meal', meal: 'Frokost', label: 'Frokost', time: '09–10' },
+  { kind: 'session', sessionIdx: 0, label: SESSIONS[0].label, time: SESSIONS[0].time },
+  { kind: 'meal', meal: 'Middag', label: 'Middag', time: '14–15' },
+  { kind: 'session', sessionIdx: 1, label: SESSIONS[1].label, time: SESSIONS[1].time },
+  { kind: 'meal', meal: 'Kvelds', label: 'Kvelds', time: '19–20' },
+  { kind: 'session', sessionIdx: 2, label: SESSIONS[2].label, time: SESSIONS[2].time },
 ];
 
 function datesBetween(start: string, end: string) {
@@ -437,6 +451,56 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     </div>
   );
 
+  /** Én måltidsrute i bordet — ligger mellom øktene så dagen leses kronologisk. */
+  const MealCell = ({ date, meal, style }: { date: string; meal: string; style: React.CSSProperties }) => {
+    const post = (postsByDate.get(date) ?? []).find(
+      (p) => (p.name ?? '').trim().toLowerCase() === meal.toLowerCase(),
+    );
+    if (!post) {
+      return (
+        <button
+          type="button"
+          style={style}
+          onClick={() => createPost.mutate({ date, name: meal })}
+          disabled={createPost.isPending}
+          className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-2 py-1 text-left text-[10px] text-muted-foreground hover:bg-muted"
+        >
+          + {meal}
+        </button>
+      );
+    }
+    return (
+      <div style={style} className="flex">
+        <LeirskolePostStaffPicker
+          weekId={week.id}
+          title={`${meal} · ${new Date(`${date}T12:00:00`).getDate()}.`}
+          maxHours={maxHours}
+          hoursByStaff={staffHoursByDate.get(date) ?? new Map()}
+          staffOptions={staffOptions}
+          post={{
+            id: post.id,
+            name: post.name ?? meal,
+            date,
+            duration_hours: post.duration_hours,
+            assignments: post.assignments ?? [],
+          }}
+        >
+          <button
+            type="button"
+            className="flex w-full items-center gap-1 rounded-xl border border-border/60 bg-muted/30 px-2 py-1 text-left text-[10px] hover:brightness-105"
+          >
+            <span className="shrink-0 font-semibold">{meal}</span>
+            <span className="flex-1 truncate text-muted-foreground">
+              {(post.assignments ?? [])
+                .map((a) => firstName(staffToLeader.get(a.staff_id)?.name ?? '?'))
+                .join(', ') || 'ingen'}
+            </span>
+          </button>
+        </LeirskolePostStaffPicker>
+      </div>
+    );
+  };
+
   return (
     <div className="oks-ls-pill space-y-3 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -620,14 +684,15 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             })}
           </div>
 
-          {/* Øktrader — ankomst/avreise vises som kalenderkolonne over alle tre radene */}
+          {/* Øktrader — måltidene ligger mellom øktene, slik at alt følger klokken.
+              Ankomst/avreise vises som én kalenderkolonne over hele dagen. */}
           <div className="grid gap-1.5" style={gridStyle}>
-            {SESSIONS.map((s, rowIdx) => (
-              <div key={`label-${s.row}`} style={{ gridColumn: 1, gridRow: rowIdx + 1 }} className="flex items-center">
+            {BOARD_ROWS.map((r, rowIdx) => (
+              <div key={`label-${r.label}`} style={{ gridColumn: 1, gridRow: rowIdx + 1 }} className="flex items-center">
                 <LabelCell>
                   <span className="leading-tight">
-                    {s.label}
-                    <span className="block text-[9px] font-medium normal-case text-muted-foreground/70">{s.time}</span>
+                    {r.label}
+                    <span className="block text-[9px] font-medium normal-case text-muted-foreground/70">{r.time}</span>
                   </span>
                 </LabelCell>
               </div>
@@ -636,14 +701,14 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
               specialDays.has(date) ? (
                 <div
                   key={`cal-${date}`}
-                  style={{ gridColumn: dayIdx + 2, gridRow: '1 / span 3' }}
+                  style={{ gridColumn: dayIdx + 2, gridRow: `1 / span ${BOARD_ROWS.length}` }}
                   className="rounded-xl border border-amber-500/50 bg-amber-500/5 p-1.5"
                 >
                   <LeirskoleSpecialDayTimeline
                     weekId={week.id}
                     date={date}
                     posts={(postsByDate.get(date) ?? [])
-                      .filter((p) => !ROW_NAMES.has((p.name ?? '').trim()))
+                      .filter((p) => !NIGHT_ROW_NAMES.has((p.name ?? '').trim()))
                       .map((p) => ({
                         id: p.id,
                         name: p.name ?? '',
@@ -657,8 +722,18 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                   />
                 </div>
               ) : (
-                SESSIONS.map((s, rowIdx) => {
-                  const t = rowsFor(date)[rowIdx];
+                BOARD_ROWS.map((r, rowIdx) => {
+                  if (r.kind === 'meal') {
+                    return (
+                      <MealCell
+                        key={`${date}-${r.meal}`}
+                        date={date}
+                        meal={r.meal}
+                        style={{ gridColumn: dayIdx + 2, gridRow: rowIdx + 1 }}
+                      />
+                    );
+                  }
+                  const t = rowsFor(date)[r.sessionIdx];
                   if (!t) return null;
                 const content = cellContent(t);
                 const lines = content.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -675,7 +750,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                       : 'border-amber-500/50 bg-amber-500/10';
                 return (
                   <button
-                    key={`${date}-${s.row}`}
+                    key={`${date}-${r.label}`}
                     type="button"
                     style={{ gridColumn: dayIdx + 2, gridRow: rowIdx + 1 }}
                     onClick={() => setTarget(t)}
@@ -733,67 +808,6 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                 })
               ),
             )}
-          </div>
-
-          {/* Måltid */}
-          <div className="grid gap-1.5" style={gridStyle}>
-            <LabelCell>Måltid</LabelCell>
-            {dates.map((date) => {
-              const dayPosts = postsByDate.get(date) ?? [];
-              const special = specialDays.has(date);
-              const mealRows = MEALS.map((m) => ({
-                meal: m,
-                post: dayPosts.find((p) => (p.name ?? '').trim().toLowerCase() === m.toLowerCase()),
-              })).filter((x) => x.post || !special || x.meal === 'Middag');
-              return (
-                <div key={date} className="rounded-xl border border-border/60 bg-muted/25 p-1.5">
-                  {mealRows.length === 0 && <p className="text-[11px] text-muted-foreground">—</p>}
-                  <div className="space-y-1">
-                    {mealRows.map(({ meal, post }) =>
-                      !post ? (
-                        <button
-                          key={meal}
-                          type="button"
-                          onClick={() => createPost.mutate({ date, name: meal })}
-                          disabled={createPost.isPending}
-                          className="w-full rounded-lg border border-dashed border-border px-1 py-0.5 text-left text-[10px] text-muted-foreground hover:bg-muted"
-                        >
-                          + {meal}
-                        </button>
-                      ) : (
-                      <LeirskolePostStaffPicker
-                        key={meal}
-                        weekId={week.id}
-                        title={`${meal} · ${new Date(`${date}T12:00:00`).getDate()}.`}
-                        maxHours={maxHours}
-                        hoursByStaff={staffHoursByDate.get(date) ?? new Map()}
-                        staffOptions={staffOptions}
-                        post={{
-                          id: post.id,
-                          name: post.name ?? meal,
-                          date,
-                          duration_hours: post.duration_hours,
-                          assignments: post.assignments ?? [],
-                        }}
-                      >
-                        <button
-                          type="button"
-                          className="flex w-full items-start gap-1 rounded-lg px-1 py-0.5 text-left text-[10px] hover:bg-muted"
-                        >
-                          <span className="shrink-0 font-semibold">{meal}</span>
-                          <span className="flex-1 text-muted-foreground">
-                            {(post.assignments ?? [])
-                              .map((a) => firstName(staffToLeader.get(a.staff_id)?.name ?? '?'))
-                              .join(', ') || 'ingen'}
-                          </span>
-                        </button>
-                      </LeirskolePostStaffPicker>
-                      ),
-                    )}
-                  </div>
-                </div>
-              );
-            })}
           </div>
 
           {/* Kjøkken hele dagen */}
