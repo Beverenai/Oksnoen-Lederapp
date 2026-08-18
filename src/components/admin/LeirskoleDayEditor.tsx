@@ -469,8 +469,6 @@ export function LeirskoleDayEditor({
                 kitchenIds={kitchenIds}
                 maxHours={maxHours}
                 isLocked={isLocked}
-                focusSession={focus?.session}
-                focusNonce={focus?.nonce}
               />
             </>
           )}
