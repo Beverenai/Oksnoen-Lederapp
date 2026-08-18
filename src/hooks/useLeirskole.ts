@@ -264,7 +264,8 @@ export function useSaveLeirskoleCompetencies() {
 export function useLeirskoleSchedule(weekId?: string | null) {
   return useQuery({
     queryKey: ['leirskole-schedule', weekId],
-    refetchOnWindowFocus: false,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
     placeholderData: keepPreviousData,
     enabled: !!weekId,
     queryFn: async () => {
