@@ -85,6 +85,8 @@ function postCapacity(name: string, requiredLeaders: number) {
   const n = name.trim().toLowerCase();
   if (/frokost|middag|kvelds|måltid/.test(n)) return Math.max(requiredLeaders, 2);
   if (n.includes('sanitas')) return Math.max(requiredLeaders, 4);
+  // Nattevakt kan dobbeltbookes (to ledere på natt).
+  if (n.includes('nattevakt')) return Math.max(requiredLeaders, 2);
   return Math.max(requiredLeaders, 1);
 }
 
