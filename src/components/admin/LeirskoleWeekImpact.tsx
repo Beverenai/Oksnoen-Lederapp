@@ -28,6 +28,8 @@ type Impact = {
   kind: 'over' | 'rest' | 'clash' | 'empty' | 'plan';
   date: string;
   text: string;
+  /** Kan «Løs» gjøre noe med denne? */
+  fixable?: boolean;
 };
 
 const mins = (t: string) => {
@@ -175,18 +177,25 @@ export function LeirskoleWeekImpact({
         const { slots, staleLeaderIds } = planSlots(lines, types, acts);
         const openSlots = slots.filter((s) => !s.leaderId);
         if (openSlots.length > 0) {
+          // Hvor mange ledere står på vakten uten aktivitet? Uten dem kan «Løs» ikke fylle noe.
+          const filled = slots.filter((s) => s.leaderId).length;
+          const free = Math.max(0, post.assignments.length - filled);
+          const list = openSlots.map((s) => s.label).join(', ');
           out.push({
             kind: 'plan',
             date,
-            text: `${row.label}: ${openSlots.length} plass${openSlots.length === 1 ? '' : 'er'} uten leder (${openSlots
-              .map((s) => s.label)
-              .join(', ')}).`,
+            fixable: free > 0,
+            text:
+              free > 0
+                ? `${row.label}: ${openSlots.length} plass${openSlots.length === 1 ? '' : 'er'} uten leder (${list}).`
+                : `${row.label}: ${openSlots.length} plass${openSlots.length === 1 ? '' : 'er'} uten leder (${list}) — ingen ledige ledere på vakten. Sett flere ledere på økten, eller fjern aktiviteten i «Dag til dag».`,
           });
         }
         if (staleLeaderIds.length > 0) {
           out.push({
             kind: 'plan',
             date,
+            fixable: true,
             text: `${row.label}: ${staleLeaderIds.length} leder(e) har en aktivitet som ikke står i «Dag til dag».`,
           });
         }
@@ -200,19 +209,29 @@ export function LeirskoleWeekImpact({
     [impacts, planImpacts],
   );
 
-  const canFix = !!weekId && planImpacts.length > 0;
+  const fixableImpacts = useMemo(() => planImpacts.filter((i) => i.fixable), [planImpacts]);
+  const canFix = !!weekId && fixableImpacts.length > 0;
 
   const fix = async () => {
     if (!weekId) return;
     setFixing(true);
     try {
       const locked = new Set(lockedDates ?? []);
-      const targets = Array.from(new Set(planImpacts.map((i) => i.date))).filter((d) => !locked.has(d));
+      const targets = Array.from(new Set(fixableImpacts.map((i) => i.date))).filter((d) => !locked.has(d));
+      if (!targets.length) {
+        toast.info('Alt som står igjen må løses manuelt — det mangler ledere på vaktene.');
+        return;
+      }
       const res = await resolveLeirskoleConflicts({ weekId, dates: targets });
       qc.invalidateQueries({ queryKey: ['leirskole-activities'] });
       qc.invalidateQueries({ queryKey: ['leirskole-activity-history'] });
       qc.invalidateQueries({ queryKey: ['leirskole-my-activities'] });
-      toast.success(`Ryddet ${res.removed} og fylte ${res.created} plasser`);
+      qc.invalidateQueries({ queryKey: ['leirskole-week-plan'] });
+      if (res.removed === 0 && res.created === 0) {
+        toast.info('Fant ingen plasser som kunne fylles automatisk — det mangler ledere på vaktene.');
+      } else {
+        toast.success(`Ryddet ${res.removed} og fylte ${res.created} plasser`);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Kunne ikke løse konfliktene');
     } finally {
