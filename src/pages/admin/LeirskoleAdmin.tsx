@@ -114,7 +114,7 @@ export default function LeirskoleAdmin() {
   const { data: weekActivities } = useLeirskoleActivities(week?.id);
   const { data: planCells } = useLeirskoleWeekPlan(week?.id);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
-  const [openStep, setOpenStep] = useState<number | null>(1);
+  const [panel, setPanel] = useState<'activities' | 'access' | 'payroll' | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
   const [viewDate, setViewDate] = useState<string | null>(null);
 
