@@ -897,3 +897,37 @@ export function useShiftLeirskolePosts() {
     onSuccess: () => invalidateSchedule(qc),
   });
 }
+
+/* ─────────── Ukesarkiv: lagrede ledere per leirskoleuke ─────────── */
+
+export type LeirskoleWeekSnapshot = Tables<'leirskole_week_leader_snapshots'>;
+
+/** Arkiverte ledere (med timer/vakter/aktiviteter) for en leirskoleuke. */
+export function useLeirskoleWeekSnapshot(weekId?: string | null) {
+  return useQuery({
+    queryKey: ['leirskole-week-snapshot', weekId],
+    enabled: !!weekId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leirskole_week_leader_snapshots')
+        .select('*')
+        .eq('week_id', weekId!)
+        .order('leader_name');
+      if (error) throw error;
+      return (data ?? []) as LeirskoleWeekSnapshot[];
+    },
+  });
+}
+
+/** Lagrer (eller oppdaterer) arkivet for en leirskoleuke. */
+export function useSaveLeirskoleWeekSnapshot() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (weekId: string) => {
+      const { data, error } = await supabase.rpc('snapshot_leirskole_week', { _week_id: weekId });
+      if (error) throw error;
+      return (data as number) ?? 0;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-week-snapshot'] }),
+  });
+}
