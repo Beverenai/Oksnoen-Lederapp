@@ -723,8 +723,18 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                   />
                 </div>
               ) : (
-                SESSIONS.map((s, rowIdx) => {
-                  const t = rowsFor(date)[rowIdx];
+                BOARD_ROWS.map((r, rowIdx) => {
+                  if (r.kind === 'meal') {
+                    return (
+                      <MealCell
+                        key={`${date}-${r.meal}`}
+                        date={date}
+                        meal={r.meal}
+                        style={{ gridColumn: dayIdx + 2, gridRow: rowIdx + 1 }}
+                      />
+                    );
+                  }
+                  const t = rowsFor(date)[r.sessionIdx];
                   if (!t) return null;
                 const content = cellContent(t);
                 const lines = content.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -741,7 +751,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                       : 'border-amber-500/50 bg-amber-500/10';
                 return (
                   <button
-                    key={`${date}-${s.row}`}
+                    key={`${date}-${r.label}`}
                     type="button"
                     style={{ gridColumn: dayIdx + 2, gridRow: rowIdx + 1 }}
                     onClick={() => setTarget(t)}
