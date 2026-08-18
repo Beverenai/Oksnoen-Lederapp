@@ -8,6 +8,9 @@ const WEEKDAYS = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'];
 export interface LeaderWeekShift {
   name: string;
   hours: number;
+  assignmentId?: string;
+  postId?: string;
+  kitchen?: boolean;
 }
 
 /** Full oversikt: én rad per leder, én kolonne per dag. */
@@ -18,6 +21,7 @@ export function LeirskoleLeaderWeekTable({
   kitchenSet,
   maxHours,
   issuesByLeader,
+  onEditCell,
 }: {
   dates: string[];
   staff: { staffId: string; leaderId: string; name: string }[];
@@ -27,6 +31,8 @@ export function LeirskoleLeaderWeekTable({
   kitchenSet: Set<string>;
   maxHours: number;
   issuesByLeader: Map<string, LeirskoleIssue[]>;
+  /** Åpner redigering av én leders dag. */
+  onEditCell?: (date: string, staffId: string) => void;
 }) {
   const [q, setQ] = useState('');
   const [day, setDay] = useState<string>('alle');
@@ -118,8 +124,10 @@ export function LeirskoleLeaderWeekTable({
                     const over = hours > maxHours + 0.01;
                     return (
                       <td key={d.date} className="px-2 py-2">
-                        <div
-                          className={`rounded-xl border px-2 py-1.5 ${
+                        <button
+                          type="button"
+                          onClick={() => onEditCell?.(d.date, s.staffId)}
+                          className={`w-full rounded-xl border px-2 py-1.5 text-left transition hover:brightness-95 ${
                             over
                               ? 'border-destructive/50 bg-destructive/10'
                               : hours === 0
@@ -142,7 +150,7 @@ export function LeirskoleLeaderWeekTable({
                               {d.list.map((x) => shortName(x.name)).join(' · ')}
                             </p>
                           )}
-                        </div>
+                        </button>
                       </td>
                     );
                   })}

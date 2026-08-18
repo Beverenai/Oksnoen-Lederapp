@@ -136,6 +136,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const [preview, setPreview] = useState<LeirskolePreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [snapshot, setSnapshot] = useState<LeirskoleSnapshot | null>(null);
+  /** Redigering av én leders dag fra lederoversikten. */
+  const [editCell, setEditCell] = useState<{ date: string; staffId: string } | null>(null);
 
   const toggleBig = () => {
     setBig((v) => {
@@ -473,6 +475,38 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke angre'),
   });
 
+  /** Fjern én vakt fra en leder (brukes i lederoversikten). */
+  const removeShift = useMutation({
+    mutationFn: async (assignmentId: string) => {
+      const { error } = await supabase.from('leirskole_assignments').delete().eq('id', assignmentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      ['leirskole-schedule', 'leirskole-my-shifts'].forEach((key) =>
+        qc.invalidateQueries({ queryKey: [key] }),
+      );
+      toast.success('Vakten er fjernet');
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke fjerne vakten'),
+  });
+
+  /** Sett en leder på en vakt (brukes i lederoversikten). */
+  const addShift = useMutation({
+    mutationFn: async ({ postId, staffId }: { postId: string; staffId: string }) => {
+      const { error } = await supabase
+        .from('leirskole_assignments')
+        .insert({ post_id: postId, staff_id: staffId, assigned_manually: true });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      ['leirskole-schedule', 'leirskole-my-shifts'].forEach((key) =>
+        qc.invalidateQueries({ queryKey: [key] }),
+      );
+      toast.success('Vakten er lagt til');
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke legge til vakten'),
+  });
+
   /** Hent forhåndsvisning før noe skrives. */
   const openPreview = async (mode: LeirskoleGenerateMode) => {
     setPendingMode(mode);
@@ -539,19 +573,27 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
 
   /** `${date}|${staffId}` -> vaktene lederen har den dagen (til lederoversikten). */
   const shiftsByStaffDate = useMemo(() => {
-    const map = new Map<string, { name: string; hours: number }[]>();
+    const map = new Map<
+      string,
+      { name: string; hours: number; assignmentId?: string; postId?: string; kitchen?: boolean }[]
+    >();
     (posts ?? []).forEach((p) => {
       (p.assignments ?? []).forEach((a) => {
         const key = `${p.date}|${a.staff_id}`;
         map.set(key, [
           ...(map.get(key) ?? []),
-          { name: p.name ?? 'Vakt', hours: Number(p.duration_hours ?? 0) },
+          {
+            name: p.name ?? 'Vakt',
+            hours: Number(p.duration_hours ?? 0),
+            assignmentId: a.id,
+            postId: p.id,
+          },
         ]);
       });
     });
     (kitchenDays ?? []).forEach((k) => {
       const key = `${k.date}|${k.staff_id}`;
-      map.set(key, [...(map.get(key) ?? []), { name: 'Kjøkken', hours: KITCHEN_DAY_HOURS }]);
+      map.set(key, [...(map.get(key) ?? []), { name: 'Kjøkken', hours: KITCHEN_DAY_HOURS, kitchen: true }]);
     });
     return map;
   }, [posts, kitchenDays]);
@@ -1270,9 +1312,111 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           kitchenSet={kitchenSet}
           maxHours={maxHours}
           issuesByLeader={issuesByLeader}
+          onEditCell={(date, staffId) => setEditCell({ date, staffId })}
         />
       </div>
       )}
+
+      {/* Rediger én leders dag rett fra lederoversikten */}
+      <Dialog open={!!editCell} onOpenChange={(v) => !v && setEditCell(null)}>
+        <DialogContent className="max-w-md">
+          {editCell && (() => {
+            const staffRow = staff.find((s) => s.id === editCell.staffId);
+            const mine = shiftsByStaffDate.get(`${editCell.date}|${editCell.staffId}`) ?? [];
+            const total = mine.reduce((a, b) => a + b.hours, 0);
+            const onKitchen = kitchenSet.has(`${editCell.date}|${editCell.staffId}`);
+            const dayPosts = (postsByDate.get(editCell.date) ?? []).filter(
+              (p) => !(p.assignments ?? []).some((a) => a.staff_id === editCell.staffId),
+            );
+            const dt = new Date(`${editCell.date}T12:00:00`);
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>
+                    {staffRow?.leader?.name ?? 'Leder'} · {WEEKDAYS[dt.getDay()]} {dt.getDate()}.
+                  </DialogTitle>
+                </DialogHeader>
+                <p
+                  className={`text-sm font-semibold ${
+                    total > maxHours + 0.01 ? 'text-destructive' : 'text-muted-foreground'
+                  }`}
+                >
+                  {total.toFixed(1)}t denne dagen (tak {maxHours}t)
+                </p>
+
+                <div className="space-y-1.5">
+                  {mine.length === 0 && <p className="text-sm text-muted-foreground">Ingen vakter denne dagen.</p>}
+                  {mine.map((s) => (
+                    <div
+                      key={s.assignmentId ?? `kitchen-${s.name}`}
+                      className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-2"
+                    >
+                      <span className="min-w-0 truncate text-sm font-medium">
+                        {s.name} <span className="text-muted-foreground">· {s.hours.toFixed(1)}t</span>
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 rounded-full text-xs text-destructive"
+                        disabled={removeShift.isPending || setKitchenDay.isPending}
+                        onClick={() => {
+                          if (s.kitchen) {
+                            setKitchenDay.mutate({
+                              weekId: week.id,
+                              date: editCell.date,
+                              staffId: editCell.staffId,
+                              active: false,
+                            });
+                          } else if (s.assignmentId) {
+                            removeShift.mutate(s.assignmentId);
+                          }
+                        }}
+                      >
+                        Fjern
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                {!onKitchen && dayPosts.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold uppercase text-muted-foreground">Legg til vakt</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {dayPosts.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          disabled={addShift.isPending}
+                          onClick={() => addShift.mutate({ postId: p.id, staffId: editCell.staffId })}
+                          className="rounded-full border border-border/70 bg-background px-3 py-1 text-xs font-medium hover:bg-muted"
+                        >
+                          + {p.name ?? 'Vakt'}{' '}
+                          <span className="text-muted-foreground">{Number(p.duration_hours ?? 0).toFixed(1)}t</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-between gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-full text-xs"
+                    disabled={fixDay.isPending}
+                    onClick={() => fixDay.mutate(editCell.date)}
+                  >
+                    Fiks dagen ({maxHours}t)
+                  </Button>
+                  <Button size="sm" className="rounded-full text-xs" onClick={() => setEditCell(null)}>
+                    Ferdig
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       <LeirskoleGeneratePreviewDialog
         preview={preview}
