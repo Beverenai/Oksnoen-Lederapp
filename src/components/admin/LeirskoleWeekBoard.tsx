@@ -710,6 +710,49 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             på vakt uten aktivitet
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-full bg-muted/60 p-0.5">
+            {[
+              { key: 'bord' as const, label: 'Ukebord', icon: LayoutGrid },
+              { key: 'ledere' as const, label: 'Ledere', icon: Users },
+            ].map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setView(t.key)}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  view === t.key ? 'bg-background shadow-sm' : 'text-muted-foreground'
+                }`}
+              >
+                <t.icon className="h-3.5 w-3.5" />
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {view === 'bord' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 rounded-full text-xs"
+              onClick={toggleBig}
+              title={big ? 'Bytt til kompakt visning' : 'Bytt til stor visning'}
+            >
+              {big ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+              {big ? 'Kompakt' : 'Stor'}
+            </Button>
+          )}
+          {snapshot && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 rounded-full text-xs"
+              onClick={() => undoGenerate.mutate()}
+              disabled={undoGenerate.isPending}
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+              {undoGenerate.isPending ? 'Angrer…' : 'Angre generering'}
+            </Button>
+          )}
         <Popover open={menuOpen} onOpenChange={setMenuOpen}>
           <PopoverTrigger asChild>
             <Button className="gap-2 rounded-full" disabled={generate.isPending}>
@@ -732,7 +775,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                 type="button"
                 onClick={() => {
                   setMenuOpen(false);
-                  generate.mutate(o.mode);
+                  void openPreview(o.mode);
                 }}
                 className="w-full rounded-xl px-3 py-2 text-left hover:bg-muted"
               >
@@ -742,6 +785,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             ))}
           </PopoverContent>
         </Popover>
+        </div>
       </div>
 
       {summary && (
