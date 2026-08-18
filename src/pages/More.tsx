@@ -252,7 +252,7 @@ export default function More() {
         ...(isKitchen || isAdmin
           ? [{ to: '/kjokken', icon: ChefHat, label: 'Kjøkken' } as MoreItem]
           : []),
-        ...(hookupsEnabled || isAdmin
+        ...(isAdmin
           ? [
               {
                 to: '/klineliste',
