@@ -48,7 +48,6 @@ import { Award } from 'lucide-react';
 import { LeirskoleCompetenceSheet } from '@/components/leirskole/LeirskoleCompetenceSheet';
 import { useMyLeirskoleCompetencies } from '@/hooks/useLeirskole';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
-import { TinderIcon } from '@/components/icons/TinderIcon';
 import { usePovCurrentRoll } from '@/hooks/usePov';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import { BentoTile, type BentoTone, type BentoSize } from '@/components/offseason/BentoTile';
