@@ -391,9 +391,7 @@ export function LeirskoleDaySessions({
     const warns = warningsFor(staffId);
     const before = activityKey && leaderId ? doneBefore.get(`${leaderId}|${activityKey}`) ?? 0 : 0;
     const cellKey = `${p.id}|${staffId}`;
-    const free = staff.filter(
-      (x) => x.leader && !kitchenIds.has(x.id) && x.id !== staffId,
-    );
+    const free = assignableStaff.filter((x) => x.id !== staffId);
     return (
       <>
         {noteKey === cellKey && assignmentId ? (
@@ -549,8 +547,7 @@ export function LeirskoleDaySessions({
   /** Plukker som fyller en tom plass. */
   const SlotPicker = ({ p, slot }: { p: SessionPost; slot: PlanSlot }) => {
     const onPostIds = new Set(p.assignments.map((a) => a.staff_id));
-    const candidates = staff
-      .filter((s) => s.leader && !kitchenIds.has(s.id))
+    const candidates = assignableStaff
       .slice()
       .sort((x, y) => {
         const onX = onPostIds.has(x.id) ? 0 : 1;
