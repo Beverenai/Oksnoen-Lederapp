@@ -346,7 +346,7 @@ export function LeirskolePostsCard({
         <CardDescription>
           {readOnly
             ? 'Vaktplanen hentes fra jobbplattformen og oppdateres ved neste synkronisering.'
-            : `Maks ${Number(week.max_daily_hours ?? 8)} t/dag og ${Number(week.min_rest_hours ?? 11)} t hvile.`}
+            : `Planleggingsgrense ${Number(week.max_daily_hours ?? 8)} t/dag og ${Number(week.min_rest_hours ?? 11)} t hvile etter endt arbeidsdag.`}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

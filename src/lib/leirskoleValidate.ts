@@ -153,7 +153,7 @@ export function validateLeirskoleWeek(input: ValidateInput): LeirskoleIssue[] {
         });
         continue;
       }
-      // 4. For kort hvile
+      // 4. For kort hvile (kun mellom arbeidsdager, etter endt arbeidsdag)
       const rest = (cur.start.getTime() - prev.end.getTime()) / 3_600_000;
       if (rest < minRestHours - 0.01 && prev.post.date !== cur.post.date) {
         issues.push({
@@ -163,7 +163,7 @@ export function validateLeirskoleWeek(input: ValidateInput): LeirskoleIssue[] {
           rowIndex: null,
           label: cur.post.name,
           leaderId,
-          message: `${short(leaderName.get(leaderId) ?? '?')} har bare ${rest.toFixed(1)}t hvile etter ${prev.post.name}`,
+          message: `${short(leaderName.get(leaderId) ?? '?')} har bare ${rest.toFixed(1)}t hvile etter endt arbeidsdag (${prev.post.name})`,
         });
       }
     }
