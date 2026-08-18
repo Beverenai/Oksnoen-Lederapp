@@ -282,11 +282,35 @@ export function useMyLeirskoleShifts(weekId?: string | null) {
       if (error) throw error;
       const assignments = (data ?? []) as Array<{ note: string | null; post: LeirskolePost | null }>;
       return assignments
-        .map((assignment) => (assignment.post ? { ...assignment.post, leaderNote: assignment.note } : null))
-        .filter(Boolean)
+        .flatMap((assignment) =>
+          assignment.post ? [{ ...assignment.post, leaderNote: assignment.note }] : [],
+        )
         // Upubliserte økter (f.eks. 3. økt som settes senere på dagen) vises ikke.
         .filter((post) => (post as LeirskolePost & { is_published?: boolean }).is_published !== false)
-        .sort((a, b) => (a.date === b.date ? a.start_time.localeCompare(b.start_time) : a.date.localeCompare(b.date))) as (LeirskolePost & { leaderNote: string | null })[];
+        .sort((a, b) =>
+          a.date === b.date ? a.start_time.localeCompare(b.start_time) : a.date.localeCompare(b.date),
+        );
+    },
+  });
+}
+
+/**
+ * Egen beskjed til én leder på én økt («ta med regntøy», «du leder gruppa» …).
+ * Lagres på selve vakttildelingen, så lederen ser den på vakten sin.
+ */
+export function useSetLeirskoleAssignmentNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ assignmentId, note }: { assignmentId: string; note: string | null }) => {
+      const { error } = await supabase
+        .from('leirskole_assignments')
+        .update({ note: note && note.trim() ? note.trim() : null })
+        .eq('id', assignmentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-my-shifts'] });
     },
   });
 }
