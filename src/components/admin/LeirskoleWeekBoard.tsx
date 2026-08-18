@@ -947,14 +947,14 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                     type="button"
                     style={{ gridColumn: dayIdx + 2, gridRow: rowIdx + 1 }}
                     onClick={() => setTarget(t)}
-                    className={`rounded-xl border p-2 text-left transition-colors hover:brightness-105 ${tone}`}
+                    className={`rounded-xl border text-left ${ui.pad} transition-colors hover:brightness-105 ${tone}`}
                   >
                     {t.session === null && (
-                      <p className="mb-1 truncate text-[10px] font-semibold uppercase text-muted-foreground">
+                      <p className="mb-1 truncate ${ui.sub} font-semibold uppercase text-muted-foreground">
                         {t.label}
                       </p>
                     )}
-                    {lines.length === 0 && <p className="text-[11px] text-muted-foreground">Tom — trykk for å fylle</p>}
+                    {lines.length === 0 && <p className="${ui.txt} text-muted-foreground">Tom — trykk for å fylle</p>}
                      <div className="space-y-1">
                        {instances.map((inst) => (
                          <div key={inst.id} className="flex items-center gap-1 text-[11px]">
