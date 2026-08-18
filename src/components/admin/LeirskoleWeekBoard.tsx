@@ -598,24 +598,14 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                 const content = cellContent(t);
                 const lines = content.split('\n').map((l) => l.trim()).filter(Boolean);
                 const slotActivities = t.session ? activityBySlot.get(`${date}|${t.session}`) ?? [] : [];
-                const selectedTypes = (types ?? []).filter((ty) =>
-                  lines.some((l) => l.toLowerCase().includes(ty.label.toLowerCase())),
-                );
-                // Aktiviteter som er fordelt til en leder, men som ikke står i ruteteksten,
-                // vises også — ellers dukker lederen opp som «uten aktivitet» i tillegg.
-                const extraTypes = (types ?? []).filter(
-                  (ty) =>
-                    !selectedTypes.some((s) => s.key === ty.key) &&
-                    slotActivities.some((a) => a.activity === ty.key),
-                );
-                const shownTypes = [...selectedTypes, ...extraTypes];
-                const withLeader = shownTypes.filter((ty) =>
-                  slotActivities.some((a) => a.activity === ty.key),
-                ).length;
+                 // Aktiviteter kan stå flere ganger i samme rute (to på Klatring osv.),
+                 // og hver forekomst vises med sin egen leder.
+                 const instances = cellInstances(lines, types ?? [], slotActivities);
+                 const withLeader = instances.filter((i) => i.leaderId).length;
                 const tone =
                   lines.length === 0
                     ? 'border-border/60 bg-muted/25'
-                    : withLeader >= shownTypes.length && shownTypes.length > 0
+                     : withLeader >= instances.length && instances.length > 0
                       ? 'border-emerald-500/50 bg-emerald-500/10'
                       : 'border-amber-500/50 bg-amber-500/10';
                 return (
@@ -632,24 +622,21 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                       </p>
                     )}
                     {lines.length === 0 && <p className="text-[11px] text-muted-foreground">Tom — trykk for å fylle</p>}
-                    <div className="space-y-1">
-                      {shownTypes.map((ty) => {
-                        const holder = slotActivities.find((a) => a.activity === ty.key);
-                        return (
-                          <div key={ty.key} className="flex items-center gap-1 text-[11px]">
-                            <span>{ty.emoji ?? '•'}</span>
-                            <span className="flex-1 truncate font-medium">{ty.label}</span>
-                            <span
-                              className={`shrink-0 truncate text-[10px] ${
-                                holder ? 'font-semibold text-foreground' : 'text-amber-600 dark:text-amber-400'
-                              }`}
-                            >
-                              {holder ? firstName(leaderName.get(holder.leader_id) ?? '?') : 'ingen'}
-                            </span>
-                          </div>
-                        );
-                      })}
-                      {shownTypes.length === 0 &&
+                     <div className="space-y-1">
+                       {instances.map((inst) => (
+                         <div key={inst.id} className="flex items-center gap-1 text-[11px]">
+                           <span>{inst.emoji ?? '•'}</span>
+                           <span className="flex-1 truncate font-medium">{inst.label}</span>
+                           <span
+                             className={`shrink-0 truncate text-[10px] ${
+                               inst.leaderId ? 'font-semibold text-foreground' : 'text-amber-600 dark:text-amber-400'
+                             }`}
+                           >
+                             {inst.leaderId ? firstName(leaderName.get(inst.leaderId) ?? '?') : 'ingen'}
+                           </span>
+                         </div>
+                       ))}
+                       {instances.length === 0 &&
                         lines.map((l, i) => (
                           <p key={`${l}-${i}`} className="truncate text-[11px]">
                             {l}
