@@ -4,7 +4,9 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertTriangle, Moon, Sparkles, Wand2 } from 'lucide-react';
+import { AlertTriangle, Lock, LockOpen, Moon, NotebookPen, Sparkles, Wand2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useLeirskoleActivities,
@@ -14,6 +16,8 @@ import {
   useLeirskoleWeekPlan,
   useLeirskoleKitchenDays,
   useSetLeirskoleKitchenDay,
+  useSetLeirskoleDayLock,
+  useSetLeirskoleDayLog,
   type LeirskoleStaff,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
@@ -81,7 +85,11 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const { data: types } = useLeirskoleActivityTypes(true);
   const { data: kitchenDays } = useLeirskoleKitchenDays(week.id);
   const setKitchenDay = useSetLeirskoleKitchenDay();
+  const setDayLock = useSetLeirskoleDayLock();
+  const setDayLog = useSetLeirskoleDayLog();
   const [target, setTarget] = useState<CellTarget | null>(null);
+  const [logDate, setLogDate] = useState<string | null>(null);
+  const [logText, setLogText] = useState('');
   const [summary, setSummary] = useState<LeirskoleGenerateSummary | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -96,6 +104,23 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     });
     return map;
   }, [weekDays]);
+
+  const lockedDays = useMemo(
+    () => new Set((weekDays ?? []).filter((d) => d.is_locked).map((d) => d.date)),
+    [weekDays],
+  );
+  const dayLogs = useMemo(() => {
+    const map = new Map<string, string>();
+    (weekDays ?? []).forEach((d) => {
+      if (d.log_note) map.set(d.date, d.log_note);
+    });
+    return map;
+  }, [weekDays]);
+
+  const openLog = (date: string) => {
+    setLogText(dayLogs.get(date) ?? '');
+    setLogDate(date);
+  };
 
   const staffToLeader = useMemo(() => {
     const map = new Map<string, { id: string; name: string; competencies: string[] }>();
@@ -536,12 +561,13 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             {dates.map((date) => {
               const d = new Date(`${date}T12:00:00`);
               const special = specialDays.get(date);
+              const locked = lockedDays.has(date);
               return (
                 <div
                   key={date}
                   className={`rounded-xl px-2 py-1.5 text-center ${
                     special ? 'border border-dashed border-amber-500/60 bg-amber-500/15' : 'oks-ls-gradient'
-                  }`}
+                  } ${locked ? 'ring-2 ring-sky-400' : ''}`}
                 >
                   <p className={`text-xs font-bold ${special ? 'text-amber-700 dark:text-amber-200' : 'text-white'}`}>
                     {WEEKDAYS[d.getDay()]} {d.getDate()}.
@@ -551,6 +577,44 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                       {special === 'both' ? 'Avreise + ankomst' : special === 'arrival' ? 'Ankomst' : 'Avreise'}
                     </p>
                   )}
+                  <div className="mt-1 flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      title={locked ? 'Åpne dagen for generering' : 'Lås dagen (generatoren endrer den ikke)'}
+                      onClick={() =>
+                        setDayLock.mutate(
+                          { weekId: week.id, date, locked: !locked },
+                          {
+                            onSuccess: () => toast.success(locked ? 'Dagen er åpnet' : 'Dagen er låst'),
+                            onError: () => toast.error('Kunne ikke endre låsen'),
+                          },
+                        )
+                      }
+                      className={`rounded-full p-1 ${
+                        locked
+                          ? 'bg-sky-500 text-white'
+                          : special
+                            ? 'bg-background/70 text-muted-foreground'
+                            : 'bg-white/20 text-white'
+                      }`}
+                    >
+                      {locked ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
+                    </button>
+                    <button
+                      type="button"
+                      title="Logg: hvordan gikk dagen?"
+                      onClick={() => openLog(date)}
+                      className={`rounded-full p-1 ${
+                        dayLogs.has(date)
+                          ? 'bg-emerald-500 text-white'
+                          : special
+                            ? 'bg-background/70 text-muted-foreground'
+                            : 'bg-white/20 text-white'
+                      }`}
+                    >
+                      <NotebookPen className="h-3 w-3" />
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -1080,6 +1144,83 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           .filter((s) => s.leader)
           .map((s) => ({ staffId: s.id, leaderId: s.leader!.id, name: s.leader!.name }))}
       />
+
+      {/* Logg for dagen: hva ble gjort, og hvem jobbet når */}
+      <Dialog open={!!logDate} onOpenChange={(v) => !v && setLogDate(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              Logg ·{' '}
+              {logDate
+                ? `${WEEKDAYS[new Date(`${logDate}T12:00:00`).getDay()]} ${new Date(`${logDate}T12:00:00`).getDate()}.`
+                : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="max-h-52 overflow-y-auto rounded-2xl border border-border/60 bg-muted/30 p-2 text-xs">
+              <p className="mb-1 font-semibold text-muted-foreground">Hvem jobbet når</p>
+              {(logDate ? postsByDate.get(logDate) ?? [] : []).length === 0 ? (
+                <p className="text-muted-foreground">Ingen vakter satt opp denne dagen.</p>
+              ) : (
+                (logDate ? postsByDate.get(logDate) ?? [] : []).map((p) => (
+                  <div key={p.id} className="flex items-start justify-between gap-2 py-0.5">
+                    <span className="font-medium">
+                      {p.name}{' '}
+                      <span className="text-muted-foreground tabular-nums">
+                        {String(p.start_time).slice(0, 5)}–{String(p.end_time).slice(0, 5)}
+                      </span>
+                    </span>
+                    <span className="text-right text-muted-foreground">
+                      {(p.assignments ?? [])
+                        .map((a) => staffToLeader.get(a.staff_id)?.name ?? '—')
+                        .map(firstName)
+                        .join(', ') || 'Ingen'}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+            <Textarea
+              value={logText}
+              onChange={(e) => setLogText(e.target.value)}
+              rows={6}
+              placeholder="Hvordan gikk øktene? Hva ble faktisk gjort, endringer, avvik…"
+            />
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                variant="outline"
+                className="gap-1.5 rounded-full"
+                onClick={() =>
+                  logDate &&
+                  setDayLock.mutate({ weekId: week.id, date: logDate, locked: !lockedDays.has(logDate) })
+                }
+              >
+                {logDate && lockedDays.has(logDate) ? <Lock className="h-4 w-4" /> : <LockOpen className="h-4 w-4" />}
+                {logDate && lockedDays.has(logDate) ? 'Låst' : 'Lås dagen'}
+              </Button>
+              <Button
+                className="rounded-full"
+                disabled={setDayLog.isPending}
+                onClick={() =>
+                  logDate &&
+                  setDayLog.mutate(
+                    { weekId: week.id, date: logDate, note: logText },
+                    {
+                      onSuccess: () => {
+                        toast.success('Logg lagret');
+                        setLogDate(null);
+                      },
+                      onError: () => toast.error('Kunne ikke lagre loggen'),
+                    },
+                  )
+                }
+              >
+                Lagre logg
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
