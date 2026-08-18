@@ -51,7 +51,8 @@ import { LeirskoleBoardIssues } from '@/components/admin/LeirskoleBoardIssues';
 import { LeirskoleLeaderWeekTable } from '@/components/admin/LeirskoleLeaderWeekTable';
 import { LeirskoleGeneratePreviewDialog } from '@/components/admin/LeirskoleGeneratePreviewDialog';
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
-import { LeirskoleSpecialDayTimeline } from '@/components/admin/LeirskoleSpecialDayTimeline';
+import { LeirskoleExtraPostsCell } from '@/components/admin/LeirskoleExtraPostsCell';
+import { LeirskoleSimplePlan } from '@/components/admin/LeirskoleSimplePlan';
 import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
 import { trimDayHours, fillDayHours, KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import { assignMissingActivities } from '@/lib/leirskoleAutoActivity';
@@ -130,7 +131,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const [logText, setLogText] = useState('');
   const [summary, setSummary] = useState<LeirskoleGenerateSummary | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [view, setView] = useState<'bord' | 'ledere'>('bord');
+  const [view, setView] = useState<'bord' | 'ledere' | 'plan'>('bord');
   const [big, setBig] = useState(() => localStorage.getItem('leirskole-board-big') === '1');
   const [pendingMode, setPendingMode] = useState<LeirskoleGenerateMode | null>(null);
   const [preview, setPreview] = useState<LeirskolePreview | null>(null);
@@ -528,17 +529,15 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     }
   };
 
-  /** Radene for en vanlig dag: økt 1–3. Ankomst/avreise bruker kalenderkolonne. */
-  const rowsFor = (date: string): (CellTarget | null)[] => {
-    if (specialDays.has(date)) return SESSIONS.map(() => null);
-    return SESSIONS.map((s) => ({
+  /** Radene for en dag: økt 1–3. Ankomst/avreise følger samme klokke som resten. */
+  const rowsFor = (date: string): (CellTarget | null)[] =>
+    SESSIONS.map((s) => ({
       date,
       session: s.session,
       rowIndex: s.row,
       label: s.label,
       dayType: 'normal' as const,
     }));
-  };
 
   const cellContent = (t: CellTarget) =>
     planContent.get(t.postId ? `post|${t.postId}` : `${t.date}|${t.rowIndex}`) ?? '';
@@ -756,6 +755,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           <div className="flex rounded-full bg-muted/60 p-0.5">
             {[
               { key: 'bord' as const, label: 'Ukebord', icon: LayoutGrid },
+              { key: 'plan' as const, label: 'Dag til dag', icon: NotebookPen },
               { key: 'ledere' as const, label: 'Ledere', icon: Users },
             ].map((t) => (
               <button
