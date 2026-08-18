@@ -30,6 +30,8 @@ type Impact = {
   text: string;
   /** Kan «Løs» gjøre noe med denne? */
   fixable?: boolean;
+  /** Økten saken gjelder (session-nøkkel) — brukes til å hoppe rett dit. */
+  session?: string;
 };
 
 const mins = (t: string) => {
@@ -59,6 +61,7 @@ export function LeirskoleWeekImpact({
   onPickDate,
   weekId,
   lockedDates,
+  onPickIssue,
 }: {
   dates: string[];
   posts: Post[];
@@ -69,9 +72,12 @@ export function LeirskoleWeekImpact({
   weekId?: string;
   /** Låste dager røres ikke av «Løs». */
   lockedDates?: string[];
+  /** Kalles når en sak trykkes — hopper til dagen og økten. */
+  onPickIssue?: (issue: { date: string; session?: string }) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [fixing, setFixing] = useState(false);
+  const [fixingOne, setFixingOne] = useState<string | null>(null);
   const qc = useQueryClient();
   const { data: types } = useLeirskoleActivityTypes(true);
   const { data: activities } = useLeirskoleActivities(weekId);
@@ -152,7 +158,15 @@ export function LeirskoleWeekImpact({
     posts
       .filter((p) => p.assignments.length === 0)
       .forEach((p) =>
-        out.push({ kind: 'empty', date: p.date, fixable: true, text: `${p.name} har ingen ledere.` }),
+        out.push({
+          kind: 'empty',
+          date: p.date,
+          fixable: true,
+          session: SESSION_ROWS.find(
+            (r) => r.label.toLowerCase() === (p.name ?? '').trim().toLowerCase(),
+          )?.session,
+          text: `${p.name} har ingen ledere.`,
+        }),
       );
 
     return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
@@ -185,6 +199,7 @@ export function LeirskoleWeekImpact({
             kind: 'plan',
             date,
             fixable: true,
+            session: row.session,
             text:
               free > 0
                 ? `${row.label}: ${openSlots.length} plass${openSlots.length === 1 ? '' : 'er'} uten leder (${list}).`
@@ -196,6 +211,7 @@ export function LeirskoleWeekImpact({
             kind: 'plan',
             date,
             fixable: true,
+            session: row.session,
             text: `${row.label}: ${staleLeaderIds.length} leder(e) har en aktivitet som ikke står i «Dag til dag».`,
           });
         }
@@ -244,6 +260,44 @@ export function LeirskoleWeekImpact({
     }
   };
 
+  /** Løser kun den ene saken som ble trykket på. */
+  const fixOne = async (impact: Impact, id: string) => {
+    if (!weekId) return;
+    if ((lockedDates ?? []).includes(impact.date)) {
+      toast.error('Dagen er låst — åpne låsen først.');
+      return;
+    }
+    setFixingOne(id);
+    try {
+      const res = await resolveLeirskoleConflicts({
+        weekId,
+        dates: [impact.date],
+        maxHours,
+        sessions: impact.session ? [impact.session] : undefined,
+      });
+      qc.invalidateQueries({ queryKey: ['leirskole-activities'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-activity-history'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-my-activities'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-week-plan'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-my-shifts'] });
+      if (res.removed === 0 && res.created === 0) {
+        toast.info('Ingen ledige ledere til denne økten — løs den manuelt.');
+      } else {
+        toast.success(`Fikset: ${res.created} plass(er) fylt, ${res.removed} ryddet`);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Kunne ikke løse saken');
+    } finally {
+      setFixingOne(null);
+    }
+  };
+
+  const pick = (impact: Impact) => {
+    onPickIssue?.({ date: impact.date, session: impact.session });
+    onPickDate?.(impact.date);
+  };
+
   // Ingenting å vise når alt går opp.
   if (all.length === 0) return null;
 
@@ -278,17 +332,42 @@ export function LeirskoleWeekImpact({
 
       {open && (
         <div className="space-y-2 px-3 pb-3">
-          {all.slice(0, 12).map((i, idx) => (
-            <button
-              key={`${i.date}-${idx}`}
-              type="button"
-              onClick={() => onPickDate?.(i.date)}
-              className="flex w-full items-start gap-2 rounded-xl bg-muted/40 px-2.5 py-2 text-left text-xs hover:bg-muted"
-            >
-              <span className="w-16 shrink-0 font-bold uppercase text-muted-foreground">{shortDate(i.date)}</span>
-              <span className={`min-w-0 flex-1 ${TONE[i.kind]}`}>{i.text}</span>
-            </button>
-          ))}
+          {all.slice(0, 12).map((i, idx) => {
+            const id = `${i.date}-${idx}`;
+            return (
+              <div
+                key={id}
+                className="flex items-start gap-2 rounded-xl bg-muted/40 px-2.5 py-2 text-xs transition-colors hover:bg-muted"
+              >
+                <button
+                  type="button"
+                  onClick={() => pick(i)}
+                  className="flex min-w-0 flex-1 items-start gap-2 text-left"
+                >
+                  <span className="w-16 shrink-0 font-bold uppercase text-muted-foreground">{shortDate(i.date)}</span>
+                  <span className={`min-w-0 flex-1 ${TONE[i.kind]}`}>{i.text}</span>
+                </button>
+                {i.fixable && !!weekId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      pick(i);
+                      void fixOne(i, id);
+                    }}
+                    disabled={fixingOne === id}
+                    className="flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10.5px] font-bold text-primary disabled:opacity-60"
+                  >
+                    {fixingOne === id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Wand2 className="h-3 w-3" />
+                    )}
+                    Fiks denne
+                  </button>
+                )}
+              </div>
+            );
+          })}
           {all.length > 12 && (
             <p className="px-1 text-[11px] text-muted-foreground">+{all.length - 12} flere …</p>
           )}
