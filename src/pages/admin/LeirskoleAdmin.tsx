@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users, ChevronDown, ChevronRight, HelpCircle, ListChecks, FileSpreadsheet, KeyRound } from 'lucide-react';
+import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users, ChevronDown, ChevronRight, HelpCircle, ListChecks, FileSpreadsheet, KeyRound, Archive } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   useActiveLeirskoleWeek,
@@ -29,6 +29,8 @@ import { LeirskoleLeaderSheet } from '@/components/admin/LeirskoleLeaderSheet';
 import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
 import { LeirskoleWeekBoard } from '@/components/admin/LeirskoleWeekBoard';
 import { LeirskolePayrollExportCard } from '@/components/admin/LeirskolePayrollExportCard';
+import { LeirskoleWeekArchiveCard } from '@/components/admin/LeirskoleWeekArchiveCard';
+import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
 import { LeirskoleDayEditor } from '@/components/admin/LeirskoleDayEditor';
 import { LeirskoleDayToDayCard } from '@/components/admin/LeirskoleDayToDayCard';
 import { formatDue, shortDate, todayStr } from '@/lib/leirskoleDates';
