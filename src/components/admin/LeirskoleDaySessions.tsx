@@ -274,6 +274,122 @@ export function LeirskoleDaySessions({
 
   return (
     <div className="space-y-2.5">
+      {/* Kjøkkenvakt hele dagen — kan ikke stå på vanlige økter samme dag. */}
+      <div className="rounded-2xl border border-sky-500/40 bg-sky-500/[0.07] p-2">
+        <div className="flex items-center gap-1.5">
+          <span className="shrink-0 rounded-full bg-sky-500/20 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-sky-700 dark:text-sky-300">
+            Kjøkken
+          </span>
+          <p className="min-w-0 flex-1 truncate px-1 text-sm font-bold">Kjøkkenvakt hele dagen</p>
+          <span className="shrink-0 rounded-full bg-background/60 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+            {kitchenList.length} leder{kitchenList.length === 1 ? '' : 'e'}
+          </span>
+        </div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {kitchenList.length === 0 && (
+            <p className="self-center text-[11px] text-muted-foreground">Ingen på kjøkken denne dagen.</p>
+          )}
+          {kitchenList.map((s) => {
+            const h = kitchenHours?.get(s.id) ?? KITCHEN_DAY_HOURS;
+            return (
+              <div
+                key={s.id}
+                className="flex items-center gap-1.5 rounded-full border border-sky-500/40 bg-background/70 py-1 pl-1.5 pr-1"
+              >
+                <ChefHat className="h-3.5 w-3.5 shrink-0 text-sky-500" />
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={s.leader?.profile_image_url ?? undefined} alt={s.leader?.name ?? 'Leder'} />
+                  <AvatarFallback className="text-[9px]">{initials(s.leader?.name ?? 'L')}</AvatarFallback>
+                </Avatar>
+                <span className="max-w-[7rem] truncate text-xs font-semibold">{s.leader?.name?.split(' ')[0]}</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={24}
+                  step={0.5}
+                  aria-label={`Timer på kjøkken for ${s.leader?.name ?? 'leder'}`}
+                  defaultValue={h}
+                  key={`${s.id}-${h}`}
+                  onBlur={(e) => {
+                    const v = Number(e.target.value);
+                    if (!Number.isFinite(v) || v < 0 || v === h) return;
+                    if (!guard()) return;
+                    setKitchen.mutate(
+                      { weekId: week.id, staffId: s.id, date, active: true, hours: v },
+                      { onError: () => toast.error('Kunne ikke lagre timene') },
+                    );
+                  }}
+                  className="h-6 w-11 rounded-full bg-muted/60 px-1.5 text-center text-[11px] font-semibold tabular-nums outline-none focus:ring-1 focus:ring-primary"
+                />
+                <span className="text-[10px] font-semibold text-muted-foreground">t</span>
+                <button
+                  type="button"
+                  aria-label={`Fjern ${s.leader?.name ?? 'leder'} fra kjøkken`}
+                  onClick={() =>
+                    guard() &&
+                    setKitchen.mutate(
+                      { weekId: week.id, staffId: s.id, date, active: false },
+                      { onError: () => toast.error('Kunne ikke fjerne kjøkkenvakten') },
+                    )
+                  }
+                  className="shrink-0 p-0.5"
+                >
+                  <X className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              </div>
+            );
+          })}
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Sett leder på kjøkken hele dagen"
+                className="flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-full border border-dashed border-sky-500/60 text-sky-600 transition-colors hover:bg-sky-500/10 dark:text-sky-300"
+              >
+                <ChefHat className="h-4 w-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="start"
+              collisionPadding={12}
+              className="z-50 max-h-[min(60vh,20rem)] w-[min(18rem,calc(100vw-2rem))] overflow-y-auto p-1.5"
+            >
+              <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Kjøkken hele dagen · {KITCHEN_DAY_HOURS}t
+              </p>
+              {staff
+                .filter((s) => s.leader && !kitchenIds.has(s.id))
+                .map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() =>
+                      guard() &&
+                      setKitchen.mutate(
+                        { weekId: week.id, staffId: s.id, date, active: true, hours: KITCHEN_DAY_HOURS },
+                        { onError: () => toast.error('Kunne ikke sette kjøkkenvakt') },
+                      )
+                    }
+                    className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-muted/60"
+                  >
+                    <Avatar className="h-7 w-7 shrink-0">
+                      <AvatarImage src={s.leader?.profile_image_url ?? undefined} alt={s.leader!.name} />
+                      <AvatarFallback className="text-[10px]">{initials(s.leader!.name)}</AvatarFallback>
+                    </Avatar>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-semibold">{s.leader!.name}</span>
+                      <span className="block text-[10.5px] text-muted-foreground">
+                        Alle vaktene denne dagen fjernes
+                      </span>
+                    </span>
+                  </button>
+                ))}
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-1.5">
         <p className="text-[11px] text-muted-foreground">
           {editMode ? 'Redigering på — endre navn, tid og slett økter.' : 'Trykk på en leder for å endre aktivitet eller fjerne. + legger til leder.'}
