@@ -278,17 +278,21 @@ export function LeirskoleDaySessions({
         const b = ranges[j];
         if (a.p.id === b.p.id) continue;
         if (a.start < b.end && b.start < a.end) {
-          if (!overlapAllowed(a.p) && !overlapAllowed(b.p)) {
+          if (overlapAllowed(a.p) || overlapAllowed(b.p)) {
+            // Sanitas — helt greit å kombinere.
+          } else if (isNightPost(a.p) || isNightPost(b.p)) {
+            out.push(`Merk: ${a.p.name} + ${b.p.name} — tillatt, men sjekk hvile`);
+          } else {
             out.push(`Dobbeltbooket: ${a.p.name} og ${b.p.name}`);
           }
           continue;
         }
-        const isSanitas = (p: SessionPost) => (p.name ?? '').toLowerCase().includes('sanitas');
-        if (a.p.date === b.p.date || isSanitas(a.p) || isSanitas(b.p)) continue;
+        if (a.p.date === b.p.date || overlapAllowed(a.p) || overlapAllowed(b.p)) continue;
         const gap = (a.start < b.start ? b.start - a.end : a.start - b.end) / 60;
         if (gap < MIN_REST_HOURS) {
+          const soft = isNightPost(a.p) || isNightPost(b.p);
           out.push(
-            `Bare ${gap.toFixed(1)}t hvile etter endt arbeidsdag mellom ${a.p.name} og ${b.p.name} (krav ${MIN_REST_HOURS}t)`,
+            `${soft ? 'Merk: bare' : 'Bare'} ${gap.toFixed(1)}t hvile etter endt arbeidsdag mellom ${a.p.name} og ${b.p.name} (krav ${MIN_REST_HOURS}t)`,
           );
         }
       }
