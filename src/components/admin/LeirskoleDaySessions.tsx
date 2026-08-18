@@ -95,12 +95,12 @@ const isMeal = (p: SessionPost) => MEAL_NAMES.has((p.name ?? '').trim().toLowerC
 const NO_ACTIVITY_NAMES = new Set([...MEAL_NAMES, 'sanitas', 'nattevakt']);
 const hasActivities = (p: SessionPost) => !NO_ACTIVITY_NAMES.has((p.name ?? '').trim().toLowerCase());
 
-/** Sanitas og nattevakt kan gå oppå andre vakter — de skal kunne dobbeltbookes. */
-const OVERLAP_OK = ['sanitas', 'nattevakt'];
-const overlapAllowed = (p: SessionPost) => {
-  const n = (p.name ?? '').trim().toLowerCase();
-  return OVERLAP_OK.some((x) => n.includes(x));
-};
+/** Sanitas går oppå andre vakter — helt normalt, ingen advarsel. */
+const overlapAllowed = (p: SessionPost) => (p.name ?? '').trim().toLowerCase().includes('sanitas');
+
+/** Nattevakt kan kombineres med andre vakter — vi bare minner om det. */
+const isNightPost = (p: SessionPost) =>
+  !!p.is_night || (p.name ?? '').trim().toLowerCase().includes('nattevakt');
 
 /**
  * Dagsvisning: øktene nedover etter klokkeslett. Plassene i hver økt kommer fra
