@@ -44,6 +44,8 @@ const MEAL_TIMES: Record<string, { start: string; end: string; hours: number }> 
 const TEMPLATE_NAMES = new Set(['Frokost', 'Middag', 'Kvelds', 'Nattevakt', 'Sanitas', 'Økt 1', 'Økt 2', 'Økt 3']);
 /** Navn som har egne rader (måltid/natt) og derfor ikke vises i tidslinjen. */
 const ROW_NAMES = new Set(['Frokost', 'Middag', 'Kvelds', 'Nattevakt', 'Sanitas']);
+/** Kveld/natt har egne rader nederst og skal aldri inn i dagtidslinjen. */
+const NIGHT_ROW_NAMES = new Set(['Nattevakt', 'Sanitas']);
 
 type StaffRow = LeirskoleStaff & {
   leader: {
@@ -59,6 +61,19 @@ const SESSIONS = [
   { row: 1, label: 'Økt 1', session: 'formiddag', time: '11–14' },
   { row: 2, label: 'Økt 2', session: 'ettermiddag', time: '16–19' },
   { row: 3, label: 'Økt 3', session: 'kveld', time: '20–21.30' },
+];
+
+/** Radene i dagbordet i kronologisk rekkefølge — måltidene ligger mellom øktene. */
+const BOARD_ROWS: (
+  | { kind: 'session'; sessionIdx: number; label: string; time: string }
+  | { kind: 'meal'; meal: string; label: string; time: string }
+)[] = [
+  { kind: 'meal', meal: 'Frokost', label: 'Frokost', time: '09–10' },
+  { kind: 'session', sessionIdx: 0, label: SESSIONS[0].label, time: SESSIONS[0].time },
+  { kind: 'meal', meal: 'Middag', label: 'Middag', time: '14–15' },
+  { kind: 'session', sessionIdx: 1, label: SESSIONS[1].label, time: SESSIONS[1].time },
+  { kind: 'meal', meal: 'Kvelds', label: 'Kvelds', time: '19–20' },
+  { kind: 'session', sessionIdx: 2, label: SESSIONS[2].label, time: SESSIONS[2].time },
 ];
 
 function datesBetween(start: string, end: string) {
