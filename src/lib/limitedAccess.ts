@@ -25,6 +25,7 @@ export const LEIRSKOLE_ROUTES = [
   '/',
   '/leirskole',
   '/leirskole/vaktplan',
+  '/leirskole/grupper',
   '/leirskole/oppgaver',
   '/leaders',
   '/chat',
