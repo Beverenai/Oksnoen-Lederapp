@@ -27,6 +27,7 @@ import { LeirskoleGuideCard } from '@/components/admin/LeirskoleGuideCard';
 import { LeirskoleLeaderSheet } from '@/components/admin/LeirskoleLeaderSheet';
 import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
 import { LeirskoleWeekBoard } from '@/components/admin/LeirskoleWeekBoard';
+import { LeirskolePayrollExportCard } from '@/components/admin/LeirskolePayrollExportCard';
 import { LeirskoleDayEditor } from '@/components/admin/LeirskoleDayEditor';
 import { formatDue, shortDate, todayStr } from '@/lib/leirskoleDates';
 
@@ -375,6 +376,29 @@ export default function LeirskoleAdmin() {
             weekId={week.id}
             weekName={week.name}
             maxDailyHours={week.max_daily_hours}
+          />
+        </Step>
+
+        <Step
+          n={3}
+          title="Timer og lønn"
+          subtitle="Eksporter dager, økter og timer til Excel"
+          status={
+            hasSchedule
+              ? { label: `${totalHours.toFixed(0)}t klar`, tone: 'done' }
+              : { label: 'Ingen vakter ennå', tone: 'todo' }
+          }
+          open={openStep === 3}
+          onToggle={() => setOpenStep(openStep === 3 ? null : 3)}
+        >
+          <LeirskolePayrollExportCard
+            week={week}
+            allWeeks={(weeks ?? []).map((w) => ({
+              id: w.id,
+              name: w.name,
+              start_date: w.start_date,
+              end_date: w.end_date,
+            }))}
           />
         </Step>
       </div>
