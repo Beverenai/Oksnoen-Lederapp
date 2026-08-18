@@ -380,6 +380,7 @@ export function LeirskoleDayEditor({
               { key: 'dag' as const, label: 'Rutenett', icon: LayoutGrid },
               { key: 'ledere' as const, label: 'Per leder', icon: Users },
               { key: 'rediger' as const, label: 'Dra & slipp', icon: Pencil },
+              { key: 'uke' as const, label: 'Hele uken', icon: CalendarDays },
             ].map((t) => (
               <button
                 key={t.key}
@@ -394,6 +395,26 @@ export function LeirskoleDayEditor({
               </button>
             ))}
           </div>
+
+          {mode !== 'uke' && (
+            <LeirskoleWeekImpact
+              weekId={week.id}
+              dates={dates}
+              posts={(posts ?? []) as DayPost[]}
+              staff={staff}
+              kitchenDays={(kitchenDays ?? []) as { date: string; staff_id: string }[]}
+              lockedDates={lockedDates}
+              maxHours={maxHours}
+              activeDate={activeDate}
+              onPickDate={setDate}
+            />
+          )}
+
+          {mode === 'uke' && (
+            <div className="-mx-4">
+              <LeirskoleWeekBoard week={week} staff={staff} />
+            </div>
+          )}
 
           {mode === 'dag' && (
             <>
