@@ -27,6 +27,7 @@ import {
   useDeleteLeirskolePost,
   useUpdateLeirskolePost,
   useSetLeirskoleAssignmentNote,
+  useSetLeirskoleKitchenDay,
 } from '@/hooks/useLeirskole';
 
 const MIN_REST_HOURS = 11;
@@ -93,6 +94,7 @@ export function LeirskoleDaySessions({
   weekPosts,
   staff,
   kitchenIds,
+  kitchenHours,
   maxHours,
   isLocked,
 }: {
@@ -102,6 +104,8 @@ export function LeirskoleDaySessions({
   weekPosts: SessionPost[];
   staff: StaffRow[];
   kitchenIds: Set<string>;
+  /** Timer for de som står på kjøkken denne dagen (standard 8t). */
+  kitchenHours?: Map<string, number>;
   maxHours: number;
   isLocked: boolean;
 }) {
@@ -114,6 +118,7 @@ export function LeirskoleDaySessions({
   const updatePost = useUpdateLeirskolePost();
   const deletePost = useDeleteLeirskolePost();
   const setNote = useSetLeirskoleAssignmentNote();
+  const setKitchen = useSetLeirskoleKitchenDay();
 
   const [newOpen, setNewOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', start: '10:00', end: '12:00' });
@@ -158,12 +163,14 @@ export function LeirskoleDaySessions({
   /** Timer per leder denne dagen (kjøkkendag teller som hel dag). */
   const hoursByStaff = useMemo(() => {
     const map = new Map<string, number>();
-    staff.forEach((s) => map.set(s.id, kitchenIds.has(s.id) ? KITCHEN_DAY_HOURS : 0));
+    staff.forEach((s) =>
+      map.set(s.id, kitchenIds.has(s.id) ? kitchenHours?.get(s.id) ?? KITCHEN_DAY_HOURS : 0),
+    );
     sorted.forEach((p) =>
       p.assignments.forEach((a) => map.set(a.staff_id, (map.get(a.staff_id) ?? 0) + Number(p.duration_hours ?? 0))),
     );
     return map;
-  }, [staff, sorted, kitchenIds]);
+  }, [staff, sorted, kitchenIds, kitchenHours]);
 
   /** Vaktene til hver leder i hele uken — brukes til hvile/overlapp. */
   const shiftsByStaff = useMemo(() => {
