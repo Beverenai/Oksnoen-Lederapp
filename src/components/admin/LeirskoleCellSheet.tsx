@@ -587,7 +587,7 @@ export function LeirskoleCellSheet({
                               label: inst.label,
                               leaderId: inst.leaderId,
                               count: countOf(inst.label),
-                              text: activityLine({ label: inst.label, emoji: inst.emoji }),
+                              text: activityLine({ key: inst.key, label: inst.label, emoji: inst.emoji }),
                             })
                           }
                           className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-background/70 text-muted-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground"
