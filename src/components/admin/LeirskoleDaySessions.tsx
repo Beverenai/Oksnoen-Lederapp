@@ -110,6 +110,8 @@ export function LeirskoleDaySessions({
   kitchenHours,
   maxHours,
   isLocked,
+  focusSession,
+  focusNonce,
 }: {
   week: { id: string };
   date: string;
@@ -121,6 +123,10 @@ export function LeirskoleDaySessions({
   kitchenHours?: Map<string, number>;
   maxHours: number;
   isLocked: boolean;
+  /** Økt (session-nøkkel) som skal scrolles til og markeres. */
+  focusSession?: string;
+  /** Endres for å trigge scroll på nytt til samme økt. */
+  focusNonce?: number;
 }) {
   const qc = useQueryClient();
   const { data: types } = useLeirskoleActivityTypes(true);
