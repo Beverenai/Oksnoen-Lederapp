@@ -594,7 +594,7 @@ export function LeirskoleDaySessions({
         );
       })}
 
-      {newOpen ? (
+      {!editMode ? null : newOpen ? (
         <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/30 p-3">
           <div className="flex flex-wrap gap-1.5">
             {PRESET_NAMES.map((n) => (
