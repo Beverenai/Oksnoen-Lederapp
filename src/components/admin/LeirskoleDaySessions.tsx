@@ -262,6 +262,21 @@ export function LeirskoleDaySessions({
 
   return (
     <div className="space-y-2.5">
+      <div className="flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-1.5">
+        <p className="text-[11px] text-muted-foreground">
+          {editMode ? 'Redigering på — endre navn, tid, ledere og aktiviteter.' : 'Oversikt over dagen.'}
+        </p>
+        <Button
+          size="sm"
+          variant={editMode ? 'default' : 'outline'}
+          className="h-7 shrink-0 gap-1.5 rounded-full px-3 text-[11px]"
+          onClick={() => setEditMode((v) => !v)}
+        >
+          {editMode ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+          {editMode ? 'Ferdig' : 'Rediger'}
+        </Button>
+      </div>
+
       {sorted.length === 0 && (
         <p className="py-3 text-center text-xs text-muted-foreground">Ingen økter denne dagen ennå.</p>
       )}
