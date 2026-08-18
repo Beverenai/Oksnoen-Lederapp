@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.snapshot_leirskole_week(uuid) FROM anon;
