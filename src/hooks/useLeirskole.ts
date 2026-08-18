@@ -44,16 +44,32 @@ export function useAddLeirskoleActivityType() {
       label,
       emoji,
       sortOrder,
+      isCustom = false,
     }: {
       label: string;
       emoji: string;
       sortOrder: number;
+      /** Egendefinerte aktiviteter kan alle ledere ta. */
+      isCustom?: boolean;
     }) => {
       const key = slugifyActivity(label) || `aktivitet_${Date.now()}`;
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('leirskole_activity_types')
-        .insert({ key, label: label.trim(), emoji: emoji || '•', sort_order: sortOrder });
+        .upsert(
+          {
+            key,
+            label: label.trim(),
+            emoji: emoji || '•',
+            sort_order: sortOrder,
+            is_custom: isCustom,
+            is_active: true,
+          },
+          { onConflict: 'key' },
+        )
+        .select('key, label, emoji')
+        .single();
       if (error) throw error;
+      return data as { key: string; label: string; emoji: string | null };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-activity-types'] }),
   });
