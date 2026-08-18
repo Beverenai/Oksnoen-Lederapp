@@ -1144,6 +1144,83 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           .filter((s) => s.leader)
           .map((s) => ({ staffId: s.id, leaderId: s.leader!.id, name: s.leader!.name }))}
       />
+
+      {/* Logg for dagen: hva ble gjort, og hvem jobbet når */}
+      <Dialog open={!!logDate} onOpenChange={(v) => !v && setLogDate(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              Logg ·{' '}
+              {logDate
+                ? `${WEEKDAYS[new Date(`${logDate}T12:00:00`).getDay()]} ${new Date(`${logDate}T12:00:00`).getDate()}.`
+                : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="max-h-52 overflow-y-auto rounded-2xl border border-border/60 bg-muted/30 p-2 text-xs">
+              <p className="mb-1 font-semibold text-muted-foreground">Hvem jobbet når</p>
+              {(logDate ? postsByDate.get(logDate) ?? [] : []).length === 0 ? (
+                <p className="text-muted-foreground">Ingen vakter satt opp denne dagen.</p>
+              ) : (
+                (logDate ? postsByDate.get(logDate) ?? [] : []).map((p) => (
+                  <div key={p.id} className="flex items-start justify-between gap-2 py-0.5">
+                    <span className="font-medium">
+                      {p.name}{' '}
+                      <span className="text-muted-foreground tabular-nums">
+                        {String(p.start_time).slice(0, 5)}–{String(p.end_time).slice(0, 5)}
+                      </span>
+                    </span>
+                    <span className="text-right text-muted-foreground">
+                      {(p.assignments ?? [])
+                        .map((a) => staffToLeader.get(a.staff_id)?.name ?? '—')
+                        .map(firstName)
+                        .join(', ') || 'Ingen'}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+            <Textarea
+              value={logText}
+              onChange={(e) => setLogText(e.target.value)}
+              rows={6}
+              placeholder="Hvordan gikk øktene? Hva ble faktisk gjort, endringer, avvik…"
+            />
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                variant="outline"
+                className="gap-1.5 rounded-full"
+                onClick={() =>
+                  logDate &&
+                  setDayLock.mutate({ weekId: week.id, date: logDate, locked: !lockedDays.has(logDate) })
+                }
+              >
+                {logDate && lockedDays.has(logDate) ? <Lock className="h-4 w-4" /> : <LockOpen className="h-4 w-4" />}
+                {logDate && lockedDays.has(logDate) ? 'Låst' : 'Lås dagen'}
+              </Button>
+              <Button
+                className="rounded-full"
+                disabled={setDayLog.isPending}
+                onClick={() =>
+                  logDate &&
+                  setDayLog.mutate(
+                    { weekId: week.id, date: logDate, note: logText },
+                    {
+                      onSuccess: () => {
+                        toast.success('Logg lagret');
+                        setLogDate(null);
+                      },
+                      onError: () => toast.error('Kunne ikke lagre loggen'),
+                    },
+                  )
+                }
+              >
+                Lagre logg
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
