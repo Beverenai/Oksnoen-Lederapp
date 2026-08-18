@@ -66,12 +66,12 @@ export async function runLeirskoleGenerate({
   if (mode !== 'schedule') {
     const [{ data: types }, { data: days }, { data: cells }] = await Promise.all([
       supabase.from('leirskole_activity_types').select('key, label, emoji').eq('is_active', true),
-      supabase.from('leirskole_week_days').select('date, day_type').eq('week_id', weekId),
+      supabase.from('leirskole_week_days').select('date, day_type, is_locked').eq('week_id', weekId),
       supabase.from('leirskole_week_plan_cells').select('date, row_index, content').eq('week_id', weekId),
     ]);
 
     const special = new Set(
-      (days ?? []).filter((d) => d.day_type !== 'normal').map((d) => d.date),
+      (days ?? []).filter((d) => d.day_type !== 'normal' || d.is_locked).map((d) => d.date),
     );
     const filled = new Set(
       (cells ?? [])
@@ -135,7 +135,7 @@ export async function runLeirskoleGenerate({
         .from('leirskole_posts')
         .select('id, date, name, is_custom, assignments:leirskole_assignments(staff_id)')
         .eq('week_id', weekId),
-      supabase.from('leirskole_week_days').select('date, day_type').eq('week_id', weekId),
+      supabase.from('leirskole_week_days').select('date, day_type, is_locked').eq('week_id', weekId),
       supabase
         .from('leirskole_staff')
         .select('id, leader_id, leader:leaders(id, name, leirskole_competencies)')
@@ -166,8 +166,10 @@ export async function runLeirskoleGenerate({
 
   const activeTypes = (types ?? []) as RandomPlanActivity[];
   const dayTypeMap = new Map((weekDays ?? []).map((d) => [d.date, d.day_type]));
+  const lockedDates = new Set((weekDays ?? []).filter((d) => d.is_locked).map((d) => d.date));
   const slots = (cells ?? [])
     .map((cell) => {
+      if (lockedDates.has(cell.date)) return null;
       const session = cell.row_index != null ? ROW_TO_SESSION[cell.row_index] : cell.post_id ? cell.post_id : undefined;
       if (!session) return null;
       const lines = (cell.content ?? '')
