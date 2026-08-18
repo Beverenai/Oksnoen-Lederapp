@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AlertTriangle, Check, ChefHat, History, Pencil, Plus, Trash2, UserPlus, X } from 'lucide-react';
+import { AlertTriangle, Check, ChefHat, History, MessageSquare, Pencil, Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { hhmm } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import {
@@ -26,6 +26,7 @@ import {
   useAddLeirskolePost,
   useDeleteLeirskolePost,
   useUpdateLeirskolePost,
+  useSetLeirskoleAssignmentNote,
 } from '@/hooks/useLeirskole';
 
 const MIN_REST_HOURS = 11;
@@ -37,7 +38,7 @@ export interface SessionPost {
   start_time: string;
   end_time: string;
   duration_hours: number | null;
-  assignments: { id: string; staff_id: string }[];
+  assignments: { id: string; staff_id: string; note?: string | null }[];
 }
 
 interface StaffRow {
@@ -75,8 +76,9 @@ const PRESET_NAMES = ['Ankomst', 'Avreise', 'Økt 1', 'Økt 2', 'Økt 3', 'Natte
 
 const MEAL_NAMES = new Set(['frokost', 'lunsj', 'middag', 'kvelds']);
 const isMeal = (p: SessionPost) => MEAL_NAMES.has((p.name ?? '').trim().toLowerCase());
-/** Måltider har ingen aktivitet — øktene har. */
-const hasActivities = (p: SessionPost) => !isMeal(p);
+/** Måltider, sanitas og nattevakt trenger ingen aktivitet — bare øktene. */
+const NO_ACTIVITY_NAMES = new Set([...MEAL_NAMES, 'sanitas', 'nattevakt']);
+const hasActivities = (p: SessionPost) => !NO_ACTIVITY_NAMES.has((p.name ?? '').trim().toLowerCase());
 const CUSTOM_ACTIVITY = 'egen';
 
 /**
@@ -111,12 +113,15 @@ export function LeirskoleDaySessions({
   const addPost = useAddLeirskolePost();
   const updatePost = useUpdateLeirskolePost();
   const deletePost = useDeleteLeirskolePost();
+  const setNote = useSetLeirskoleAssignmentNote();
 
   const [newOpen, setNewOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', start: '10:00', end: '12:00' });
   const [customKey, setCustomKey] = useState<string | null>(null);
   const [customText, setCustomText] = useState('');
   const [editMode, setEditMode] = useState(false);
+  const [noteKey, setNoteKey] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState('');
 
   const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
 
@@ -392,7 +397,27 @@ export function LeirskoleDaySessions({
                           </span>
                         )}
 
-                        {customKey === cellKey ? (
+                        {noteKey === cellKey ? (
+                          <Input
+                            autoFocus
+                            value={noteText}
+                            onChange={(e) => setNoteText(e.target.value)}
+                            placeholder="Beskjed til lederen"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Escape') setNoteKey(null);
+                              if (e.key !== 'Enter') return;
+                              if (!guard()) return;
+                              setNote.mutate(
+                                { assignmentId: a.id, note: noteText },
+                                { onError: () => toast.error('Kunne ikke lagre beskjeden') },
+                              );
+                              setNoteKey(null);
+                              setNoteText('');
+                            }}
+                            onBlur={() => setNoteKey(null)}
+                            className="mt-6 h-7 rounded-full px-2 text-[10px]"
+                          />
+                        ) : customKey === cellKey ? (
                           <Input
                             autoFocus
                             value={customText}
@@ -452,6 +477,12 @@ export function LeirskoleDaySessions({
                                     )}
                                   </span>
                                 )}
+                                {a.note && (
+                                  <span className="mt-1 flex w-full items-center justify-center gap-0.5 truncate rounded-full bg-primary/15 px-1 py-0.5 text-[9.5px] font-semibold text-primary">
+                                    <MessageSquare className="h-2.5 w-2.5 shrink-0" />
+                                    <span className="truncate">{a.note}</span>
+                                  </span>
+                                )}
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
@@ -509,6 +540,25 @@ export function LeirskoleDaySessions({
                                     </DropdownMenuItem>
                                   )}
                                 </>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="rounded-xl py-2 text-sm"
+                                onClick={() => {
+                                  setNoteText(a.note ?? '');
+                                  setNoteKey(cellKey);
+                                }}
+                              >
+                                <MessageSquare className="mr-1.5 h-4 w-4" />
+                                {a.note ? 'Endre beskjed …' : 'Skriv beskjed …'}
+                              </DropdownMenuItem>
+                              {a.note && (
+                                <DropdownMenuItem
+                                  className="rounded-xl py-2 text-sm"
+                                  onClick={() => guard() && setNote.mutate({ assignmentId: a.id, note: null })}
+                                >
+                                  Fjern beskjed
+                                </DropdownMenuItem>
                               )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
