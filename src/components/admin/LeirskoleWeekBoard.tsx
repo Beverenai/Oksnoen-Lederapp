@@ -537,6 +537,106 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     return map;
   }, [missing]);
 
+  /** `${date}|${staffId}` -> vaktene lederen har den dagen (til lederoversikten). */
+  const shiftsByStaffDate = useMemo(() => {
+    const map = new Map<string, { name: string; hours: number }[]>();
+    (posts ?? []).forEach((p) => {
+      (p.assignments ?? []).forEach((a) => {
+        const key = `${p.date}|${a.staff_id}`;
+        map.set(key, [
+          ...(map.get(key) ?? []),
+          { name: p.name ?? 'Vakt', hours: Number(p.duration_hours ?? 0) },
+        ]);
+      });
+    });
+    (kitchenDays ?? []).forEach((k) => {
+      const key = `${k.date}|${k.staff_id}`;
+      map.set(key, [...(map.get(key) ?? []), { name: 'Kjøkken', hours: KITCHEN_DAY_HOURS }]);
+    });
+    return map;
+  }, [posts, kitchenDays]);
+
+  /** Alle brudd i uken — samme regler som brukes i redigeringspanelet. */
+  const issues = useMemo(
+    () =>
+      validateLeirskoleWeek({
+        dates,
+        posts: (posts ?? []).map((p) => ({
+          id: p.id,
+          date: p.date,
+          name: p.name ?? 'Vakt',
+          start_time: String(p.start_time ?? '00:00'),
+          end_time: String(p.end_time ?? '00:00'),
+          duration_hours: Number(p.duration_hours ?? 0),
+          leaderIds: (p.assignments ?? [])
+            .map((a) => staffToLeader.get(a.staff_id)?.id)
+            .filter((x): x is string => !!x),
+        })),
+        specialDates: new Set(specialDays.keys()),
+        lockedDates: lockedDays,
+        kitchenByDate: (() => {
+          const map = new Map<string, string[]>();
+          (kitchenDays ?? []).forEach((k) => {
+            const l = staffToLeader.get(k.staff_id);
+            if (l) map.set(k.date, [...(map.get(k.date) ?? []), l.id]);
+          });
+          return map;
+        })(),
+        kitchenHours: KITCHEN_DAY_HOURS,
+        maxHours,
+        leaderName,
+        missingActivities: missing.map((m) => ({
+          date: m.target.date,
+          session: m.target.session,
+          rowIndex: m.target.rowIndex,
+          label: m.target.label,
+          activityLabel: `${m.emoji ?? '•'} ${m.label}`,
+        })),
+      }),
+    [dates, posts, specialDays, lockedDays, kitchenDays, staffToLeader, maxHours, leaderName, missing],
+  );
+
+  const issuesByLeader = useMemo(() => {
+    const map = new Map<string, LeirskoleIssue[]>();
+    issues.forEach((i) => {
+      if (!i.leaderId) return;
+      map.set(i.leaderId, [...(map.get(i.leaderId) ?? []), i]);
+    });
+    return map;
+  }, [issues]);
+
+  /** Timer og konflikter per leder for den ruten som redigeres. */
+  const cellLeaderInfo = useMemo(() => {
+    const map = new Map<string, { day: number; week: number; note?: string }>();
+    if (!target) return map;
+    staff.forEach((s) => {
+      if (!s.leader) return;
+      const day = staffHoursByDate.get(target.date)?.get(s.id) ?? 0;
+      const weekTotal = dates.reduce((sum, d) => sum + (staffHoursByDate.get(d)?.get(s.id) ?? 0), 0);
+      const notes = (issuesByLeader.get(s.leader.id) ?? [])
+        .filter((i) => i.date === target.date)
+        .map((i) => i.message);
+      map.set(s.leader.id, { day, week: weekTotal, note: notes[0] });
+    });
+    return map;
+  }, [target, staff, staffHoursByDate, dates, issuesByLeader]);
+
+  /** Hopp fra varsel til riktig rute (eller til lederoversikten for timer/hvile). */
+  const jumpToIssue = (issue: LeirskoleIssue) => {
+    const session = issue.rowIndex != null ? SESSIONS.find((s) => s.row === issue.rowIndex) : null;
+    if (session) {
+      setTarget({
+        date: issue.date,
+        session: session.session,
+        rowIndex: session.row,
+        label: session.label,
+        dayType: 'normal',
+      });
+      return;
+    }
+    setView('ledere');
+  };
+
   const LabelCell = ({ children }: { children: React.ReactNode }) => (
     <div className="sticky left-0 z-10 flex items-center bg-card px-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
       {children}
