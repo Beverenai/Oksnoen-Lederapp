@@ -110,146 +110,130 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
       </button>
 
       {open && (
-        <div className="space-y-2 px-3 pb-4">
-          <div className="hidden gap-2 px-1 sm:grid sm:grid-cols-[7rem_repeat(3,minmax(0,1fr))]">
-            <span />
-            {ROWS.map((r) => (
-              <span key={r.row} className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {r.label} <span className="font-normal normal-case">{r.time}</span>
-              </span>
-            ))}
-          </div>
-
-          {dates.map((date) => {
-            const special = specialDays.get(date);
-            return (
-              <div
-                key={date}
-                className="grid gap-2 rounded-2xl border border-border/60 bg-card p-2 sm:grid-cols-[7rem_repeat(3,minmax(0,1fr))]"
-              >
-                <div className="flex items-center gap-2 px-1 sm:flex-col sm:items-start sm:justify-center sm:gap-1">
-                  <p className="text-sm font-bold">{dayLabel(date)}</p>
-                  {special && (
-                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-200">
-                      {special === 'both' ? 'Avreise + ankomst' : special === 'arrival' ? 'Ankomst' : 'Avreise'}
+        <div className="overflow-x-auto px-3 pb-4">
+          <div
+            className="min-w-max"
+            style={{ ['--oks-cols' as string]: `repeat(${dates.length}, minmax(9.5rem, 1fr))` }}
+          >
+            {/* Dagene bortover */}
+            <div className="grid gap-1" style={{ gridTemplateColumns: 'var(--oks-row-label, 3.25rem) var(--oks-cols)' }}>
+              <span />
+              {dates.map((date) => (
+                <div key={date} className="flex items-baseline gap-1 px-1 pb-1">
+                  <span className="text-xs font-bold">{dayLabel(date)}</span>
+                  {specialDays.get(date) && (
+                    <span className="rounded-full bg-amber-500/20 px-1.5 text-[9px] font-semibold uppercase text-amber-700 dark:text-amber-200">
+                      {specialDays.get(date) === 'both' ? 'av+an' : specialDays.get(date) === 'arrival' ? 'ank' : 'avr'}
                     </span>
                   )}
                 </div>
+              ))}
+            </div>
 
-                {ROWS.map((r, colIdx) => {
-                  const key = `${date}|${r.row}`;
-                  const cell = stored.get(key);
-                  const lines = splitLines(cell?.content ?? '');
-                  const color = cell?.color ?? 'neutral';
-                  const setLines = (next: string[]) => persist(date, r.row, next, color);
+            {/* Øktene nedover */}
+            {ROWS.map((r, rowIdx) => (
+              <div
+                key={r.row}
+                className="grid gap-1 py-0.5"
+                style={{ gridTemplateColumns: 'var(--oks-row-label, 3.25rem) var(--oks-cols)' }}
+              >
+                <div className="flex flex-col justify-center px-1">
+                  <span className="text-xs font-bold tabular-nums">{r.row}</span>
+                  <span className="text-[9px] leading-tight text-muted-foreground">{r.time}</span>
+                </div>
+                {dates.map((date) => {
+                  const cell = stored.get(`${date}|${r.row}`);
                   return (
-                    <div key={r.row} className={`min-w-0 rounded-xl p-1.5 ${COLUMN_TINT[colIdx]}`}>
-                      <p className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:hidden">
-                        {r.label} <span className="font-normal normal-case">{r.time}</span>
-                      </p>
-                      <div className="space-y-1">
-                        {lines.length === 0 && <p className="px-1 text-xs text-muted-foreground">—</p>}
-                        {lines.map((line) => {
-                          const n = lineMultiplier(line);
-                          const label = stripMultiplier(line);
-                          const type = (types ?? []).find((t) => label.toLowerCase().includes(t.label.toLowerCase()));
-                          const change = (delta: number) => {
-                            if (!type) {
-                              if (delta < 0) setLines(lines.filter((l) => l !== line));
-                              return;
-                            }
-                            setLines(setActivityCount(lines, type.label, label, n + delta));
-                          };
-                          return (
-                            <div
-                              key={line}
-                              className="flex items-center gap-1 rounded-lg bg-background/80 px-1.5 py-1 text-xs font-medium"
-                            >
-                              <span className="min-w-0 flex-1 truncate">{label}</span>
-                              <span className="shrink-0 tabular-nums text-muted-foreground">×{n}</span>
-                              <button
-                                type="button"
-                                aria-label={`Færre på ${label}`}
-                                onClick={() => change(-1)}
-                                className="rounded-full bg-muted/70 p-0.5 hover:bg-muted"
-                              >
-                                <Minus className="h-3 w-3" />
-                              </button>
-                              <button
-                                type="button"
-                                aria-label={`Flere på ${label}`}
-                                onClick={() => change(1)}
-                                className="rounded-full bg-muted/70 p-0.5 hover:bg-muted"
-                              >
-                                <Plus className="h-3 w-3" />
-                              </button>
-                            </div>
-                          );
-                        })}
-
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button
-                              type="button"
-                              className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border py-1 text-[11px] font-semibold text-muted-foreground hover:bg-background/60"
-                            >
-                              <Plus className="h-3 w-3" /> Aktivitet
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent align="start" className="w-56 p-1">
-                            <div className="max-h-64 space-y-0.5 overflow-y-auto">
-                              {(types ?? []).length === 0 && (
-                                <p className="p-2 text-xs text-muted-foreground">
-                                  Ingen aktiviteter — legg dem inn i «Aktivitetstyper».
-                                </p>
-                              )}
-                              {(types ?? []).map((a) => {
-                                const text = `${a.emoji ?? ''} ${a.label}`.trim();
-                                const count = countActivity(lines, a.label);
-                                return (
-                                  <div
-                                    key={a.id}
-                                    className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
-                                      count > 0 ? 'bg-primary/15 font-semibold' : ''
-                                    }`}
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={() => setLines(setActivityCount(lines, a.label, text, count + 1))}
-                                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                                    >
-                                      <span>{a.emoji ?? '•'}</span>
-                                      <span className="flex-1 truncate">{a.label}</span>
-                                      {count > 0 && <span className="tabular-nums text-xs">×{count}</span>}
-                                    </button>
-                                    {count > 0 && (
-                                      <button
-                                        type="button"
-                                        aria-label={`Færre på ${a.label}`}
-                                        onClick={() => setLines(setActivityCount(lines, a.label, text, count - 1))}
-                                        className="rounded-full bg-muted/70 p-0.5"
-                                      >
-                                        <Minus className="h-3 w-3" />
-                                      </button>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
+                    <PlanCell
+                      key={date}
+                      lines={splitLines(cell?.content ?? '')}
+                      tint={ROW_TINT[rowIdx]}
+                      types={types ?? []}
+                      onChange={(next) => persist(date, r.row, next, cell?.color ?? 'neutral')}
+                    />
                   );
                 })}
               </div>
-            );
-          })}
-          <p className="px-1 text-[11px] text-muted-foreground">
-            «Klatring x2» betyr at to ledere skal ha klatring i den økten — generatoren bemanner etter dette.
+            ))}
+          </div>
+          <p className="mt-2 px-1 text-[11px] text-muted-foreground">
+            Trykk i en rute for å legge inn aktiviteter. «Klatring ×2» betyr at to ledere skal ha klatring i den økten.
           </p>
         </div>
       )}
     </div>
   );
 }
+
+type PlanCellProps = {
+  lines: string[];
+  tint: string;
+  types: { id: string; label: string; emoji: string | null }[];
+  onChange: (next: string[]) => void;
+};
+
+/** Én rute i regnearket — kompakt visning, redigering i popover. */
+const PlanCell = memo(function PlanCell({ lines, tint, types, onChange }: PlanCellProps) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={`min-h-[3.25rem] min-w-0 rounded-lg px-1.5 py-1 text-left text-[11px] leading-tight transition-colors hover:ring-1 hover:ring-primary/40 ${tint}`}
+        >
+          {lines.length === 0 ? (
+            <span className="text-muted-foreground">+</span>
+          ) : (
+            <span className="block space-y-0.5">
+              {lines.map((line) => (
+                <span key={line} className="block truncate font-medium">
+                  {stripMultiplier(line)}
+                  {lineMultiplier(line) > 1 && (
+                    <span className="tabular-nums text-muted-foreground"> ×{lineMultiplier(line)}</span>
+                  )}
+                </span>
+              ))}
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-60 p-1">
+        <div className="max-h-72 space-y-0.5 overflow-y-auto">
+          {types.length === 0 && (
+            <p className="p-2 text-xs text-muted-foreground">Ingen aktiviteter — legg dem inn i «Aktivitetstyper».</p>
+          )}
+          {types.map((a) => {
+            const text = `${a.emoji ?? ''} ${a.label}`.trim();
+            const count = countActivity(lines, a.label);
+            return (
+              <div
+                key={a.id}
+                className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${count > 0 ? 'bg-primary/15 font-semibold' : ''}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => onChange(setActivityCount(lines, a.label, text, count + 1))}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                >
+                  <span>{a.emoji ?? '•'}</span>
+                  <span className="flex-1 truncate">{a.label}</span>
+                  {count > 0 && <span className="tabular-nums text-xs">×{count}</span>}
+                </button>
+                {count > 0 && (
+                  <button
+                    type="button"
+                    aria-label={`Færre på ${a.label}`}
+                    onClick={() => onChange(setActivityCount(lines, a.label, text, count - 1))}
+                    className="rounded-full bg-muted/70 p-0.5"
+                  >
+                    <Minus className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+});
