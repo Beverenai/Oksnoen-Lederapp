@@ -1312,9 +1312,110 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           kitchenSet={kitchenSet}
           maxHours={maxHours}
           issuesByLeader={issuesByLeader}
+          onEditCell={(date, staffId) => setEditCell({ date, staffId })}
         />
       </div>
       )}
+
+      {/* Rediger én leders dag rett fra lederoversikten */}
+      <Dialog open={!!editCell} onOpenChange={(v) => !v && setEditCell(null)}>
+        <DialogContent className="max-w-md">
+          {editCell && (() => {
+            const staffRow = staff.find((s) => s.id === editCell.staffId);
+            const mine = shiftsByStaffDate.get(`${editCell.date}|${editCell.staffId}`) ?? [];
+            const total = mine.reduce((a, b) => a + b.hours, 0);
+            const onKitchen = kitchenSet.has(`${editCell.date}|${editCell.staffId}`);
+            const dayPosts = (postsByDate.get(editCell.date) ?? []).filter(
+              (p) => !(p.assignments ?? []).some((a) => a.staff_id === editCell.staffId),
+            );
+            const dt = new Date(`${editCell.date}T12:00:00`);
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>
+                    {staffRow?.leader?.name ?? 'Leder'} · {WEEKDAYS[dt.getDay()]} {dt.getDate()}.
+                  </DialogTitle>
+                </DialogHeader>
+                <p
+                  className={`text-sm font-semibold ${
+                    total > maxHours + 0.01 ? 'text-destructive' : 'text-muted-foreground'
+                  }`}
+                >
+                  {total.toFixed(1)}t denne dagen (tak {maxHours}t)
+                </p>
+
+                <div className="space-y-1.5">
+                  {mine.length === 0 && <p className="text-sm text-muted-foreground">Ingen vakter denne dagen.</p>}
+                  {mine.map((s) => (
+                    <div
+                      key={s.assignmentId ?? `kitchen-${s.name}`}
+                      className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-2"
+                    >
+                      <span className="min-w-0 truncate text-sm font-medium">
+                        {s.name} <span className="text-muted-foreground">· {s.hours.toFixed(1)}t</span>
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 rounded-full text-xs text-destructive"
+                        disabled={removeShift.isPending || setKitchenDay.isPending}
+                        onClick={() => {
+                          if (s.kitchen) {
+                            setKitchenDay.mutate({
+                              weekId: week.id,
+                              date: editCell.date,
+                              staffId: null,
+                            });
+                          } else if (s.assignmentId) {
+                            removeShift.mutate(s.assignmentId);
+                          }
+                        }}
+                      >
+                        Fjern
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                {!onKitchen && dayPosts.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold uppercase text-muted-foreground">Legg til vakt</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {dayPosts.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          disabled={addShift.isPending}
+                          onClick={() => addShift.mutate({ postId: p.id, staffId: editCell.staffId })}
+                          className="rounded-full border border-border/70 bg-background px-3 py-1 text-xs font-medium hover:bg-muted"
+                        >
+                          + {p.name ?? 'Vakt'}{' '}
+                          <span className="text-muted-foreground">{Number(p.duration_hours ?? 0).toFixed(1)}t</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-between gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-full text-xs"
+                    disabled={fixDay.isPending}
+                    onClick={() => fixDay.mutate(editCell.date)}
+                  >
+                    Fiks dagen ({maxHours}t)
+                  </Button>
+                  <Button size="sm" className="rounded-full text-xs" onClick={() => setEditCell(null)}>
+                    Ferdig
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       <LeirskoleGeneratePreviewDialog
         preview={preview}
