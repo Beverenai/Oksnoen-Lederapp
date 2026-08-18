@@ -509,7 +509,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const cellContent = (t: CellTarget) =>
     planContent.get(t.postId ? `post|${t.postId}` : `${t.date}|${t.rowIndex}`) ?? '';
 
-  const gridStyle = { gridTemplateColumns: `64px repeat(${dates.length}, minmax(0, 1fr))` };
+  const gridStyle = {
+    gridTemplateColumns: `${big ? 84 : 64}px repeat(${dates.length}, minmax(${big ? '240px' : '0'}, 1fr))`,
+  };
 
   /** Aktiviteter i ukeplanen som ingen leder har fått ennå. */
   const missing = useMemo(() => {
