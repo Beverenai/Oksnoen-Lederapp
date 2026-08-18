@@ -331,6 +331,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         qc.invalidateQueries({ queryKey: ['leirskole-staff'] });
         toast.info(`Kopierte ${unique.length} ledere fra forrige uke`);
       }
+      // Sikkerhetsnett: ta et bilde av uken slik den er nå, så alt kan angres.
+      const snap = await takeLeirskoleSnapshot(week.id);
+      setSnapshot(snap);
       return runLeirskoleGenerate({
         weekId: week.id,
         startDate: week.start_date,
@@ -344,6 +347,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     },
     onSuccess: (result) => {
       setSummary(result);
+      setPendingMode(null);
+      setPreview(null);
       ['leirskole-week-plan', 'leirskole-schedule', 'leirskole-activities', 'leirskole-activity-history', 'leirskole-my-shifts'].forEach(
         (key) => qc.invalidateQueries({ queryKey: [key] }),
       );
