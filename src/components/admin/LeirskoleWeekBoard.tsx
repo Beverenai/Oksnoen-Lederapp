@@ -136,6 +136,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const [preview, setPreview] = useState<LeirskolePreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [snapshot, setSnapshot] = useState<LeirskoleSnapshot | null>(null);
+  /** Redigering av én leders dag fra lederoversikten. */
+  const [editCell, setEditCell] = useState<{ date: string; staffId: string } | null>(null);
 
   const toggleBig = () => {
     setBig((v) => {
