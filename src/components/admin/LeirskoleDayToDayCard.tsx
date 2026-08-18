@@ -1,7 +1,7 @@
 import { memo, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ChevronDown, Minus, NotebookPen, Plus } from 'lucide-react';
+import { ChevronDown, Minus, NotebookPen } from 'lucide-react';
 import {
   useLeirskoleActivityTypes,
   useLeirskoleWeekDays,
