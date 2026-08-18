@@ -264,7 +264,7 @@ export function LeirskoleDaySessions({
     <div className="space-y-2.5">
       <div className="flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-1.5">
         <p className="text-[11px] text-muted-foreground">
-          {editMode ? 'Redigering på — endre navn, tid, ledere og aktiviteter.' : 'Oversikt over dagen.'}
+          {editMode ? 'Redigering på — endre navn, tid og slett økter.' : 'Trykk på en leder for å endre aktivitet eller fjerne. + legger til leder.'}
         </p>
         <Button
           size="sm"

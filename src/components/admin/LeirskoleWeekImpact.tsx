@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ChevronDown, Lock, LockOpen } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronDown } from 'lucide-react';
 import { shortDate } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
-import { useSetLeirskoleDayLock } from '@/hooks/useLeirskole';
 
 type Post = {
   id: string;
@@ -40,28 +39,21 @@ const TONE: Record<Impact['kind'], string> = {
  * og lar deg låse dagene du ikke vil at generatoren eller nye endringer skal røre.
  */
 export function LeirskoleWeekImpact({
-  weekId,
   dates,
   posts,
   staff,
   kitchenDays,
-  lockedDates,
   maxHours,
-  activeDate,
   onPickDate,
 }: {
-  weekId: string;
   dates: string[];
   posts: Post[];
   staff: StaffRow[];
   kitchenDays: { date: string; staff_id: string }[];
-  lockedDates: Set<string>;
   maxHours: number;
-  activeDate: string;
   onPickDate?: (date: string) => void;
 }) {
   const [open, setOpen] = useState(true);
-  const setLock = useSetLeirskoleDayLock();
   const nameOf = useMemo(
     () => new Map(staff.map((s) => [s.id, s.leader?.name ?? 'Leder'])),
     [staff],
@@ -172,35 +164,6 @@ export function LeirskoleWeekImpact({
 
       {open && (
         <div className="space-y-2 px-3 pb-3">
-          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-            {dates.map((d) => {
-              const locked = lockedDates.has(d);
-              const bad = (byDate.get(d) ?? []).length;
-              return (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => setLock.mutate({ weekId, date: d, locked: !locked })}
-                  className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                    locked
-                      ? 'bg-primary text-primary-foreground'
-                      : bad
-                        ? 'bg-destructive/10 text-destructive'
-                        : 'bg-muted/60 text-muted-foreground'
-                  } ${d === activeDate ? 'ring-2 ring-primary/40' : ''}`}
-                  title={locked ? 'Låst — trykk for å åpne' : 'Åpen — trykk for å låse dagen'}
-                >
-                  {locked ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
-                  {shortDate(d)}
-                  {bad ? <span className="opacity-80">· {bad}</span> : null}
-                </button>
-              );
-            })}
-          </div>
-          <p className="px-1 text-[11px] text-muted-foreground">
-            Trykk på en dag for å låse den. Låste dager rører verken generatoren eller nye endringer.
-          </p>
-
           {impacts.slice(0, 12).map((i, idx) => (
             <button
               key={`${i.date}-${idx}`}
