@@ -1228,12 +1228,13 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           </div>
         </div>
       </div>
+      )}
 
-      {/* Timer per leder — enkel kontroll på at alle ligger nær dagstaket */}
+      {/* Full oversikt: timer og vakter per leder gjennom uken */}
       <div className="rounded-2xl border border-border/60 bg-muted/20 p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-xs font-semibold">Timer per leder</p>
+            <p className="text-xs font-semibold">Ledere gjennom uken</p>
             <p className="text-[11px] text-muted-foreground">
               Alt lagres automatisk. Mål: så nær {maxHours}t som mulig hver dag.
             </p>
@@ -1251,7 +1252,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             <Button
               size="sm"
               className="gap-1 rounded-full text-xs"
-              onClick={() => generate.mutate('schedule')}
+              onClick={() => void openPreview('schedule')}
               disabled={generate.isPending}
             >
               <Wand2 className="h-3.5 w-3.5" />
@@ -1259,61 +1260,29 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             </Button>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[520px] text-[11px]">
-            <thead>
-              <tr className="text-muted-foreground">
-                <th className="sticky left-0 bg-card px-2 py-1 text-left font-semibold">Leder</th>
-                {dates.map((date) => {
-                  const d = new Date(`${date}T12:00:00`);
-                  return (
-                    <th key={date} className="px-1 py-1 text-center font-semibold">
-                      {WEEKDAYS[d.getDay()]} {d.getDate()}.
-                    </th>
-                  );
-                })}
-                <th className="px-2 py-1 text-right font-semibold">Sum</th>
-              </tr>
-            </thead>
-            <tbody>
-              {staff
-                .filter((s) => s.leader)
-                .map((s) => {
-                  const perDay = dates.map((date) => staffHoursByDate.get(date)?.get(s.id) ?? 0);
-                  const total = perDay.reduce((a, b) => a + b, 0);
-                  return (
-                    <tr key={s.id} className="border-t border-border/40">
-                      <td className="sticky left-0 max-w-[9rem] truncate bg-card px-2 py-1 font-medium">
-                        {s.leader!.name}
-                      </td>
-                      {perDay.map((h, i) => (
-                        <td
-                          key={dates[i]}
-                          title={kitchenSet.has(`${dates[i]}|${s.id}`) ? 'Kjøkken hele dagen' : undefined}
-                          className={`px-1 py-1 text-center tabular-nums ${
-                            h > maxHours + 0.01
-                              ? 'font-bold text-destructive'
-                              : h === 0
-                                ? 'text-muted-foreground/50'
-                                : h < maxHours - 1.01
-                                  ? 'text-amber-600 dark:text-amber-400'
-                                  : 'text-emerald-600 dark:text-emerald-400'
-                          }`}
-                        >
-                          {h.toFixed(1)}
-                          {kitchenSet.has(`${dates[i]}|${s.id}`) && (
-                            <span className="ml-0.5 text-[9px] font-semibold text-sky-500">K</span>
-                          )}
-                        </td>
-                      ))}
-                      <td className="px-2 py-1 text-right font-semibold tabular-nums">{total.toFixed(1)}t</td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </div>
+        <LeirskoleLeaderWeekTable
+          dates={dates}
+          staff={staff
+            .filter((s) => s.leader)
+            .map((s) => ({ staffId: s.id, leaderId: s.leader!.id, name: s.leader!.name }))}
+          shifts={shiftsByStaffDate}
+          kitchenSet={kitchenSet}
+          maxHours={maxHours}
+          issuesByLeader={issuesByLeader}
+        />
       </div>
+
+      <LeirskoleGeneratePreviewDialog
+        preview={preview}
+        loading={previewLoading}
+        running={generate.isPending}
+        onCancel={() => {
+          setPreview(null);
+          setPendingMode(null);
+        }}
+        onConfirm={() => pendingMode && generate.mutate(pendingMode)}
+      />
+
 
       <LeirskoleCellSheet
         open={!!target}
