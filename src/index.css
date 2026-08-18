@@ -779,6 +779,14 @@ html.oks-leirskole-theme.oks-ls-dark .oks-leirskole-bg {
   box-shadow: 0 14px 34px -24px hsl(0 0% 0% / 0.75);
 }
 
+/* Dag til dag: hele uken skal få plass på store skjermer */
+@media (min-width: 1024px) {
+  .oks-dtd-grid {
+    --oks-daymin: 0px;
+    width: 100%;
+  }
+}
+
 /* Logo-gradient: rød → grønn → blå. Brukes på topp-kort og aksenter. */
 .oks-ls-gradient {
   background:

@@ -82,14 +82,14 @@ function OpenRow({
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold">{title}</span>
+        <span className="block text-sm font-semibold">{title}</span>
         <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
+        {status && (
+          <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${TONE[status.tone]}`}>
+            {status.label}
+          </span>
+        )}
       </span>
-      {status && (
-        <span className={`hidden shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold sm:inline ${TONE[status.tone]}`}>
-          {status.label}
-        </span>
-      )}
       <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
     </button>
   );
@@ -114,7 +114,7 @@ export default function LeirskoleAdmin() {
   const { data: weekActivities } = useLeirskoleActivities(week?.id);
   const { data: planCells } = useLeirskoleWeekPlan(week?.id);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
-  const [panel, setPanel] = useState<'activities' | 'access' | 'payroll' | null>(null);
+  const [panel, setPanel] = useState<'leaders' | 'activities' | 'access' | 'payroll' | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
   const [viewDate, setViewDate] = useState<string | null>(null);
 
@@ -312,104 +312,96 @@ export default function LeirskoleAdmin() {
 
       {guideOpen && <LeirskoleGuideCard />}
 
-      {/* Dashboard-oppsett: planlegging til venstre, ressurser til høyre */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-5">
-        <div className="space-y-3 lg:col-span-8">
-          <LeirskoleWeekPeriodsCard
-            selectedWeekId={week.id}
-            activeWeekId={activeWeek?.id}
-            onSelect={(id) => {
-              setPickedWeekId(id);
-              setViewDate(null);
-            }}
-          />
+      {/* Verktøyrad — hver åpner sin egen detaljvisning */}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <OpenRow
+          icon={<Users className="h-5 w-5" />}
+          title="Ledere"
+          subtitle="Hvem jobber denne uken"
+          status={
+            (staff ?? []).length === 0
+              ? { label: 'Ingen ledere', tone: 'todo' }
+              : missingCompetence > 0
+                ? { label: `${missingCompetence} mangler kompetanse`, tone: 'warn' }
+                : { label: `${(staff ?? []).length} ledere`, tone: 'done' }
+          }
+          onOpen={() => setPanel('leaders')}
+        />
+        <OpenRow
+          icon={<ListChecks className="h-5 w-5" />}
+          title="Aktivitetstyper"
+          subtitle="Hvilke aktiviteter kan gis til lederne"
+          status={
+            planFilled === 0
+              ? { label: 'Ukeplan ikke fylt ut', tone: 'todo' }
+              : { label: `${planFilled} av ${planTotal} ruter`, tone: planFilled >= planTotal ? 'done' : 'warn' }
+          }
+          onOpen={() => setPanel('activities')}
+        />
+        <OpenRow
+          icon={<KeyRound className="h-5 w-5" />}
+          title="Tilgang og varsling"
+          subtitle="Inviter ledere og send beskjed"
+          onOpen={() => setPanel('access')}
+        />
+        <OpenRow
+          icon={<FileSpreadsheet className="h-5 w-5" />}
+          title="Timer og lønn"
+          subtitle="Eksporter til Excel"
+          status={
+            hasSchedule
+              ? { label: `${totalHours.toFixed(0)}t klar`, tone: 'done' }
+              : { label: 'Ingen vakter ennå', tone: 'todo' }
+          }
+          onOpen={() => setPanel('payroll')}
+        />
+      </div>
 
-          <LeirskoleDayToDayCard week={week} />
+      {/* Planlegging i full bredde — hele uken skal få plass */}
+      <div className="space-y-3">
+        <LeirskoleWeekPeriodsCard
+          selectedWeekId={week.id}
+          activeWeekId={activeWeek?.id}
+          onSelect={(id) => {
+            setPickedWeekId(id);
+            setViewDate(null);
+          }}
+        />
 
-          <LeirskoleDayEditor
-            week={week}
-            staff={staff ?? []}
-            weekBoard={<LeirskoleWeekBoard week={week} staff={staff ?? []} />}
-          />
-        </div>
+        <LeirskoleDayToDayCard week={week} />
 
-        <aside className="space-y-3 lg:col-span-4">
-          {/* Ledere vises som en ekte liste — ikke en toggle */}
-          <div className="oks-ls-pill space-y-3 p-4">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Users className="h-4 w-4" />
-                </span>
-                <div>
-                  <h2 className="text-base font-semibold leading-tight">Ledere</h2>
-                  <p className="text-xs text-muted-foreground">Hvem jobber denne uken</p>
-                </div>
-              </div>
-              <span
-                className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                  (staff ?? []).length === 0 ? TONE.todo : missingCompetence > 0 ? TONE.warn : TONE.done
-                }`}
-              >
-                {(staff ?? []).length === 0
-                  ? 'Ingen ledere'
-                  : missingCompetence > 0
-                    ? `${missingCompetence} mangler kompetanse`
-                    : `${(staff ?? []).length} ledere`}
-              </span>
-            </div>
-            <LeirskoleStaffPanel
-              weekName={week.name}
-              weekDates={`${week.start_date} – ${week.end_date}`}
-              staff={staff ?? []}
-              hoursByStaff={hoursByStaff}
-              maxDailyHours={week.max_daily_hours}
-              activitiesByLeader={activitiesByLeader}
-              onSelect={(s) => setSelectedStaffId(s.id)}
-            />
-          </div>
-
-          <OpenRow
-            icon={<ListChecks className="h-5 w-5" />}
-            title="Aktivitetstyper"
-            subtitle="Hvilke aktiviteter kan gis til lederne"
-            status={
-              planFilled === 0
-                ? { label: 'Ukeplan ikke fylt ut', tone: 'todo' }
-                : { label: `${planFilled} av ${planTotal} ruter`, tone: planFilled >= planTotal ? 'done' : 'warn' }
-            }
-            onOpen={() => setPanel('activities')}
-          />
-
-          <OpenRow
-            icon={<KeyRound className="h-5 w-5" />}
-            title="Tilgang og varsling"
-            subtitle="Inviter ledere og send beskjed"
-            onOpen={() => setPanel('access')}
-          />
-
-          <OpenRow
-            icon={<FileSpreadsheet className="h-5 w-5" />}
-            title="Timer og lønn"
-            subtitle="Eksporter dager, økter og timer til Excel"
-            status={
-              hasSchedule
-                ? { label: `${totalHours.toFixed(0)}t klar`, tone: 'done' }
-                : { label: 'Ingen vakter ennå', tone: 'todo' }
-            }
-            onOpen={() => setPanel('payroll')}
-          />
-        </aside>
+        <LeirskoleDayEditor
+          week={week}
+          staff={staff ?? []}
+          weekBoard={<LeirskoleWeekBoard week={week} staff={staff ?? []} />}
+        />
       </div>
 
       <Sheet open={panel !== null} onOpenChange={(v) => !v && setPanel(null)}>
-        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-2xl">
           <SheetHeader className="text-left">
             <SheetTitle>
-              {panel === 'activities' ? 'Aktivitetstyper' : panel === 'access' ? 'Tilgang og varsling' : 'Timer og lønn'}
+              {panel === 'leaders'
+                ? 'Ledere'
+                : panel === 'activities'
+                  ? 'Aktivitetstyper'
+                  : panel === 'access'
+                    ? 'Tilgang og varsling'
+                    : 'Timer og lønn'}
             </SheetTitle>
           </SheetHeader>
           <div className="mt-4 space-y-3">
+            {panel === 'leaders' && (
+              <LeirskoleStaffPanel
+                weekName={week.name}
+                weekDates={`${week.start_date} – ${week.end_date}`}
+                staff={staff ?? []}
+                hoursByStaff={hoursByStaff}
+                maxDailyHours={week.max_daily_hours}
+                activitiesByLeader={activitiesByLeader}
+                onSelect={(s) => setSelectedStaffId(s.id)}
+              />
+            )}
             {panel === 'activities' && <LeirskoleActivityTypesCard />}
             {panel === 'access' && (
               <LeirskoleAccessCard weekId={week.id} weekName={week.name} maxDailyHours={week.max_daily_hours} />
