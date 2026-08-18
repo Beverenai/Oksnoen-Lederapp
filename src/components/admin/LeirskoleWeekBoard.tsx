@@ -1230,8 +1230,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
       </div>
       )}
 
-      {view === 'ledere' && (
       {/* Full oversikt: timer og vakter per leder gjennom uken */}
+      {view === 'ledere' && (
       <div className="rounded-2xl border border-border/60 bg-muted/20 p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div>
