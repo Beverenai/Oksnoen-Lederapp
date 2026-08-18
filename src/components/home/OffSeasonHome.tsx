@@ -17,7 +17,7 @@ import type { Leader } from '@/types/database';
 /**
  * Hjem-siden off-season / for ledere som ikke er aktive i perioden.
  * Lederpasset er hovedattraksjonen, med snarveier til de morsomme
- * funksjonene som fortsatt er åpne (snus, klineliste, ledersnakk).
+ * funksjonene som fortsatt er åpne (POV, snus, ledersnakk).
  */
 export function OffSeasonHome({
   leader,

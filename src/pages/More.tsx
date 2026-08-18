@@ -275,7 +275,7 @@ export default function More() {
   const firstName = (leader?.name || '').split(' ')[0] || '';
 
   // Off-season / inactive leaders: only the allowed surfaces.
-  // Off-season: hjemskjermen har allerede POV, Slurker, Klineliste og Snus,
+  // Off-season: hjemskjermen har allerede POV og Snus,
   // så «Mer» er en kompakt liste med resten – ingen doble knapper.
   const limitedSections: MoreSection[] = [
     {
