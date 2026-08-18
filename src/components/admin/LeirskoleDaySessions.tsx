@@ -471,6 +471,7 @@ export function LeirskoleDaySessions({
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
+                          )}
 
                           {warns.length > 0 && (
                             <p className="mt-0.5 line-clamp-2 text-[10px] font-medium text-destructive">{warns[0]}</p>
@@ -484,9 +485,10 @@ export function LeirskoleDaySessions({
                     <PopoverTrigger asChild>
                       <button
                         type="button"
-                        className="flex h-[6.9rem] w-[7.75rem] flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-border/70 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-muted/40"
+                        aria-label={`Legg til leder på ${p.name}`}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-full border border-dashed border-border/70 text-muted-foreground transition-colors hover:bg-muted/50"
                       >
-                        <UserPlus className="h-5 w-5" /> Legg til leder
+                        <UserPlus className="h-4 w-4" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent
