@@ -293,9 +293,15 @@ export function LeirskoleWeekImpact({
     }
   };
 
-  const pick = (impact: Impact) => {
+  const pick = (impact: Impact, id?: string) => {
     onPickIssue?.({ date: impact.date, session: impact.session });
     onPickDate?.(impact.date);
+    if (id && impact.fixable && weekId) {
+      toast.success(shortDate(impact.date), {
+        description: impact.text,
+        action: { label: 'Fiks denne', onClick: () => void fixOne(impact, id) },
+      });
+    }
   };
 
   // Ingenting å vise når alt går opp.
@@ -341,7 +347,7 @@ export function LeirskoleWeekImpact({
               >
                 <button
                   type="button"
-                  onClick={() => pick(i)}
+                  onClick={() => pick(i, id)}
                   className="flex min-w-0 flex-1 items-start gap-2 text-left"
                 >
                   <span className="w-16 shrink-0 font-bold uppercase text-muted-foreground">{shortDate(i.date)}</span>
