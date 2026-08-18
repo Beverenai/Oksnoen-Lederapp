@@ -170,13 +170,22 @@ export function LeirskoleDaySessions({
     return map;
   }, [activities, date]);
 
-  /** Ruteinnholdet i «Dag til dag» for hver økt denne dagen. */
+  /** Ruteinnholdet i «Dag til dag» — slått opp én gang per render. */
+  const cellsForDay = useMemo(() => {
+    const byRow = new Map<number, string | null | undefined>();
+    const byPost = new Map<string, string | null | undefined>();
+    (planCells ?? []).forEach((c) => {
+      if (c.date !== date) return;
+      if (c.row_index != null) byRow.set(c.row_index, c.content);
+      if (c.post_id) byPost.set(c.post_id, c.content);
+    });
+    return { byRow, byPost };
+  }, [planCells, date]);
+
   const linesForPost = (p: SessionPost) => {
     const row = planRow(p);
-    const cell = (planCells ?? []).find((c) =>
-      row != null ? c.date === date && c.row_index === row : c.date === date && c.post_id === p.id,
-    );
-    return splitPlanLines(cell?.content);
+    const content = row != null ? cellsForDay.byRow.get(row) : cellsForDay.byPost.get(p.id);
+    return splitPlanLines(content);
   };
 
   const saveLines = (p: SessionPost, lines: string[]) => {
@@ -227,7 +236,7 @@ export function LeirskoleDaySessions({
    * Advarsler for én leder, eventuelt som om de i tillegg tok `extra`-vakten.
    * 11-timers hvile gjelder mellom arbeidsdager, ikke innen samme dag.
    */
-  const warningsFor = (staffId: string, extra?: SessionPost): string[] => {
+  const computeWarnings = (staffId: string, extra?: SessionPost): string[] => {
     const out: string[] = [];
     const extraHours = extra ? Number(extra.duration_hours ?? 0) : 0;
     const hours = (hoursByStaff.get(staffId) ?? 0) + extraHours;
@@ -256,6 +265,23 @@ export function LeirskoleDaySessions({
     if (kitchenIds.has(staffId) && (extra || shifts.length > 0)) out.push('Har kjøkken hele dagen');
     return Array.from(new Set(out));
   };
+
+  /** Advarslene uten ekstra vakt regnes bare én gang per leder. */
+  const baseWarnings = useMemo(() => {
+    const map = new Map<string, string[]>();
+    staff.forEach((s) => map.set(s.id, computeWarnings(s.id)));
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staff, hoursByStaff, shiftsByStaff, kitchenIds, maxHours]);
+
+  const warningsFor = (staffId: string, extra?: SessionPost): string[] =>
+    extra ? computeWarnings(staffId, extra) : baseWarnings.get(staffId) ?? [];
+
+  /** Ledere som kan settes på vanlige økter (ikke kjøkken). */
+  const assignableStaff = useMemo(
+    () => staff.filter((s) => s.leader && !kitchenIds.has(s.id)),
+    [staff, kitchenIds],
+  );
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
@@ -365,9 +391,7 @@ export function LeirskoleDaySessions({
     const warns = warningsFor(staffId);
     const before = activityKey && leaderId ? doneBefore.get(`${leaderId}|${activityKey}`) ?? 0 : 0;
     const cellKey = `${p.id}|${staffId}`;
-    const free = staff.filter(
-      (x) => x.leader && !kitchenIds.has(x.id) && x.id !== staffId,
-    );
+    const free = assignableStaff.filter((x) => x.id !== staffId);
     return (
       <>
         {noteKey === cellKey && assignmentId ? (
@@ -523,8 +547,7 @@ export function LeirskoleDaySessions({
   /** Plukker som fyller en tom plass. */
   const SlotPicker = ({ p, slot }: { p: SessionPost; slot: PlanSlot }) => {
     const onPostIds = new Set(p.assignments.map((a) => a.staff_id));
-    const candidates = staff
-      .filter((s) => s.leader && !kitchenIds.has(s.id))
+    const candidates = assignableStaff
       .slice()
       .sort((x, y) => {
         const onX = onPostIds.has(x.id) ? 0 : 1;
@@ -537,10 +560,10 @@ export function LeirskoleDaySessions({
           <button
             type="button"
             aria-label={`Velg leder til ${slot.label} på ${p.name}`}
-            className="flex h-[3.4rem] w-full flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-border/70 text-muted-foreground transition-colors hover:bg-muted/50"
+            className="flex h-[3.4rem] w-full flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-amber-500/70 bg-amber-500/[0.09] text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-300"
           >
             <Plus className="h-4 w-4" />
-            <span className="text-[9.5px] font-semibold">Ledig</span>
+            <span className="text-[9.5px] font-bold">Mangler</span>
           </button>
         </PopoverTrigger>
         <PopoverContent
@@ -621,12 +644,19 @@ export function LeirskoleDaySessions({
           if (!withActivities) return true;
           return !leaderId || !slotLeaderIds.has(leaderId);
         });
+        /** Tomme plasser i økten, eller måltid/vakt helt uten ledere. */
+        const openSlots = slots.filter((s) => !s.leaderId).length;
+        const missing = withActivities ? openSlots > 0 : p.assignments.length === 0;
 
         return (
           <div
             key={p.id}
             className={`rounded-2xl border p-2 ${
-              meal ? 'border-sky-500/40 bg-sky-500/[0.07]' : 'border-emerald-500/40 bg-emerald-500/[0.07]'
+              missing
+                ? 'border-amber-500/70 bg-amber-500/[0.09]'
+                : meal
+                  ? 'border-sky-500/40 bg-sky-500/[0.07]'
+                  : 'border-emerald-500/40 bg-emerald-500/[0.07]'
             }`}
           >
             <div className="flex items-center gap-1.5">
@@ -637,6 +667,13 @@ export function LeirskoleDaySessions({
               >
                 {meal ? 'Måltid' : 'Økt'}
               </span>
+
+              {missing && (
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-500/25 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-200">
+                  <AlertTriangle className="h-3 w-3" />
+                  {withActivities ? `${openSlots} mangler leder` : 'Mangler ledere'}
+                </span>
+              )}
 
               <Popover>
                 <PopoverTrigger asChild>
@@ -782,7 +819,9 @@ export function LeirskoleDaySessions({
                   </p>
                 )}
                 {!withActivities && p.assignments.length === 0 && (
-                  <p className="self-center text-[11px] text-muted-foreground">Ingen ledere.</p>
+                  <p className="flex items-center gap-1 self-center rounded-full bg-amber-500/20 px-2 py-1 text-[11px] font-bold text-amber-800 dark:text-amber-200">
+                    <AlertTriangle className="h-3.5 w-3.5" /> Ingen ledere satt opp — legg til her
+                  </p>
                 )}
                 {withoutActivity.map((a) => (
                   <div
@@ -811,10 +850,8 @@ export function LeirskoleDaySessions({
                     <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Ledige til {p.name}
                     </p>
-                    {staff
-                      .filter(
-                        (s) => s.leader && !kitchenIds.has(s.id) && !p.assignments.some((x) => x.staff_id === s.id),
-                      )
+                    {assignableStaff
+                      .filter((s) => !p.assignments.some((x) => x.staff_id === s.id))
                       .slice()
                       .sort((x, y) => (hoursByStaff.get(x.id) ?? 0) - (hoursByStaff.get(y.id) ?? 0))
                       .map((s) => {
