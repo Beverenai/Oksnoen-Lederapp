@@ -931,3 +931,27 @@ export function useSaveLeirskoleWeekSnapshot() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-week-snapshot'] }),
   });
 }
+
+/**
+ * Autolagring av ukesarkivet: kjører snapshot-RPC-en stille ca. 4 sekunder
+ * etter siste endring i bemanning, vaktplan, aktiviteter eller kjøkken.
+ */
+export function useAutoSaveLeirskoleWeek(weekId?: string | null, signature?: string) {
+  const qc = useQueryClient();
+  const lastSaved = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!weekId || !signature) return;
+    const key = `${weekId}|${signature}`;
+    if (lastSaved.current === key) return;
+
+    const timer = setTimeout(async () => {
+      const { error } = await supabase.rpc('snapshot_leirskole_week', { _week_id: weekId });
+      if (error) return;
+      lastSaved.current = key;
+      qc.invalidateQueries({ queryKey: ['leirskole-week-snapshot'] });
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [weekId, signature, qc]);
+}
