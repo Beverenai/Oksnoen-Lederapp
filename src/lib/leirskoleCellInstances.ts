@@ -25,7 +25,29 @@ export interface CellInstance {
 
 const mentions = (line: string, label: string) => line.toLowerCase().includes(label.trim().toLowerCase());
 
-export const countActivity = (lines: string[], label: string) => lines.filter((l) => mentions(l, label)).length;
+/** «Klatring x2» betyr to ledere på Klatring. Uten suffiks er det én. */
+export const lineMultiplier = (line: string) => {
+  const m = line.match(/[x×]\s*(\d{1,2})\s*$/i);
+  const n = m ? Number(m[1]) : 1;
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 20) : 1;
+};
+
+/** Teksten uten antall-suffiks — brukes for visning og sammenligning. */
+export const stripMultiplier = (line: string) => line.replace(/\s*[x×]\s*\d{1,2}\s*$/i, '').trim();
+
+export const countActivity = (lines: string[], label: string) =>
+  lines.filter((l) => mentions(l, label)).reduce((sum, l) => sum + lineMultiplier(l), 0);
+
+/**
+ * Setter hvor mange ledere aktiviteten skal ha i ruten.
+ * Alle linjer for aktiviteten slås sammen til én linje med `xN`.
+ */
+export function setActivityCount(lines: string[], label: string, text: string, count: number): string[] {
+  const out = lines.filter((l) => !mentions(l, label));
+  const n = Math.max(0, Math.min(20, Math.round(count)));
+  if (n > 0) out.push(n > 1 ? `${stripMultiplier(text)} x${n}` : stripMultiplier(text));
+  return out;
+}
 
 export function cellInstances(
   lines: string[],

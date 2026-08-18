@@ -366,7 +366,14 @@ Deno.serve(async (req) => {
         const name = ROW_TO_NAME[Number(c.row_index)];
         if (!name) continue;
         const lines = String(c.content ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
-        const n = lines.filter((l) => labels.some((lb) => l.toLowerCase().includes(lb))).length;
+        // «Klatring x2» = to ledere på den aktiviteten.
+        const n = lines
+          .filter((l) => labels.some((lb) => l.toLowerCase().includes(lb)))
+          .reduce((sum, l) => {
+            const m = l.match(/[x\u00d7]\s*(\d{1,2})\s*$/i);
+            const k = m ? Number(m[1]) : 1;
+            return sum + (Number.isFinite(k) && k > 0 ? Math.min(k, 20) : 1);
+          }, 0);
         if (n > 0) countBySlot.set(`${c.date}|${name}`, n);
       }
       for (const p of rows) {

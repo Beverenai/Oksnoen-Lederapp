@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   AlertTriangle,
-  LayoutGrid,
+  ChevronDown,
   Lock,
   LockOpen,
   Maximize2,
@@ -52,7 +52,6 @@ import { LeirskoleLeaderWeekTable } from '@/components/admin/LeirskoleLeaderWeek
 import { LeirskoleGeneratePreviewDialog } from '@/components/admin/LeirskoleGeneratePreviewDialog';
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
 import { LeirskoleExtraPostsCell } from '@/components/admin/LeirskoleExtraPostsCell';
-import { LeirskoleSimplePlan } from '@/components/admin/LeirskoleSimplePlan';
 import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
 import { trimDayHours, fillDayHours, KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import { assignMissingActivities } from '@/lib/leirskoleAutoActivity';
@@ -132,7 +131,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const [logText, setLogText] = useState('');
   const [summary, setSummary] = useState<LeirskoleGenerateSummary | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [view, setView] = useState<'bord' | 'ledere' | 'plan'>('bord');
+  const [leadersOpen, setLeadersOpen] = useState(false);
   const [big, setBig] = useState(() => localStorage.getItem('leirskole-board-big') === '1');
   const [pendingMode, setPendingMode] = useState<LeirskoleGenerateMode | null>(null);
   const [preview, setPreview] = useState<LeirskolePreview | null>(null);
@@ -683,7 +682,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
       });
       return;
     }
-    setView('ledere');
+    setLeadersOpen(true);
   };
 
   const LabelCell = ({ children }: { children: React.ReactNode }) => (
@@ -760,26 +759,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-full bg-muted/60 p-0.5">
-            {[
-              { key: 'bord' as const, label: 'Ukebord', icon: LayoutGrid },
-              { key: 'plan' as const, label: 'Dag til dag', icon: NotebookPen },
-              { key: 'ledere' as const, label: 'Ledere', icon: Users },
-            ].map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setView(t.key)}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  view === t.key ? 'bg-background shadow-sm' : 'text-muted-foreground'
-                }`}
-              >
-                <t.icon className="h-3.5 w-3.5" />
-                {t.label}
-              </button>
-            ))}
-          </div>
-          {view === 'bord' && (
+          {(
             <Button
               variant="outline"
               size="sm"
@@ -864,7 +844,6 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         fixing={fixWeek.isPending}
       />
 
-      {view === "bord" && (
       <div className="min-w-0">
         <div className="space-y-1.5">
           {/* Dagoverskrifter */}
@@ -1291,12 +1270,26 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           </div>
         </div>
       </div>
-      )}
 
-      {/* Full oversikt: timer og vakter per leder gjennom uken */}
-      {view === 'plan' && <LeirskoleSimplePlan weekId={week.id} dates={dates} dayTypes={specialDays} />}
+      {/* Ledere gjennom uken — egen seksjon nederst som kan åpnes */}
+      <button
+        type="button"
+        onClick={() => setLeadersOpen((v) => !v)}
+        className="flex w-full items-center gap-2 rounded-2xl border border-border/60 bg-muted/20 p-3 text-left"
+      >
+        <Users className="h-4 w-4 shrink-0 text-primary" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs font-semibold">Ledere gjennom uken</span>
+          <span className="block truncate text-[11px] text-muted-foreground">
+            Timer per leder og dag — mål: så nær {maxHours}t som mulig
+          </span>
+        </span>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${leadersOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
 
-      {view === 'ledere' && (
+      {leadersOpen && (
       <div className="rounded-2xl border border-border/60 bg-muted/20 p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div>

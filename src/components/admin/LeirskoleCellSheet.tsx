@@ -10,7 +10,7 @@ import { TimeRangeField } from '@/components/ui/time-range-field';
 import { useSaveLeirskoleWeekPlanCell, type LeirskoleActivityType } from '@/hooks/useLeirskole';
 import { dayLabel } from '@/lib/leirskoleDates';
 import { activityLine } from '@/lib/leirskoleRandomPlan';
-import { cellInstances, countActivity } from '@/lib/leirskoleCellInstances';
+import { cellInstances, countActivity, setActivityCount } from '@/lib/leirskoleCellInstances';
 
 export interface CellTarget {
   date: string;
@@ -443,14 +443,7 @@ export function LeirskoleCellSheet({
                 const text = activityLine(t);
                 const count = countOf(t.label);
                 const removeOne = () => {
-                  const next = [...lines];
-                  const lower = next.map((l) => l.toLowerCase());
-                  let i = -1;
-                  lower.forEach((l, idx) => {
-                    if (l.includes(t.label.toLowerCase())) i = idx;
-                  });
-                  if (i >= 0) next.splice(i, 1);
-                  setLines(next);
+                  setLines(setActivityCount(lines, t.label, text, count - 1));
                 };
                 return (
                   <div
@@ -461,7 +454,7 @@ export function LeirskoleCellSheet({
                   >
                     <button
                       type="button"
-                      onClick={() => setLines([...lines, text])}
+                      onClick={() => setLines(setActivityCount(lines, t.label, text, count + 1))}
                       className="flex items-center gap-1.5"
                       title="Legg til én gang"
                     >
@@ -482,7 +475,7 @@ export function LeirskoleCellSheet({
                     )}
                     <button
                       type="button"
-                      onClick={() => setLines([...lines, text])}
+                      onClick={() => setLines(setActivityCount(lines, t.label, text, count + 1))}
                       title="Legg til én"
                       className={`rounded-full px-1.5 py-0.5 text-xs leading-none ${
                         count > 0 ? 'bg-background/25' : 'bg-background/60'
