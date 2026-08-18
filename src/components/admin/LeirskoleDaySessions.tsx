@@ -298,7 +298,10 @@ export function LeirskoleDaySessions({
       }
     }
     if (kitchenIds.has(staffId) && (extra || shifts.length > 0)) out.push('Har kjøkken hele dagen');
-    return Array.from(new Set(out));
+    // «Merk»-advarsler er myke — de skal ikke skygge for de reelle problemene.
+    return Array.from(new Set(out)).sort(
+      (a, b) => Number(a.startsWith('Merk')) - Number(b.startsWith('Merk')),
+    );
   };
 
   /** Advarslene uten ekstra vakt regnes bare én gang per leder. */
