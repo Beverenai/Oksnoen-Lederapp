@@ -1289,6 +1289,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
       <LeirskoleCellSheet
         open={!!target}
         onOpenChange={(v) => !v && setTarget(null)}
+        leaderInfo={cellLeaderInfo}
         weekId={week.id}
         target={target}
         content={target ? cellContent(target) : ''}
