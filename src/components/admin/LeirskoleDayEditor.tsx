@@ -24,9 +24,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AlertTriangle, ChevronDown, Clock, GripVertical, Lock, LockOpen, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Clock, GripVertical, LayoutGrid, Lock, LockOpen, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
 import { LeirskoleDayLeaderList } from '@/components/admin/LeirskoleDayLeaderList';
 import { LeirskoleDaySessions } from '@/components/admin/LeirskoleDaySessions';
+import { LeirskoleDayMatrix } from '@/components/admin/LeirskoleDayMatrix';
 import { hhmm, shortDate, todayStr } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import {
@@ -191,7 +192,7 @@ export function LeirskoleDayEditor({
   const [date, setDate] = useState<string>(() => (dates.includes(today) ? today : dates[0]));
   const activeDate = dates.includes(date) ? date : dates[0];
   const [open, setOpen] = useState(true);
-  const [mode, setMode] = useState<'okter' | 'ledere' | 'rediger'>('okter');
+  const [mode, setMode] = useState<'dag' | 'okter' | 'ledere' | 'rediger'>('dag');
   const [newOpen, setNewOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', start: '10:00', end: '12:00' });
 
@@ -369,6 +370,7 @@ export function LeirskoleDayEditor({
 
           <div className="flex rounded-full bg-muted/60 p-0.5">
             {[
+              { key: 'dag' as const, label: 'Dagen', icon: LayoutGrid },
               { key: 'okter' as const, label: 'Økter', icon: Clock },
               { key: 'ledere' as const, label: 'Per leder', icon: Users },
               { key: 'rediger' as const, label: 'Dra & slipp', icon: Pencil },
@@ -377,7 +379,7 @@ export function LeirskoleDayEditor({
                 key={t.key}
                 type="button"
                 onClick={() => setMode(t.key)}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                className={`flex flex-1 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[11px] font-semibold transition-colors ${
                   mode === t.key ? 'bg-background shadow-sm' : 'text-muted-foreground'
                 }`}
               >
@@ -386,6 +388,36 @@ export function LeirskoleDayEditor({
               </button>
             ))}
           </div>
+
+          {mode === 'dag' && (
+            <>
+              <div className="flex items-center justify-between rounded-2xl bg-muted/40 px-3 py-2">
+                <p className="text-xs text-muted-foreground">
+                  {isLocked
+                    ? 'Dagen er låst — åpne låsen for å endre.'
+                    : 'Ledere bortover, økter nedover. Trykk i en rute for vakt og aktivitet.'}
+                </p>
+                <Button
+                  size="sm"
+                  variant={isLocked ? 'default' : 'outline'}
+                  className="h-8 gap-1.5 rounded-full text-xs"
+                  onClick={() => setLock.mutate({ weekId: week.id, date: activeDate, locked: !isLocked })}
+                >
+                  {isLocked ? <Lock className="h-3.5 w-3.5" /> : <LockOpen className="h-3.5 w-3.5" />}
+                  {isLocked ? 'Låst' : 'Åpen'}
+                </Button>
+              </div>
+              <LeirskoleDayMatrix
+                week={week}
+                date={activeDate}
+                dayPosts={dayPosts}
+                staff={staff}
+                kitchenIds={kitchenIds}
+                maxHours={maxHours}
+                isLocked={isLocked}
+              />
+            </>
+          )}
 
           {mode === 'okter' && (
             <>
