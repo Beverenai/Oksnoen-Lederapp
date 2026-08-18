@@ -594,6 +594,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               {isAdmin && (
                 <NavLinkItem item={{ to: '/admin/leirskole', icon: LayoutDashboard, label: 'Leirskole-admin' }} />
               )}
+              <NavLinkItem item={{ to: '/leirskole/grupper', icon: Users, label: 'Elevgrupper' }} />
               <NavLinkItem item={{ to: '/profile', icon: User, label: 'Min Profil' }} />
               <div className="pt-2">
                 <NavLinkItem item={merNavItem} />
