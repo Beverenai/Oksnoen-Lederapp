@@ -561,12 +561,13 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             {dates.map((date) => {
               const d = new Date(`${date}T12:00:00`);
               const special = specialDays.get(date);
+              const locked = lockedDays.has(date);
               return (
                 <div
                   key={date}
                   className={`rounded-xl px-2 py-1.5 text-center ${
                     special ? 'border border-dashed border-amber-500/60 bg-amber-500/15' : 'oks-ls-gradient'
-                  }`}
+                  } ${locked ? 'ring-2 ring-sky-400' : ''}`}
                 >
                   <p className={`text-xs font-bold ${special ? 'text-amber-700 dark:text-amber-200' : 'text-white'}`}>
                     {WEEKDAYS[d.getDay()]} {d.getDate()}.
@@ -576,6 +577,44 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                       {special === 'both' ? 'Avreise + ankomst' : special === 'arrival' ? 'Ankomst' : 'Avreise'}
                     </p>
                   )}
+                  <div className="mt-1 flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      title={locked ? 'Åpne dagen for generering' : 'Lås dagen (generatoren endrer den ikke)'}
+                      onClick={() =>
+                        setDayLock.mutate(
+                          { weekId: week.id, date, locked: !locked },
+                          {
+                            onSuccess: () => toast.success(locked ? 'Dagen er åpnet' : 'Dagen er låst'),
+                            onError: () => toast.error('Kunne ikke endre låsen'),
+                          },
+                        )
+                      }
+                      className={`rounded-full p-1 ${
+                        locked
+                          ? 'bg-sky-500 text-white'
+                          : special
+                            ? 'bg-background/70 text-muted-foreground'
+                            : 'bg-white/20 text-white'
+                      }`}
+                    >
+                      {locked ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
+                    </button>
+                    <button
+                      type="button"
+                      title="Logg: hvordan gikk dagen?"
+                      onClick={() => openLog(date)}
+                      className={`rounded-full p-1 ${
+                        dayLogs.has(date)
+                          ? 'bg-emerald-500 text-white'
+                          : special
+                            ? 'bg-background/70 text-muted-foreground'
+                            : 'bg-white/20 text-white'
+                      }`}
+                    >
+                      <NotebookPen className="h-3 w-3" />
+                    </button>
+                  </div>
                 </div>
               );
             })}
