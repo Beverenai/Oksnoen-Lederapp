@@ -357,7 +357,8 @@ export default function Chat() {
   };
 
   const notifyMentions = (messageId: string, mentions: string[]) => {
-    if (mentions.length === 0) return;
+    // I Leirskole-kanalen varsles hele uka, så da sender vi alltid.
+    if (mentions.length === 0 && channel !== 'leirskole') return;
     // Feiler stille — en manglende push skal aldri hindre at meldingen er sendt.
     supabase.functions
       .invoke('push-chat-mention', { body: { message_id: messageId } })
