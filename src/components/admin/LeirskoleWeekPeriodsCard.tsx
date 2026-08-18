@@ -213,7 +213,7 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
             </div>
           </div>
           <div>
-            <Label className="text-xs">Maks timer per dag</Label>
+            <Label className="text-xs">Planleggingsgrense timer per dag</Label>
             <Input
               type="number"
               min={1}
@@ -240,7 +240,7 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
               <span className="block truncate text-sm font-semibold">{selectedWeek.name}</span>
               <span className="block truncate text-[11px] text-muted-foreground">
                 {shortDate(selectedWeek.start_date)} – {shortDate(selectedWeek.end_date)} ·{' '}
-                {staffCount.get(selectedWeek.id) ?? 0} ledere · maks {Number(selectedWeek.max_daily_hours ?? 8)}t/dag
+                {staffCount.get(selectedWeek.id) ?? 0} ledere · planleggingsgrense {Number(selectedWeek.max_daily_hours ?? 8)}t/dag
                 {selectedWeek.schedule_published_at && <span className="ml-1.5 text-primary">· Publisert</span>}
               </span>
             </span>
@@ -269,7 +269,7 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
                 </div>
               </div>
               <div>
-                <Label className="text-[11px]">Maks timer per dag</Label>
+                <Label className="text-[11px]">Planleggingsgrense timer per dag</Label>
                 <Input
                   type="number"
                   min={1}
