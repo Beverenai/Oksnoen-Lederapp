@@ -130,6 +130,24 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const [logText, setLogText] = useState('');
   const [summary, setSummary] = useState<LeirskoleGenerateSummary | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [view, setView] = useState<'bord' | 'ledere'>('bord');
+  const [big, setBig] = useState(() => localStorage.getItem('leirskole-board-big') === '1');
+  const [pendingMode, setPendingMode] = useState<LeirskoleGenerateMode | null>(null);
+  const [preview, setPreview] = useState<LeirskolePreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [snapshot, setSnapshot] = useState<LeirskoleSnapshot | null>(null);
+
+  const toggleBig = () => {
+    setBig((v) => {
+      localStorage.setItem('leirskole-board-big', v ? '0' : '1');
+      return !v;
+    });
+  };
+
+  /** Størrelser for kompakt vs. stor visning. */
+  const ui = big
+    ? { pad: 'p-3', txt: 'text-sm', sub: 'text-xs', chip: 'px-2 py-1 text-xs', gap: 'gap-2' }
+    : { pad: 'p-2', txt: 'text-[11px]', sub: 'text-[10px]', chip: 'px-1.5 py-0.5 text-[10px]', gap: 'gap-1.5' };
 
   const dates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
 
