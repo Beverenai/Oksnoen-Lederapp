@@ -73,6 +73,12 @@ function absRange(p: { date: string; start_time: string; end_time: string }) {
 
 const PRESET_NAMES = ['Ankomst', 'Avreise', 'Økt 1', 'Økt 2', 'Økt 3', 'Nattevakt', 'Sanitas'];
 
+const MEAL_NAMES = new Set(['frokost', 'lunsj', 'middag', 'kvelds']);
+const isMeal = (p: SessionPost) => MEAL_NAMES.has((p.name ?? '').trim().toLowerCase());
+/** Måltider har ingen aktivitet — øktene har. */
+const hasActivities = (p: SessionPost) => !isMeal(p);
+const CUSTOM_ACTIVITY = 'egen';
+
 /**
  * Dagsvisning: øktene nedover etter klokkeslett, med lederne som står på hver
  * økt, aktiviteten deres, og advarsler når noen går over planleggingsgrensen
