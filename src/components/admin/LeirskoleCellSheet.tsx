@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { AlertTriangle, Check, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TimeRangeField } from '@/components/ui/time-range-field';
 import { useSaveLeirskoleWeekPlanCell, type LeirskoleActivityType } from '@/hooks/useLeirskole';
 import { dayLabel } from '@/lib/leirskoleDates';
 import { activityLine } from '@/lib/leirskoleRandomPlan';
