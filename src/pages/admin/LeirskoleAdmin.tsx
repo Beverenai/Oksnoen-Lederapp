@@ -116,7 +116,8 @@ export default function LeirskoleAdmin() {
   const { data: weekActivities } = useLeirskoleActivities(week?.id);
   const { data: planCells } = useLeirskoleWeekPlan(week?.id);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
-  const [panel, setPanel] = useState<'leaders' | 'activities' | 'access' | 'payroll' | null>(null);
+  const [panel, setPanel] = useState<'leaders' | 'activities' | 'access' | 'payroll' | 'archive' | null>(null);
+  const [quickPushOpen, setQuickPushOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [viewDate, setViewDate] = useState<string | null>(null);
 
@@ -357,6 +358,18 @@ export default function LeirskoleAdmin() {
           }
           onOpen={() => setPanel('payroll')}
         />
+        <OpenRow
+          icon={<Archive className="h-5 w-5" />}
+          title="Ukesarkiv"
+          subtitle="Lagre ledere, vakter og timer for uken"
+          onOpen={() => setPanel('archive')}
+        />
+        <OpenRow
+          icon={<Bell className="h-5 w-5" />}
+          title="Hurtigvarslinger"
+          subtitle={`Sendes kun til ${(staff ?? []).length} ledere denne uken`}
+          onOpen={() => setQuickPushOpen(true)}
+        />
       </div>
 
       {/* Planlegging i full bredde — hele uken skal få plass */}
@@ -389,7 +402,9 @@ export default function LeirskoleAdmin() {
                   ? 'Aktivitetstyper'
                   : panel === 'access'
                     ? 'Tilgang og varsling'
-                    : 'Timer og lønn'}
+                    : panel === 'archive'
+                      ? 'Ukesarkiv'
+                      : 'Timer og lønn'}
             </SheetTitle>
           </SheetHeader>
           <div className="mt-4 space-y-3">
@@ -419,9 +434,27 @@ export default function LeirskoleAdmin() {
                 }))}
               />
             )}
+            {panel === 'archive' && (
+              <LeirskoleWeekArchiveCard
+                week={week}
+                allWeeks={(weeks ?? []).map((w) => ({
+                  id: w.id,
+                  name: w.name,
+                  start_date: w.start_date,
+                  end_date: w.end_date,
+                }))}
+              />
+            )}
           </div>
         </SheetContent>
       </Sheet>
+
+      <QuickNotificationSheet
+        open={quickPushOpen}
+        onOpenChange={setQuickPushOpen}
+        leaderIds={(staff ?? []).map((s) => s.leader?.id).filter((id): id is string => !!id)}
+        scopeLabel={`ledere på ${week.name}`}
+      />
 
       {selectedStaff?.leader && (
         <LeirskoleLeaderSheet
