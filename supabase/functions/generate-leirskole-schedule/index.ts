@@ -411,7 +411,9 @@ Deno.serve(async (req) => {
     }
 
     // Upubliserte økter er ikke satt ennå og skal ikke bemannes.
-    const posts: Post[] = ((postsRaw ?? []) as any[]).filter((p) => p.is_published !== false) as any;
+    const posts: Post[] = ((postsRaw ?? []) as any[])
+      .filter((p) => p.is_published !== false)
+      .filter((p) => !onlyDates || onlyDates.includes(String(p.date))) as any;
     if (posts.length === 0) return json({ error: "Ingen vaktposter for denne uken." }, 400);
 
     const staffIds = staff.map(s => s.id);
