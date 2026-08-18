@@ -393,7 +393,11 @@ export function useLeirskoleActivities(weekId?: string | null) {
         .from('leirskole_activity_assignments')
         .select('*')
         .eq('week_id', weekId!)
-        .order('date', { ascending: false });
+        // Stabil rekkefølge: ellers kan to ledere med samme aktivitet bytte plass
+        // (og «forsvinne») hver gang lista hentes på nytt.
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true });
       if (error) throw error;
       return (data ?? []) as LeirskoleActivityAssignment[];
     },

@@ -31,7 +31,9 @@ async function loadDay(weekId: string, date: string): Promise<DayContext> {
         .from('leirskole_activity_assignments')
         .select('id, leader_id, activity, session')
         .eq('week_id', weekId)
-        .eq('date', date),
+        .eq('date', date)
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true }),
       supabase.from('leirskole_staff').select('id, leader:leaders(id, leirskole_competencies)').eq('week_id', weekId),
     ]);
 
