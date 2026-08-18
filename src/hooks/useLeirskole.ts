@@ -702,7 +702,9 @@ export function useSetLeirskoleKitchenDay() {
         );
       if (error) throw error;
 
-      // Kjøkkenledere skal ikke stå på andre vakter den dagen.
+      // Bare hele kjøkkendager tar lederen ut av alle andre vakter.
+      // Hjelper de bare noen timer, beholder de resten av dagen sin.
+      if ((hours ?? 8) < 8) return;
       const { data: posts } = await supabase
         .from('leirskole_posts')
         .select('id')
