@@ -955,6 +955,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                   if (!t) return null;
                 const content = cellContent(t);
                 const lines = content.split('\n').map((l) => l.trim()).filter(Boolean);
+                const cellPost = t.postId ? (posts ?? []).find((p) => p.id === t.postId) : undefined;
+                const special = specialDays.get(date);
                 const slotActivities = t.session ? activityBySlot.get(`${date}|${t.session}`) ?? [] : [];
                  // Aktiviteter kan stå flere ganger i samme rute (to på Klatring osv.),
                  // og hver forekomst vises med sin egen leder.
@@ -974,12 +976,21 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                     onClick={() => setTarget(t)}
                     className={`rounded-xl border text-left ${ui.pad} transition-colors hover:brightness-105 ${tone}`}
                   >
-                    {t.session === null && (
-                      <p className={`mb-1 truncate ${ui.sub} font-semibold uppercase text-muted-foreground`}>
-                        {t.label}
+                    <p className={`mb-1 flex items-center justify-between gap-1 ${ui.sub} font-semibold uppercase text-muted-foreground`}>
+                      <span className="truncate">{t.label}</span>
+                      {cellPost && (
+                        <span className="shrink-0 tabular-nums normal-case">
+                          {hhmm(cellPost.start_time)}–{hhmm(cellPost.end_time)}
+                        </span>
+                      )}
+                    </p>
+                    {lines.length === 0 && (
+                      <p className={`${ui.txt} text-muted-foreground`}>
+                        {special
+                          ? 'Trykk for å gi økten navn og tid'
+                          : 'Tom — trykk for å fylle'}
                       </p>
                     )}
-                    {lines.length === 0 && <p className={`${ui.txt} text-muted-foreground`}>Tom — trykk for å fylle</p>}
                      <div className="space-y-1">
                        {instances.map((inst) => (
                          <div key={inst.id} className={`flex items-center gap-1 ${ui.txt}`}>
