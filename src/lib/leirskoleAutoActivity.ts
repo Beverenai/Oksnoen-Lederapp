@@ -68,14 +68,17 @@ async function loadDay(weekId: string, date: string): Promise<DayContext> {
 export async function assignMissingActivities({
   weekId,
   date,
+  sessions,
 }: {
   weekId: string;
   date: string;
+  /** Begrens til bestemte økter (session-nøkler). Uten = alle. */
+  sessions?: string[];
 }): Promise<number> {
   const ctx = await loadDay(weekId, date);
   let created = 0;
 
-  for (const row of SESSION_ROWS) {
+  for (const row of SESSION_ROWS.filter((r) => !sessions || sessions.includes(r.session))) {
     const post = ctx.posts.find((p) => (p.name ?? '').trim().toLowerCase() === row.label.toLowerCase());
     if (!post) continue;
     const onDuty = (post.assignments ?? [])
@@ -135,14 +138,16 @@ export async function assignMissingActivities({
 export async function resolveDayActivities({
   weekId,
   date,
+  sessions,
 }: {
   weekId: string;
   date: string;
+  sessions?: string[];
 }): Promise<{ removed: number; created: number }> {
   const ctx = await loadDay(weekId, date);
   const staleIds: string[] = [];
 
-  for (const row of SESSION_ROWS) {
+  for (const row of SESSION_ROWS.filter((r) => !sessions || sessions.includes(r.session))) {
     const lines = splitPlanLines(ctx.cells.find((c) => c.row_index === row.row)?.content);
     const sessionActs = ctx.existing.filter((a) => a.session === row.session);
     if (!sessionActs.length) continue;
@@ -158,7 +163,7 @@ export async function resolveDayActivities({
     await supabase.from('leirskole_activity_assignments').delete().in('id', staleIds);
   }
 
-  const created = await assignMissingActivities({ weekId, date });
+  const created = await assignMissingActivities({ weekId, date, sessions });
   return { removed: staleIds.length, created };
 }
 
@@ -167,20 +172,23 @@ export async function resolveLeirskoleConflicts({
   weekId,
   dates,
   maxHours = 8,
+  sessions,
 }: {
   weekId: string;
   dates: string[];
   /** Timegrense per leder per dag — brukes når nye ledere settes på vakter. */
   maxHours?: number;
+  /** Begrens til bestemte økter (session-nøkler). Uten = alle. */
+  sessions?: string[];
 }): Promise<{ removed: number; created: number }> {
   let removed = 0;
   let created = 0;
   for (const date of dates) {
-    const r = await resolveDayActivities({ weekId, date });
+    const r = await resolveDayActivities({ weekId, date, sessions });
     removed += r.removed;
     created += r.created;
     // Er det fortsatt tomme plasser? Sett flere ledere på vakten og fyll dem.
-    const staffed = await staffOpenSlots({ weekId, date, maxHours });
+    const staffed = await staffOpenSlots({ weekId, date, maxHours, sessions });
     created += staffed;
   }
   return { removed, created };
@@ -200,10 +208,12 @@ export async function staffOpenSlots({
   weekId,
   date,
   maxHours,
+  sessions,
 }: {
   weekId: string;
   date: string;
   maxHours: number;
+  sessions?: string[];
 }): Promise<number> {
   const ctx = await loadDay(weekId, date);
   const [{ data: dayPosts }, { data: kitchen }] = await Promise.all([
@@ -241,7 +251,7 @@ export async function staffOpenSlots({
   const typeByKey = new Map(ctx.types.map((t) => [t.key, t]));
   let created = 0;
 
-  for (const row of SESSION_ROWS) {
+  for (const row of SESSION_ROWS.filter((r) => !sessions || sessions.includes(r.session))) {
     const post = postList.find((p) => (p.name ?? '').trim().toLowerCase() === row.label.toLowerCase());
     if (!post) continue;
     const lines = splitPlanLines(ctx.cells.find((c) => c.row_index === row.row)?.content);

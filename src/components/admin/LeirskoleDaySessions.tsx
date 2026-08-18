@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -110,6 +110,8 @@ export function LeirskoleDaySessions({
   kitchenHours,
   maxHours,
   isLocked,
+  focusSession,
+  focusNonce,
 }: {
   week: { id: string };
   date: string;
@@ -121,6 +123,10 @@ export function LeirskoleDaySessions({
   kitchenHours?: Map<string, number>;
   maxHours: number;
   isLocked: boolean;
+  /** Økt (session-nøkkel) som skal scrolles til og markeres. */
+  focusSession?: string;
+  /** Endres for å trigge scroll på nytt til samme økt. */
+  focusNonce?: number;
 }) {
   const qc = useQueryClient();
   const { data: types } = useLeirskoleActivityTypes(true);
@@ -133,6 +139,22 @@ export function LeirskoleDaySessions({
   const updatePost = useUpdateLeirskolePost();
   const deletePost = useDeleteLeirskolePost();
   const setNote = useSetLeirskoleAssignmentNote();
+  /** Kort per økt — brukes til å scrolle til en valgt økt. */
+  const cardRefs = useRef(new Map<string, HTMLDivElement>());
+  const [highlight, setHighlight] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!focusNonce || !focusSession) return;
+    setHighlight(focusSession);
+    const t = window.setTimeout(() => {
+      cardRefs.current.get(focusSession)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+    const clear = window.setTimeout(() => setHighlight(null), 3200);
+    return () => {
+      window.clearTimeout(t);
+      window.clearTimeout(clear);
+    };
+  }, [focusNonce, focusSession]);
   const setKitchen = useSetLeirskoleKitchenDay();
 
   const [newOpen, setNewOpen] = useState(false);
@@ -651,7 +673,13 @@ export function LeirskoleDaySessions({
         return (
           <div
             key={p.id}
-            className={`rounded-2xl border p-2 ${
+            ref={(el) => {
+              if (el) cardRefs.current.set(session, el);
+              else cardRefs.current.delete(session);
+            }}
+            className={`rounded-2xl border p-2 transition-shadow ${
+              highlight === session ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+            } ${
               missing
                 ? 'border-amber-500/70 bg-amber-500/[0.09]'
                 : meal
