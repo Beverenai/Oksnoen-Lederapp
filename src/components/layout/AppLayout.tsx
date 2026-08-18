@@ -200,6 +200,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
     accessMode === 'leirskole' || location.pathname.startsWith('/leirskole') ||
     location.pathname.startsWith('/admin/leirskole');
 
+  // Hurtigvarsling til ALLE ledere hører til hovedappen. På leirskole sendes
+  // varsler kun fra Leirskole-admin (kun ukas bemanning).
+  const showGlobalQuickPush = !leirskoleSurface;
+
   // Lyst tema er standard på leirskole; brukeren kan velge mørkt og valget huskes.
   const [lsDark, setLsDark] = useState(
     () => localStorage.getItem('oks-ls-theme') === 'dark',
@@ -669,7 +673,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </nav>
 
         <div className="p-4 border-t border-border space-y-1">
-          {isAdmin && (
+          {isAdmin && showGlobalQuickPush && (
             <Button
               variant="ghost"
               className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
@@ -783,7 +787,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             )}
             
             <div className="pt-4 space-y-1">
-              {isAdmin && (
+              {isAdmin && showGlobalQuickPush && (
                 <Button
                   variant="ghost"
                   className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
