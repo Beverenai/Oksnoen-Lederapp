@@ -296,7 +296,7 @@ export default function Leirskole() {
         </div>
       )}
 
-      {nextShift !== null && (
+      {nextShift && (
         <div className="oks-ls-pill p-4">
           <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
             <Megaphone className="h-4 w-4 text-primary" /> Denne økten skal du
