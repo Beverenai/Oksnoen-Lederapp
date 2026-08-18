@@ -2615,6 +2615,8 @@ export type Database = {
           date: string
           day_type: string
           id: string
+          is_locked: boolean
+          log_note: string | null
           updated_at: string
           week_id: string
         }
@@ -2623,6 +2625,8 @@ export type Database = {
           date: string
           day_type?: string
           id?: string
+          is_locked?: boolean
+          log_note?: string | null
           updated_at?: string
           week_id: string
         }
@@ -2631,6 +2635,8 @@ export type Database = {
           date?: string
           day_type?: string
           id?: string
+          is_locked?: boolean
+          log_note?: string | null
           updated_at?: string
           week_id?: string
         }
