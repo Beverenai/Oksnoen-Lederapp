@@ -560,10 +560,10 @@ export function LeirskoleDaySessions({
           <button
             type="button"
             aria-label={`Velg leder til ${slot.label} på ${p.name}`}
-            className="flex h-[3.4rem] w-full flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-border/70 text-muted-foreground transition-colors hover:bg-muted/50"
+            className="flex h-[3.4rem] w-full flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-amber-500/70 bg-amber-500/[0.09] text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-300"
           >
             <Plus className="h-4 w-4" />
-            <span className="text-[9.5px] font-semibold">Ledig</span>
+            <span className="text-[9.5px] font-bold">Mangler</span>
           </button>
         </PopoverTrigger>
         <PopoverContent
