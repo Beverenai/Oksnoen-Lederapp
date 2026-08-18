@@ -37,7 +37,7 @@ import { cn } from '@/lib/utils';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { LederPassMini } from '@/components/passport/LederPassMini';
 import { useMailboxUnreadCount } from '@/hooks/useMailbox';
-import { useHookupsEnabled, useIncomingHookupCount } from '@/hooks/useHookups';
+import { useIncomingHookupCount } from '@/hooks/useHookups';
 import { useUnopenedSipCount } from '@/hooks/useSips';
 import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute, isLeirskoleRoute } from '@/lib/limitedAccess';
@@ -113,7 +113,6 @@ export default function More() {
   const sweatersEnabled = useSweatersEnabled();
   const { data: murderState } = useMyMurderState();
   const { data: mailboxUnread } = useMailboxUnreadCount(!!isAdmin);
-  const hookupsEnabled = useHookupsEnabled();
   const incomingHookups = useIncomingHookupCount();
   const unopenedSips = useUnopenedSipCount();
   const { data: povRoll } = usePovCurrentRoll();
