@@ -41,6 +41,7 @@ export function LeirskoleCellSheet({
   assignments,
   post,
   staffOptions,
+  leaderInfo,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -57,9 +58,17 @@ export function LeirskoleCellSheet({
   post?: { id: string; name: string; start_time: string; end_time: string; assignments: { staff_id: string }[] } | null;
   /** Bemanningsvalg for egne økter: leirskole_staff-id + navn. */
   staffOptions?: { staffId: string; leaderId: string; name: string }[];
+  /** Timer og konflikter per leder for denne dagen — vises i nedtrekkslistene. */
+  leaderInfo?: Map<string, { day: number; week: number; note?: string }>;
 }) {
   const qc = useQueryClient();
   const savePlan = useSaveLeirskoleWeekPlanCell();
+  /** Kort tekst som viser dagstimer + evt. konflikt bak ledernavnet. */
+  const infoSuffix = (id: string) => {
+    const info = leaderInfo?.get(id);
+    if (!info) return '';
+    return ` · ${info.day.toFixed(1)}t i dag${info.note ? ' ⚠' : ''}`;
+  };
   const isSpecial = target?.dayType != null && target.dayType !== 'normal';
   const [name, setName] = useState('');
   const [start, setStart] = useState('09:00');
@@ -536,6 +545,7 @@ export function LeirskoleCellSheet({
                                 {!isArrival && l.competencies.length > 0 && !l.competencies.includes(t.key)
                                   ? ' (uten kompetanse)'
                                   : ''}
+                                {infoSuffix(l.id)}
                               </option>
                             ))}
                           </optgroup>
@@ -548,6 +558,7 @@ export function LeirskoleCellSheet({
                                 {!isArrival && l.competencies.length > 0 && !l.competencies.includes(t.key)
                                   ? ' (uten kompetanse)'
                                   : ''}
+                                {infoSuffix(l.id)}
                               </option>
                             ))}
                           </optgroup>
