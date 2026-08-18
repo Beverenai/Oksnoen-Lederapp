@@ -475,9 +475,40 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke angre'),
   });
 
+  /** Fjern én vakt fra en leder (brukes i lederoversikten). */
+  const removeShift = useMutation({
+    mutationFn: async (assignmentId: string) => {
+      const { error } = await supabase.from('leirskole_assignments').delete().eq('id', assignmentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      ['leirskole-schedule', 'leirskole-my-shifts'].forEach((key) =>
+        qc.invalidateQueries({ queryKey: [key] }),
+      );
+      toast.success('Vakten er fjernet');
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke fjerne vakten'),
+  });
+
+  /** Sett en leder på en vakt (brukes i lederoversikten). */
+  const addShift = useMutation({
+    mutationFn: async ({ postId, staffId }: { postId: string; staffId: string }) => {
+      const { error } = await supabase
+        .from('leirskole_assignments')
+        .insert({ post_id: postId, staff_id: staffId, assigned_manually: true });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      ['leirskole-schedule', 'leirskole-my-shifts'].forEach((key) =>
+        qc.invalidateQueries({ queryKey: [key] }),
+      );
+      toast.success('Vakten er lagt til');
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke legge til vakten'),
+  });
+
   /** Hent forhåndsvisning før noe skrives. */
   const openPreview = async (mode: LeirskoleGenerateMode) => {
-
     setPendingMode(mode);
     setPreviewLoading(true);
     try {
