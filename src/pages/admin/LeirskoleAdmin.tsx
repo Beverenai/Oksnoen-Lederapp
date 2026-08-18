@@ -29,8 +29,7 @@ import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInf
 import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
 import { LeirskoleWeekBoard } from '@/components/admin/LeirskoleWeekBoard';
 import { LeirskoleDayEditor } from '@/components/admin/LeirskoleDayEditor';
-import { formatDue, hhmm, shortDate, todayStr } from '@/lib/leirskoleDates';
-import { LeaderAvatarStack, type AvatarPerson } from '@/components/leirskole/LeaderAvatarStack';
+import { formatDue, shortDate, todayStr } from '@/lib/leirskoleDates';
 
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) return error.message;
@@ -119,9 +118,8 @@ export default function LeirskoleAdmin() {
   const { data: planCells } = useLeirskoleWeekPlan(week?.id);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [openStep, setOpenStep] = useState<number | null>(1);
-  const [todayOpen, setTodayOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
-  const [viewDate, setViewDate] = useState<string | null>(null);
+  const [viewDate] = useState<string | null>(null);
 
   const [taskDraft, setTaskDraft] = useState({ title: '', description: '', due_at: '' });
   const [taskAssignAll, setTaskAssignAll] = useState(true);
@@ -270,13 +268,6 @@ export default function LeirskoleAdmin() {
 
   const activeDate = viewDate ?? (weekDates.includes(today) ? today : weekDates[0] ?? today);
 
-  const dayPosts = useMemo(
-    () =>
-      (posts ?? [])
-        .filter((p) => p.date === activeDate)
-        .sort((a, b) => a.start_time.localeCompare(b.start_time)),
-    [posts, activeDate],
-  );
 
   const staffNames = useMemo(() => {
     const map = new Map<string, string>();
@@ -284,18 +275,6 @@ export default function LeirskoleAdmin() {
     return map;
   }, [staff]);
 
-  /** staff_id → leder med bilde, for avatarrekkene. */
-  const staffPeople = useMemo(() => {
-    const map = new Map<string, AvatarPerson>();
-    (staff ?? []).forEach((s) => {
-      map.set(s.id, {
-        id: s.id,
-        name: s.leader?.name ?? 'Ukjent',
-        imageUrl: s.leader?.profile_image_url ?? null,
-      });
-    });
-    return map;
-  }, [staff]);
 
   const activitiesByLeader = useMemo(() => {
     const map = new Map<string, string[]>();
