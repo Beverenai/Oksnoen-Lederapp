@@ -419,31 +419,58 @@ export function LeirskoleCellSheet({
               )}
               {types.map((t) => {
                 const text = activityLine(t);
-                const active = selected.some((s) => s.key === t.key);
+                const count = countOf(t.label);
+                const removeOne = () => {
+                  const next = [...lines];
+                  const i = next.map((l) => l.toLowerCase()).findLastIndex((l) => l.includes(t.label.toLowerCase()));
+                  if (i >= 0) next.splice(i, 1);
+                  setLines(next);
+                };
                 return (
-                  <button
+                  <div
                     key={t.id}
-                    type="button"
-                    onClick={() =>
-                      setLines(
-                        active
-                          ? lines.filter((l) => !l.toLowerCase().includes(t.label.toLowerCase()))
-                          : [...lines, text],
-                      )
-                    }
-                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                      active
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                    className={`flex items-center gap-1 rounded-full pl-3 pr-1 py-1 text-sm font-medium transition-colors ${
+                      count > 0 ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground'
                     }`}
                   >
-                    <span>{t.emoji ?? '•'}</span>
-                    <span>{t.label}</span>
-                    {active && <Check className="h-3.5 w-3.5" />}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setLines([...lines, text])}
+                      className="flex items-center gap-1.5"
+                      title="Legg til én gang"
+                    >
+                      <span>{t.emoji ?? '•'}</span>
+                      <span>{t.label}</span>
+                      {count > 1 && <span className="text-xs opacity-90">×{count}</span>}
+                      {count === 1 && <Check className="h-3.5 w-3.5" />}
+                    </button>
+                    {count > 0 && (
+                      <button
+                        type="button"
+                        onClick={removeOne}
+                        title="Fjern én"
+                        className="rounded-full bg-background/25 px-1.5 leading-none py-0.5 text-xs"
+                      >
+                        −
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setLines([...lines, text])}
+                      title="Legg til én"
+                      className={`rounded-full px-1.5 py-0.5 text-xs leading-none ${
+                        count > 0 ? 'bg-background/25' : 'bg-background/60'
+                      }`}
+                    >
+                      +
+                    </button>
+                  </div>
                 );
               })}
             </div>
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              Trykk + for å legge til aktiviteten flere ganger — da kan to ledere ha f.eks. Klatring.
+            </p>
           </div>
 
           {target?.session && (
@@ -451,12 +478,13 @@ export function LeirskoleCellSheet({
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Hvem tar hva ({onDuty.length} på vakt)
               </p>
-              {selected.length === 0 && (
+              {instances.length === 0 && (
                 <p className="text-sm text-muted-foreground">Velg aktiviteter først.</p>
               )}
               <div className="space-y-2">
-                {selected.map((t) => {
-                  const current = leaderFor(t.key);
+                {instances.map((inst) => {
+                  const t = { key: inst.key, label: inst.label, emoji: inst.emoji };
+                  const current = inst.leaderId ?? '';
                   const leader = pool.find((l) => l.id === current);
                   const lacks =
                     !isArrival &&
@@ -464,10 +492,15 @@ export function LeirskoleCellSheet({
                     leader.competencies.length > 0 &&
                     !leader.competencies.includes(t.key);
                   return (
-                    <div key={t.key} className="rounded-2xl bg-muted/40 px-3 py-2">
+                    <div key={inst.id} className="rounded-2xl bg-muted/40 px-3 py-2">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-semibold">
                           {t.emoji} {t.label}
+                          {inst.total > 1 && (
+                            <span className="ml-1 text-xs font-normal text-muted-foreground">
+                              ({inst.slot + 1}/{inst.total})
+                            </span>
+                          )}
                         </span>
                         {lacks && (
                           <span className="flex items-center gap-1 text-[11px] text-destructive">
@@ -481,7 +514,13 @@ export function LeirskoleCellSheet({
                       <select
                         value={current}
                         disabled={setLeader.isPending}
-                        onChange={(e) => setLeader.mutate({ activity: t.key, leaderId: e.target.value })}
+                        onChange={(e) =>
+                          setLeader.mutate({
+                            activity: t.key,
+                            leaderId: e.target.value,
+                            previousLeaderId: inst.leaderId,
+                          })
+                        }
                         className="mt-1.5 w-full rounded-xl border border-border bg-background px-2 py-2 text-sm"
                       >
                         <option value="">Ingen valgt</option>
