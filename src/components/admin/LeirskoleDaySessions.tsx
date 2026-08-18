@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { TimeRangeField, TimeRangePopover } from '@/components/ui/time-range-field';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -280,29 +281,16 @@ export function LeirskoleDaySessions({
                     }}
                     className="h-8 flex-1 rounded-xl border-transparent bg-muted/40 px-2 text-sm font-bold"
                   />
-                  <Input
-                    type="time"
-                    key={`${p.id}-s-${p.start_time}`}
-                    defaultValue={hhmm(p.start_time)}
-                    aria-label="Starttid"
-                    onBlur={(e) => {
-                      if (!e.target.value || e.target.value === hhmm(p.start_time)) return;
+                  <TimeRangePopover
+                    start={hhmm(p.start_time)}
+                    end={hhmm(p.end_time)}
+                    onChange={({ start, end }) => {
                       if (!guard()) return;
-                      updatePost.mutate({ id: p.id, start_time: `${e.target.value}:00` });
+                      const payload: { id: string; start_time?: string; end_time?: string } = { id: p.id };
+                      if (start !== hhmm(p.start_time)) payload.start_time = `${start}:00`;
+                      if (end !== hhmm(p.end_time)) payload.end_time = `${end}:00`;
+                      if (payload.start_time || payload.end_time) updatePost.mutate(payload);
                     }}
-                    className="h-8 w-[5.6rem] rounded-xl text-xs tabular-nums"
-                  />
-                  <Input
-                    type="time"
-                    key={`${p.id}-e-${p.end_time}`}
-                    defaultValue={hhmm(p.end_time)}
-                    aria-label="Sluttid"
-                    onBlur={(e) => {
-                      if (!e.target.value || e.target.value === hhmm(p.end_time)) return;
-                      if (!guard()) return;
-                      updatePost.mutate({ id: p.id, end_time: `${e.target.value}:00` });
-                    }}
-                    className="h-8 w-[5.6rem] rounded-xl text-xs tabular-nums"
                   />
                   <Button
                     size="icon"
@@ -519,20 +507,12 @@ export function LeirskoleDaySessions({
             placeholder="Navn på økten (f.eks. Ankomst)"
             className="h-9 rounded-xl text-sm"
           />
-          <div className="flex items-center gap-2">
-            <Input
-              type="time"
-              value={draft.start}
-              onChange={(e) => setDraft((d) => ({ ...d, start: e.target.value }))}
-              className="h-9 flex-1 rounded-xl text-sm tabular-nums"
-            />
-            <Input
-              type="time"
-              value={draft.end}
-              onChange={(e) => setDraft((d) => ({ ...d, end: e.target.value }))}
-              className="h-9 flex-1 rounded-xl text-sm tabular-nums"
-            />
-          </div>
+          <TimeRangeField
+            start={draft.start}
+            end={draft.end}
+            onStartChange={(v) => setDraft((d) => ({ ...d, start: v }))}
+            onEndChange={(v) => setDraft((d) => ({ ...d, end: v }))}
+          />
           <div className="flex gap-2">
             <Button size="sm" className="flex-1 rounded-full" disabled={addPost.isPending} onClick={() => createPost()}>
               Legg til økt
