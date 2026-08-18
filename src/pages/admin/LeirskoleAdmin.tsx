@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users, ChevronDown, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Send, Trash2, CalendarDays, Bell, CheckCircle2, Clock, Users, ChevronDown, ChevronRight, HelpCircle, ListChecks, FileSpreadsheet, KeyRound } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   useActiveLeirskoleWeek,
   useLeirskoleActivities,
@@ -57,45 +58,40 @@ const TONE: Record<StepTone, string> = {
   done: 'bg-primary/20 text-primary',
 };
 
-/** Ett steg i arbeidsflyten — åpnes/lukkes og viser status. */
-function Step({
-  n,
+/** Rad som åpner en egen detaljvisning (sheet) i stedet for en toggle. */
+function OpenRow({
+  icon,
   title,
   subtitle,
   status,
-  open,
-  onToggle,
-  children,
+  onOpen,
 }: {
-  n: number;
+  icon: React.ReactNode;
   title: string;
   subtitle: string;
-  status: { label: string; tone: StepTone };
-  open: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
+  status?: { label: string; tone: StepTone };
+  onOpen: () => void;
 }) {
   return (
-    <div className="oks-ls-pill overflow-hidden">
-      <button type="button" onClick={onToggle} className="flex w-full items-center gap-3 p-4 text-left">
-        <span
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-            status.tone === 'done' ? 'oks-ls-gradient' : 'bg-muted/60 text-muted-foreground'
-          }`}
-        >
-          {n}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold">{title}</span>
-          <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
-        </span>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${TONE[status.tone]}`}>
+    <button
+      type="button"
+      onClick={onOpen}
+      className="oks-ls-pill flex w-full items-center gap-3 p-4 text-left transition-transform hover:-translate-y-0.5"
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold">{title}</span>
+        <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
+      </span>
+      {status && (
+        <span className={`hidden shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold sm:inline ${TONE[status.tone]}`}>
           {status.label}
         </span>
-        <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && <div className="space-y-3 border-t border-border/60 p-4 pt-3">{children}</div>}
-    </div>
+      )}
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </button>
   );
 }
 
