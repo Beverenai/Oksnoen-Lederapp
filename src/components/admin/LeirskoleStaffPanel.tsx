@@ -2,12 +2,10 @@ import { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Search, LayoutGrid, List, Pencil, Clock, AlertTriangle } from 'lucide-react';
+import { Search, LayoutGrid, List, Clock, AlertTriangle, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { competenceEmoji, competenceLabel } from '@/lib/leirskoleCompetencies';
-import { LeirskoleCompetenceSheet } from '@/components/leirskole/LeirskoleCompetenceSheet';
 import type { LeirskoleStaff } from '@/hooks/useLeirskole';
 
 type StaffRow = LeirskoleStaff & {
@@ -47,8 +45,6 @@ export function LeirskoleStaffPanel({
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [filter, setFilter] = useState<'alle' | 'mangler'>('alle');
-  const [editing, setEditing] = useState<StaffRow | null>(null);
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return staff.filter((s) => {
@@ -112,8 +108,8 @@ export function LeirskoleStaffPanel({
         </ToggleGroup>
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        {filtered.length} av {staff.length} ledere
+      <p className="text-xs text-muted-foreground">
+        {filtered.length} av {staff.length} ledere · trykk på en leder for å se kompetanse, aktiviteter og sende beskjed
       </p>
 
       {staff.length === 0 ? (
@@ -123,83 +119,68 @@ export function LeirskoleStaffPanel({
           </CardContent>
         </Card>
       ) : (
-        <div className={view === 'grid' ? 'grid gap-3 sm:grid-cols-2 xl:grid-cols-3' : 'space-y-2'}>
+        <div className={view === 'grid' ? 'grid gap-3 sm:grid-cols-2' : 'space-y-2'}>
           {filtered.map((s) => {
             const comps = s.leader?.leirskole_competencies ?? [];
             const hours = hoursByStaff.get(s.id) ?? 0;
             const acts = (s.leader?.id && activitiesByLeader?.get(s.leader.id)) || [];
+            const shownComps = comps.slice(0, 4);
+            const restComps = comps.length - shownComps.length;
             return (
               <Card
                 key={s.id}
                 onClick={() => onSelect?.(s)}
-                className={`cursor-pointer overflow-hidden border-2 transition-colors hover:bg-card ${
-                  comps.length ? 'border-primary/40' : 'border-destructive/40'
-                }`}
+                className="group cursor-pointer overflow-hidden rounded-2xl border transition-colors hover:border-primary/50 hover:bg-muted/30"
               >
-                <CardContent className={view === 'grid' ? 'space-y-3 p-4' : 'flex items-center gap-3 p-3'}>
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-11 w-11">
+                <CardContent className="space-y-2.5 p-3.5">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-11 w-11 shrink-0">
                       <AvatarImage src={s.leader?.profile_image_url ?? undefined} alt={s.leader?.name ?? ''} />
                       <AvatarFallback>{initials(s.leader?.name ?? '?')}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="truncate font-semibold">{s.leader?.name ?? 'Ukjent'}</p>
+                        <p className="truncate text-[15px] font-semibold leading-tight">{s.leader?.name ?? 'Ukjent'}</p>
                         {s.role_label && (
                           <Badge variant="secondary" className="shrink-0 text-[10px]">{s.role_label}</Badge>
                         )}
                       </div>
-                      <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" /> {hours.toFixed(1)} t denne uken
-                      </p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> {hours.toFixed(1)} t
+                        </span>
+                        <span>·</span>
+                        <span>{acts.length} aktiviteter</span>
+                      </div>
                     </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={(e) => { e.stopPropagation(); setEditing(s); }}
-                      aria-label="Rediger kompetanse"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5">
-                    {comps.length === 0 ? (
-                      <span className="flex items-center gap-1 text-xs text-destructive">
-                        <AlertTriangle className="h-3 w-3" /> Mangler kompetanse
-                      </span>
-                    ) : (
-                      comps.map((c) => (
+                  {comps.length === 0 ? (
+                    <div className="flex items-center gap-1.5 rounded-xl bg-destructive/10 px-2.5 py-1.5 text-[11px] font-medium text-destructive">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> Mangler kompetanse — trykk for å legge inn
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      {shownComps.map((c) => (
                         <span
                           key={c}
                           className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground"
                         >
                           {competenceEmoji(c)} {competenceLabel(c)}
                         </span>
-                      ))
-                    )}
-                  </div>
-
-                  {acts.length > 0 && (
-                    <p className="text-[11px] text-muted-foreground">
-                      Har hatt: {acts.map(competenceLabel).join(', ')}
-                    </p>
+                      ))}
+                      {restComps > 0 && (
+                        <span className="text-[11px] font-medium text-muted-foreground">+{restComps} flere</span>
+                      )}
+                    </div>
                   )}
                 </CardContent>
               </Card>
             );
           })}
         </div>
-      )}
-
-      {editing?.leader && (
-        <LeirskoleCompetenceSheet
-          open={!!editing}
-          onOpenChange={(v) => !v && setEditing(null)}
-          leaderId={editing.leader.id}
-          leaderName={editing.leader.name}
-          current={editing.leader.leirskole_competencies ?? []}
-        />
       )}
     </div>
   );
