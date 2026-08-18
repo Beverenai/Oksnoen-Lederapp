@@ -99,8 +99,7 @@ const hasActivities = (p: SessionPost) => !NO_ACTIVITY_NAMES.has((p.name ?? '').
 const overlapAllowed = (p: SessionPost) => (p.name ?? '').trim().toLowerCase().includes('sanitas');
 
 /** Nattevakt kan kombineres med andre vakter — vi bare minner om det. */
-const isNightPost = (p: SessionPost) =>
-  !!p.is_night || (p.name ?? '').trim().toLowerCase().includes('nattevakt');
+const isNightPost = (p: SessionPost) => (p.name ?? '').trim().toLowerCase().includes('nattevakt');
 
 /**
  * Dagsvisning: øktene nedover etter klokkeslett. Plassene i hver økt kommer fra
