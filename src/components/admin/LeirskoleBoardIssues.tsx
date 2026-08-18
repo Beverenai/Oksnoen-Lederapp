@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { AlertTriangle, CheckCircle2, ChevronDown } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronDown, Wrench } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   ISSUE_LABEL,
   groupIssues,
@@ -20,9 +21,14 @@ const TONE: Record<LeirskoleIssueType, string> = {
 export function LeirskoleBoardIssues({
   issues,
   onJump,
+  onFix,
+  fixing,
 }: {
   issues: LeirskoleIssue[];
   onJump: (issue: LeirskoleIssue) => void;
+  /** Auto-opprydding: fjerner vakter over grensen, fyller tomme og gir aktiviteter. */
+  onFix?: () => void;
+  fixing?: boolean;
 }) {
   const [open, setOpen] = useState<LeirskoleIssueType | null>(null);
   const groups = groupIssues(issues);
@@ -39,9 +45,22 @@ export function LeirskoleBoardIssues({
 
   return (
     <div className="space-y-1.5 rounded-2xl border border-amber-500/50 bg-amber-500/10 p-2">
-      <p className="flex items-center gap-1.5 px-1 text-sm font-semibold text-amber-800 dark:text-amber-200">
-        <AlertTriangle className="h-4 w-4" /> {issues.length} ting å se på
-      </p>
+      <div className="flex items-center justify-between gap-2 px-1">
+        <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-800 dark:text-amber-200">
+          <AlertTriangle className="h-4 w-4" /> {issues.length} ting å se på
+        </p>
+        {onFix && (
+          <Button
+            size="sm"
+            className="h-7 gap-1 rounded-full px-3 text-xs"
+            onClick={onFix}
+            disabled={fixing}
+          >
+            <Wrench className="h-3.5 w-3.5" />
+            {fixing ? 'Fikser…' : 'Fikse'}
+          </Button>
+        )}
+      </div>
       {groups.map(([type, list]) => (
         <div key={type} className={`rounded-xl border bg-background/70 ${TONE[type]}`}>
           <button
