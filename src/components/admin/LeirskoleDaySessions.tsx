@@ -302,6 +302,7 @@ export function LeirskoleDaySessions({
                   >
                     {meal ? 'Måltid' : 'Økt'}
                   </span>
+                  {editMode ? (
                   <Input
                     key={`${p.id}-${p.name}`}
                     defaultValue={p.name}
@@ -314,9 +315,14 @@ export function LeirskoleDaySessions({
                     }}
                     className="h-8 min-w-0 flex-1 rounded-xl border-transparent bg-background/60 px-2 text-sm font-bold"
                   />
+                  ) : (
+                    <p className="min-w-0 flex-1 truncate px-1 text-sm font-bold">{p.name}</p>
+                  )}
                   <span className="shrink-0 rounded-full bg-background/60 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
                     {Number(p.duration_hours ?? 0).toFixed(1)}t
                   </span>
+                  {editMode ? (
+                    <>
                   <TimeRangePopover
                     start={hhmm(p.start_time)}
                     end={hhmm(p.end_time)}
@@ -337,6 +343,12 @@ export function LeirskoleDaySessions({
                   >
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
+                    </>
+                  ) : (
+                    <span className="shrink-0 rounded-full bg-background/60 px-2 py-0.5 text-[11px] font-semibold tabular-nums">
+                      {hhmm(p.start_time)}–{hhmm(p.end_time)}
+                    </span>
+                  )}
                 </div>
 
                 <div className="mt-1.5 flex flex-wrap items-start gap-1.5">
