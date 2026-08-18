@@ -416,7 +416,10 @@ export function LeirskoleDaySessions({
 
       {sorted.map((p) => {
         const session = sessionKey(p);
-        const free = staff.filter((s) => s.leader && !p.assignments.some((a) => a.staff_id === s.id));
+        // Kjøkkenvakt hele dagen ⇒ lederen kan ikke settes på vanlige økter samme dag.
+        const free = staff.filter(
+          (s) => s.leader && !kitchenIds.has(s.id) && !p.assignments.some((a) => a.staff_id === s.id),
+        );
         const meal = isMeal(p);
         return (
           <div
