@@ -382,11 +382,7 @@ export function LeirskoleCellSheet({
                   : 'Navn og tid på økten'}
               </p>
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Navn på økten (f.eks. Innsjekk)" />
-              <div className="flex items-center gap-2">
-                <Input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="flex-1" />
-                <span className="text-muted-foreground">–</span>
-                <Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="flex-1" />
-              </div>
+              <TimeRangeField start={start} end={end} onStartChange={setStart} onEndChange={setEnd} />
               <div className="flex gap-2">
                 <Button size="sm" className="rounded-full" onClick={() => savePost.mutate()} disabled={savePost.isPending}>
                   {post?.id ? 'Lagre endringer' : 'Opprett økt'}
