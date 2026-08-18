@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AlertTriangle, ChefHat, History, Plus, Trash2, UserPlus, X } from 'lucide-react';
+import { AlertTriangle, Check, ChefHat, History, Pencil, Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { hhmm } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import {
@@ -116,6 +116,7 @@ export function LeirskoleDaySessions({
   const [draft, setDraft] = useState({ name: '', start: '10:00', end: '12:00' });
   const [customKey, setCustomKey] = useState<string | null>(null);
   const [customText, setCustomText] = useState('');
+  const [editMode, setEditMode] = useState(false);
 
   const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
 
@@ -261,6 +262,21 @@ export function LeirskoleDaySessions({
 
   return (
     <div className="space-y-2.5">
+      <div className="flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-1.5">
+        <p className="text-[11px] text-muted-foreground">
+          {editMode ? 'Redigering på — endre navn, tid, ledere og aktiviteter.' : 'Oversikt over dagen.'}
+        </p>
+        <Button
+          size="sm"
+          variant={editMode ? 'default' : 'outline'}
+          className="h-7 shrink-0 gap-1.5 rounded-full px-3 text-[11px]"
+          onClick={() => setEditMode((v) => !v)}
+        >
+          {editMode ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+          {editMode ? 'Ferdig' : 'Rediger'}
+        </Button>
+      </div>
+
       {sorted.length === 0 && (
         <p className="py-3 text-center text-xs text-muted-foreground">Ingen økter denne dagen ennå.</p>
       )}
@@ -286,6 +302,7 @@ export function LeirskoleDaySessions({
                   >
                     {meal ? 'Måltid' : 'Økt'}
                   </span>
+                  {editMode ? (
                   <Input
                     key={`${p.id}-${p.name}`}
                     defaultValue={p.name}
@@ -298,9 +315,14 @@ export function LeirskoleDaySessions({
                     }}
                     className="h-8 min-w-0 flex-1 rounded-xl border-transparent bg-background/60 px-2 text-sm font-bold"
                   />
+                  ) : (
+                    <p className="min-w-0 flex-1 truncate px-1 text-sm font-bold">{p.name}</p>
+                  )}
                   <span className="shrink-0 rounded-full bg-background/60 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
                     {Number(p.duration_hours ?? 0).toFixed(1)}t
                   </span>
+                  {editMode ? (
+                    <>
                   <TimeRangePopover
                     start={hhmm(p.start_time)}
                     end={hhmm(p.end_time)}
@@ -321,6 +343,12 @@ export function LeirskoleDaySessions({
                   >
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
+                    </>
+                  ) : (
+                    <span className="shrink-0 rounded-full bg-background/60 px-2 py-0.5 text-[11px] font-semibold tabular-nums">
+                      {hhmm(p.start_time)}–{hhmm(p.end_time)}
+                    </span>
+                  )}
                 </div>
 
                 <div className="mt-1.5 flex flex-wrap items-start gap-1.5">
@@ -337,6 +365,7 @@ export function LeirskoleDaySessions({
                     const t = act ? typeMap.get(act.activity) : undefined;
                     const before = act && leaderId ? doneBefore.get(`${leaderId}|${act.activity}`) ?? 0 : 0;
                     const cellKey = `${p.id}|${a.staff_id}`;
+                    const missingActivity = hasActivities(p) && !act;
                     return (
                       <div
                         key={a.id}
@@ -344,6 +373,7 @@ export function LeirskoleDaySessions({
                           warns.length ? 'border-destructive/50 bg-destructive/5' : 'border-border/50 bg-background/70'
                         }`}
                       >
+                        {editMode && (
                         <button
                           type="button"
                           aria-label={`Fjern ${name}`}
@@ -352,6 +382,15 @@ export function LeirskoleDaySessions({
                         >
                           <X className="h-3 w-3 text-muted-foreground" />
                         </button>
+                        )}
+                        {missingActivity && (
+                          <span
+                            title="Mangler aktivitet i denne økten"
+                            className="absolute left-0 top-0 rounded-full bg-background/80 p-0.5"
+                          >
+                            <AlertTriangle className="h-3 w-3 text-amber-500" />
+                          </span>
+                        )}
                         <Avatar className="mx-auto h-9 w-9">
                           <AvatarImage src={s?.leader?.profile_image_url ?? undefined} alt={name} />
                           <AvatarFallback className="text-[10px]">{initials(name)}</AvatarFallback>
@@ -393,7 +432,16 @@ export function LeirskoleDaySessions({
                               className="mt-1 h-6 rounded-full px-2 text-[10px]"
                             />
                           )}
-                          {hasActivities(p) && customKey !== cellKey && (
+                          {hasActivities(p) && customKey !== cellKey && !editMode && (
+                            <p
+                              className={`mt-1 truncate rounded-full px-1 py-0.5 text-[9.5px] font-semibold ${
+                                act ? 'bg-muted/60' : 'text-amber-600 dark:text-amber-400'
+                              }`}
+                            >
+                              {act ? `${t?.emoji ?? '•'} ${t?.label ?? act.note ?? act.activity}` : 'Ingen aktivitet'}
+                            </p>
+                          )}
+                          {hasActivities(p) && customKey !== cellKey && editMode && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
@@ -481,6 +529,7 @@ export function LeirskoleDaySessions({
                     );
                   })}
 
+                  {editMode && (
                   <Popover>
                     <PopoverTrigger asChild>
                       <button
@@ -537,6 +586,7 @@ export function LeirskoleDaySessions({
                       )}
                     </PopoverContent>
                   </Popover>
+                  )}
                 </div>
               </div>
             </div>
@@ -544,7 +594,7 @@ export function LeirskoleDaySessions({
         );
       })}
 
-      {newOpen ? (
+      {!editMode ? null : newOpen ? (
         <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/30 p-3">
           <div className="flex flex-wrap gap-1.5">
             {PRESET_NAMES.map((n) => (
