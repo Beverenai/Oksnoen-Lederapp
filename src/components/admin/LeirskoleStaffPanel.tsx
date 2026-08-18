@@ -2,12 +2,10 @@ import { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Search, LayoutGrid, List, Clock, AlertTriangle, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { competenceEmoji, competenceLabel } from '@/lib/leirskoleCompetencies';
-import { LeirskoleCompetenceSheet } from '@/components/leirskole/LeirskoleCompetenceSheet';
 import type { LeirskoleStaff } from '@/hooks/useLeirskole';
 
 type StaffRow = LeirskoleStaff & {
@@ -47,8 +45,6 @@ export function LeirskoleStaffPanel({
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [filter, setFilter] = useState<'alle' | 'mangler'>('alle');
-  const [editing] = useState<StaffRow | null>(null);
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return staff.filter((s) => {
@@ -185,16 +181,6 @@ export function LeirskoleStaffPanel({
             );
           })}
         </div>
-      )}
-
-      {editing?.leader && (
-        <LeirskoleCompetenceSheet
-          open={!!editing}
-          onOpenChange={(v) => !v && setEditing(null)}
-          leaderId={editing.leader.id}
-          leaderName={editing.leader.name}
-          current={editing.leader.leirskole_competencies ?? []}
-        />
       )}
     </div>
   );
