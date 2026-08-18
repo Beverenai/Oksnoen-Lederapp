@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { AlertTriangle, Check, Clock } from 'lucide-react';
+import { AlertTriangle, Check, Clock, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TimeRangeField } from '@/components/ui/time-range-field';
@@ -279,6 +279,54 @@ export function LeirskoleCellSheet({
   const leaderFor = (activity: string) =>
     assignments.find((a) => a.activity === activity)?.leader_id ?? '';
 
+  /**
+   * Fjern én forekomst av en aktivitet fra økten: både lederansvaret og
+   * plassen i ukeplanen slettes, slik at dag-til-dag og ukeplan er like.
+   */
+  const removeInstance = useMutation({
+    mutationFn: async ({
+      activity,
+      label,
+      leaderId,
+      count,
+      text,
+    }: {
+      activity: string;
+      label: string;
+      leaderId: string | null;
+      count: number;
+      text: string;
+    }) => {
+      if (!target) throw new Error('Ingen rute valgt');
+      if (leaderId && target.session) {
+        const { error } = await supabase
+          .from('leirskole_activity_assignments')
+          .delete()
+          .eq('week_id', weekId)
+          .eq('date', target.date)
+          .eq('session', target.session)
+          .eq('activity', activity)
+          .eq('leader_id', leaderId);
+        if (error) throw error;
+      }
+      await savePlan.mutateAsync({
+        weekId,
+        date: target.date,
+        rowIndex: target.rowIndex,
+        content: setActivityCount(lines, label, text, count - 1).join('\n'),
+        color: 'neutral',
+        postId: target.rowIndex != null ? undefined : target.postId ?? undefined,
+      });
+    },
+    onSuccess: () => {
+      ['leirskole-activities', 'leirskole-activity-history', 'leirskole-week-plan'].forEach((key) =>
+        qc.invalidateQueries({ queryKey: [key] }),
+      );
+      toast.success('Aktiviteten er fjernet fra økten');
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke fjerne aktiviteten'),
+  });
+
   const isArrival = target?.dayType != null && target.dayType !== 'normal';
 
   /** Ledere som ikke står på denne vakten, men som er med i uken. */
@@ -529,6 +577,23 @@ export function LeirskoleCellSheet({
                         {isArrival && (
                           <span className="text-[11px] text-emerald-600 dark:text-emerald-400">Ankomst — kompetanse fri</span>
                         )}
+                        <button
+                          type="button"
+                          title="Fjern aktiviteten fra økten"
+                          disabled={removeInstance.isPending}
+                          onClick={() =>
+                            removeInstance.mutate({
+                              activity: t.key,
+                              label: inst.label,
+                              leaderId: inst.leaderId,
+                              count: countOf(inst.label),
+                              text: activityLine({ label: inst.label, emoji: inst.emoji } as LeirskoleActivityType),
+                            })
+                          }
+                          className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-background/70 text-muted-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                       <select
                         value={current}
