@@ -486,6 +486,7 @@ export function LeirskoleDayEditor({
                 weekPosts={(posts ?? []) as DayPost[]}
                 staff={staff}
                 kitchenIds={kitchenIds}
+                kitchenHours={kitchenHoursById}
                 maxHours={maxHours}
                 isLocked={isLocked}
               />
