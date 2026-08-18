@@ -24,6 +24,7 @@ export const PUSH_DESTINATIONS: PushDestination[] = [
   { label: 'Klineliste', url: '/klineliste' },
   { label: 'Lederpass', url: '/lederpass' },
   { label: 'Snusvalg', url: '/profile?snus=1' },
+  { label: 'Leirskole', url: '/leirskole' },
   { label: 'Mer', url: '/mer' },
 ];
 

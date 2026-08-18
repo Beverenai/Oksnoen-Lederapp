@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
+import { useActiveLeirskoleWeek, useIsLeirskoleStaff, useLeirskoleStaff } from '@/hooks/useLeirskole';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAccessMode } from '@/hooks/useViewMode';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowDown, AtSign, Send, Users } from 'lucide-react';
+import { ArrowDown, ImagePlus, Loader2, Reply, Send, Users, X } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { cn } from '@/lib/utils';
+import { compressImage } from '@/lib/imageUtils';
+import { ChatReactions, type ChatReaction } from '@/components/chat/ChatReactions';
+import { ChatImage, CHAT_BUCKET } from '@/components/chat/ChatImage';
 import {
   activeMentionQuery,
   applyMention,
@@ -26,6 +31,8 @@ interface ChatMessage {
   channel?: string | null;
   period_id?: string | null;
   mentions?: string[] | null;
+  reply_to_id?: string | null;
+  image_path?: string | null;
 }
 
 interface LeaderLite {
@@ -85,11 +92,22 @@ function timeLabel(iso: string) {
 }
 
 export default function Chat() {
-  const { leader, isLimitedAccess } = useAuth();
+  const { leader, isLimitedAccess, isLeirskole, isAdmin } = useAuth();
   const { showError } = useStatusPopup();
-  const canUsePeriodChat = !isLimitedAccess && leader?.is_active !== false;
-  const [channel, setChannel] = useState<'period' | 'offseason'>(
-    canUsePeriodChat ? 'period' : 'offseason',
+  const { limited, leirskoleView, mode: accessMode } = useAccessMode();
+  const canUsePeriodChat = !limited;
+  const { data: activeLeirskoleWeek } = useActiveLeirskoleWeek();
+  const { data: isLeirskoleStaff } = useIsLeirskoleStaff(activeLeirskoleWeek?.id);
+  const { data: leirskoleStaff } = useLeirskoleStaff(activeLeirskoleWeek?.id);
+  const leirskoleLeaderIds = useMemo(
+    () => new Set((leirskoleStaff ?? []).map((s) => s.leader_id)),
+    [leirskoleStaff],
+  );
+  // Leirskole-chatten er kun for de som er satt opp på den aktive leirskoleuken (+ admin).
+  const canUseLeirskoleChat =
+    (isAdmin && accessMode !== 'offseason') || (leirskoleView && !!isLeirskoleStaff);
+  const [channel, setChannel] = useState<'period' | 'offseason' | 'leirskole'>(
+    accessMode === 'leirskole' && canUseLeirskoleChat ? 'leirskole' : canUsePeriodChat ? 'period' : 'offseason',
   );
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -98,12 +116,18 @@ export default function Chat() {
   const [sending, setSending] = useState(false);
   const [showJump, setShowJump] = useState(false);
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null);
+  const [reactions, setReactions] = useState<ChatReaction[]>([]);
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   // Inaktive ledere har kun tilgang til off season-chatten
   useEffect(() => {
-    if (!canUsePeriodChat) setChannel('offseason');
-  }, [canUsePeriodChat]);
+    if (accessMode === 'leirskole') setChannel(canUseLeirskoleChat ? 'leirskole' : 'offseason');
+    else if (!canUsePeriodChat) setChannel((c) => (c === 'period' || c === 'leirskole' ? 'offseason' : c));
+    else setChannel((c) => (c === 'offseason' ? 'period' : c));
+  }, [canUsePeriodChat, accessMode, canUseLeirskoleChat]);
   const shellRef = useRef<HTMLDivElement>(null);
   const [shellHeight, setShellHeight] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -132,6 +156,24 @@ export default function Chat() {
     };
   }, []);
 
+  /**
+   * Låser side-skrollingen mens man er i chatten. Uten dette kan hele siden
+   * skrolle bak/over meldingslisten (spesielt når tastaturet åpnes på iPhone).
+   */
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtml = html.style.overflow;
+    const prevBody = body.style.overflow;
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    window.scrollTo({ top: 0 });
+    return () => {
+      html.style.overflow = prevHtml;
+      body.style.overflow = prevBody;
+    };
+  }, []);
+
   const scrollToBottom = (force = false) => {
     if (!force && !nearBottomRef.current) return;
     requestAnimationFrame(() => {
@@ -154,10 +196,13 @@ export default function Chat() {
     return () => el.removeEventListener('scroll', onScroll);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setMessages([]);
+  /**
+   * Henter meldinger, ledere og reaksjoner. Kalles ved bytte av kanal, når
+   * appen får fokus igjen, jevnlig i bakgrunnen og hver gang realtime kobler
+   * til på nytt — slik at ingen meldinger blir hengende igjen usett.
+   */
+  const load = useCallback(
+    async (opts: { reset?: boolean } = {}) => {
       let periodId: string | null = null;
       if (channel === 'period') {
         const { data: period } = await supabase
@@ -166,7 +211,7 @@ export default function Chat() {
           .eq('is_active', true)
           .maybeSingle();
         periodId = period?.id ?? null;
-        if (!cancelled) setPeriodLabel(period?.name ?? null);
+        setPeriodLabel(period?.name ?? null);
       }
 
       let query = supabase
@@ -181,14 +226,37 @@ export default function Chat() {
         query,
         supabase.from('leaders').select('id,name,profile_image_url,is_active,is_external'),
       ]);
-      if (cancelled) return;
-      setMessages((msgs || []) as ChatMessage[]);
+
+      const list = (msgs || []) as ChatMessage[];
+      setMessages(list);
       const map: Record<string, LeaderLite> = {};
       (lds || []).forEach((l: any) => { map[l.id] = l; });
       setLeaders(map);
-      scrollToBottom(true);
-    })();
 
+      if (list.length > 0) {
+        const { data: reacts } = await supabase
+          .from('chat_message_reactions')
+          .select('message_id, leader_id, emoji')
+          .in('message_id', list.map((m) => m.id));
+        setReactions((reacts ?? []) as ChatReaction[]);
+      } else {
+        setReactions([]);
+      }
+
+      if (opts.reset) scrollToBottom(true);
+    },
+    [channel],
+  );
+
+  useEffect(() => {
+    setMessages([]);
+    setReactions([]);
+    setReplyTo(null);
+    void load({ reset: true });
+  }, [channel, load]);
+
+  // Realtime + fallback: poll når fanen er synlig, og last på nytt ved fokus.
+  useEffect(() => {
     const rt = supabase
       .channel(uniqueRealtimeChannelName(`chat-messages-${channel}`))
       .on(
@@ -208,20 +276,59 @@ export default function Chat() {
           setMessages((prev) => prev.filter((m) => m.id !== (payload.old as any).id));
         },
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_message_reactions' },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as ChatReaction & { id?: string };
+          if (!row?.message_id) return;
+          setReactions((prev) => {
+            const without = prev.filter(
+              (r) =>
+                !(
+                  r.message_id === row.message_id &&
+                  r.leader_id === row.leader_id &&
+                  r.emoji === row.emoji
+                ),
+            );
+            return payload.eventType === 'DELETE' ? without : [...without, row];
+          });
+        },
+      )
+      .subscribe((status) => {
+        // Ny tilkobling kan ha mistet meldinger — hent alt på nytt.
+        if (status === 'SUBSCRIBED') void load();
+      });
+
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    const interval = window.setInterval(refresh, 20_000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
 
     return () => {
-      cancelled = true;
       supabase.removeChannel(rt);
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
     };
-  }, [channel]);
+  }, [channel, load]);
 
-  /** Ledere som kan tagges: periodechat = aktive, off season = alle med konto. */
+  /**
+   * Ledere som kan tagges: periodechat = aktive, leirskole = kun de som er satt
+   * opp på den aktive leirskoleuken, off season = alle med konto.
+   */
   const taggableLeaders = useMemo(() => {
     const all = Object.values(leaders).filter((l) => !l.is_external);
-    const pool = channel === 'period' ? all.filter((l) => l.is_active !== false) : all;
+    const pool =
+      channel === 'period'
+        ? all.filter((l) => l.is_active !== false)
+        : channel === 'leirskole'
+          ? all.filter((l) => leirskoleLeaderIds.has(l.id))
+          : all;
     return pool.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
-  }, [leaders, channel]);
+  }, [leaders, channel, leirskoleLeaderIds]);
 
   const mentionMatches = useMemo(() => {
     if (!mention) return [];
@@ -236,42 +343,133 @@ export default function Chat() {
       : people;
   }, [mention, taggableLeaders, leader?.id]);
 
+  /** Ledere som skal varsles: taggede + den du svarer på. */
+  const mentionIdsFor = (body: string, replyingTo: ChatMessage | null) => {
+    const everyone = hasAllMention(body);
+    const ids = new Set(
+      (everyone
+        ? taggableLeaders.map((l) => l.id)
+        : findMentionedLeaders(body, taggableLeaders).map((l) => l.id)),
+    );
+    if (replyingTo) ids.add(replyingTo.leader_id);
+    ids.delete(leader?.id ?? '');
+    return [...ids];
+  };
+
+  const notifyMentions = (messageId: string, mentions: string[]) => {
+    if (mentions.length === 0) return;
+    // Feiler stille — en manglende push skal aldri hindre at meldingen er sendt.
+    supabase.functions
+      .invoke('push-chat-mention', { body: { message_id: messageId } })
+      .catch((e) => console.warn('push-chat-mention failed', e));
+  };
+
   const send = async () => {
     const body = input.trim();
     if (!body || !leader) return;
+    const replyingTo = replyTo;
     setSending(true);
     nearBottomRef.current = true;
-    const everyone = hasAllMention(body);
-    const mentions = (everyone
-      ? taggableLeaders.map((l) => l.id)
-      : findMentionedLeaders(body, taggableLeaders).map((l) => l.id)
-    ).filter((id) => id !== leader.id);
+    const mentions = mentionIdsFor(body, replyingTo);
     const { data: inserted, error } = await supabase
       .from('chat_messages')
-      .insert({ leader_id: leader.id, body, channel, mentions })
+      .insert({
+        leader_id: leader.id,
+        body,
+        channel,
+        mentions,
+        reply_to_id: replyingTo?.id ?? null,
+      })
       .select('id')
       .maybeSingle();
     setSending(false);
     if (error) {
+      // Vis den faktiske årsaken — den generiske teksten skjulte hva som feilet.
+      console.error('chat insert failed', { channel, leaderId: leader.id, error });
       showError(
         channel === 'period'
-          ? 'Kunne ikke sende melding. Bare ledere som er aktive denne perioden kan skrive i periodechatten.'
+          ? 'Kunne ikke sende melding i periodechatten'
           : 'Kunne ikke sende melding',
+        error.message || 'Prøv igjen',
       );
       return;
     }
     setInput('');
     setMention(null);
+    setReplyTo(null);
     // Reset textarea auto-grow
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     scrollToBottom(true);
+    if (inserted?.id) notifyMentions(inserted.id, mentions);
+    void load();
+  };
 
-    // Varsle de taggede. Feiler stille — en manglende push skal aldri
-    // hindre at meldingen er sendt.
-    if (inserted?.id && mentions.length > 0) {
-      supabase.functions
-        .invoke('push-chat-mention', { body: { message_id: inserted.id } })
-        .catch((e) => console.warn('push-chat-mention failed', e));
+  /** Send et bilde (med valgfri tekst som bildetekst). */
+  const sendImage = async (file: File) => {
+    if (!leader) return;
+    const caption = input.trim();
+    const replyingTo = replyTo;
+    setUploading(true);
+    nearBottomRef.current = true;
+    try {
+      const compressed = await compressImage(file);
+      const ext = (compressed.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${leader.id}/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from(CHAT_BUCKET)
+        .upload(path, compressed, { contentType: compressed.type || 'image/jpeg' });
+      if (upErr) throw upErr;
+
+      const mentions = mentionIdsFor(caption, replyingTo);
+      const { data: inserted, error } = await supabase
+        .from('chat_messages')
+        .insert({
+          leader_id: leader.id,
+          body: caption,
+          channel,
+          mentions,
+          image_path: path,
+          reply_to_id: replyingTo?.id ?? null,
+        })
+        .select('id')
+        .maybeSingle();
+      if (error) {
+        await supabase.storage.from(CHAT_BUCKET).remove([path]);
+        throw error;
+      }
+      setInput('');
+      setReplyTo(null);
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+      scrollToBottom(true);
+      if (inserted?.id) notifyMentions(inserted.id, mentions);
+      void load();
+    } catch (e: any) {
+      showError('Kunne ikke sende bildet', e?.message ?? 'Prøv igjen');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const toggleReaction = async (messageId: string, emoji: string) => {
+    if (!leader) return;
+    const mine = reactions.some(
+      (r) => r.message_id === messageId && r.leader_id === leader.id && r.emoji === emoji,
+    );
+    // Optimistisk — realtime bekrefter etterpå.
+    setReactions((prev) =>
+      mine
+        ? prev.filter(
+            (r) => !(r.message_id === messageId && r.leader_id === leader.id && r.emoji === emoji),
+          )
+        : [...prev, { message_id: messageId, leader_id: leader.id, emoji }],
+    );
+    const q = supabase.from('chat_message_reactions');
+    const { error } = mine
+      ? await q.delete().eq('message_id', messageId).eq('leader_id', leader.id).eq('emoji', emoji)
+      : await q.insert({ message_id: messageId, leader_id: leader.id, emoji });
+    if (error && !error.message.toLowerCase().includes('duplicate')) {
+      showError('Kunne ikke reagere', error.message);
+      void load();
     }
   };
 
@@ -344,21 +542,6 @@ export default function Chat() {
     requestAnimationFrame(() => el?.focus());
   };
 
-  const openMentionPicker = () => {
-    const el = textareaRef.current;
-    const caret = el?.selectionStart ?? input.length;
-    const needsSpace = caret > 0 && !/\s$/.test(input.slice(0, caret));
-    const insert = `${needsSpace ? ' ' : ''}@`;
-    const next = input.slice(0, caret) + insert + input.slice(caret);
-    setInput(next);
-    const newCaret = caret + insert.length;
-    setMention({ start: newCaret - 1, query: '' });
-    requestAnimationFrame(() => {
-      el?.focus();
-      el?.setSelectionRange(newCaret, newCaret);
-    });
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (mention && mentionMatches.length > 0 && (e.key === 'Enter' || e.key === 'Tab')) {
       e.preventDefault();
@@ -409,7 +592,7 @@ export default function Chat() {
   return (
     <div
       ref={shellRef}
-      className="-mx-4 -my-4 flex flex-col gap-2 px-3 pt-2 pb-1 animate-fade-in lg:mx-0 lg:my-0 lg:px-0 lg:pt-0"
+      className="-mx-4 -my-4 flex flex-col gap-2 overflow-hidden px-3 pt-2 pb-1 animate-fade-in lg:mx-0 lg:my-0 lg:px-0 lg:pt-0"
       style={shellHeight ? { height: shellHeight } : { height: '70svh' }}
     >
       {/* Kompakt topplinje: tittel + kanalvelger på én rad (mindre skroll på iPhone) */}
@@ -421,11 +604,15 @@ export default function Chat() {
           <p className="truncate text-[11px] text-muted-foreground">
             {channel === 'period'
               ? `Periodechat${periodLabel ? ` · ${periodLabel}` : ''}`
-              : 'Off season — hele året'}
+              : channel === 'leirskole'
+                ? 'Leirskole — egen chat for leirskolelederne'
+                : 'Off season — hele året'}
           </p>
         </div>
-        {canUsePeriodChat && (
+        {(canUsePeriodChat || canUseLeirskoleChat) && (
         <div className="flex shrink-0 gap-1 rounded-full border bg-card/60 p-0.5 backdrop-blur">
+          {canUsePeriodChat && (
+          <>
           <button
             type="button"
             onClick={() => setChannel('period')}
@@ -450,6 +637,22 @@ export default function Chat() {
           >
             Off season
           </button>
+          </>
+          )}
+          {canUseLeirskoleChat && (
+            <button
+              type="button"
+              onClick={() => setChannel('leirskole')}
+              className={cn(
+                'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                channel === 'leirskole'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              Leirskole
+            </button>
+          )}
         </div>
         )}
       </div>
@@ -457,7 +660,7 @@ export default function Chat() {
       <div className="relative flex-1 min-h-0">
         <div
           ref={listRef}
-          className="h-full overflow-y-auto overscroll-contain rounded-2xl border bg-card/40 px-2.5 py-3 lg:px-3 lg:py-4"
+          className="h-full overflow-y-auto overscroll-contain rounded-2xl bg-muted/20 px-2.5 py-3 lg:px-3 lg:py-4"
         >
           {messages.length === 0 && (
             <div className="flex h-full items-center justify-center">
@@ -481,6 +684,10 @@ export default function Chat() {
             const { msg, showHeader, showAvatar, isMe } = it;
             const author = leaders[msg.leader_id];
             const mentionsMe = !!leader && (msg.mentions ?? []).includes(leader.id);
+            const quoted = msg.reply_to_id
+              ? messages.find((m) => m.id === msg.reply_to_id)
+              : undefined;
+            const msgReactions = reactions.filter((r) => r.message_id === msg.id);
             return (
               <div
                 key={it.key}
@@ -521,28 +728,71 @@ export default function Chat() {
                       </button>
                     </div>
                   )}
-                  <div
-                    title={new Date(msg.created_at).toLocaleString('nb-NO')}
-                    className={cn(
-                      'rounded-2xl px-3 py-2 pb-1.5 text-sm whitespace-pre-wrap break-words shadow-sm',
-                      isMe
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-foreground',
-                      isMe && showHeader && 'rounded-tr-md',
-                      !isMe && showHeader && 'rounded-tl-md',
-                      mentionsMe && !isMe && 'ring-2 ring-primary/50',
-                    )}
-                  >
-                    {renderBody(msg, isMe)}
-                    <span
+                  <div className={cn('flex items-center gap-1', isMe && 'flex-row-reverse')}>
+                    <div
+                      title={new Date(msg.created_at).toLocaleString('nb-NO')}
                       className={cn(
-                        'block text-[10px] leading-none mt-1',
-                        isMe ? 'text-primary-foreground/70 text-right' : 'text-muted-foreground',
+                        'min-w-0 rounded-2xl px-3 py-2 pb-1.5 text-sm whitespace-pre-wrap break-words shadow-sm',
+                        isMe
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-foreground',
+                        isMe && showHeader && 'rounded-tr-md',
+                        !isMe && showHeader && 'rounded-tl-md',
+                        mentionsMe && !isMe && 'ring-2 ring-primary/50',
                       )}
                     >
-                      {timeLabel(msg.created_at)}
-                    </span>
+                      {quoted && (
+                        <div
+                          className={cn(
+                            'mb-1.5 rounded-lg border-l-2 px-2 py-1 text-[12px]',
+                            isMe
+                              ? 'border-primary-foreground/60 bg-primary-foreground/10'
+                              : 'border-primary/60 bg-background/60',
+                          )}
+                        >
+                          <span className="block font-semibold">
+                            {quoted.leader_id === leader?.id
+                              ? 'Deg'
+                              : leaders[quoted.leader_id]?.name || 'Ukjent'}
+                          </span>
+                          <span className="line-clamp-2 opacity-80">
+                            {quoted.body || (quoted.image_path ? '📷 Bilde' : '')}
+                          </span>
+                        </div>
+                      )}
+                      {msg.image_path && (
+                        <div className="mb-1 -mx-1">
+                          <ChatImage path={msg.image_path} />
+                        </div>
+                      )}
+                      {msg.body && renderBody(msg, isMe)}
+                      <span
+                        className={cn(
+                          'block text-[10px] leading-none mt-1',
+                          isMe ? 'text-primary-foreground/70 text-right' : 'text-muted-foreground',
+                        )}
+                      >
+                        {timeLabel(msg.created_at)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplyTo(msg);
+                        requestAnimationFrame(() => textareaRef.current?.focus());
+                      }}
+                      aria-label="Svar på meldingen"
+                      className="shrink-0 rounded-full p-1.5 text-muted-foreground opacity-60 transition-opacity hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                    >
+                      <Reply className="h-3.5 w-3.5" />
+                    </button>
                   </div>
+                  <ChatReactions
+                    reactions={msgReactions}
+                    myLeaderId={leader?.id}
+                    onToggle={(emoji) => toggleReaction(msg.id, emoji)}
+                    align={isMe ? 'end' : 'start'}
+                  />
                 </div>
               </div>
             );
@@ -572,6 +822,31 @@ export default function Chat() {
           onSubmit={(e) => { e.preventDefault(); send(); }}
           className="relative shrink-0"
         >
+          {replyTo && (
+            <div className="mb-1.5 flex items-start gap-2 rounded-2xl border bg-card/70 px-3 py-2 backdrop-blur">
+              <Reply className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold text-primary">
+                  Svarer{' '}
+                  {replyTo.leader_id === leader?.id
+                    ? 'deg selv'
+                    : leaders[replyTo.leader_id]?.name || 'Ukjent'}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {replyTo.body || (replyTo.image_path ? '📷 Bilde' : '')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReplyTo(null)}
+                aria-label="Avbryt svar"
+                className="rounded-full p-1 text-muted-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
           {mention && mentionMatches.length > 0 && (
             <div className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-2xl border bg-popover shadow-xl">
               <p className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -613,36 +888,57 @@ export default function Chat() {
           )}
 
           <div className="flex items-end gap-2 rounded-3xl border bg-card/70 p-1.5 backdrop-blur shadow-sm">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) void sendImage(file);
+              }}
+            />
             <Button
               type="button"
               size="icon"
               variant="ghost"
-              onClick={openMentionPicker}
-              aria-label="Tagg en leder"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading || !leader}
+              aria-label="Send bilde"
               className="h-9 w-9 shrink-0 rounded-full text-muted-foreground"
             >
-              <AtSign className="h-4 w-4" />
+              {uploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ImagePlus className="h-4 w-4" />
+              )}
             </Button>
             <Textarea
               ref={textareaRef}
               value={input}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
+              onFocus={() => {
+                // Tastaturet dekker bunnen på iPhone — hopp ned igjen.
+                nearBottomRef.current = true;
+                setTimeout(() => scrollToBottom(true), 250);
+              }}
               onClick={(e) => syncMention(input, (e.target as HTMLTextAreaElement).selectionStart ?? 0)}
-              placeholder="Skriv en melding… bruk @ for å tagge"
+              placeholder={replyTo ? 'Skriv svaret…' : 'Skriv en melding…'}
               maxLength={4000}
               rows={1}
-              disabled={sending || !leader}
+              disabled={sending || uploading || !leader}
               className="min-h-[36px] max-h-40 flex-1 resize-none border-0 bg-transparent px-1 py-2 text-base shadow-none focus-visible:ring-0"
             />
             <Button
               type="submit"
               size="icon"
-              disabled={sending || !input.trim()}
+              disabled={sending || uploading || !input.trim()}
               aria-label="Send"
               className="h-9 w-9 shrink-0 rounded-full"
             >
-              <Send className="h-4 w-4" />
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
         </form>

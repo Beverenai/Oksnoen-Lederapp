@@ -55,9 +55,13 @@ export function useMyMatches() {
       const { data, error } = await supabase
         .from('leader_matches')
         .select('id, created_at, leader_a_id, leader_b_id')
+        // Kun mine egne matcher — admin kan lese alle rader, så filteret må stå her.
+        .or(`leader_a_id.eq.${myId},leader_b_id.eq.${myId}`)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      const rows = data ?? [];
+      const rows = (data ?? []).filter(
+        (r) => r.leader_a_id === myId || r.leader_b_id === myId,
+      );
       const otherIds = rows.map((r) => (r.leader_a_id === myId ? r.leader_b_id : r.leader_a_id));
       if (otherIds.length === 0) return [];
       const { data: leaders } = await supabase
@@ -65,17 +69,23 @@ export function useMyMatches() {
         .select('id, name, profile_image_url')
         .in('id', otherIds);
       const byId = new Map((leaders ?? []).map((l) => [l.id, l]));
-      return rows.map((r) => {
+      const seen = new Set<string>();
+      const list: LeaderMatch[] = [];
+      for (const r of rows) {
         const otherId = r.leader_a_id === myId ? r.leader_b_id : r.leader_a_id;
+        // Én rad per leder — samme person skal aldri stå to ganger.
+        if (seen.has(otherId)) continue;
+        seen.add(otherId);
         const l = byId.get(otherId);
-        return {
+        list.push({
           id: r.id,
           created_at: r.created_at,
           leaderId: otherId,
           name: l?.name ?? 'Ukjent leder',
           profile_image_url: l?.profile_image_url ?? null,
-        };
-      });
+        });
+      }
+      return list;
     },
     staleTime: 15_000,
   });
@@ -159,7 +169,8 @@ export function useSwipeCandidates() {
     );
 
     // Uendelig sveiping: først de du ikke har sveipet, og når de er brukt opp
-    // kommer de du har sveipet vekk tilbake igjen (kun likte forsvinner).
+    // kommer de du har sveipet vekk tilbake igjen. Likte og matchede er alt
+    // filtrert ut av `pool`, så de kan aldri resirkuleres.
     const fresh = pool.filter((l) => !passed.has(l.id));
     const recycled = pool.filter((l) => passed.has(l.id));
     const ordered = fresh.length > 0 ? fresh : recycled;
@@ -193,6 +204,17 @@ export function useSwipeLeader() {
       queryClient.invalidateQueries({ queryKey: ['leader-matches'] });
     },
   });
+}
+
+/** Push til motparten om en ny match. Feil skal aldri stoppe sveipingen. */
+export async function notifyMatch(targetLeaderId: string) {
+  try {
+    await supabase.functions.invoke('push-match', {
+      body: { kind: 'match', target_leader_id: targetLeaderId },
+    });
+  } catch (e) {
+    console.warn('push-match feilet', e);
+  }
 }
 
 export function useUnmatch() {

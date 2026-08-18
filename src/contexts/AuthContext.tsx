@@ -4,7 +4,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import type { Session } from '@supabase/supabase-js';
 
 type Leader = Tables<'leaders'>;
-type AppRole = 'superadmin' | 'admin' | 'leader' | 'nurse' | 'kitchen';
+type AppRole = 'superadmin' | 'admin' | 'leader' | 'nurse' | 'kitchen' | 'leirskole';
 
 interface AuthContextType {
   leader: Leader | null;
@@ -15,6 +15,8 @@ interface AuthContextType {
   isAdmin: boolean;
   isNurse: boolean;
   isKitchen: boolean;
+  /** Leirskole-leder — ser kun leirskole-delen av appen. */
+  isLeirskole: boolean;
   isLoading: boolean;
   isInitialized: boolean;
   isProfileComplete: boolean;
@@ -42,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isNurse, setIsNurse] = useState(false);
   const [isKitchen, setIsKitchen] = useState(false);
+  const [isLeirskole, setIsLeirskole] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLimitedAccess, setIsLimitedAccess] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -219,6 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const isAdm = isSA || roles.includes('admin');
       const isNrs = roles.includes('nurse');
       const isKtc = roles.includes('kitchen');
+      const isLsk = roles.includes('leirskole');
 
       // 3. Inactive leaders keep access, but only to the off-season features.
       //    Gjelder også admin/superadmin — de skal se off-season-appen når de er inaktive.
@@ -232,6 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAdmin(isAdm);
       setIsNurse(isNrs);
       setIsKitchen(isKtc);
+      setIsLeirskole(isLsk);
       lastResolvedUserId.current = authUserId;
       localStorage.setItem('leaderName', leaderData.name);
       console.log('[Auth] ✓ Auth ready — leader:', leaderData.name, 'roles:', roles);
@@ -343,13 +348,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdmin(false);
     setIsNurse(false);
     setIsKitchen(false);
+    setIsLeirskole(false);
     setIsLimitedAccess(false);
   };
 
   return (
     <AuthContext.Provider value={{
       leader, viewAsLeader, effectiveLeader, setViewAsLeader,
-      isSuperAdmin, isAdmin, isNurse, isKitchen,
+      isSuperAdmin, isAdmin, isNurse, isKitchen, isLeirskole,
       isLoading,
       isInitialized,
       isProfileComplete, authError, deactivatedMessage, isLimitedAccess,

@@ -50,14 +50,19 @@ function readSeen(): string[] {
 
 export function HomeNotifications() {
   const navigate = useNavigate();
-  const { leader } = useAuth();
+  const { leader, isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState<string[]>(() => readSeen());
   const [leaderMap, setLeaderMap] = useState<Map<string, { name: string; image: string | null }>>(new Map());
-  const { data: sipsData } = useMySips();
-  const { incoming: hookups } = useMyHookups();
+  const { data: sipsDataRaw } = useMySips();
+  const { incoming: hookupsRaw } = useMyHookups();
   const { data: matches = [] } = useMyMatches();
   const { data: mailboxMessages = [] } = useMyMailboxMessages();
+
+  // Slurker og klineliste er skrudd av for vanlige ledere — kun admin får
+  // varsler fra disse funksjonene.
+  const sipsData = isAdmin ? sipsDataRaw : undefined;
+  const hookups = isAdmin ? hookupsRaw : [];
 
   useEffect(() => {
     const ids = Array.from(
@@ -125,22 +130,7 @@ export function HomeNotifications() {
       });
     });
 
-    matches.slice(0, 5).forEach((m) => {
-      list.push({
-        id: `match-${m.id}`,
-        type: 'match',
-        title: `Du har match med ${m.name}`,
-        subtitle: 'Åpne chatten',
-        image: m.profile_image_url,
-        initials: m.name.slice(0, 2).toUpperCase(),
-        createdAt: m.created_at,
-        action: () => {
-          setOpen(false);
-          navigate('/kline-tinder');
-        },
-        icon: <Heart className="h-4 w-4 text-rose-500" />,
-      });
-    });
+    // Tinder er deaktivert, så match-varsler vises ikke lenger.
 
     mailboxMessages
       .filter((m) => !!m.admin_reply && !m.read_at)

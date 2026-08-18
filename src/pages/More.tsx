@@ -37,13 +37,17 @@ import { cn } from '@/lib/utils';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { LederPassMini } from '@/components/passport/LederPassMini';
 import { useMailboxUnreadCount } from '@/hooks/useMailbox';
-import { useHookupsEnabled, useIncomingHookupCount } from '@/hooks/useHookups';
+import { useIncomingHookupCount } from '@/hooks/useHookups';
 import { useUnopenedSipCount } from '@/hooks/useSips';
 import { useAppMode } from '@/hooks/useAppMode';
-import { isLimitedAccessRoute } from '@/lib/limitedAccess';
-import { IdCard, MessageCircle, Circle, Crown, Camera, ChevronRight } from 'lucide-react';
+import { isLimitedAccessRoute, isLeirskoleRoute } from '@/lib/limitedAccess';
+import { useAccessMode } from '@/hooks/useViewMode';
+import ViewModeSwitcher from '@/components/layout/ViewModeSwitcher';
+import { IdCard, MessageCircle, Circle, Crown, Camera, ChevronRight, Tent, Users } from 'lucide-react';
+import { Award } from 'lucide-react';
+import { LeirskoleCompetenceSheet } from '@/components/leirskole/LeirskoleCompetenceSheet';
+import { useMyLeirskoleCompetencies } from '@/hooks/useLeirskole';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
-import { TinderIcon } from '@/components/icons/TinderIcon';
 import { usePovCurrentRoll } from '@/hooks/usePov';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import { BentoTile, type BentoTone, type BentoSize } from '@/components/offseason/BentoTile';
@@ -102,14 +106,13 @@ function Tile({ item }: { item: MoreItem }) {
 }
 
 export default function More() {
-  const { isAdmin, isNurse, isKitchen, isSuperAdmin, isLimitedAccess, logout, leader, effectiveLeader } = useAuth();
+  const { isAdmin, isNurse, isKitchen, isSuperAdmin, isLimitedAccess, isLeirskole, logout, leader, effectiveLeader } = useAuth();
   const navigate = useNavigate();
   const { mode: appMode } = useAppMode();
-  const limited = isLimitedAccess || (appMode === 'inactive' && !isSuperAdmin);
+  const { limited, leirskoleView, mode: accessMode } = useAccessMode();
   const sweatersEnabled = useSweatersEnabled();
   const { data: murderState } = useMyMurderState();
   const { data: mailboxUnread } = useMailboxUnreadCount(!!isAdmin);
-  const hookupsEnabled = useHookupsEnabled();
   const incomingHookups = useIncomingHookupCount();
   const unopenedSips = useUnopenedSipCount();
   const { data: povRoll } = usePovCurrentRoll();
@@ -118,6 +121,8 @@ export default function More() {
   const [notificationSheetOpen, setNotificationSheetOpen] = useState(false);
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
   const [plusOpen, setPlusOpen] = useState(false);
+  const [compOpen, setCompOpen] = useState(false);
+  const { data: myCompetencies } = useMyLeirskoleCompetencies();
 
   useEffect(() => {
     let cancelled = false;
@@ -183,6 +188,9 @@ export default function More() {
     ...(isAdmin
       ? [{ to: '/participant-stats', icon: BarChart2, label: 'Deltagere' } as MoreItem]
       : []),
+    ...(isAdmin
+      ? [{ to: '/admin/leirskole', icon: Tent, label: 'Leirskole' } as MoreItem]
+      : []),
   ];
 
   const fullSections: MoreSection[] = [
@@ -196,6 +204,12 @@ export default function More() {
         { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
         { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
         { to: '/my-shifts', icon: ClipboardList, label: 'Min vakt' },
+        ...(leirskoleView
+          ? [
+              { to: '/leirskole', icon: Tent, label: 'Leirskole' } as MoreItem,
+              { to: '/leirskole/grupper', icon: Users, label: 'Elevgrupper' } as MoreItem,
+            ]
+          : []),
       ],
     },
     {
@@ -240,7 +254,7 @@ export default function More() {
         ...(isKitchen || isAdmin
           ? [{ to: '/kjokken', icon: ChefHat, label: 'Kjøkken' } as MoreItem]
           : []),
-        ...(hookupsEnabled || isAdmin
+        ...(isAdmin
           ? [
               {
                 to: '/klineliste',
@@ -250,7 +264,6 @@ export default function More() {
               } as MoreItem,
             ]
           : []),
-        { to: '/kline-tinder', icon: TinderIcon, label: 'Tinder' } as MoreItem,
         { to: '/pov', icon: Camera, label: 'POV' } as MoreItem,
         { icon: Crown, label: 'Øksnøen +', onClick: () => setPlusOpen(true) } as MoreItem,
         { to: '/feedback', icon: Lightbulb, label: 'Feedback' } as MoreItem,
@@ -265,7 +278,7 @@ export default function More() {
   const firstName = (leader?.name || '').split(' ')[0] || '';
 
   // Off-season / inactive leaders: only the allowed surfaces.
-  // Off-season: hjemskjermen har allerede POV, Tinder, Slurker, Klineliste og Snus,
+  // Off-season: hjemskjermen har allerede POV og Snus,
   // så «Mer» er en kompakt liste med resten – ingen doble knapper.
   const limitedSections: MoreSection[] = [
     {
@@ -289,7 +302,51 @@ export default function More() {
     },
   ];
 
-  const sections: MoreSection[] = limited
+  const leirskoleSections: MoreSection[] = [
+    ...(isAdmin
+      ? [{
+          label: 'Admin',
+          items: [
+            {
+              to: '/admin/leirskole',
+              icon: LayoutDashboard,
+              label: 'Leirskole-admin',
+              desc: 'Vaktplan, ledere og oppgaver',
+            } as MoreItem,
+          ],
+        }]
+      : []),
+    {
+      label: 'Leirskole',
+      items: [
+        { to: '/leirskole', icon: Tent, label: 'Leirskole', desc: 'Vakter og oppgaver' },
+        { to: '/leirskole/vaktplan', icon: Calendar, label: 'Vaktplan', desc: 'Hele uken' },
+        { to: '/leirskole/grupper', icon: Users, label: 'Elevgrupper', desc: 'Hva gruppene har gjort' },
+        { to: '/leaders', icon: Users, label: 'Ledere', desc: 'Kontakt og vakter' },
+        { to: '/chat', icon: MessageCircle, label: 'Leirskole-chat', desc: 'Egen kanal i Lederhuset' },
+      ],
+    },
+    {
+      label: 'Ditt',
+      items: [
+        {
+          icon: Award,
+          label: 'Min kompetanse',
+          desc: 'Hva du kan ha ansvar for',
+          onClick: () => setCompOpen(true),
+        },
+        { to: '/profile', icon: User, label: 'Min Profil', desc: 'Bilde og innstillinger' },
+      ],
+    },
+    {
+      label: 'Konto',
+      items: [{ icon: LogOut, label: 'Logg ut', onClick: () => logout() }],
+    },
+  ];
+
+  const sections: MoreSection[] = accessMode === 'leirskole'
+    ? leirskoleSections
+    : limited
     ? limitedSections.map((s) => ({
         ...s,
         items: s.items.filter((i) => !i.to || isLimitedAccessRoute(i.to)),
@@ -304,17 +361,24 @@ export default function More() {
       )}
     >
       <header className="pt-1">
-        {limited && (
+        {accessMode === 'leirskole' ? (
+          <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/15 px-3 py-1 text-[10.5px] font-bold uppercase tracking-wider text-primary">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            Leirskole
+          </span>
+        ) : limited ? (
           <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-oks-gold/40 bg-[var(--gradient-oks-red)] px-3 py-1 text-[10.5px] font-bold uppercase tracking-wider text-oks-cream shadow-oks">
             <span className="h-1.5 w-1.5 rounded-full bg-oks-gold" />
             Off-season
           </span>
-        )}
+        ) : null}
         <h1 className="text-[26px] font-heading font-bold leading-tight text-foreground">
           Hei{firstName ? `, ${firstName}` : ''} <span aria-hidden>👋</span>
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">Alle sider og funksjoner</p>
       </header>
+
+      <ViewModeSwitcher />
 
       {isAdmin && !limited && (
         <NavLink
@@ -327,7 +391,9 @@ export default function More() {
         </NavLink>
       )}
 
-      <LederPassMini leader={effectiveLeader ?? leader} periodLabel={periodLabel} />
+      {accessMode !== 'leirskole' && (
+        <LederPassMini leader={effectiveLeader ?? leader} periodLabel={periodLabel} />
+      )}
 
       {sections.map((section) =>
         section.items.length === 0 ? null : (
@@ -384,7 +450,7 @@ export default function More() {
         ),
       )}
 
-      {limited && (
+      {limited && accessMode !== 'leirskole' && (
         <section className="space-y-2">
           <div className="flex items-center justify-between px-1">
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -408,6 +474,16 @@ export default function More() {
       />
 
       <OksnoenPlusDialog open={plusOpen} onOpenChange={setPlusOpen} />
+
+      {effectiveLeader?.id && accessMode === 'leirskole' && (
+        <LeirskoleCompetenceSheet
+          open={compOpen}
+          onOpenChange={setCompOpen}
+          leaderId={effectiveLeader.id}
+          current={myCompetencies ? [...myCompetencies] : []}
+          confirm
+        />
+      )}
     </div>
   );
 }

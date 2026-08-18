@@ -31,6 +31,7 @@ import {
   Archive,
   Camera,
   Flame,
+  Beer,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
@@ -72,6 +73,7 @@ const navItems = [
   { key: 'season-view', label: 'Hele sesongen', desc: 'Se alle perioder samlet (kun lesing)', icon: Archive, color: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300' },
   { key: 'archive', label: 'Periodearkiv', desc: 'Se data fra alle perioder', icon: Archive, color: 'bg-slate-500/15 text-slate-600 dark:text-slate-300', path: '/arkiv' },
   { key: 'tinder', label: 'Øksnøen Tinder', desc: 'Se matcher og likes mellom ledere', icon: Flame, color: 'bg-rose-500/15 text-rose-600 dark:text-rose-300' },
+  { key: 'sips', label: 'Slurker', desc: 'Del ut flere slurker til ledere', icon: Beer, color: 'bg-amber-500/15 text-amber-600 dark:text-amber-300' },
 ];
 
 const sectionLabels: Record<string, string> = {
@@ -89,6 +91,7 @@ const sectionLabels: Record<string, string> = {
   sweaters: 'Gensere',
   'season-view': 'Hele sesongen',
   tinder: 'Øksnøen Tinder',
+  sips: 'Slurker',
 };
 
 export default function AdminSettings() {
@@ -199,8 +202,12 @@ export default function AdminSettings() {
     }
   };
 
-  const loadData = async () => {
-    setIsLoading(true);
+  /**
+   * Henter admin-data. `quiet` brukes ved oppfriskning etter en endring —
+   * da unngår vi skjelettvisningen som ellers river ned åpne dialoger.
+   */
+  const loadData = async (opts?: { quiet?: boolean }) => {
+    if (!opts?.quiet) setIsLoading(true);
     try {
       const [leadersRes, rolesRes, configRes] = await Promise.all([
         supabase.from('leaders').select('*').order('created_at'),
@@ -226,9 +233,17 @@ export default function AdminSettings() {
       console.error('Error loading admin data:', error);
       showError('Kunne ikke laste data');
     } finally {
-      setIsLoading(false);
+      if (!opts?.quiet) setIsLoading(false);
     }
   };
+
+  /** Oppdater én leder lokalt (optimistisk) uten å hente alt på nytt. */
+  const updateLeaderInList = (id: string, patch: Partial<LeaderWithRole>) => {
+    setLeaders((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+    setEditingLeader((prev) => (prev && prev.id === id ? { ...prev, ...patch } : prev));
+  };
+
+  const quietReload = () => loadData({ quiet: true });
 
   const addLeader = async () => {
     if (!newLeaderName || !newLeaderPhone) {
@@ -335,7 +350,7 @@ export default function AdminSettings() {
             localHomeConfig={localHomeConfig}
             setLocalHomeConfig={setLocalHomeConfig}
             setHomeConfig={setHomeConfig}
-            onLeaderUpdated={loadData}
+            onLeaderUpdated={quietReload}
           />
         </div>
 
@@ -343,7 +358,8 @@ export default function AdminSettings() {
           leader={editingLeader}
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
-          onSaved={loadData}
+          onSaved={quietReload}
+          onRoleChanged={(role) => editingLeader && updateLeaderInList(editingLeader.id, { role } as Partial<LeaderWithRole>)}
           currentRole={(editingLeader as any)?.role || 'leader'}
         />
       </>

@@ -1,13 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Circle, HeartHandshake, Beer } from 'lucide-react';
-import { TinderIcon } from '@/components/icons/TinderIcon';
+import { Circle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { SnusCan3D } from '@/components/snus/SnusCan3D';
 import { getSnusProduct, customSnusProduct } from '@/lib/snusCatalog';
-import { useIncomingHookupCount } from '@/hooks/useHookups';
-import { useSipsLeft, useUnopenedSipCount, useMyDrink } from '@/hooks/useSips';
-import { DRINKS } from '@/lib/drinkSounds';
 import { OksnoenPlusDialog } from '@/components/offseason/OksnoenPlusDialog';
 import { PlusPerkTiles } from '@/components/offseason/PlusPerkTiles';
 import { BentoTile } from '@/components/offseason/BentoTile';
@@ -21,7 +17,7 @@ import type { Leader } from '@/types/database';
 /**
  * Hjem-siden off-season / for ledere som ikke er aktive i perioden.
  * Lederpasset er hovedattraksjonen, med snarveier til de morsomme
- * funksjonene som fortsatt er åpne (snus, klineliste, ledersnakk).
+ * funksjonene som fortsatt er åpne (POV, snus, ledersnakk).
  */
 export function OffSeasonHome({
   leader,
@@ -31,10 +27,6 @@ export function OffSeasonHome({
   periodLabel?: string | null;
 }) {
   const navigate = useNavigate();
-  const incomingHookups = useIncomingHookupCount();
-  const { data: sipsLeft = 0 } = useSipsLeft();
-  const { drink: myDrink } = useMyDrink();
-  const unopenedSips = useUnopenedSipCount();
   const { data: povRoll } = usePovCurrentRoll();
   const povLeft = povRoll?.my_shots_left ?? 0;
   const [mySnus, setMySnus] = useState<{ productId: string | null; customLabel: string | null } | null>(null);
@@ -93,35 +85,6 @@ export function OffSeasonHome({
 
       {/* Avrevne papirstrimler */}
       <div className="grid grid-cols-2 gap-3">
-        <BentoTile
-          icon={TinderIcon}
-          label="Tinder"
-          desc="Sveip på ledere"
-          tone="sunset"
-          size="lg"
-          visual={<TinderIcon className="h-6 w-6" />}
-          className="bg-[linear-gradient(140deg,#ff6036_0%,#fd267d_55%,#e1136b_100%)] border-white/25 text-white [&_*]:!opacity-100"
-          onClick={() => navigate('/kline-tinder')}
-        />
-        <BentoTile
-          icon={Beer}
-          label="Gi slurker"
-          desc={`${DRINKS[myDrink].emoji.repeat(Math.min(sipsLeft, 5))} ${sipsLeft} igjen`}
-          tone="red"
-          size="lg"
-          visual={<span className="text-[26px] leading-none">{DRINKS[myDrink].emoji}</span>}
-          count={unopenedSips || undefined}
-          className="bg-[linear-gradient(140deg,#f7b733_0%,#e08908_50%,#a8410a_100%)] border-oks-gold/50 text-white"
-          onClick={() => navigate('/slurker')}
-        />
-        <BentoTile
-          icon={HeartHandshake}
-          label="Klineliste"
-          desc="Kartet"
-          tone="night"
-          count={incomingHookups || undefined}
-          onClick={() => navigate('/klineliste')}
-        />
         <BentoTile
           icon={Circle}
           label="Snus"

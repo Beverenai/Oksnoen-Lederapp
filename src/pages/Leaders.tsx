@@ -11,9 +11,11 @@ import { Input } from '@/components/ui/input';
 import { Users, Phone, Cross, ArrowUpDown, Check, Search, X, Home, Coffee, MessageSquare } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/leaders/LeaderDetailDialog';
 import { OffSeasonLeaderList } from '@/components/leaders/OffSeasonLeaderList';
+import { LeirskoleLeaderList } from '@/components/leirskole/LeirskoleLeaderList';
 import { LeaderContentSheet } from '@/components/admin/LeaderContentSheet';
 import { SnusBadge } from '@/components/snus/SnusBadge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAccessMode } from '@/hooks/useViewMode';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -758,7 +760,8 @@ function LeadersFull() {
  * Off season (inaktiv app) viser en enkel lederliste uten periodedata.
  */
 export default function Leaders() {
-  const { isLimitedAccess } = useAuth();
-  if (isLimitedAccess) return <OffSeasonLeaderList />;
+  const { limited, mode } = useAccessMode();
+  if (mode === 'leirskole') return <LeirskoleLeaderList />;
+  if (limited) return <OffSeasonLeaderList />;
   return <LeadersFull />;
 }

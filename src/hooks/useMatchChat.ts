@@ -70,6 +70,14 @@ export function useSendMatchMessage(matchId: string | null) {
         body: body.trim(),
       });
       if (error) throw error;
+      // Gi motparten push om den nye meldingen.
+      try {
+        await supabase.functions.invoke('push-match', {
+          body: { kind: 'message', match_id: matchId, preview: body.trim().slice(0, 120) },
+        });
+      } catch (e) {
+        console.warn('push-match feilet', e);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['match-messages', matchId] });

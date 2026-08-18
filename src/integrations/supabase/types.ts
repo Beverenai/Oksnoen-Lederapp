@@ -320,33 +320,78 @@ export type Database = {
           },
         ]
       }
+      chat_message_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          leader_id: string
+          message_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          leader_id: string
+          message_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          leader_id?: string
+          message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_message_reactions_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           body: string
           channel: string
           created_at: string
           id: string
+          image_path: string | null
           leader_id: string
           mentions: string[]
           period_id: string | null
+          reply_to_id: string | null
         }
         Insert: {
           body: string
           channel?: string
           created_at?: string
           id?: string
+          image_path?: string | null
           leader_id: string
           mentions?: string[]
           period_id?: string | null
+          reply_to_id?: string | null
         }
         Update: {
           body?: string
           channel?: string
           created_at?: string
           id?: string
+          image_path?: string | null
           leader_id?: string
           mentions?: string[]
           period_id?: string | null
+          reply_to_id?: string | null
         }
         Relationships: [
           {
@@ -361,6 +406,13 @@ export type Database = {
             columns: ["period_id"]
             isOneToOne: false
             referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
             referencedColumns: ["id"]
           },
         ]
@@ -1811,6 +1863,7 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           email: string | null
+          extra_sips: number
           gender: string | null
           has_boat_license: boolean | null
           has_car: boolean | null
@@ -1822,6 +1875,8 @@ export type Database = {
           is_external: boolean
           last_app_edit_at: string
           last_synced_at: string | null
+          leirskole_competencies: string[]
+          leirskole_competencies_confirmed_at: string | null
           ministerpost: string | null
           name: string
           phone: string
@@ -1848,6 +1903,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           email?: string | null
+          extra_sips?: number
           gender?: string | null
           has_boat_license?: boolean | null
           has_car?: boolean | null
@@ -1859,6 +1915,8 @@ export type Database = {
           is_external?: boolean
           last_app_edit_at?: string
           last_synced_at?: string | null
+          leirskole_competencies?: string[]
+          leirskole_competencies_confirmed_at?: string | null
           ministerpost?: string | null
           name: string
           phone: string
@@ -1885,6 +1943,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           email?: string | null
+          extra_sips?: number
           gender?: string | null
           has_boat_license?: boolean | null
           has_car?: boolean | null
@@ -1896,6 +1955,8 @@ export type Database = {
           is_external?: boolean
           last_app_edit_at?: string
           last_synced_at?: string | null
+          leirskole_competencies?: string[]
+          leirskole_competencies_confirmed_at?: string | null
           ministerpost?: string | null
           name?: string
           phone?: string
@@ -1918,6 +1979,744 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      leirskole_activity_assignments: {
+        Row: {
+          activity: string
+          auto_generated: boolean
+          created_at: string
+          created_by: string | null
+          date: string
+          id: string
+          leader_id: string
+          note: string | null
+          session: string
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          activity: string
+          auto_generated?: boolean
+          created_at?: string
+          created_by?: string | null
+          date: string
+          id?: string
+          leader_id: string
+          note?: string | null
+          session?: string
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          activity?: string
+          auto_generated?: boolean
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          leader_id?: string
+          note?: string | null
+          session?: string
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_activity_assignments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_activity_assignments_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_activity_assignments_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_activity_types: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          is_active: boolean
+          is_custom: boolean
+          key: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          is_active?: boolean
+          is_custom?: boolean
+          key: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          is_active?: boolean
+          is_custom?: boolean
+          key?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      leirskole_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_manually: boolean
+          created_at: string
+          generator_run_id: string | null
+          id: string
+          is_locked: boolean
+          note: string | null
+          post_id: string
+          staff_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_manually?: boolean
+          created_at?: string
+          generator_run_id?: string | null
+          id?: string
+          is_locked?: boolean
+          note?: string | null
+          post_id: string
+          staff_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_manually?: boolean
+          created_at?: string
+          generator_run_id?: string | null
+          id?: string
+          is_locked?: boolean
+          note?: string | null
+          post_id?: string
+          staff_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_assignments_generator_run_id_fkey"
+            columns: ["generator_run_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_generator_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_assignments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_assignments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_availability: {
+        Row: {
+          available: boolean
+          created_at: string
+          date: string
+          from_time: string | null
+          id: string
+          note: string | null
+          staff_id: string
+          to_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          available?: boolean
+          created_at?: string
+          date: string
+          from_time?: string | null
+          id?: string
+          note?: string | null
+          staff_id: string
+          to_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          available?: boolean
+          created_at?: string
+          date?: string
+          from_time?: string | null
+          id?: string
+          note?: string | null
+          staff_id?: string
+          to_time?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_availability_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_generator_runs: {
+        Row: {
+          finished_at: string | null
+          id: string
+          keep_locked: boolean
+          run_by: string | null
+          started_at: string
+          stats: Json
+          status: string
+          week_id: string
+        }
+        Insert: {
+          finished_at?: string | null
+          id?: string
+          keep_locked?: boolean
+          run_by?: string | null
+          started_at?: string
+          stats?: Json
+          status?: string
+          week_id: string
+        }
+        Update: {
+          finished_at?: string | null
+          id?: string
+          keep_locked?: boolean
+          run_by?: string | null
+          started_at?: string
+          stats?: Json
+          status?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_generator_runs_run_by_fkey"
+            columns: ["run_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_generator_runs_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_group_completions: {
+        Row: {
+          activity_key: string
+          created_at: string
+          created_by: string | null
+          date: string | null
+          group_number: number
+          id: string
+          note: string | null
+          session: string | null
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          activity_key: string
+          created_at?: string
+          created_by?: string | null
+          date?: string | null
+          group_number: number
+          id?: string
+          note?: string | null
+          session?: string | null
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          activity_key?: string
+          created_at?: string
+          created_by?: string | null
+          date?: string | null
+          group_number?: number
+          id?: string
+          note?: string | null
+          session?: string | null
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_group_completions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_group_completions_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_group_requirements: {
+        Row: {
+          activity_key: string
+          created_at: string
+          required_count: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          activity_key: string
+          created_at?: string
+          required_count?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          activity_key?: string
+          created_at?: string
+          required_count?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      leirskole_kitchen_days: {
+        Row: {
+          created_at: string
+          date: string
+          hours: number
+          id: string
+          note: string | null
+          staff_id: string
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          hours?: number
+          id?: string
+          note?: string | null
+          staff_id: string
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          hours?: number
+          id?: string
+          note?: string | null
+          staff_id?: string
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_kitchen_days_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_kitchen_days_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_posts: {
+        Row: {
+          created_at: string
+          crosses_midnight: boolean
+          date: string
+          duration_hours: number
+          end_time: string
+          id: string
+          is_custom: boolean
+          is_main_shift: boolean
+          is_night: boolean
+          is_published: boolean
+          name: string
+          notes: string | null
+          post_type: string
+          required_leaders: number
+          sort_order: number
+          start_time: string
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          crosses_midnight?: boolean
+          date: string
+          duration_hours?: number
+          end_time: string
+          id?: string
+          is_custom?: boolean
+          is_main_shift?: boolean
+          is_night?: boolean
+          is_published?: boolean
+          name: string
+          notes?: string | null
+          post_type?: string
+          required_leaders?: number
+          sort_order?: number
+          start_time: string
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          crosses_midnight?: boolean
+          date?: string
+          duration_hours?: number
+          end_time?: string
+          id?: string
+          is_custom?: boolean
+          is_main_shift?: boolean
+          is_night?: boolean
+          is_published?: boolean
+          name?: string
+          notes?: string | null
+          post_type?: string
+          required_leaders?: number
+          sort_order?: number
+          start_time?: string
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_posts_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_session_activities: {
+        Row: {
+          activity_keys: string[]
+          created_at: string
+          date: string
+          id: string
+          session: string
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          activity_keys?: string[]
+          created_at?: string
+          date: string
+          id?: string
+          session: string
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          activity_keys?: string[]
+          created_at?: string
+          date?: string
+          id?: string
+          session?: string
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_session_activities_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_staff: {
+        Row: {
+          created_at: string
+          external_ref: string | null
+          id: string
+          leader_id: string
+          max_daily_hours: number | null
+          role_label: string | null
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          external_ref?: string | null
+          id?: string
+          leader_id: string
+          max_daily_hours?: number | null
+          role_label?: string | null
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          external_ref?: string | null
+          id?: string
+          leader_id?: string
+          max_daily_hours?: number | null
+          role_label?: string | null
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_staff_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_staff_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_week_days: {
+        Row: {
+          created_at: string
+          date: string
+          day_type: string
+          id: string
+          is_locked: boolean
+          log_note: string | null
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          day_type?: string
+          id?: string
+          is_locked?: boolean
+          log_note?: string | null
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          day_type?: string
+          id?: string
+          is_locked?: boolean
+          log_note?: string | null
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_week_days_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_week_leader_snapshots: {
+        Row: {
+          activities: string[] | null
+          activity_count: number
+          competencies: string[] | null
+          created_at: string
+          hours: number
+          id: string
+          kitchen_days: number
+          kitchen_hours: number
+          leader_id: string | null
+          leader_name: string
+          role_label: string | null
+          shift_count: number
+          snapshot_at: string
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          activities?: string[] | null
+          activity_count?: number
+          competencies?: string[] | null
+          created_at?: string
+          hours?: number
+          id?: string
+          kitchen_days?: number
+          kitchen_hours?: number
+          leader_id?: string | null
+          leader_name: string
+          role_label?: string | null
+          shift_count?: number
+          snapshot_at?: string
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          activities?: string[] | null
+          activity_count?: number
+          competencies?: string[] | null
+          created_at?: string
+          hours?: number
+          id?: string
+          kitchen_days?: number
+          kitchen_hours?: number
+          leader_id?: string | null
+          leader_name?: string
+          role_label?: string | null
+          shift_count?: number
+          snapshot_at?: string
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_week_leader_snapshots_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_week_plan_cells: {
+        Row: {
+          color: string
+          content: string
+          created_at: string
+          date: string
+          id: string
+          post_id: string | null
+          row_index: number | null
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          color?: string
+          content?: string
+          created_at?: string
+          date: string
+          id?: string
+          post_id?: string | null
+          row_index?: number | null
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          color?: string
+          content?: string
+          created_at?: string
+          date?: string
+          id?: string
+          post_id?: string | null
+          row_index?: number | null
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_week_plan_cells_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_week_plan_cells_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_weeks: {
+        Row: {
+          created_at: string
+          end_date: string
+          external_ref: string | null
+          group_count: number
+          id: string
+          is_active: boolean
+          max_daily_hours: number
+          min_rest_hours: number
+          name: string
+          notes: string | null
+          schedule_published_at: string | null
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          external_ref?: string | null
+          group_count?: number
+          id?: string
+          is_active?: boolean
+          max_daily_hours?: number
+          min_rest_hours?: number
+          name: string
+          notes?: string | null
+          schedule_published_at?: string | null
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          external_ref?: string | null
+          group_count?: number
+          id?: string
+          is_active?: boolean
+          max_daily_hours?: number
+          min_rest_hours?: number
+          name?: string
+          notes?: string | null
+          schedule_published_at?: string | null
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       mailbox_messages: {
         Row: {
@@ -4878,6 +5677,18 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_sips_admin_overview: {
+        Args: never
+        Returns: {
+          extra_sips: number
+          given: number
+          is_active: boolean
+          leader_id: string
+          leader_name: string
+          profile_image_url: string
+          sips_left: number
+        }[]
+      }
       give_sips: {
         Args: {
           _amount: number
@@ -4886,6 +5697,10 @@ export type Database = {
           _to: string
         }
         Returns: string
+      }
+      grant_extra_sips: {
+        Args: { _amount: number; _leader_id: string }
+        Returns: number
       }
       has_role: {
         Args: {
@@ -4897,8 +5712,14 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_in_match: { Args: { _match_id: string }; Returns: boolean }
       is_kitchen: { Args: never; Returns: boolean }
+      is_leirskole: { Args: never; Returns: boolean }
+      is_leirskole_week_member: { Args: { _week_id: string }; Returns: boolean }
       is_nurse: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      leirskole_post_duration: {
+        Args: { _end: string; _start: string }
+        Returns: number
+      }
       mark_fix_task_fixed: { Args: { _task_id: string }; Returns: undefined }
       my_sips_left: { Args: never; Returns: number }
       pov_current_roll: {
@@ -4935,6 +5756,7 @@ export type Database = {
       }
       set_murder_game_active: { Args: { _active: boolean }; Returns: undefined }
       set_my_drink: { Args: { _drink: string }; Returns: string }
+      snapshot_leirskole_week: { Args: { _week_id: string }; Returns: number }
       snapshot_period_leaders: {
         Args: { _period_id?: string }
         Returns: number
@@ -4948,7 +5770,13 @@ export type Database = {
       void_kiosk_sale: { Args: { _sale_id: string }; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "leader" | "nurse" | "superadmin" | "kitchen"
+      app_role:
+        | "admin"
+        | "leader"
+        | "nurse"
+        | "superadmin"
+        | "kitchen"
+        | "leirskole"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5076,7 +5904,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "leader", "nurse", "superadmin", "kitchen"],
+      app_role: [
+        "admin",
+        "leader",
+        "nurse",
+        "superadmin",
+        "kitchen",
+        "leirskole",
+      ],
     },
   },
 } as const

@@ -21,6 +21,10 @@ import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 interface QuickNotificationSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Begrens mottakerne til disse lederne (f.eks. bare leirskole-uken). */
+  leaderIds?: string[];
+  /** Vises i teksten, f.eks. «ledere på Uke 34». */
+  scopeLabel?: string;
 }
 
 type TargetActivity = 'all' | 'active' | 'free' | 'unread_with_content';
@@ -86,7 +90,12 @@ const quickNotifications: QuickNotification[] = [
   },
 ];
 
-export function QuickNotificationSheet({ open, onOpenChange }: QuickNotificationSheetProps) {
+export function QuickNotificationSheet({
+  open,
+  onOpenChange,
+  leaderIds,
+  scopeLabel,
+}: QuickNotificationSheetProps) {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader } = useAuth();
   const [sendingId, setSendingId] = useState<string | null>(null);
@@ -94,6 +103,9 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
   const [customTitle, setCustomTitle] = useState('');
   const [customMessage, setCustomMessage] = useState('');
   const [customUrl, setCustomUrl] = useState('/');
+
+  const scoped = Array.isArray(leaderIds);
+  const audience = scoped ? (scopeLabel ?? `${leaderIds!.length} ledere`) : 'alle ledere';
 
   const handleSendNotification = async (notification: QuickNotification) => {
     if (!leader) return;
@@ -106,11 +118,13 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
           title: notification.notificationTitle,
           message: notification.notificationMessage,
           url: notification.url,
-          broadcast: notification.target === 'all',
-          target_activity: ['active', 'free'].includes(notification.target) ? notification.target : undefined,
-          target_unread_with_content: notification.target === 'unread_with_content',
+          broadcast: scoped ? false : notification.target === 'all',
+          leader_ids: scoped ? leaderIds : undefined,
+          target_activity:
+            !scoped && ['active', 'free'].includes(notification.target) ? notification.target : undefined,
+          target_unread_with_content: !scoped && notification.target === 'unread_with_content',
           sender_leader_id: leader.id,
-          personalize_activity: notification.personalize || false,
+          personalize_activity: !scoped && (notification.personalize || false),
         },
       });
 
@@ -141,7 +155,8 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
           title,
           message,
           url: customUrl || '/',
-          broadcast: true,
+          broadcast: !scoped,
+          leader_ids: scoped ? leaderIds : undefined,
           sender_leader_id: leader.id,
         },
       });
@@ -178,8 +193,8 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
           </SheetTitle>
           <SheetDescription>
             {customMode
-              ? 'Skriv din egen melding som sendes til alle ledere'
-              : 'Send ut forhåndsdefinerte varslinger med ett trykk'}
+              ? `Skriv din egen melding som sendes til ${audience}`
+              : `Send ut forhåndsdefinerte varslinger med ett trykk — går til ${audience}`}
           </SheetDescription>
         </SheetHeader>
 
@@ -230,7 +245,7 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
               ) : (
                 <>
                   <Send className="w-4 h-4 mr-2" />
-                  Send til alle ledere
+                  Send til {audience}
                 </>
               )}
             </Button>
@@ -249,7 +264,7 @@ export function QuickNotificationSheet({ open, onOpenChange }: QuickNotification
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-foreground">Egen varsling</div>
               <div className="text-sm text-muted-foreground mt-0.5">
-                Skriv din egen melding til alle ledere
+                Skriv din egen melding til {audience}
               </div>
             </div>
             <div className="shrink-0 self-center">

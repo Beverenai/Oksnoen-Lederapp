@@ -91,7 +91,7 @@ serve(async (req) => {
 
     const { data: message } = await supabaseAdmin
       .from("chat_messages")
-      .select("id, leader_id, body, channel, mentions")
+      .select("id, leader_id, body, channel, mentions, image_path")
       .eq("id", messageId)
       .maybeSingle();
     if (!message) return json({ error: "Not found" }, 404);
@@ -115,7 +115,13 @@ serve(async (req) => {
     const recipientIds = (recipients ?? []).map((r) => r.id as string);
     if (recipientIds.length === 0) return json({ success: true, sent: 0, reason: "no accounts" });
 
-    const preview = String(message.body ?? "").slice(0, 120);
+    const rawBody = String(message.body ?? "").trim();
+    const hasImage = !!(message as { image_path?: string | null }).image_path;
+    const preview = rawBody
+      ? `${hasImage ? "📷 " : ""}${rawBody.slice(0, 120)}`
+      : hasImage
+        ? "📷 Sendte et bilde"
+        : "Ny melding i Lederhuset";
     const title = `💬 ${caller.name} tagget deg`;
     const url = "/chat";
 

@@ -15,7 +15,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AppLayout from "@/components/layout/AppLayout";
 import { useStatusBarTheme } from "@/hooks/useStatusBarTheme";
 import { useAppMode } from "@/hooks/useAppMode";
-import { isLimitedAccessRoute } from "@/lib/limitedAccess";
+import { isLimitedAccessRoute, isLeirskoleRoute } from "@/lib/limitedAccess";
+import { useAccessMode } from "@/hooks/useViewMode";
 
 // Critical path - load immediately
 import Login from "@/pages/Login";
@@ -65,8 +66,11 @@ const LederpassPage = lazy(() => import("@/pages/Lederpass"));
 const Kiosk = lazy(() => import("@/pages/Kiosk"));
 const Kjokken = lazy(() => import("@/pages/Kjokken"));
 const Klineliste = lazy(() => import("@/pages/Klineliste"));
-const KlineTinder = lazy(() => import("@/pages/KlineTinder"));
 const PeriodArchive = lazy(() => import("@/pages/admin/PeriodArchive"));
+const Leirskole = lazy(() => import("@/pages/Leirskole"));
+const LeirskoleAdmin = lazy(() => import("@/pages/admin/LeirskoleAdmin"));
+const LeirskoleVaktplan = lazy(() => import("@/pages/leirskole/LeirskoleVaktplan"));
+const LeirskoleGrupper = lazy(() => import("@/pages/leirskole/LeirskoleGrupper"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -102,8 +106,9 @@ function PageLoader() {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { leader, isLoading, isInitialized, isProfileComplete, authError, deactivatedMessage, retryAuth, isSuperAdmin, isLimitedAccess } = useAuth();
+  const { leader, isLoading, isInitialized, isProfileComplete, authError, deactivatedMessage, retryAuth, isSuperAdmin, isLimitedAccess, isLeirskole, isAdmin } = useAuth();
   const { mode } = useAppMode();
+  const { limited, leirskoleView, mode: accessMode } = useAccessMode();
 
   // Only show full-page loader during initial app load, never between page navigations
   if (!isInitialized && isLoading) {
@@ -133,8 +138,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   // Limited access: app-wide inactive mode, or a leader who is not active this
   // period. Only the off-season surfaces are reachable for non-superadmins.
-  if (isLimitedAccess || (mode === 'inactive' && !isSuperAdmin)) {
-    if (!isLimitedAccessRoute(window.location.pathname)) {
+  if (accessMode === 'leirskole') {
+    const path = window.location.pathname;
+    if (!isLeirskoleRoute(path)) {
+      return <Navigate to="/" replace />;
+    }
+  } else if (limited) {
+    const path = window.location.pathname;
+    if (!isLimitedAccessRoute(path)) {
       return <Navigate to="/" replace />;
     }
   }
@@ -157,6 +168,13 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/" replace />;
   }
 
+  return <>{children}</>;
+}
+
+/** Sider som er skrudd av for vanlige ledere, men beholdt for admin. */
+function AdminOnly({ children }: { children: React.ReactNode }) {
+  const { isAdmin } = useAuth();
+  if (!isAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -231,6 +249,10 @@ function AppRoutes() {
         <Route path="/admin/shifts-mini" element={<ProtectedRoute><ShiftPlannerMini /></ProtectedRoute>} />
         <Route path="/admin/dynga" element={<ProtectedRoute><Dynga /></ProtectedRoute>} />
         <Route path="/arkiv" element={<ProtectedRoute><PeriodArchive /></ProtectedRoute>} />
+        <Route path="/leirskole" element={<ProtectedRoute><Leirskole /></ProtectedRoute>} />
+        <Route path="/leirskole/vaktplan" element={<ProtectedRoute><LeirskoleVaktplan /></ProtectedRoute>} />
+        <Route path="/leirskole/grupper" element={<ProtectedRoute><LeirskoleGrupper /></ProtectedRoute>} />
+        <Route path="/admin/leirskole" element={<ProtectedRoute><LeirskoleAdmin /></ProtectedRoute>} />
         <Route path="/gjenglemt" element={<ProtectedRoute><Gjenglemt /></ProtectedRoute>} />
         <Route path="/gjenglemt-admin" element={<GjenglemtAdmin />} />
         <Route path="/gjenglemt/:slug" element={<PublicGjenglemt />} />
@@ -250,13 +272,15 @@ function AppRoutes() {
         <Route path="/kiosk" element={<ProtectedRoute><Kiosk /></ProtectedRoute>} />
         <Route path="/kjokken" element={<ProtectedRoute><Kjokken /></ProtectedRoute>} />
         <Route path="/postkasse" element={<ProtectedRoute><Mailbox /></ProtectedRoute>} />
-        <Route path="/klineliste" element={<ProtectedRoute><Klineliste /></ProtectedRoute>} />
-        <Route path="/kline-tinder" element={<ProtectedRoute><KlineTinder /></ProtectedRoute>} />
+        {/* Klineliste er deaktivert for vanlige ledere — kun admin. */}
+        <Route path="/klineliste" element={<ProtectedRoute><AdminOnly><Klineliste /></AdminOnly></ProtectedRoute>} />
+        {/* Tinder er deaktivert for alle ledere. */}
+        <Route path="/kline-tinder" element={<Navigate to="/" replace />} />
         <Route path="/snus" element={<ProtectedRoute><SnusPage /></ProtectedRoute>} />
         <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
         <Route path="/pov" element={<ProtectedRoute><PovPage /></ProtectedRoute>} />
-        <Route path="/slurker" element={<ProtectedRoute><SlurkerPage /></ProtectedRoute>} />
-        <Route path="/liggeliste" element={<Navigate to="/klineliste" replace />} />
+        <Route path="/slurker" element={<ProtectedRoute><AdminOnly><SlurkerPage /></AdminOnly></ProtectedRoute>} />
+        <Route path="/liggeliste" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

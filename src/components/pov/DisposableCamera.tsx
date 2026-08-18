@@ -3,7 +3,14 @@ import { Check, RefreshCw, SwitchCamera, X, Zap, ZapOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { hapticImpact, hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
-import { POV_FILTERS, povFilterOf, type PovFilter, type PovFilterId } from '@/lib/povFilters';
+import {
+  POV_FILTERS,
+  applyGradeToImageData,
+  canvasFilterSupported,
+  povFilterOf,
+  type PovFilter,
+  type PovFilterId,
+} from '@/lib/povFilters';
 
 type Props = {
   shotsLeft: number;
@@ -21,6 +28,13 @@ const MONTHS_NO = [
 const MAX_LONG_SIDE = 2600;
 
 let stampFontLoaded: Promise<void> | null = null;
+let ctxFilterOk: boolean | null = null;
+
+/** Cachet støttesjekk for `ctx.filter`. */
+function hasCanvasFilter(): boolean {
+  if (ctxFilterOk === null) ctxFilterOk = canvasFilterSupported();
+  return ctxFilterOk;
+}
 
 /** Pixel stamp font, loaded once and ignored if it fails. */
 function loadStampFont(): Promise<void> {
@@ -64,10 +78,13 @@ async function developFrame(
   ctx.imageSmoothingQuality = 'high';
 
   ctx.save();
-  try {
-    ctx.filter = look.css;
-  } catch {
-    /* older engines just get the raw frame */
+  const useCssFilter = hasCanvasFilter();
+  if (useCssFilter) {
+    try {
+      ctx.filter = look.css;
+    } catch {
+      /* håndteres av manuell fallback under */
+    }
   }
   if (mirrored) {
     ctx.translate(w, 0);
@@ -75,6 +92,17 @@ async function developFrame(
   }
   ctx.drawImage(source, 0, 0, w, h);
   ctx.restore();
+
+  // Safari på iPhone støtter ikke ctx.filter — legg looken på pikslene i stedet.
+  if (!useCssFilter) {
+    try {
+      const frame = ctx.getImageData(0, 0, w, h);
+      applyGradeToImageData(frame, look.grade);
+      ctx.putImageData(frame, 0, 0);
+    } catch {
+      /* uten pikseltilgang beholder vi råbildet */
+    }
+  }
 
   if (look.tint) {
     ctx.globalCompositeOperation = look.tint.mode;

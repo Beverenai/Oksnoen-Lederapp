@@ -31,12 +31,15 @@ import {
   Archive,
   ChefHat,
   LayoutDashboard,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { hapticImpact } from '@/lib/capacitorHaptics';
+import { isNativeIOS } from '@/lib/capacitor';
 import { PassIcon } from '@/components/icons/PassIcon';
 import { QuickNotificationSheet } from '@/components/admin/QuickNotificationSheet';
 import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
@@ -44,8 +47,9 @@ import { useCheckoutEnabled } from '@/hooks/useCheckoutEnabled';
 import { useAppBadge } from '@/hooks/useAppBadge';
 import { useSweatersEnabled } from '@/hooks/useSweatersEnabled';
 import { useAppMode } from '@/hooks/useAppMode';
+import { useAccessMode } from '@/hooks/useViewMode';
 import { useSeasonView } from '@/contexts/SeasonViewContext';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Tent } from 'lucide-react';
 import {
   Collapsible,
   CollapsibleContent,
@@ -172,14 +176,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const sweatersEnabled = useSweatersEnabled();
   const { mode: appMode } = useAppMode();
   const { seasonView, setSeasonView } = useSeasonView();
-  const inactiveForUser = isLimitedAccess || (appMode === 'inactive' && !isSuperAdmin);
+  const { limited: inactiveForUser, mode: accessMode, setViewMode } = useAccessMode();
 
   // Off-season-tema på <html> slik at ark/dialoger (portaler) ikke blir hvite
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.toggle('oks-offseason-theme', inactiveForUser);
+    root.classList.toggle('oks-offseason-theme', accessMode === 'offseason');
     return () => root.classList.remove('oks-offseason-theme');
-  }, [inactiveForUser]);
+  }, [accessMode]);
+
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasRead, setHasRead] = useState(false);
@@ -189,6 +194,34 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [showHajoloTooltip, setShowHajoloTooltip] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Leirskole-tema: mørkt tema i leirskole-modus og på alle leirskole-sider
+  const leirskoleSurface =
+    accessMode === 'leirskole' || location.pathname.startsWith('/leirskole') ||
+    location.pathname.startsWith('/admin/leirskole');
+
+  // Lyst tema er standard på leirskole; brukeren kan velge mørkt og valget huskes.
+  const [lsDark, setLsDark] = useState(
+    () => localStorage.getItem('oks-ls-theme') === 'dark',
+  );
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('oks-leirskole-theme', leirskoleSurface);
+    root.classList.toggle('oks-ls-dark', leirskoleSurface && lsDark);
+    return () => {
+      root.classList.remove('oks-leirskole-theme');
+      root.classList.remove('oks-ls-dark');
+    };
+  }, [leirskoleSurface, lsDark]);
+
+  const toggleLsTheme = () => {
+    setLsDark((prev) => {
+      const next = !prev;
+      localStorage.setItem('oks-ls-theme', next ? 'dark' : 'light');
+      return next;
+    });
+  };
 
   // Collapsible header state (Facebook/Instagram-style)
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -207,7 +240,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const isRegularLeader = !isAdmin && !isNurse;
 
   // Determine if current route is a sub-page (not one of the main tab routes)
-  const bottomNavItems: BottomNavItem[] = inactiveForUser
+  const bottomNavItems: BottomNavItem[] = accessMode === 'leirskole'
+    ? [
+        { to: '/', icon: Tent, label: 'Leirskole' },
+        { to: '/leaders', icon: Users, label: 'Ledere' },
+        { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
+        ...(isAdmin
+          ? [{ to: '/admin/leirskole', icon: LayoutDashboard, label: 'Admin' } as BottomNavItem]
+          : []),
+        { to: '/mer', icon: LayoutGrid, label: 'Mer' },
+      ]
+    : inactiveForUser
     ? [
         { to: '/', icon: Home, label: 'Hjem' },
         { to: '/chat', icon: MessageCircle, label: 'Lederhuset' },
@@ -474,15 +517,29 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div
       className={cn(
         'bg-background flex min-h-[100svh] lg:min-h-dvh flex-col overflow-x-hidden w-full max-w-full pl-safe pr-safe',
-        inactiveForUser && 'oks-offseason-bg min-h-[100dvh]',
+        inactiveForUser && !leirskoleSurface && 'oks-offseason-bg min-h-[100dvh]',
+        leirskoleSurface && 'oks-leirskole-bg min-h-[100dvh]',
       )}
     >
+      {/* Leirskole: velg lyst (standard) eller mørkt tema — skjules på iPhone fordi systemet styrer det */}
+      {leirskoleSurface && !isNativeIOS() && (
+        <button
+          type="button"
+          onClick={toggleLsTheme}
+          aria-label={lsDark ? 'Bytt til lyst tema' : 'Bytt til mørkt tema'}
+          title={lsDark ? 'Lyst tema' : 'Mørkt tema'}
+          className="fixed right-3 z-[70] rounded-full border border-border bg-card/90 p-2 text-foreground shadow-lg backdrop-blur"
+          style={{ top: 'calc(var(--safe-top) + 8px)' }}
+        >
+          {lsDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+      )}
       {/* View As Banner */}
       {viewAsLeader && (
         <div className="bg-amber-500 dark:bg-amber-600 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
           <span className="text-sm font-medium">👁 Du ser appen som {viewAsLeader.name}</span>
           <button
-            onClick={() => { setViewAsLeader(null); navigate('/admin'); }}
+            onClick={() => { setViewAsLeader(null); setViewMode('auto'); navigate('/admin'); }}
             className="text-sm font-bold underline hover:no-underline"
           >
             Avslutt
@@ -529,12 +586,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {inactiveForUser ? (
+          {accessMode === 'leirskole' ? (
+            /* Leirskole: kun leirskole-funksjonene */
+            <div className="space-y-1">
+              <NavLinkItem item={{ to: '/', icon: Tent, label: 'Leirskole' }} />
+              <NavLinkItem item={{ to: '/chat', icon: MessageCircle, label: 'Lederhuset' }} />
+              {isAdmin && (
+                <NavLinkItem item={{ to: '/admin/leirskole', icon: LayoutDashboard, label: 'Leirskole-admin' }} />
+              )}
+              <NavLinkItem item={{ to: '/leirskole/grupper', icon: Users, label: 'Elevgrupper' }} />
+              <NavLinkItem item={{ to: '/profile', icon: User, label: 'Min Profil' }} />
+              <div className="pt-2">
+                <NavLinkItem item={merNavItem} />
+              </div>
+            </div>
+          ) : inactiveForUser ? (
             <div className="space-y-1">
               <NavLinkItem item={{ to: '/', icon: Home, label: 'Hjem' }} />
               <NavLinkItem item={{ to: '/chat', icon: MessageCircle, label: 'Lederhuset' }} />
               <NavLinkItem item={{ to: '/lederpass', icon: PassIcon as LucideIcon, label: 'Lederpass' }} />
-              <NavLinkItem item={{ to: '/klineliste', icon: HeartHandshake, label: 'Klineliste' }} />
               <NavLinkItem item={{ to: '/profile', icon: User, label: 'Min Profil' }} />
             </div>
           ) : isAdmin ? (

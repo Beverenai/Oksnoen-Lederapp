@@ -40,9 +40,11 @@ import { MessageSquareWarning } from 'lucide-react';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
 import { useAppMode } from '@/hooks/useAppMode';
+import { useAccessMode } from '@/hooks/useViewMode';
 import { Link as LinkIcon } from 'lucide-react';
 import { LederPass } from '@/components/passport/LederPass';
 import { OffSeasonHome } from '@/components/home/OffSeasonHome';
+import LeirskolePage from '@/pages/Leirskole';
 import { useMyMurderState } from '@/hooks/useMurderGame';
 import { Skull } from 'lucide-react';
 import { Tent, AlertCircle } from 'lucide-react';
@@ -156,6 +158,7 @@ const formatTeamDisplay = (team: string | null): string => {
 export default function Home() {
   const { leader, effectiveLeader, isAdmin, isNurse, isSuperAdmin, isLimitedAccess } = useAuth();
   const { mode: appMode } = useAppMode();
+  const { limited: limitedView, mode: accessMode } = useAccessMode();
   const navigate = useNavigate();
   const location = useLocation();
   const [content, setContent] = useState<LeaderContent | null>(null);
@@ -510,7 +513,16 @@ export default function Home() {
   // App-wide inactive mode (off-season): the real interactive 3D lederpass
   // fills the entire home surface. Chat remains reachable via bottom nav.
   // Superadmin keeps the full home to manage the app.
-  if (isLimitedAccess || (appMode === 'inactive' && !isSuperAdmin)) {
+  // Leirskole-modus: helt egen app-flate.
+  if (accessMode === 'leirskole') {
+    return (
+      <div className="mx-auto w-full max-w-2xl">
+        <LeirskolePage />
+      </div>
+    );
+  }
+
+  if (limitedView) {
     return (
       <div className="mx-auto w-full max-w-2xl">
         <OffSeasonHome leader={effectiveLeader} periodLabel={activePeriodLabel} />
