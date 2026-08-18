@@ -528,7 +528,6 @@ export function LeirskoleDaySessions({
                     );
                   })}
 
-                  {editMode && (
                   <Popover>
                     <PopoverTrigger asChild>
                       <button
@@ -585,7 +584,6 @@ export function LeirskoleDaySessions({
                       )}
                     </PopoverContent>
                   </Popover>
-                  )}
                 </div>
               </div>
             </div>
