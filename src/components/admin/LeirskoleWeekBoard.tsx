@@ -451,6 +451,49 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke rydde uken'),
   });
 
+  /** Angre siste generering ved å skrive tilbake bildet vi tok før kjøringen. */
+  const undoGenerate = useMutation({
+    mutationFn: async () => {
+      if (!snapshot) throw new Error('Ingen generering å angre');
+      await restoreLeirskoleSnapshot(snapshot);
+    },
+    onSuccess: () => {
+      [
+        'leirskole-week-plan',
+        'leirskole-schedule',
+        'leirskole-activities',
+        'leirskole-activity-history',
+        'leirskole-my-shifts',
+        'leirskole-kitchen-days',
+      ].forEach((key) => qc.invalidateQueries({ queryKey: [key] }));
+      setSnapshot(null);
+      setSummary(null);
+      toast.success('Genereringen er angret');
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke angre'),
+  });
+
+  /** Hent forhåndsvisning før noe skrives. */
+  const openPreview = async (mode: LeirskoleGenerateMode) => {
+    setPendingMode(mode);
+    setPreviewLoading(true);
+    try {
+      const p = await previewLeirskoleGenerate({
+        weekId: week.id,
+        startDate: week.start_date,
+        endDate: week.end_date,
+        mode,
+        overwritePlan: mode === 'plan',
+      });
+      setPreview(p);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Kunne ikke beregne forhåndsvisning');
+      setPendingMode(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   /** Radene for en vanlig dag: økt 1–3. Ankomst/avreise bruker kalenderkolonne. */
   const rowsFor = (date: string): (CellTarget | null)[] => {
     if (specialDays.has(date)) return SESSIONS.map(() => null);
