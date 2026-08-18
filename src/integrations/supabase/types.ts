@@ -2050,6 +2050,7 @@ export type Database = {
           emoji: string
           id: string
           is_active: boolean
+          is_custom: boolean
           key: string
           label: string
           sort_order: number
@@ -2060,6 +2061,7 @@ export type Database = {
           emoji?: string
           id?: string
           is_active?: boolean
+          is_custom?: boolean
           key: string
           label: string
           sort_order?: number
@@ -2070,6 +2072,7 @@ export type Database = {
           emoji?: string
           id?: string
           is_active?: boolean
+          is_custom?: boolean
           key?: string
           label?: string
           sort_order?: number
@@ -2229,6 +2232,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      leirskole_group_completions: {
+        Row: {
+          activity_key: string
+          created_at: string
+          created_by: string | null
+          date: string | null
+          group_number: number
+          id: string
+          note: string | null
+          session: string | null
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          activity_key: string
+          created_at?: string
+          created_by?: string | null
+          date?: string | null
+          group_number: number
+          id?: string
+          note?: string | null
+          session?: string | null
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          activity_key?: string
+          created_at?: string
+          created_by?: string | null
+          date?: string | null
+          group_number?: number
+          id?: string
+          note?: string | null
+          session?: string | null
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_group_completions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leirskole_group_completions_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leirskole_group_requirements: {
+        Row: {
+          activity_key: string
+          created_at: string
+          required_count: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          activity_key: string
+          created_at?: string
+          required_count?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          activity_key?: string
+          created_at?: string
+          required_count?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       leirskole_kitchen_days: {
         Row: {
@@ -2532,6 +2613,7 @@ export type Database = {
           created_at: string
           end_date: string
           external_ref: string | null
+          group_count: number
           id: string
           is_active: boolean
           max_daily_hours: number
@@ -2546,6 +2628,7 @@ export type Database = {
           created_at?: string
           end_date: string
           external_ref?: string | null
+          group_count?: number
           id?: string
           is_active?: boolean
           max_daily_hours?: number
@@ -2560,6 +2643,7 @@ export type Database = {
           created_at?: string
           end_date?: string
           external_ref?: string | null
+          group_count?: number
           id?: string
           is_active?: boolean
           max_daily_hours?: number
