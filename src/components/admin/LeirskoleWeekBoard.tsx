@@ -950,18 +950,18 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                     className={`rounded-xl border text-left ${ui.pad} transition-colors hover:brightness-105 ${tone}`}
                   >
                     {t.session === null && (
-                      <p className="mb-1 truncate ${ui.sub} font-semibold uppercase text-muted-foreground">
+                      <p className={`mb-1 truncate ${ui.sub} font-semibold uppercase text-muted-foreground`}>
                         {t.label}
                       </p>
                     )}
-                    {lines.length === 0 && <p className="${ui.txt} text-muted-foreground">Tom — trykk for å fylle</p>}
+                    {lines.length === 0 && <p className={`${ui.txt} text-muted-foreground`}>Tom — trykk for å fylle</p>}
                      <div className="space-y-1">
                        {instances.map((inst) => (
-                         <div key={inst.id} className="flex items-center gap-1 text-[11px]">
+                         <div key={inst.id} className={`flex items-center gap-1 ${ui.txt}`}>
                            <span>{inst.emoji ?? '•'}</span>
                            <span className="flex-1 truncate font-medium">{inst.label}</span>
                            <span
-                             className={`shrink-0 truncate text-[10px] ${
+                             className={`shrink-0 truncate ${ui.sub} ${
                                inst.leaderId ? 'font-semibold text-foreground' : 'text-amber-600 dark:text-amber-400'
                              }`}
                            >
@@ -971,7 +971,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                        ))}
                        {instances.length === 0 &&
                         lines.map((l, i) => (
-                          <p key={`${l}-${i}`} className="truncate text-[11px]">
+                           <p key={`${l}-${i}`} className={`truncate ${ui.txt}`}>
                             {l}
                           </p>
                         ))}
@@ -979,7 +979,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                     {t.session && (
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {(dutyBySlot.get(`${date}|${t.session}`) ?? []).length === 0 && (
-                          <span className="text-[10px] text-muted-foreground">Ingen ledere</span>
+                          <span className={`${ui.sub} text-muted-foreground`}>Ingen ledere</span>
                         )}
                         {/* Kun ledere uten aktivitet vises som brikker — de med aktivitet
                             står allerede i listen over, så navnene dupliseres ikke. */}
@@ -989,7 +989,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                             <span
                               key={l.id}
                               title={`${l.name} – uten aktivitet`}
-                              className="truncate max-w-[6.5rem] rounded-full border border-dashed border-muted-foreground/40 bg-transparent px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                              className={`truncate max-w-[6.5rem] rounded-full border border-dashed border-muted-foreground/40 bg-transparent font-medium text-muted-foreground ${ui.chip}`}
                             >
                               {firstName(l.name)}
                             </span>
