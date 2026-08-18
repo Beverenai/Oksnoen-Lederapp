@@ -43,7 +43,7 @@ export function useViewMode() {
  * app_mode) med en eventuell manuell overstyring.
  */
 export function useAccessMode() {
-  const { isSuperAdmin, isLimitedAccess, isLeirskole } = useAuth();
+  const { isSuperAdmin, isAdmin, isLimitedAccess, isLeirskole } = useAuth();
   const { mode: appMode } = useAppMode();
   const { viewMode, setViewMode, canSwitch } = useViewMode();
 
