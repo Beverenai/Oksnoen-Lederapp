@@ -4,7 +4,20 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertTriangle, Lock, LockOpen, Moon, NotebookPen, Sparkles, Wand2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  LayoutGrid,
+  Lock,
+  LockOpen,
+  Maximize2,
+  Minimize2,
+  Moon,
+  NotebookPen,
+  Sparkles,
+  Undo2,
+  Users,
+  Wand2,
+} from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,9 +36,20 @@ import {
 } from '@/hooks/useLeirskole';
 import {
   runLeirskoleGenerate,
+  previewLeirskoleGenerate,
   type LeirskoleGenerateMode,
   type LeirskoleGenerateSummary,
+  type LeirskolePreview,
 } from '@/lib/leirskoleGenerateAll';
+import {
+  takeLeirskoleSnapshot,
+  restoreLeirskoleSnapshot,
+  type LeirskoleSnapshot,
+} from '@/lib/leirskoleSnapshot';
+import { validateLeirskoleWeek, type LeirskoleIssue } from '@/lib/leirskoleValidate';
+import { LeirskoleBoardIssues } from '@/components/admin/LeirskoleBoardIssues';
+import { LeirskoleLeaderWeekTable } from '@/components/admin/LeirskoleLeaderWeekTable';
+import { LeirskoleGeneratePreviewDialog } from '@/components/admin/LeirskoleGeneratePreviewDialog';
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
 import { LeirskoleSpecialDayTimeline } from '@/components/admin/LeirskoleSpecialDayTimeline';
 import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
