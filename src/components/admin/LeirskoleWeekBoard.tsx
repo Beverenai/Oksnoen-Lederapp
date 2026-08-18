@@ -551,7 +551,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     planContent.get(t.rowIndex != null ? `${t.date}|${t.rowIndex}` : `post|${t.postId}`) ?? '';
 
   const gridStyle = {
-    gridTemplateColumns: `${big ? 84 : 64}px repeat(${dates.length}, minmax(${big ? '240px' : '0'}, 1fr))`,
+    gridTemplateColumns: `${big ? 76 : 58}px repeat(${dates.length}, minmax(0, 1fr))`,
   };
 
   /** Aktiviteter i ukeplanen som ingen leder har fått ennå. */
@@ -743,7 +743,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   };
 
   return (
-    <div className="oks-ls-pill space-y-3 p-4">
+      <div className="oks-ls-pill min-w-0 space-y-3 p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-semibold">
@@ -860,7 +860,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
       <LeirskoleBoardIssues issues={issues} onJump={jumpToIssue} />
 
       {view === "bord" && (
-      <div className="-mx-2 px-2">
+      <div className="min-w-0">
         <div className="space-y-1.5">
           {/* Dagoverskrifter */}
           <div className="grid gap-1.5" style={gridStyle}>

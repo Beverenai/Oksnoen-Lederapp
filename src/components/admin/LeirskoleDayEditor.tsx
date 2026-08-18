@@ -420,7 +420,7 @@ export function LeirskoleDayEditor({
           )}
 
           {mode === 'uke' && (
-            <div className="-mx-4 overflow-x-auto lg:mx-[calc(50%-50vw)] lg:w-screen lg:px-4">{weekBoard}</div>
+            <div className="min-w-0 w-full">{weekBoard}</div>
           )}
 
           {mode === 'dag' && (
