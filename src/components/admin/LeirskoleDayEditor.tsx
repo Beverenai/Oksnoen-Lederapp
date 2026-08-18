@@ -419,7 +419,9 @@ export function LeirskoleDayEditor({
             />
           )}
 
-          {mode === 'uke' && <div className="-mx-4">{weekBoard}</div>}
+          {mode === 'uke' && (
+            <div className="-mx-4 overflow-x-auto lg:mx-[calc(50%-50vw)] lg:w-screen lg:px-4">{weekBoard}</div>
+          )}
 
           {mode === 'dag' && (
             <>
@@ -469,28 +471,16 @@ export function LeirskoleDayEditor({
                   {isLocked ? 'Låst' : 'Åpen'}
                 </Button>
               </div>
-              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
-                <div className="min-w-0">
-                  <LeirskoleDaySessions
-                    week={week}
-                    date={activeDate}
-                    dayPosts={dayPosts}
-                    weekPosts={(posts ?? []) as DayPost[]}
-                    staff={staff}
-                    kitchenIds={kitchenIds}
-                    maxHours={maxHours}
-                    isLocked={isLocked}
-                  />
-                </div>
-                <aside className="hidden min-w-0 xl:block">
-                  <div className="sticky top-4 space-y-2">
-                    <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Hele uken
-                    </p>
-                    <div className="max-h-[70vh] overflow-auto rounded-2xl border border-border/60">{weekBoard}</div>
-                  </div>
-                </aside>
-              </div>
+              <LeirskoleDaySessions
+                week={week}
+                date={activeDate}
+                dayPosts={dayPosts}
+                weekPosts={(posts ?? []) as DayPost[]}
+                staff={staff}
+                kitchenIds={kitchenIds}
+                maxHours={maxHours}
+                isLocked={isLocked}
+              />
             </>
           )}
 
