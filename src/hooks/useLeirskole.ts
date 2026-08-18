@@ -16,7 +16,7 @@ export function useLeirskoleActivityTypes(onlyActive = false) {
   return useQuery({
     queryKey: ['leirskole-activity-types', onlyActive],
     refetchOnWindowFocus: false,
-    placeholderData: (prev: unknown) => prev,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       let q = supabase.from('leirskole_activity_types').select('*').order('sort_order');
       if (onlyActive) q = q.eq('is_active', true);
@@ -248,7 +248,7 @@ export function useLeirskoleSchedule(weekId?: string | null) {
   return useQuery({
     queryKey: ['leirskole-schedule', weekId],
     refetchOnWindowFocus: false,
-    placeholderData: (prev: unknown) => prev,
+    placeholderData: keepPreviousData,
     enabled: !!weekId,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -370,7 +370,7 @@ export function useLeirskoleActivities(weekId?: string | null) {
   return useQuery({
     queryKey: ['leirskole-activities', weekId],
     refetchOnWindowFocus: false,
-    placeholderData: (prev: unknown) => prev,
+    placeholderData: keepPreviousData,
     enabled: !!weekId,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -389,7 +389,7 @@ export function useLeirskoleActivityHistory() {
   return useQuery({
     queryKey: ['leirskole-activity-history'],
     refetchOnWindowFocus: false,
-    placeholderData: (prev: unknown) => prev,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leirskole_activity_assignments')
@@ -553,7 +553,7 @@ export function useLeirskoleWeekDays(weekId?: string | null) {
   return useQuery({
     queryKey: ['leirskole-week-days', weekId],
     refetchOnWindowFocus: false,
-    placeholderData: (prev: unknown) => prev,
+    placeholderData: keepPreviousData,
     enabled: !!weekId,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -633,7 +633,7 @@ export function useLeirskoleKitchenDays(weekId?: string | null) {
   return useQuery({
     queryKey: ['leirskole-kitchen-days', weekId],
     refetchOnWindowFocus: false,
-    placeholderData: (prev: unknown) => prev,
+    placeholderData: keepPreviousData,
     enabled: !!weekId,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -708,7 +708,7 @@ export function useLeirskoleWeekPlan(weekId?: string | null) {
   return useQuery({
     queryKey: ['leirskole-week-plan', weekId],
     refetchOnWindowFocus: false,
-    placeholderData: (prev: unknown) => prev,
+    placeholderData: keepPreviousData,
     enabled: !!weekId,
     queryFn: async () => {
       const { data, error } = await supabase
