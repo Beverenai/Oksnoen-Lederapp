@@ -61,7 +61,7 @@ export const PLUS_PERK_GROUPS: PlusPerkGroup[] = [
   {
     label: 'Sosialt',
     perks: [
-      { key: 'tinder', icon: Flame, title: 'Tinder for ledere', desc: 'Sveip på lederne og få match', to: '/kline-tinder' },
+      { key: 'flirt', icon: Flame, title: 'Ekstra klinepoeng', desc: 'Dobbelt utslag på klinelista' },
       { key: 'queue', icon: HeartHandshake, title: 'Prioritert klinekø', desc: 'Hopp foran i køen på klinelista' },
       { key: 'chat', icon: ShieldOff, title: 'Reklamefritt Lederhuset', desc: 'Ingen forstyrrelser i chatten' },
     ],
