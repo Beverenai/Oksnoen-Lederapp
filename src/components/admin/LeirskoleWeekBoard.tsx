@@ -452,6 +452,56 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     </div>
   );
 
+  /** Én måltidsrute i bordet — ligger mellom øktene så dagen leses kronologisk. */
+  const MealCell = ({ date, meal, style }: { date: string; meal: string; style: React.CSSProperties }) => {
+    const post = (postsByDate.get(date) ?? []).find(
+      (p) => (p.name ?? '').trim().toLowerCase() === meal.toLowerCase(),
+    );
+    if (!post) {
+      return (
+        <button
+          type="button"
+          style={style}
+          onClick={() => createPost.mutate({ date, name: meal })}
+          disabled={createPost.isPending}
+          className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-2 py-1 text-left text-[10px] text-muted-foreground hover:bg-muted"
+        >
+          + {meal}
+        </button>
+      );
+    }
+    return (
+      <div style={style} className="flex">
+        <LeirskolePostStaffPicker
+          weekId={week.id}
+          title={`${meal} · ${new Date(`${date}T12:00:00`).getDate()}.`}
+          maxHours={maxHours}
+          hoursByStaff={staffHoursByDate.get(date) ?? new Map()}
+          staffOptions={staffOptions}
+          post={{
+            id: post.id,
+            name: post.name ?? meal,
+            date,
+            duration_hours: post.duration_hours,
+            assignments: post.assignments ?? [],
+          }}
+        >
+          <button
+            type="button"
+            className="flex w-full items-center gap-1 rounded-xl border border-border/60 bg-muted/30 px-2 py-1 text-left text-[10px] hover:brightness-105"
+          >
+            <span className="shrink-0 font-semibold">{meal}</span>
+            <span className="flex-1 truncate text-muted-foreground">
+              {(post.assignments ?? [])
+                .map((a) => firstName(staffToLeader.get(a.staff_id)?.name ?? '?'))
+                .join(', ') || 'ingen'}
+            </span>
+          </button>
+        </LeirskolePostStaffPicker>
+      </div>
+    );
+  };
+
   return (
     <div className="oks-ls-pill space-y-3 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
