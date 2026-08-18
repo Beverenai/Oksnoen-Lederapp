@@ -544,6 +544,22 @@ export function LeirskoleDaySessions({
                   >
                     Gjør plassen ledig
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="rounded-xl py-2 text-sm text-destructive focus:text-destructive"
+                    onClick={() =>
+                      removeActivitySlot(
+                        p,
+                        {
+                          key: activityKey,
+                          label: typeMap.get(activityKey)?.label ?? activityKey,
+                          emoji: typeMap.get(activityKey)?.emoji ?? null,
+                        },
+                        leaderId,
+                      )
+                    }
+                  >
+                    <Trash2 className="mr-1.5 h-4 w-4" /> Fjern aktiviteten fra økten
+                  </DropdownMenuItem>
                 </>
               )}
               {assignmentId && (
@@ -655,6 +671,15 @@ export function LeirskoleDaySessions({
           {candidates.length === 0 && (
             <p className="px-2 py-2 text-xs text-muted-foreground">Ingen ledige ledere.</p>
           )}
+          <div className="mt-1 border-t border-border/60 pt-1">
+            <button
+              type="button"
+              onClick={() => removeActivitySlot(p, { key: slot.key, label: slot.label, emoji: slot.emoji })}
+              className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-xs font-semibold text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Fjern {slot.label} fra {p.name}
+            </button>
+          </div>
         </PopoverContent>
       </Popover>
     );
