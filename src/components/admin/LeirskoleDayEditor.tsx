@@ -200,6 +200,8 @@ export function LeirskoleDayEditor({
   const [mode, setMode] = useState<'dag' | 'okter' | 'ledere' | 'rediger' | 'uke'>('okter');
   const [newOpen, setNewOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', start: '10:00', end: '12:00' });
+  /** Økten som ble valgt fra «ting må løses» — brukes til å scrolle og markere. */
+  const [focus, setFocus] = useState<{ session?: string; nonce: number } | null>(null);
 
   const dayPosts = useMemo(
     () =>
@@ -432,6 +434,11 @@ export function LeirskoleDayEditor({
               kitchenDays={(kitchenDays ?? []) as { date: string; staff_id: string }[]}
               maxHours={maxHours}
               onPickDate={setDate}
+              onPickIssue={({ date: d, session }) => {
+                setDate(d);
+                setMode('okter');
+                setFocus({ session, nonce: Date.now() });
+              }}
             />
           )}
 
@@ -462,6 +469,8 @@ export function LeirskoleDayEditor({
                 kitchenIds={kitchenIds}
                 maxHours={maxHours}
                 isLocked={isLocked}
+                focusSession={focus?.session}
+                focusNonce={focus?.nonce}
               />
             </>
           )}
