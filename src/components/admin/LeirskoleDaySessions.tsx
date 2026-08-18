@@ -369,162 +369,161 @@ export function LeirskoleDaySessions({
                     return (
                       <div
                         key={a.id}
-                        className={`relative w-[5.85rem] rounded-xl border p-1.5 text-center ${
+                        className={`relative w-[6.1rem] rounded-xl border p-1.5 text-center ${
                           warns.length ? 'border-destructive/50 bg-destructive/5' : 'border-border/50 bg-background/70'
                         }`}
                       >
                         {editMode && (
-                        <button
-                          type="button"
-                          aria-label={`Fjern ${name}`}
-                          className="absolute right-0 top-0 rounded-full p-0.5"
-                          onClick={() => guard() && assign.mutate({ postId: p.id, staffId: a.staff_id, remove: true })}
-                        >
-                          <X className="h-3 w-3 text-muted-foreground" />
-                        </button>
+                          <button
+                            type="button"
+                            aria-label={`Fjern ${name}`}
+                            className="absolute right-0 top-0 rounded-full p-0.5"
+                            onClick={() => guard() && assign.mutate({ postId: p.id, staffId: a.staff_id, remove: true })}
+                          >
+                            <X className="h-3 w-3 text-muted-foreground" />
+                          </button>
                         )}
                         {missingActivity && (
                           <span
-                            title="Mangler aktivitet i denne økten"
+                            title="Mangler aktivitet — trykk på lederen for å velge"
                             className="absolute left-0 top-0 rounded-full bg-background/80 p-0.5"
                           >
                             <AlertTriangle className="h-3 w-3 text-amber-500" />
                           </span>
                         )}
-                        <Avatar className="mx-auto h-9 w-9">
-                          <AvatarImage src={s?.leader?.profile_image_url ?? undefined} alt={name} />
-                          <AvatarFallback className="text-[10px]">{initials(name)}</AvatarFallback>
-                        </Avatar>
-                        <div className="mt-0.5 min-w-0">
-                          <p className="truncate text-[11px] font-bold leading-tight">{name.split(' ')[0]}</p>
-                          <p className="flex items-center justify-center gap-0.5 text-[9.5px] font-semibold tabular-nums">
-                            <span className={hours > maxHours + 0.01 ? 'text-destructive' : 'text-muted-foreground'}>
-                              {hours.toFixed(1)}/{maxHours}t
-                            </span>
-                            {kitchenIds.has(a.staff_id) && <ChefHat className="h-3 w-3 text-sky-500" />}
-                            {warns.length > 0 && (
-                              <span title={warns.join('\n')}>
-                                <AlertTriangle className="h-3 w-3 text-destructive" />
-                              </span>
-                            )}
-                          </p>
 
-                          {/* Aktiviteten lederen har i denne økten (ikke på måltider) */}
-                          {hasActivities(p) && customKey === cellKey && (
-                            <Input
-                              autoFocus
-                              value={customText}
-                              onChange={(e) => setCustomText(e.target.value)}
-                              placeholder="Egen aktivitet"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Escape') setCustomKey(null);
-                                if (e.key !== 'Enter') return;
-                                const v = customText.trim();
-                                if (!v || !leaderId || !guard()) return;
-                                setActivity.mutate(
-                                  { weekId: week.id, date, session, leaderId, activity: CUSTOM_ACTIVITY, note: v },
-                                  { onError: () => toast.error('Kunne ikke lagre aktiviteten') },
-                                );
-                                setCustomKey(null);
-                                setCustomText('');
-                              }}
-                              onBlur={() => setCustomKey(null)}
-                              className="mt-1 h-6 rounded-full px-2 text-[10px]"
-                            />
-                          )}
-                          {hasActivities(p) && customKey !== cellKey && !editMode && (
-                            <p
-                              className={`mt-1 truncate rounded-full px-1 py-0.5 text-[9.5px] font-semibold ${
-                                act ? 'bg-muted/60' : 'text-amber-600 dark:text-amber-400'
-                              }`}
-                            >
-                              {act ? `${t?.emoji ?? '•'} ${t?.label ?? act.note ?? act.activity}` : 'Ingen aktivitet'}
-                            </p>
-                          )}
-                          {hasActivities(p) && customKey !== cellKey && editMode && (
+                        {customKey === cellKey ? (
+                          <Input
+                            autoFocus
+                            value={customText}
+                            onChange={(e) => setCustomText(e.target.value)}
+                            placeholder="Egen aktivitet"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Escape') setCustomKey(null);
+                              if (e.key !== 'Enter') return;
+                              const v = customText.trim();
+                              if (!v || !leaderId || !guard()) return;
+                              setActivity.mutate(
+                                { weekId: week.id, date, session, leaderId, activity: CUSTOM_ACTIVITY, note: v },
+                                { onError: () => toast.error('Kunne ikke lagre aktiviteten') },
+                              );
+                              setCustomKey(null);
+                              setCustomText('');
+                            }}
+                            onBlur={() => setCustomKey(null)}
+                            className="mt-6 h-7 rounded-full px-2 text-[10px]"
+                          />
+                        ) : (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                className="mt-1 flex w-full items-center justify-center gap-0.5 rounded-full border border-border/60 bg-muted/50 px-1 py-0.5 text-[9.5px] font-semibold"
+                                aria-label={`Endre ${name} på ${p.name}`}
+                                className="w-full rounded-lg text-center transition-colors hover:bg-muted/40"
                               >
-                                <span>{t?.emoji ?? (act?.note ? '✎' : '＋')}</span>
-                                <span className="truncate">
-                                  {t?.label ?? act?.note ?? act?.activity ?? 'Aktivitet'}
+                                <Avatar className="mx-auto h-9 w-9">
+                                  <AvatarImage src={s?.leader?.profile_image_url ?? undefined} alt={name} />
+                                  <AvatarFallback className="text-[10px]">{initials(name)}</AvatarFallback>
+                                </Avatar>
+                                <span className="mt-0.5 block truncate text-[11px] font-bold leading-tight">
+                                  {name.split(' ')[0]}
                                 </span>
-                                {before > 0 && (
-                                  <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-500/15 px-1 font-semibold text-emerald-700 dark:text-emerald-300">
-                                    <History className="h-2.5 w-2.5" />
-                                    {before}×
+                                <span className="flex items-center justify-center gap-0.5 text-[9.5px] font-semibold tabular-nums">
+                                  <span className={hours > maxHours + 0.01 ? 'text-destructive' : 'text-muted-foreground'}>
+                                    {hours.toFixed(1)}/{maxHours}t
+                                  </span>
+                                  {kitchenIds.has(a.staff_id) && <ChefHat className="h-3 w-3 text-sky-500" />}
+                                  {warns.length > 0 && <AlertTriangle className="h-3 w-3 text-destructive" />}
+                                </span>
+                                {hasActivities(p) && (
+                                  <span
+                                    className={`mt-1 flex w-full items-center justify-center gap-0.5 truncate rounded-full px-1 py-0.5 text-[9.5px] font-semibold ${
+                                      act ? 'bg-muted/60' : 'border border-dashed border-amber-500/50 text-amber-600 dark:text-amber-400'
+                                    }`}
+                                  >
+                                    <span className="truncate">
+                                      {act ? `${t?.emoji ?? '•'} ${t?.label ?? act.note ?? act.activity}` : '＋ Aktivitet'}
+                                    </span>
+                                    {before > 0 && (
+                                      <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-500/15 px-1 text-emerald-700 dark:text-emerald-300">
+                                        <History className="h-2.5 w-2.5" />
+                                        {before}×
+                                      </span>
+                                    )}
                                   </span>
                                 )}
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="z-50 max-h-72 overflow-y-auto">
-                              <DropdownMenuLabel>
-                                Aktivitet for {name.split(' ')[0]} · {p.name}
+                            <DropdownMenuContent
+                              align="start"
+                              collisionPadding={12}
+                              className="z-50 max-h-[min(70vh,28rem)] w-[min(20rem,calc(100vw-2rem))] overflow-y-auto p-1.5"
+                            >
+                              <DropdownMenuLabel className="text-[13px]">
+                                {name.split(' ')[0]} · {p.name}
                               </DropdownMenuLabel>
-                              {(types ?? []).map((ty) => {
-                                const n = leaderId ? doneBefore.get(`${leaderId}|${ty.key}`) ?? 0 : 0;
-                                return (
-                                  <DropdownMenuItem
-                                    key={ty.key}
-                                    onClick={() =>
-                                      leaderId &&
-                                      setActivity.mutate(
-                                        {
-                                          weekId: week.id,
-                                          date,
-                                          session,
-                                          leaderId,
-                                          activity: ty.key,
-                                        },
-                                        { onError: () => toast.error('Kunne ikke lagre aktiviteten') },
-                                      )
-                                    }
-                                  >
-                                    <span className="mr-1.5">{ty.emoji ?? '•'}</span>
-                                    {ty.label}
-                                    {n > 0 && <span className="ml-auto text-[10px] text-muted-foreground">{n}× før</span>}
-                                  </DropdownMenuItem>
-                                );
-                              })}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setCustomText(act?.note ?? '');
-                                  setCustomKey(cellKey);
-                                }}
-                              >
-                                ✎ Skriv inn selv …
-                              </DropdownMenuItem>
-                              {act && (
+                              {hasActivities(p) && (
                                 <>
+                                  {(types ?? []).map((ty) => {
+                                    const n = leaderId ? doneBefore.get(`${leaderId}|${ty.key}`) ?? 0 : 0;
+                                    const on = act?.activity === ty.key;
+                                    return (
+                                      <DropdownMenuItem
+                                        key={ty.key}
+                                        className={`gap-2 rounded-xl py-2 text-sm ${on ? 'bg-muted' : ''}`}
+                                        onClick={() =>
+                                          leaderId &&
+                                          guard() &&
+                                          setActivity.mutate(
+                                            { weekId: week.id, date, session, leaderId, activity: ty.key },
+                                            { onError: () => toast.error('Kunne ikke lagre aktiviteten') },
+                                          )
+                                        }
+                                      >
+                                        <span className="text-base">{ty.emoji ?? '•'}</span>
+                                        <span className="flex-1 truncate">{ty.label}</span>
+                                        {n > 0 && <span className="text-[11px] text-muted-foreground">{n}× før</span>}
+                                      </DropdownMenuItem>
+                                    );
+                                  })}
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
-                                    onClick={() =>
-                                      leaderId &&
-                                      setActivity.mutate({
-                                        weekId: week.id,
-                                        date,
-                                        session,
-                                        leaderId,
-                                        activity: null,
-                                      })
-                                    }
+                                    className="rounded-xl py-2 text-sm"
+                                    onClick={() => {
+                                      setCustomText(act?.note ?? '');
+                                      setCustomKey(cellKey);
+                                    }}
                                   >
-                                    Fjern aktivitet
+                                    ✎ Skriv inn selv …
                                   </DropdownMenuItem>
+                                  {act && (
+                                    <DropdownMenuItem
+                                      className="rounded-xl py-2 text-sm"
+                                      onClick={() =>
+                                        leaderId &&
+                                        guard() &&
+                                        setActivity.mutate({ weekId: week.id, date, session, leaderId, activity: null })
+                                      }
+                                    >
+                                      Fjern aktivitet
+                                    </DropdownMenuItem>
+                                  )}
                                 </>
                               )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="rounded-xl py-2 text-sm text-destructive focus:text-destructive"
+                                onClick={() => guard() && assign.mutate({ postId: p.id, staffId: a.staff_id, remove: true })}
+                              >
+                                <X className="mr-1.5 h-4 w-4" /> Fjern fra økten
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                          )}
+                        )}
 
-                          {warns.length > 0 && (
-                            <p className="mt-0.5 line-clamp-2 text-[10px] font-medium text-destructive">{warns[0]}</p>
-                          )}
-                        </div>
+                        {warns.length > 0 && (
+                          <p className="mt-0.5 line-clamp-2 text-[10px] font-medium text-destructive">{warns[0]}</p>
+                        )}
                       </div>
                     );
                   })}
