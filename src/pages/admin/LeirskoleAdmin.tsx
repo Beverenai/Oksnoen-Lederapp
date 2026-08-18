@@ -329,6 +329,8 @@ export default function LeirskoleAdmin() {
         <LeirskoleDayToDayCard week={week} />
       )}
 
+      {week && <LeirskoleGroupsCard week={week} />}
+
       {week && (
         <LeirskoleDayEditor
           week={week}
