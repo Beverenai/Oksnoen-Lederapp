@@ -281,16 +281,19 @@ export function LeirskoleCellSheet({
 
   /** Aktiviteter som ikke er i økten ennå. */
   const unusedTypes = useMemo(
-    () => types.filter((t) => !selected.some((s) => s.key === t.key)),
-    [types, selected],
+    () => types.filter((t) => countOf(t.label) === 0),
+    [types, lines],
   );
 
   /** Gi en leder en aktivitet: bruk først en ledig aktivitet i økten, ellers legg til en ny. */
   const giveActivity = useMutation({
     mutationFn: async (leaders: CellLeader[]) => {
       if (!target?.session) throw new Error('Denne økten kan ikke få aktivitetsansvar');
-      const usedKeys = new Set(assignments.map((a) => a.activity));
-      const freeInSlot = selected.filter((t) => !usedKeys.has(t.key));
+      // Ledige forekomster i ruten (samme aktivitet kan ha flere plasser).
+      const freeInSlot = instances
+        .filter((i) => !i.leaderId)
+        .map((i) => types.find((t) => t.key === i.key))
+        .filter((t): t is LeirskoleActivityType => !!t);
       const spare = [...unusedTypes];
       const nextLines = [...lines];
       const picks: { leaderId: string; key: string }[] = [];
@@ -324,7 +327,7 @@ export function LeirskoleCellSheet({
         });
       }
       for (const p of picks) {
-        await setLeader.mutateAsync({ activity: p.key, leaderId: p.leaderId });
+        await setLeader.mutateAsync({ activity: p.key, leaderId: p.leaderId, previousLeaderId: null });
       }
       return picks.length;
     },
