@@ -103,7 +103,7 @@ export function LeirskoleExtraPostsCell({
           .insert({ post_id: postId, staff_id: staffId, assigned_manually: true, is_locked: true });
         if (error) throw error;
         const removed = await trimDayHours({ weekId, date, staffId, keepPostId: postId });
-        if (removed.length) toast.success(`Fjernet ${removed.join(', ')} for å holde 8t`);
+        if (removed.length) toast.success(`Fjernet ${removed.join(', ')} for å holde planleggingsgrensen`);
       } else {
         const { error } = await supabase
           .from('leirskole_assignments')

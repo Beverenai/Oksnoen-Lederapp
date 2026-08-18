@@ -13,7 +13,7 @@ const STEPS: { title: string; where: string; body: string }[] = [
     title: '2. Vaktplan',
     where: 'Steg 2',
     body:
-      'Først «Generer vaktplan»: lederne fordeles på frokost, økt 1, middag, økt 2, kvelds, økt 3, Sanitas og nattevakt — maks ca. 8 timer per dag, 11 timer hvile og helst sammenhengende vakter. Deretter «Fordel aktiviteter»: aktivitetene fra ukeplanen gis til ledere med riktig kompetanse som er på vakt i økten, og rullerer så ingen har det samme to økter på rad. Nederst kan du endre hver enkelt manuelt.',
+      'Først «Generer vaktplan»: lederne fordeles på frokost, økt 1, middag, økt 2, kvelds, økt 3, Sanitas og nattevakt — planleggingsgrensen er 8 timer per dag (overtid planlegges ikke), 11 timer hvile etter endt arbeidsdag og helst sammenhengende vakter. Deretter «Fordel aktiviteter»: aktivitetene fra ukeplanen gis til ledere med riktig kompetanse som er på vakt i økten, og rullerer så ingen har det samme to økter på rad. Nederst kan du endre hver enkelt manuelt.',
   },
   {
     title: '3. Oppgaver',

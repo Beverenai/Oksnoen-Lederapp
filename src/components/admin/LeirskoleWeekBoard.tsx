@@ -816,7 +816,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
               {
                 mode: 'schedule' as const,
                 title: 'Vaktplan fra ukeplanen',
-                sub: 'Ledere fylles inn, roterer på aktiviteter · maks 8t',
+                sub: 'Ledere fylles inn, roterer på aktiviteter · planleggingsgrense 8t',
               },
               { mode: 'plan' as const, title: 'Ny tilfeldig ukeplan', sub: 'Lager plan på nytt (overskriver rutene)' },
             ].map((o) => (

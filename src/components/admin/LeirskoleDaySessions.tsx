@@ -75,8 +75,8 @@ const PRESET_NAMES = ['Ankomst', 'Avreise', 'Økt 1', 'Økt 2', 'Økt 3', 'Natte
 
 /**
  * Dagsvisning: øktene nedover etter klokkeslett, med lederne som står på hver
- * økt, aktiviteten deres, og advarsler når noen får for mange timer eller
- * bryter 11-timers hvile.
+ * økt, aktiviteten deres, og advarsler når noen går over planleggingsgrensen
+ * eller bryter 11-timers hvile etter endt arbeidsdag.
  */
 export function LeirskoleDaySessions({
   week,
@@ -163,12 +163,13 @@ export function LeirskoleDaySessions({
   /**
    * Advarsler for én leder, eventuelt som om de i tillegg tok `extra`-vakten.
    * Gir samme svar for lederbrikkene og for lederplukkeren.
+   * 11-timers hvile gjelder mellom arbeidsdager, ikke innen samme dag.
    */
   const warningsFor = (staffId: string, extra?: SessionPost): string[] => {
     const out: string[] = [];
     const extraHours = extra ? Number(extra.duration_hours ?? 0) : 0;
     const hours = (hoursByStaff.get(staffId) ?? 0) + extraHours;
-    if (hours > maxHours + 0.01) out.push(`${hours.toFixed(1)}t denne dagen (maks ${maxHours}t)`);
+    if (hours > maxHours + 0.01) out.push(`${hours.toFixed(1)}t denne dagen (planleggingsgrense ${maxHours}t)`);
 
     const shifts = [...(shiftsByStaff.get(staffId) ?? []), ...(extra ? [extra] : [])];
     const ranges = shifts.map((p) => ({ p, ...absRange(p) }));
@@ -181,9 +182,11 @@ export function LeirskoleDaySessions({
           out.push(`Dobbeltbooket: ${a.p.name} og ${b.p.name}`);
           continue;
         }
+        // 11-timers hvile gjelder etter endt arbeidsdag, ikke mellom vakter samme dag.
+        if (a.p.date === b.p.date) continue;
         const gap = (a.start < b.start ? b.start - a.end : a.start - b.end) / 60;
         if (gap < MIN_REST_HOURS) {
-          out.push(`Bare ${gap.toFixed(1)}t hvile mellom ${a.p.name} og ${b.p.name} (krav ${MIN_REST_HOURS}t)`);
+          out.push(`Bare ${gap.toFixed(1)}t hvile etter endt arbeidsdag mellom ${a.p.name} og ${b.p.name} (krav ${MIN_REST_HOURS}t)`);
         }
       }
     }
