@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useSaveLeirskoleWeekPlanCell, type LeirskoleActivityType } from '@/hooks/useLeirskole';
 import { dayLabel } from '@/lib/leirskoleDates';
 import { activityLine } from '@/lib/leirskoleRandomPlan';
+import { cellInstances, countActivity } from '@/lib/leirskoleCellInstances';
 
 export interface CellTarget {
   date: string;
@@ -159,10 +160,10 @@ export function LeirskoleCellSheet({
     [content],
   );
 
-  const selected = useMemo(
-    () => types.filter((t) => lines.some((l) => l.toLowerCase().includes(t.label.toLowerCase()))),
-    [types, lines],
-  );
+  /** Én rad per forekomst — samme aktivitet kan stå flere ganger. */
+  const instances = useMemo(() => cellInstances(lines, types, assignments), [lines, types, assignments]);
+
+  const countOf = (label: string) => countActivity(lines, label);
 
   const setLines = (next: string[]) => {
     if (!target) return;
@@ -180,16 +181,29 @@ export function LeirskoleCellSheet({
   };
 
   const setLeader = useMutation({
-    mutationFn: async ({ activity, leaderId }: { activity: string; leaderId: string }) => {
+    mutationFn: async ({
+      activity,
+      leaderId,
+      previousLeaderId,
+    }: {
+      activity: string;
+      leaderId: string;
+      previousLeaderId?: string | null;
+    }) => {
       if (!target?.session) throw new Error('Denne økten kan ikke få aktivitetsansvar');
-      const base = supabase
-        .from('leirskole_activity_assignments')
-        .delete()
-        .eq('week_id', weekId)
-        .eq('date', target.date)
-        .eq('session', target.session);
-      const { error: delError } = await base.eq('activity', activity);
-      if (delError) throw delError;
+      // Bare den forekomsten som endres frigjøres — andre ledere på samme
+      // aktivitet i økten beholdes (to kan f.eks. ha Klatring).
+      if (previousLeaderId) {
+        const { error: delError } = await supabase
+          .from('leirskole_activity_assignments')
+          .delete()
+          .eq('week_id', weekId)
+          .eq('date', target.date)
+          .eq('session', target.session)
+          .eq('activity', activity)
+          .eq('leader_id', previousLeaderId);
+        if (delError) throw delError;
+      }
       if (!leaderId) return;
       const { error: delLeader } = await supabase
         .from('leirskole_activity_assignments')
