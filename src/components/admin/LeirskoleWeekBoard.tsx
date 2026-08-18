@@ -857,7 +857,12 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         </div>
       )}
 
-      <LeirskoleBoardIssues issues={issues} onJump={jumpToIssue} />
+      <LeirskoleBoardIssues
+        issues={issues}
+        onJump={jumpToIssue}
+        onFix={() => fixWeek.mutate()}
+        fixing={fixWeek.isPending}
+      />
 
       {view === "bord" && (
       <div className="min-w-0">

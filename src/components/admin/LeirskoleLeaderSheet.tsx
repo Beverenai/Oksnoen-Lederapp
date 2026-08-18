@@ -82,30 +82,24 @@ export function LeirskoleLeaderSheet({
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke tildele'),
   });
 
-  const sendTask = useMutation({
+  // Egen varsling til denne lederen (oppgave-modulen er erstattet av varslinger).
+  const sendNotice = useMutation({
     mutationFn: async () => {
-      const title = taskTitle.trim();
-      if (!title) throw new Error('Skriv en oppgave');
-      const { error } = await supabase.from('leirskole_tasks').insert({
-        week_id: weekId,
-        title,
-        assign_all: false,
-        assigned_leader_ids: [leaderId],
-        created_by: leader?.id ?? null,
-      });
-      if (error) throw error;
-      await supabase.functions.invoke('push-send', {
+      const message = taskTitle.trim();
+      if (!message) throw new Error('Skriv en beskjed');
+      const { error } = await supabase.functions.invoke('push-send', {
         body: {
-          title: 'Ny leirskole-oppgave',
-          message: title,
+          title: 'Beskjed fra leirskole',
+          message,
           leader_ids: [leaderId],
           sender_leader_id: leader?.id,
         },
       });
+      if (error) throw error;
     },
     onSuccess: () => {
       setTaskTitle('');
-      toast.success('Oppgave sendt');
+      toast.success('Varsling sendt');
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke sende'),
   });
@@ -225,18 +219,18 @@ export function LeirskoleLeaderSheet({
             )}
           </div>
 
-          {/* Oppgave */}
+          {/* Varsling */}
           <div className="space-y-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Send oppgave</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Send varsling</p>
             <Input
-              placeholder="Oppgave til denne lederen"
+              placeholder="Beskjed til denne lederen"
               value={taskTitle}
               onChange={(e) => setTaskTitle(e.target.value)}
             />
             <Button
               className="w-full gap-2 rounded-full"
-              disabled={sendTask.isPending}
-              onClick={() => sendTask.mutate()}
+              disabled={sendNotice.isPending}
+              onClick={() => sendNotice.mutate()}
             >
               <Send className="h-4 w-4" /> Send + varsle
             </Button>

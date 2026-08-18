@@ -10,8 +10,6 @@ import {
   useLeirskoleStaff,
   useLeirskoleKitchenDays,
   useIsLeirskoleStaff,
-  useLeirskoleSessionInfo,
-  useMarkLeirskoleInfoRead,
   useMyLeirskoleActivities,
   useLeirskoleActivityTypes,
   useMyLeirskoleShifts,
@@ -80,10 +78,8 @@ export default function Leirskole() {
   const { data: week, isLoading: weekLoading } = useActiveLeirskoleWeek();
   const { data: isStaff } = useIsLeirskoleStaff(week?.id);
   const { data: myShifts, isLoading: shiftsLoading } = useMyLeirskoleShifts(week?.id);
-  const { data: sessionInfo } = useLeirskoleSessionInfo(week?.id);
   const { data: myActivities } = useMyLeirskoleActivities(week?.id);
   const { data: activityTypes } = useLeirskoleActivityTypes(true);
-  const markInfoRead = useMarkLeirskoleInfoRead();
   const { data: myCompetencies } = useMyLeirskoleCompetencies();
   const { data: weekPosts } = useLeirskoleSchedule(week?.id);
   const { data: weekStaff } = useLeirskoleStaff(week?.id);
@@ -102,14 +98,6 @@ export default function Leirskole() {
 
   const firstName = (effectiveLeader?.name ?? '').split(' ')[0] || 'leder';
   const today = todayStr();
-
-  const myInfo = useMemo(
-    () =>
-      (sessionInfo ?? []).filter(
-        (info) => info.assign_all || (info.assigned_leader_ids ?? []).includes(effectiveLeader?.id ?? ''),
-      ),
-    [sessionInfo, effectiveLeader?.id],
-  );
 
   const shifts = useMemo(() => myShifts ?? [], [myShifts]);
   const myHours = useMemo(
@@ -308,7 +296,7 @@ export default function Leirskole() {
         </div>
       )}
 
-      {(nextShift || myInfo.length > 0) && (
+      {nextShift && (
         <div className="oks-ls-pill p-4">
           <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
             <Megaphone className="h-4 w-4 text-primary" /> Denne økten skal du
@@ -345,6 +333,11 @@ export default function Leirskole() {
                     {nextShiftActivity.note && (
                       <p className="mt-1 text-xs text-muted-foreground">{nextShiftActivity.note}</p>
                     )}
+                    {nextShift.leaderNote && (
+                      <p className="mt-2 rounded-xl bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary">
+                        {nextShift.leaderNote}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <div className={`relative overflow-hidden rounded-2xl border border-dashed p-3 pl-4 ${s.card}`}>
@@ -364,6 +357,11 @@ export default function Leirskole() {
                       {dayLabel(nextShift.date)}
                       {nextShift.date === today ? ' · i dag' : ' · neste'} · ingen aktivitet tildelt
                     </p>
+                    {nextShift.leaderNote && (
+                      <p className="mt-2 rounded-xl bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary">
+                        {nextShift.leaderNote}
+                      </p>
+                    )}
                   </div>
                 );
               })()
@@ -379,30 +377,6 @@ export default function Leirskole() {
                 <p className="text-xs text-muted-foreground">Sjekk ukeplanen nedenfor for neste vakt.</p>
               </div>
             )}
-            {myInfo.map((i) => (
-              <div key={i.id} className="rounded-2xl bg-muted/40 p-3">
-                <p className="text-sm font-semibold">{i.title}</p>
-                {i.body && <p className="mt-0.5 text-xs text-muted-foreground">{i.body}</p>}
-                {(i.items ?? []).length > 0 && (
-                  <ul className="mt-1.5 space-y-1">
-                    {(i.items as string[]).map((it, idx) => (
-                      <li key={idx} className="flex gap-1.5 text-sm">
-                        <span className="text-primary">•</span>
-                        <span>{it}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <Button
-                  size="sm"
-                  variant={i.readByMe ? 'secondary' : 'default'}
-                  className="mt-2 gap-1.5 rounded-full"
-                  onClick={() => markInfoRead.mutate({ infoId: i.id, read: !i.readByMe })}
-                >
-                  <Check className="h-3.5 w-3.5" /> {i.readByMe ? 'Lest' : 'Marker som lest'}
-                </Button>
-              </div>
-            ))}
           </div>
         </div>
       )}

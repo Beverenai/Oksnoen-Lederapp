@@ -2085,6 +2085,7 @@ export type Database = {
           generator_run_id: string | null
           id: string
           is_locked: boolean
+          note: string | null
           post_id: string
           staff_id: string
           updated_at: string
@@ -2096,6 +2097,7 @@ export type Database = {
           generator_run_id?: string | null
           id?: string
           is_locked?: boolean
+          note?: string | null
           post_id: string
           staff_id: string
           updated_at?: string
@@ -2107,6 +2109,7 @@ export type Database = {
           generator_run_id?: string | null
           id?: string
           is_locked?: boolean
+          note?: string | null
           post_id?: string
           staff_id?: string
           updated_at?: string
@@ -2381,96 +2384,6 @@ export type Database = {
           },
         ]
       }
-      leirskole_session_info: {
-        Row: {
-          assign_all: boolean
-          assigned_leader_ids: string[]
-          body: string | null
-          created_at: string
-          created_by: string | null
-          id: string
-          items: string[]
-          title: string
-          updated_at: string
-          week_id: string
-        }
-        Insert: {
-          assign_all?: boolean
-          assigned_leader_ids?: string[]
-          body?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          items?: string[]
-          title: string
-          updated_at?: string
-          week_id: string
-        }
-        Update: {
-          assign_all?: boolean
-          assigned_leader_ids?: string[]
-          body?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          items?: string[]
-          title?: string
-          updated_at?: string
-          week_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "leirskole_session_info_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "leaders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "leirskole_session_info_week_id_fkey"
-            columns: ["week_id"]
-            isOneToOne: false
-            referencedRelation: "leirskole_weeks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      leirskole_session_info_reads: {
-        Row: {
-          created_at: string
-          id: string
-          info_id: string
-          leader_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          info_id: string
-          leader_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          info_id?: string
-          leader_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "leirskole_session_info_reads_info_id_fkey"
-            columns: ["info_id"]
-            isOneToOne: false
-            referencedRelation: "leirskole_session_info"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "leirskole_session_info_reads_leader_id_fkey"
-            columns: ["leader_id"]
-            isOneToOne: false
-            referencedRelation: "leaders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       leirskole_staff: {
         Row: {
           created_at: string
@@ -2512,96 +2425,6 @@ export type Database = {
           },
           {
             foreignKeyName: "leirskole_staff_week_id_fkey"
-            columns: ["week_id"]
-            isOneToOne: false
-            referencedRelation: "leirskole_weeks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      leirskole_task_completions: {
-        Row: {
-          completed_at: string
-          id: string
-          leader_id: string
-          task_id: string
-        }
-        Insert: {
-          completed_at?: string
-          id?: string
-          leader_id: string
-          task_id: string
-        }
-        Update: {
-          completed_at?: string
-          id?: string
-          leader_id?: string
-          task_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "leirskole_task_completions_leader_id_fkey"
-            columns: ["leader_id"]
-            isOneToOne: false
-            referencedRelation: "leaders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "leirskole_task_completions_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "leirskole_tasks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      leirskole_tasks: {
-        Row: {
-          assign_all: boolean
-          assigned_leader_ids: string[]
-          created_at: string
-          created_by: string | null
-          description: string | null
-          due_at: string | null
-          id: string
-          title: string
-          updated_at: string
-          week_id: string | null
-        }
-        Insert: {
-          assign_all?: boolean
-          assigned_leader_ids?: string[]
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          due_at?: string | null
-          id?: string
-          title: string
-          updated_at?: string
-          week_id?: string | null
-        }
-        Update: {
-          assign_all?: boolean
-          assigned_leader_ids?: string[]
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          due_at?: string | null
-          id?: string
-          title?: string
-          updated_at?: string
-          week_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "leirskole_tasks_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "leaders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "leirskole_tasks_week_id_fkey"
             columns: ["week_id"]
             isOneToOne: false
             referencedRelation: "leirskole_weeks"
