@@ -425,21 +425,18 @@ export function LeirskoleDayEditor({
 
           {mode === 'dag' && (
             <>
-              <div className="flex items-center justify-between rounded-2xl bg-muted/40 px-3 py-2">
-                <p className="text-xs text-muted-foreground">
-                  {isLocked
-                    ? 'Dagen er låst — åpne låsen for å endre.'
-                    : 'Ledere bortover, økter nedover. Trykk i en rute for vakt og aktivitet.'}
-                </p>
-                <Button
-                  size="sm"
-                  variant={isLocked ? 'default' : 'outline'}
-                  className="h-8 gap-1.5 rounded-full text-xs"
-                  onClick={() => setLock.mutate({ weekId: week.id, date: activeDate, locked: !isLocked })}
-                >
-                  {isLocked ? <Lock className="h-3.5 w-3.5" /> : <LockOpen className="h-3.5 w-3.5" />}
-                  {isLocked ? 'Låst' : 'Åpen'}
-                </Button>
+              <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setLock.mutate({ weekId: week.id, date: activeDate, locked: !isLocked })}
+                aria-label={isLocked ? 'Åpne dagen' : 'Lås dagen'}
+                title={isLocked ? 'Låst — trykk for å åpne' : 'Åpen — trykk for å låse'}
+                className={`ml-auto flex h-8 w-8 items-center justify-center rounded-full ${
+                  isLocked ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {isLocked ? <Lock className="h-3.5 w-3.5" /> : <LockOpen className="h-3.5 w-3.5" />}
+              </button>
               </div>
               <LeirskoleDayMatrix
                 week={week}
@@ -455,21 +452,18 @@ export function LeirskoleDayEditor({
 
           {mode === 'okter' && (
             <>
-              <div className="flex items-center justify-between rounded-2xl bg-muted/40 px-3 py-2">
-                <p className="text-xs text-muted-foreground">
-                  {isLocked
-                    ? 'Dagen er låst — åpne låsen for å endre.'
-                    : 'Legg til ledere og aktiviteter rett i øktene.'}
-                </p>
-                <Button
-                  size="sm"
-                  variant={isLocked ? 'default' : 'outline'}
-                  className="h-8 gap-1.5 rounded-full text-xs"
-                  onClick={() => setLock.mutate({ weekId: week.id, date: activeDate, locked: !isLocked })}
-                >
-                  {isLocked ? <Lock className="h-3.5 w-3.5" /> : <LockOpen className="h-3.5 w-3.5" />}
-                  {isLocked ? 'Låst' : 'Åpen'}
-                </Button>
+              <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setLock.mutate({ weekId: week.id, date: activeDate, locked: !isLocked })}
+                aria-label={isLocked ? 'Åpne dagen' : 'Lås dagen'}
+                title={isLocked ? 'Låst — trykk for å åpne' : 'Åpen — trykk for å låse'}
+                className={`ml-auto flex h-8 w-8 items-center justify-center rounded-full ${
+                  isLocked ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {isLocked ? <Lock className="h-3.5 w-3.5" /> : <LockOpen className="h-3.5 w-3.5" />}
+              </button>
               </div>
               <LeirskoleDaySessions
                 week={week}
@@ -497,20 +491,19 @@ export function LeirskoleDayEditor({
 
           {mode === 'rediger' && (
           <>
-          <div className="flex items-center justify-between rounded-2xl bg-muted/40 px-3 py-2">
-            <p className="text-xs text-muted-foreground">
-              {isLocked ? 'Dagen er låst — generatoren rører den ikke.' : 'Dra ledere mellom øktene for å endre.'}
-            </p>
-            <Button
-              size="sm"
-              variant={isLocked ? 'default' : 'outline'}
-              className="h-8 gap-1.5 rounded-full text-xs"
-              onClick={() => setLock.mutate({ weekId: week.id, date: activeDate, locked: !isLocked })}
-            >
-              {isLocked ? <Lock className="h-3.5 w-3.5" /> : <LockOpen className="h-3.5 w-3.5" />}
-              {isLocked ? 'Låst' : 'Åpen'}
-            </Button>
-          </div>
+              <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setLock.mutate({ weekId: week.id, date: activeDate, locked: !isLocked })}
+                aria-label={isLocked ? 'Åpne dagen' : 'Lås dagen'}
+                title={isLocked ? 'Låst — trykk for å åpne' : 'Åpen — trykk for å låse'}
+                className={`ml-auto flex h-8 w-8 items-center justify-center rounded-full ${
+                  isLocked ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {isLocked ? <Lock className="h-3.5 w-3.5" /> : <LockOpen className="h-3.5 w-3.5" />}
+              </button>
+              </div>
 
           <DndContext sensors={sensors} onDragEnd={onDragEnd}>
             {dayPosts.length === 0 && (

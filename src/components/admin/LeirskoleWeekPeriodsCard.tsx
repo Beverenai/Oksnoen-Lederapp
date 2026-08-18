@@ -16,7 +16,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { shortDate } from '@/lib/leirskoleDates';
-import { CalendarRange, Plus, Trash2, Users, Check, ChevronDown, Settings2, Crown, Edit3 } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { CalendarRange, Plus, Trash2, Check, ChevronDown, Settings2, Crown, Edit3, ChevronRight } from 'lucide-react';
 
 type Props = {
   selectedWeekId: string | null;
@@ -36,6 +37,7 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', start_date: '', end_date: '', max_daily_hours: '8' });
 
   const selectedWeek = useMemo(
@@ -130,12 +132,40 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
   });
 
   return (
-    <div className="space-y-2">
+    <>
+      {/* Kompakt knapp — uker håndteres i eget ark */}
+      <button
+        type="button"
+        onClick={() => setSheetOpen(true)}
+        className="oks-ls-pill flex w-full items-center gap-2 p-3 text-left"
+      >
+        <CalendarRange className="h-4 w-4 shrink-0 text-primary" />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold">
+            {selectedWeek?.name ?? 'Velg leirskoleuke'}
+          </span>
+          <span className="block truncate text-[11px] text-muted-foreground">
+            {selectedWeek
+              ? `${shortDate(selectedWeek.start_date)} – ${shortDate(selectedWeek.end_date)} · ${
+                  staffCount.get(selectedWeek.id) ?? 0
+                } ledere${selectedWeek.is_active ? ' · aktiv' : ''}`
+              : 'Trykk for å velge, endre eller lage ny uke'}
+          </span>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </button>
+
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="bottom" className="max-h-[88vh] overflow-y-auto">
+          <SheetHeader className="text-left">
+            <SheetTitle className="flex items-center gap-2">
+              <CalendarRange className="h-4 w-4 text-primary" /> Leirskoleuker
+            </SheetTitle>
+          </SheetHeader>
+          <div className="space-y-2 pt-2">
       {/* Tittelrad med aktiv-uke-knapp og ny uke */}
       <div className="flex items-center justify-between gap-2 px-1">
-        <p className="flex items-center gap-2 text-sm font-semibold">
-          <CalendarRange className="h-4 w-4 text-primary" /> Leirskoleuker
-        </p>
+        <p className="text-xs text-muted-foreground">Velg uken du planlegger</p>
         <div className="flex items-center gap-1.5">
           <Button
             size="sm"
@@ -156,8 +186,8 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
         </div>
       </div>
 
-      {/* Horisontal ukevelger — rask å bytte mellom */}
-      <div className="flex gap-1.5 overflow-x-auto px-1 pb-1 -mx-1">
+      {/* Ukevelger */}
+      <div className="-mx-1 flex flex-wrap gap-1.5 px-1 pb-1">
         {(weeks ?? []).length === 0 && !adding && (
           <p className="py-2 text-xs text-muted-foreground">Ingen uker lagt inn ennå.</p>
         )}
@@ -171,6 +201,7 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
               onClick={() => {
                 onSelect(w.id);
                 setEditing(false);
+                setSheetOpen(false);
               }}
               className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
                 isPlanning
@@ -369,6 +400,9 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
