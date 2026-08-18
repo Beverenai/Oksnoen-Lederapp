@@ -811,67 +811,6 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             )}
           </div>
 
-          {/* Måltid */}
-          <div className="grid gap-1.5" style={gridStyle}>
-            <LabelCell>Måltid</LabelCell>
-            {dates.map((date) => {
-              const dayPosts = postsByDate.get(date) ?? [];
-              const special = specialDays.has(date);
-              const mealRows = MEALS.map((m) => ({
-                meal: m,
-                post: dayPosts.find((p) => (p.name ?? '').trim().toLowerCase() === m.toLowerCase()),
-              })).filter((x) => x.post || !special || x.meal === 'Middag');
-              return (
-                <div key={date} className="rounded-xl border border-border/60 bg-muted/25 p-1.5">
-                  {mealRows.length === 0 && <p className="text-[11px] text-muted-foreground">—</p>}
-                  <div className="space-y-1">
-                    {mealRows.map(({ meal, post }) =>
-                      !post ? (
-                        <button
-                          key={meal}
-                          type="button"
-                          onClick={() => createPost.mutate({ date, name: meal })}
-                          disabled={createPost.isPending}
-                          className="w-full rounded-lg border border-dashed border-border px-1 py-0.5 text-left text-[10px] text-muted-foreground hover:bg-muted"
-                        >
-                          + {meal}
-                        </button>
-                      ) : (
-                      <LeirskolePostStaffPicker
-                        key={meal}
-                        weekId={week.id}
-                        title={`${meal} · ${new Date(`${date}T12:00:00`).getDate()}.`}
-                        maxHours={maxHours}
-                        hoursByStaff={staffHoursByDate.get(date) ?? new Map()}
-                        staffOptions={staffOptions}
-                        post={{
-                          id: post.id,
-                          name: post.name ?? meal,
-                          date,
-                          duration_hours: post.duration_hours,
-                          assignments: post.assignments ?? [],
-                        }}
-                      >
-                        <button
-                          type="button"
-                          className="flex w-full items-start gap-1 rounded-lg px-1 py-0.5 text-left text-[10px] hover:bg-muted"
-                        >
-                          <span className="shrink-0 font-semibold">{meal}</span>
-                          <span className="flex-1 text-muted-foreground">
-                            {(post.assignments ?? [])
-                              .map((a) => firstName(staffToLeader.get(a.staff_id)?.name ?? '?'))
-                              .join(', ') || 'ingen'}
-                          </span>
-                        </button>
-                      </LeirskolePostStaffPicker>
-                      ),
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
           {/* Kjøkken hele dagen */}
           <div className="grid gap-1.5" style={gridStyle}>
             <LabelCell>Kjøkken</LabelCell>
