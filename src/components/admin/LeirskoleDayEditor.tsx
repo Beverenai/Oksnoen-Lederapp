@@ -29,7 +29,6 @@ import { LeirskoleDayLeaderList } from '@/components/admin/LeirskoleDayLeaderLis
 import { LeirskoleDaySessions } from '@/components/admin/LeirskoleDaySessions';
 import { LeirskoleDayMatrix } from '@/components/admin/LeirskoleDayMatrix';
 import { LeirskoleWeekImpact } from '@/components/admin/LeirskoleWeekImpact';
-import { LeirskoleWeekBoard } from '@/components/admin/LeirskoleWeekBoard';
 import { hhmm, shortDate, todayStr } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import {
@@ -162,9 +161,12 @@ function DropZone({ id, children, className }: { id: string; children: React.Rea
 export function LeirskoleDayEditor({
   week,
   staff,
+  weekBoard,
 }: {
   week: { id: string; start_date: string; end_date: string; max_daily_hours: number | null };
   staff: StaffRow[];
+  /** Ukeoversikten vises som egen fane inne i dag-til-dag. */
+  weekBoard?: React.ReactNode;
 }) {
   const qc = useQueryClient();
   const { data: posts } = useLeirskoleSchedule(week.id);
@@ -410,11 +412,7 @@ export function LeirskoleDayEditor({
             />
           )}
 
-          {mode === 'uke' && (
-            <div className="-mx-4">
-              <LeirskoleWeekBoard week={week} staff={staff} />
-            </div>
-          )}
+          {mode === 'uke' && <div className="-mx-4">{weekBoard}</div>}
 
           {mode === 'dag' && (
             <>
