@@ -268,11 +268,24 @@ export function LeirskoleDaySessions({
       {sorted.map((p) => {
         const session = sessionKey(p);
         const free = staff.filter((s) => s.leader && !p.assignments.some((a) => a.staff_id === s.id));
+        const meal = isMeal(p);
         return (
-          <div key={p.id} className="rounded-2xl border border-border/60 bg-card p-3">
+          <div
+            key={p.id}
+            className={`rounded-2xl border p-2 ${
+              meal ? 'border-sky-500/40 bg-sky-500/[0.07]' : 'border-emerald-500/40 bg-emerald-500/[0.07]'
+            }`}
+          >
             <div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide ${
+                      meal ? 'bg-sky-500/20 text-sky-700 dark:text-sky-300' : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                    }`}
+                  >
+                    {meal ? 'Måltid' : 'Økt'}
+                  </span>
                   <Input
                     key={`${p.id}-${p.name}`}
                     defaultValue={p.name}
@@ -283,9 +296,9 @@ export function LeirskoleDaySessions({
                       if (!guard()) return;
                       updatePost.mutate({ id: p.id, name: v });
                     }}
-                    className="h-9 min-w-0 flex-1 rounded-xl border-transparent bg-muted/40 px-2 text-base font-bold"
+                    className="h-8 min-w-0 flex-1 rounded-xl border-transparent bg-background/60 px-2 text-sm font-bold"
                   />
-                  <span className="shrink-0 rounded-full bg-muted/50 px-2 py-1 text-[10px] font-semibold tabular-nums text-muted-foreground">
+                  <span className="shrink-0 rounded-full bg-background/60 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
                     {Number(p.duration_hours ?? 0).toFixed(1)}t
                   </span>
                   <TimeRangePopover
@@ -302,17 +315,17 @@ export function LeirskoleDaySessions({
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-8 w-8 shrink-0"
+                    className="h-7 w-7 shrink-0"
                     aria-label="Slett økt"
                     onClick={() => guard() && deletePost.mutate(p.id)}
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
                 </div>
 
-                <div className="mt-2.5 flex flex-wrap items-start gap-2">
+                <div className="mt-1.5 flex flex-wrap items-start gap-1.5">
                   {p.assignments.length === 0 && (
-                    <p className="w-full text-xs text-muted-foreground">Ingen ledere på økten.</p>
+                    <p className="self-center text-[11px] text-muted-foreground">Ingen ledere.</p>
                   )}
                   {p.assignments.map((a) => {
                     const s = staffById.get(a.staff_id);
@@ -323,28 +336,29 @@ export function LeirskoleDaySessions({
                     const act = leaderId ? actByLeaderSession.get(`${leaderId}|${session}`) : undefined;
                     const t = act ? typeMap.get(act.activity) : undefined;
                     const before = act && leaderId ? doneBefore.get(`${leaderId}|${act.activity}`) ?? 0 : 0;
+                    const cellKey = `${p.id}|${a.staff_id}`;
                     return (
                       <div
                         key={a.id}
-                        className={`relative w-[7.75rem] rounded-2xl border p-2 text-center ${
-                          warns.length ? 'border-destructive/50 bg-destructive/5' : 'border-border/50 bg-muted/30'
+                        className={`relative w-[5.85rem] rounded-xl border p-1.5 text-center ${
+                          warns.length ? 'border-destructive/50 bg-destructive/5' : 'border-border/50 bg-background/70'
                         }`}
                       >
                         <button
                           type="button"
                           aria-label={`Fjern ${name}`}
-                          className="absolute right-0.5 top-0.5 rounded-full p-1"
+                          className="absolute right-0 top-0 rounded-full p-0.5"
                           onClick={() => guard() && assign.mutate({ postId: p.id, staffId: a.staff_id, remove: true })}
                         >
-                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                          <X className="h-3 w-3 text-muted-foreground" />
                         </button>
-                        <Avatar className="mx-auto h-12 w-12">
+                        <Avatar className="mx-auto h-9 w-9">
                           <AvatarImage src={s?.leader?.profile_image_url ?? undefined} alt={name} />
-                          <AvatarFallback className="text-xs">{initials(name)}</AvatarFallback>
+                          <AvatarFallback className="text-[10px]">{initials(name)}</AvatarFallback>
                         </Avatar>
-                        <div className="mt-1 min-w-0">
-                          <p className="truncate text-xs font-bold">{name.split(' ')[0]}</p>
-                          <p className="flex items-center justify-center gap-1 text-[10px] font-semibold tabular-nums">
+                        <div className="mt-0.5 min-w-0">
+                          <p className="truncate text-[11px] font-bold leading-tight">{name.split(' ')[0]}</p>
+                          <p className="flex items-center justify-center gap-0.5 text-[9.5px] font-semibold tabular-nums">
                             <span className={hours > maxHours + 0.01 ? 'text-destructive' : 'text-muted-foreground'}>
                               {hours.toFixed(1)}/{maxHours}t
                             </span>
@@ -356,15 +370,40 @@ export function LeirskoleDaySessions({
                             )}
                           </p>
 
-                          {/* Aktiviteten lederen har i denne økten */}
+                          {/* Aktiviteten lederen har i denne økten (ikke på måltider) */}
+                          {hasActivities(p) && customKey === cellKey && (
+                            <Input
+                              autoFocus
+                              value={customText}
+                              onChange={(e) => setCustomText(e.target.value)}
+                              placeholder="Egen aktivitet"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') setCustomKey(null);
+                                if (e.key !== 'Enter') return;
+                                const v = customText.trim();
+                                if (!v || !leaderId || !guard()) return;
+                                setActivity.mutate(
+                                  { weekId: week.id, date, session, leaderId, activity: CUSTOM_ACTIVITY, note: v },
+                                  { onError: () => toast.error('Kunne ikke lagre aktiviteten') },
+                                );
+                                setCustomKey(null);
+                                setCustomText('');
+                              }}
+                              onBlur={() => setCustomKey(null)}
+                              className="mt-1 h-6 rounded-full px-2 text-[10px]"
+                            />
+                          )}
+                          {hasActivities(p) && customKey !== cellKey && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                className="mt-1 flex w-full items-center justify-center gap-1 rounded-full border border-border/60 bg-background/80 px-1.5 py-1 text-[10.5px] font-semibold"
+                                className="mt-1 flex w-full items-center justify-center gap-0.5 rounded-full border border-border/60 bg-muted/50 px-1 py-0.5 text-[9.5px] font-semibold"
                               >
-                                <span>{t?.emoji ?? '＋'}</span>
-                                <span className="truncate">{t?.label ?? act?.activity ?? 'Aktivitet'}</span>
+                                <span>{t?.emoji ?? (act?.note ? '✎' : '＋')}</span>
+                                <span className="truncate">
+                                  {t?.label ?? act?.note ?? act?.activity ?? 'Aktivitet'}
+                                </span>
                                 {before > 0 && (
                                   <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-500/15 px-1 font-semibold text-emerald-700 dark:text-emerald-300">
                                     <History className="h-2.5 w-2.5" />
@@ -402,6 +441,15 @@ export function LeirskoleDaySessions({
                                   </DropdownMenuItem>
                                 );
                               })}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setCustomText(act?.note ?? '');
+                                  setCustomKey(cellKey);
+                                }}
+                              >
+                                ✎ Skriv inn selv …
+                              </DropdownMenuItem>
                               {act && (
                                 <>
                                   <DropdownMenuSeparator />
