@@ -146,21 +146,12 @@ export function LeirskoleExtraPostsCell({
                   if (v && v !== p.name) updatePost.mutate({ id: p.id, patch: { name: v } });
                 }}
               />
-              <div className="flex items-center gap-2">
-                <Input
-                  type="time"
-                  defaultValue={hhmm(p.start_time)}
-                  onBlur={(e) =>
-                    e.target.value && updatePost.mutate({ id: p.id, patch: { start_time: e.target.value } })
-                  }
-                />
-                <span className="text-muted-foreground">–</span>
-                <Input
-                  type="time"
-                  defaultValue={hhmm(p.end_time)}
-                  onBlur={(e) => e.target.value && updatePost.mutate({ id: p.id, patch: { end_time: e.target.value } })}
-                />
-              </div>
+              <TimeRangeField
+                start={hhmm(p.start_time)}
+                end={hhmm(p.end_time)}
+                onStartChange={(v) => updatePost.mutate({ id: p.id, patch: { start_time: v } })}
+                onEndChange={(v) => updatePost.mutate({ id: p.id, patch: { end_time: v } })}
+              />
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Trykk på en leder for å legge til
               </p>
@@ -225,15 +216,12 @@ export function LeirskoleExtraPostsCell({
             placeholder="Navn på økten"
             onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
           />
-          <div className="flex items-center gap-2">
-            <Input
-              type="time"
-              value={draft.start}
-              onChange={(e) => setDraft((d) => ({ ...d, start: e.target.value }))}
-            />
-            <span className="text-muted-foreground">–</span>
-            <Input type="time" value={draft.end} onChange={(e) => setDraft((d) => ({ ...d, end: e.target.value }))} />
-          </div>
+          <TimeRangeField
+            start={draft.start}
+            end={draft.end}
+            onStartChange={(v) => setDraft((d) => ({ ...d, start: v }))}
+            onEndChange={(v) => setDraft((d) => ({ ...d, end: v }))}
+          />
           <Button
             size="sm"
             className="w-full rounded-full"
