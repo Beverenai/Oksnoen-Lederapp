@@ -82,14 +82,14 @@ function OpenRow({
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold">{title}</span>
+        <span className="block text-sm font-semibold">{title}</span>
         <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
+        {status && (
+          <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${TONE[status.tone]}`}>
+            {status.label}
+          </span>
+        )}
       </span>
-      {status && (
-        <span className={`hidden shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold sm:inline ${TONE[status.tone]}`}>
-          {status.label}
-        </span>
-      )}
       <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
     </button>
   );
