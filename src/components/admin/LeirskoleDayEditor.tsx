@@ -23,7 +23,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AlertTriangle, ChevronDown, Clock, GripVertical, Lock, LockOpen, Plus, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Clock, GripVertical, Lock, LockOpen, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
+import { LeirskoleDayLeaderList } from '@/components/admin/LeirskoleDayLeaderList';
 import { hhmm, shortDate, todayStr } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import {
@@ -188,6 +189,7 @@ export function LeirskoleDayEditor({
   const [date, setDate] = useState<string>(() => (dates.includes(today) ? today : dates[0]));
   const activeDate = dates.includes(date) ? date : dates[0];
   const [open, setOpen] = useState(true);
+  const [mode, setMode] = useState<'oversikt' | 'rediger'>('oversikt');
   const [newOpen, setNewOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', start: '10:00', end: '12:00' });
 
@@ -363,6 +365,38 @@ export function LeirskoleDayEditor({
             })}
           </div>
 
+          <div className="flex rounded-full bg-muted/60 p-0.5">
+            {[
+              { key: 'oversikt' as const, label: 'Oversikt', icon: Users },
+              { key: 'rediger' as const, label: 'Rediger', icon: Pencil },
+            ].map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setMode(t.key)}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  mode === t.key ? 'bg-background shadow-sm' : 'text-muted-foreground'
+                }`}
+              >
+                <t.icon className="h-3.5 w-3.5" />
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {mode === 'oversikt' && (
+            <LeirskoleDayLeaderList
+              weekId={week.id}
+              date={activeDate}
+              posts={dayPosts}
+              staff={staff}
+              kitchenIds={kitchenIds}
+              maxHours={maxHours}
+            />
+          )}
+
+          {mode === 'rediger' && (
+          <>
           <div className="flex items-center justify-between rounded-2xl bg-muted/40 px-3 py-2">
             <p className="text-xs text-muted-foreground">
               {isLocked ? 'Dagen er låst — generatoren rører den ikke.' : 'Dra ledere mellom øktene for å endre.'}
@@ -552,6 +586,8 @@ export function LeirskoleDayEditor({
             >
               <Plus className="h-4 w-4" /> Ny økt denne dagen
             </Button>
+          )}
+          </>
           )}
         </div>
       )}
