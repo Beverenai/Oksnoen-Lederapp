@@ -139,6 +139,22 @@ export function LeirskoleDaySessions({
   const updatePost = useUpdateLeirskolePost();
   const deletePost = useDeleteLeirskolePost();
   const setNote = useSetLeirskoleAssignmentNote();
+  /** Kort per økt — brukes til å scrolle til en valgt økt. */
+  const cardRefs = useRef(new Map<string, HTMLDivElement>());
+  const [highlight, setHighlight] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!focusNonce || !focusSession) return;
+    setHighlight(focusSession);
+    const t = window.setTimeout(() => {
+      cardRefs.current.get(focusSession)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+    const clear = window.setTimeout(() => setHighlight(null), 3200);
+    return () => {
+      window.clearTimeout(t);
+      window.clearTimeout(clear);
+    };
+  }, [focusNonce, focusSession]);
   const setKitchen = useSetLeirskoleKitchenDay();
 
   const [newOpen, setNewOpen] = useState(false);
