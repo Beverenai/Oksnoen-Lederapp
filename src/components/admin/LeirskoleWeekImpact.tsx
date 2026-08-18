@@ -136,12 +136,6 @@ export function LeirskoleWeekImpact({
     return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   }, [posts, kitchenDays, dates, maxHours, nameOf]);
 
-  const byDate = useMemo(() => {
-    const map = new Map<string, Impact[]>();
-    impacts.forEach((i) => map.set(i.date, [...(map.get(i.date) ?? []), i]));
-    return map;
-  }, [impacts]);
-
   return (
     <div className="rounded-2xl border border-border/60 bg-background/70">
       <button

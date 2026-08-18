@@ -360,18 +360,30 @@ export function LeirskoleDayEditor({
             {dates.map((d) => {
               const on = d === activeDate;
               const count = ((posts ?? []) as DayPost[]).filter((p) => p.date === d).length;
+              const locked = lockedDates.has(d);
               return (
-                <button
+                <div
                   key={d}
-                  type="button"
-                  onClick={() => setDate(d)}
-                  className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                  className={`flex shrink-0 items-center gap-1 rounded-full pl-3 pr-1 py-1 text-[11px] font-semibold transition-colors ${
                     on ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground'
                   }`}
                 >
-                  {d === today ? 'I dag' : shortDate(d)}
-                  <span className={`ml-1 font-normal ${on ? 'text-primary-foreground/80' : ''}`}>{count}</span>
-                </button>
+                  <button type="button" onClick={() => setDate(d)} className="flex items-center gap-1">
+                    {d === today ? 'I dag' : shortDate(d)}
+                    <span className={`font-normal ${on ? 'text-primary-foreground/80' : ''}`}>{count}</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={locked ? `Åpne ${shortDate(d)}` : `Lås ${shortDate(d)}`}
+                    title={locked ? 'Låst — trykk for å åpne' : 'Åpen — trykk for å låse dagen'}
+                    onClick={() => setLock.mutate({ weekId: week.id, date: d, locked: !locked })}
+                    className={`rounded-full p-1 ${
+                      locked ? (on ? 'bg-primary-foreground/20' : 'bg-background/80 text-primary') : 'opacity-60'
+                    }`}
+                  >
+                    {locked ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -380,8 +392,6 @@ export function LeirskoleDayEditor({
             {[
               { key: 'okter' as const, label: 'Dagen', icon: Clock },
               { key: 'dag' as const, label: 'Rutenett', icon: LayoutGrid },
-              { key: 'ledere' as const, label: 'Per leder', icon: Users },
-              { key: 'rediger' as const, label: 'Dra & slipp', icon: Pencil },
               { key: 'uke' as const, label: 'Hele uken', icon: CalendarDays },
             ].map((t) => (
               <button
@@ -400,14 +410,11 @@ export function LeirskoleDayEditor({
 
           {mode !== 'uke' && (
             <LeirskoleWeekImpact
-              weekId={week.id}
               dates={dates}
               posts={(posts ?? []) as DayPost[]}
               staff={staff}
               kitchenDays={(kitchenDays ?? []) as { date: string; staff_id: string }[]}
-              lockedDates={lockedDates}
               maxHours={maxHours}
-              activeDate={activeDate}
               onPickDate={setDate}
             />
           )}
