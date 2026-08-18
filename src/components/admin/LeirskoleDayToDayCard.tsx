@@ -1,4 +1,5 @@
 import { memo, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ChevronDown, Minus, NotebookPen } from 'lucide-react';
@@ -10,6 +11,7 @@ import {
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
 import { useSeedLeirskoleSpecialDays } from '@/hooks/useSeedLeirskoleSpecialDays';
+import { assignMissingActivities } from '@/lib/leirskoleAutoActivity';
 import { countActivity, setActivityCount, lineMultiplier, stripMultiplier } from '@/lib/leirskoleCellInstances';
 import { dayLabel } from '@/lib/leirskoleDates';
 
@@ -49,6 +51,7 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
   const { data: types } = useLeirskoleActivityTypes(true);
   const { data: weekDays } = useLeirskoleWeekDays(week.id);
   const save = useSaveLeirskoleWeekPlanCell();
+  const qc = useQueryClient();
   useSeedLeirskoleSpecialDays(week);
   const dates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
 
@@ -89,7 +92,22 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
   const persist = (date: string, row: number, lines: string[], color: string) => {
     save.mutate(
       { weekId: week.id, date, rowIndex: row, content: lines.join('\n'), color },
-      { onError: () => toast.error('Kunne ikke lagre ruten') },
+      {
+        onError: () => toast.error('Kunne ikke lagre ruten'),
+        // Aktiviteten skal straks få en leder som er på vakt i den økten.
+        // Er ingen ledig, står den tom til vaktplanen genereres.
+        onSuccess: async () => {
+          try {
+            const n = await assignMissingActivities({ weekId: week.id, date });
+            ['leirskole-activities', 'leirskole-week-plan', 'leirskole-schedule'].forEach((key) =>
+              qc.invalidateQueries({ queryKey: [key] }),
+            );
+            if (n > 0) toast.success(`${n} aktivitet${n === 1 ? '' : 'er'} fikk leder`);
+          } catch {
+            /* Ingen leder på vakt ennå — aktiviteten står tom. */
+          }
+        },
+      },
     );
   };
 
