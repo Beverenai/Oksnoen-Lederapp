@@ -24,10 +24,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AlertTriangle, ChevronDown, Clock, GripVertical, LayoutGrid, Lock, LockOpen, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, ChevronDown, Clock, GripVertical, LayoutGrid, Lock, LockOpen, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
 import { LeirskoleDayLeaderList } from '@/components/admin/LeirskoleDayLeaderList';
 import { LeirskoleDaySessions } from '@/components/admin/LeirskoleDaySessions';
 import { LeirskoleDayMatrix } from '@/components/admin/LeirskoleDayMatrix';
+import { LeirskoleWeekImpact } from '@/components/admin/LeirskoleWeekImpact';
 import { hhmm, shortDate, todayStr } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import {
@@ -160,9 +161,12 @@ function DropZone({ id, children, className }: { id: string; children: React.Rea
 export function LeirskoleDayEditor({
   week,
   staff,
+  weekBoard,
 }: {
   week: { id: string; start_date: string; end_date: string; max_daily_hours: number | null };
   staff: StaffRow[];
+  /** Ukeoversikten vises som egen fane inne i dag-til-dag. */
+  weekBoard?: React.ReactNode;
 }) {
   const qc = useQueryClient();
   const { data: posts } = useLeirskoleSchedule(week.id);
@@ -192,7 +196,7 @@ export function LeirskoleDayEditor({
   const [date, setDate] = useState<string>(() => (dates.includes(today) ? today : dates[0]));
   const activeDate = dates.includes(date) ? date : dates[0];
   const [open, setOpen] = useState(true);
-  const [mode, setMode] = useState<'dag' | 'okter' | 'ledere' | 'rediger'>('okter');
+  const [mode, setMode] = useState<'dag' | 'okter' | 'ledere' | 'rediger' | 'uke'>('okter');
   const [newOpen, setNewOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', start: '10:00', end: '12:00' });
 
@@ -211,6 +215,10 @@ export function LeirskoleDayEditor({
     [kitchenDays, activeDate],
   );
   const isLocked = !!(weekDays ?? []).find((d) => d.date === activeDate)?.is_locked;
+  const lockedDates = useMemo(
+    () => new Set((weekDays ?? []).filter((d) => d.is_locked).map((d) => d.date)),
+    [weekDays],
+  );
 
   /** Timer per leder denne dagen. */
   const hoursByStaff = useMemo(() => {
@@ -374,6 +382,7 @@ export function LeirskoleDayEditor({
               { key: 'dag' as const, label: 'Rutenett', icon: LayoutGrid },
               { key: 'ledere' as const, label: 'Per leder', icon: Users },
               { key: 'rediger' as const, label: 'Dra & slipp', icon: Pencil },
+              { key: 'uke' as const, label: 'Hele uken', icon: CalendarDays },
             ].map((t) => (
               <button
                 key={t.key}
@@ -388,6 +397,22 @@ export function LeirskoleDayEditor({
               </button>
             ))}
           </div>
+
+          {mode !== 'uke' && (
+            <LeirskoleWeekImpact
+              weekId={week.id}
+              dates={dates}
+              posts={(posts ?? []) as DayPost[]}
+              staff={staff}
+              kitchenDays={(kitchenDays ?? []) as { date: string; staff_id: string }[]}
+              lockedDates={lockedDates}
+              maxHours={maxHours}
+              activeDate={activeDate}
+              onPickDate={setDate}
+            />
+          )}
+
+          {mode === 'uke' && <div className="-mx-4">{weekBoard}</div>}
 
           {mode === 'dag' && (
             <>
