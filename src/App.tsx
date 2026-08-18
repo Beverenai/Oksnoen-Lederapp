@@ -171,6 +171,13 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** Sider som er skrudd av for vanlige ledere, men beholdt for admin. */
+function AdminOnly({ children }: { children: React.ReactNode }) {
+  const { isAdmin } = useAuth();
+  if (!isAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   const { leader, isProfileComplete } = useAuth();
   const { isInstalled, hasDeclined, isIOS, isAndroid } = usePWAInstall();
@@ -265,14 +272,15 @@ function AppRoutes() {
         <Route path="/kiosk" element={<ProtectedRoute><Kiosk /></ProtectedRoute>} />
         <Route path="/kjokken" element={<ProtectedRoute><Kjokken /></ProtectedRoute>} />
         <Route path="/postkasse" element={<ProtectedRoute><Mailbox /></ProtectedRoute>} />
-        <Route path="/klineliste" element={<ProtectedRoute><Klineliste /></ProtectedRoute>} />
-        {/* Tinder er deaktivert for alle ledere — gamle lenker går til klinelista. */}
-        <Route path="/kline-tinder" element={<Navigate to="/klineliste" replace />} />
+        {/* Klineliste er deaktivert for vanlige ledere — kun admin. */}
+        <Route path="/klineliste" element={<ProtectedRoute><AdminOnly><Klineliste /></AdminOnly></ProtectedRoute>} />
+        {/* Tinder er deaktivert for alle ledere. */}
+        <Route path="/kline-tinder" element={<Navigate to="/" replace />} />
         <Route path="/snus" element={<ProtectedRoute><SnusPage /></ProtectedRoute>} />
         <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
         <Route path="/pov" element={<ProtectedRoute><PovPage /></ProtectedRoute>} />
-        <Route path="/slurker" element={<ProtectedRoute><SlurkerPage /></ProtectedRoute>} />
-        <Route path="/liggeliste" element={<Navigate to="/klineliste" replace />} />
+        <Route path="/slurker" element={<ProtectedRoute><AdminOnly><SlurkerPage /></AdminOnly></ProtectedRoute>} />
+        <Route path="/liggeliste" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

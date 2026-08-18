@@ -604,7 +604,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <NavLinkItem item={{ to: '/', icon: Home, label: 'Hjem' }} />
               <NavLinkItem item={{ to: '/chat', icon: MessageCircle, label: 'Lederhuset' }} />
               <NavLinkItem item={{ to: '/lederpass', icon: PassIcon as LucideIcon, label: 'Lederpass' }} />
-              <NavLinkItem item={{ to: '/klineliste', icon: HeartHandshake, label: 'Klineliste' }} />
               <NavLinkItem item={{ to: '/profile', icon: User, label: 'Min Profil' }} />
             </div>
           ) : isAdmin ? (

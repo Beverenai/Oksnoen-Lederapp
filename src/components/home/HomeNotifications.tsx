@@ -50,14 +50,19 @@ function readSeen(): string[] {
 
 export function HomeNotifications() {
   const navigate = useNavigate();
-  const { leader } = useAuth();
+  const { leader, isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState<string[]>(() => readSeen());
   const [leaderMap, setLeaderMap] = useState<Map<string, { name: string; image: string | null }>>(new Map());
-  const { data: sipsData } = useMySips();
-  const { incoming: hookups } = useMyHookups();
+  const { data: sipsDataRaw } = useMySips();
+  const { incoming: hookupsRaw } = useMyHookups();
   const { data: matches = [] } = useMyMatches();
   const { data: mailboxMessages = [] } = useMyMailboxMessages();
+
+  // Slurker og klineliste er skrudd av for vanlige ledere — kun admin får
+  // varsler fra disse funksjonene.
+  const sipsData = isAdmin ? sipsDataRaw : undefined;
+  const hookups = isAdmin ? hookupsRaw : [];
 
   useEffect(() => {
     const ids = Array.from(
