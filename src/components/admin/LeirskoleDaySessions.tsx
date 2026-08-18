@@ -236,7 +236,7 @@ export function LeirskoleDaySessions({
    * Advarsler for én leder, eventuelt som om de i tillegg tok `extra`-vakten.
    * 11-timers hvile gjelder mellom arbeidsdager, ikke innen samme dag.
    */
-  const warningsFor = (staffId: string, extra?: SessionPost): string[] => {
+  const computeWarnings = (staffId: string, extra?: SessionPost): string[] => {
     const out: string[] = [];
     const extraHours = extra ? Number(extra.duration_hours ?? 0) : 0;
     const hours = (hoursByStaff.get(staffId) ?? 0) + extraHours;
@@ -265,6 +265,23 @@ export function LeirskoleDaySessions({
     if (kitchenIds.has(staffId) && (extra || shifts.length > 0)) out.push('Har kjøkken hele dagen');
     return Array.from(new Set(out));
   };
+
+  /** Advarslene uten ekstra vakt regnes bare én gang per leder. */
+  const baseWarnings = useMemo(() => {
+    const map = new Map<string, string[]>();
+    staff.forEach((s) => map.set(s.id, computeWarnings(s.id)));
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staff, hoursByStaff, shiftsByStaff, kitchenIds, maxHours]);
+
+  const warningsFor = (staffId: string, extra?: SessionPost): string[] =>
+    extra ? computeWarnings(staffId, extra) : baseWarnings.get(staffId) ?? [];
+
+  /** Ledere som kan settes på vanlige økter (ikke kjøkken). */
+  const assignableStaff = useMemo(
+    () => staff.filter((s) => s.leader && !kitchenIds.has(s.id)),
+    [staff, kitchenIds],
+  );
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
