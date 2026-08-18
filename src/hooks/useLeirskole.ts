@@ -249,66 +249,15 @@ export function useLeirskoleSchedule(weekId?: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leirskole_posts')
-        .select('*, assignments:leirskole_assignments(id, staff_id, is_locked, assigned_manually)')
+        .select('*, assignments:leirskole_assignments(id, staff_id, is_locked, assigned_manually, note)')
         .eq('week_id', weekId!)
         .order('date')
         .order('start_time');
       if (error) throw error;
       return (data ?? []) as (LeirskolePost & {
-        assignments: { id: string; staff_id: string; is_locked: boolean; assigned_manually: boolean }[];
+        assignments: { id: string; staff_id: string; is_locked: boolean; assigned_manually: boolean; note: string | null }[];
       })[];
     },
-  });
-}
-
-/** Oppgaver for uken + hvilke jeg har fullført. */
-export function useLeirskoleTasks(weekId?: string | null) {
-  const { effectiveLeader } = useAuth();
-  return useQuery({
-    queryKey: ['leirskole-tasks', weekId, effectiveLeader?.id],
-    enabled: !!weekId && !!effectiveLeader?.id,
-    queryFn: async () => {
-      const [{ data: tasks, error }, { data: done, error: doneError }] = await Promise.all([
-        supabase.from('leirskole_tasks').select('*').eq('week_id', weekId!).order('created_at', { ascending: false }),
-        supabase
-          .from('leirskole_task_completions')
-          .select('task_id, leader_id, completed_at')
-          .eq('leader_id', effectiveLeader!.id),
-      ]);
-      if (error) throw error;
-      if (doneError) throw doneError;
-      const mine = new Set(
-        (done ?? []).filter((completion) => completion.leader_id === effectiveLeader?.id).map((completion) => completion.task_id),
-      );
-      return (tasks ?? []).map((task) => ({
-        ...(task as LeirskoleTask),
-        completedByMe: mine.has(task.id),
-      }));
-    },
-  });
-}
-
-export function useToggleLeirskoleTask() {
-  const qc = useQueryClient();
-  const { effectiveLeader } = useAuth();
-  return useMutation({
-    mutationFn: async ({ taskId, done }: { taskId: string; done: boolean }) => {
-      if (!effectiveLeader?.id) throw new Error('Ingen leder');
-      if (done) {
-        const { error } = await supabase
-          .from('leirskole_task_completions')
-          .insert({ task_id: taskId, leader_id: effectiveLeader.id });
-        if (error && !error.message.includes('duplicate')) throw error;
-      } else {
-        const { error } = await supabase
-          .from('leirskole_task_completions')
-          .delete()
-          .eq('task_id', taskId)
-          .eq('leader_id', effectiveLeader.id);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-tasks'] }),
   });
 }
 
@@ -328,16 +277,16 @@ export function useMyLeirskoleShifts(weekId?: string | null) {
       if (!staff) return [];
       const { data, error } = await supabase
         .from('leirskole_assignments')
-        .select('id, post:leirskole_posts(*)')
+        .select('id, note, post:leirskole_posts(*)')
         .eq('staff_id', staff.id);
       if (error) throw error;
-      const assignments = (data ?? []) as Array<{ post: LeirskolePost | null }>;
+      const assignments = (data ?? []) as Array<{ note: string | null; post: LeirskolePost | null }>;
       return assignments
-        .map((assignment) => assignment.post)
+        .map((assignment) => (assignment.post ? { ...assignment.post, leaderNote: assignment.note } : null))
         .filter(Boolean)
         // Upubliserte økter (f.eks. 3. økt som settes senere på dagen) vises ikke.
         .filter((post) => (post as LeirskolePost & { is_published?: boolean }).is_published !== false)
-        .sort((a, b) => (a.date === b.date ? a.start_time.localeCompare(b.start_time) : a.date.localeCompare(b.date)));
+        .sort((a, b) => (a.date === b.date ? a.start_time.localeCompare(b.start_time) : a.date.localeCompare(b.date))) as (LeirskolePost & { leaderNote: string | null })[];
     },
   });
 }
@@ -385,61 +334,6 @@ export function useIsLeirskoleStaff(weekId?: string | null) {
       if (error) throw error;
       return !!data;
     },
-  });
-}
-
-/**
- * Øktinfo for uken (hybrid av «Denne økten skal du» i vanlig app).
- * Returnerer bare det som gjelder meg, med lest-status.
- */
-export function useLeirskoleSessionInfo(weekId?: string | null) {
-  const { effectiveLeader } = useAuth();
-  return useQuery({
-    queryKey: ['leirskole-session-info', weekId, effectiveLeader?.id],
-    enabled: !!weekId,
-    queryFn: async () => {
-      const [{ data: info, error }, { data: reads }] = await Promise.all([
-        supabase
-          .from('leirskole_session_info')
-          .select('*')
-          .eq('week_id', weekId!)
-          .order('created_at', { ascending: false }),
-        supabase.from('leirskole_session_info_reads').select('info_id, leader_id'),
-      ]);
-      if (error) throw error;
-      const mineRead = new Set(
-        (reads ?? []).filter((read) => read.leader_id === effectiveLeader?.id).map((read) => read.info_id),
-      );
-      return (info ?? []).map((entry) => ({
-        ...(entry as LeirskoleSessionInfo),
-        readByMe: mineRead.has(entry.id),
-        readCount: (reads ?? []).filter((read) => read.info_id === entry.id).length,
-      }));
-    },
-  });
-}
-
-export function useMarkLeirskoleInfoRead() {
-  const qc = useQueryClient();
-  const { effectiveLeader } = useAuth();
-  return useMutation({
-    mutationFn: async ({ infoId, read }: { infoId: string; read: boolean }) => {
-      if (!effectiveLeader?.id) throw new Error('Ingen leder');
-      if (read) {
-        const { error } = await supabase
-          .from('leirskole_session_info_reads')
-          .insert({ info_id: infoId, leader_id: effectiveLeader.id });
-        if (error && !error.message.includes('duplicate')) throw error;
-      } else {
-        const { error } = await supabase
-          .from('leirskole_session_info_reads')
-          .delete()
-          .eq('info_id', infoId)
-          .eq('leader_id', effectiveLeader.id);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-session-info'] }),
   });
 }
 
