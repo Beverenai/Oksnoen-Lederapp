@@ -834,10 +834,8 @@ export function LeirskoleDaySessions({
                     <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Ledige til {p.name}
                     </p>
-                    {staff
-                      .filter(
-                        (s) => s.leader && !kitchenIds.has(s.id) && !p.assignments.some((x) => x.staff_id === s.id),
-                      )
+                    {assignableStaff
+                      .filter((s) => !p.assignments.some((x) => x.staff_id === s.id))
                       .slice()
                       .sort((x, y) => (hoursByStaff.get(x.id) ?? 0) - (hoursByStaff.get(y.id) ?? 0))
                       .map((s) => {
