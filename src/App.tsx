@@ -171,6 +171,13 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** Sider som er skrudd av for vanlige ledere, men beholdt for admin. */
+function AdminOnly({ children }: { children: React.ReactNode }) {
+  const { isAdmin } = useAuth();
+  if (!isAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   const { leader, isProfileComplete } = useAuth();
   const { isInstalled, hasDeclined, isIOS, isAndroid } = usePWAInstall();
