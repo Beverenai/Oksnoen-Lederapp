@@ -156,7 +156,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
 
   const dates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
 
-  useSeedLeirskoleSpecialDays(week);
+  // «Dag til dag» seeder ankomst/avreise. Gjør vi det her også, skriver to
+  // komponenter til samme dager og siden hopper mens dataene oppdateres.
+  useSeedLeirskoleSpecialDays(week, false);
 
   const specialDays = useMemo(() => {
     const map = new Map<string, string>();
@@ -273,7 +275,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     });
     (kitchenDays ?? []).forEach((k) => {
       const day = map.get(k.date) ?? new Map<string, number>();
-      day.set(k.staff_id, (day.get(k.staff_id) ?? 0) + KITCHEN_DAY_HOURS);
+      day.set(k.staff_id, (day.get(k.staff_id) ?? 0) + Number(k.hours ?? KITCHEN_DAY_HOURS));
       map.set(k.date, day);
     });
     return map;
@@ -295,7 +297,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
       const l = staffToLeader.get(k.staff_id);
       if (!l) return;
       const day = map.get(k.date) ?? new Map<string, number>();
-      day.set(l.id, (day.get(l.id) ?? 0) + KITCHEN_DAY_HOURS);
+      day.set(l.id, (day.get(l.id) ?? 0) + Number(k.hours ?? KITCHEN_DAY_HOURS));
       map.set(k.date, day);
     });
     return map;
@@ -607,7 +609,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     });
     (kitchenDays ?? []).forEach((k) => {
       const key = `${k.date}|${k.staff_id}`;
-      map.set(key, [...(map.get(key) ?? []), { name: 'Kjøkken', hours: KITCHEN_DAY_HOURS, kitchen: true }]);
+      map.set(key, [...(map.get(key) ?? []), { name: 'Kjøkken', hours: Number(k.hours ?? KITCHEN_DAY_HOURS), kitchen: true }]);
     });
     return map;
   }, [posts, kitchenDays]);

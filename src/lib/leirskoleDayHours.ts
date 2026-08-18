@@ -53,11 +53,14 @@ export async function trimDayHours({
 
   const { data: kitchen } = await supabase
     .from('leirskole_kitchen_days')
-    .select('id')
+    .select('id, hours')
     .eq('week_id', weekId)
     .eq('date', date)
     .eq('staff_id', staffId);
-  const kitchenHours = (kitchen ?? []).length ? KITCHEN_DAY_HOURS : 0;
+  const kitchenHours = (kitchen ?? []).reduce(
+    (sum, k) => sum + Number(k.hours ?? KITCHEN_DAY_HOURS),
+    0,
+  );
 
   let total = mine.reduce((sum, r) => sum + r.hours, 0) + kitchenHours;
   if (total <= maxHours + 0.01) return [];
@@ -107,7 +110,7 @@ export async function fillDayHours({
       .select('id, name, duration_hours, required_leaders, is_night')
       .eq('week_id', weekId)
       .eq('date', date),
-    supabase.from('leirskole_kitchen_days').select('staff_id').eq('week_id', weekId).eq('date', date),
+    supabase.from('leirskole_kitchen_days').select('staff_id, hours').eq('week_id', weekId).eq('date', date),
   ]);
 
   const usable = (posts ?? []).filter((p) => !p.is_night && Number(p.duration_hours ?? 0) > 0);
@@ -126,7 +129,8 @@ export async function fillDayHours({
   const hours = new Map<string, number>();
   const durationById = new Map((posts ?? []).map((p) => [p.id, Number(p.duration_hours ?? 0)]));
 
-  staff.forEach((s) => hours.set(s.id, kitchenStaff.has(s.id) ? KITCHEN_DAY_HOURS : 0));
+  const kitchenHoursById = new Map((kitchen ?? []).map((k) => [k.staff_id, Number(k.hours ?? KITCHEN_DAY_HOURS)]));
+  staff.forEach((s) => hours.set(s.id, kitchenHoursById.get(s.id) ?? 0));
   (rows ?? []).forEach((r) => {
     const set = onPost.get(r.post_id) ?? new Set<string>();
     set.add(r.staff_id);

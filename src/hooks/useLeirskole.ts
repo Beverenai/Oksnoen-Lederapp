@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Tables } from '@/integrations/supabase/types';
@@ -15,6 +15,8 @@ export type LeirskoleSessionActivities = Tables<'leirskole_session_activities'>;
 export function useLeirskoleActivityTypes(onlyActive = false) {
   return useQuery({
     queryKey: ['leirskole-activity-types', onlyActive],
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       let q = supabase.from('leirskole_activity_types').select('*').order('sort_order');
       if (onlyActive) q = q.eq('is_active', true);
@@ -245,6 +247,8 @@ export function useSaveLeirskoleCompetencies() {
 export function useLeirskoleSchedule(weekId?: string | null) {
   return useQuery({
     queryKey: ['leirskole-schedule', weekId],
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
     enabled: !!weekId,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -365,6 +369,8 @@ export function useIsLeirskoleStaff(weekId?: string | null) {
 export function useLeirskoleActivities(weekId?: string | null) {
   return useQuery({
     queryKey: ['leirskole-activities', weekId],
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
     enabled: !!weekId,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -382,6 +388,8 @@ export function useLeirskoleActivities(weekId?: string | null) {
 export function useLeirskoleActivityHistory() {
   return useQuery({
     queryKey: ['leirskole-activity-history'],
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leirskole_activity_assignments')
@@ -544,6 +552,8 @@ export type LeirskoleWeekDay = Tables<'leirskole_week_days'>;
 export function useLeirskoleWeekDays(weekId?: string | null) {
   return useQuery({
     queryKey: ['leirskole-week-days', weekId],
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
     enabled: !!weekId,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -622,6 +632,8 @@ export type LeirskoleKitchenDay = Tables<'leirskole_kitchen_days'>;
 export function useLeirskoleKitchenDays(weekId?: string | null) {
   return useQuery({
     queryKey: ['leirskole-kitchen-days', weekId],
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
     enabled: !!weekId,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -643,11 +655,14 @@ export function useSetLeirskoleKitchenDay() {
       staffId,
       date,
       active,
+      hours,
     }: {
       weekId: string;
       staffId: string;
       date: string;
       active: boolean;
+      /** Kjøkkenvakt er 8t som standard, men kan settes til noe annet. */
+      hours?: number;
     }) => {
       if (!active) {
         const { error } = await supabase
@@ -658,17 +673,12 @@ export function useSetLeirskoleKitchenDay() {
         if (error) throw error;
         return;
       }
-      // Kun én leder på kjøkken per dag — bytt ut den som eventuelt står der.
-      await supabase
-        .from('leirskole_kitchen_days')
-        .delete()
-        .eq('week_id', weekId)
-        .eq('date', date)
-        .neq('staff_id', staffId);
-
       const { error } = await supabase
         .from('leirskole_kitchen_days')
-        .upsert({ week_id: weekId, staff_id: staffId, date }, { onConflict: 'staff_id,date' });
+        .upsert(
+          { week_id: weekId, staff_id: staffId, date, hours: hours ?? 8 },
+          { onConflict: 'staff_id,date' },
+        );
       if (error) throw error;
 
       // Kjøkkenledere skal ikke stå på andre vakter den dagen.
@@ -697,6 +707,8 @@ export function useSetLeirskoleKitchenDay() {
 export function useLeirskoleWeekPlan(weekId?: string | null) {
   return useQuery({
     queryKey: ['leirskole-week-plan', weekId],
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
     enabled: !!weekId,
     queryFn: async () => {
       const { data, error } = await supabase
