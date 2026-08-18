@@ -477,6 +477,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
 
   /** Hent forhåndsvisning før noe skrives. */
   const openPreview = async (mode: LeirskoleGenerateMode) => {
+
     setPendingMode(mode);
     setPreviewLoading(true);
     try {
