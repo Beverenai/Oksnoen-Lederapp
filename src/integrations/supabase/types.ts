@@ -2557,6 +2557,68 @@ export type Database = {
           },
         ]
       }
+      leirskole_week_leader_snapshots: {
+        Row: {
+          activities: string[] | null
+          activity_count: number
+          competencies: string[] | null
+          created_at: string
+          hours: number
+          id: string
+          kitchen_days: number
+          kitchen_hours: number
+          leader_id: string | null
+          leader_name: string
+          role_label: string | null
+          shift_count: number
+          snapshot_at: string
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          activities?: string[] | null
+          activity_count?: number
+          competencies?: string[] | null
+          created_at?: string
+          hours?: number
+          id?: string
+          kitchen_days?: number
+          kitchen_hours?: number
+          leader_id?: string | null
+          leader_name: string
+          role_label?: string | null
+          shift_count?: number
+          snapshot_at?: string
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          activities?: string[] | null
+          activity_count?: number
+          competencies?: string[] | null
+          created_at?: string
+          hours?: number
+          id?: string
+          kitchen_days?: number
+          kitchen_hours?: number
+          leader_id?: string | null
+          leader_name?: string
+          role_label?: string | null
+          shift_count?: number
+          snapshot_at?: string
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leirskole_week_leader_snapshots_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "leirskole_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leirskole_week_plan_cells: {
         Row: {
           color: string
@@ -5694,6 +5756,7 @@ export type Database = {
       }
       set_murder_game_active: { Args: { _active: boolean }; Returns: undefined }
       set_my_drink: { Args: { _drink: string }; Returns: string }
+      snapshot_leirskole_week: { Args: { _week_id: string }; Returns: number }
       snapshot_period_leaders: {
         Args: { _period_id?: string }
         Returns: number
