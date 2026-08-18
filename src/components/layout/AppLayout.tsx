@@ -521,8 +521,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         leirskoleSurface && 'oks-leirskole-bg min-h-[100dvh]',
       )}
     >
-      {/* Leirskole: velg lyst (standard) eller mørkt tema */}
-      {leirskoleSurface && (
+      {/* Leirskole: velg lyst (standard) eller mørkt tema — skjules på iPhone fordi systemet styrer det */}
+      {leirskoleSurface && !isNativeIOS() && (
         <button
           type="button"
           onClick={toggleLsTheme}
