@@ -673,7 +673,13 @@ export function LeirskoleDaySessions({
         return (
           <div
             key={p.id}
-            className={`rounded-2xl border p-2 ${
+            ref={(el) => {
+              if (el) cardRefs.current.set(session, el);
+              else cardRefs.current.delete(session);
+            }}
+            className={`rounded-2xl border p-2 transition-shadow ${
+              highlight === session ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+            } ${
               missing
                 ? 'border-amber-500/70 bg-amber-500/[0.09]'
                 : meal
