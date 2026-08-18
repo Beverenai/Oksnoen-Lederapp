@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Clock, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -26,17 +26,21 @@ function TimePicker({
   label,
   value,
   onChange,
+  open,
+  onToggle,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  open: boolean;
+  onToggle: () => void;
 }) {
   const mins = toMin(value);
   const hour = Math.floor(mins / 60);
   const minute = mins % 60;
 
   return (
-    <div className="flex-1">
+    <div className="min-w-0 flex-1">
       <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
       <div className="flex items-stretch gap-1">
         <Button
@@ -44,72 +48,73 @@ function TimePicker({
           variant="outline"
           size="icon"
           aria-label={`${label} minus 15 minutter`}
-          className="h-12 w-10 shrink-0 rounded-xl"
+          className="h-11 w-9 shrink-0 rounded-xl"
           onClick={() => onChange(fromMin(mins - 15))}
         >
           <Minus className="h-4 w-4" />
         </Button>
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-12 flex-1 rounded-xl px-2 text-xl font-semibold tabular-nums"
-            >
-              <Clock className="mr-1.5 h-4 w-4 opacity-60" />
-              {value || '--:--'}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="center" className="w-[264px] p-3">
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Time</p>
-            <div className="grid grid-cols-5 gap-1">
-              {HOURS.map((h) => (
-                <button
-                  key={h}
-                  type="button"
-                  onClick={() => onChange(fromMin(h * 60 + minute))}
-                  className={cn(
-                    'h-9 rounded-lg text-sm font-medium tabular-nums transition-colors',
-                    h === hour ? 'bg-primary text-primary-foreground' : 'bg-muted/60 hover:bg-muted',
-                  )}
-                >
-                  {String(h % 24).padStart(2, '0')}
-                </button>
-              ))}
-            </div>
-            <p className="mb-1.5 mt-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Minutt
-            </p>
-            <div className="grid grid-cols-4 gap-1">
-              {MINUTES.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => onChange(fromMin(hour * 60 + m))}
-                  className={cn(
-                    'h-9 rounded-lg text-sm font-medium tabular-nums transition-colors',
-                    m === minute ? 'bg-primary text-primary-foreground' : 'bg-muted/60 hover:bg-muted',
-                  )}
-                >
-                  :{String(m).padStart(2, '0')}
-                </button>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className={cn(
+            'flex h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-xl border text-lg font-semibold tabular-nums transition-colors',
+            open ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background hover:bg-muted',
+          )}
+        >
+          <Clock className="h-4 w-4 shrink-0 opacity-60" />
+          {value || '--:--'}
+        </button>
 
         <Button
           type="button"
           variant="outline"
           size="icon"
           aria-label={`${label} pluss 15 minutter`}
-          className="h-12 w-10 shrink-0 rounded-xl"
+          className="h-11 w-9 shrink-0 rounded-xl"
           onClick={() => onChange(fromMin(mins + 15))}
         >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
+
+      {open && (
+        <div className="mt-2 rounded-xl border border-border/70 bg-muted/30 p-2">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Time</p>
+          <div className="grid grid-cols-5 gap-1">
+            {HOURS.map((h) => (
+              <button
+                key={h}
+                type="button"
+                onClick={() => onChange(fromMin(h * 60 + minute))}
+                className={cn(
+                  'h-8 rounded-lg text-xs font-semibold tabular-nums transition-colors',
+                  h === hour ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted',
+                )}
+              >
+                {String(h % 24).padStart(2, '0')}
+              </button>
+            ))}
+          </div>
+          <p className="mb-1 mt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Minutt</p>
+          <div className="grid grid-cols-4 gap-1">
+            {MINUTES.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => onChange(fromMin(hour * 60 + m))}
+                className={cn(
+                  'h-8 rounded-lg text-xs font-semibold tabular-nums transition-colors',
+                  m === minute ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted',
+                )}
+              >
+                :{String(m).padStart(2, '0')}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -145,12 +150,25 @@ export function TimeRangeField({
   }, [start, end]);
 
   const invalid = !start || !end || duration === 0;
+  const [openField, setOpenField] = useState<'start' | 'end' | null>(null);
 
   return (
     <div className={cn('space-y-2', className)}>
-      <div className="flex items-end gap-2">
-        <TimePicker label="Start" value={start} onChange={onStartChange} />
-        <TimePicker label="Slutt" value={end} onChange={onEndChange} />
+      <div className="flex items-start gap-2">
+        <TimePicker
+          label="Start"
+          value={start}
+          onChange={onStartChange}
+          open={openField === 'start'}
+          onToggle={() => setOpenField((v) => (v === 'start' ? null : 'start'))}
+        />
+        <TimePicker
+          label="Slutt"
+          value={end}
+          onChange={onEndChange}
+          open={openField === 'end'}
+          onToggle={() => setOpenField((v) => (v === 'end' ? null : 'end'))}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
@@ -210,7 +228,11 @@ export function TimeRangePopover({ start, end, onChange, presets, className }: T
           {start}–{end}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[320px] p-3">
+      <PopoverContent
+        align="end"
+        collisionPadding={12}
+        className="z-50 max-h-[min(70vh,32rem)] w-[min(21rem,calc(100vw-2rem))] overflow-y-auto p-3"
+      >
         <TimeRangeField
           start={start}
           end={end}

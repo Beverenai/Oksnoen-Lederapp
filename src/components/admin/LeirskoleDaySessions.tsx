@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AlertTriangle, ChefHat, ChevronDown, History, Plus, Trash2, UserPlus, X } from 'lucide-react';
+import { AlertTriangle, ChefHat, History, Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { hhmm } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import {
@@ -262,15 +262,8 @@ export function LeirskoleDaySessions({
         const free = staff.filter((s) => s.leader && !p.assignments.some((a) => a.staff_id === s.id));
         return (
           <div key={p.id} className="rounded-2xl border border-border/60 bg-card p-3">
-            <div className="flex items-start gap-2">
-              <div className="w-[4.6rem] shrink-0">
-                <p className="text-sm font-bold tabular-nums">{hhmm(p.start_time)}</p>
-                <p className="text-[11px] tabular-nums text-muted-foreground">{hhmm(p.end_time)}</p>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {Number(p.duration_hours ?? 0).toFixed(1)}t
-                </p>
-              </div>
-              <div className="min-w-0 flex-1">
+            <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <Input
                     key={`${p.id}-${p.name}`}
@@ -282,8 +275,11 @@ export function LeirskoleDaySessions({
                       if (!guard()) return;
                       updatePost.mutate({ id: p.id, name: v });
                     }}
-                    className="h-8 flex-1 rounded-xl border-transparent bg-muted/40 px-2 text-sm font-bold"
+                    className="h-9 min-w-0 flex-1 rounded-xl border-transparent bg-muted/40 px-2 text-base font-bold"
                   />
+                  <span className="shrink-0 rounded-full bg-muted/50 px-2 py-1 text-[10px] font-semibold tabular-nums text-muted-foreground">
+                    {Number(p.duration_hours ?? 0).toFixed(1)}t
+                  </span>
                   <TimeRangePopover
                     start={hhmm(p.start_time)}
                     end={hhmm(p.end_time)}
@@ -306,9 +302,9 @@ export function LeirskoleDaySessions({
                   </Button>
                 </div>
 
-                <div className="mt-2 space-y-1.5">
+                <div className="mt-2.5 flex flex-wrap items-start gap-2">
                   {p.assignments.length === 0 && (
-                    <p className="text-xs text-muted-foreground">Ingen ledere på økten.</p>
+                    <p className="w-full text-xs text-muted-foreground">Ingen ledere på økten.</p>
                   )}
                   {p.assignments.map((a) => {
                     const s = staffById.get(a.staff_id);
@@ -322,48 +318,51 @@ export function LeirskoleDaySessions({
                     return (
                       <div
                         key={a.id}
-                        className={`flex items-center gap-2 rounded-xl border px-2 py-1.5 ${
+                        className={`relative w-[7.75rem] rounded-2xl border p-2 text-center ${
                           warns.length ? 'border-destructive/50 bg-destructive/5' : 'border-border/50 bg-muted/30'
                         }`}
                       >
-                        <Avatar className="h-8 w-8 shrink-0">
+                        <button
+                          type="button"
+                          aria-label={`Fjern ${name}`}
+                          className="absolute right-0.5 top-0.5 rounded-full p-1"
+                          onClick={() => guard() && assign.mutate({ postId: p.id, staffId: a.staff_id, remove: true })}
+                        >
+                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        </button>
+                        <Avatar className="mx-auto h-12 w-12">
                           <AvatarImage src={s?.leader?.profile_image_url ?? undefined} alt={name} />
-                          <AvatarFallback className="text-[10px]">{initials(name)}</AvatarFallback>
+                          <AvatarFallback className="text-xs">{initials(name)}</AvatarFallback>
                         </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="truncate text-xs font-bold">{name}</span>
-                            <span
-                              className={`shrink-0 text-[11px] font-semibold tabular-nums ${
-                                hours > maxHours + 0.01 ? 'text-destructive' : 'text-muted-foreground'
-                              }`}
-                            >
+                        <div className="mt-1 min-w-0">
+                          <p className="truncate text-xs font-bold">{name.split(' ')[0]}</p>
+                          <p className="flex items-center justify-center gap-1 text-[10px] font-semibold tabular-nums">
+                            <span className={hours > maxHours + 0.01 ? 'text-destructive' : 'text-muted-foreground'}>
                               {hours.toFixed(1)}/{maxHours}t
                             </span>
-                            {kitchenIds.has(a.staff_id) && <ChefHat className="h-3.5 w-3.5 shrink-0 text-sky-500" />}
+                            {kitchenIds.has(a.staff_id) && <ChefHat className="h-3 w-3 text-sky-500" />}
                             {warns.length > 0 && (
-                              <span title={warns.join('\n')} className="shrink-0">
-                                <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                              <span title={warns.join('\n')}>
+                                <AlertTriangle className="h-3 w-3 text-destructive" />
                               </span>
                             )}
-                          </div>
+                          </p>
 
                           {/* Aktiviteten lederen har i denne økten */}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                className="mt-0.5 flex max-w-full items-center gap-1 rounded-full bg-background/70 px-2 py-0.5 text-[11px] font-medium"
+                                className="mt-1 flex w-full items-center justify-center gap-1 rounded-full border border-border/60 bg-background/80 px-1.5 py-1 text-[10.5px] font-semibold"
                               >
                                 <span>{t?.emoji ?? '＋'}</span>
-                                <span className="truncate">{t?.label ?? act?.activity ?? 'Velg aktivitet'}</span>
+                                <span className="truncate">{t?.label ?? act?.activity ?? 'Aktivitet'}</span>
                                 {before > 0 && (
                                   <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-500/15 px-1 font-semibold text-emerald-700 dark:text-emerald-300">
                                     <History className="h-2.5 w-2.5" />
                                     {before}×
                                   </span>
                                 )}
-                                <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="z-50 max-h-72 overflow-y-auto">
@@ -418,28 +417,27 @@ export function LeirskoleDaySessions({
                           </DropdownMenu>
 
                           {warns.length > 0 && (
-                            <p className="mt-0.5 text-[10.5px] font-medium text-destructive">{warns[0]}</p>
+                            <p className="mt-0.5 line-clamp-2 text-[10px] font-medium text-destructive">{warns[0]}</p>
                           )}
                         </div>
-                        <button
-                          type="button"
-                          aria-label={`Fjern ${name}`}
-                          className="shrink-0 p-1"
-                          onClick={() => guard() && assign.mutate({ postId: p.id, staffId: a.staff_id, remove: true })}
-                        >
-                          <X className="h-4 w-4 text-muted-foreground" />
-                        </button>
                       </div>
                     );
                   })}
 
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button size="sm" variant="outline" className="h-8 w-full gap-1.5 rounded-full text-xs">
-                        <UserPlus className="h-3.5 w-3.5" /> Legg til leder
-                      </Button>
+                      <button
+                        type="button"
+                        className="flex h-[6.9rem] w-[7.75rem] flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-border/70 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-muted/40"
+                      >
+                        <UserPlus className="h-5 w-5" /> Legg til leder
+                      </button>
                     </PopoverTrigger>
-                    <PopoverContent align="start" className="z-50 max-h-80 w-72 overflow-y-auto p-1.5">
+                    <PopoverContent
+                      align="start"
+                      collisionPadding={12}
+                      className="z-50 max-h-[min(60vh,20rem)] w-[min(18rem,calc(100vw-2rem))] overflow-y-auto p-1.5"
+                    >
                       <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Ledige til {p.name}
                       </p>

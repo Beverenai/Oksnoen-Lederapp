@@ -192,7 +192,7 @@ export function LeirskoleDayEditor({
   const [date, setDate] = useState<string>(() => (dates.includes(today) ? today : dates[0]));
   const activeDate = dates.includes(date) ? date : dates[0];
   const [open, setOpen] = useState(true);
-  const [mode, setMode] = useState<'dag' | 'okter' | 'ledere' | 'rediger'>('dag');
+  const [mode, setMode] = useState<'dag' | 'okter' | 'ledere' | 'rediger'>('okter');
   const [newOpen, setNewOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', start: '10:00', end: '12:00' });
 
@@ -370,8 +370,8 @@ export function LeirskoleDayEditor({
 
           <div className="flex rounded-full bg-muted/60 p-0.5">
             {[
-              { key: 'dag' as const, label: 'Dagen', icon: LayoutGrid },
-              { key: 'okter' as const, label: 'Økter', icon: Clock },
+              { key: 'okter' as const, label: 'Dagen', icon: Clock },
+              { key: 'dag' as const, label: 'Rutenett', icon: LayoutGrid },
               { key: 'ledere' as const, label: 'Per leder', icon: Users },
               { key: 'rediger' as const, label: 'Dra & slipp', icon: Pencil },
             ].map((t) => (
