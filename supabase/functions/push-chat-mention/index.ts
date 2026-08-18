@@ -98,7 +98,35 @@ serve(async (req) => {
     if (message.leader_id !== caller.id) return json({ error: "Forbidden" }, 403);
 
     const mentioned = ((message.mentions ?? []) as string[]).filter((id) => id !== caller.id);
-    if (mentioned.length === 0) return json({ success: true, sent: 0, reason: "no mentions" });
+
+    // I Leirskole-chatten varsles alle som er satt opp på den aktive uken,
+    // uansett om de er tagget — det er deres eneste kanal.
+    let weekStaffIds: string[] = [];
+    if (message.channel === "leirskole") {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: weeks } = await supabaseAdmin
+        .from("leirskole_weeks")
+        .select("id, start_date, end_date")
+        .eq("is_active", true)
+        .order("start_date", { ascending: true });
+      const list = (weeks ?? []) as Array<{ id: string; start_date: string; end_date: string }>;
+      const week =
+        list.find((w) => w.start_date <= today && w.end_date >= today) ??
+        list.find((w) => w.start_date > today) ??
+        list[list.length - 1];
+      if (week) {
+        const { data: staff } = await supabaseAdmin
+          .from("leirskole_staff")
+          .select("leader_id")
+          .eq("week_id", week.id);
+        weekStaffIds = (staff ?? [])
+          .map((s) => s.leader_id as string)
+          .filter((id) => id && id !== caller.id);
+      }
+    }
+
+    const targetIds = Array.from(new Set([...mentioned, ...weekStaffIds]));
+    if (targetIds.length === 0) return json({ success: true, sent: 0, reason: "no recipients" });
 
     // Sendelås — én rad per melding.
     const { error: lockError } = await supabaseAdmin
@@ -110,10 +138,11 @@ serve(async (req) => {
     const { data: recipients } = await supabaseAdmin
       .from("leaders")
       .select("id")
-      .in("id", mentioned)
+      .in("id", targetIds)
       .or("is_external.is.null,is_external.eq.false");
     const recipientIds = (recipients ?? []).map((r) => r.id as string);
     if (recipientIds.length === 0) return json({ success: true, sent: 0, reason: "no accounts" });
+    const mentionedSet = new Set(mentioned);
 
     const rawBody = String(message.body ?? "").trim();
     const hasImage = !!(message as { image_path?: string | null }).image_path;
@@ -122,7 +151,11 @@ serve(async (req) => {
       : hasImage
         ? "📷 Sendte et bilde"
         : "Ny melding i Lederhuset";
-    const title = `💬 ${caller.name} tagget deg`;
+    const channelLabel = message.channel === "leirskole" ? "Leirskole" : "Lederhuset";
+    const titleFor = (leaderId: string) =>
+      mentionedSet.has(leaderId)
+        ? `💬 ${caller.name} tagget deg`
+        : `💬 ${caller.name} i ${channelLabel}`;
     const url = "/chat";
 
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
@@ -151,6 +184,7 @@ serve(async (req) => {
         _leader_id: sub.leader_id,
       });
       const badge = Number(badgeData) || 0;
+      const title = titleFor(sub.leader_id);
 
       if (sub.channel === "apns") {
         if (!apnsCfg) continue;

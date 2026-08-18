@@ -43,17 +43,20 @@ export function useViewMode() {
  * app_mode) med en eventuell manuell overstyring.
  */
 export function useAccessMode() {
-  const { isSuperAdmin, isLimitedAccess, isLeirskole } = useAuth();
+  const { isSuperAdmin, isAdmin, isLimitedAccess, isLeirskole } = useAuth();
   const { mode: appMode } = useAppMode();
   const { viewMode, setViewMode, canSwitch } = useViewMode();
 
-  const autoLimited = isLimitedAccess || (appMode === 'inactive' && !isSuperAdmin);
+  // Leirskole-ledere (som ikke er admin) er alltid låst til leirskole-delen,
+  // uansett om de er aktive i perioden eller ikke.
+  const lockedToLeirskole = isLeirskole && !isAdmin && !isSuperAdmin;
+  const autoLimited = lockedToLeirskole || isLimitedAccess || (appMode === 'inactive' && !isSuperAdmin);
 
   let limited = autoLimited;
   let leirskoleView = isLeirskole;
-  let mode: AccessMode = isLeirskole && autoLimited ? 'leirskole' : autoLimited ? 'offseason' : 'full';
+  let mode: AccessMode = lockedToLeirskole || (isLeirskole && autoLimited) ? 'leirskole' : autoLimited ? 'offseason' : 'full';
 
-  if (canSwitch) {
+  if (canSwitch && !lockedToLeirskole) {
     if (viewMode === 'full') {
       limited = false;
       leirskoleView = false;
