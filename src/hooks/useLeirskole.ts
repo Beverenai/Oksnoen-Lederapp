@@ -572,6 +572,66 @@ export function useDeleteLeirskoleActivity() {
   });
 }
 
+/**
+ * Sett (eller fjern) aktiviteten til én leder i én økt. Erstatter det som
+ * ligger der fra før for den lederen — brukes i dagsvisningen.
+ */
+export function useSetLeirskoleLeaderActivity() {
+  const qc = useQueryClient();
+  const { leader } = useAuth();
+  return useMutation({
+    mutationFn: async ({
+      weekId,
+      date,
+      session,
+      leaderId,
+      activity,
+      note,
+    }: {
+      weekId: string;
+      date: string;
+      session: string;
+      leaderId: string;
+      /** null fjerner aktiviteten. */
+      activity: string | null;
+      note?: string | null;
+    }) => {
+      const { error: delError } = await supabase
+        .from('leirskole_activity_assignments')
+        .delete()
+        .eq('week_id', weekId)
+        .eq('date', date)
+        .eq('session', session)
+        .eq('leader_id', leaderId);
+      if (delError) throw delError;
+      if (!activity) return;
+      const { error } = await supabase.from('leirskole_activity_assignments').insert({
+        week_id: weekId,
+        date,
+        session,
+        leader_id: leaderId,
+        activity,
+        note: note ?? null,
+        auto_generated: false,
+        created_by: leader?.id ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateActivities(qc),
+  });
+}
+
+export function useDeleteLeirskoleActivityById() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('leirskole_activity_assignments').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateActivities(qc),
+  });
+}
+
 export type LeirskoleWeekPlanCell = Tables<'leirskole_week_plan_cells'>;
 export type LeirskoleWeekDay = Tables<'leirskole_week_days'>;
 
