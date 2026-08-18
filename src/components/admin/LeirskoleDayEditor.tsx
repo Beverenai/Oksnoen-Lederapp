@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TimeRangeField, TimeRangePopover } from '@/components/ui/time-range-field';
 import {
   DropdownMenu,
   DropdownMenuContent,
