@@ -34,7 +34,6 @@ import { assignMissingActivities } from '@/lib/leirskoleAutoActivity';
 import { cellInstances } from '@/lib/leirskoleCellInstances';
 import { useSeedLeirskoleSpecialDays } from '@/hooks/useSeedLeirskoleSpecialDays';
 
-const MEALS = ['Frokost', 'Middag', 'Kvelds'];
 const MEAL_TIMES: Record<string, { start: string; end: string; hours: number }> = {
   Frokost: { start: '09:00', end: '10:00', hours: 1 },
   Middag: { start: '14:00', end: '15:00', hours: 1 },
