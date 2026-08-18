@@ -490,9 +490,13 @@ export default function LeirskoleAdmin() {
         }}
       />
 
-      <LeirskoleWeekBoard week={week} staff={staff ?? []} />
-
-      {week && <LeirskoleDayEditor week={week} staff={staff ?? []} />}
+      {week && (
+        <LeirskoleDayEditor
+          week={week}
+          staff={staff ?? []}
+          weekBoard={<LeirskoleWeekBoard week={week} staff={staff ?? []} />}
+        />
+      )}
 
       {/* Stegvis arbeidsflyt */}
       <div className="space-y-2">
