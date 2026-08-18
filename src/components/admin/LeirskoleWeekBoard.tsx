@@ -56,7 +56,7 @@ import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffP
 import { trimDayHours, fillDayHours, KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import { assignMissingActivities } from '@/lib/leirskoleAutoActivity';
 import { cellInstances } from '@/lib/leirskoleCellInstances';
-import { hhmm } from '@/lib/leirskoleDates';
+import { hhmm, dayLabel } from '@/lib/leirskoleDates';
 import { useSeedLeirskoleSpecialDays } from '@/hooks/useSeedLeirskoleSpecialDays';
 
 const MEAL_TIMES: Record<string, { start: string; end: string; hours: number }> = {
@@ -134,6 +134,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const [leadersOpen, setLeadersOpen] = useState(false);
   const [big, setBig] = useState(() => localStorage.getItem('leirskole-board-big') === '1');
   const [pendingMode, setPendingMode] = useState<LeirskoleGenerateMode | null>(null);
+  /** Omfang: alle ulåste dager, alt på nytt, eller bare én dag. */
+  const [scope, setScope] = useState<{ kind: 'unlocked' | 'fresh' | 'day'; date?: string }>({ kind: 'unlocked' });
   const [preview, setPreview] = useState<LeirskolePreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [snapshot, setSnapshot] = useState<LeirskoleSnapshot | null>(null);
@@ -301,6 +303,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
 
   const generate = useMutation({
     mutationFn: async (mode: LeirskoleGenerateMode) => {
+      const onlyDates = scope.kind === 'day' && scope.date ? [scope.date] : null;
+      const ignoreLocked = scope.kind === 'fresh';
       // Uken må ha ledere før generatoren kan kjøre. Er den tom, kopierer vi
       // staben fra nærmeste tidligere uke som har ledere.
       if (staff.length === 0) {
@@ -346,6 +350,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         // «Tilfeldig ukeplan» skal faktisk lage en ny plan, ikke bare fylle
         // tomme ruter (ellers ser det ut som ingenting skjer).
         overwritePlan: mode === 'plan',
+        onlyDates,
+        ignoreLocked,
       });
     },
     onSuccess: (result) => {
@@ -519,6 +525,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         endDate: week.end_date,
         mode,
         overwritePlan: mode === 'plan',
+        onlyDates: scope.kind === 'day' && scope.date ? [scope.date] : null,
+        ignoreLocked: scope.kind === 'fresh',
       });
       setPreview(p);
     } catch (e) {
@@ -813,6 +821,41 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                 <p className="text-xs text-muted-foreground">{o.sub}</p>
               </button>
             ))}
+            <div className="mt-1 border-t border-border/60 pt-1">
+              <p className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Omfang
+              </p>
+              {[
+                { kind: 'unlocked' as const, title: 'Alle dager som ikke er låst', sub: 'Låste dager beholdes som de er' },
+                { kind: 'fresh' as const, title: 'Alt på nytt', sub: 'Ignorerer låsene og bygger hele uken opp igjen' },
+              ].map((o) => (
+                <button
+                  key={o.kind}
+                  type="button"
+                  onClick={() => setScope({ kind: o.kind })}
+                  className={`w-full rounded-xl px-3 py-2 text-left hover:bg-muted ${
+                    scope.kind === o.kind ? 'bg-primary/10' : ''
+                  }`}
+                >
+                  <p className="text-sm font-semibold">{o.title}</p>
+                  <p className="text-xs text-muted-foreground">{o.sub}</p>
+                </button>
+              ))}
+              <div className="max-h-40 overflow-y-auto">
+                {dates.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setScope({ kind: 'day', date: d })}
+                    className={`w-full rounded-xl px-3 py-1.5 text-left text-sm hover:bg-muted ${
+                      scope.kind === 'day' && scope.date === d ? 'bg-primary/10 font-semibold' : ''
+                    }`}
+                  >
+                    Bare {dayLabel(d)}
+                  </button>
+                ))}
+              </div>
+            </div>
           </PopoverContent>
         </Popover>
         </div>
