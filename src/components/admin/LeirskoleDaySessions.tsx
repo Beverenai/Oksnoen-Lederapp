@@ -95,12 +95,11 @@ const isMeal = (p: SessionPost) => MEAL_NAMES.has((p.name ?? '').trim().toLowerC
 const NO_ACTIVITY_NAMES = new Set([...MEAL_NAMES, 'sanitas', 'nattevakt']);
 const hasActivities = (p: SessionPost) => !NO_ACTIVITY_NAMES.has((p.name ?? '').trim().toLowerCase());
 
-/** Sanitas og nattevakt kan gå oppå andre vakter — de skal kunne dobbeltbookes. */
-const OVERLAP_OK = ['sanitas', 'nattevakt'];
-const overlapAllowed = (p: SessionPost) => {
-  const n = (p.name ?? '').trim().toLowerCase();
-  return OVERLAP_OK.some((x) => n.includes(x));
-};
+/** Sanitas går oppå andre vakter — helt normalt, ingen advarsel. */
+const overlapAllowed = (p: SessionPost) => (p.name ?? '').trim().toLowerCase().includes('sanitas');
+
+/** Nattevakt kan kombineres med andre vakter — vi bare minner om det. */
+const isNightPost = (p: SessionPost) => (p.name ?? '').trim().toLowerCase().includes('nattevakt');
 
 /**
  * Dagsvisning: øktene nedover etter klokkeslett. Plassene i hver økt kommer fra
@@ -279,23 +278,30 @@ export function LeirskoleDaySessions({
         const b = ranges[j];
         if (a.p.id === b.p.id) continue;
         if (a.start < b.end && b.start < a.end) {
-          if (!overlapAllowed(a.p) && !overlapAllowed(b.p)) {
+          if (overlapAllowed(a.p) || overlapAllowed(b.p)) {
+            // Sanitas — helt greit å kombinere.
+          } else if (isNightPost(a.p) || isNightPost(b.p)) {
+            out.push(`Merk: ${a.p.name} + ${b.p.name} — tillatt, men sjekk hvile`);
+          } else {
             out.push(`Dobbeltbooket: ${a.p.name} og ${b.p.name}`);
           }
           continue;
         }
-        const isSanitas = (p: SessionPost) => (p.name ?? '').toLowerCase().includes('sanitas');
-        if (a.p.date === b.p.date || isSanitas(a.p) || isSanitas(b.p)) continue;
+        if (a.p.date === b.p.date || overlapAllowed(a.p) || overlapAllowed(b.p)) continue;
         const gap = (a.start < b.start ? b.start - a.end : a.start - b.end) / 60;
         if (gap < MIN_REST_HOURS) {
+          const soft = isNightPost(a.p) || isNightPost(b.p);
           out.push(
-            `Bare ${gap.toFixed(1)}t hvile etter endt arbeidsdag mellom ${a.p.name} og ${b.p.name} (krav ${MIN_REST_HOURS}t)`,
+            `${soft ? 'Merk: bare' : 'Bare'} ${gap.toFixed(1)}t hvile etter endt arbeidsdag mellom ${a.p.name} og ${b.p.name} (krav ${MIN_REST_HOURS}t)`,
           );
         }
       }
     }
     if (kitchenIds.has(staffId) && (extra || shifts.length > 0)) out.push('Har kjøkken hele dagen');
-    return Array.from(new Set(out));
+    // «Merk»-advarsler er myke — de skal ikke skygge for de reelle problemene.
+    return Array.from(new Set(out)).sort(
+      (a, b) => Number(a.startsWith('Merk')) - Number(b.startsWith('Merk')),
+    );
   };
 
   /** Advarslene uten ekstra vakt regnes bare én gang per leder. */

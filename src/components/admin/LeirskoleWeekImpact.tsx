@@ -206,7 +206,9 @@ export function LeirskoleWeekImpact({
                 : `${row.label}: ${openSlots.length} plass${openSlots.length === 1 ? '' : 'er'} uten leder (${list}) — ingen på vakten er ledig. «Løs» prøver å sette inn flere ledere.`,
           });
         }
-        if (staleLeaderIds.length > 0) {
+        // Når ruten i «Dag til dag» er tom finnes det ingen plan å avvike fra —
+        // da er det ikke et avvik at lederne har aktiviteter.
+        if (staleLeaderIds.length > 0 && lines.length > 0) {
           out.push({
             kind: 'plan',
             date,
