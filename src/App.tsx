@@ -267,7 +267,8 @@ function AppRoutes() {
         <Route path="/kjokken" element={<ProtectedRoute><Kjokken /></ProtectedRoute>} />
         <Route path="/postkasse" element={<ProtectedRoute><Mailbox /></ProtectedRoute>} />
         <Route path="/klineliste" element={<ProtectedRoute><Klineliste /></ProtectedRoute>} />
-        <Route path="/kline-tinder" element={<ProtectedRoute><KlineTinder /></ProtectedRoute>} />
+        {/* Tinder er deaktivert for alle ledere — gamle lenker går til klinelista. */}
+        <Route path="/kline-tinder" element={<Navigate to="/klineliste" replace />} />
         <Route path="/snus" element={<ProtectedRoute><SnusPage /></ProtectedRoute>} />
         <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
         <Route path="/pov" element={<ProtectedRoute><PovPage /></ProtectedRoute>} />
