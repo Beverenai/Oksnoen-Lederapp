@@ -643,11 +643,14 @@ export function useSetLeirskoleKitchenDay() {
       staffId,
       date,
       active,
+      hours,
     }: {
       weekId: string;
       staffId: string;
       date: string;
       active: boolean;
+      /** Kjøkkenvakt er 8t som standard, men kan settes til noe annet. */
+      hours?: number;
     }) => {
       if (!active) {
         const { error } = await supabase
@@ -658,17 +661,12 @@ export function useSetLeirskoleKitchenDay() {
         if (error) throw error;
         return;
       }
-      // Kun én leder på kjøkken per dag — bytt ut den som eventuelt står der.
-      await supabase
-        .from('leirskole_kitchen_days')
-        .delete()
-        .eq('week_id', weekId)
-        .eq('date', date)
-        .neq('staff_id', staffId);
-
       const { error } = await supabase
         .from('leirskole_kitchen_days')
-        .upsert({ week_id: weekId, staff_id: staffId, date }, { onConflict: 'staff_id,date' });
+        .upsert(
+          { week_id: weekId, staff_id: staffId, date, hours: hours ?? 8 },
+          { onConflict: 'staff_id,date' },
+        );
       if (error) throw error;
 
       // Kjøkkenledere skal ikke stå på andre vakter den dagen.
