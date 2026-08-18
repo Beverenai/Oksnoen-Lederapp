@@ -122,7 +122,11 @@ function LeaderChip({
           {hours.toFixed(1)}/{maxHours}t
         </span>
       </button>
-      {warn && <AlertTriangle title={warn} className="h-3 w-3 shrink-0 text-destructive" />}
+      {warn && (
+        <span title={warn} className="shrink-0">
+          <AlertTriangle className="h-3 w-3 text-destructive" />
+        </span>
+      )}
       {actions}
       {onRemove && (
         <button type="button" onClick={onRemove} aria-label={`Fjern ${name}`} className="shrink-0 p-0.5">

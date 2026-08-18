@@ -119,7 +119,7 @@ export default function LeirskoleAdmin() {
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [openStep, setOpenStep] = useState<number | null>(1);
   const [guideOpen, setGuideOpen] = useState(false);
-  const [viewDate] = useState<string | null>(null);
+  const [viewDate, setViewDate] = useState<string | null>(null);
 
   const [taskDraft, setTaskDraft] = useState({ title: '', description: '', due_at: '' });
   const [taskAssignAll, setTaskAssignAll] = useState(true);
