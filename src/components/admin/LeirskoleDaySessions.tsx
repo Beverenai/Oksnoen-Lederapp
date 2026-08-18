@@ -519,20 +519,12 @@ export function LeirskoleDaySessions({
             placeholder="Navn på økten (f.eks. Ankomst)"
             className="h-9 rounded-xl text-sm"
           />
-          <div className="flex items-center gap-2">
-            <Input
-              type="time"
-              value={draft.start}
-              onChange={(e) => setDraft((d) => ({ ...d, start: e.target.value }))}
-              className="h-9 flex-1 rounded-xl text-sm tabular-nums"
-            />
-            <Input
-              type="time"
-              value={draft.end}
-              onChange={(e) => setDraft((d) => ({ ...d, end: e.target.value }))}
-              className="h-9 flex-1 rounded-xl text-sm tabular-nums"
-            />
-          </div>
+          <TimeRangeField
+            start={draft.start}
+            end={draft.end}
+            onStartChange={(v) => setDraft((d) => ({ ...d, start: v }))}
+            onEndChange={(v) => setDraft((d) => ({ ...d, end: v }))}
+          />
           <div className="flex gap-2">
             <Button size="sm" className="flex-1 rounded-full" disabled={addPost.isPending} onClick={() => createPost()}>
               Legg til økt
