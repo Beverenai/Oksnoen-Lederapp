@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { AlertTriangle, ChevronDown, Clock, GripVertical, Lock, LockOpen, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
 import { LeirskoleDayLeaderList } from '@/components/admin/LeirskoleDayLeaderList';
+import { LeirskoleDaySessions } from '@/components/admin/LeirskoleDaySessions';
 import { hhmm, shortDate, todayStr } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import {
@@ -189,7 +190,7 @@ export function LeirskoleDayEditor({
   const [date, setDate] = useState<string>(() => (dates.includes(today) ? today : dates[0]));
   const activeDate = dates.includes(date) ? date : dates[0];
   const [open, setOpen] = useState(true);
-  const [mode, setMode] = useState<'oversikt' | 'rediger'>('oversikt');
+  const [mode, setMode] = useState<'okter' | 'ledere' | 'rediger'>('okter');
   const [newOpen, setNewOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', start: '10:00', end: '12:00' });
 
@@ -367,8 +368,9 @@ export function LeirskoleDayEditor({
 
           <div className="flex rounded-full bg-muted/60 p-0.5">
             {[
-              { key: 'oversikt' as const, label: 'Oversikt', icon: Users },
-              { key: 'rediger' as const, label: 'Rediger', icon: Pencil },
+              { key: 'okter' as const, label: 'Økter', icon: Clock },
+              { key: 'ledere' as const, label: 'Per leder', icon: Users },
+              { key: 'rediger' as const, label: 'Dra & slipp', icon: Pencil },
             ].map((t) => (
               <button
                 key={t.key}
@@ -384,7 +386,38 @@ export function LeirskoleDayEditor({
             ))}
           </div>
 
-          {mode === 'oversikt' && (
+          {mode === 'okter' && (
+            <>
+              <div className="flex items-center justify-between rounded-2xl bg-muted/40 px-3 py-2">
+                <p className="text-xs text-muted-foreground">
+                  {isLocked
+                    ? 'Dagen er låst — åpne låsen for å endre.'
+                    : 'Legg til ledere og aktiviteter rett i øktene.'}
+                </p>
+                <Button
+                  size="sm"
+                  variant={isLocked ? 'default' : 'outline'}
+                  className="h-8 gap-1.5 rounded-full text-xs"
+                  onClick={() => setLock.mutate({ weekId: week.id, date: activeDate, locked: !isLocked })}
+                >
+                  {isLocked ? <Lock className="h-3.5 w-3.5" /> : <LockOpen className="h-3.5 w-3.5" />}
+                  {isLocked ? 'Låst' : 'Åpen'}
+                </Button>
+              </div>
+              <LeirskoleDaySessions
+                week={week}
+                date={activeDate}
+                dayPosts={dayPosts}
+                weekPosts={(posts ?? []) as DayPost[]}
+                staff={staff}
+                kitchenIds={kitchenIds}
+                maxHours={maxHours}
+                isLocked={isLocked}
+              />
+            </>
+          )}
+
+          {mode === 'ledere' && (
             <LeirskoleDayLeaderList
               weekId={week.id}
               date={activeDate}
