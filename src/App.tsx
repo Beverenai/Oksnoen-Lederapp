@@ -70,6 +70,7 @@ const PeriodArchive = lazy(() => import("@/pages/admin/PeriodArchive"));
 const Leirskole = lazy(() => import("@/pages/Leirskole"));
 const LeirskoleAdmin = lazy(() => import("@/pages/admin/LeirskoleAdmin"));
 const LeirskoleVaktplan = lazy(() => import("@/pages/leirskole/LeirskoleVaktplan"));
+const LeirskoleGrupper = lazy(() => import("@/pages/leirskole/LeirskoleGrupper"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -250,6 +251,7 @@ function AppRoutes() {
         <Route path="/arkiv" element={<ProtectedRoute><PeriodArchive /></ProtectedRoute>} />
         <Route path="/leirskole" element={<ProtectedRoute><Leirskole /></ProtectedRoute>} />
         <Route path="/leirskole/vaktplan" element={<ProtectedRoute><LeirskoleVaktplan /></ProtectedRoute>} />
+        <Route path="/leirskole/grupper" element={<ProtectedRoute><LeirskoleGrupper /></ProtectedRoute>} />
         <Route path="/admin/leirskole" element={<ProtectedRoute><LeirskoleAdmin /></ProtectedRoute>} />
         <Route path="/gjenglemt" element={<ProtectedRoute><Gjenglemt /></ProtectedRoute>} />
         <Route path="/gjenglemt-admin" element={<GjenglemtAdmin />} />
