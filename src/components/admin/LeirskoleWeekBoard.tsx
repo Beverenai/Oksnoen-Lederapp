@@ -1364,7 +1364,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                             setKitchenDay.mutate({
                               weekId: week.id,
                               date: editCell.date,
-                              staffId: null,
+                              staffId: editCell.staffId,
+                              active: false,
                             });
                           } else if (s.assignmentId) {
                             removeShift.mutate(s.assignmentId);
