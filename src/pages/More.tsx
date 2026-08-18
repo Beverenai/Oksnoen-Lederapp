@@ -318,6 +318,7 @@ export default function More() {
       items: [
         { to: '/leirskole', icon: Tent, label: 'Leirskole', desc: 'Vakter og oppgaver' },
         { to: '/leirskole/vaktplan', icon: Calendar, label: 'Vaktplan', desc: 'Hele uken' },
+        { to: '/leirskole/grupper', icon: Users, label: 'Elevgrupper', desc: 'Hva gruppene har gjort' },
         { to: '/leaders', icon: Users, label: 'Ledere', desc: 'Kontakt og vakter' },
         { to: '/chat', icon: MessageCircle, label: 'Leirskole-chat', desc: 'Egen kanal i Lederhuset' },
       ],
