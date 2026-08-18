@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Circle, HeartHandshake, Beer } from 'lucide-react';
-import { TinderIcon } from '@/components/icons/TinderIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { SnusCan3D } from '@/components/snus/SnusCan3D';
 import { getSnusProduct, customSnusProduct } from '@/lib/snusCatalog';
@@ -93,16 +92,6 @@ export function OffSeasonHome({
 
       {/* Avrevne papirstrimler */}
       <div className="grid grid-cols-2 gap-3">
-        <BentoTile
-          icon={TinderIcon}
-          label="Tinder"
-          desc="Sveip på ledere"
-          tone="sunset"
-          size="lg"
-          visual={<TinderIcon className="h-6 w-6" />}
-          className="bg-[linear-gradient(140deg,#ff6036_0%,#fd267d_55%,#e1136b_100%)] border-white/25 text-white [&_*]:!opacity-100"
-          onClick={() => navigate('/kline-tinder')}
-        />
         <BentoTile
           icon={Beer}
           label="Gi slurker"
