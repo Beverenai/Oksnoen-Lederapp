@@ -616,6 +616,40 @@ export function useSetLeirskoleDayType() {
   });
 }
 
+/** Lås/åpne en dag: låste dager røres ikke av vaktplan-generatoren. */
+export function useSetLeirskoleDayLock() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ weekId, date, locked }: { weekId: string; date: string; locked: boolean }) => {
+      const { error } = await supabase
+        .from('leirskole_week_days')
+        .upsert(
+          { week_id: weekId, date, is_locked: locked, updated_at: new Date().toISOString() },
+          { onConflict: 'week_id,date' },
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-week-days'] }),
+  });
+}
+
+/** Logg for dagen: hvordan øktene faktisk gikk. */
+export function useSetLeirskoleDayLog() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ weekId, date, note }: { weekId: string; date: string; note: string }) => {
+      const { error } = await supabase
+        .from('leirskole_week_days')
+        .upsert(
+          { week_id: weekId, date, log_note: note.trim() || null, updated_at: new Date().toISOString() },
+          { onConflict: 'week_id,date' },
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leirskole-week-days'] }),
+  });
+}
+
 /** Rutene i ukeplanleggeren (dag × rad). */
 export type LeirskoleKitchenDay = Tables<'leirskole_kitchen_days'>;
 
