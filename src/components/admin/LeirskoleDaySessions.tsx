@@ -170,13 +170,22 @@ export function LeirskoleDaySessions({
     return map;
   }, [activities, date]);
 
-  /** Ruteinnholdet i «Dag til dag» for hver økt denne dagen. */
+  /** Ruteinnholdet i «Dag til dag» — slått opp én gang per render. */
+  const cellsForDay = useMemo(() => {
+    const byRow = new Map<number, string | null | undefined>();
+    const byPost = new Map<string, string | null | undefined>();
+    (planCells ?? []).forEach((c) => {
+      if (c.date !== date) return;
+      if (c.row_index != null) byRow.set(c.row_index, c.content);
+      if (c.post_id) byPost.set(c.post_id, c.content);
+    });
+    return { byRow, byPost };
+  }, [planCells, date]);
+
   const linesForPost = (p: SessionPost) => {
     const row = planRow(p);
-    const cell = (planCells ?? []).find((c) =>
-      row != null ? c.date === date && c.row_index === row : c.date === date && c.post_id === p.id,
-    );
-    return splitPlanLines(cell?.content);
+    const content = row != null ? cellsForDay.byRow.get(row) : cellsForDay.byPost.get(p.id);
+    return splitPlanLines(content);
   };
 
   const saveLines = (p: SessionPost, lines: string[]) => {
