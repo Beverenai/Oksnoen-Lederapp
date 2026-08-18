@@ -539,19 +539,27 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
 
   /** `${date}|${staffId}` -> vaktene lederen har den dagen (til lederoversikten). */
   const shiftsByStaffDate = useMemo(() => {
-    const map = new Map<string, { name: string; hours: number }[]>();
+    const map = new Map<
+      string,
+      { name: string; hours: number; assignmentId?: string; postId?: string; kitchen?: boolean }[]
+    >();
     (posts ?? []).forEach((p) => {
       (p.assignments ?? []).forEach((a) => {
         const key = `${p.date}|${a.staff_id}`;
         map.set(key, [
           ...(map.get(key) ?? []),
-          { name: p.name ?? 'Vakt', hours: Number(p.duration_hours ?? 0) },
+          {
+            name: p.name ?? 'Vakt',
+            hours: Number(p.duration_hours ?? 0),
+            assignmentId: a.id,
+            postId: p.id,
+          },
         ]);
       });
     });
     (kitchenDays ?? []).forEach((k) => {
       const key = `${k.date}|${k.staff_id}`;
-      map.set(key, [...(map.get(key) ?? []), { name: 'Kjøkken', hours: KITCHEN_DAY_HOURS }]);
+      map.set(key, [...(map.get(key) ?? []), { name: 'Kjøkken', hours: KITCHEN_DAY_HOURS, kitchen: true }]);
     });
     return map;
   }, [posts, kitchenDays]);
