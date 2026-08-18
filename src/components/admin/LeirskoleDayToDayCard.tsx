@@ -177,8 +177,8 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
       {open && (
         <div className="overflow-x-auto px-3 pb-4">
           <div
-            className="min-w-max"
-            style={{ ['--oks-cols' as string]: `repeat(${dates.length}, minmax(9.5rem, 1fr))` }}
+            className="oks-dtd-grid min-w-max lg:min-w-full"
+            style={{ ['--oks-cols' as string]: `repeat(${dates.length}, minmax(var(--oks-daymin, 9.5rem), 1fr))` }}
           >
             {/* Dagene bortover */}
             <div className="grid gap-1" style={{ gridTemplateColumns: 'var(--oks-row-label, 3.25rem) var(--oks-cols)' }}>
