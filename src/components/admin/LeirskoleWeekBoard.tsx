@@ -4,7 +4,9 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertTriangle, Moon, Sparkles, Wand2 } from 'lucide-react';
+import { AlertTriangle, Lock, LockOpen, Moon, NotebookPen, Sparkles, Wand2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useLeirskoleActivities,
@@ -14,6 +16,8 @@ import {
   useLeirskoleWeekPlan,
   useLeirskoleKitchenDays,
   useSetLeirskoleKitchenDay,
+  useSetLeirskoleDayLock,
+  useSetLeirskoleDayLog,
   type LeirskoleStaff,
   type LeirskoleWeek,
 } from '@/hooks/useLeirskole';
@@ -81,7 +85,11 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const { data: types } = useLeirskoleActivityTypes(true);
   const { data: kitchenDays } = useLeirskoleKitchenDays(week.id);
   const setKitchenDay = useSetLeirskoleKitchenDay();
+  const setDayLock = useSetLeirskoleDayLock();
+  const setDayLog = useSetLeirskoleDayLog();
   const [target, setTarget] = useState<CellTarget | null>(null);
+  const [logDate, setLogDate] = useState<string | null>(null);
+  const [logText, setLogText] = useState('');
   const [summary, setSummary] = useState<LeirskoleGenerateSummary | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -96,6 +104,23 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     });
     return map;
   }, [weekDays]);
+
+  const lockedDays = useMemo(
+    () => new Set((weekDays ?? []).filter((d) => d.is_locked).map((d) => d.date)),
+    [weekDays],
+  );
+  const dayLogs = useMemo(() => {
+    const map = new Map<string, string>();
+    (weekDays ?? []).forEach((d) => {
+      if (d.log_note) map.set(d.date, d.log_note);
+    });
+    return map;
+  }, [weekDays]);
+
+  const openLog = (date: string) => {
+    setLogText(dayLogs.get(date) ?? '');
+    setLogDate(date);
+  };
 
   const staffToLeader = useMemo(() => {
     const map = new Map<string, { id: string; name: string; competencies: string[] }>();
