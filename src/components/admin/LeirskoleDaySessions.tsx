@@ -279,10 +279,12 @@ export function LeirskoleDaySessions({
         const b = ranges[j];
         if (a.p.id === b.p.id) continue;
         if (a.start < b.end && b.start < a.end) {
-          out.push(`Dobbeltbooket: ${a.p.name} og ${b.p.name}`);
+          if (!overlapAllowed(a.p) && !overlapAllowed(b.p)) {
+            out.push(`Dobbeltbooket: ${a.p.name} og ${b.p.name}`);
+          }
           continue;
         }
-        if (a.p.date === b.p.date) continue;
+        if (a.p.date === b.p.date || overlapAllowed(a.p) || overlapAllowed(b.p)) continue;
         const gap = (a.start < b.start ? b.start - a.end : a.start - b.end) / 60;
         if (gap < MIN_REST_HOURS) {
           out.push(
