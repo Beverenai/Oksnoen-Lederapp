@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import {
   useActiveLeirskoleWeek,
   useLeirskoleActivities,
+  useAutoSaveLeirskoleWeek,
   useLeirskoleSchedule,
   useLeirskoleStaff,
   useLeirskoleWeekPlan,
