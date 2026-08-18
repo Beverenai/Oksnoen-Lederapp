@@ -635,14 +635,15 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             })}
           </div>
 
-          {/* Øktrader — ankomst/avreise vises som kalenderkolonne over alle tre radene */}
+          {/* Øktrader — måltidene ligger mellom øktene, slik at alt følger klokken.
+              Ankomst/avreise vises som én kalenderkolonne over hele dagen. */}
           <div className="grid gap-1.5" style={gridStyle}>
-            {SESSIONS.map((s, rowIdx) => (
-              <div key={`label-${s.row}`} style={{ gridColumn: 1, gridRow: rowIdx + 1 }} className="flex items-center">
+            {BOARD_ROWS.map((r, rowIdx) => (
+              <div key={`label-${r.label}`} style={{ gridColumn: 1, gridRow: rowIdx + 1 }} className="flex items-center">
                 <LabelCell>
                   <span className="leading-tight">
-                    {s.label}
-                    <span className="block text-[9px] font-medium normal-case text-muted-foreground/70">{s.time}</span>
+                    {r.label}
+                    <span className="block text-[9px] font-medium normal-case text-muted-foreground/70">{r.time}</span>
                   </span>
                 </LabelCell>
               </div>
@@ -651,14 +652,14 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
               specialDays.has(date) ? (
                 <div
                   key={`cal-${date}`}
-                  style={{ gridColumn: dayIdx + 2, gridRow: '1 / span 3' }}
+                  style={{ gridColumn: dayIdx + 2, gridRow: `1 / span ${BOARD_ROWS.length}` }}
                   className="rounded-xl border border-amber-500/50 bg-amber-500/5 p-1.5"
                 >
                   <LeirskoleSpecialDayTimeline
                     weekId={week.id}
                     date={date}
                     posts={(postsByDate.get(date) ?? [])
-                      .filter((p) => !ROW_NAMES.has((p.name ?? '').trim()))
+                      .filter((p) => !NIGHT_ROW_NAMES.has((p.name ?? '').trim()))
                       .map((p) => ({
                         id: p.id,
                         name: p.name ?? '',
