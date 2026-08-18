@@ -46,6 +46,8 @@ export async function runLeirskoleGenerate({
   perSession = 6,
   createdBy = null,
   overwritePlan = false,
+  onlyDates = null,
+  ignoreLocked = false,
 }: {
   weekId: string;
   startDate: string;
@@ -54,6 +56,10 @@ export async function runLeirskoleGenerate({
   perSession?: number;
   createdBy?: string | null;
   overwritePlan?: boolean;
+  /** Begrens genereringen til disse datoene (null = hele uken). */
+  onlyDates?: string[] | null;
+  /** Ignorer dagslåsene og generer alt på nytt. */
+  ignoreLocked?: boolean;
 }): Promise<LeirskoleGenerateSummary> {
   const summary: LeirskoleGenerateSummary = {
     cellsFilled: 0,
@@ -71,14 +77,18 @@ export async function runLeirskoleGenerate({
     ]);
 
     const special = new Set(
-      (days ?? []).filter((d) => d.day_type !== 'normal' || d.is_locked).map((d) => d.date),
+      (days ?? [])
+        .filter((d) => d.day_type !== 'normal' || (d.is_locked && !ignoreLocked))
+        .map((d) => d.date),
     );
     const filled = new Set(
       (cells ?? [])
         .filter((c) => c.row_index != null && (c.content ?? '').trim().length > 0)
         .map((c) => `${c.date}|${c.row_index}`),
     );
-    const dates = datesBetween(startDate, endDate).filter((d) => !special.has(d));
+    const dates = datesBetween(startDate, endDate)
+      .filter((d) => !special.has(d))
+      .filter((d) => !onlyDates || onlyDates.includes(d));
 
     const planned = randomWeekPlan({
       dates,
@@ -110,7 +120,7 @@ export async function runLeirskoleGenerate({
   // ---- 2. Vaktplan -------------------------------------------------------
   const { data: genData, error: genError } = await supabase.functions.invoke(
     'generate-leirskole-schedule',
-    { body: { week_id: weekId, keep_locked: true } },
+    { body: { week_id: weekId, keep_locked: true, only_dates: onlyDates, ignore_locked: ignoreLocked } },
   );
   if (genError) throw genError;
   const gen = genData as {
@@ -166,10 +176,13 @@ export async function runLeirskoleGenerate({
 
   const activeTypes = (types ?? []) as RandomPlanActivity[];
   const dayTypeMap = new Map((weekDays ?? []).map((d) => [d.date, d.day_type]));
-  const lockedDates = new Set((weekDays ?? []).filter((d) => d.is_locked).map((d) => d.date));
+  const lockedDates = new Set(
+    ignoreLocked ? [] : (weekDays ?? []).filter((d) => d.is_locked).map((d) => d.date),
+  );
   const slots = (cells ?? [])
     .map((cell) => {
       if (lockedDates.has(cell.date)) return null;
+      if (onlyDates && !onlyDates.includes(cell.date)) return null;
       const session = cell.row_index != null ? ROW_TO_SESSION[cell.row_index] : cell.post_id ? cell.post_id : undefined;
       if (!session) return null;
       const lines = (cell.content ?? '')
