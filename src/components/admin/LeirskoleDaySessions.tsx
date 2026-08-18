@@ -366,6 +366,26 @@ export function LeirskoleDaySessions({
     assign.mutate({ postId: p.id, staffId, remove: true });
   };
 
+  /**
+   * Fjerner én plass (aktivitet) fra økten: lederansvaret nullstilles og
+   * plassen tas ut av «Dag til dag», slik at begge visningene er like.
+   */
+  const removeActivitySlot = (
+    p: SessionPost,
+    activity: { key: string; label: string; emoji: string | null },
+    leaderId?: string | null,
+  ) => {
+    if (!guard()) return;
+    if (leaderId) {
+      setActivity.mutate({ weekId: week.id, date, session: sessionKey(p), leaderId, activity: null });
+    }
+    const lines = linesForPost(p);
+    const count = countActivity(lines, activity.label);
+    const text = `${activity.emoji ?? ''} ${activity.label}`.trim();
+    saveLines(p, setActivityCount(lines, activity.label, text, count - 1));
+    toast.success(`${activity.label} fjernet fra ${p.name}`);
+  };
+
   const createPost = (name?: string) => {
     const value = (name ?? draft.name).trim();
     if (!value) return toast.error('Gi økten et navn');
