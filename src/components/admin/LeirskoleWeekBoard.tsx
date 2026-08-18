@@ -57,6 +57,7 @@ import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffP
 import { trimDayHours, fillDayHours, KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import { assignMissingActivities } from '@/lib/leirskoleAutoActivity';
 import { cellInstances } from '@/lib/leirskoleCellInstances';
+import { hhmm } from '@/lib/leirskoleDates';
 import { useSeedLeirskoleSpecialDays } from '@/hooks/useSeedLeirskoleSpecialDays';
 
 const MEAL_TIMES: Record<string, { start: string; end: string; hours: number }> = {
@@ -529,18 +530,25 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     }
   };
 
-  /** Radene for en dag: økt 1–3. Ankomst/avreise følger samme klokke som resten. */
+  /** Radene for en dag: økt 1–3. Hver rad kobles til vakten bak seg, slik at
+      navn og klokkeslett kan endres — også på ankomst- og avreisedager. */
   const rowsFor = (date: string): (CellTarget | null)[] =>
-    SESSIONS.map((s) => ({
-      date,
-      session: s.session,
-      rowIndex: s.row,
-      label: s.label,
-      dayType: 'normal' as const,
-    }));
+    SESSIONS.map((s) => {
+      const post = (postsByDate.get(date) ?? []).find(
+        (p) => (p.name ?? '').trim().toLowerCase() === s.label.toLowerCase(),
+      );
+      return {
+        date,
+        session: s.session,
+        rowIndex: s.row,
+        label: post?.name?.trim() || s.label,
+        postId: post?.id ?? null,
+        dayType: (specialDays.get(date) ?? 'normal') as CellTarget['dayType'],
+      };
+    });
 
   const cellContent = (t: CellTarget) =>
-    planContent.get(t.postId ? `post|${t.postId}` : `${t.date}|${t.rowIndex}`) ?? '';
+    planContent.get(t.rowIndex != null ? `${t.date}|${t.rowIndex}` : `post|${t.postId}`) ?? '';
 
   const gridStyle = {
     gridTemplateColumns: `${big ? 84 : 64}px repeat(${dates.length}, minmax(${big ? '240px' : '0'}, 1fr))`,
@@ -948,6 +956,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                   if (!t) return null;
                 const content = cellContent(t);
                 const lines = content.split('\n').map((l) => l.trim()).filter(Boolean);
+                const cellPost = t.postId ? (posts ?? []).find((p) => p.id === t.postId) : undefined;
+                const special = specialDays.get(date);
                 const slotActivities = t.session ? activityBySlot.get(`${date}|${t.session}`) ?? [] : [];
                  // Aktiviteter kan stå flere ganger i samme rute (to på Klatring osv.),
                  // og hver forekomst vises med sin egen leder.
@@ -967,12 +977,21 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                     onClick={() => setTarget(t)}
                     className={`rounded-xl border text-left ${ui.pad} transition-colors hover:brightness-105 ${tone}`}
                   >
-                    {t.session === null && (
-                      <p className={`mb-1 truncate ${ui.sub} font-semibold uppercase text-muted-foreground`}>
-                        {t.label}
+                    <p className={`mb-1 flex items-center justify-between gap-1 ${ui.sub} font-semibold uppercase text-muted-foreground`}>
+                      <span className="truncate">{t.label}</span>
+                      {cellPost && (
+                        <span className="shrink-0 tabular-nums normal-case">
+                          {hhmm(cellPost.start_time)}–{hhmm(cellPost.end_time)}
+                        </span>
+                      )}
+                    </p>
+                    {lines.length === 0 && (
+                      <p className={`${ui.txt} text-muted-foreground`}>
+                        {special
+                          ? 'Trykk for å gi økten navn og tid'
+                          : 'Tom — trykk for å fylle'}
                       </p>
                     )}
-                    {lines.length === 0 && <p className={`${ui.txt} text-muted-foreground`}>Tom — trykk for å fylle</p>}
                      <div className="space-y-1">
                        {instances.map((inst) => (
                          <div key={inst.id} className={`flex items-center gap-1 ${ui.txt}`}>

@@ -70,6 +70,10 @@ export function LeirskoleCellSheet({
     return ` · ${info.day.toFixed(1)}t i dag${info.note ? ' ⚠' : ''}`;
   };
   const isSpecial = target?.dayType != null && target.dayType !== 'normal';
+  /** Navn og klokkeslett kan endres for alle økter — også Økt 1–3. */
+  const canEditPost = !!post?.id || isSpecial;
+  /** Bare egne økter (ankomst/avreise m.m.) kan slettes helt. */
+  const canDeletePost = !!post?.id && isSpecial;
   const [name, setName] = useState('');
   const [start, setStart] = useState('09:00');
   const [end, setEnd] = useState('11:00');
@@ -183,7 +187,8 @@ export function LeirskoleCellSheet({
         rowIndex: target.rowIndex,
         content: next.join('\n'),
         color: 'neutral',
-        postId: target.postId ?? undefined,
+        // Faste økter lagres på radnummer; bare egne økter lagres på vakt-id.
+        postId: target.rowIndex != null ? undefined : target.postId ?? undefined,
       },
       { onError: () => toast.error('Kunne ikke lagre ruten') },
     );
@@ -332,7 +337,7 @@ export function LeirskoleCellSheet({
           rowIndex: target.rowIndex,
           content: nextLines.join('\n'),
           color: 'neutral',
-          postId: target.postId ?? undefined,
+          postId: target.rowIndex != null ? undefined : target.postId ?? undefined,
         });
       }
       for (const p of picks) {
@@ -354,16 +359,27 @@ export function LeirskoleCellSheet({
         </SheetHeader>
 
         <div className="mt-3 space-y-4 pb-6">
-          {isSpecial && (
-            <div className="space-y-3 rounded-2xl border border-amber-500/50 bg-amber-500/10 p-3">
-              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">
+          {canEditPost && (
+            <div
+              className={`space-y-3 rounded-2xl border p-3 ${
+                isSpecial ? 'border-amber-500/50 bg-amber-500/10' : 'border-border/60 bg-muted/30'
+              }`}
+            >
+              <p
+                className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide ${
+                  isSpecial ? 'text-amber-700 dark:text-amber-200' : 'text-muted-foreground'
+                }`}
+              >
                 <Clock className="h-3.5 w-3.5" />
-                {target?.dayType === 'both'
-                  ? 'Avreise + ankomst'
-                  : target?.dayType === 'arrival'
-                    ? 'Ankomstdag'
-                    : 'Avreisedag'}{' '}
-                — egen økt
+                {isSpecial
+                  ? `${
+                      target?.dayType === 'both'
+                        ? 'Avreise + ankomst'
+                        : target?.dayType === 'arrival'
+                          ? 'Ankomstdag'
+                          : 'Avreisedag'
+                    } — navn og tid`
+                  : 'Navn og tid på økten'}
               </p>
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Navn på økten (f.eks. Innsjekk)" />
               <div className="flex items-center gap-2">
@@ -375,7 +391,7 @@ export function LeirskoleCellSheet({
                 <Button size="sm" className="rounded-full" onClick={() => savePost.mutate()} disabled={savePost.isPending}>
                   {post?.id ? 'Lagre endringer' : 'Opprett økt'}
                 </Button>
-                {post?.id && (
+                {canDeletePost && (
                   <Button
                     size="sm"
                     variant="ghost"
