@@ -175,6 +175,14 @@ export function LeirskoleDaySessions({
     return map;
   }, [staff]);
   const kitchenList = useMemo(() => staff.filter((s) => kitchenIds.has(s.id)), [staff, kitchenIds]);
+  /** Bare hele kjøkkendager (8t+) sperrer lederen for andre vakter. */
+  const fullKitchenIds = useMemo(() => {
+    const set = new Set<string>();
+    kitchenIds.forEach((id) => {
+      if ((kitchenHours?.get(id) ?? KITCHEN_DAY_HOURS) >= KITCHEN_DAY_HOURS) set.add(id);
+    });
+    return set;
+  }, [kitchenIds, kitchenHours]);
 
   const sorted = useMemo(
     () => dayPosts.slice().sort((a, b) => toMin(a.start_time) - toMin(b.start_time)),
@@ -297,7 +305,7 @@ export function LeirskoleDaySessions({
         }
       }
     }
-    if (kitchenIds.has(staffId) && (extra || shifts.length > 0)) out.push('Har kjøkken hele dagen');
+    if (fullKitchenIds.has(staffId) && (extra || shifts.length > 0)) out.push('Har kjøkken hele dagen');
     // «Merk»-advarsler er myke — de skal ikke skygge for de reelle problemene.
     return Array.from(new Set(out)).sort(
       (a, b) => Number(a.startsWith('Merk')) - Number(b.startsWith('Merk')),
@@ -310,15 +318,15 @@ export function LeirskoleDaySessions({
     staff.forEach((s) => map.set(s.id, computeWarnings(s.id)));
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staff, hoursByStaff, shiftsByStaff, kitchenIds, maxHours]);
+  }, [staff, hoursByStaff, shiftsByStaff, fullKitchenIds, maxHours]);
 
   const warningsFor = (staffId: string, extra?: SessionPost): string[] =>
     extra ? computeWarnings(staffId, extra) : baseWarnings.get(staffId) ?? [];
 
   /** Ledere som kan settes på vanlige økter (ikke kjøkken). */
   const assignableStaff = useMemo(
-    () => staff.filter((s) => s.leader && !kitchenIds.has(s.id)),
-    [staff, kitchenIds],
+    () => staff.filter((s) => s.leader && !fullKitchenIds.has(s.id)),
+    [staff, fullKitchenIds],
   );
 
   const invalidate = () => {
