@@ -6,7 +6,7 @@ import {
   type LeirskoleIssue,
   type LeirskoleIssueType,
 } from '@/lib/leirskoleValidate';
-import { dayLabel } from '@/lib/leirskoleDates';
+import { shortDate } from '@/lib/leirskoleDates';
 
 const TONE: Record<LeirskoleIssueType, string> = {
   missing_leader: 'border-amber-500/50 text-amber-700 dark:text-amber-200',
@@ -64,7 +64,7 @@ export function LeirskoleBoardIssues({
                   className="flex w-full items-center gap-2 rounded-lg bg-muted/50 px-2 py-1.5 text-left text-sm text-foreground hover:bg-muted"
                 >
                   <span className="w-20 shrink-0 text-xs font-bold uppercase text-muted-foreground">
-                    {dayLabel(issue.date)}
+                    {shortDate(issue.date)}
                   </span>
                   <span className="w-16 shrink-0 text-xs font-semibold">{issue.label}</span>
                   <span className="min-w-0 flex-1 truncate">{issue.message}</span>
