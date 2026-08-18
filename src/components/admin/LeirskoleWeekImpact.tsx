@@ -152,7 +152,7 @@ export function LeirskoleWeekImpact({
     posts
       .filter((p) => p.assignments.length === 0)
       .forEach((p) =>
-        out.push({ kind: 'empty', date: p.date, text: `${p.name} har ingen ledere.` }),
+        out.push({ kind: 'empty', date: p.date, fixable: true, text: `${p.name} har ingen ledere.` }),
       );
 
     return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
@@ -184,11 +184,11 @@ export function LeirskoleWeekImpact({
           out.push({
             kind: 'plan',
             date,
-            fixable: free > 0,
+            fixable: true,
             text:
               free > 0
                 ? `${row.label}: ${openSlots.length} plass${openSlots.length === 1 ? '' : 'er'} uten leder (${list}).`
-                : `${row.label}: ${openSlots.length} plass${openSlots.length === 1 ? '' : 'er'} uten leder (${list}) — ingen ledige ledere på vakten. Sett flere ledere på økten, eller fjern aktiviteten i «Dag til dag».`,
+                : `${row.label}: ${openSlots.length} plass${openSlots.length === 1 ? '' : 'er'} uten leder (${list}) — ingen på vakten er ledig. «Løs» prøver å sette inn flere ledere.`,
           });
         }
         if (staleLeaderIds.length > 0) {
@@ -209,7 +209,10 @@ export function LeirskoleWeekImpact({
     [impacts, planImpacts],
   );
 
-  const fixableImpacts = useMemo(() => planImpacts.filter((i) => i.fixable), [planImpacts]);
+  const fixableImpacts = useMemo(
+    () => [...planImpacts, ...impacts.filter((i) => i.fixable)],
+    [planImpacts, impacts],
+  );
   const canFix = !!weekId && fixableImpacts.length > 0;
 
   const fix = async () => {
@@ -222,13 +225,15 @@ export function LeirskoleWeekImpact({
         toast.info('Alt som står igjen må løses manuelt — det mangler ledere på vaktene.');
         return;
       }
-      const res = await resolveLeirskoleConflicts({ weekId, dates: targets });
+      const res = await resolveLeirskoleConflicts({ weekId, dates: targets, maxHours });
       qc.invalidateQueries({ queryKey: ['leirskole-activities'] });
       qc.invalidateQueries({ queryKey: ['leirskole-activity-history'] });
       qc.invalidateQueries({ queryKey: ['leirskole-my-activities'] });
       qc.invalidateQueries({ queryKey: ['leirskole-week-plan'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-schedule'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-my-shifts'] });
       if (res.removed === 0 && res.created === 0) {
-        toast.info('Fant ingen plasser som kunne fylles automatisk — det mangler ledere på vaktene.');
+        toast.info('Ingen ledere er ledige innenfor timegrensen — løs resten manuelt.');
       } else {
         toast.success(`Ryddet ${res.removed} og fylte ${res.created} plasser`);
       }

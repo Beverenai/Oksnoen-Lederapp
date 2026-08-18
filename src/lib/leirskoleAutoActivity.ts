@@ -166,9 +166,12 @@ export async function resolveDayActivities({
 export async function resolveLeirskoleConflicts({
   weekId,
   dates,
+  maxHours = 8,
 }: {
   weekId: string;
   dates: string[];
+  /** Timegrense per leder per dag — brukes når nye ledere settes på vakter. */
+  maxHours?: number;
 }): Promise<{ removed: number; created: number }> {
   let removed = 0;
   let created = 0;
@@ -176,6 +179,122 @@ export async function resolveLeirskoleConflicts({
     const r = await resolveDayActivities({ weekId, date });
     removed += r.removed;
     created += r.created;
+    // Er det fortsatt tomme plasser? Sett flere ledere på vakten og fyll dem.
+    const staffed = await staffOpenSlots({ weekId, date, maxHours });
+    created += staffed;
   }
   return { removed, created };
+}
+
+const toMin = (t: string) => {
+  const [h, m] = (t ?? '00:00').slice(0, 5).split(':').map(Number);
+  return h * 60 + m;
+};
+
+/**
+ * Setter ledige ledere på vakter der «Dag til dag» har plasser uten leder,
+ * og gir dem plassen. Respekterer timegrensen per dag, kjøkkenvakt og at
+ * lederen ikke kan stå på to økter samtidig.
+ */
+export async function staffOpenSlots({
+  weekId,
+  date,
+  maxHours,
+}: {
+  weekId: string;
+  date: string;
+  maxHours: number;
+}): Promise<number> {
+  const ctx = await loadDay(weekId, date);
+  const [{ data: dayPosts }, { data: kitchen }] = await Promise.all([
+    supabase
+      .from('leirskole_posts')
+      .select('id, name, start_time, end_time, duration_hours, assignments:leirskole_assignments(staff_id)')
+      .eq('week_id', weekId)
+      .eq('date', date),
+    supabase.from('leirskole_kitchen_days').select('staff_id').eq('week_id', weekId).eq('date', date),
+  ]);
+
+  const kitchenIds = new Set((kitchen ?? []).map((k) => k.staff_id));
+  const postList = (dayPosts ?? []) as {
+    id: string;
+    name: string;
+    start_time: string;
+    end_time: string;
+    duration_hours: number | null;
+    assignments: { staff_id: string }[];
+  }[];
+
+  /** Timer og opptatte tidsrom per leder denne dagen. */
+  const hours = new Map<string, number>();
+  const busy = new Map<string, { s: number; e: number }[]>();
+  postList.forEach((p) => {
+    const s = toMin(p.start_time);
+    let e = toMin(p.end_time);
+    if (e <= s) e += 1440;
+    p.assignments.forEach((a) => {
+      hours.set(a.staff_id, (hours.get(a.staff_id) ?? 0) + Number(p.duration_hours ?? 0));
+      busy.set(a.staff_id, [...(busy.get(a.staff_id) ?? []), { s, e }]);
+    });
+  });
+
+  const typeByKey = new Map(ctx.types.map((t) => [t.key, t]));
+  let created = 0;
+
+  for (const row of SESSION_ROWS) {
+    const post = postList.find((p) => (p.name ?? '').trim().toLowerCase() === row.label.toLowerCase());
+    if (!post) continue;
+    const lines = splitPlanLines(ctx.cells.find((c) => c.row_index === row.row)?.content);
+    const sessionActs = ctx.existing.filter((a) => a.session === row.session);
+    const { slots } = planSlots(lines, ctx.types, sessionActs);
+    const open = slots.filter((s) => !s.leaderId);
+    if (!open.length) continue;
+
+    const s = toMin(post.start_time);
+    let e = toMin(post.end_time);
+    if (e <= s) e += 1440;
+    const duration = Number(post.duration_hours ?? 0);
+    const onPost = new Set(post.assignments.map((a) => a.staff_id));
+    const held = new Set(slots.filter((x) => x.leaderId).map((x) => x.leaderId as string));
+
+    for (const slot of open) {
+      // Kandidater: ikke kjøkken, ikke på økten, innenfor timegrensen, ingen overlapp.
+      const candidates = Array.from(ctx.leaderByStaff.entries())
+        .filter(([staffId, leader]) => {
+          if (kitchenIds.has(staffId) || onPost.has(staffId) || held.has(leader.id)) return false;
+          if ((hours.get(staffId) ?? 0) + duration > maxHours + 0.01) return false;
+          return !(busy.get(staffId) ?? []).some((b) => b.s < e && s < b.e);
+        })
+        .sort((a, b) => (hours.get(a[0]) ?? 0) - (hours.get(b[0]) ?? 0));
+
+      const pick =
+        candidates.find(
+          ([, l]) =>
+            typeByKey.get(slot.key)?.is_custom || l.competencies.length === 0 || l.competencies.includes(slot.key),
+        ) ?? candidates[0];
+      if (!pick) break;
+      const [staffId, leader] = pick;
+
+      const { error: assignError } = await supabase
+        .from('leirskole_assignments')
+        .insert({ post_id: post.id, staff_id: staffId, assigned_manually: false });
+      if (assignError) continue;
+      const { error } = await supabase.from('leirskole_activity_assignments').insert({
+        week_id: weekId,
+        date,
+        session: row.session,
+        leader_id: leader.id,
+        activity: slot.key,
+        auto_generated: true,
+      });
+      if (error) continue;
+      onPost.add(staffId);
+      held.add(leader.id);
+      hours.set(staffId, (hours.get(staffId) ?? 0) + duration);
+      busy.set(staffId, [...(busy.get(staffId) ?? []), { s, e }]);
+      created += 1;
+    }
+  }
+
+  return created;
 }
