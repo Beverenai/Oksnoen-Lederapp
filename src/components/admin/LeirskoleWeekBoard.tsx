@@ -529,15 +529,22 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     }
   };
 
-  /** Radene for en dag: økt 1–3. Ankomst/avreise følger samme klokke som resten. */
+  /** Radene for en dag: økt 1–3. Hver rad kobles til vakten bak seg, slik at
+      navn og klokkeslett kan endres — også på ankomst- og avreisedager. */
   const rowsFor = (date: string): (CellTarget | null)[] =>
-    SESSIONS.map((s) => ({
-      date,
-      session: s.session,
-      rowIndex: s.row,
-      label: s.label,
-      dayType: 'normal' as const,
-    }));
+    SESSIONS.map((s) => {
+      const post = (postsByDate.get(date) ?? []).find(
+        (p) => (p.name ?? '').trim().toLowerCase() === s.label.toLowerCase(),
+      );
+      return {
+        date,
+        session: s.session,
+        rowIndex: s.row,
+        label: post?.name?.trim() || s.label,
+        postId: post?.id ?? null,
+        dayType: (specialDays.get(date) ?? 'normal') as CellTarget['dayType'],
+      };
+    });
 
   const cellContent = (t: CellTarget) =>
     planContent.get(t.postId ? `post|${t.postId}` : `${t.date}|${t.rowIndex}`) ?? '';
