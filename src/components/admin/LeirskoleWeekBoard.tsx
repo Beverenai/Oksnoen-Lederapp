@@ -27,6 +27,7 @@ import { LeirskoleSpecialDayTimeline } from '@/components/admin/LeirskoleSpecial
 import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
 import { trimDayHours, fillDayHours, KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import { assignMissingActivities } from '@/lib/leirskoleAutoActivity';
+import { cellInstances } from '@/lib/leirskoleCellInstances';
 import { useSeedLeirskoleSpecialDays } from '@/hooks/useSeedLeirskoleSpecialDays';
 
 const MEALS = ['Frokost', 'Middag', 'Kvelds'];
