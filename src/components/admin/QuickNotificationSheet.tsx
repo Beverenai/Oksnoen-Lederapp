@@ -25,6 +25,8 @@ interface QuickNotificationSheetProps {
   leaderIds?: string[];
   /** Vises i teksten, f.eks. «ledere på Uke 34». */
   scopeLabel?: string;
+  /** Egne forhåndsdefinerte varslinger for leirskole-modulen. */
+  variant?: 'default' | 'leirskole';
 }
 
 type TargetActivity = 'all' | 'active' | 'free' | 'unread_with_content';
@@ -90,11 +92,71 @@ const quickNotifications: QuickNotification[] = [
   },
 ];
 
+/** Leirskole-varslinger: åpner leirskole-sidene og går kun til ukas bemanning. */
+const leirskoleNotifications: QuickNotification[] = [
+  {
+    id: 'ls-schedule-published',
+    icon: Calendar,
+    title: 'Vaktplanen er klar',
+    description: 'Ber ledere sjekke vaktplanen for uka',
+    notificationTitle: '🗓️ Vaktplanen for uka er klar!',
+    notificationMessage: 'Åpne appen for å se hvilke vakter du har denne uka.',
+    target: 'all',
+    url: '/leirskole/vaktplan',
+    color: 'bg-blue-500',
+  },
+  {
+    id: 'ls-schedule-changed',
+    icon: RefreshCw,
+    title: 'Vaktplanen er endret',
+    description: 'Varsler om endringer i vaktene',
+    notificationTitle: '🔄 Vaktplanen er oppdatert',
+    notificationMessage: 'Sjekk vaktplanen din — noe har blitt endret.',
+    target: 'all',
+    url: '/leirskole/vaktplan',
+    color: 'bg-amber-500',
+  },
+  {
+    id: 'ls-session-start',
+    icon: Play,
+    title: 'Økten starter nå',
+    description: 'Minner alle på at neste økt begynner',
+    notificationTitle: '⏰ Økten starter nå!',
+    notificationMessage: 'Sjekk hvor du skal være denne økten.',
+    target: 'all',
+    url: '/leirskole',
+    color: 'bg-green-500',
+  },
+  {
+    id: 'ls-new-task',
+    icon: Bell,
+    title: 'Ny oppgave',
+    description: 'Ber ledere se oppgavelista',
+    notificationTitle: '✅ Ny oppgave til deg',
+    notificationMessage: 'Du har fått en ny oppgave — se oppgavelista i appen.',
+    target: 'all',
+    url: '/leirskole/oppgaver',
+    color: 'bg-purple-500',
+  },
+  {
+    id: 'ls-meeting',
+    icon: Coffee,
+    title: 'Ledermøte',
+    description: 'Kall inn ukas ledere til møte',
+    notificationTitle: '☕ Ledermøte',
+    notificationMessage: 'Møt opp til ledermøte nå.',
+    target: 'all',
+    url: '/leirskole',
+    color: 'bg-orange-500',
+  },
+];
+
 export function QuickNotificationSheet({
   open,
   onOpenChange,
   leaderIds,
   scopeLabel,
+  variant = 'default',
 }: QuickNotificationSheetProps) {
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const { leader } = useAuth();
@@ -102,13 +164,18 @@ export function QuickNotificationSheet({
   const [customMode, setCustomMode] = useState(false);
   const [customTitle, setCustomTitle] = useState('');
   const [customMessage, setCustomMessage] = useState('');
-  const [customUrl, setCustomUrl] = useState('/');
+  const [customUrl, setCustomUrl] = useState(variant === 'leirskole' ? '/leirskole' : '/');
 
   const scoped = Array.isArray(leaderIds);
   const audience = scoped ? (scopeLabel ?? `${leaderIds!.length} ledere`) : 'alle ledere';
+  const presets = variant === 'leirskole' ? leirskoleNotifications : quickNotifications;
 
   const handleSendNotification = async (notification: QuickNotification) => {
     if (!leader) return;
+    if (scoped && leaderIds!.length === 0) {
+      showError('Ingen ledere er satt opp på denne uka');
+      return;
+    }
     
     setSendingId(notification.id);
     
@@ -149,6 +216,11 @@ export function QuickNotificationSheet({
       return;
     }
     setSendingId('custom');
+    if (scoped && leaderIds!.length === 0) {
+      showError('Ingen ledere er satt opp på denne uka');
+      setSendingId(null);
+      return;
+    }
     try {
       const { data, error } = await supabase.functions.invoke('push-send', {
         body: {
@@ -272,7 +344,7 @@ export function QuickNotificationSheet({
             </div>
           </Button>
 
-          {quickNotifications.map((notification) => {
+          {presets.map((notification) => {
             const Icon = notification.icon;
             const isSending = sendingId === notification.id;
             

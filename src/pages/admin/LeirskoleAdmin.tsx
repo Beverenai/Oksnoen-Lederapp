@@ -474,6 +474,7 @@ export default function LeirskoleAdmin() {
         onOpenChange={setQuickPushOpen}
         leaderIds={(staff ?? []).map((s) => s.leader?.id).filter((id): id is string => !!id)}
         scopeLabel={`ledere på ${week.name}`}
+        variant="leirskole"
       />
 
       {selectedStaff?.leader && (
