@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AlertTriangle, ChefHat, ChevronDown, History, Plus, Trash2, UserPlus, X } from 'lucide-react';
+import { AlertTriangle, ChefHat, History, Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { hhmm } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import {
