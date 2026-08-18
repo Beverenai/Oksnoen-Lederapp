@@ -52,9 +52,7 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
   const { data: weekDays } = useLeirskoleWeekDays(week.id);
   const save = useSaveLeirskoleWeekPlanCell();
   const qc = useQueryClient();
-  // Ukeoversikten gjør samme seeding — vi lar den ta jobben, ellers skriver to
-  // komponenter til de samme dagene og siden hopper mens dataene oppdateres.
-  useSeedLeirskoleSpecialDays(week, false);
+  useSeedLeirskoleSpecialDays(week);
   const dates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
 
   const stored = useMemo(() => {

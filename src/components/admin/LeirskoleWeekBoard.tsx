@@ -156,7 +156,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
 
   const dates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
 
-  useSeedLeirskoleSpecialDays(week);
+  // «Dag til dag» seeder ankomst/avreise. Gjør vi det her også, skriver to
+  // komponenter til samme dager og siden hopper mens dataene oppdateres.
+  useSeedLeirskoleSpecialDays(week, false);
 
   const specialDays = useMemo(() => {
     const map = new Map<string, string>();
