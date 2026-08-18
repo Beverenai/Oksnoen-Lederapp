@@ -819,7 +819,9 @@ export function LeirskoleDaySessions({
                   </p>
                 )}
                 {!withActivities && p.assignments.length === 0 && (
-                  <p className="self-center text-[11px] text-muted-foreground">Ingen ledere.</p>
+                  <p className="flex items-center gap-1 self-center rounded-full bg-amber-500/20 px-2 py-1 text-[11px] font-bold text-amber-800 dark:text-amber-200">
+                    <AlertTriangle className="h-3.5 w-3.5" /> Ingen ledere satt opp — legg til her
+                  </p>
                 )}
                 {withoutActivity.map((a) => (
                   <div
