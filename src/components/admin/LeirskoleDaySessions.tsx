@@ -284,7 +284,8 @@ export function LeirskoleDaySessions({
           }
           continue;
         }
-        if (a.p.date === b.p.date || overlapAllowed(a.p) || overlapAllowed(b.p)) continue;
+        const isSanitas = (p: SessionPost) => (p.name ?? '').toLowerCase().includes('sanitas');
+        if (a.p.date === b.p.date || isSanitas(a.p) || isSanitas(b.p)) continue;
         const gap = (a.start < b.start ? b.start - a.end : a.start - b.end) / 60;
         if (gap < MIN_REST_HOURS) {
           out.push(
