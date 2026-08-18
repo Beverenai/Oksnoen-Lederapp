@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import {
   useActiveLeirskoleWeek,
   useLeirskoleActivities,
+  useAutoSaveLeirskoleWeek,
   useLeirskoleSchedule,
   useLeirskoleStaff,
   useLeirskoleWeekPlan,
@@ -120,6 +121,25 @@ export default function LeirskoleAdmin() {
   const [quickPushOpen, setQuickPushOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [viewDate, setViewDate] = useState<string | null>(null);
+
+  // Autolagring: signaturen endrer seg når bemanning, vaktplan, aktiviteter
+  // eller ukesoppsett endres — da lagres ukesarkivet automatisk.
+  const autoSaveSignature = useMemo(() => {
+    const stamp = (rows?: { updated_at?: string | null }[]) =>
+      (rows ?? []).reduce((max, r) => (r.updated_at && r.updated_at > max ? r.updated_at : max), '');
+    return [
+      (staff ?? []).length,
+      (posts ?? []).length,
+      (weekActivities ?? []).length,
+      (planCells ?? []).length,
+      stamp(staff as { updated_at?: string | null }[]),
+      stamp(posts as { updated_at?: string | null }[]),
+      stamp(weekActivities as { updated_at?: string | null }[]),
+      stamp(planCells as { updated_at?: string | null }[]),
+    ].join(':');
+  }, [staff, posts, weekActivities, planCells]);
+
+  useAutoSaveLeirskoleWeek(week?.id, autoSaveSignature);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['leirskole-weeks'] });
