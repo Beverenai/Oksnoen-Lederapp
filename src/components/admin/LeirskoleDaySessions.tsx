@@ -644,12 +644,19 @@ export function LeirskoleDaySessions({
           if (!withActivities) return true;
           return !leaderId || !slotLeaderIds.has(leaderId);
         });
+        /** Tomme plasser i økten, eller måltid/vakt helt uten ledere. */
+        const openSlots = slots.filter((s) => !s.leaderId).length;
+        const missing = withActivities ? openSlots > 0 : p.assignments.length === 0;
 
         return (
           <div
             key={p.id}
             className={`rounded-2xl border p-2 ${
-              meal ? 'border-sky-500/40 bg-sky-500/[0.07]' : 'border-emerald-500/40 bg-emerald-500/[0.07]'
+              missing
+                ? 'border-amber-500/70 bg-amber-500/[0.09]'
+                : meal
+                  ? 'border-sky-500/40 bg-sky-500/[0.07]'
+                  : 'border-emerald-500/40 bg-emerald-500/[0.07]'
             }`}
           >
             <div className="flex items-center gap-1.5">
@@ -660,6 +667,13 @@ export function LeirskoleDaySessions({
               >
                 {meal ? 'Måltid' : 'Økt'}
               </span>
+
+              {missing && (
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-500/25 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-200">
+                  <AlertTriangle className="h-3 w-3" />
+                  {withActivities ? `${openSlots} mangler leder` : 'Mangler ledere'}
+                </span>
+              )}
 
               <Popover>
                 <PopoverTrigger asChild>
