@@ -460,21 +460,13 @@ export function LeirskoleDayEditor({
                     className="h-8 flex-1 rounded-xl text-sm font-semibold"
                     aria-label="Navn på økten"
                   />
-                  <Input
-                    type="time"
-                    defaultValue={hhmm(p.start_time)}
-                    key={`${p.id}-s-${p.start_time}`}
-                    onBlur={(e) => saveTime(p, 'start_time', e.target.value)}
-                    className="h-8 w-[6.2rem] rounded-xl text-xs tabular-nums"
-                    aria-label="Starttid"
-                  />
-                  <Input
-                    type="time"
-                    defaultValue={hhmm(p.end_time)}
-                    key={`${p.id}-e-${p.end_time}`}
-                    onBlur={(e) => saveTime(p, 'end_time', e.target.value)}
-                    className="h-8 w-[6.2rem] rounded-xl text-xs tabular-nums"
-                    aria-label="Sluttid"
+                  <TimeRangePopover
+                    start={hhmm(p.start_time)}
+                    end={hhmm(p.end_time)}
+                    onChange={({ start, end }) => {
+                      if (start !== hhmm(p.start_time)) saveTime(p, 'start_time', start);
+                      if (end !== hhmm(p.end_time)) saveTime(p, 'end_time', end);
+                    }}
                   />
                   <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
                     {Number(p.duration_hours ?? 0).toFixed(1)}t
@@ -587,20 +579,12 @@ export function LeirskoleDayEditor({
                 placeholder="Navn på økten"
                 className="h-9 rounded-xl text-sm"
               />
-              <div className="flex items-center gap-2">
-                <Input
-                  type="time"
-                  value={draft.start}
-                  onChange={(e) => setDraft((d) => ({ ...d, start: e.target.value }))}
-                  className="h-9 flex-1 rounded-xl text-sm tabular-nums"
-                />
-                <Input
-                  type="time"
-                  value={draft.end}
-                  onChange={(e) => setDraft((d) => ({ ...d, end: e.target.value }))}
-                  className="h-9 flex-1 rounded-xl text-sm tabular-nums"
-                />
-              </div>
+              <TimeRangeField
+                start={draft.start}
+                end={draft.end}
+                onStartChange={(v) => setDraft((d) => ({ ...d, start: v }))}
+                onEndChange={(v) => setDraft((d) => ({ ...d, end: v }))}
+              />
               <div className="flex gap-2">
                 <Button size="sm" className="flex-1 rounded-full" onClick={createPost} disabled={addPost.isPending}>
                   Legg til
