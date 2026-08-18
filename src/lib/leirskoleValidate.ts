@@ -123,7 +123,7 @@ export function validateLeirskoleWeek(input: ValidateInput): LeirskoleIssue[] {
           rowIndex: null,
           label: 'Timer',
           leaderId,
-          message: `${short(leaderName.get(leaderId) ?? '?')} har ${v.toFixed(1)}t (maks ${maxHours}t)`,
+          message: `${short(leaderName.get(leaderId) ?? '?')} har ${v.toFixed(1)}t (planleggingsgrense ${maxHours}t)`,
         });
       }
     });
