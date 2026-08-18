@@ -478,7 +478,7 @@ export default function Leirskole() {
           <p className="flex items-center gap-2 text-sm font-semibold">
             <CalendarDays className="h-4 w-4 text-primary" /> Mine vakter
           </p>
-          <span className="text-[11px] text-muted-foreground">maks {maxDaily}t/dag</span>
+          <span className="text-[11px] text-muted-foreground">planleggingsgrense {maxDaily}t/dag</span>
         </div>
         {shiftsLoading ? (
           <Skeleton className="h-20 rounded-2xl" />

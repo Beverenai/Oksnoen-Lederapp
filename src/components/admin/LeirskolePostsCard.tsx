@@ -90,7 +90,7 @@ const KIND_STYLE: Record<PostKind, { ring: string; chip: string; icon: JSX.Eleme
 
 /**
  * Vaktplan-generatoren for leirskole: vaktposter per dag, kjør generator
- * (maks t/dag + hviletid), og bytt leder manuelt på en vakt.
+ * (planleggingsgrense t/dag + hviletid), og bytt leder manuelt på en vakt.
  */
 export function LeirskolePostsCard({
   week,

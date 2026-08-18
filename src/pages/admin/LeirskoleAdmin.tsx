@@ -437,7 +437,7 @@ export default function LeirskoleAdmin() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80">Leirskole-admin</p>
             <h1 className="mt-0.5 truncate text-2xl font-heading font-bold">{week.name}</h1>
             <p className="mt-0.5 text-sm text-white/85">
-              {shortDate(week.start_date)} – {shortDate(week.end_date)} · maks {Number(week.max_daily_hours ?? 8)}t/dag
+              {shortDate(week.start_date)} – {shortDate(week.end_date)} · planleggingsgrense {Number(week.max_daily_hours ?? 8)}t/dag
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
