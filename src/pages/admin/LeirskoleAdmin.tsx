@@ -25,7 +25,6 @@ import { LeirskoleActivityTypesCard } from '@/components/admin/LeirskoleActivity
 import { LeirskoleWeekPeriodsCard } from '@/components/admin/LeirskoleWeekPeriodsCard';
 import { LeirskoleGuideCard } from '@/components/admin/LeirskoleGuideCard';
 import { LeirskoleLeaderSheet } from '@/components/admin/LeirskoleLeaderSheet';
-import { LeirskoleSessionInfoCard } from '@/components/admin/LeirskoleSessionInfoCard';
 import { LeirskoleStaffPanel } from '@/components/admin/LeirskoleStaffPanel';
 import { LeirskoleWeekBoard } from '@/components/admin/LeirskoleWeekBoard';
 import { LeirskoleDayEditor } from '@/components/admin/LeirskoleDayEditor';
