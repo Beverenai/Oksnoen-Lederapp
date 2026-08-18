@@ -239,3 +239,106 @@ export async function runLeirskoleGenerate({
 
   return summary;
 }
+
+// ---------------------------------------------------------------------------
+// Forhåndsvisning: hva vil «Generer uken» faktisk gjøre? Ingenting skrives her.
+// ---------------------------------------------------------------------------
+
+export interface LeirskolePreviewDay {
+  date: string;
+  locked: boolean;
+  special: boolean;
+  /** Tomme ruter som blir fylt med aktiviteter. */
+  cellsToFill: number;
+  /** Vakter som finnes i dag og kan bli byttet ut. */
+  existingShifts: number;
+  /** Aktivitetstildelinger satt manuelt — beholdes alltid. */
+  manualActivities: number;
+  /** Automatiske aktivitetstildelinger som blir laget på nytt. */
+  autoActivities: number;
+}
+
+export interface LeirskolePreview {
+  mode: LeirskoleGenerateMode;
+  days: LeirskolePreviewDay[];
+  totals: { cellsToFill: number; shiftsAtRisk: number; manualKept: number; lockedDays: number };
+}
+
+export async function previewLeirskoleGenerate({
+  weekId,
+  startDate,
+  endDate,
+  mode,
+  perSession = 6,
+  overwritePlan = false,
+}: {
+  weekId: string;
+  startDate: string;
+  endDate: string;
+  mode: LeirskoleGenerateMode;
+  perSession?: number;
+  overwritePlan?: boolean;
+}): Promise<LeirskolePreview> {
+  const [{ data: types }, { data: days }, { data: cells }, { data: posts }, { data: acts }] = await Promise.all([
+    supabase.from('leirskole_activity_types').select('key, label, emoji').eq('is_active', true),
+    supabase.from('leirskole_week_days').select('date, day_type, is_locked').eq('week_id', weekId),
+    supabase.from('leirskole_week_plan_cells').select('date, row_index, content').eq('week_id', weekId),
+    supabase
+      .from('leirskole_posts')
+      .select('date, assignments:leirskole_assignments(id)')
+      .eq('week_id', weekId),
+    supabase.from('leirskole_activity_assignments').select('date, auto_generated').eq('week_id', weekId),
+  ]);
+
+  const lockedDates = new Set((days ?? []).filter((d) => d.is_locked).map((d) => d.date));
+  const specialDates = new Set((days ?? []).filter((d) => d.day_type !== 'normal').map((d) => d.date));
+  const skip = new Set([...lockedDates, ...specialDates]);
+
+  const filled = new Set(
+    (cells ?? [])
+      .filter((c) => c.row_index != null && (c.content ?? '').trim().length > 0)
+      .map((c) => `${c.date}|${c.row_index}`),
+  );
+
+  const allDates = datesBetween(startDate, endDate);
+  const planned =
+    mode === 'schedule'
+      ? []
+      : randomWeekPlan({
+          dates: allDates.filter((d) => !skip.has(d)),
+          activities: ((types ?? []) as RandomPlanActivity[]).filter(isSessionActivity),
+          perSession,
+          filled,
+          overwrite: overwritePlan,
+        });
+
+  const shiftsByDate = new Map<string, number>();
+  (posts ?? []).forEach((p) => {
+    const n = ((p.assignments ?? []) as unknown[]).length;
+    shiftsByDate.set(p.date, (shiftsByDate.get(p.date) ?? 0) + n);
+  });
+
+  const daysOut: LeirskolePreviewDay[] = allDates.map((date) => {
+    const locked = lockedDates.has(date);
+    return {
+      date,
+      locked,
+      special: specialDates.has(date),
+      cellsToFill: planned.filter((p) => p.date === date).length,
+      existingShifts: locked || mode === 'plan' ? 0 : shiftsByDate.get(date) ?? 0,
+      manualActivities: (acts ?? []).filter((a) => a.date === date && !a.auto_generated).length,
+      autoActivities: (acts ?? []).filter((a) => a.date === date && a.auto_generated).length,
+    };
+  });
+
+  return {
+    mode,
+    days: daysOut,
+    totals: {
+      cellsToFill: daysOut.reduce((s, d) => s + d.cellsToFill, 0),
+      shiftsAtRisk: daysOut.reduce((s, d) => s + d.existingShifts, 0),
+      manualKept: daysOut.reduce((s, d) => s + d.manualActivities, 0),
+      lockedDays: daysOut.filter((d) => d.locked).length,
+    },
+  };
+}

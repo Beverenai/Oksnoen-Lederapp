@@ -4,7 +4,20 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertTriangle, Lock, LockOpen, Moon, NotebookPen, Sparkles, Wand2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  LayoutGrid,
+  Lock,
+  LockOpen,
+  Maximize2,
+  Minimize2,
+  Moon,
+  NotebookPen,
+  Sparkles,
+  Undo2,
+  Users,
+  Wand2,
+} from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,9 +36,20 @@ import {
 } from '@/hooks/useLeirskole';
 import {
   runLeirskoleGenerate,
+  previewLeirskoleGenerate,
   type LeirskoleGenerateMode,
   type LeirskoleGenerateSummary,
+  type LeirskolePreview,
 } from '@/lib/leirskoleGenerateAll';
+import {
+  takeLeirskoleSnapshot,
+  restoreLeirskoleSnapshot,
+  type LeirskoleSnapshot,
+} from '@/lib/leirskoleSnapshot';
+import { validateLeirskoleWeek, type LeirskoleIssue } from '@/lib/leirskoleValidate';
+import { LeirskoleBoardIssues } from '@/components/admin/LeirskoleBoardIssues';
+import { LeirskoleLeaderWeekTable } from '@/components/admin/LeirskoleLeaderWeekTable';
+import { LeirskoleGeneratePreviewDialog } from '@/components/admin/LeirskoleGeneratePreviewDialog';
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
 import { LeirskoleSpecialDayTimeline } from '@/components/admin/LeirskoleSpecialDayTimeline';
 import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
@@ -106,6 +130,24 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const [logText, setLogText] = useState('');
   const [summary, setSummary] = useState<LeirskoleGenerateSummary | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [view, setView] = useState<'bord' | 'ledere'>('bord');
+  const [big, setBig] = useState(() => localStorage.getItem('leirskole-board-big') === '1');
+  const [pendingMode, setPendingMode] = useState<LeirskoleGenerateMode | null>(null);
+  const [preview, setPreview] = useState<LeirskolePreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [snapshot, setSnapshot] = useState<LeirskoleSnapshot | null>(null);
+
+  const toggleBig = () => {
+    setBig((v) => {
+      localStorage.setItem('leirskole-board-big', v ? '0' : '1');
+      return !v;
+    });
+  };
+
+  /** Størrelser for kompakt vs. stor visning. */
+  const ui = big
+    ? { pad: 'p-3', txt: 'text-sm', sub: 'text-xs', chip: 'px-2 py-1 text-xs', gap: 'gap-2' }
+    : { pad: 'p-2', txt: 'text-[11px]', sub: 'text-[10px]', chip: 'px-1.5 py-0.5 text-[10px]', gap: 'gap-1.5' };
 
   const dates = useMemo(() => datesBetween(week.start_date, week.end_date), [week.start_date, week.end_date]);
 
@@ -289,6 +331,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         qc.invalidateQueries({ queryKey: ['leirskole-staff'] });
         toast.info(`Kopierte ${unique.length} ledere fra forrige uke`);
       }
+      // Sikkerhetsnett: ta et bilde av uken slik den er nå, så alt kan angres.
+      const snap = await takeLeirskoleSnapshot(week.id);
+      setSnapshot(snap);
       return runLeirskoleGenerate({
         weekId: week.id,
         startDate: week.start_date,
@@ -302,6 +347,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     },
     onSuccess: (result) => {
       setSummary(result);
+      setPendingMode(null);
+      setPreview(null);
       ['leirskole-week-plan', 'leirskole-schedule', 'leirskole-activities', 'leirskole-activity-history', 'leirskole-my-shifts'].forEach(
         (key) => qc.invalidateQueries({ queryKey: [key] }),
       );
@@ -404,6 +451,49 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke rydde uken'),
   });
 
+  /** Angre siste generering ved å skrive tilbake bildet vi tok før kjøringen. */
+  const undoGenerate = useMutation({
+    mutationFn: async () => {
+      if (!snapshot) throw new Error('Ingen generering å angre');
+      await restoreLeirskoleSnapshot(snapshot);
+    },
+    onSuccess: () => {
+      [
+        'leirskole-week-plan',
+        'leirskole-schedule',
+        'leirskole-activities',
+        'leirskole-activity-history',
+        'leirskole-my-shifts',
+        'leirskole-kitchen-days',
+      ].forEach((key) => qc.invalidateQueries({ queryKey: [key] }));
+      setSnapshot(null);
+      setSummary(null);
+      toast.success('Genereringen er angret');
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke angre'),
+  });
+
+  /** Hent forhåndsvisning før noe skrives. */
+  const openPreview = async (mode: LeirskoleGenerateMode) => {
+    setPendingMode(mode);
+    setPreviewLoading(true);
+    try {
+      const p = await previewLeirskoleGenerate({
+        weekId: week.id,
+        startDate: week.start_date,
+        endDate: week.end_date,
+        mode,
+        overwritePlan: mode === 'plan',
+      });
+      setPreview(p);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Kunne ikke beregne forhåndsvisning');
+      setPendingMode(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   /** Radene for en vanlig dag: økt 1–3. Ankomst/avreise bruker kalenderkolonne. */
   const rowsFor = (date: string): (CellTarget | null)[] => {
     if (specialDays.has(date)) return SESSIONS.map(() => null);
@@ -419,7 +509,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
   const cellContent = (t: CellTarget) =>
     planContent.get(t.postId ? `post|${t.postId}` : `${t.date}|${t.rowIndex}`) ?? '';
 
-  const gridStyle = { gridTemplateColumns: `64px repeat(${dates.length}, minmax(0, 1fr))` };
+  const gridStyle = {
+    gridTemplateColumns: `${big ? 84 : 64}px repeat(${dates.length}, minmax(${big ? '240px' : '0'}, 1fr))`,
+  };
 
   /** Aktiviteter i ukeplanen som ingen leder har fått ennå. */
   const missing = useMemo(() => {
@@ -444,6 +536,106 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     missing.forEach((m) => map.set(m.target.date, [...(map.get(m.target.date) ?? []), m]));
     return map;
   }, [missing]);
+
+  /** `${date}|${staffId}` -> vaktene lederen har den dagen (til lederoversikten). */
+  const shiftsByStaffDate = useMemo(() => {
+    const map = new Map<string, { name: string; hours: number }[]>();
+    (posts ?? []).forEach((p) => {
+      (p.assignments ?? []).forEach((a) => {
+        const key = `${p.date}|${a.staff_id}`;
+        map.set(key, [
+          ...(map.get(key) ?? []),
+          { name: p.name ?? 'Vakt', hours: Number(p.duration_hours ?? 0) },
+        ]);
+      });
+    });
+    (kitchenDays ?? []).forEach((k) => {
+      const key = `${k.date}|${k.staff_id}`;
+      map.set(key, [...(map.get(key) ?? []), { name: 'Kjøkken', hours: KITCHEN_DAY_HOURS }]);
+    });
+    return map;
+  }, [posts, kitchenDays]);
+
+  /** Alle brudd i uken — samme regler som brukes i redigeringspanelet. */
+  const issues = useMemo(
+    () =>
+      validateLeirskoleWeek({
+        dates,
+        posts: (posts ?? []).map((p) => ({
+          id: p.id,
+          date: p.date,
+          name: p.name ?? 'Vakt',
+          start_time: String(p.start_time ?? '00:00'),
+          end_time: String(p.end_time ?? '00:00'),
+          duration_hours: Number(p.duration_hours ?? 0),
+          leaderIds: (p.assignments ?? [])
+            .map((a) => staffToLeader.get(a.staff_id)?.id)
+            .filter((x): x is string => !!x),
+        })),
+        specialDates: new Set(specialDays.keys()),
+        lockedDates: lockedDays,
+        kitchenByDate: (() => {
+          const map = new Map<string, string[]>();
+          (kitchenDays ?? []).forEach((k) => {
+            const l = staffToLeader.get(k.staff_id);
+            if (l) map.set(k.date, [...(map.get(k.date) ?? []), l.id]);
+          });
+          return map;
+        })(),
+        kitchenHours: KITCHEN_DAY_HOURS,
+        maxHours,
+        leaderName,
+        missingActivities: missing.map((m) => ({
+          date: m.target.date,
+          session: m.target.session,
+          rowIndex: m.target.rowIndex,
+          label: m.target.label,
+          activityLabel: `${m.emoji ?? '•'} ${m.label}`,
+        })),
+      }),
+    [dates, posts, specialDays, lockedDays, kitchenDays, staffToLeader, maxHours, leaderName, missing],
+  );
+
+  const issuesByLeader = useMemo(() => {
+    const map = new Map<string, LeirskoleIssue[]>();
+    issues.forEach((i) => {
+      if (!i.leaderId) return;
+      map.set(i.leaderId, [...(map.get(i.leaderId) ?? []), i]);
+    });
+    return map;
+  }, [issues]);
+
+  /** Timer og konflikter per leder for den ruten som redigeres. */
+  const cellLeaderInfo = useMemo(() => {
+    const map = new Map<string, { day: number; week: number; note?: string }>();
+    if (!target) return map;
+    staff.forEach((s) => {
+      if (!s.leader) return;
+      const day = staffHoursByDate.get(target.date)?.get(s.id) ?? 0;
+      const weekTotal = dates.reduce((sum, d) => sum + (staffHoursByDate.get(d)?.get(s.id) ?? 0), 0);
+      const notes = (issuesByLeader.get(s.leader.id) ?? [])
+        .filter((i) => i.date === target.date)
+        .map((i) => i.message);
+      map.set(s.leader.id, { day, week: weekTotal, note: notes[0] });
+    });
+    return map;
+  }, [target, staff, staffHoursByDate, dates, issuesByLeader]);
+
+  /** Hopp fra varsel til riktig rute (eller til lederoversikten for timer/hvile). */
+  const jumpToIssue = (issue: LeirskoleIssue) => {
+    const session = issue.rowIndex != null ? SESSIONS.find((s) => s.row === issue.rowIndex) : null;
+    if (session) {
+      setTarget({
+        date: issue.date,
+        session: session.session,
+        rowIndex: session.row,
+        label: session.label,
+        dayType: 'normal',
+      });
+      return;
+    }
+    setView('ledere');
+  };
 
   const LabelCell = ({ children }: { children: React.ReactNode }) => (
     <div className="sticky left-0 z-10 flex items-center bg-card px-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -518,6 +710,49 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             på vakt uten aktivitet
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-full bg-muted/60 p-0.5">
+            {[
+              { key: 'bord' as const, label: 'Ukebord', icon: LayoutGrid },
+              { key: 'ledere' as const, label: 'Ledere', icon: Users },
+            ].map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setView(t.key)}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  view === t.key ? 'bg-background shadow-sm' : 'text-muted-foreground'
+                }`}
+              >
+                <t.icon className="h-3.5 w-3.5" />
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {view === 'bord' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 rounded-full text-xs"
+              onClick={toggleBig}
+              title={big ? 'Bytt til kompakt visning' : 'Bytt til stor visning'}
+            >
+              {big ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+              {big ? 'Kompakt' : 'Stor'}
+            </Button>
+          )}
+          {snapshot && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 rounded-full text-xs"
+              onClick={() => undoGenerate.mutate()}
+              disabled={undoGenerate.isPending}
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+              {undoGenerate.isPending ? 'Angrer…' : 'Angre generering'}
+            </Button>
+          )}
         <Popover open={menuOpen} onOpenChange={setMenuOpen}>
           <PopoverTrigger asChild>
             <Button className="gap-2 rounded-full" disabled={generate.isPending}>
@@ -540,7 +775,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                 type="button"
                 onClick={() => {
                   setMenuOpen(false);
-                  generate.mutate(o.mode);
+                  void openPreview(o.mode);
                 }}
                 className="w-full rounded-xl px-3 py-2 text-left hover:bg-muted"
               >
@@ -550,6 +785,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             ))}
           </PopoverContent>
         </Popover>
+        </div>
       </div>
 
       {summary && (
@@ -571,52 +807,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         </div>
       )}
 
-      {/* Mangler leder */}
-      <div
-        className={`rounded-2xl border px-3 py-2 text-xs ${
-          missing.length
-            ? 'border-amber-500/60 bg-amber-500/10'
-            : 'border-emerald-500/50 bg-emerald-500/10'
-        }`}
-      >
-        {missing.length === 0 ? (
-          <p className="flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-300">
-            <Sparkles className="h-3.5 w-3.5" /> Alle aktiviteter i ukeplanen har en leder
-          </p>
-        ) : (
-          <>
-            <p className="flex items-center gap-1.5 font-semibold text-amber-700 dark:text-amber-200">
-              <AlertTriangle className="h-3.5 w-3.5" /> {missing.length} aktiviteter mangler leder
-            </p>
-            <div className="mt-2 space-y-1.5">
-              {dates
-                .filter((date) => (missingByDay.get(date) ?? []).length > 0)
-                .map((date) => {
-                  const d = new Date(`${date}T12:00:00`);
-                  return (
-                    <div key={date} className="flex flex-wrap items-center gap-1.5">
-                      <span className="w-16 shrink-0 text-[11px] font-bold uppercase text-muted-foreground">
-                        {WEEKDAYS[d.getDay()]} {d.getDate()}.
-                      </span>
-                      {(missingByDay.get(date) ?? []).map((m, i) => (
-                        <button
-                          key={`${m.target.label}-${m.label}-${i}`}
-                          type="button"
-                          onClick={() => setTarget(m.target)}
-                          className="rounded-full border border-amber-500/50 bg-background/70 px-2 py-0.5 text-[11px] font-medium hover:bg-amber-500/20"
-                        >
-                          {m.emoji ?? '•'} {m.label}
-                          <span className="ml-1 text-[10px] text-muted-foreground">{m.target.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })}
-            </div>
-          </>
-        )}
-      </div>
+      <LeirskoleBoardIssues issues={issues} onJump={jumpToIssue} />
 
+      {view === "bord" && (
       <div className="-mx-2 px-2">
         <div className="space-y-1.5">
           {/* Dagoverskrifter */}
@@ -754,21 +947,21 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                     type="button"
                     style={{ gridColumn: dayIdx + 2, gridRow: rowIdx + 1 }}
                     onClick={() => setTarget(t)}
-                    className={`rounded-xl border p-2 text-left transition-colors hover:brightness-105 ${tone}`}
+                    className={`rounded-xl border text-left ${ui.pad} transition-colors hover:brightness-105 ${tone}`}
                   >
                     {t.session === null && (
-                      <p className="mb-1 truncate text-[10px] font-semibold uppercase text-muted-foreground">
+                      <p className={`mb-1 truncate ${ui.sub} font-semibold uppercase text-muted-foreground`}>
                         {t.label}
                       </p>
                     )}
-                    {lines.length === 0 && <p className="text-[11px] text-muted-foreground">Tom — trykk for å fylle</p>}
+                    {lines.length === 0 && <p className={`${ui.txt} text-muted-foreground`}>Tom — trykk for å fylle</p>}
                      <div className="space-y-1">
                        {instances.map((inst) => (
-                         <div key={inst.id} className="flex items-center gap-1 text-[11px]">
+                         <div key={inst.id} className={`flex items-center gap-1 ${ui.txt}`}>
                            <span>{inst.emoji ?? '•'}</span>
                            <span className="flex-1 truncate font-medium">{inst.label}</span>
                            <span
-                             className={`shrink-0 truncate text-[10px] ${
+                             className={`shrink-0 truncate ${ui.sub} ${
                                inst.leaderId ? 'font-semibold text-foreground' : 'text-amber-600 dark:text-amber-400'
                              }`}
                            >
@@ -778,7 +971,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                        ))}
                        {instances.length === 0 &&
                         lines.map((l, i) => (
-                          <p key={`${l}-${i}`} className="truncate text-[11px]">
+                           <p key={`${l}-${i}`} className={`truncate ${ui.txt}`}>
                             {l}
                           </p>
                         ))}
@@ -786,7 +979,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                     {t.session && (
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {(dutyBySlot.get(`${date}|${t.session}`) ?? []).length === 0 && (
-                          <span className="text-[10px] text-muted-foreground">Ingen ledere</span>
+                          <span className={`${ui.sub} text-muted-foreground`}>Ingen ledere</span>
                         )}
                         {/* Kun ledere uten aktivitet vises som brikker — de med aktivitet
                             står allerede i listen over, så navnene dupliseres ikke. */}
@@ -796,7 +989,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                             <span
                               key={l.id}
                               title={`${l.name} – uten aktivitet`}
-                              className="truncate max-w-[6.5rem] rounded-full border border-dashed border-muted-foreground/40 bg-transparent px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                              className={`truncate max-w-[6.5rem] rounded-full border border-dashed border-muted-foreground/40 bg-transparent font-medium text-muted-foreground ${ui.chip}`}
                             >
                               {firstName(l.name)}
                             </span>
@@ -1035,12 +1228,14 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           </div>
         </div>
       </div>
+      )}
 
-      {/* Timer per leder — enkel kontroll på at alle ligger nær dagstaket */}
+      {/* Full oversikt: timer og vakter per leder gjennom uken */}
+      {view === 'ledere' && (
       <div className="rounded-2xl border border-border/60 bg-muted/20 p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-xs font-semibold">Timer per leder</p>
+            <p className="text-xs font-semibold">Ledere gjennom uken</p>
             <p className="text-[11px] text-muted-foreground">
               Alt lagres automatisk. Mål: så nær {maxHours}t som mulig hver dag.
             </p>
@@ -1058,7 +1253,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             <Button
               size="sm"
               className="gap-1 rounded-full text-xs"
-              onClick={() => generate.mutate('schedule')}
+              onClick={() => void openPreview('schedule')}
               disabled={generate.isPending}
             >
               <Wand2 className="h-3.5 w-3.5" />
@@ -1066,65 +1261,35 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             </Button>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[520px] text-[11px]">
-            <thead>
-              <tr className="text-muted-foreground">
-                <th className="sticky left-0 bg-card px-2 py-1 text-left font-semibold">Leder</th>
-                {dates.map((date) => {
-                  const d = new Date(`${date}T12:00:00`);
-                  return (
-                    <th key={date} className="px-1 py-1 text-center font-semibold">
-                      {WEEKDAYS[d.getDay()]} {d.getDate()}.
-                    </th>
-                  );
-                })}
-                <th className="px-2 py-1 text-right font-semibold">Sum</th>
-              </tr>
-            </thead>
-            <tbody>
-              {staff
-                .filter((s) => s.leader)
-                .map((s) => {
-                  const perDay = dates.map((date) => staffHoursByDate.get(date)?.get(s.id) ?? 0);
-                  const total = perDay.reduce((a, b) => a + b, 0);
-                  return (
-                    <tr key={s.id} className="border-t border-border/40">
-                      <td className="sticky left-0 max-w-[9rem] truncate bg-card px-2 py-1 font-medium">
-                        {s.leader!.name}
-                      </td>
-                      {perDay.map((h, i) => (
-                        <td
-                          key={dates[i]}
-                          title={kitchenSet.has(`${dates[i]}|${s.id}`) ? 'Kjøkken hele dagen' : undefined}
-                          className={`px-1 py-1 text-center tabular-nums ${
-                            h > maxHours + 0.01
-                              ? 'font-bold text-destructive'
-                              : h === 0
-                                ? 'text-muted-foreground/50'
-                                : h < maxHours - 1.01
-                                  ? 'text-amber-600 dark:text-amber-400'
-                                  : 'text-emerald-600 dark:text-emerald-400'
-                          }`}
-                        >
-                          {h.toFixed(1)}
-                          {kitchenSet.has(`${dates[i]}|${s.id}`) && (
-                            <span className="ml-0.5 text-[9px] font-semibold text-sky-500">K</span>
-                          )}
-                        </td>
-                      ))}
-                      <td className="px-2 py-1 text-right font-semibold tabular-nums">{total.toFixed(1)}t</td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </div>
+        <LeirskoleLeaderWeekTable
+          dates={dates}
+          staff={staff
+            .filter((s) => s.leader)
+            .map((s) => ({ staffId: s.id, leaderId: s.leader!.id, name: s.leader!.name }))}
+          shifts={shiftsByStaffDate}
+          kitchenSet={kitchenSet}
+          maxHours={maxHours}
+          issuesByLeader={issuesByLeader}
+        />
       </div>
+      )}
+
+      <LeirskoleGeneratePreviewDialog
+        preview={preview}
+        loading={previewLoading}
+        running={generate.isPending}
+        onCancel={() => {
+          setPreview(null);
+          setPendingMode(null);
+        }}
+        onConfirm={() => pendingMode && generate.mutate(pendingMode)}
+      />
+
 
       <LeirskoleCellSheet
         open={!!target}
         onOpenChange={(v) => !v && setTarget(null)}
+        leaderInfo={cellLeaderInfo}
         weekId={week.id}
         target={target}
         content={target ? cellContent(target) : ''}
