@@ -187,3 +187,38 @@ export function TimeRangeField({
     </div>
   );
 }
+
+export interface TimeRangePopoverProps {
+  start: string;
+  end: string;
+  onChange: (next: { start: string; end: string }) => void;
+  presets?: { label: string; start: string; end: string }[];
+  className?: string;
+}
+
+/** Compact trigger ("09:00–11:30") that opens the full picker in a popover. */
+export function TimeRangePopover({ start, end, onChange, presets, className }: TimeRangePopoverProps) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className={cn('h-8 shrink-0 gap-1 rounded-xl px-2 text-xs font-semibold tabular-nums', className)}
+        >
+          <Clock className="h-3.5 w-3.5 opacity-60" />
+          {start}–{end}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-[320px] p-3">
+        <TimeRangeField
+          start={start}
+          end={end}
+          onStartChange={(v) => onChange({ start: v, end })}
+          onEndChange={(v) => onChange({ start, end: v })}
+          presets={presets}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
