@@ -422,7 +422,11 @@ export function LeirskoleCellSheet({
                 const count = countOf(t.label);
                 const removeOne = () => {
                   const next = [...lines];
-                  const i = next.map((l) => l.toLowerCase()).findLastIndex((l) => l.includes(t.label.toLowerCase()));
+                  const lower = next.map((l) => l.toLowerCase());
+                  let i = -1;
+                  lower.forEach((l, idx) => {
+                    if (l.includes(t.label.toLowerCase())) i = idx;
+                  });
                   if (i >= 0) next.splice(i, 1);
                   setLines(next);
                 };
