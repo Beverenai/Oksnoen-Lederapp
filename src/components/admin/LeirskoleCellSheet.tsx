@@ -183,7 +183,8 @@ export function LeirskoleCellSheet({
         rowIndex: target.rowIndex,
         content: next.join('\n'),
         color: 'neutral',
-        postId: target.postId ?? undefined,
+        // Faste økter lagres på radnummer; bare egne økter lagres på vakt-id.
+        postId: target.rowIndex != null ? undefined : target.postId ?? undefined,
       },
       { onError: () => toast.error('Kunne ikke lagre ruten') },
     );
@@ -332,7 +333,7 @@ export function LeirskoleCellSheet({
           rowIndex: target.rowIndex,
           content: nextLines.join('\n'),
           color: 'neutral',
-          postId: target.postId ?? undefined,
+          postId: target.rowIndex != null ? undefined : target.postId ?? undefined,
         });
       }
       for (const p of picks) {

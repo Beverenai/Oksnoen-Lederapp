@@ -547,7 +547,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     });
 
   const cellContent = (t: CellTarget) =>
-    planContent.get(t.postId ? `post|${t.postId}` : `${t.date}|${t.rowIndex}`) ?? '';
+    planContent.get(t.rowIndex != null ? `${t.date}|${t.rowIndex}` : `post|${t.postId}`) ?? '';
 
   const gridStyle = {
     gridTemplateColumns: `${big ? 84 : 64}px repeat(${dates.length}, minmax(${big ? '240px' : '0'}, 1fr))`,
