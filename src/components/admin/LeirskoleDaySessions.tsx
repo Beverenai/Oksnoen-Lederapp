@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AlertTriangle, ChefHat, History, Plus, Trash2, UserPlus, X } from 'lucide-react';
+import { AlertTriangle, Check, ChefHat, History, Pencil, Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { hhmm } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import {
@@ -116,6 +116,7 @@ export function LeirskoleDaySessions({
   const [draft, setDraft] = useState({ name: '', start: '10:00', end: '12:00' });
   const [customKey, setCustomKey] = useState<string | null>(null);
   const [customText, setCustomText] = useState('');
+  const [editMode, setEditMode] = useState(false);
 
   const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
 
