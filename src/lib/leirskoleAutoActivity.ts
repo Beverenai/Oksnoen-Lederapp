@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { planSlots, splitPlanLines, SESSION_ROWS } from '@/lib/leirskolePlanSlots';
 
 interface DayContext {
-  types: { key: string; label: string; emoji: string | null }[];
+  types: { key: string; label: string; emoji: string | null; is_custom?: boolean }[];
   posts: { id: string; name: string; assignments: { staff_id: string }[] }[];
   cells: { row_index: number | null; content: string | null }[];
   existing: { id: string; leader_id: string; activity: string; session: string }[];
@@ -24,7 +24,7 @@ async function loadDay(weekId: string, date: string): Promise<DayContext> {
         .eq('date', date),
       supabase
         .from('leirskole_activity_types')
-        .select('key, label, emoji')
+        .select('key, label, emoji, is_custom')
         .eq('is_active', true)
         .order('sort_order'),
       supabase
@@ -92,8 +92,13 @@ export async function assignMissingActivities({
     for (const leader of onDuty) {
       if (held.has(leader.id)) continue;
       if (!openSlots.length) break;
+      // Egendefinerte aktiviteter kan alle ta — ellers styrer kompetansen.
+      const openTypes = new Map(ctx.types.map((t) => [t.key, t]));
       const i = openSlots.findIndex(
-        (s) => leader.competencies.length === 0 || leader.competencies.includes(s.key),
+        (s) =>
+          openTypes.get(s.key)?.is_custom ||
+          leader.competencies.length === 0 ||
+          leader.competencies.includes(s.key),
       );
       const slot = openSlots.splice(i >= 0 ? i : 0, 1)[0];
       // Lederen kan ha en gammel aktivitet utenfor planen — den erstattes.

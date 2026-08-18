@@ -30,6 +30,7 @@ import { LeirskoleWeekBoard } from '@/components/admin/LeirskoleWeekBoard';
 import { LeirskolePayrollExportCard } from '@/components/admin/LeirskolePayrollExportCard';
 import { LeirskoleDayEditor } from '@/components/admin/LeirskoleDayEditor';
 import { LeirskoleDayToDayCard } from '@/components/admin/LeirskoleDayToDayCard';
+import { LeirskoleGroupsCard } from '@/components/admin/LeirskoleGroupsCard';
 import { formatDue, shortDate, todayStr } from '@/lib/leirskoleDates';
 
 function errorMessage(error: unknown, fallback: string) {
@@ -328,6 +329,8 @@ export default function LeirskoleAdmin() {
       {week && (
         <LeirskoleDayToDayCard week={week} />
       )}
+
+      {week && <LeirskoleGroupsCard week={week} />}
 
       {week && (
         <LeirskoleDayEditor

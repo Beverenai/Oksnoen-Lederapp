@@ -2,8 +2,10 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ChevronDown, Minus, NotebookPen } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ChevronDown, Minus, NotebookPen, Plus, Sparkles } from 'lucide-react';
 import {
+  useAddLeirskoleActivityType,
   useLeirskoleActivityTypes,
   useLeirskoleWeekDays,
   useLeirskoleWeekPlan,
@@ -222,6 +224,7 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
           </div>
           <p className="mt-2 px-1 text-[11px] text-muted-foreground">
             Trykk i en rute for å legge inn aktiviteter. «Klatring ×2» betyr at to ledere skal ha klatring i den økten.
+            Du kan lage en egen aktivitet nederst i ruten — den kan alle ledere ta.
           </p>
         </div>
       )}
@@ -232,12 +235,35 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
 type PlanCellProps = {
   lines: string[];
   tint: string;
-  types: { id: string; label: string; emoji: string | null }[];
+  types: { id: string; label: string; emoji: string | null; is_custom?: boolean }[];
   onChange: (next: string[]) => void;
 };
 
 /** Én rute i regnearket — kompakt visning, redigering i popover. */
 const PlanCell = memo(function PlanCell({ lines, tint, types, onChange }: PlanCellProps) {
+  const addType = useAddLeirskoleActivityType();
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customLabel, setCustomLabel] = useState('');
+
+  /** Lager en egen aktivitet og legger den rett inn i ruten. */
+  const createCustom = () => {
+    const label = customLabel.trim();
+    if (!label) return;
+    addType.mutate(
+      { label, emoji: '✨', sortOrder: 900, isCustom: true },
+      {
+        onSuccess: (created) => {
+          const text = `${created.emoji ?? '✨'} ${created.label}`.trim();
+          onChange(setActivityCount(lines, created.label, text, countActivity(lines, created.label) + 1));
+          setCustomLabel('');
+          setCustomOpen(false);
+          toast.success(`${created.label} lagt til`);
+        },
+        onError: () => toast.error('Kunne ikke lage aktiviteten'),
+      },
+    );
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -261,7 +287,7 @@ const PlanCell = memo(function PlanCell({ lines, tint, types, onChange }: PlanCe
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-60 p-1">
+      <PopoverContent align="start" collisionPadding={12} className="w-64 p-1">
         <div className="max-h-72 space-y-0.5 overflow-y-auto">
           {types.length === 0 && (
             <p className="p-2 text-xs text-muted-foreground">Ingen aktiviteter — legg dem inn i «Aktivitetstyper».</p>
@@ -296,6 +322,42 @@ const PlanCell = memo(function PlanCell({ lines, tint, types, onChange }: PlanCe
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-1 border-t border-border/60 pt-1">
+          {customOpen ? (
+            <div className="flex items-center gap-1 p-1">
+              <Input
+                autoFocus
+                value={customLabel}
+                onChange={(e) => setCustomLabel(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') createCustom();
+                  if (e.key === 'Escape') setCustomOpen(false);
+                }}
+                placeholder="Egen aktivitet …"
+                className="h-8 rounded-xl text-xs"
+              />
+              <button
+                type="button"
+                aria-label="Lag aktiviteten"
+                onClick={createCustom}
+                disabled={addType.isPending || !customLabel.trim()}
+                className="shrink-0 rounded-full bg-primary p-1.5 text-primary-foreground disabled:opacity-50"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCustomOpen(true)}
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-muted/60"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Ny egen aktivitet
+            </button>
+          )}
         </div>
       </PopoverContent>
     </Popover>
