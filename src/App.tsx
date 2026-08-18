@@ -252,7 +252,7 @@ function AppRoutes() {
         <Route path="/leirskole" element={<ProtectedRoute><Leirskole /></ProtectedRoute>} />
         <Route path="/leirskole/vaktplan" element={<ProtectedRoute><LeirskoleVaktplan /></ProtectedRoute>} />
         <Route path="/leirskole/grupper" element={<ProtectedRoute><LeirskoleGrupper /></ProtectedRoute>} />
-        <Route path="/admin/leirskole" element={<ProtectedRoute><LeirskoleAdmin /></ProtectedRoute>} />
+        <Route path="/admin/leirskole" element={<ProtectedRoute><AdminOnly><LeirskoleAdmin /></AdminOnly></ProtectedRoute>} />
         <Route path="/gjenglemt" element={<ProtectedRoute><Gjenglemt /></ProtectedRoute>} />
         <Route path="/gjenglemt-admin" element={<GjenglemtAdmin />} />
         <Route path="/gjenglemt/:slug" element={<PublicGjenglemt />} />
