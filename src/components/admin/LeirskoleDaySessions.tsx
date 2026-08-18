@@ -129,6 +129,11 @@ export function LeirskoleDaySessions({
   const [noteText, setNoteText] = useState('');
 
   const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
+  /** Lederne som står på kjøkken hele dagen. */
+  const kitchenList = useMemo(
+    () => staff.filter((s) => kitchenIds.has(s.id)),
+    [staff, kitchenIds],
+  );
 
   const sorted = useMemo(
     () => dayPosts.slice().sort((a, b) => toMin(a.start_time) - toMin(b.start_time)),
