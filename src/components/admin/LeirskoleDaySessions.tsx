@@ -365,6 +365,7 @@ export function LeirskoleDaySessions({
                     const t = act ? typeMap.get(act.activity) : undefined;
                     const before = act && leaderId ? doneBefore.get(`${leaderId}|${act.activity}`) ?? 0 : 0;
                     const cellKey = `${p.id}|${a.staff_id}`;
+                    const missingActivity = hasActivities(p) && !act;
                     return (
                       <div
                         key={a.id}
@@ -372,6 +373,7 @@ export function LeirskoleDaySessions({
                           warns.length ? 'border-destructive/50 bg-destructive/5' : 'border-border/50 bg-background/70'
                         }`}
                       >
+                        {editMode && (
                         <button
                           type="button"
                           aria-label={`Fjern ${name}`}
@@ -380,6 +382,15 @@ export function LeirskoleDaySessions({
                         >
                           <X className="h-3 w-3 text-muted-foreground" />
                         </button>
+                        )}
+                        {missingActivity && (
+                          <span
+                            title="Mangler aktivitet i denne økten"
+                            className="absolute left-0 top-0 rounded-full bg-background/80 p-0.5"
+                          >
+                            <AlertTriangle className="h-3 w-3 text-amber-500" />
+                          </span>
+                        )}
                         <Avatar className="mx-auto h-9 w-9">
                           <AvatarImage src={s?.leader?.profile_image_url ?? undefined} alt={name} />
                           <AvatarFallback className="text-[10px]">{initials(name)}</AvatarFallback>
@@ -421,7 +432,16 @@ export function LeirskoleDaySessions({
                               className="mt-1 h-6 rounded-full px-2 text-[10px]"
                             />
                           )}
-                          {hasActivities(p) && customKey !== cellKey && (
+                          {hasActivities(p) && customKey !== cellKey && !editMode && (
+                            <p
+                              className={`mt-1 truncate rounded-full px-1 py-0.5 text-[9.5px] font-semibold ${
+                                act ? 'bg-muted/60' : 'text-amber-600 dark:text-amber-400'
+                              }`}
+                            >
+                              {act ? `${t?.emoji ?? '•'} ${t?.label ?? act.note ?? act.activity}` : 'Ingen aktivitet'}
+                            </p>
+                          )}
+                          {hasActivities(p) && customKey !== cellKey && editMode && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
