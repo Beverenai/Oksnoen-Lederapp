@@ -28,6 +28,7 @@ import { AlertTriangle, CalendarDays, ChevronDown, Clock, GripVertical, LayoutGr
 import { LeirskoleDayLeaderList } from '@/components/admin/LeirskoleDayLeaderList';
 import { LeirskoleDaySessions } from '@/components/admin/LeirskoleDaySessions';
 import { LeirskoleDayMatrix } from '@/components/admin/LeirskoleDayMatrix';
+import { LeirskoleGenerateButton } from '@/components/admin/LeirskoleGenerateButton';
 import { LeirskoleWeekImpact } from '@/components/admin/LeirskoleWeekImpact';
 import { hhmm, shortDate, todayStr } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
@@ -214,6 +215,14 @@ export function LeirskoleDayEditor({
     () => new Set((kitchenDays ?? []).filter((k) => k.date === activeDate).map((k) => k.staff_id)),
     [kitchenDays, activeDate],
   );
+  /** Timer for kjøkkenvaktene denne dagen (standard 8t, men kan justeres). */
+  const kitchenHoursById = useMemo(() => {
+    const map = new Map<string, number>();
+    (kitchenDays ?? [])
+      .filter((k) => k.date === activeDate)
+      .forEach((k) => map.set(k.staff_id, Number((k as { hours?: number | null }).hours ?? KITCHEN_DAY_HOURS)));
+    return map;
+  }, [kitchenDays, activeDate]);
   const isLocked = !!(weekDays ?? []).find((d) => d.date === activeDate)?.is_locked;
   const lockedDates = useMemo(
     () => new Set((weekDays ?? []).filter((d) => d.is_locked).map((d) => d.date)),
@@ -223,14 +232,16 @@ export function LeirskoleDayEditor({
   /** Timer per leder denne dagen. */
   const hoursByStaff = useMemo(() => {
     const map = new Map<string, number>();
-    staff.forEach((s) => map.set(s.id, kitchenIds.has(s.id) ? KITCHEN_DAY_HOURS : 0));
+    staff.forEach((s) =>
+      map.set(s.id, kitchenIds.has(s.id) ? kitchenHoursById.get(s.id) ?? KITCHEN_DAY_HOURS : 0),
+    );
     dayPosts.forEach((p) =>
       p.assignments.forEach((a) =>
         map.set(a.staff_id, (map.get(a.staff_id) ?? 0) + Number(p.duration_hours ?? 0)),
       ),
     );
     return map;
-  }, [staff, dayPosts, kitchenIds]);
+  }, [staff, dayPosts, kitchenIds, kitchenHoursById]);
 
   /** Dobbeltbooking: leder står på to økter som overlapper i tid. */
   const clashByStaff = useMemo(() => {
@@ -356,6 +367,9 @@ export function LeirskoleDayEditor({
 
       {open && (
         <div className="space-y-2.5 px-4 pb-4">
+          {/* Generering er tilgjengelig uansett fane. */}
+          <LeirskoleGenerateButton week={week} date={activeDate} className="justify-end" />
+
           <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
             {dates.map((d) => {
               const on = d === activeDate;
