@@ -425,6 +425,8 @@ export function LeirskoleDayEditor({
           {mode !== 'uke' && (
             <LeirskoleWeekImpact
               dates={dates}
+              weekId={week.id}
+              lockedDates={Array.from(lockedDates)}
               posts={(posts ?? []) as DayPost[]}
               staff={staff}
               kitchenDays={(kitchenDays ?? []) as { date: string; staff_id: string }[]}

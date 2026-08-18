@@ -1,7 +1,16 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ChevronDown } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Loader2, Wand2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { shortDate } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
+import { resolveLeirskoleConflicts } from '@/lib/leirskoleAutoActivity';
+import {
+  useLeirskoleActivities,
+  useLeirskoleActivityTypes,
+  useLeirskoleWeekPlan,
+} from '@/hooks/useLeirskole';
+import { planSlots, splitPlanLines, SESSION_ROWS } from '@/lib/leirskolePlanSlots';
 
 type Post = {
   id: string;
@@ -16,7 +25,7 @@ type Post = {
 type StaffRow = { id: string; leader?: { id: string; name: string } | null };
 
 type Impact = {
-  kind: 'over' | 'rest' | 'clash' | 'empty';
+  kind: 'over' | 'rest' | 'clash' | 'empty' | 'plan';
   date: string;
   text: string;
 };
@@ -32,6 +41,7 @@ const TONE: Record<Impact['kind'], string> = {
   rest: 'text-destructive',
   clash: 'text-destructive',
   empty: 'text-amber-700 dark:text-amber-200',
+  plan: 'text-amber-700 dark:text-amber-200',
 };
 
 /**
@@ -45,6 +55,8 @@ export function LeirskoleWeekImpact({
   kitchenDays,
   maxHours,
   onPickDate,
+  weekId,
+  lockedDates,
 }: {
   dates: string[];
   posts: Post[];
@@ -52,8 +64,16 @@ export function LeirskoleWeekImpact({
   kitchenDays: { date: string; staff_id: string }[];
   maxHours: number;
   onPickDate?: (date: string) => void;
+  weekId?: string;
+  /** Låste dager røres ikke av «Løs». */
+  lockedDates?: string[];
 }) {
   const [open, setOpen] = useState(true);
+  const [fixing, setFixing] = useState(false);
+  const qc = useQueryClient();
+  const { data: types } = useLeirskoleActivityTypes(true);
+  const { data: activities } = useLeirskoleActivities(weekId);
+  const { data: planCells } = useLeirskoleWeekPlan(weekId);
   const nameOf = useMemo(
     () => new Map(staff.map((s) => [s.id, s.leader?.name ?? 'Leder'])),
     [staff],
@@ -136,29 +156,105 @@ export function LeirskoleWeekImpact({
     return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   }, [posts, kitchenDays, dates, maxHours, nameOf]);
 
+  /** Avvik mellom «Dag til dag» og aktivitetene: tomme plasser og aktiviteter utenfor planen. */
+  const planImpacts = useMemo<Impact[]>(() => {
+    if (!types?.length) return [];
+    const out: Impact[] = [];
+    dates.forEach((date) => {
+      SESSION_ROWS.forEach((row) => {
+        const post = posts.find(
+          (p) => p.date === date && (p.name ?? '').trim().toLowerCase() === row.label.toLowerCase(),
+        );
+        if (!post) return;
+        const lines = splitPlanLines(
+          (planCells ?? []).find((c) => c.date === date && c.row_index === row.row)?.content,
+        );
+        const acts = (activities ?? [])
+          .filter((a) => a.date === date && a.session === row.session)
+          .map((a) => ({ leader_id: a.leader_id, activity: a.activity }));
+        const { slots, staleLeaderIds } = planSlots(lines, types, acts);
+        const openSlots = slots.filter((s) => !s.leaderId);
+        if (openSlots.length > 0) {
+          out.push({
+            kind: 'plan',
+            date,
+            text: `${row.label}: ${openSlots.length} plass${openSlots.length === 1 ? '' : 'er'} uten leder (${openSlots
+              .map((s) => s.label)
+              .join(', ')}).`,
+          });
+        }
+        if (staleLeaderIds.length > 0) {
+          out.push({
+            kind: 'plan',
+            date,
+            text: `${row.label}: ${staleLeaderIds.length} leder(e) har en aktivitet som ikke står i «Dag til dag».`,
+          });
+        }
+      });
+    });
+    return out;
+  }, [dates, posts, planCells, activities, types]);
+
+  const all = useMemo(
+    () => [...impacts, ...planImpacts].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
+    [impacts, planImpacts],
+  );
+
+  const canFix = !!weekId && planImpacts.length > 0;
+
+  const fix = async () => {
+    if (!weekId) return;
+    setFixing(true);
+    try {
+      const locked = new Set(lockedDates ?? []);
+      const targets = Array.from(new Set(planImpacts.map((i) => i.date))).filter((d) => !locked.has(d));
+      const res = await resolveLeirskoleConflicts({ weekId, dates: targets });
+      qc.invalidateQueries({ queryKey: ['leirskole-activities'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-activity-history'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-my-activities'] });
+      toast.success(`Ryddet ${res.removed} og fylte ${res.created} plasser`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Kunne ikke løse konfliktene');
+    } finally {
+      setFixing(false);
+    }
+  };
+
+  // Ingenting å vise når alt går opp.
+  if (all.length === 0) return null;
+
   return (
     <div className="rounded-2xl border border-border/60 bg-background/70">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left"
-      >
-        {impacts.length === 0 ? (
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-        ) : (
+      <div className="flex items-center gap-2 px-3 py-2">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+          <span className="flex-1 text-sm font-semibold">
+            {all.length} ting må løses
+          </span>
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </button>
+        {canFix && (
+          <button
+            type="button"
+            onClick={fix}
+            disabled={fixing}
+            className="flex shrink-0 items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground disabled:opacity-60"
+          >
+            {fixing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+            Løs
+          </button>
         )}
-        <span className="flex-1 text-sm font-semibold">
-          {impacts.length === 0
-            ? 'Uken går opp etter endringene'
-            : `${impacts.length} ting må endres for at uken skal gå opp`}
-        </span>
-        <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
+      </div>
 
       {open && (
         <div className="space-y-2 px-3 pb-3">
-          {impacts.slice(0, 12).map((i, idx) => (
+          {all.slice(0, 12).map((i, idx) => (
             <button
               key={`${i.date}-${idx}`}
               type="button"
@@ -169,8 +265,8 @@ export function LeirskoleWeekImpact({
               <span className={`min-w-0 flex-1 ${TONE[i.kind]}`}>{i.text}</span>
             </button>
           ))}
-          {impacts.length > 12 && (
-            <p className="px-1 text-[11px] text-muted-foreground">+{impacts.length - 12} flere …</p>
+          {all.length > 12 && (
+            <p className="px-1 text-[11px] text-muted-foreground">+{all.length - 12} flere …</p>
           )}
         </div>
       )}
