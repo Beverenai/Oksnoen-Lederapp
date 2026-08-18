@@ -933,31 +933,7 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
               </div>
             ))}
             {dates.map((date, dayIdx) =>
-              specialDays.has(date) ? (
-                <div
-                  key={`cal-${date}`}
-                  style={{ gridColumn: dayIdx + 2, gridRow: `1 / span ${BOARD_ROWS.length}` }}
-                  className="rounded-xl border border-amber-500/50 bg-amber-500/5 p-1.5"
-                >
-                  <LeirskoleSpecialDayTimeline
-                    weekId={week.id}
-                    date={date}
-                    posts={(postsByDate.get(date) ?? [])
-                      .filter((p) => !NIGHT_ROW_NAMES.has((p.name ?? '').trim()))
-                      .map((p) => ({
-                        id: p.id,
-                        name: p.name ?? '',
-                        start_time: p.start_time,
-                        end_time: p.end_time,
-                        assignments: p.assignments ?? [],
-                      }))}
-                    staffOptions={staff
-                      .filter((s) => s.leader)
-                      .map((s) => ({ staffId: s.id, name: s.leader!.name }))}
-                  />
-                </div>
-              ) : (
-                BOARD_ROWS.map((r, rowIdx) => {
+              BOARD_ROWS.map((r, rowIdx) => {
                   if (r.kind === 'meal') {
                     return (
                       <MealCell
@@ -1040,9 +1016,30 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                     )}
                   </button>
                 );
-                })
-              ),
+              }),
             )}
+          </div>
+
+          {/* Egne økter: ankomst, avreise, rydding … i samme rad-logikk som resten. */}
+          <div className="grid gap-1.5" style={gridStyle}>
+            <LabelCell>Egne økter</LabelCell>
+            {dates.map((date) => (
+              <LeirskoleExtraPostsCell
+                key={`extra-${date}`}
+                weekId={week.id}
+                date={date}
+                posts={(postsByDate.get(date) ?? [])
+                  .filter((p) => !TEMPLATE_NAMES.has((p.name ?? '').trim()))
+                  .map((p) => ({
+                    id: p.id,
+                    name: p.name ?? '',
+                    start_time: p.start_time,
+                    end_time: p.end_time,
+                    assignments: p.assignments ?? [],
+                  }))}
+                staffOptions={staffOptions}
+              />
+            ))}
           </div>
 
           {/* Kjøkken hele dagen */}
