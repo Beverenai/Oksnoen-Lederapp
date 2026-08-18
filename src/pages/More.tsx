@@ -205,7 +205,10 @@ export default function More() {
         { to: '/my-cabins', icon: Building2, label: 'Din Hytte' },
         { to: '/my-shifts', icon: ClipboardList, label: 'Min vakt' },
         ...(leirskoleView
-          ? [{ to: '/leirskole', icon: Tent, label: 'Leirskole' } as MoreItem]
+          ? [
+              { to: '/leirskole', icon: Tent, label: 'Leirskole' } as MoreItem,
+              { to: '/leirskole/grupper', icon: Users, label: 'Elevgrupper' } as MoreItem,
+            ]
           : []),
       ],
     },
