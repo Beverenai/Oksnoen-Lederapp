@@ -621,17 +621,6 @@ export function useSetLeirskoleLeaderActivity() {
   });
 }
 
-export function useDeleteLeirskoleActivityById() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('leirskole_activity_assignments').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => invalidateActivities(qc),
-  });
-}
-
 export type LeirskoleWeekPlanCell = Tables<'leirskole_week_plan_cells'>;
 export type LeirskoleWeekDay = Tables<'leirskole_week_days'>;
 
