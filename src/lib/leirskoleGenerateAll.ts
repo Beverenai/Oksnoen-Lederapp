@@ -284,6 +284,8 @@ export async function previewLeirskoleGenerate({
   mode,
   perSession = 6,
   overwritePlan = false,
+  onlyDates = null,
+  ignoreLocked = false,
 }: {
   weekId: string;
   startDate: string;
@@ -291,6 +293,8 @@ export async function previewLeirskoleGenerate({
   mode: LeirskoleGenerateMode;
   perSession?: number;
   overwritePlan?: boolean;
+  onlyDates?: string[] | null;
+  ignoreLocked?: boolean;
 }): Promise<LeirskolePreview> {
   const [{ data: types }, { data: days }, { data: cells }, { data: posts }, { data: acts }] = await Promise.all([
     supabase.from('leirskole_activity_types').select('key, label, emoji').eq('is_active', true),
@@ -303,9 +307,12 @@ export async function previewLeirskoleGenerate({
     supabase.from('leirskole_activity_assignments').select('date, auto_generated').eq('week_id', weekId),
   ]);
 
-  const lockedDates = new Set((days ?? []).filter((d) => d.is_locked).map((d) => d.date));
+  const lockedDates = new Set(
+    ignoreLocked ? [] : (days ?? []).filter((d) => d.is_locked).map((d) => d.date),
+  );
   const specialDates = new Set((days ?? []).filter((d) => d.day_type !== 'normal').map((d) => d.date));
   const skip = new Set([...lockedDates, ...specialDates]);
+  const inScope = (date: string) => !onlyDates || onlyDates.includes(date);
 
   const filled = new Set(
     (cells ?? [])
@@ -318,7 +325,7 @@ export async function previewLeirskoleGenerate({
     mode === 'schedule'
       ? []
       : randomWeekPlan({
-          dates: allDates.filter((d) => !skip.has(d)),
+          dates: allDates.filter((d) => !skip.has(d) && inScope(d)),
           activities: ((types ?? []) as RandomPlanActivity[]).filter(isSessionActivity),
           perSession,
           filled,
@@ -338,7 +345,7 @@ export async function previewLeirskoleGenerate({
       locked,
       special: specialDates.has(date),
       cellsToFill: planned.filter((p) => p.date === date).length,
-      existingShifts: locked || mode === 'plan' ? 0 : shiftsByDate.get(date) ?? 0,
+      existingShifts: locked || mode === 'plan' || !inScope(date) ? 0 : shiftsByDate.get(date) ?? 0,
       manualActivities: (acts ?? []).filter((a) => a.date === date && !a.auto_generated).length,
       autoActivities: (acts ?? []).filter((a) => a.date === date && a.auto_generated).length,
     };
