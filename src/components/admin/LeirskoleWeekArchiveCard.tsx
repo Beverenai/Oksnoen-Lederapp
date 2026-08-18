@@ -69,7 +69,8 @@ export function LeirskoleWeekArchiveCard({ week, allWeeks }: Props) {
           <Archive className="h-5 w-5 text-primary" /> Ukesarkiv
         </h2>
         <p className="text-sm text-muted-foreground">
-          Lagrer lederne som var satt opp og hva de jobbet – fast per leirskoleuke.
+          Lagres automatisk noen sekunder etter hver endring i bemanning, vaktplan eller aktiviteter. Du kan
+          også lagre manuelt.
         </p>
       </div>
 
@@ -111,7 +112,7 @@ export function LeirskoleWeekArchiveCard({ week, allWeeks }: Props) {
                 }
               >
                 {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Lagre uken
+                Lagre nå
               </Button>
               <Button
                 size="sm"
@@ -143,7 +144,7 @@ export function LeirskoleWeekArchiveCard({ week, allWeeks }: Props) {
             <p className="text-sm text-muted-foreground">Laster…</p>
           ) : (rows ?? []).length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Ingenting lagret for denne uken ennå. Trykk «Lagre uken» når uken er ferdig.
+              Ingenting lagret for denne uken ennå — det skjer automatisk så snart uken endres.
             </p>
           ) : (
             <div className="space-y-1.5">
