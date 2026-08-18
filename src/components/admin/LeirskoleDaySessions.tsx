@@ -114,6 +114,8 @@ export function LeirskoleDaySessions({
 
   const [newOpen, setNewOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', start: '10:00', end: '12:00' });
+  const [customKey, setCustomKey] = useState<string | null>(null);
+  const [customText, setCustomText] = useState('');
 
   const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
 
