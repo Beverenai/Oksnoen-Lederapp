@@ -152,7 +152,6 @@ export default function Chat() {
       // og mål toppen relativt til dokumentet, ikke det forskjøvne viewportet.
       if (keyboardOpen) {
         window.scrollTo(0, 0);
-        if (vv) vv.scrollTop = 0 as unknown as number;
       }
       const top = el.getBoundingClientRect().top + window.scrollY;
       // Når tastaturet er åpent er bunnmenyen skjult bak tastaturet
