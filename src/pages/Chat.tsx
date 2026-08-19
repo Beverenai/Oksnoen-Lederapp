@@ -141,18 +141,38 @@ export default function Chat() {
     const measure = () => {
       const el = shellRef.current;
       if (!el) return;
-      const top = el.getBoundingClientRect().top;
       const navVar = getComputedStyle(document.documentElement).getPropertyValue('--nav-actual-h');
       const navH = parseFloat(navVar) || 64;
-      const vh = window.visualViewport?.height ?? window.innerHeight;
-      setShellHeight(Math.max(320, vh - top - navH - 12));
+      const vv = window.visualViewport;
+      const vh = vv?.height ?? window.innerHeight;
+      // Hvor mye tastaturet dekker av skjermen (0 når det er lukket)
+      const kb = Math.max(0, window.innerHeight - (vh + (vv?.offsetTop ?? 0)));
+      const keyboardOpen = kb > 80;
+      // iOS skrur ofte hele siden opp når tastaturet åpnes – tving den tilbake
+      // og mål toppen relativt til dokumentet, ikke det forskjøvne viewportet.
+      if (keyboardOpen) {
+        window.scrollTo(0, 0);
+      }
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      // Når tastaturet er åpent er bunnmenyen skjult bak tastaturet
+      const reserved = keyboardOpen ? 8 : navH + 12;
+      setShellHeight(Math.max(220, vh - top - reserved));
     };
     measure();
+    const onVVScroll = () => {
+      // Motvirk iOS-hoppet: hold dokumentet i ro og re-mål høyden
+      if ((window.visualViewport?.offsetTop ?? 0) > 0) window.scrollTo(0, 0);
+      measure();
+    };
     window.addEventListener('resize', measure);
+    window.addEventListener('scroll', onVVScroll, { passive: true });
     window.visualViewport?.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('scroll', onVVScroll);
     return () => {
       window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', onVVScroll);
       window.visualViewport?.removeEventListener('resize', measure);
+      window.visualViewport?.removeEventListener('scroll', onVVScroll);
     };
   }, []);
 
@@ -922,7 +942,15 @@ export default function Chat() {
               onFocus={() => {
                 // Tastaturet dekker bunnen på iPhone — hopp ned igjen.
                 nearBottomRef.current = true;
-                setTimeout(() => scrollToBottom(true), 250);
+                window.scrollTo(0, 0);
+                setTimeout(() => {
+                  window.scrollTo(0, 0);
+                  scrollToBottom(true);
+                }, 120);
+                setTimeout(() => {
+                  window.scrollTo(0, 0);
+                  scrollToBottom(true);
+                }, 400);
               }}
               onClick={(e) => syncMention(input, (e.target as HTMLTextAreaElement).selectionStart ?? 0)}
               placeholder={replyTo ? 'Skriv svaret…' : 'Skriv en melding…'}
