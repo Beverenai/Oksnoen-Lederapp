@@ -31,7 +31,6 @@ import {
   Archive,
   Camera,
   Flame,
-  Beer,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
