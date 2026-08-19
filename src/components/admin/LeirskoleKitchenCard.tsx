@@ -121,7 +121,7 @@ export function LeirskoleKitchenCard({ week, staff }: { week: LeirskoleWeek; sta
             {s.leader?.name ?? 'Ukjent'}
             {active && (
               <span className="ml-1.5 text-[11px] font-semibold tabular-nums text-[hsl(var(--oks-ls-green))]">
-                {hours}t
+                {fmtHours(hours)}t
               </span>
             )}
           </span>
@@ -154,7 +154,7 @@ export function LeirskoleKitchenCard({ week, staff }: { week: LeirskoleWeek; sta
                   : 'border-border/60 bg-background text-muted-foreground hover:bg-muted/50'
               }`}
             >
-              {h}t
+              {fmtHours(h)}t
             </button>
           ))}
         </div>
@@ -256,7 +256,7 @@ export function LeirskoleKitchenCard({ week, staff }: { week: LeirskoleWeek; sta
                         ? names
                             .map(
                               (s) =>
-                                `${s.leader?.name?.split(' ')[0] ?? 'Ukjent'} ${hoursFor(s.id, d)}t`,
+                                `${s.leader?.name?.split(' ')[0] ?? 'Ukjent'} ${fmtHours(hoursFor(s.id, d))}t`,
                             )
                             .join(', ')
                         : '—'}
