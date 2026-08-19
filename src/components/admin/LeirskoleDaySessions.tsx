@@ -321,7 +321,7 @@ export function LeirskoleDaySessions({
     staff.forEach((s) => map.set(s.id, computeWarnings(s.id)));
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staff, hoursByStaff, shiftsByStaff, fullKitchenIds, maxHours]);
+  }, [staff, hoursByStaff, shiftsByStaff, fullKitchenIds, maxHours, date]);
 
   const warningsFor = (staffId: string, extra?: SessionPost): string[] =>
     extra ? computeWarnings(staffId, extra) : baseWarnings.get(staffId) ?? [];
