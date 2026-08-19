@@ -942,7 +942,15 @@ export default function Chat() {
               onFocus={() => {
                 // Tastaturet dekker bunnen på iPhone — hopp ned igjen.
                 nearBottomRef.current = true;
-                setTimeout(() => scrollToBottom(true), 250);
+                window.scrollTo(0, 0);
+                setTimeout(() => {
+                  window.scrollTo(0, 0);
+                  scrollToBottom(true);
+                }, 120);
+                setTimeout(() => {
+                  window.scrollTo(0, 0);
+                  scrollToBottom(true);
+                }, 400);
               }}
               onClick={(e) => syncMention(input, (e.target as HTMLTextAreaElement).selectionStart ?? 0)}
               placeholder={replyTo ? 'Skriv svaret…' : 'Skriv en melding…'}
