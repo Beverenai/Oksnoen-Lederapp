@@ -19,7 +19,12 @@ type StaffRow = {
 
 const WEEKDAYS = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'];
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
-const HOUR_CHOICES = [1, 2, 3, 4, 6, 8];
+const HOUR_CHOICES = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8];
+
+/** 1.5 -> "1,5" */
+function fmtHours(h: number) {
+  return Number(h).toFixed(1).replace(/\.0$/, '').replace('.', ',');
+}
 
 function parse(d: string) {
   const [y, m, day] = d.split('-').map(Number);
@@ -72,7 +77,7 @@ export function LeirskoleKitchenCard({ week, staff }: { week: LeirskoleWeek; sta
           ? 'Kjøkkenvakt fjernet'
           : (hours ?? 8) >= 8
             ? 'Satt på kjøkken hele dagen'
-            : `Satt på kjøkken i ${hours}t`,
+            : `Satt på kjøkken i ${fmtHours(hours ?? 0)}t`,
       );
     } catch (error) {
       showError(
