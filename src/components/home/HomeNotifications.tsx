@@ -201,7 +201,7 @@ export function HomeNotifications() {
                     </span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={cn('text-sm font-medium leading-tight', n.type === 'sip' && 'text-foreground')}>
+                    <p className="text-sm font-medium leading-tight">
                       {n.title}
                     </p>
                     {n.subtitle && (
