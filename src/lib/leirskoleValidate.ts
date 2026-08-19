@@ -45,6 +45,8 @@ export interface ValidateInput {
   /** Kjøkkenvakt hele dagen: leder-id-er per dato. */
   kitchenByDate: Map<string, string[]>;
   kitchenHours: number;
+  /** Faktiske kjøkkentimer per `${dato}|${lederId}` — brukes når det ikke er hel dag. */
+  kitchenHoursByLeader?: Map<string, number>;
   maxHours: number;
   /** Minimum hvile mellom to vakter, i timer. */
   minRestHours?: number;
@@ -82,6 +84,7 @@ export function validateLeirskoleWeek(input: ValidateInput): LeirskoleIssue[] {
     specialDates,
     kitchenByDate,
     kitchenHours,
+    kitchenHoursByLeader,
     maxHours,
     minRestHours = 11,
     leaderName,
@@ -111,7 +114,9 @@ export function validateLeirskoleWeek(input: ValidateInput): LeirskoleIssue[] {
     hours.set(date, day);
   };
   posts.forEach((p) => p.leaderIds.forEach((id) => add(p.date, id, Number(p.duration_hours ?? 0))));
-  kitchenByDate.forEach((ids, date) => ids.forEach((id) => add(date, id, kitchenHours)));
+  kitchenByDate.forEach((ids, date) =>
+    ids.forEach((id) => add(date, id, kitchenHoursByLeader?.get(`${date}|${id}`) ?? kitchenHours)),
+  );
 
   dates.forEach((date) => {
     (hours.get(date) ?? new Map()).forEach((v, leaderId) => {
@@ -171,8 +176,9 @@ export function validateLeirskoleWeek(input: ValidateInput): LeirskoleIssue[] {
 
   kitchenByDate.forEach((ids, date) => {
     ids.forEach((id) => {
+      const kh = kitchenHoursByLeader?.get(`${date}|${id}`) ?? kitchenHours;
       const clash = posts.filter((p) => p.date === date && p.leaderIds.includes(id));
-      if (clash.length) {
+      if (clash.length && kh >= kitchenHours) {
         issues.push({
           type: 'double_booked',
           date,

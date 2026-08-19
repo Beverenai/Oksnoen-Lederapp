@@ -172,8 +172,9 @@ export function LeirskoleKitchenCard({ week, staff }: { week: LeirskoleWeek; sta
           )}
         </CardTitle>
         <CardDescription>
-          Velg dag øverst, så setter du ledere på kjøkken. Hele dagen (8t) tar dem ut av alle andre
-          økter – færre timer betyr at de bare hjelper til og beholder resten av vaktene.
+          Velg dag øverst, så setter du ledere på kjøkken. Timene legges til dagens totale timetall –
+          ingen økter fjernes automatisk. Hvis lederen får for mange timer, ser du det i «Dag til
+          dag» og kan ta dem av økter manuelt.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

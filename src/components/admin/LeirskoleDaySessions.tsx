@@ -271,6 +271,7 @@ export function LeirskoleDaySessions({
   /**
    * Advarsler for én leder, eventuelt som om de i tillegg tok `extra`-vakten.
    * 11-timers hvile gjelder mellom arbeidsdager, ikke innen samme dag.
+   * Vi viser bare brudd som gjelder dagen man står i — resten hører til sin egen dag.
    */
   const computeWarnings = (staffId: string, extra?: SessionPost): string[] => {
     const out: string[] = [];
@@ -285,6 +286,8 @@ export function LeirskoleDaySessions({
         const a = ranges[i];
         const b = ranges[j];
         if (a.p.id === b.p.id) continue;
+        // Kun konflikter som berører dagen vi redigerer.
+        if (a.p.date !== date && b.p.date !== date) continue;
         if (a.start < b.end && b.start < a.end) {
           if (overlapAllowed(a.p) || overlapAllowed(b.p)) {
             // Sanitas — helt greit å kombinere.
@@ -318,7 +321,7 @@ export function LeirskoleDaySessions({
     staff.forEach((s) => map.set(s.id, computeWarnings(s.id)));
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staff, hoursByStaff, shiftsByStaff, fullKitchenIds, maxHours]);
+  }, [staff, hoursByStaff, shiftsByStaff, fullKitchenIds, maxHours, date]);
 
   const warningsFor = (staffId: string, extra?: SessionPost): string[] =>
     extra ? computeWarnings(staffId, extra) : baseWarnings.get(staffId) ?? [];

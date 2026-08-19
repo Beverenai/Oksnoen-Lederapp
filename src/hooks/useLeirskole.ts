@@ -702,23 +702,8 @@ export function useSetLeirskoleKitchenDay() {
           { onConflict: 'staff_id,date' },
         );
       if (error) throw error;
-
-      // Bare hele kjøkkendager tar lederen ut av alle andre vakter.
-      // Hjelper de bare noen timer, beholder de resten av dagen sin.
-      if ((hours ?? 8) < 8) return;
-      const { data: posts } = await supabase
-        .from('leirskole_posts')
-        .select('id')
-        .eq('week_id', weekId)
-        .eq('date', date);
-      const postIds = (posts ?? []).map((p) => p.id);
-      if (postIds.length) {
-        await supabase
-          .from('leirskole_assignments')
-          .delete()
-          .eq('staff_id', staffId)
-          .in('post_id', postIds);
-      }
+      // Vi fjerner ingen økter automatisk. Kjøkkentimene legges til timetallet,
+      // og admin ser advarselen og tar personen av økter manuelt om det trengs.
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['leirskole-kitchen-days'] });
