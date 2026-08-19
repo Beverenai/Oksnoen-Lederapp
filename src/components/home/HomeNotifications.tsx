@@ -1,20 +1,18 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Beer, Wine, GlassWater, Heart, MessageSquare, Check } from 'lucide-react';
+import { Bell, Heart, MessageSquare, Check } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useMySips } from '@/hooks/useSips';
 import { useMyHookups } from '@/hooks/useHookups';
 import { useMyMatches } from '@/hooks/useLeaderSwipes';
 import { useMyMailboxMessages } from '@/hooks/useMailbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { DRINKS, type DrinkType } from '@/lib/drinkSounds';
 import { cn } from '@/lib/utils';
 
 type NotificationItem = {
   id: string;
-  type: 'sip' | 'hookup' | 'match' | 'mailbox';
+  type: 'hookup' | 'match' | 'mailbox';
   title: string;
   subtitle?: string;
   image?: string | null;
@@ -22,18 +20,6 @@ type NotificationItem = {
   createdAt: string;
   action: () => void;
   icon: React.ReactNode;
-};
-
-const drinkEmoji: Record<DrinkType, string> = {
-  beer: DRINKS.beer.emoji,
-  wine: DRINKS.wine.emoji,
-  drink: DRINKS.drink.emoji,
-};
-
-const drinkIcon: Record<DrinkType, typeof Beer> = {
-  beer: Beer,
-  wine: Wine,
-  drink: GlassWater,
 };
 
 const SEEN_KEY = 'oks-home-notifications-seen';
@@ -54,14 +40,11 @@ export function HomeNotifications() {
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState<string[]>(() => readSeen());
   const [leaderMap, setLeaderMap] = useState<Map<string, { name: string; image: string | null }>>(new Map());
-  const { data: sipsDataRaw } = useMySips();
   const { incoming: hookupsRaw } = useMyHookups();
   const { data: matches = [] } = useMyMatches();
   const { data: mailboxMessages = [] } = useMyMailboxMessages();
 
-  // Slurker og klineliste er skrudd av for vanlige ledere — kun admin får
-  // varsler fra disse funksjonene.
-  const sipsData = isAdmin ? sipsDataRaw : undefined;
+  // Klineliste er skrudd av for vanlige ledere — kun admin får varsler derfra.
   const hookups = isAdmin ? hookupsRaw : [];
 
   useEffect(() => {
@@ -90,26 +73,6 @@ export function HomeNotifications() {
 
   const notifications = useMemo<NotificationItem[]>(() => {
     const list: NotificationItem[] = [];
-
-    (sipsData?.received ?? [])
-      .filter((sip) => !sip.opened_at)
-      .forEach((sip) => {
-        const DrinkIcon = drinkIcon[sip.drink_type] ?? Beer;
-        list.push({
-          id: `sip-${sip.id}`,
-          type: 'sip',
-          title: `${sip.fromName} har gitt deg ${sip.amount} ${DRINKS[sip.drink_type].noun}`,
-          subtitle: sip.message || undefined,
-          image: sip.fromImage,
-          initials: sip.fromName.slice(0, 2).toUpperCase(),
-          createdAt: sip.created_at,
-          action: () => {
-            setOpen(false);
-            navigate('/slurker');
-          },
-          icon: <DrinkIcon className="h-4 w-4" />,
-        });
-      });
 
     hookups.forEach((h) => {
       const otherId = h.leader_a_id === leader?.id ? h.leader_b_id : h.leader_a_id;
@@ -151,7 +114,7 @@ export function HomeNotifications() {
       });
 
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [sipsData, hookups, matches, mailboxMessages, navigate]);
+  }, [hookups, leaderMap, leader?.id, matches, mailboxMessages, navigate]);
 
   const seenSet = useMemo(() => new Set(seen), [seen]);
   const unreadCount = notifications.filter((n) => !seenSet.has(n.id)).length;
