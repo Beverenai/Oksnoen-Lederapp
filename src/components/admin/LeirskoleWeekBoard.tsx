@@ -641,6 +641,14 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           return map;
         })(),
         kitchenHours: KITCHEN_DAY_HOURS,
+        kitchenHoursByLeader: (() => {
+          const map = new Map<string, number>();
+          (kitchenDays ?? []).forEach((k) => {
+            const l = staffToLeader.get(k.staff_id);
+            if (l) map.set(`${k.date}|${l.id}`, Number(k.hours ?? KITCHEN_DAY_HOURS));
+          });
+          return map;
+        })(),
         maxHours,
         leaderName,
         missingActivities: missing.map((m) => ({
