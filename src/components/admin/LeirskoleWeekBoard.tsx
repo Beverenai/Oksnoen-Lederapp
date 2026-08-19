@@ -52,6 +52,7 @@ import { LeirskoleLeaderWeekTable } from '@/components/admin/LeirskoleLeaderWeek
 import { LeirskoleGeneratePreviewDialog } from '@/components/admin/LeirskoleGeneratePreviewDialog';
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
 import { LeirskoleExtraPostsCell } from '@/components/admin/LeirskoleExtraPostsCell';
+import { LeirskoleExtraHoursCell, EXTRA_HOURS_TYPE } from '@/components/admin/LeirskoleExtraHoursCell';
 import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
 import { trimDayHours, fillDayHours, KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import { assignMissingActivities } from '@/lib/leirskoleAutoActivity';
@@ -1085,7 +1086,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                 weekId={week.id}
                 date={date}
                 posts={(postsByDate.get(date) ?? [])
-                  .filter((p) => !TEMPLATE_NAMES.has((p.name ?? '').trim()))
+                  .filter(
+                    (p) => !TEMPLATE_NAMES.has((p.name ?? '').trim()) && p.post_type !== EXTRA_HOURS_TYPE,
+                  )
                   .map((p) => ({
                     id: p.id,
                     name: p.name ?? '',
@@ -1174,6 +1177,36 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                 </Popover>
               );
             })}
+          </div>
+
+          {/* Egne timer utenfor vanlige økter – navn og varighet velges fritt. */}
+          <div className="grid gap-1.5" style={gridStyle}>
+            <LabelCell>
+              <span className="leading-tight">
+                Egne timer
+                <span className="block text-[9px] font-medium normal-case text-muted-foreground/70">
+                  teller i totalen
+                </span>
+              </span>
+            </LabelCell>
+            {dates.map((date) => (
+              <LeirskoleExtraHoursCell
+                key={`extra-hours-${date}`}
+                weekId={week.id}
+                date={date}
+                posts={(postsByDate.get(date) ?? [])
+                  .filter((p) => p.post_type === EXTRA_HOURS_TYPE)
+                  .map((p) => ({
+                    id: p.id,
+                    name: p.name ?? '',
+                    start_time: p.start_time,
+                    end_time: p.end_time,
+                    duration_hours: p.duration_hours ?? null,
+                    assignments: p.assignments ?? [],
+                  }))}
+                staffOptions={staffOptions}
+              />
+            ))}
           </div>
 
           {/* Nattevakt */}

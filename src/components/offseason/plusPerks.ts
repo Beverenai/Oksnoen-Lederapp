@@ -55,7 +55,6 @@ export const PLUS_PERK_GROUPS: PlusPerkGroup[] = [
     perks: [
       { key: 'table', icon: UtensilsCrossed, title: 'Ekstra tilbehør', desc: 'Premium tilbehør på Lederbordet' },
       { key: 'units', icon: Beer, title: '2 ekstra enheter', desc: 'Om kvelden – og lov til å bli full én gang i perioden' },
-      { key: 'sips', icon: Beer, title: 'Uendelig slurker', desc: 'Del ut så mange slurker du vil – ingen grense' },
     ],
   },
   {

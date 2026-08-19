@@ -38,7 +38,6 @@ import { SweatersTab } from '@/components/admin/SweatersTab';
 import { KioskProductsTab } from '@/components/admin/KioskProductsTab';
 import { SeasonViewTab } from '@/components/admin/settings/SeasonViewTab';
 import { TinderAdminTab } from '@/components/admin/settings/TinderAdminTab';
-import { SipsAdminTab } from '@/components/admin/settings/SipsAdminTab';
 import { ParticipantTasksTab } from '@/components/admin/ParticipantTasksTab';
 const HomeConfigTab = lazy(() => import('@/components/admin/HomeConfigTab'));
 import type { Tables } from '@/integrations/supabase/types';
@@ -369,9 +368,6 @@ export function AdminSettingsContent({
 
     case 'tinder':
       return <TinderAdminTab />;
-
-    case 'sips':
-      return <SipsAdminTab />;
 
     case 'participant-tasks':
       return <ParticipantTasksTab />;
