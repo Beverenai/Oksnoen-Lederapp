@@ -59,7 +59,6 @@ export default function Profile() {
   const [canClimbing, setCanClimbing] = useState(false);
   const [canZipline, setCanZipline] = useState(false);
   const [canRopeSetup, setCanRopeSetup] = useState(false);
-  const { drink: myDrink, setDrink } = useMyDrink();
   const [snusUser, setSnusUser] = useState(false);
   const [snusProductId, setSnusProductId] = useState<string | null>(null);
   const [snusProductIds, setSnusProductIds] = useState<string[]>([]);
@@ -529,22 +528,6 @@ export default function Profile() {
               });
             }}
           />
-        </CardContent>
-      </Card>
-
-      {/* Min drikke */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <span aria-hidden className="text-xl leading-none">{DRINKS[myDrink].emoji}</span>
-            Min drikke
-          </CardTitle>
-          <CardDescription>
-            Velg hva du drikker – alle slurker du gir vises og høres som {DRINKS[myDrink].label.toLowerCase()}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DrinkPicker value={myDrink} onChange={(d) => setDrink.mutate(d)} />
         </CardContent>
       </Card>
 
