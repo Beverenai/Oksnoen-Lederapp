@@ -1179,6 +1179,36 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
             })}
           </div>
 
+          {/* Egne timer utenfor vanlige økter – navn og varighet velges fritt. */}
+          <div className="grid gap-1.5" style={gridStyle}>
+            <LabelCell>
+              <span className="leading-tight">
+                Egne timer
+                <span className="block text-[9px] font-medium normal-case text-muted-foreground/70">
+                  teller i totalen
+                </span>
+              </span>
+            </LabelCell>
+            {dates.map((date) => (
+              <LeirskoleExtraHoursCell
+                key={`extra-hours-${date}`}
+                weekId={week.id}
+                date={date}
+                posts={(postsByDate.get(date) ?? [])
+                  .filter((p) => p.post_type === EXTRA_HOURS_TYPE)
+                  .map((p) => ({
+                    id: p.id,
+                    name: p.name ?? '',
+                    start_time: p.start_time,
+                    end_time: p.end_time,
+                    duration_hours: p.duration_hours ?? null,
+                    assignments: p.assignments ?? [],
+                  }))}
+                staffOptions={staffOptions}
+              />
+            ))}
+          </div>
+
           {/* Nattevakt */}
           <div className="grid gap-1.5" style={gridStyle}>
             <LabelCell>
