@@ -52,6 +52,7 @@ import { LeirskoleLeaderWeekTable } from '@/components/admin/LeirskoleLeaderWeek
 import { LeirskoleGeneratePreviewDialog } from '@/components/admin/LeirskoleGeneratePreviewDialog';
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
 import { LeirskoleExtraPostsCell } from '@/components/admin/LeirskoleExtraPostsCell';
+import { LeirskoleExtraHoursCell, EXTRA_HOURS_TYPE } from '@/components/admin/LeirskoleExtraHoursCell';
 import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
 import { trimDayHours, fillDayHours, KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
 import { assignMissingActivities } from '@/lib/leirskoleAutoActivity';
@@ -1085,7 +1086,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                 weekId={week.id}
                 date={date}
                 posts={(postsByDate.get(date) ?? [])
-                  .filter((p) => !TEMPLATE_NAMES.has((p.name ?? '').trim()))
+                  .filter(
+                    (p) => !TEMPLATE_NAMES.has((p.name ?? '').trim()) && p.post_type !== EXTRA_HOURS_TYPE,
+                  )
                   .map((p) => ({
                     id: p.id,
                     name: p.name ?? '',
