@@ -234,7 +234,7 @@ export default function LeirskoleGrupper() {
                       key={r.activity_key}
                       className={`flex items-center gap-2 rounded-2xl border px-2.5 py-2 transition-colors ${
                         full
-                          ? 'border-emerald-500/50 bg-emerald-500/12'
+                          ? 'border-emerald-600 bg-emerald-500 text-white shadow-sm'
                           : done > 0
                             ? 'border-amber-500/50 bg-amber-500/12'
                             : 'border-dashed border-border/70'
@@ -245,7 +245,9 @@ export default function LeirskoleGrupper() {
                         disabled={full}
                         onClick={() => register(g, r.activity_key)}
                         aria-label={`Registrer ${labelOf(r.activity_key)} for gruppe ${g}`}
-                        className="flex min-w-0 flex-1 items-center gap-2 text-left disabled:opacity-100"
+                        className={`flex min-w-0 flex-1 items-center gap-2 text-left disabled:opacity-100 ${
+                          full ? 'text-white' : ''
+                        }`}
                       >
                         <span className="text-base leading-none">{emojiOf(r.activity_key)}</span>
                         <span className="min-w-0 flex-1">
@@ -255,7 +257,7 @@ export default function LeirskoleGrupper() {
                               <span
                                 key={i}
                                 className={`h-1.5 w-4 rounded-full ${
-                                  i < done ? (full ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-muted'
+                                  i < done ? (full ? 'bg-white' : 'bg-amber-500') : 'bg-muted'
                                 }`}
                               />
                             ))}
@@ -263,7 +265,7 @@ export default function LeirskoleGrupper() {
                           </span>
                         </span>
                         {full ? (
-                          <Check className="h-4 w-4 shrink-0 text-emerald-600" />
+                          <Check className="h-4 w-4 shrink-0 text-white" />
                         ) : (
                           <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
                         )}
@@ -273,7 +275,7 @@ export default function LeirskoleGrupper() {
                           type="button"
                           aria-label={`Angre siste ${labelOf(r.activity_key)} for gruppe ${g}`}
                           onClick={() => undo(g, r.activity_key)}
-                          className="shrink-0 rounded-full p-1 text-muted-foreground"
+                          className={`shrink-0 rounded-full p-1 ${full ? 'text-white/90 hover:text-white' : 'text-muted-foreground'}`}
                         >
                           <Undo2 className="h-3.5 w-3.5" />
                         </button>
