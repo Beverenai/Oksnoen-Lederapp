@@ -67,7 +67,7 @@ export function LeirskolePostStaffPicker({
           .eq('post_id', post.id)
           .eq('staff_id', staffId);
         if (error) throw error;
-        return [] as string[];
+        return { removed: [] as string[], activities: 0 };
       }
       const { error } = await supabase.from('leirskole_assignments').insert({
         post_id: post.id,
@@ -76,13 +76,18 @@ export function LeirskolePostStaffPicker({
         is_locked: true,
       });
       if (error) throw error;
-      return trimDayHours({ weekId, date: post.date, staffId, keepPostId: post.id, maxHours });
+      const removed = await trimDayHours({ weekId, date: post.date, staffId, keepPostId: post.id, maxHours });
+      // Ledige plasser i «Dag til dag» fylles med en gang lederen står på økten.
+      const activities = await autoFillPostActivities({ weekId, date: post.date, postName: post.name });
+      return { removed, activities };
     },
     onMutate: ({ staffId, on }) => patchCache(staffId, on),
-    onSuccess: (removed) => {
+    onSuccess: ({ removed, activities }) => {
       invalidate();
       if (removed.length) toast.success(`Fjernet ${removed.join(', ')} for å holde ${maxHours}t`);
+      if (activities) toast.success(`${activities} aktivitet(er) fordelt automatisk`);
     },
+
     onError: (e: unknown) => {
       invalidate();
       toast.error(e instanceof Error ? e.message : 'Kunne ikke oppdatere bemanning');
