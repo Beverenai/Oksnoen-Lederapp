@@ -1501,7 +1501,14 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                           key={p.id}
                           type="button"
                           disabled={addShift.isPending}
-                          onClick={() => addShift.mutate({ postId: p.id, staffId: editCell.staffId })}
+                          onClick={() =>
+                            addShift.mutate({
+                              postId: p.id,
+                              staffId: editCell.staffId,
+                              date: editCell.date,
+                              postName: p.name,
+                            })
+                          }
                           className="rounded-full border border-border/70 bg-background px-3 py-1 text-xs font-medium hover:bg-muted"
                         >
                           + {p.name ?? 'Vakt'}{' '}
