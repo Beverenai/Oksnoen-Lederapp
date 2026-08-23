@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Check } from 'lucide-react';
 import { trimDayHours } from '@/lib/leirskoleDayHours';
+import { autoFillPostActivities } from '@/lib/leirskoleAutoActivity';
 
 export interface PickerPost {
   id: string;
