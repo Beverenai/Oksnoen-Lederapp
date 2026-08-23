@@ -263,18 +263,22 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
                   <span className="text-[9px] leading-tight text-muted-foreground">{r.time}</span>
                 </div>
                 {dates.map((date) => {
-                  const cell = stored.get(`${date}|${r.row}`);
-                  const key = `${date}|${r.row}`;
+                  const slot =
+                    slots.get(`${date}|${r.row}`) ??
+                    { key: `${date}|${r.row}`, rowIndex: r.row, postId: null, label: r.label };
+                  const cell = stored.get(slot.key);
                   return (
                     <PlanCell
                       key={date}
-                      lines={pending[key] ?? splitLines(cell?.content ?? '')}
+                      label={slot.label !== r.label ? slot.label : undefined}
+                      lines={pending[slot.key] ?? splitLines(cell?.content ?? '')}
                       tint={ROW_TINT[rowIdx]}
                       types={types ?? []}
-                      onChange={(next) => persist(date, r.row, next, cell?.color ?? 'neutral')}
+                      onChange={(next) => persist(date, slot, next, cell?.color ?? 'neutral')}
                     />
                   );
                 })}
+
               </div>
             ))}
           </div>
