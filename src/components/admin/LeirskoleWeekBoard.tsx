@@ -552,13 +552,44 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     }
   };
 
+  /** Vakter som ikke er økt/måltid/sanitas/nattevakt — f.eks. Ankomst og Avreise. */
+  const RESERVED_POST_NAMES = new Set([
+    ...SESSIONS.map((s) => s.label.toLowerCase()),
+    'frokost',
+    'lunsj',
+    'middag',
+    'kvelds',
+    'sanitas',
+    'nattevakt',
+  ]);
+
   /** Radene for en dag: økt 1–3. Hver rad kobles til vakten bak seg, slik at
       navn og klokkeslett kan endres — også på ankomst- og avreisedager. */
-  const rowsFor = (date: string): (CellTarget | null)[] =>
-    SESSIONS.map((s) => {
-      const post = (postsByDate.get(date) ?? []).find(
-        (p) => (p.name ?? '').trim().toLowerCase() === s.label.toLowerCase(),
-      );
+  const rowsFor = (date: string): (CellTarget | null)[] => {
+    const dayPosts = postsByDate.get(date) ?? [];
+    // Egne økter (Ankomst/Avreise) fyller radene der Økt 1–3 ikke finnes.
+    const extras = dayPosts
+      .filter((p) => !RESERVED_POST_NAMES.has((p.name ?? '').trim().toLowerCase()))
+      .slice()
+      .sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''));
+    let extraIdx = 0;
+    return SESSIONS.map((s) => {
+      const post = dayPosts.find((p) => (p.name ?? '').trim().toLowerCase() === s.label.toLowerCase());
+      if (!post) {
+        const extra = extras[extraIdx];
+        if (extra) {
+          extraIdx += 1;
+          // Egen økt: aktivitetene lagres på vakten, ikke på øktraden.
+          return {
+            date,
+            session: `post:${extra.id}`,
+            rowIndex: null,
+            label: extra.name?.trim() || s.label,
+            postId: extra.id,
+            dayType: (specialDays.get(date) ?? 'normal') as CellTarget['dayType'],
+          };
+        }
+      }
       return {
         date,
         session: s.session,
@@ -568,6 +599,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         dayType: (specialDays.get(date) ?? 'normal') as CellTarget['dayType'],
       };
     });
+  };
+
 
   const cellContent = (t: CellTarget) =>
     planContent.get(t.rowIndex != null ? `${t.date}|${t.rowIndex}` : `post|${t.postId}`) ?? '';

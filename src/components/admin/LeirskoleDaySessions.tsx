@@ -727,10 +727,15 @@ export function LeirskoleDaySessions({
         const meal = isMeal(p);
         const withActivities = hasActivities(p);
         const lines = withActivities ? linesForPost(p) : [];
-        const sessionActs = actsBySession.get(session) ?? [];
+        /** Kun ledere som faktisk står på økten kan holde en plass. */
+        const postLeaderIds = new Set(
+          p.assignments.map((a) => staffById.get(a.staff_id)?.leader?.id).filter(Boolean) as string[],
+        );
+        const sessionActs = (actsBySession.get(session) ?? []).filter((a) => postLeaderIds.has(a.leader_id));
         const { slots, staleLeaderIds } = withActivities
           ? planSlots(lines, types ?? [], sessionActs)
           : { slots: [] as PlanSlot[], staleLeaderIds: [] as string[] };
+
         const slotLeaderIds = new Set(slots.map((s) => s.leaderId).filter(Boolean) as string[]);
         /** Ledere på økten som ikke har en plass i planen. */
         const withoutActivity = p.assignments.filter((a) => {
