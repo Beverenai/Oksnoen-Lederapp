@@ -55,7 +55,7 @@ import { LeirskoleExtraPostsCell } from '@/components/admin/LeirskoleExtraPostsC
 import { LeirskoleExtraHoursCell, EXTRA_HOURS_TYPE } from '@/components/admin/LeirskoleExtraHoursCell';
 import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
 import { trimDayHours, fillDayHours, KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
-import { assignMissingActivities } from '@/lib/leirskoleAutoActivity';
+import { assignMissingActivities, autoFillPostActivities } from '@/lib/leirskoleAutoActivity';
 import { cellInstances } from '@/lib/leirskoleCellInstances';
 import { hhmm, dayLabel } from '@/lib/leirskoleDates';
 import { useSeedLeirskoleSpecialDays } from '@/hooks/useSeedLeirskoleSpecialDays';
