@@ -502,17 +502,29 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
 
   /** Sett en leder på en vakt (brukes i lederoversikten). */
   const addShift = useMutation({
-    mutationFn: async ({ postId, staffId }: { postId: string; staffId: string }) => {
+    mutationFn: async ({
+      postId,
+      staffId,
+      date,
+      postName,
+    }: {
+      postId: string;
+      staffId: string;
+      date?: string;
+      postName?: string | null;
+    }) => {
       const { error } = await supabase
         .from('leirskole_assignments')
         .insert({ post_id: postId, staff_id: staffId, assigned_manually: true });
       if (error) throw error;
+      if (!date) return 0;
+      return autoFillPostActivities({ weekId: week.id, date, postName });
     },
-    onSuccess: () => {
-      ['leirskole-schedule', 'leirskole-my-shifts'].forEach((key) =>
+    onSuccess: (activities) => {
+      ['leirskole-schedule', 'leirskole-my-shifts', 'leirskole-activities'].forEach((key) =>
         qc.invalidateQueries({ queryKey: [key] }),
       );
-      toast.success('Vakten er lagt til');
+      toast.success(activities ? `Vakten er lagt til · ${activities} aktivitet(er) fordelt` : 'Vakten er lagt til');
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke legge til vakten'),
   });
