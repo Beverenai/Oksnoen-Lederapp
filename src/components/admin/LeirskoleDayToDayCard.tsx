@@ -170,11 +170,16 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
   };
 
   const persist = useCallback(
-    (date: string, row: number, lines: string[], color: string) => {
-      const key = `${date}|${row}`;
+    (
+      date: string,
+      slot: { key: string; rowIndex: number | null; postId: string | null },
+      lines: string[],
+      color: string,
+    ) => {
+      const key = slot.key;
       setPending((prev) => ({ ...prev, [key]: lines }));
       save.mutate(
-        { weekId: week.id, date, rowIndex: row, content: lines.join('\n'), color },
+        { weekId: week.id, date, rowIndex: slot.rowIndex, postId: slot.postId, content: lines.join('\n'), color },
         {
           onError: () => {
             setPending((prev) => {
