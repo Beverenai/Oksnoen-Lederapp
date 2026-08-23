@@ -348,7 +348,7 @@ export function LeirskoleCellSheet({
     [types, lines],
   );
 
-  /** Gi en leder en aktivitet: bruk først en ledig aktivitet i økten, ellers legg til en ny. */
+  /** Gi en leder en aktivitet: bruk først en ledig plass, ellers legg til en plass. */
   const giveActivity = useMutation({
     mutationFn: async (leaders: CellLeader[]) => {
       if (!target?.session) throw new Error('Denne økten kan ikke få aktivitetsansvar');
@@ -358,28 +358,36 @@ export function LeirskoleCellSheet({
         .map((i) => types.find((t) => t.key === i.key))
         .filter((t): t is LeirskoleActivityType => !!t);
       const spare = [...unusedTypes];
-      const nextLines = [...lines];
+      // Aktiviteter som allerede står i ruten — kan få en plass til (x2, x3 …).
+      const inCell = types.filter((t) => countOf(t.label) > 0);
+      let nextLines = [...lines];
       const picks: { leaderId: string; key: string }[] = [];
 
       for (const leader of leaders) {
+        const fits = (t: LeirskoleActivityType) =>
+          leader.competencies.length === 0 || leader.competencies.includes(t.key);
         const pickFrom = (list: LeirskoleActivityType[]) => {
-          const i = list.findIndex(
-            (t) => leader.competencies.length === 0 || leader.competencies.includes(t.key),
-          );
+          const i = list.findIndex(fits);
           return list.splice(i >= 0 ? i : 0, 1)[0];
         };
         let type: LeirskoleActivityType | undefined;
-        if (freeInSlot.length) type = pickFrom(freeInSlot);
-        else if (spare.length) {
+        if (freeInSlot.length) {
+          type = pickFrom(freeInSlot);
+        } else if (spare.length) {
           type = pickFrom(spare);
           if (type) nextLines.push(activityLine(type));
+        } else if (inCell.length) {
+          // Ingen ledige plasser: utvid en aktivitet i ruten med én plass.
+          type = inCell.find(fits) ?? inCell[0];
+          const text = activityLine(type);
+          nextLines = setActivityCount(nextLines, type.label, text, countActivity(nextLines, type.label) + 1);
         }
         if (!type) break;
         picks.push({ leaderId: leader.id, key: type.key });
       }
-      if (!picks.length) throw new Error('Ingen ledige aktiviteter å gi');
+      if (!picks.length) throw new Error('Legg inn en aktivitet i ruten først');
 
-      if (nextLines.length !== lines.length) {
+      if (nextLines.join('\n') !== lines.join('\n')) {
         await savePlan.mutateAsync({
           weekId,
           date: target.date,
@@ -394,6 +402,7 @@ export function LeirskoleCellSheet({
       }
       return picks.length;
     },
+
     onSuccess: (n) => toast.success(`${n} leder(e) fikk aktivitet`),
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke gi aktivitet'),
   });
