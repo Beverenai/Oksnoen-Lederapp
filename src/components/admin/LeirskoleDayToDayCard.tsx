@@ -24,6 +24,19 @@ const ROWS = [
   { row: 3, label: 'Økt 3', time: '20–21.30' },
 ];
 
+/** Vaktnavn som ikke er egne økter — resten (Ankomst/Avreise) fyller ledige øktrader. */
+const RESERVED_POSTS = new Set([
+  'økt 1',
+  'økt 2',
+  'økt 3',
+  'frokost',
+  'lunsj',
+  'middag',
+  'kvelds',
+  'sanitas',
+  'nattevakt',
+]);
+
 /** Fargekode på annenhver økt-rad, som i regnearket. */
 const ROW_TINT = [
   'bg-destructive/10 dark:bg-destructive/20',
