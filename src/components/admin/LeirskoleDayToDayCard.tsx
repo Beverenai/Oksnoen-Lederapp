@@ -7,6 +7,7 @@ import { ChevronDown, Minus, NotebookPen, Plus, Sparkles } from 'lucide-react';
 import {
   useAddLeirskoleActivityType,
   useLeirskoleActivityTypes,
+  useLeirskoleSchedule,
   useLeirskoleWeekDays,
   useLeirskoleWeekPlan,
   useSaveLeirskoleWeekPlanCell,
