@@ -295,12 +295,14 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
 type PlanCellProps = {
   lines: string[];
   tint: string;
+  /** Vises når ruten hører til en egen økt, f.eks. «Ankomst». */
+  label?: string;
   types: { id: string; label: string; emoji: string | null; is_custom?: boolean }[];
   onChange: (next: string[]) => void;
 };
 
 /** Én rute i regnearket — kompakt visning, redigering i popover. */
-const PlanCell = memo(function PlanCell({ lines, tint, types, onChange }: PlanCellProps) {
+const PlanCell = memo(function PlanCell({ lines, tint, label, types, onChange }: PlanCellProps) {
   const addType = useAddLeirskoleActivityType();
   const [customOpen, setCustomOpen] = useState(false);
   const [customLabel, setCustomLabel] = useState('');
