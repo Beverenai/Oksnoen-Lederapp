@@ -66,6 +66,7 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
   const { data: cells } = useLeirskoleWeekPlan(week.id);
   const { data: types } = useLeirskoleActivityTypes(true);
   const { data: weekDays } = useLeirskoleWeekDays(week.id);
+  const { data: posts } = useLeirskoleSchedule(week.id);
   const save = useSaveLeirskoleWeekPlanCell();
   const qc = useQueryClient();
   useSeedLeirskoleSpecialDays(week);
@@ -85,10 +86,40 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
   const stored = useMemo(() => {
     const map = new Map<string, { content: string; color: string }>();
     (cells ?? []).forEach((c) => {
-      if (c.row_index != null) map.set(`${c.date}|${c.row_index}`, { content: c.content ?? '', color: c.color ?? 'neutral' });
+      const key = c.post_id ? `post|${c.post_id}` : c.row_index != null ? `${c.date}|${c.row_index}` : null;
+      if (key) map.set(key, { content: c.content ?? '', color: c.color ?? 'neutral' });
     });
     return map;
   }, [cells]);
+
+  /**
+   * Rutene i «Dag til dag». På ankomst- og avreisedager finnes ikke «Økt 1»;
+   * da hører raden til dagens egen vakt (Ankomst/Avreise), slik at aktivitetene
+   * havner på samme økt som dagsvisningen og vaktplanen bruker.
+   */
+  const slots = useMemo(() => {
+    const map = new Map<string, { key: string; rowIndex: number | null; postId: string | null; label: string }>();
+    dates.forEach((date) => {
+      const dayPosts = (posts ?? []).filter((p) => p.date === date);
+      const extras = dayPosts
+        .filter((p) => !RESERVED_POSTS.has((p.name ?? '').trim().toLowerCase()))
+        .slice()
+        .sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''));
+      let extraIdx = 0;
+      ROWS.forEach((r) => {
+        const post = dayPosts.find((p) => (p.name ?? '').trim().toLowerCase() === r.label.toLowerCase());
+        const extra = !post ? extras[extraIdx] : undefined;
+        if (extra) extraIdx += 1;
+        map.set(
+          `${date}|${r.row}`,
+          extra
+            ? { key: `post|${extra.id}`, rowIndex: null, postId: extra.id, label: extra.name?.trim() || r.label }
+            : { key: `${date}|${r.row}`, rowIndex: r.row, postId: null, label: post?.name?.trim() || r.label },
+        );
+      });
+    });
+    return map;
+  }, [dates, posts]);
 
   // Når serveren har svart med samme innhold, slipper vi den optimistiske ruten.
   useEffect(() => {
@@ -117,11 +148,17 @@ export function LeirskoleDayToDayCard({ week }: { week: LeirskoleWeek }) {
   const filled = useMemo(
     () =>
       dates.reduce(
-        (sum, date) => sum + ROWS.filter((r) => (stored.get(`${date}|${r.row}`)?.content ?? '').trim().length > 0).length,
+        (sum, date) =>
+          sum +
+          ROWS.filter((r) => {
+            const slot = slots.get(`${date}|${r.row}`);
+            return (stored.get(slot?.key ?? `${date}|${r.row}`)?.content ?? '').trim().length > 0;
+          }).length,
         0,
       ),
-    [dates, stored],
+    [dates, slots, stored],
   );
+
 
   // Åpen/lukket huskes, slik at den ikke lukker seg når dataene oppdateres.
   const [open, setOpen] = useState(() => localStorage.getItem('leirskole-daytoday-open') !== '0');
