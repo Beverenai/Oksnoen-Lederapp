@@ -333,6 +333,11 @@ const PlanCell = memo(function PlanCell({ lines, tint, label, types, onChange }:
           type="button"
           className={`min-h-[3.25rem] min-w-0 rounded-lg px-1.5 py-1 text-left text-[11px] leading-tight transition-colors hover:ring-1 hover:ring-primary/40 ${tint}`}
         >
+          {label && (
+            <span className="mb-0.5 block truncate text-[9px] font-semibold uppercase text-muted-foreground">
+              {label}
+            </span>
+          )}
           {lines.length === 0 ? (
             <span className="text-muted-foreground">+</span>
           ) : (
