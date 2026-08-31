@@ -29,6 +29,8 @@ import { LeirskoleDayLeaderList } from '@/components/admin/LeirskoleDayLeaderLis
 import { LeirskoleDaySessions } from '@/components/admin/LeirskoleDaySessions';
 import { LeirskoleDayMatrix } from '@/components/admin/LeirskoleDayMatrix';
 import { LeirskoleGenerateButton } from '@/components/admin/LeirskoleGenerateButton';
+import { LeirskoleCopyDaySheet } from '@/components/admin/LeirskoleCopyDaySheet';
+
 import { LeirskoleWeekImpact } from '@/components/admin/LeirskoleWeekImpact';
 import { hhmm, shortDate, todayStr } from '@/lib/leirskoleDates';
 import { KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
