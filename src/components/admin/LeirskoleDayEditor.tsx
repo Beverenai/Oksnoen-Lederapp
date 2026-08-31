@@ -369,8 +369,12 @@ export function LeirskoleDayEditor({
 
       {open && (
         <div className="space-y-2.5 px-4 pb-4">
-          {/* Generering er tilgjengelig uansett fane. */}
-          <LeirskoleGenerateButton week={week} date={activeDate} className="justify-end" />
+          {/* Generering og kopiering er tilgjengelig uansett fane. */}
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
+            <LeirskoleCopyDaySheet weekId={week.id} targetDate={activeDate} />
+            <LeirskoleGenerateButton week={week} date={activeDate} />
+          </div>
+
 
           <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
             {dates.map((d) => {
