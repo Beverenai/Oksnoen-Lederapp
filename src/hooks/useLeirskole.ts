@@ -887,6 +887,135 @@ export function useShiftLeirskolePosts() {
   });
 }
 
+/**
+ * Kopier øktene (og «Dag til dag»-innholdet) fra én dag i en annen uke
+ * til en dag i denne uken. Ledere/bemanning kopieres ikke.
+ */
+export function useCopyLeirskoleDay() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      fromWeekId,
+      fromDate,
+      toWeekId,
+      toDate,
+      replace,
+    }: {
+      fromWeekId: string;
+      fromDate: string;
+      toWeekId: string;
+      toDate: string;
+      /** Slett eksisterende økter på måldagen først. */
+      replace?: boolean;
+    }) => {
+      const { data: srcPosts, error } = await supabase
+        .from('leirskole_posts')
+        .select('*')
+        .eq('week_id', fromWeekId)
+        .eq('date', fromDate)
+        .order('start_time');
+      if (error) throw error;
+      if (!(srcPosts ?? []).length) throw new Error('Ingen økter å kopiere fra den dagen');
+
+      if (replace) {
+        const { error: delErr } = await supabase
+          .from('leirskole_posts')
+          .delete()
+          .eq('week_id', toWeekId)
+          .eq('date', toDate);
+        if (delErr) throw delErr;
+        await supabase
+          .from('leirskole_week_plan_cells')
+          .delete()
+          .eq('week_id', toWeekId)
+          .eq('date', toDate);
+      }
+
+      const { data: inserted, error: insErr } = await supabase
+        .from('leirskole_posts')
+        .insert(
+          (srcPosts ?? []).map((p) => ({
+            week_id: toWeekId,
+            date: toDate,
+            name: p.name,
+            post_type: p.post_type,
+            start_time: p.start_time,
+            end_time: p.end_time,
+            required_leaders: p.required_leaders,
+            is_main_shift: p.is_main_shift,
+            is_night: p.is_night,
+            is_custom: p.is_custom,
+            is_published: p.is_published,
+            notes: p.notes,
+            sort_order: p.sort_order,
+          })),
+        )
+        .select('id, name, start_time');
+      if (insErr) throw insErr;
+
+      // «Dag til dag»-tekstene følger med: både faste rader og de som hører til en økt.
+      const { data: cells } = await supabase
+        .from('leirskole_week_plan_cells')
+        .select('*')
+        .eq('week_id', fromWeekId)
+        .eq('date', fromDate);
+
+      const newIdByKey = new Map(
+        (inserted ?? []).map((p) => [`${p.name}|${p.start_time}`, p.id] as const),
+      );
+      const srcById = new Map((srcPosts ?? []).map((p) => [p.id, p] as const));
+
+      const rowCells: { week_id: string; date: string; row_index: number; content: string; color: string }[] = [];
+      const postCells: { week_id: string; date: string; post_id: string; content: string; color: string }[] = [];
+
+      (cells ?? []).forEach((c) => {
+        if (c.post_id) {
+          const src = srcById.get(c.post_id);
+          const newId = src ? newIdByKey.get(`${src.name}|${src.start_time}`) : undefined;
+          if (newId) postCells.push({ week_id: toWeekId, date: toDate, post_id: newId, content: c.content, color: c.color });
+        } else if (c.row_index != null) {
+          rowCells.push({ week_id: toWeekId, date: toDate, row_index: c.row_index, content: c.content, color: c.color });
+        }
+      });
+
+      if (rowCells.length) {
+        await supabase
+          .from('leirskole_week_plan_cells')
+          .upsert(rowCells, { onConflict: 'week_id,date,row_index' });
+      }
+      if (postCells.length) {
+        await supabase
+          .from('leirskole_week_plan_cells')
+          .upsert(postCells, { onConflict: 'week_id,date,post_id' });
+      }
+
+      // Dagtypen (ankomst/avreise) følger også med.
+      const { data: srcDay } = await supabase
+        .from('leirskole_week_days')
+        .select('day_type')
+        .eq('week_id', fromWeekId)
+        .eq('date', fromDate)
+        .maybeSingle();
+      if (srcDay?.day_type) {
+        await supabase
+          .from('leirskole_week_days')
+          .upsert(
+            { week_id: toWeekId, date: toDate, day_type: srcDay.day_type, updated_at: new Date().toISOString() },
+            { onConflict: 'week_id,date' },
+          );
+      }
+
+      return (inserted ?? []).length;
+    },
+    onSuccess: () => {
+      invalidateSchedule(qc);
+      qc.invalidateQueries({ queryKey: ['leirskole-week-plan'] });
+      qc.invalidateQueries({ queryKey: ['leirskole-week-days'] });
+    },
+  });
+}
+
+
 /* ─────────── Ukesarkiv: lagrede ledere per leirskoleuke ─────────── */
 
 export type LeirskoleWeekSnapshot = Tables<'leirskole_week_leader_snapshots'>;
