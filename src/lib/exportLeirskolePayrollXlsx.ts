@@ -177,7 +177,9 @@ const SUMMARY_HEADERS = [
   'Leder',
   'Dager',
   'Økter',
-  'Timer',
+  'Timer totalt',
+  'Ordinære timer',
+  'Overtid (over 8 t/dag)',
   'Herav kjøkken',
   'Herav natt',
   'Herav egne økter',
@@ -186,6 +188,7 @@ const SUMMARY_HEADERS = [
 function writeSummary(ws: ExcelJS.Worksheet, title: string, rows: Row[]) {
   ws.properties.defaultColWidth = 16;
   ws.getColumn(1).width = 26;
+  ws.getColumn(6).width = 20;
   ws.mergeCells(1, 1, 1, SUMMARY_HEADERS.length);
   const t = ws.getCell(1, 1);
   t.value = title;
@@ -201,17 +204,22 @@ function writeSummary(ws: ExcelJS.Worksheet, title: string, rows: Row[]) {
 
   rows.forEach((r, i) => {
     const row = ws.getRow(4 + i);
+    const { normal, overtime } = splitOvertime(r.dayHours);
     row.getCell(1).value = r.name;
     row.getCell(2).value = r.days.size;
     row.getCell(3).value = r.sessions;
     row.getCell(4).value = Number(r.hours.toFixed(2));
-    row.getCell(5).value = Number(r.kitchenHours.toFixed(2));
-    row.getCell(6).value = Number(r.nightHours.toFixed(2));
-    row.getCell(7).value = Number(r.customHours.toFixed(2));
+    row.getCell(5).value = Number(normal.toFixed(2));
+    row.getCell(6).value = Number(overtime.toFixed(2));
+    row.getCell(7).value = Number(r.kitchenHours.toFixed(2));
+    row.getCell(8).value = Number(r.nightHours.toFixed(2));
+    row.getCell(9).value = Number(r.customHours.toFixed(2));
     for (let c = 2; c <= SUMMARY_HEADERS.length; c++) row.getCell(c).numFmt = '0.00;(0.00);-';
     row.getCell(2).numFmt = '0;(0);-';
     row.getCell(3).numFmt = '0;(0);-';
+    if (overtime > 0) row.getCell(6).font = { name: 'Arial', bold: true, color: { argb: 'FFC00000' } };
   });
+
 
   const sumRow = ws.getRow(4 + rows.length + 1);
   sumRow.getCell(1).value = 'Sum';
