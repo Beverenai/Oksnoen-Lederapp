@@ -27,7 +27,23 @@ interface Row {
   kitchenHours: number;
   nightHours: number;
   customHours: number;
+  /** dato → timer den dagen (grunnlag for overtid over 8 t) */
+  dayHours: Map<string, number>;
 }
+
+/** Timer per dag før overtid slår inn. */
+export const NORMAL_DAY_HOURS = 8;
+
+function splitOvertime(dayHours: Map<string, number>) {
+  let normal = 0;
+  let overtime = 0;
+  dayHours.forEach((h) => {
+    normal += Math.min(h, NORMAL_DAY_HOURS);
+    overtime += Math.max(0, h - NORMAL_DAY_HOURS);
+  });
+  return { normal, overtime };
+}
+
 
 interface DetailRow {
   weekName: string;
@@ -58,7 +74,7 @@ async function collectWeek(week: PayrollWeekInput) {
         .eq('week_id', week.id)
         .order('date')
         .order('start_time'),
-      supabase.from('leirskole_kitchen_days').select('staff_id, date').eq('week_id', week.id),
+      supabase.from('leirskole_kitchen_days').select('staff_id, date, hours').eq('week_id', week.id),
       supabase
         .from('leirskole_activity_assignments')
         .select('date, session, leader_id, activity')
@@ -93,10 +109,14 @@ async function collectWeek(week: PayrollWeekInput) {
       kitchenHours: 0,
       nightHours: 0,
       customHours: 0,
+      dayHours: new Map(),
     };
     rows.set(leaderId, created);
     return created;
   };
+
+  const addDay = (r: Row, date: string, hours: number) =>
+    r.dayHours.set(date, (r.dayHours.get(date) ?? 0) + hours);
 
   const details: DetailRow[] = [];
 
@@ -109,6 +129,7 @@ async function collectWeek(week: PayrollWeekInput) {
       r.days.add(String(p.date));
       r.sessions += 1;
       r.hours += hours;
+      addDay(r, String(p.date), hours);
       if (p.is_night) r.nightHours += hours;
       if (p.is_custom) r.customHours += hours;
       details.push({
@@ -127,22 +148,25 @@ async function collectWeek(week: PayrollWeekInput) {
   (kitchen ?? []).forEach((k) => {
     const leader = leaderByStaff.get(k.staff_id);
     if (!leader) return;
+    const hours = Number((k as { hours?: number | null }).hours ?? KITCHEN_DAY_HOURS);
     const r = row(leader.id, leader.name);
     r.days.add(String(k.date));
     r.sessions += 1;
-    r.hours += KITCHEN_DAY_HOURS;
-    r.kitchenHours += KITCHEN_DAY_HOURS;
+    r.hours += hours;
+    r.kitchenHours += hours;
+    addDay(r, String(k.date), hours);
     details.push({
       weekName: week.name,
       date: String(k.date),
-      name: 'Kjøkken (hele dagen)',
+      name: hours >= KITCHEN_DAY_HOURS ? 'Kjøkken (hele dagen)' : 'Kjøkken',
       time: '—',
-      hours: KITCHEN_DAY_HOURS,
+      hours,
       leader: leader.name,
       activity: 'Kjøkken',
       note: '',
     });
   });
+
 
   const list = [...rows.values()].sort((a, b) => a.name.localeCompare(b.name, 'nb'));
   details.sort((a, b) => (a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date)));
@@ -153,7 +177,9 @@ const SUMMARY_HEADERS = [
   'Leder',
   'Dager',
   'Økter',
-  'Timer',
+  'Timer totalt',
+  'Ordinære timer',
+  'Overtid (over 8 t/dag)',
   'Herav kjøkken',
   'Herav natt',
   'Herav egne økter',
@@ -162,6 +188,7 @@ const SUMMARY_HEADERS = [
 function writeSummary(ws: ExcelJS.Worksheet, title: string, rows: Row[]) {
   ws.properties.defaultColWidth = 16;
   ws.getColumn(1).width = 26;
+  ws.getColumn(6).width = 20;
   ws.mergeCells(1, 1, 1, SUMMARY_HEADERS.length);
   const t = ws.getCell(1, 1);
   t.value = title;
@@ -177,17 +204,22 @@ function writeSummary(ws: ExcelJS.Worksheet, title: string, rows: Row[]) {
 
   rows.forEach((r, i) => {
     const row = ws.getRow(4 + i);
+    const { normal, overtime } = splitOvertime(r.dayHours);
     row.getCell(1).value = r.name;
     row.getCell(2).value = r.days.size;
     row.getCell(3).value = r.sessions;
     row.getCell(4).value = Number(r.hours.toFixed(2));
-    row.getCell(5).value = Number(r.kitchenHours.toFixed(2));
-    row.getCell(6).value = Number(r.nightHours.toFixed(2));
-    row.getCell(7).value = Number(r.customHours.toFixed(2));
+    row.getCell(5).value = Number(normal.toFixed(2));
+    row.getCell(6).value = Number(overtime.toFixed(2));
+    row.getCell(7).value = Number(r.kitchenHours.toFixed(2));
+    row.getCell(8).value = Number(r.nightHours.toFixed(2));
+    row.getCell(9).value = Number(r.customHours.toFixed(2));
     for (let c = 2; c <= SUMMARY_HEADERS.length; c++) row.getCell(c).numFmt = '0.00;(0.00);-';
     row.getCell(2).numFmt = '0;(0);-';
     row.getCell(3).numFmt = '0;(0);-';
+    if (overtime > 0) row.getCell(6).font = { name: 'Arial', bold: true, color: { argb: 'FFC00000' } };
   });
+
 
   const sumRow = ws.getRow(4 + rows.length + 1);
   sumRow.getCell(1).value = 'Sum';
@@ -231,16 +263,54 @@ function writeDetails(ws: ExcelJS.Worksheet, rows: DetailRow[]) {
   });
 }
 
+const OVERTIME_HEADERS = ['Leder', 'Dato', 'Timer totalt', 'Ordinære timer', 'Overtid'];
+
+/** Ett ark med hver dag en leder har gått over 8 timer. */
+function writeOvertime(ws: ExcelJS.Worksheet, rows: Row[]) {
+  ws.properties.defaultColWidth = 16;
+  ws.getColumn(1).width = 26;
+  const head = ws.getRow(1);
+  OVERTIME_HEADERS.forEach((h, i) => {
+    const c = head.getCell(i + 1);
+    c.value = h;
+    c.font = { name: 'Arial', bold: true };
+    c.border = { bottom: { style: 'thin' } };
+  });
+
+  const list = rows
+    .flatMap((r) =>
+      [...r.dayHours.entries()]
+        .filter(([, h]) => h > NORMAL_DAY_HOURS + 0.001)
+        .map(([date, h]) => ({ name: r.name, date, hours: h })),
+    )
+    .sort((a, b) => (a.date === b.date ? a.name.localeCompare(b.name, 'nb') : a.date.localeCompare(b.date)));
+
+  list.forEach((r, i) => {
+    const row = ws.getRow(2 + i);
+    row.getCell(1).value = r.name;
+    row.getCell(2).value = r.date;
+    row.getCell(3).value = Number(r.hours.toFixed(2));
+    row.getCell(4).value = NORMAL_DAY_HOURS;
+    row.getCell(5).value = Number((r.hours - NORMAL_DAY_HOURS).toFixed(2));
+    for (let c = 3; c <= 5; c++) row.getCell(c).numFmt = '0.00;(0.00);-';
+    row.getCell(5).font = { name: 'Arial', bold: true, color: { argb: 'FFC00000' } };
+  });
+
+  if (!list.length) ws.getRow(2).getCell(1).value = 'Ingen overtid registrert';
+  return list.length;
+}
+
 /** Slår sammen flere uker til én rad per leder. */
 function mergeRows(all: Row[][]): Row[] {
   const map = new Map<string, Row>();
   all.flat().forEach((r) => {
     const found = map.get(r.leaderId);
     if (!found) {
-      map.set(r.leaderId, { ...r, days: new Set(r.days) });
+      map.set(r.leaderId, { ...r, days: new Set(r.days), dayHours: new Map(r.dayHours) });
       return;
     }
     r.days.forEach((d) => found.days.add(d));
+    r.dayHours.forEach((h, d) => found.dayHours.set(d, (found.dayHours.get(d) ?? 0) + h));
     found.sessions += r.sessions;
     found.hours += r.hours;
     found.kitchenHours += r.kitchenHours;
@@ -249,6 +319,7 @@ function mergeRows(all: Row[][]): Row[] {
   });
   return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 }
+
 
 const safeSheetName = (name: string) => name.replace(/[\\/*?:[\]]/g, ' ').slice(0, 28) || 'Uke';
 
@@ -274,7 +345,9 @@ export async function exportLeirskoleWeekPayroll(week: PayrollWeekInput) {
     `Leirskole — ${week.name} (${week.start_date} – ${week.end_date})`,
     rows,
   );
+  writeOvertime(wb.addWorksheet('Overtid'), rows);
   writeDetails(wb.addWorksheet('Detaljer'), details);
+
   await download(wb, `leirskole-timer-${safeSheetName(week.name).trim().replace(/\s+/g, '-').toLowerCase()}.xlsx`);
   return { leaders: rows.length, shifts: details.length };
 }
@@ -299,7 +372,9 @@ export async function exportLeirskoleSeasonPayroll(weeks: PayrollWeekInput[]) {
       c.rows,
     );
   });
+  writeOvertime(wb.addWorksheet('Overtid'), mergeRows(collected.map((c) => c.rows)));
   writeDetails(wb.addWorksheet('Detaljer'), collected.flatMap((c) => c.details));
+
   await download(wb, `leirskole-timer-sesong.xlsx`);
   return { weeks: weeks.length, leaders: mergeRows(collected.map((c) => c.rows)).length };
 }
