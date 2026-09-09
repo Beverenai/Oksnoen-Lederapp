@@ -27,7 +27,23 @@ interface Row {
   kitchenHours: number;
   nightHours: number;
   customHours: number;
+  /** dato → timer den dagen (grunnlag for overtid over 8 t) */
+  dayHours: Map<string, number>;
 }
+
+/** Timer per dag før overtid slår inn. */
+export const NORMAL_DAY_HOURS = 8;
+
+function splitOvertime(dayHours: Map<string, number>) {
+  let normal = 0;
+  let overtime = 0;
+  dayHours.forEach((h) => {
+    normal += Math.min(h, NORMAL_DAY_HOURS);
+    overtime += Math.max(0, h - NORMAL_DAY_HOURS);
+  });
+  return { normal, overtime };
+}
+
 
 interface DetailRow {
   weekName: string;
