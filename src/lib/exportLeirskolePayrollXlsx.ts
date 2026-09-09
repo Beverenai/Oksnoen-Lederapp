@@ -263,16 +263,54 @@ function writeDetails(ws: ExcelJS.Worksheet, rows: DetailRow[]) {
   });
 }
 
+const OVERTIME_HEADERS = ['Leder', 'Dato', 'Timer totalt', 'Ordinære timer', 'Overtid'];
+
+/** Ett ark med hver dag en leder har gått over 8 timer. */
+function writeOvertime(ws: ExcelJS.Worksheet, rows: Row[]) {
+  ws.properties.defaultColWidth = 16;
+  ws.getColumn(1).width = 26;
+  const head = ws.getRow(1);
+  OVERTIME_HEADERS.forEach((h, i) => {
+    const c = head.getCell(i + 1);
+    c.value = h;
+    c.font = { name: 'Arial', bold: true };
+    c.border = { bottom: { style: 'thin' } };
+  });
+
+  const list = rows
+    .flatMap((r) =>
+      [...r.dayHours.entries()]
+        .filter(([, h]) => h > NORMAL_DAY_HOURS + 0.001)
+        .map(([date, h]) => ({ name: r.name, date, hours: h })),
+    )
+    .sort((a, b) => (a.date === b.date ? a.name.localeCompare(b.name, 'nb') : a.date.localeCompare(b.date)));
+
+  list.forEach((r, i) => {
+    const row = ws.getRow(2 + i);
+    row.getCell(1).value = r.name;
+    row.getCell(2).value = r.date;
+    row.getCell(3).value = Number(r.hours.toFixed(2));
+    row.getCell(4).value = NORMAL_DAY_HOURS;
+    row.getCell(5).value = Number((r.hours - NORMAL_DAY_HOURS).toFixed(2));
+    for (let c = 3; c <= 5; c++) row.getCell(c).numFmt = '0.00;(0.00);-';
+    row.getCell(5).font = { name: 'Arial', bold: true, color: { argb: 'FFC00000' } };
+  });
+
+  if (!list.length) ws.getRow(2).getCell(1).value = 'Ingen overtid registrert';
+  return list.length;
+}
+
 /** Slår sammen flere uker til én rad per leder. */
 function mergeRows(all: Row[][]): Row[] {
   const map = new Map<string, Row>();
   all.flat().forEach((r) => {
     const found = map.get(r.leaderId);
     if (!found) {
-      map.set(r.leaderId, { ...r, days: new Set(r.days) });
+      map.set(r.leaderId, { ...r, days: new Set(r.days), dayHours: new Map(r.dayHours) });
       return;
     }
     r.days.forEach((d) => found.days.add(d));
+    r.dayHours.forEach((h, d) => found.dayHours.set(d, (found.dayHours.get(d) ?? 0) + h));
     found.sessions += r.sessions;
     found.hours += r.hours;
     found.kitchenHours += r.kitchenHours;
@@ -281,6 +319,7 @@ function mergeRows(all: Row[][]): Row[] {
   });
   return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 }
+
 
 const safeSheetName = (name: string) => name.replace(/[\\/*?:[\]]/g, ' ').slice(0, 28) || 'Uke';
 
