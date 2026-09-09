@@ -378,6 +378,8 @@ async function download(wb: ExcelJS.Workbook, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+const today = () => new Date().toISOString().slice(0, 10);
+
 /** Eksporter timer for én uke (regnskap/lønn). */
 export async function exportLeirskoleWeekPayroll(week: PayrollWeekInput) {
   const { rows, details } = await collectWeek(week);
@@ -386,13 +388,17 @@ export async function exportLeirskoleWeekPayroll(week: PayrollWeekInput) {
   wb.created = new Date();
   writeSummary(
     wb.addWorksheet('Sammendrag'),
-    `Leirskole — ${week.name} (${week.start_date} – ${week.end_date})`,
+    `Leirskole — ${week.name} (${week.start_date} – ${week.end_date}) · eksportert ${today()}`,
     rows,
   );
+  writeDays(wb.addWorksheet('Per dag'), rows);
   writeOvertime(wb.addWorksheet('Overtid'), rows);
   writeDetails(wb.addWorksheet('Detaljer'), details);
 
-  await download(wb, `leirskole-timer-${safeSheetName(week.name).trim().replace(/\s+/g, '-').toLowerCase()}.xlsx`);
+  await download(
+    wb,
+    `leirskole-timer-${safeSheetName(week.name).trim().replace(/\s+/g, '-').toLowerCase()}-${today()}.xlsx`,
+  );
   return { leaders: rows.length, shifts: details.length };
 }
 
@@ -400,14 +406,15 @@ export async function exportLeirskoleWeekPayroll(week: PayrollWeekInput) {
 export async function exportLeirskoleSeasonPayroll(weeks: PayrollWeekInput[]) {
   const collected = [];
   for (const w of weeks) collected.push(await collectWeek(w));
+  const merged = mergeRows(collected.map((c) => c.rows));
 
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Øksnøen LederApp';
   wb.created = new Date();
   writeSummary(
     wb.addWorksheet('Totalt'),
-    `Leirskole — alle uker (${weeks.length} uker)`,
-    mergeRows(collected.map((c) => c.rows)),
+    `Leirskole — alle uker (${weeks.length} uker) · eksportert ${today()}`,
+    merged,
   );
   collected.forEach((c) => {
     writeSummary(
@@ -416,9 +423,11 @@ export async function exportLeirskoleSeasonPayroll(weeks: PayrollWeekInput[]) {
       c.rows,
     );
   });
-  writeOvertime(wb.addWorksheet('Overtid'), mergeRows(collected.map((c) => c.rows)));
+  writeDays(wb.addWorksheet('Per dag'), merged);
+  writeOvertime(wb.addWorksheet('Overtid'), merged);
   writeDetails(wb.addWorksheet('Detaljer'), collected.flatMap((c) => c.details));
 
-  await download(wb, `leirskole-timer-sesong.xlsx`);
-  return { weeks: weeks.length, leaders: mergeRows(collected.map((c) => c.rows)).length };
+  await download(wb, `leirskole-timer-sesong-${today()}.xlsx`);
+  return { weeks: weeks.length, leaders: merged.length };
 }
+
