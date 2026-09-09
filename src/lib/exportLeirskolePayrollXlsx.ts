@@ -74,7 +74,7 @@ async function collectWeek(week: PayrollWeekInput) {
         .eq('week_id', week.id)
         .order('date')
         .order('start_time'),
-      supabase.from('leirskole_kitchen_days').select('staff_id, date').eq('week_id', week.id),
+      supabase.from('leirskole_kitchen_days').select('staff_id, date, hours').eq('week_id', week.id),
       supabase
         .from('leirskole_activity_assignments')
         .select('date, session, leader_id, activity')
