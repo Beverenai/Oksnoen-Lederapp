@@ -109,10 +109,14 @@ async function collectWeek(week: PayrollWeekInput) {
       kitchenHours: 0,
       nightHours: 0,
       customHours: 0,
+      dayHours: new Map(),
     };
     rows.set(leaderId, created);
     return created;
   };
+
+  const addDay = (r: Row, date: string, hours: number) =>
+    r.dayHours.set(date, (r.dayHours.get(date) ?? 0) + hours);
 
   const details: DetailRow[] = [];
 
@@ -125,6 +129,7 @@ async function collectWeek(week: PayrollWeekInput) {
       r.days.add(String(p.date));
       r.sessions += 1;
       r.hours += hours;
+      addDay(r, String(p.date), hours);
       if (p.is_night) r.nightHours += hours;
       if (p.is_custom) r.customHours += hours;
       details.push({
@@ -143,22 +148,25 @@ async function collectWeek(week: PayrollWeekInput) {
   (kitchen ?? []).forEach((k) => {
     const leader = leaderByStaff.get(k.staff_id);
     if (!leader) return;
+    const hours = Number((k as { hours?: number | null }).hours ?? KITCHEN_DAY_HOURS);
     const r = row(leader.id, leader.name);
     r.days.add(String(k.date));
     r.sessions += 1;
-    r.hours += KITCHEN_DAY_HOURS;
-    r.kitchenHours += KITCHEN_DAY_HOURS;
+    r.hours += hours;
+    r.kitchenHours += hours;
+    addDay(r, String(k.date), hours);
     details.push({
       weekName: week.name,
       date: String(k.date),
-      name: 'Kjøkken (hele dagen)',
+      name: hours >= KITCHEN_DAY_HOURS ? 'Kjøkken (hele dagen)' : 'Kjøkken',
       time: '—',
-      hours: KITCHEN_DAY_HOURS,
+      hours,
       leader: leader.name,
       activity: 'Kjøkken',
       note: '',
     });
   });
+
 
   const list = [...rows.values()].sort((a, b) => a.name.localeCompare(b.name, 'nb'));
   details.sort((a, b) => (a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date)));
