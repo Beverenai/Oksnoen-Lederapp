@@ -175,6 +175,9 @@ async function collectWeek(week: PayrollWeekInput) {
 
 const SUMMARY_HEADERS = [
   'Leder',
+  'Første dag',
+  'Siste dag',
+  'Datoer',
   'Dager',
   'Økter',
   'Timer totalt',
@@ -185,10 +188,13 @@ const SUMMARY_HEADERS = [
   'Herav egne økter',
 ];
 
+const sortedDates = (r: Row) => [...r.dayHours.keys()].sort();
+
 function writeSummary(ws: ExcelJS.Worksheet, title: string, rows: Row[]) {
   ws.properties.defaultColWidth = 16;
   ws.getColumn(1).width = 26;
-  ws.getColumn(6).width = 20;
+  ws.getColumn(4).width = 42;
+  ws.getColumn(9).width = 20;
   ws.mergeCells(1, 1, 1, SUMMARY_HEADERS.length);
   const t = ws.getCell(1, 1);
   t.value = title;
@@ -205,19 +211,23 @@ function writeSummary(ws: ExcelJS.Worksheet, title: string, rows: Row[]) {
   rows.forEach((r, i) => {
     const row = ws.getRow(4 + i);
     const { normal, overtime } = splitOvertime(r.dayHours);
+    const dates = sortedDates(r);
     row.getCell(1).value = r.name;
-    row.getCell(2).value = r.days.size;
-    row.getCell(3).value = r.sessions;
-    row.getCell(4).value = Number(r.hours.toFixed(2));
-    row.getCell(5).value = Number(normal.toFixed(2));
-    row.getCell(6).value = Number(overtime.toFixed(2));
-    row.getCell(7).value = Number(r.kitchenHours.toFixed(2));
-    row.getCell(8).value = Number(r.nightHours.toFixed(2));
-    row.getCell(9).value = Number(r.customHours.toFixed(2));
-    for (let c = 2; c <= SUMMARY_HEADERS.length; c++) row.getCell(c).numFmt = '0.00;(0.00);-';
-    row.getCell(2).numFmt = '0;(0);-';
-    row.getCell(3).numFmt = '0;(0);-';
-    if (overtime > 0) row.getCell(6).font = { name: 'Arial', bold: true, color: { argb: 'FFC00000' } };
+    row.getCell(2).value = dates[0] ?? '';
+    row.getCell(3).value = dates[dates.length - 1] ?? '';
+    row.getCell(4).value = dates.join(', ');
+    row.getCell(5).value = r.days.size;
+    row.getCell(6).value = r.sessions;
+    row.getCell(7).value = Number(r.hours.toFixed(2));
+    row.getCell(8).value = Number(normal.toFixed(2));
+    row.getCell(9).value = Number(overtime.toFixed(2));
+    row.getCell(10).value = Number(r.kitchenHours.toFixed(2));
+    row.getCell(11).value = Number(r.nightHours.toFixed(2));
+    row.getCell(12).value = Number(r.customHours.toFixed(2));
+    for (let c = 5; c <= SUMMARY_HEADERS.length; c++) row.getCell(c).numFmt = '0.00;(0.00);-';
+    row.getCell(5).numFmt = '0;(0);-';
+    row.getCell(6).numFmt = '0;(0);-';
+    if (overtime > 0) row.getCell(9).font = { name: 'Arial', bold: true, color: { argb: 'FFC00000' } };
   });
 
 
@@ -227,15 +237,49 @@ function writeSummary(ws: ExcelJS.Worksheet, title: string, rows: Row[]) {
   const first = 4;
   const last = 4 + rows.length - 1;
   if (rows.length) {
-    for (let c = 2; c <= SUMMARY_HEADERS.length; c++) {
+    for (let c = 5; c <= SUMMARY_HEADERS.length; c++) {
       const cell = sumRow.getCell(c);
       const col = ws.getColumn(c).letter;
       cell.value = { formula: `SUM(${col}${first}:${col}${last})` };
       cell.font = { name: 'Arial', bold: true };
-      cell.numFmt = c <= 3 ? '0;(0);-' : '0.00;(0.00);-';
+      cell.numFmt = c <= 6 ? '0;(0);-' : '0.00;(0.00);-';
     }
   }
 }
+
+const DAY_HEADERS = ['Leder', 'Dato', 'Timer', 'Ordinære timer', 'Overtid'];
+
+/** Ett ark med én rad per leder per dato — grunnlag for lønn uten dobbeltbetaling. */
+function writeDays(ws: ExcelJS.Worksheet, rows: Row[]) {
+  ws.properties.defaultColWidth = 16;
+  ws.getColumn(1).width = 26;
+  const head = ws.getRow(1);
+  DAY_HEADERS.forEach((h, i) => {
+    const c = head.getCell(i + 1);
+    c.value = h;
+    c.font = { name: 'Arial', bold: true };
+    c.border = { bottom: { style: 'thin' } };
+  });
+
+  const list = rows
+    .flatMap((r) => [...r.dayHours.entries()].map(([date, hours]) => ({ name: r.name, date, hours })))
+    .sort((a, b) => (a.date === b.date ? a.name.localeCompare(b.name, 'nb') : a.date.localeCompare(b.date)));
+
+  list.forEach((r, i) => {
+    const row = ws.getRow(2 + i);
+    const overtime = Math.max(0, r.hours - NORMAL_DAY_HOURS);
+    row.getCell(1).value = r.name;
+    row.getCell(2).value = r.date;
+    row.getCell(3).value = Number(r.hours.toFixed(2));
+    row.getCell(4).value = Number(Math.min(r.hours, NORMAL_DAY_HOURS).toFixed(2));
+    row.getCell(5).value = Number(overtime.toFixed(2));
+    for (let c = 3; c <= 5; c++) row.getCell(c).numFmt = '0.00;(0.00);-';
+    if (overtime > 0) row.getCell(5).font = { name: 'Arial', bold: true, color: { argb: 'FFC00000' } };
+  });
+
+  if (!list.length) ws.getRow(2).getCell(1).value = 'Ingen timer registrert';
+}
+
 
 const DETAIL_HEADERS = ['Uke', 'Dato', 'Økt', 'Klokkeslett', 'Timer', 'Leder', 'Aktivitet', 'Beskjed'];
 
@@ -334,6 +378,8 @@ async function download(wb: ExcelJS.Workbook, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+const today = () => new Date().toISOString().slice(0, 10);
+
 /** Eksporter timer for én uke (regnskap/lønn). */
 export async function exportLeirskoleWeekPayroll(week: PayrollWeekInput) {
   const { rows, details } = await collectWeek(week);
@@ -342,13 +388,17 @@ export async function exportLeirskoleWeekPayroll(week: PayrollWeekInput) {
   wb.created = new Date();
   writeSummary(
     wb.addWorksheet('Sammendrag'),
-    `Leirskole — ${week.name} (${week.start_date} – ${week.end_date})`,
+    `Leirskole — ${week.name} (${week.start_date} – ${week.end_date}) · eksportert ${today()}`,
     rows,
   );
+  writeDays(wb.addWorksheet('Per dag'), rows);
   writeOvertime(wb.addWorksheet('Overtid'), rows);
   writeDetails(wb.addWorksheet('Detaljer'), details);
 
-  await download(wb, `leirskole-timer-${safeSheetName(week.name).trim().replace(/\s+/g, '-').toLowerCase()}.xlsx`);
+  await download(
+    wb,
+    `leirskole-timer-${safeSheetName(week.name).trim().replace(/\s+/g, '-').toLowerCase()}-${today()}.xlsx`,
+  );
   return { leaders: rows.length, shifts: details.length };
 }
 
@@ -356,14 +406,15 @@ export async function exportLeirskoleWeekPayroll(week: PayrollWeekInput) {
 export async function exportLeirskoleSeasonPayroll(weeks: PayrollWeekInput[]) {
   const collected = [];
   for (const w of weeks) collected.push(await collectWeek(w));
+  const merged = mergeRows(collected.map((c) => c.rows));
 
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Øksnøen LederApp';
   wb.created = new Date();
   writeSummary(
     wb.addWorksheet('Totalt'),
-    `Leirskole — alle uker (${weeks.length} uker)`,
-    mergeRows(collected.map((c) => c.rows)),
+    `Leirskole — alle uker (${weeks.length} uker) · eksportert ${today()}`,
+    merged,
   );
   collected.forEach((c) => {
     writeSummary(
@@ -372,9 +423,11 @@ export async function exportLeirskoleSeasonPayroll(weeks: PayrollWeekInput[]) {
       c.rows,
     );
   });
-  writeOvertime(wb.addWorksheet('Overtid'), mergeRows(collected.map((c) => c.rows)));
+  writeDays(wb.addWorksheet('Per dag'), merged);
+  writeOvertime(wb.addWorksheet('Overtid'), merged);
   writeDetails(wb.addWorksheet('Detaljer'), collected.flatMap((c) => c.details));
 
-  await download(wb, `leirskole-timer-sesong.xlsx`);
-  return { weeks: weeks.length, leaders: mergeRows(collected.map((c) => c.rows)).length };
+  await download(wb, `leirskole-timer-sesong-${today()}.xlsx`);
+  return { weeks: weeks.length, leaders: merged.length };
 }
+
