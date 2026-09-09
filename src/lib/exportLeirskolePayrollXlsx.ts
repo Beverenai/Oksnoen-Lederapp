@@ -372,7 +372,9 @@ export async function exportLeirskoleSeasonPayroll(weeks: PayrollWeekInput[]) {
       c.rows,
     );
   });
+  writeOvertime(wb.addWorksheet('Overtid'), mergeRows(collected.map((c) => c.rows)));
   writeDetails(wb.addWorksheet('Detaljer'), collected.flatMap((c) => c.details));
+
   await download(wb, `leirskole-timer-sesong.xlsx`);
   return { weeks: weeks.length, leaders: mergeRows(collected.map((c) => c.rows)).length };
 }
