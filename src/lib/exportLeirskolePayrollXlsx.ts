@@ -345,7 +345,9 @@ export async function exportLeirskoleWeekPayroll(week: PayrollWeekInput) {
     `Leirskole — ${week.name} (${week.start_date} – ${week.end_date})`,
     rows,
   );
+  writeOvertime(wb.addWorksheet('Overtid'), rows);
   writeDetails(wb.addWorksheet('Detaljer'), details);
+
   await download(wb, `leirskole-timer-${safeSheetName(week.name).trim().replace(/\s+/g, '-').toLowerCase()}.xlsx`);
   return { leaders: rows.length, shifts: details.length };
 }
