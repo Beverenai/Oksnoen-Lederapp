@@ -48,6 +48,7 @@ export function useDyngaRealtime() {
 }
 
 export function useDyngaColumns(periodId?: string | null) {
+  const allMode = periodId === DYNGA_ALL_PERIODS;
   return useQuery<DyngaColumn[]>({
     queryKey: ['dynga-columns', periodId ?? null],
     queryFn: async () => {
@@ -55,7 +56,7 @@ export function useDyngaColumns(periodId?: string | null) {
         .from('dynga_columns')
         .select('*')
         .order('sort_order', { ascending: true });
-      if (periodId) q = q.eq('period_id', periodId);
+      if (periodId && !allMode) q = q.eq('period_id', periodId);
       const { data, error } = await q;
       if (error) throw error;
       return data || [];
@@ -66,6 +67,7 @@ export function useDyngaColumns(periodId?: string | null) {
 }
 
 export function useDyngaCards(periodId?: string | null) {
+  const allMode = periodId === DYNGA_ALL_PERIODS;
   return useQuery<DyngaCardWithParticipant[]>({
     queryKey: ['dynga-cards', periodId ?? null],
     queryFn: async () => {
@@ -73,18 +75,54 @@ export function useDyngaCards(periodId?: string | null) {
         .from('dynga_cards')
         .select('*, participant:participants(id, name, first_name, last_name, image_url, cabin_id, cabins(id, name)), dynga_comments(count)')
         .order('sort_order', { ascending: true });
-      if (periodId) q = q.eq('period_id', periodId);
+      if (periodId && !allMode) q = q.eq('period_id', periodId);
       const { data, error } = await q;
       if (error) throw error;
-      return (data || []).map((row: any) => ({
+
+      let cards = (data || []).map((row: any) => ({
         ...row,
         comment_count: row.dynga_comments?.[0]?.count ?? 0,
       })) as DyngaCardWithParticipant[];
+
+      if (allMode) {
+        // Deltakere fra andre perioder er ikke lesbare via vanlig join (periodefilter),
+        // så navn/bilde hentes fra sesongdataene i stedet.
+        const missing = cards.some((c) => !c.participant);
+        const [seasonRes, periodsRes] = await Promise.all([
+          missing ? fetchSeasonParticipants().catch(() => []) : Promise.resolve([]),
+          supabase.from('periods').select('id, name'),
+        ]);
+        const byId = new Map((seasonRes as any[]).map((p) => [p.id, p]));
+        const periodName = new Map(((periodsRes.data || []) as any[]).map((p) => [p.id, p.name as string]));
+        cards = cards.map((c) => {
+          const sp: any = c.participant ? null : byId.get(c.participant_id);
+          return {
+            ...c,
+            participant: c.participant ?? (sp
+              ? {
+                  id: sp.id,
+                  name: sp.name,
+                  first_name: sp.first_name ?? null,
+                  last_name: sp.last_name ?? null,
+                  image_url: sp.image_url ?? null,
+                  cabin_id: sp.cabin_id ?? null,
+                  cabins: sp.cabins ?? null,
+                }
+              : null),
+            period_label: c.period_id
+              ? (periodName.get(c.period_id) ?? '').replace(/^Periode\s*/i, 'P') || null
+              : null,
+          };
+        });
+      }
+
+      return cards;
     },
     enabled: periodId !== undefined,
     staleTime: 10_000,
   });
 }
+
 
 export interface DyngaCommentWithLeader extends DyngaComment {
   leader: { id: string; name: string; profile_image_url: string | null } | null;
