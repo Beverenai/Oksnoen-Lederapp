@@ -25,16 +25,42 @@ export function DyngaBoard({ periodId, readOnly }: DyngaBoardProps = {}) {
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
   );
 
-  const cardsByColumn = useMemo(() => {
-    const map = new Map<string, DyngaCardWithParticipant[]>();
-    columns.forEach(c => map.set(c.id, []));
-    cards.forEach(card => {
-      const arr = map.get(card.column_id) || [];
-      arr.push(card);
-      map.set(card.column_id, arr);
+  const allMode = periodId === DYNGA_ALL_PERIODS;
+
+  // I «Alle perioder» slås kolonner med samme navn sammen på tvers av perioder.
+  const displayColumns = useMemo(() => {
+    if (!allMode) return columns;
+    const byTitle = new Map<string, DyngaColumn>();
+    columns.forEach((c) => {
+      const key = (c.title || '').trim().toLowerCase();
+      if (!byTitle.has(key)) byTitle.set(key, c);
+    });
+    return [...byTitle.values()].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  }, [allMode, columns]);
+
+  const columnKeyById = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!allMode) return map;
+    const titleToId = new Map(displayColumns.map((c) => [(c.title || '').trim().toLowerCase(), c.id]));
+    columns.forEach((c) => {
+      const target = titleToId.get((c.title || '').trim().toLowerCase());
+      if (target) map.set(c.id, target);
     });
     return map;
-  }, [columns, cards]);
+  }, [allMode, columns, displayColumns]);
+
+  const cardsByColumn = useMemo(() => {
+    const map = new Map<string, DyngaCardWithParticipant[]>();
+    displayColumns.forEach(c => map.set(c.id, []));
+    cards.forEach(card => {
+      const colId = allMode ? (columnKeyById.get(card.column_id) ?? card.column_id) : card.column_id;
+      const arr = map.get(colId) || [];
+      arr.push(card);
+      map.set(colId, arr);
+    });
+    return map;
+  }, [displayColumns, cards, allMode, columnKeyById]);
+
 
   const findCard = (id: string) => cards.find(c => c.id === id) || null;
 
