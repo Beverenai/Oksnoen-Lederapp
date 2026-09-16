@@ -6,7 +6,7 @@ import { ArrowLeft, Plus, Settings2, Calendar, Lock } from 'lucide-react';
 import { DyngaBoard } from '@/components/admin/dynga/DyngaBoard';
 import { AddParticipantsSheet } from '@/components/admin/dynga/AddParticipantsSheet';
 import { ManageColumnsSheet } from '@/components/admin/dynga/ManageColumnsSheet';
-import { useDyngaRealtime } from '@/hooks/useDynga';
+import { useDyngaRealtime, DYNGA_ALL_PERIODS } from '@/hooks/useDynga';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -38,8 +38,10 @@ export default function Dynga() {
     if (!selectedPeriodId && activePeriod) setSelectedPeriodId(activePeriod.id);
   }, [activePeriod, selectedPeriodId]);
 
+  const allMode = selectedPeriodId === DYNGA_ALL_PERIODS;
   const isViewingActive = !!activePeriod && selectedPeriodId === activePeriod.id;
   const readOnly = !isViewingActive;
+
 
   if (!isAdmin) {
     return (
