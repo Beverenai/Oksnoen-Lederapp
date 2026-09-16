@@ -8,6 +8,13 @@
       "when": 1789572937982,
       "tag": "0000_period_leaders_and_season_archive",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789572989647,
+      "tag": "0001_create_period_leader_assignments",
+      "breakpoints": true
     }
   ]
 }

@@ -4091,6 +4091,42 @@ export type Database = {
           },
         ]
       }
+      period_leader_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          leader_id: string
+          period_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leader_id: string
+          period_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leader_id?: string
+          period_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "period_leader_assignments_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "period_leader_assignments_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       period_leader_snapshots: {
         Row: {
           cabins: string | null
