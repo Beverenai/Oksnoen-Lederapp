@@ -68,7 +68,11 @@ export default function Dynga() {
               )}
             </h1>
             <p className="hidden sm:block text-sm text-muted-foreground">
-              {readOnly ? 'Ser på tidligere periode (skrivebeskyttet)' : 'Oversikt over deltageroppførsel'}
+              {allMode
+                ? 'Alle perioder samlet (skrivebeskyttet)'
+                : readOnly
+                  ? 'Ser på tidligere periode (skrivebeskyttet)'
+                  : 'Oversikt over deltageroppførsel'}
             </p>
           </div>
         </div>
@@ -79,6 +83,7 @@ export default function Dynga() {
               <SelectValue placeholder="Periode" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value={DYNGA_ALL_PERIODS}>Alle perioder</SelectItem>
               {periods.map((p: any) => (
                 <SelectItem key={p.id} value={p.id}>
                   {p.name}{p.is_active ? ' (aktiv)' : ''}
@@ -86,6 +91,7 @@ export default function Dynga() {
               ))}
             </SelectContent>
           </Select>
+
           {!readOnly && (
             <>
               <Button variant="default" size="sm" onClick={() => setAddOpen(true)}>
