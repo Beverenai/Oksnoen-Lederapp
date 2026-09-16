@@ -122,7 +122,28 @@ export default function PeriodArchive() {
     }
   };
 
-  const exportGroup = async () => {
+  const archiveSeason = async () => {
+    if (!yearPeriods.length || year === null) return;
+    const ok = confirm(
+      `Arkivere sesongen ${year}?\n\nAlle ${yearPeriods.length} perioder merkes arkivert, lederne for hver periode lagres, og du får ned en komplett Excel-fil. Ingenting slettes — du kan fortsatt åpne hver periode her.`,
+    );
+    if (!ok) return;
+    setExporting(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('archive_season', { _season_year: year });
+      if (error) throw error;
+      const res = (data ?? {}) as { periods?: number; leaders?: number };
+      await exportSeason();
+      showSuccess(`Sesongen ${year} arkivert · ${res.periods ?? 0} perioder · ${res.leaders ?? 0} ledere lagret`);
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke arkivere sesongen');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+
     if (!period) return;
     setExporting(true);
     try {
