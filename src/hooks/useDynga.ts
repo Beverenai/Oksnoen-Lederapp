@@ -86,13 +86,13 @@ export function useDyngaCards(periodId?: string | null) {
         comment_count: row.dynga_comments?.[0]?.count ?? 0,
       })) as DyngaCardWithParticipant[];
 
-      if (allMode) {
+      const missing = cards.some((c) => !c.participant);
+      if (allMode || missing) {
         // Deltakere fra andre perioder er ikke lesbare via vanlig join (periodefilter),
         // så navn/bilde hentes fra sesongdataene i stedet.
-        const missing = cards.some((c) => !c.participant);
         const [seasonRes, periodsRes] = await Promise.all([
           missing ? fetchSeasonParticipants().catch(() => []) : Promise.resolve([]),
-          supabase.from('periods').select('id, name'),
+          allMode ? supabase.from('periods').select('id, name') : Promise.resolve({ data: [] } as any),
         ]);
         const byId = new Map((seasonRes as any[]).map((p) => [p.id, p]));
         const periodName = new Map(((periodsRes.data || []) as any[]).map((p) => [p.id, p.name as string]));
