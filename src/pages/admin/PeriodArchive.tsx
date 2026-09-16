@@ -143,8 +143,9 @@ export default function PeriodArchive() {
     }
   };
 
-
+  const exportGroup = async () => {
     if (!period) return;
+
     setExporting(true);
     try {
       const sheets = [];
