@@ -244,6 +244,15 @@ export default function PeriodArchive() {
                   )}
                   Hele sesongen
                 </Button>
+                <Button size="sm" variant="secondary" onClick={archiveSeason} disabled={!yearPeriods.length || exporting}>
+                  {exporting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Lock className="h-4 w-4 mr-1" />
+                  )}
+                  Arkiver sesongen {year}
+                </Button>
+
                 <Button size="sm" onClick={exportAll} disabled={!period || exporting}>
                   {exporting ? (
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
