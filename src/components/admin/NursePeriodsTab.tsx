@@ -94,8 +94,21 @@ export function NursePeriodsTab() {
           resetKeys.map((key) => ({ key, value: 'false' })),
           { onConflict: 'key' },
         );
-      showSuccess(`Aktiv periode: ${p.name}`);
+      // Aktiver lederne som er satt opp for den nye perioden, og sett resten i off-season.
+      let leaderMsg = '';
+      try {
+        const { data, error } = await (supabase as any).rpc('apply_period_leaders', { _period_id: p.id });
+        if (error) throw error;
+        const r = (data ?? {}) as { setup?: number; activated?: number; deactivated?: number };
+        if ((r.setup ?? 0) > 0) {
+          leaderMsg = ` · ${r.activated ?? 0} ledere aktivert, ${r.deactivated ?? 0} satt i off-season`;
+        }
+      } catch (e) {
+        console.error('Kunne ikke oppdatere ledere for perioden', e);
+      }
+      showSuccess(`Aktiv periode: ${p.name}${leaderMsg}`);
       setPeriods((prev) => prev.map((x) => ({ ...x, is_active: x.id === p.id })));
+
     }
     setSwitching(null);
   };
