@@ -19,7 +19,13 @@ export interface DyngaCardWithParticipant extends DyngaCardRow {
     cabins: { id: string; name: string } | null;
   } | null;
   comment_count: number;
+  /** Kort periodemerke, kun satt i «Alle perioder»-visning. */
+  period_label?: string | null;
 }
+
+/** Velg alle perioder i Dynga (skrivebeskyttet visning på tvers). */
+export const DYNGA_ALL_PERIODS = 'all';
+
 
 export function useDyngaRealtime() {
   const qc = useQueryClient();
