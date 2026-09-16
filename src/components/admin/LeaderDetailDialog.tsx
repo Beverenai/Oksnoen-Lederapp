@@ -594,6 +594,9 @@ export function LeaderDetailDialog({
                 </RadioGroup>
               </div>
 
+              {(isAdmin || isSuperAdmin) && leader && <LeaderPeriodsCard leaderId={leader.id} />}
+
+
               {(isAdmin || isSuperAdmin) && (
                 <div className="space-y-2 rounded-lg border border-border p-3">
                   <Label className="text-sm font-semibold flex items-center gap-2">
