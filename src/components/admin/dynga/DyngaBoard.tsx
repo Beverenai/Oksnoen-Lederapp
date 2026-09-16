@@ -150,7 +150,7 @@ export function DyngaBoard({ periodId, readOnly }: DyngaBoardProps = {}) {
     );
   }
 
-  if (columns.length === 0) {
+  if (displayColumns.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         Ingen kolonner enda. Klikk "Kolonner" for å legge til.
@@ -161,9 +161,10 @@ export function DyngaBoard({ periodId, readOnly }: DyngaBoardProps = {}) {
   return (
     <>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <SortableContext items={columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
+        <SortableContext items={displayColumns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
           <div className="flex gap-3 overflow-x-auto overflow-y-hidden pb-3 -mx-2 px-2 snap-x items-stretch h-full">
-            {columns.map(col => {
+            {displayColumns.map(col => {
+
               const colCards = cardsByColumn.get(col.id) || [];
               return (
                 <SortableDyngaColumn key={col.id} column={col} count={colCards.length}>
