@@ -3,6 +3,8 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
+import { fetchSeasonParticipants } from './useSeasonParticipants';
+
 
 export type DyngaColumn = Tables<'dynga_columns'>;
 export type DyngaCardRow = Tables<'dynga_cards'>;
