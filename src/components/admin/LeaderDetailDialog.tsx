@@ -1,4 +1,6 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { LeaderPeriodsCard } from './LeaderPeriodsCard';
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { normalizePhone } from '@/lib/utils';
