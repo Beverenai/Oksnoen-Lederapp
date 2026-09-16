@@ -6,7 +6,7 @@ import { ArrowLeft, Plus, Settings2, Calendar, Lock } from 'lucide-react';
 import { DyngaBoard } from '@/components/admin/dynga/DyngaBoard';
 import { AddParticipantsSheet } from '@/components/admin/dynga/AddParticipantsSheet';
 import { ManageColumnsSheet } from '@/components/admin/dynga/ManageColumnsSheet';
-import { useDyngaRealtime } from '@/hooks/useDynga';
+import { useDyngaRealtime, DYNGA_ALL_PERIODS } from '@/hooks/useDynga';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -38,8 +38,10 @@ export default function Dynga() {
     if (!selectedPeriodId && activePeriod) setSelectedPeriodId(activePeriod.id);
   }, [activePeriod, selectedPeriodId]);
 
+  const allMode = selectedPeriodId === DYNGA_ALL_PERIODS;
   const isViewingActive = !!activePeriod && selectedPeriodId === activePeriod.id;
   const readOnly = !isViewingActive;
+
 
   if (!isAdmin) {
     return (
@@ -66,7 +68,11 @@ export default function Dynga() {
               )}
             </h1>
             <p className="hidden sm:block text-sm text-muted-foreground">
-              {readOnly ? 'Ser på tidligere periode (skrivebeskyttet)' : 'Oversikt over deltageroppførsel'}
+              {allMode
+                ? 'Alle perioder samlet (skrivebeskyttet)'
+                : readOnly
+                  ? 'Ser på tidligere periode (skrivebeskyttet)'
+                  : 'Oversikt over deltageroppførsel'}
             </p>
           </div>
         </div>
@@ -77,6 +83,7 @@ export default function Dynga() {
               <SelectValue placeholder="Periode" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value={DYNGA_ALL_PERIODS}>Alle perioder</SelectItem>
               {periods.map((p: any) => (
                 <SelectItem key={p.id} value={p.id}>
                   {p.name}{p.is_active ? ' (aktiv)' : ''}
@@ -84,6 +91,7 @@ export default function Dynga() {
               ))}
             </SelectContent>
           </Select>
+
           {!readOnly && (
             <>
               <Button variant="default" size="sm" onClick={() => setAddOpen(true)}>

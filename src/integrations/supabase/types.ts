@@ -4091,6 +4091,42 @@ export type Database = {
           },
         ]
       }
+      period_leader_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          leader_id: string
+          period_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leader_id: string
+          period_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leader_id?: string
+          period_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "period_leader_assignments_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "period_leader_assignments_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       period_leader_snapshots: {
         Row: {
           cabins: string | null
@@ -5562,7 +5598,9 @@ export type Database = {
         Returns: string
       }
       add_murder_player: { Args: { _leader_id: string }; Returns: undefined }
+      apply_period_leaders: { Args: { _period_id: string }; Returns: Json }
       archive_murder_round: { Args: never; Returns: string }
+      archive_season: { Args: { _season_year: number }; Returns: Json }
       claim_murder_kill: { Args: never; Returns: string }
       claim_participant_task: { Args: { _task_id: string }; Returns: boolean }
       confirm_murder_death: { Args: { _claim_id?: string }; Returns: undefined }
