@@ -5562,7 +5562,9 @@ export type Database = {
         Returns: string
       }
       add_murder_player: { Args: { _leader_id: string }; Returns: undefined }
+      apply_period_leaders: { Args: { _period_id: string }; Returns: Json }
       archive_murder_round: { Args: never; Returns: string }
+      archive_season: { Args: { _season_year: number }; Returns: Json }
       claim_murder_kill: { Args: never; Returns: string }
       claim_participant_task: { Args: { _task_id: string }; Returns: boolean }
       confirm_murder_death: { Args: { _claim_id?: string }; Returns: undefined }
