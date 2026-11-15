@@ -38,7 +38,6 @@ import { hapticImpact } from '@/lib/capacitorHaptics';
 import { LederPassMini } from '@/components/passport/LederPassMini';
 import { useMailboxUnreadCount } from '@/hooks/useMailbox';
 import { useIncomingHookupCount } from '@/hooks/useHookups';
-import { useUnopenedSipCount } from '@/hooks/useSips';
 import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute, isLeirskoleRoute } from '@/lib/limitedAccess';
 import { useAccessMode } from '@/hooks/useViewMode';
@@ -114,7 +113,6 @@ export default function More() {
   const { data: murderState } = useMyMurderState();
   const { data: mailboxUnread } = useMailboxUnreadCount(!!isAdmin);
   const incomingHookups = useIncomingHookupCount();
-  const unopenedSips = useUnopenedSipCount();
   const { data: povRoll } = usePovCurrentRoll();
   const povShotsLeft = povRoll?.my_shots_left ?? 0;
   const [hasScheduleImage, setHasScheduleImage] = useState(false);

@@ -30,7 +30,6 @@ const Profile = lazy(() => import("@/pages/Profile"));
 const SnusPage = lazy(() => import("@/pages/SnusPage"));
 const FeedbackPage = lazy(() => import("@/pages/Feedback"));
 const PovPage = lazy(() => import("@/pages/Pov"));
-const SlurkerPage = lazy(() => import("@/pages/Slurker"));
 const Leaders = lazy(() => import("@/pages/Leaders"));
 const Team = lazy(() => import("@/pages/Team"));
 const Passport = lazy(() => import("@/pages/Passport"));
@@ -252,7 +251,7 @@ function AppRoutes() {
         <Route path="/leirskole" element={<ProtectedRoute><Leirskole /></ProtectedRoute>} />
         <Route path="/leirskole/vaktplan" element={<ProtectedRoute><LeirskoleVaktplan /></ProtectedRoute>} />
         <Route path="/leirskole/grupper" element={<ProtectedRoute><LeirskoleGrupper /></ProtectedRoute>} />
-        <Route path="/admin/leirskole" element={<ProtectedRoute><LeirskoleAdmin /></ProtectedRoute>} />
+        <Route path="/admin/leirskole" element={<ProtectedRoute><AdminOnly><LeirskoleAdmin /></AdminOnly></ProtectedRoute>} />
         <Route path="/gjenglemt" element={<ProtectedRoute><Gjenglemt /></ProtectedRoute>} />
         <Route path="/gjenglemt-admin" element={<GjenglemtAdmin />} />
         <Route path="/gjenglemt/:slug" element={<PublicGjenglemt />} />
@@ -279,7 +278,6 @@ function AppRoutes() {
         <Route path="/snus" element={<ProtectedRoute><SnusPage /></ProtectedRoute>} />
         <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
         <Route path="/pov" element={<ProtectedRoute><PovPage /></ProtectedRoute>} />
-        <Route path="/slurker" element={<ProtectedRoute><AdminOnly><SlurkerPage /></AdminOnly></ProtectedRoute>} />
         <Route path="/liggeliste" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

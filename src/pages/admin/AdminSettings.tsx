@@ -31,7 +31,6 @@ import {
   Archive,
   Camera,
   Flame,
-  Beer,
 } from 'lucide-react';
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
@@ -73,7 +72,6 @@ const navItems = [
   { key: 'season-view', label: 'Hele sesongen', desc: 'Se alle perioder samlet (kun lesing)', icon: Archive, color: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300' },
   { key: 'archive', label: 'Periodearkiv', desc: 'Se data fra alle perioder', icon: Archive, color: 'bg-slate-500/15 text-slate-600 dark:text-slate-300', path: '/arkiv' },
   { key: 'tinder', label: 'Øksnøen Tinder', desc: 'Se matcher og likes mellom ledere', icon: Flame, color: 'bg-rose-500/15 text-rose-600 dark:text-rose-300' },
-  { key: 'sips', label: 'Slurker', desc: 'Del ut flere slurker til ledere', icon: Beer, color: 'bg-amber-500/15 text-amber-600 dark:text-amber-300' },
 ];
 
 const sectionLabels: Record<string, string> = {
@@ -91,7 +89,6 @@ const sectionLabels: Record<string, string> = {
   sweaters: 'Gensere',
   'season-view': 'Hele sesongen',
   tinder: 'Øksnøen Tinder',
-  sips: 'Slurker',
 };
 
 export default function AdminSettings() {

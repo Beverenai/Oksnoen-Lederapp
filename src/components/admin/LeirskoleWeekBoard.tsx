@@ -52,9 +52,10 @@ import { LeirskoleLeaderWeekTable } from '@/components/admin/LeirskoleLeaderWeek
 import { LeirskoleGeneratePreviewDialog } from '@/components/admin/LeirskoleGeneratePreviewDialog';
 import { LeirskoleCellSheet, type CellTarget } from '@/components/admin/LeirskoleCellSheet';
 import { LeirskoleExtraPostsCell } from '@/components/admin/LeirskoleExtraPostsCell';
+import { LeirskoleExtraHoursCell, EXTRA_HOURS_TYPE } from '@/components/admin/LeirskoleExtraHoursCell';
 import { LeirskolePostStaffPicker } from '@/components/admin/LeirskolePostStaffPicker';
 import { trimDayHours, fillDayHours, KITCHEN_DAY_HOURS } from '@/lib/leirskoleDayHours';
-import { assignMissingActivities } from '@/lib/leirskoleAutoActivity';
+import { assignMissingActivities, autoFillPostActivities } from '@/lib/leirskoleAutoActivity';
 import { cellInstances } from '@/lib/leirskoleCellInstances';
 import { hhmm, dayLabel } from '@/lib/leirskoleDates';
 import { useSeedLeirskoleSpecialDays } from '@/hooks/useSeedLeirskoleSpecialDays';
@@ -501,17 +502,29 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
 
   /** Sett en leder på en vakt (brukes i lederoversikten). */
   const addShift = useMutation({
-    mutationFn: async ({ postId, staffId }: { postId: string; staffId: string }) => {
+    mutationFn: async ({
+      postId,
+      staffId,
+      date,
+      postName,
+    }: {
+      postId: string;
+      staffId: string;
+      date?: string;
+      postName?: string | null;
+    }) => {
       const { error } = await supabase
         .from('leirskole_assignments')
         .insert({ post_id: postId, staff_id: staffId, assigned_manually: true });
       if (error) throw error;
+      if (!date) return 0;
+      return autoFillPostActivities({ weekId: week.id, date, postName });
     },
-    onSuccess: () => {
-      ['leirskole-schedule', 'leirskole-my-shifts'].forEach((key) =>
+    onSuccess: (activities) => {
+      ['leirskole-schedule', 'leirskole-my-shifts', 'leirskole-activities'].forEach((key) =>
         qc.invalidateQueries({ queryKey: [key] }),
       );
-      toast.success('Vakten er lagt til');
+      toast.success(activities ? `Vakten er lagt til · ${activities} aktivitet(er) fordelt` : 'Vakten er lagt til');
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Kunne ikke legge til vakten'),
   });
@@ -539,13 +552,44 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
     }
   };
 
+  /** Vakter som ikke er økt/måltid/sanitas/nattevakt — f.eks. Ankomst og Avreise. */
+  const RESERVED_POST_NAMES = new Set([
+    ...SESSIONS.map((s) => s.label.toLowerCase()),
+    'frokost',
+    'lunsj',
+    'middag',
+    'kvelds',
+    'sanitas',
+    'nattevakt',
+  ]);
+
   /** Radene for en dag: økt 1–3. Hver rad kobles til vakten bak seg, slik at
       navn og klokkeslett kan endres — også på ankomst- og avreisedager. */
-  const rowsFor = (date: string): (CellTarget | null)[] =>
-    SESSIONS.map((s) => {
-      const post = (postsByDate.get(date) ?? []).find(
-        (p) => (p.name ?? '').trim().toLowerCase() === s.label.toLowerCase(),
-      );
+  const rowsFor = (date: string): (CellTarget | null)[] => {
+    const dayPosts = postsByDate.get(date) ?? [];
+    // Egne økter (Ankomst/Avreise) fyller radene der Økt 1–3 ikke finnes.
+    const extras = dayPosts
+      .filter((p) => !RESERVED_POST_NAMES.has((p.name ?? '').trim().toLowerCase()))
+      .slice()
+      .sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''));
+    let extraIdx = 0;
+    return SESSIONS.map((s) => {
+      const post = dayPosts.find((p) => (p.name ?? '').trim().toLowerCase() === s.label.toLowerCase());
+      if (!post) {
+        const extra = extras[extraIdx];
+        if (extra) {
+          extraIdx += 1;
+          // Egen økt: aktivitetene lagres på vakten, ikke på øktraden.
+          return {
+            date,
+            session: `post:${extra.id}`,
+            rowIndex: null,
+            label: extra.name?.trim() || s.label,
+            postId: extra.id,
+            dayType: (specialDays.get(date) ?? 'normal') as CellTarget['dayType'],
+          };
+        }
+      }
       return {
         date,
         session: s.session,
@@ -555,6 +599,8 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
         dayType: (specialDays.get(date) ?? 'normal') as CellTarget['dayType'],
       };
     });
+  };
+
 
   const cellContent = (t: CellTarget) =>
     planContent.get(t.rowIndex != null ? `${t.date}|${t.rowIndex}` : `post|${t.postId}`) ?? '';
@@ -641,6 +687,14 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
           return map;
         })(),
         kitchenHours: KITCHEN_DAY_HOURS,
+        kitchenHoursByLeader: (() => {
+          const map = new Map<string, number>();
+          (kitchenDays ?? []).forEach((k) => {
+            const l = staffToLeader.get(k.staff_id);
+            if (l) map.set(`${k.date}|${l.id}`, Number(k.hours ?? KITCHEN_DAY_HOURS));
+          });
+          return map;
+        })(),
         maxHours,
         leaderName,
         missingActivities: missing.map((m) => ({
@@ -1077,7 +1131,9 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                 weekId={week.id}
                 date={date}
                 posts={(postsByDate.get(date) ?? [])
-                  .filter((p) => !TEMPLATE_NAMES.has((p.name ?? '').trim()))
+                  .filter(
+                    (p) => !TEMPLATE_NAMES.has((p.name ?? '').trim()) && p.post_type !== EXTRA_HOURS_TYPE,
+                  )
                   .map((p) => ({
                     id: p.id,
                     name: p.name ?? '',
@@ -1166,6 +1222,36 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                 </Popover>
               );
             })}
+          </div>
+
+          {/* Egne timer utenfor vanlige økter – navn og varighet velges fritt. */}
+          <div className="grid gap-1.5" style={gridStyle}>
+            <LabelCell>
+              <span className="leading-tight">
+                Egne timer
+                <span className="block text-[9px] font-medium normal-case text-muted-foreground/70">
+                  teller i totalen
+                </span>
+              </span>
+            </LabelCell>
+            {dates.map((date) => (
+              <LeirskoleExtraHoursCell
+                key={`extra-hours-${date}`}
+                weekId={week.id}
+                date={date}
+                posts={(postsByDate.get(date) ?? [])
+                  .filter((p) => p.post_type === EXTRA_HOURS_TYPE)
+                  .map((p) => ({
+                    id: p.id,
+                    name: p.name ?? '',
+                    start_time: p.start_time,
+                    end_time: p.end_time,
+                    duration_hours: p.duration_hours ?? null,
+                    assignments: p.assignments ?? [],
+                  }))}
+                staffOptions={staffOptions}
+              />
+            ))}
           </div>
 
           {/* Nattevakt */}
@@ -1448,7 +1534,14 @@ export function LeirskoleWeekBoard({ week, staff }: { week: LeirskoleWeek; staff
                           key={p.id}
                           type="button"
                           disabled={addShift.isPending}
-                          onClick={() => addShift.mutate({ postId: p.id, staffId: editCell.staffId })}
+                          onClick={() =>
+                            addShift.mutate({
+                              postId: p.id,
+                              staffId: editCell.staffId,
+                              date: editCell.date,
+                              postName: p.name,
+                            })
+                          }
                           className="rounded-full border border-border/70 bg-background px-3 py-1 text-xs font-medium hover:bg-muted"
                         >
                           + {p.name ?? 'Vakt'}{' '}

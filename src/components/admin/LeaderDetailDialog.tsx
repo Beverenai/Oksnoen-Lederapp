@@ -1,4 +1,6 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { LeaderPeriodsCard } from './LeaderPeriodsCard';
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { normalizePhone } from '@/lib/utils';
@@ -593,6 +595,9 @@ export function LeaderDetailDialog({
                   </div>
                 </RadioGroup>
               </div>
+
+              {(isAdmin || isSuperAdmin) && leader && <LeaderPeriodsCard leaderId={leader.id} />}
+
 
               {(isAdmin || isSuperAdmin) && (
                 <div className="space-y-2 rounded-lg border border-border p-3">

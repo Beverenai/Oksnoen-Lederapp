@@ -99,9 +99,9 @@ serve(async (req) => {
 
     const mentioned = ((message.mentions ?? []) as string[]).filter((id) => id !== caller.id);
 
-    // I Leirskole-chatten varsles alle som er satt opp på den aktive uken,
-    // uansett om de er tagget — det er deres eneste kanal.
-    let weekStaffIds: string[] = [];
+    // Alle i kanalen varsles for hver melding: Leirskole-staben på den aktive uken,
+    // og i Lederhuset alle ledere som er aktive nå.
+    let broadcastIds: string[] = [];
     if (message.channel === "leirskole") {
       const today = new Date().toISOString().slice(0, 10);
       const { data: weeks } = await supabaseAdmin
@@ -119,13 +119,21 @@ serve(async (req) => {
           .from("leirskole_staff")
           .select("leader_id")
           .eq("week_id", week.id);
-        weekStaffIds = (staff ?? [])
+        broadcastIds = (staff ?? [])
           .map((s) => s.leader_id as string)
           .filter((id) => id && id !== caller.id);
       }
+    } else {
+      const { data: active } = await supabaseAdmin
+        .from("leaders")
+        .select("id")
+        .eq("is_active", true);
+      broadcastIds = (active ?? [])
+        .map((l) => l.id as string)
+        .filter((id) => id && id !== caller.id);
     }
 
-    const targetIds = Array.from(new Set([...mentioned, ...weekStaffIds]));
+    const targetIds = Array.from(new Set([...mentioned, ...broadcastIds]));
     if (targetIds.length === 0) return json({ success: true, sent: 0, reason: "no recipients" });
 
     // Sendelås — én rad per melding.

@@ -132,6 +132,24 @@ export async function assignMissingActivities({
 }
 
 /**
+ * Fyller tomme aktivitetsplasser rett etter at en leder er satt på en økt.
+ * Gjør ingenting for vakter som ikke er Økt 1–3 (måltider, natt, osv.).
+ */
+export async function autoFillPostActivities({
+  weekId,
+  date,
+  postName,
+}: {
+  weekId: string;
+  date: string;
+  postName: string | null | undefined;
+}): Promise<number> {
+  const row = SESSION_ROWS.find((r) => r.label.toLowerCase() === (postName ?? '').trim().toLowerCase());
+  if (!row) return 0;
+  return assignMissingActivities({ weekId, date, sessions: [row.session] });
+}
+
+/**
  * Rydder én dag: sletter aktivitetstildelinger som ikke finnes i «Dag til dag»
  * (eller som er utover antallet i ruten), og fyller deretter tomme plasser.
  */

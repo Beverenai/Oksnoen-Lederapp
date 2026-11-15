@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Archive, FileSpreadsheet, Loader2, Printer } from 'lucide-react';
+import { ArrowLeft, Archive, FileSpreadsheet, Loader2, Printer, Lock } from 'lucide-react';
 import { archiveGroups, datasetsForGroup, archiveDatasets, type ArchiveRow } from '@/lib/archiveDatasets';
 import { downloadWorkbook } from '@/lib/archiveExport';
 import { ArchiveDatasetCard } from '@/components/archive/ArchiveDatasetCard';
@@ -122,8 +122,30 @@ export default function PeriodArchive() {
     }
   };
 
+  const archiveSeason = async () => {
+    if (!yearPeriods.length || year === null) return;
+    const ok = confirm(
+      `Arkivere sesongen ${year}?\n\nAlle ${yearPeriods.length} perioder merkes arkivert, lederne for hver periode lagres, og du får ned en komplett Excel-fil. Ingenting slettes — du kan fortsatt åpne hver periode her.`,
+    );
+    if (!ok) return;
+    setExporting(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('archive_season', { _season_year: year });
+      if (error) throw error;
+      const res = (data ?? {}) as { periods?: number; leaders?: number };
+      await exportSeason();
+      showSuccess(`Sesongen ${year} arkivert · ${res.periods ?? 0} perioder · ${res.leaders ?? 0} ledere lagret`);
+    } catch (e) {
+      console.error(e);
+      showError('Kunne ikke arkivere sesongen');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const exportGroup = async () => {
     if (!period) return;
+
     setExporting(true);
     try {
       const sheets = [];
@@ -222,6 +244,15 @@ export default function PeriodArchive() {
                   )}
                   Hele sesongen
                 </Button>
+                <Button size="sm" variant="secondary" onClick={archiveSeason} disabled={!yearPeriods.length || exporting}>
+                  {exporting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Lock className="h-4 w-4 mr-1" />
+                  )}
+                  Arkiver sesongen {year}
+                </Button>
+
                 <Button size="sm" onClick={exportAll} disabled={!period || exporting}>
                   {exporting ? (
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />

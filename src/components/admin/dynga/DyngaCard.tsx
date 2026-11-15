@@ -64,9 +64,17 @@ export function DyngaCard({ card, onClick, isOverlay }: Props) {
           </button>
           <div className="flex-1 min-w-0" onClick={openSheet}>
             <div className="font-medium text-sm leading-tight line-clamp-2">{name}</div>
-            <div className="text-[11px] text-muted-foreground truncate mt-0.5">
-              {p?.cabins?.name || 'Uten hytte'}
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {card.period_label && (
+                <span className="shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                  {card.period_label}
+                </span>
+              )}
+              <span className="text-[11px] text-muted-foreground truncate">
+                {p?.cabins?.name || 'Uten hytte'}
+              </span>
             </div>
+
             {card.comment_count > 0 && (
               <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-1">
                 <MessageSquare className="h-3 w-3" />
