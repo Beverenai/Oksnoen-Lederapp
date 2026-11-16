@@ -316,6 +316,79 @@ const tools: Tool[] = [
     },
   },
   {
+    name: "person",
+    sample: async (db) => {
+      const { data } = await db.from("participants").select("person_id").not("person_id", "is", null).limit(1);
+      return data?.[0] ? { person_id: data[0].person_id } : null;
+    },
+    description: "Ett barn på tvers av perioder og år, funnet på den faste person-ID-en. Søk på navn (alle perioder) eller oppgi person_id. Viser hver deltakelse for seg: periode, år, hytte, rom, bilde og antall aktiviteter. Et barn som var med i to perioder, har to deltakelser på samme ID.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        person_id: { type: "string", description: "Barnets faste ID" },
+        navn: { type: "string", description: "Hele eller deler av navnet. Søker i alle perioder" },
+      },
+    },
+    run: async (db, args) => {
+      const personId = str(args.person_id);
+      const navn = str(args.navn).replace(/[%,()]/g, "");
+      if (!personId && !navn) throw new Error("Oppgi person_id eller navn.");
+      const cols = "id, person_id, name, birth_date, room, times_attended, image_thumb_url, period_id, cabins(name), periods(name, season_year, start_date)";
+      const rows = await fetchAll(() => {
+        let q = db.from("participants").select(cols).not("person_id", "is", null).order("name");
+        q = personId ? q.eq("person_id", personId) : q.ilike("name", `%${navn}%`);
+        return q;
+      });
+      if (rows.length === 0) throw new Error("Fant ingen person.");
+
+      // deno-lint-ignore no-explicit-any
+      const byPerson = new Map<string, any[]>();
+      for (const r of rows) {
+        if (!byPerson.has(r.person_id)) byPerson.set(r.person_id, []);
+        byPerson.get(r.person_id)!.push(r);
+      }
+      if (byPerson.size > 12) {
+        throw new Error(`For mange treff (${byPerson.size}). Skriv mer av navnet.`);
+      }
+      // Navnesøket kan ha truffet bare én av periodene til et barn. Hent resten.
+      if (!personId) {
+        const ids = [...byPerson.keys()];
+        const all = await fetchAll(() => db.from("participants").select(cols).in("person_id", ids));
+        byPerson.clear();
+        for (const r of all) {
+          if (!byPerson.has(r.person_id)) byPerson.set(r.person_id, []);
+          byPerson.get(r.person_id)!.push(r);
+        }
+      }
+      const partIds = [...byPerson.values()].flat().map((r) => r.id);
+      const acts = await fetchAll(() => db.from("participant_activities").select("participant_id").in("participant_id", partIds));
+      const actCount = new Map<string, number>();
+      for (const a of acts) actCount.set(a.participant_id, (actCount.get(a.participant_id) ?? 0) + 1);
+
+      const personer = [...byPerson.entries()].map(([id, list]) => {
+        list.sort((a, b) => String(a.periods?.start_date ?? "").localeCompare(String(b.periods?.start_date ?? "")));
+        const last = list[list.length - 1];
+        return {
+          person_id: id,
+          navn: last.name,
+          alder: age(last.birth_date),
+          aar_paa_oksnoen: last.times_attended ?? null,
+          antall_deltakelser: list.length,
+          deltakelser: list.map((r) => ({
+            deltaker_id: r.id,
+            periode: r.periods?.name ?? null,
+            aar: r.periods?.season_year ?? null,
+            hytte: r.cabins?.name ?? null,
+            rom: r.room ?? null,
+            antall_aktiviteter: actCount.get(r.id) ?? 0,
+            bilde: r.image_thumb_url ?? null,
+          })),
+        };
+      });
+      return personer.length === 1 ? personer[0] : { antall: personer.length, personer };
+    },
+  },
+  {
     name: "hytter",
     description: "Alle hytter med hvem som bor der i perioden, fordelt på rom.",
     inputSchema: { type: "object", properties: { ...periodeProp } },
@@ -503,7 +576,7 @@ const tools: Tool[] = [
 ];
 
 const SERVICE_NAME = "oksnoen-lederapp";
-const SERVICE_VERSION = "1.2.0";
+const SERVICE_VERSION = "1.3.0";
 
 // Helsesjekk: prøver alle verktøyene og melder hvilke som virker. Brukes av
 // admin («Tilkoblinger») for å oppdage at en endring i appen har knekt noe.

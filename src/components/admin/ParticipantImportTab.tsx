@@ -129,7 +129,6 @@ export function ParticipantImportTab() {
   const [participantCount, setParticipantCount] = useState(0);
   const [parsedData, setParsedData] = useState<ParsedParticipant[]>([]);
   const [isImporting, setIsImporting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -707,49 +706,6 @@ export function ParticipantImportTab() {
     }
   };
 
-  // Sletter deltakerne i AKTIV periode. Tidligere perioder er historikk
-  // (bilder, aktiviteter, hytter) og skal aldri slettes herfra.
-  const deleteAllParticipants = async () => {
-    hapticWarning();
-
-    const { data: activePeriod } = await supabase
-      .from('periods')
-      .select('id, name')
-      .eq('is_active', true)
-      .maybeSingle();
-    if (!activePeriod) {
-      showError('Ingen aktiv periode. Ingenting ble slettet.');
-      return;
-    }
-
-    if (!confirm(`⚠️ ADVARSEL: Dette vil slette alle deltakere i ${activePeriod.name} og tilhørende data (aktiviteter, helsenotater, etc.).\n\nTidligere perioder røres ikke. Dette kan ikke angres. Er du sikker?`)) return;
-    if (!confirm(`Siste sjanse: Er du HELT sikker på at du vil slette alle deltakere i ${activePeriod.name}?`)) return;
-
-    setIsDeleting(true);
-    try {
-      const periodId = activePeriod.id;
-      await supabase.from('participant_activities').delete().eq('period_id', periodId);
-      await supabase.from('participant_health_notes').delete().eq('period_id', periodId);
-      await supabase.from('participant_health_events').delete().eq('period_id', periodId);
-      await supabase.from('participant_health_info').delete().eq('period_id', periodId);
-
-      const { error } = await supabase
-        .from('participants')
-        .delete()
-        .eq('period_id', periodId);
-
-      if (error) throw error;
-
-      loadData();
-      showSuccess(`Deltakerne i ${activePeriod.name} er slettet`);
-    } catch (error) {
-      console.error('Error deleting participants:', error);
-      showError('Kunne ikke slette deltakere');
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -774,26 +730,6 @@ export function ParticipantImportTab() {
             Importer deltakere fra CSV-fil
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <Button 
-              variant="destructive" 
-              onClick={deleteAllParticipants}
-              disabled={isDeleting || participantCount === 0}
-            >
-              {isDeleting ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4 mr-2" />
-              )}
-              Slett deltakerne i aktiv periode
-            </Button>
-          </div>
-          
-          <p className="text-sm text-muted-foreground">
-            Sletter bare deltakerne i aktiv periode. Tidligere perioder og år blir stående som historikk.
-          </p>
-        </CardContent>
       </Card>
 
       <GiftCardImportCard onImported={loadData} />
