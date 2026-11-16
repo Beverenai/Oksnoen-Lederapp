@@ -2487,7 +2487,7 @@ tools.push({
 tools.push({
   name: "deltaker_helse",
   description:
-    "Sykepleier og hendelser for én deltakelse: helseinfo fra booking og sykepleier, sykepleierens notater, helsehendelser og hendelser meldt av ledere. Krever deltakelsens id.",
+    "Sykepleier og hendelser for én deltakelse: helseinfo fra booking og sykepleier, sykepleierens notater, helsehendelser, hendelser meldt av ledere og sykepleierrapporter der barnet er nevnt. Alt med tidspunkt og hvem som skrev det. Krever deltakelsens id.",
   inputSchema: {
     type: "object",
     properties: { id: { type: "string", description: "Deltakelsens id (deltaker_id)" } },
@@ -2496,17 +2496,25 @@ tools.push({
   run: async (db, args) => {
     const id = str(args.id);
     if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Oppgi deltakelsens id.");
-    const [info, notes, events, links, leaders] = await Promise.all([
+    const [info, notes, events, links, leaders, mentions] = await Promise.all([
       db.from("participant_health_info").select("info, updated_at").eq("participant_id", id),
       db.from("participant_health_notes").select("content, created_at, created_by").eq("participant_id", id).order("created_at"),
       db.from("participant_health_events").select("event_type, severity, description, created_at, created_by").eq("participant_id", id).order("created_at"),
       db.from("participant_incident_participants").select("incident_id").eq("participant_id", id),
       db.from("leaders").select("id, name"),
+      db.from("nurse_report_mentions").select("mention_text, created_at, report_id").eq("participant_id", id).order("created_at"),
     ]);
-    for (const r of [info, notes, events, links]) if (r.error) throw new Error(r.error.message);
+    for (const r of [info, notes, events, links, mentions]) if (r.error) throw new Error(r.error.message);
+    // Sykepleierens rapporter der barnet er nevnt: hele rapporten, når og hvem.
+    const reportIds = [...new Set((mentions.data ?? []).map((m) => m.report_id))];
+    const reports = reportIds.length
+      ? await db.from("nurse_reports").select("id, content, created_at, created_by").in("id", reportIds)
+      : { data: [], error: null };
+    if (reports.error) throw new Error(reports.error.message);
+    const reportBy = new Map((reports.data ?? []).map((r) => [r.id, r]));
     const ids = (links.data ?? []).map((l) => l.incident_id);
     const incidents = ids.length
-      ? await db.from("participant_incidents").select("title, category, severity, description, created_at").in("id", ids).order("created_at")
+      ? await db.from("participant_incidents").select("title, category, severity, description, created_at, leader_id").in("id", ids).order("created_at")
       : { data: [], error: null };
     if (incidents.error) throw new Error(incidents.error.message);
     const who = new Map((leaders.data ?? []).map((l) => [l.id, l.name]));
@@ -2526,12 +2534,22 @@ tools.push({
         alvorlighet: r.severity,
         beskrivelse: r.description,
         tidspunkt: r.created_at,
+        av: who.get(r.leader_id) ?? null,
       })),
+      sykepleierrapporter: (mentions.data ?? []).map((m) => {
+        const r = reportBy.get(m.report_id);
+        return {
+          om_barnet: m.mention_text,
+          rapport: r?.content ?? null,
+          tidspunkt: r?.created_at ?? m.created_at,
+          av: r ? who.get(r.created_by) ?? null : null,
+        };
+      }),
     };
   },
 });
 
-const SERVICE_VERSION = "2.3.1";
+const SERVICE_VERSION = "2.3.2";
 
 // Helsesjekk: prøver alle verktøyene og melder hvilke som virker. Brukes av
 // admin («Tilkoblinger») for å oppdage at en endring i appen har knekt noe.
