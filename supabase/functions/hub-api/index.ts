@@ -2551,7 +2551,92 @@ tools.push({
   },
 });
 
-const SERVICE_VERSION = "2.4.0";
+// Betaling og Gomla for én deltakelse: det Sophie trenger når en forelder spør om
+// faktura, betaling eller kioskpenger.
+tools.push({
+  name: "deltaker_booking",
+  description:
+    "Booking, betaling og Gomla for én deltakelse: pris, rabatt, forskudd, betalingsstatus, når det ble betalt og fakturert, foresatt som booket, kioskpenger fra bookingen, Gomla-saldo, innskudd og kjøp. Krever deltakelsens id.",
+  inputSchema: {
+    type: "object",
+    properties: { id: { type: "string", description: "Deltakelsens id (deltaker_id)" } },
+    required: ["id"],
+  },
+  sample: async (db) => {
+    const { data } = await db.from("participant_bookings").select("participant_id").not("participant_id", "is", null).limit(1);
+    return data?.[0] ? { id: data[0].participant_id } : null;
+  },
+  run: async (db, args) => {
+    const id = str(args.id);
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Oppgi deltakelsens id.");
+    const [b, bal, dep, sales, leaders] = await Promise.all([
+      db.from("participant_bookings")
+        .select("reservation_number, reservation_code, booking_time, status, seat_confirmed, cancelled_date, price, discount, prepayment, payment_status, paid_date, invoiced_date, payment_reference, kiosk_money, sweater_size, friends, notes_info, guardian_first_name, guardian_last_name, guardian_phone, guardian_email, period_label")
+        .eq("participant_id", id),
+      db.from("kiosk_balances").select("deposited, spent, balance").eq("participant_id", id).limit(1),
+      db.from("kiosk_deposits").select("amount, kind, note, created_at, created_by").eq("participant_id", id).order("created_at"),
+      db.from("kiosk_sales").select("id, total, created_at, sold_by").eq("participant_id", id).is("voided_at", null).order("created_at"),
+      db.from("leaders").select("id, name"),
+    ]);
+    for (const r of [b, bal, dep, sales]) if (r.error) throw new Error(r.error.message);
+    const who = new Map((leaders.data ?? []).map((l) => [l.id, l.name]));
+    const saleIds = (sales.data ?? []).map((x) => x.id);
+    const items = saleIds.length
+      ? await db.from("kiosk_sale_items").select("sale_id, product_name, quantity").in("sale_id", saleIds)
+      : { data: [], error: null };
+    const itemsBy = new Map<string, string[]>();
+    for (const i of items.data ?? []) {
+      itemsBy.set(i.sale_id, [...(itemsBy.get(i.sale_id) ?? []), `${i.quantity > 1 ? `${i.quantity}× ` : ""}${i.product_name}`]);
+    }
+    const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+    return {
+      bookinger: (b.data ?? []).map((r) => ({
+        periode: r.period_label,
+        reservasjon: r.reservation_number ?? r.reservation_code ?? null,
+        booket: r.booking_time,
+        status: r.status,
+        plass_bekreftet: r.seat_confirmed,
+        kansellert: r.cancelled_date,
+        pris: num(r.price),
+        rabatt: num(r.discount),
+        forskudd: num(r.prepayment),
+        betalingsstatus: r.payment_status,
+        betalt: r.paid_date,
+        fakturert: r.invoiced_date,
+        betalingsreferanse: r.payment_reference,
+        kioskpenger: num(r.kiosk_money),
+        genser: r.sweater_size,
+        venner: r.friends,
+        opplysninger: r.notes_info,
+        foresatt: {
+          navn: [r.guardian_first_name, r.guardian_last_name].filter(Boolean).join(" ") || null,
+          telefon: r.guardian_phone,
+          epost: r.guardian_email,
+        },
+      })),
+      gomla: {
+        innskudd: num(bal.data?.[0]?.deposited),
+        brukt: num(bal.data?.[0]?.spent),
+        saldo: num(bal.data?.[0]?.balance),
+        innskudd_liste: (dep.data ?? []).map((d) => ({
+          belop: num(d.amount),
+          type: d.kind,
+          merknad: d.note,
+          tidspunkt: d.created_at,
+          av: who.get(d.created_by) ?? null,
+        })),
+        kjop: (sales.data ?? []).map((x) => ({
+          sum: num(x.total),
+          tidspunkt: x.created_at,
+          solgt_av: who.get(x.sold_by) ?? null,
+          varer: itemsBy.get(x.id) ?? [],
+        })),
+      },
+    };
+  },
+});
+
+const SERVICE_VERSION = "2.5.0";
 
 // Helsesjekk: prøver alle verktøyene og melder hvilke som virker. Brukes av
 // admin («Tilkoblinger») for å oppdage at en endring i appen har knekt noe.
