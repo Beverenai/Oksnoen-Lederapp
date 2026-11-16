@@ -31,16 +31,20 @@ GRANT SELECT, DELETE ON public.wristband_assignments TO authenticated;
 GRANT ALL ON public.wristband_assignments TO service_role;
 
 -- Lesing for innloggede ledere. Skriving går bare gjennom funksjonene under.
+DROP POLICY IF EXISTS "Leaders can view wristband assignments" ON public.wristband_assignments;
 CREATE POLICY "Leaders can view wristband assignments"
   ON public.wristband_assignments FOR SELECT TO authenticated
   USING (public.current_leader_id() IS NOT NULL);
+DROP POLICY IF EXISTS "Admins delete wristband assignments" ON public.wristband_assignments;
 CREATE POLICY "Admins delete wristband assignments"
   ON public.wristband_assignments FOR DELETE TO authenticated
   USING (public.is_admin());
 
+DROP TRIGGER IF EXISTS trg_wristband_assignments_updated ON public.wristband_assignments;
 CREATE TRIGGER trg_wristband_assignments_updated
   BEFORE UPDATE ON public.wristband_assignments
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS trg_wristband_assignments_period ON public.wristband_assignments;
 CREATE TRIGGER trg_wristband_assignments_period
   BEFORE INSERT ON public.wristband_assignments
   FOR EACH ROW EXECUTE FUNCTION public.set_period_id_default();
