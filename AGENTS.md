@@ -11,3 +11,6 @@
 - Behold tilgangskontrollen (`HUB_API_KEY`) og loggingen til `hub_api_log` uendret.
 - **Admin skal kunne lese alt** (bestemt av August 16.11.2026). Verktøyene `datakart` og `rader` åpner hver tabell som står i `TABELLER`. En ny tabell må legges til der, med område og beskrivelse, i samme endring som den lages.
 - Disse skal aldri ut gjennom hub-API-et: PIN-koder (`admin_pins`), push-nøkler (`push_subscriptions`), `app_config`, og det sosiale mellom lederne (sveip, match, meldinger, spill). Avsender på anonyme meldinger i postkassen skal alltid skjules.
+
+- Arrival history is written by database triggers; bulk controls use the security-invoker RPC so existing participant permissions remain authoritative.
+- Session saves use a shared config-and-history writer and report partial failures explicitly so missing history cannot be presented as a successful save.
