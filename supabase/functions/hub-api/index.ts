@@ -2424,7 +2424,61 @@ tools.push(
   },
 );
 
-const SERVICE_VERSION = "2.1.0";
+
+// ---------- Nye bilder: huben henter og lagrer bildene av barna ----------
+//
+// Hver gang et bilde av en deltaker legges inn eller byttes, setter databasen
+// image_changed_at. Huben spør etter alt som er endret siden sist den spurte, og
+// lagrer bildet på barnet i sitt eget register. Svaret er sortert eldst først, så
+// huben kan fortsette fra siste «endret» uten å miste noe.
+tools.push({
+  name: "nye_bilder",
+  description:
+    "Bilder av deltakere som er lagt inn eller byttet siden et tidspunkt, eldst først: person_id, navn, fødselsdato, perioden og år, lenke til bildet og når det ble endret. Uten «siden» kommer alle.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      siden: { type: "string", description: "ISO-tidspunkt. Bare bilder endret etter dette." },
+      maks: { type: "number", description: "Maks antall, standard 200, høyst 500" },
+    },
+  },
+  run: async (db, args) => {
+    const maks = num(args.maks, 200, 1, 500);
+    const siden = str(args.siden);
+    if (siden && Number.isNaN(Date.parse(siden))) throw new Error("«siden» må være et ISO-tidspunkt.");
+    let q = db
+      .from("participants")
+      .select("id, person_id, name, first_name, last_name, birth_date, image_url, image_thumb_url, image_changed_at, periods(id, name, season_year)")
+      .not("image_changed_at", "is", null)
+      .or("image_url.not.is.null,image_thumb_url.not.is.null")
+      .order("image_changed_at", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(maks + 1);
+    if (siden) q = q.gt("image_changed_at", siden);
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    // deno-lint-ignore no-explicit-any
+    const rows = (data ?? []) as any[];
+    return {
+      antall: Math.min(rows.length, maks),
+      flere_finnes: rows.length > maks,
+      bilder: rows.slice(0, maks).map((r) => ({
+        deltakelse_id: r.id,
+        person_id: r.person_id ?? null,
+        navn: r.name,
+        fornavn: r.first_name ?? null,
+        etternavn: r.last_name ?? null,
+        fodselsdato: r.birth_date ?? null,
+        periode: r.periods ? { id: r.periods.id, navn: r.periods.name, aar: r.periods.season_year } : null,
+        bilde: r.image_url ?? r.image_thumb_url,
+        miniatyr: r.image_thumb_url ?? null,
+        endret: r.image_changed_at,
+      })),
+    };
+  },
+});
+
+const SERVICE_VERSION = "2.2.0";
 
 // Helsesjekk: prøver alle verktøyene og melder hvilke som virker. Brukes av
 // admin («Tilkoblinger») for å oppdage at en endring i appen har knekt noe.
