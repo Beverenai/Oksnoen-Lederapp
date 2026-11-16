@@ -892,6 +892,36 @@ export type Database = {
           },
         ]
       }
+      hub_api_log: {
+        Row: {
+          args: Json
+          created_at: string
+          duration_ms: number | null
+          id: number
+          ok: boolean
+          tool: string
+          via: string
+        }
+        Insert: {
+          args?: Json
+          created_at?: string
+          duration_ms?: number | null
+          id?: never
+          ok?: boolean
+          tool: string
+          via?: string
+        }
+        Update: {
+          args?: Json
+          created_at?: string
+          duration_ms?: number | null
+          id?: never
+          ok?: boolean
+          tool?: string
+          via?: string
+        }
+        Relationships: []
+      }
       kiosk_categories: {
         Row: {
           color: string
