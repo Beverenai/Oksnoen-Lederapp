@@ -111,7 +111,16 @@ const periodOut = (p: Period) => ({
   start: p.start_date,
   slutt: p.end_date,
   aktiv: !!p.is_active,
+  // «Aktiv» er en bryter i appen og kan stå på etter at perioden er over.
+  pagar_naa: !!p.start_date && !!p.end_date && p.start_date <= osloToday() && osloToday() <= p.end_date,
+  ...(p.is_active && p.end_date && p.end_date < osloToday()
+    ? { merknad: `Perioden er markert som aktiv i appen, men sluttet ${p.end_date}. Det er ikke leir nå.` }
+    : {}),
 });
+
+function osloToday() {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Oslo" }).format(new Date());
+}
 
 // ---------- Verktøyene ----------
 
@@ -254,7 +263,7 @@ const tools: Tool[] = [
       const id = str(args.id);
       const navn = str(args.navn).replace(/[%,()]/g, "");
       if (!id && !navn) throw new Error("Oppgi id eller navn.");
-      const cols = "id, person_id, name, birth_date, room, has_arrived, times_attended, insj_points, period_id, image_thumb_url, cabins(name), participant_teams(name)";
+      const cols = "id, person_id, name, birth_date, room, has_arrived, times_attended, insj_points, period_id, image_thumb_url, image_url, cabins(name), participant_teams(name)";
       // deno-lint-ignore no-explicit-any
       let found: any[] = [];
       if (id) {
@@ -282,7 +291,7 @@ const tools: Tool[] = [
       if (r.person_id) {
         const { data } = await db
           .from("participants")
-          .select("id, room, image_thumb_url, cabins(name), periods(name, season_year)")
+          .select("id, room, image_thumb_url, image_url, cabins(name), periods(name, season_year)")
           .eq("person_id", r.person_id)
           .neq("id", r.id);
         andre = data ?? [];
@@ -299,14 +308,14 @@ const tools: Tool[] = [
         aar_paa_oksnoen: r.times_attended ?? null,
         insj_poeng: r.insj_points ?? 0,
         armband: band.data?.[0]?.code ?? null,
-        bilde: r.image_thumb_url ?? null,
+        bilde: r.image_thumb_url ?? r.image_url ?? null,
         andre_deltakelser: andre.map((d) => ({
           id: d.id,
           periode: d.periods?.name ?? null,
           aar: d.periods?.season_year ?? null,
           hytte: d.cabins?.name ?? null,
           rom: d.room ?? null,
-          bilde: d.image_thumb_url ?? null,
+          bilde: d.image_thumb_url ?? d.image_url ?? null,
         })),
         aktiviteter: acts.map((a) => ({
           aktivitet: a.activity,
@@ -335,7 +344,7 @@ const tools: Tool[] = [
       const personId = str(args.person_id);
       const navn = str(args.navn).replace(/[%,()]/g, "");
       if (!personId && !navn) throw new Error("Oppgi person_id eller navn.");
-      const cols = "id, person_id, name, birth_date, room, times_attended, image_thumb_url, period_id, cabins(name), periods(name, season_year, start_date)";
+      const cols = "id, person_id, name, birth_date, room, times_attended, image_thumb_url, image_url, period_id, cabins(name), periods(name, season_year, start_date)";
       const rows = await fetchAll(() => {
         let q = db.from("participants").select(cols).not("person_id", "is", null).order("name");
         q = personId ? q.eq("person_id", personId) : q.ilike("name", `%${navn}%`);
@@ -383,7 +392,7 @@ const tools: Tool[] = [
             hytte: r.cabins?.name ?? null,
             rom: r.room ?? null,
             antall_aktiviteter: actCount.get(r.id) ?? 0,
-            bilde: r.image_thumb_url ?? null,
+            bilde: r.image_thumb_url ?? r.image_url ?? null,
           })),
         };
       });
