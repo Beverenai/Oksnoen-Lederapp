@@ -29,6 +29,13 @@
       "when": 1794787516415,
       "tag": "0003_qr_wristbands",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794787807760,
+      "tag": "0004_tighten_permissive_policies",
+      "breakpoints": true
     }
   ]
 }
