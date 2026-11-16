@@ -118,6 +118,8 @@ interface Tool {
   description: string;
   inputSchema: Record<string, unknown>;
   run: (db: Db, args: Args) => Promise<unknown>;
+  /** Argumenter helsesjekken kan bruke. null betyr at det ikke finnes data å teste med. */
+  sample?: (db: Db) => Promise<Args | null>;
 }
 
 const periodeProp = {
@@ -234,6 +236,12 @@ const tools: Tool[] = [
   },
   {
     name: "deltaker",
+    sample: async (db) => {
+      const { data: period } = await db.from("periods").select("id").eq("is_active", true).limit(1);
+      if (!period?.[0]) return null;
+      const { data } = await db.from("participants").select("id").eq("period_id", period[0].id).limit(1);
+      return data?.[0] ? { id: data[0].id } : null;
+    },
     description: "Alt om én deltaker i en periode: hytte, rom, lag, armbånd, og alle aktiviteter med tidspunkt og hvem som registrerte. Oppgi id eller navn.",
     inputSchema: {
       type: "object",
@@ -473,6 +481,37 @@ const tools: Tool[] = [
   },
 ];
 
+const SERVICE_NAME = "oksnoen-lederapp";
+const SERVICE_VERSION = "1.1.0";
+
+// Helsesjekk: prøver alle verktøyene og melder hvilke som virker. Brukes av
+// admin («Tilkoblinger») for å oppdage at en endring i appen har knekt noe.
+tools.push({
+  name: "helsesjekk",
+  description: "Prøver alle verktøyene i denne tjenesten og melder hvilke som virker og hvilke som feiler. Bruk dette for å sjekke at koblingen er i orden.",
+  inputSchema: { type: "object", properties: {} },
+  run: async (db) => {
+    const results = [];
+    for (const tool of tools) {
+      if (tool.name === "helsesjekk") continue;
+      const started = Date.now();
+      try {
+        const args = tool.sample ? await tool.sample(db) : {};
+        if (args === null) {
+          results.push({ verktoy: tool.name, ok: true, merknad: "ingen data å teste med", ms: Date.now() - started });
+          continue;
+        }
+        await tool.run(db, args);
+        results.push({ verktoy: tool.name, ok: true, ms: Date.now() - started });
+      } catch (err) {
+        results.push({ verktoy: tool.name, ok: false, feil: (err as Error).message, ms: Date.now() - started });
+      }
+    }
+    const feil = results.filter((r) => !r.ok).length;
+    return { ok: feil === 0, tjeneste: SERVICE_NAME, versjon: SERVICE_VERSION, antall_verktoy: results.length, feil, verktoy: results, sjekket: new Date().toISOString() };
+  },
+});
+
 const toolByName = new Map(tools.map((t) => [t.name, t]));
 
 // ---------- Kjøring og logg ----------
@@ -506,7 +545,7 @@ async function handleRpc(db: Db, msg: any): Promise<unknown | null> {
       return reply({
         protocolVersion: typeof msg.params?.protocolVersion === "string" ? msg.params.protocolVersion : "2025-06-18",
         capabilities: { tools: {} },
-        serverInfo: { name: "oksnoen-lederapp", version: "1.0.0" },
+        serverInfo: { name: SERVICE_NAME, version: SERVICE_VERSION },
         instructions:
           "Lesetilgang til Oksnøen Leirs lederapp. Start med leir_status eller perioder. Alle verktøy gjelder aktiv periode hvis ikke periode oppgis. Ingenting kan endres herfra.",
       });
