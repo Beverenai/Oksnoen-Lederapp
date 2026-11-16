@@ -4125,6 +4125,7 @@ export type Database = {
           has_arrived: boolean | null
           id: string
           image_aged_url: string | null
+          image_changed_at: string | null
           image_thumb_url: string | null
           image_url: string | null
           insj_points: number
@@ -4155,6 +4156,7 @@ export type Database = {
           has_arrived?: boolean | null
           id?: string
           image_aged_url?: string | null
+          image_changed_at?: string | null
           image_thumb_url?: string | null
           image_url?: string | null
           insj_points?: number
@@ -4185,6 +4187,7 @@ export type Database = {
           has_arrived?: boolean | null
           id?: string
           image_aged_url?: string | null
+          image_changed_at?: string | null
           image_thumb_url?: string | null
           image_url?: string | null
           insj_points?: number
