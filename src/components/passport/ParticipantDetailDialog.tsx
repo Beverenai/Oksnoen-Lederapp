@@ -28,6 +28,7 @@ import { TeamBadge } from '@/components/participants/TeamBadge';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 import { IncidentSheet } from '@/components/incidents/IncidentSheet';
 import { SendParticipantTaskSheet } from '@/components/passport/SendParticipantTaskSheet';
+import { ParticipantQrButton } from '@/components/qr/ParticipantQrButton';
 import {
   CATEGORY_LABELS,
   CATEGORY_COLORS,
@@ -1039,6 +1040,11 @@ export const ParticipantDetailDialog = ({
                     <Send className="h-4 w-4 mr-2 text-primary" />
                     Send oppdrag til leder
                   </Button>
+                )}
+
+                {/* Admin: QR-kode for deltakeren (til testing uten utskrift) */}
+                {isAdmin && participant && (
+                  <ParticipantQrButton participantId={participant.id} participantName={participant.name} disabled={readOnly} />
                 )}
 
                 {/* Admin/Nurse: booking info (guardian contact) */}
