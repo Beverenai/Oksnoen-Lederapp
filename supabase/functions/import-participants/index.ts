@@ -40,6 +40,24 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Importen kjører med full databasetilgang, så bare admin får bruke den.
+    const denied = await requireAdmin(req, supabase);
+    if (denied) return denied;
+
+    // Gjelder bare aktiv periode. Tidligere perioder er historikk og skal ikke røres.
+    const { data: activePeriod } = await supabase
+      .from('periods')
+      .select('id')
+      .eq('is_active', true)
+      .maybeSingle();
+    if (!activePeriod) {
+      return new Response(
+        JSON.stringify({ error: 'Ingen aktiv periode. Velg periode før import.' }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const periodId: string = activePeriod.id;
+
     const { participants } = await req.json() as { participants: ParticipantImport[] };
 
     console.log(`Processing ${participants.length} participants for import`);
@@ -76,7 +94,8 @@ Deno.serve(async (req) => {
       const { data: existingParticipants, error: findError } = await supabase
         .from('participants')
         .select('id, name')
-        .ilike('name', fullName);
+        .eq('period_id', periodId)
+        .ilike('name', fullName.replace(/[\\%_]/g, (c) => `\\${c}`));
 
       if (findError) {
         console.error(`Error finding participant ${fullName}:`, findError);
@@ -205,3 +224,32 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+// Returnerer et avslag hvis den som kaller ikke er admin, ellers null.
+async function requireAdmin(req: Request, supabase: any): Promise<Response | null> {
+  const deny = (error: string, status: number) =>
+    new Response(JSON.stringify({ error }), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) return deny('Unauthorized', 401);
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+  if (userError || !userData?.user) return deny('Invalid token', 401);
+
+  const { data: leader } = await supabase
+    .from('leaders')
+    .select('id')
+    .eq('auth_user_id', userData.user.id)
+    .maybeSingle();
+  if (!leader) return deny('Leader not found', 403);
+
+  const { data: roles } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('leader_id', leader.id);
+  const isAdmin = (roles || []).some((r: { role: string }) => r.role === 'admin' || r.role === 'superadmin');
+  return isAdmin ? null : deny('Admin access required', 403);
+}

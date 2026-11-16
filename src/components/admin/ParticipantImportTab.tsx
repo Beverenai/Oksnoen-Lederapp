@@ -707,28 +707,41 @@ export function ParticipantImportTab() {
     }
   };
 
+  // Sletter deltakerne i AKTIV periode. Tidligere perioder er historikk
+  // (bilder, aktiviteter, hytter) og skal aldri slettes herfra.
   const deleteAllParticipants = async () => {
     hapticWarning();
-    if (!confirm('⚠️ ADVARSEL: Dette vil slette ALLE deltakere og tilhørende data (aktiviteter, helsenotater, etc.).\n\nDette kan ikke angres. Er du sikker?')) return;
-    if (!confirm('Siste sjanse: Er du HELT sikker på at du vil slette alle deltakere?')) return;
+
+    const { data: activePeriod } = await supabase
+      .from('periods')
+      .select('id, name')
+      .eq('is_active', true)
+      .maybeSingle();
+    if (!activePeriod) {
+      showError('Ingen aktiv periode. Ingenting ble slettet.');
+      return;
+    }
+
+    if (!confirm(`⚠️ ADVARSEL: Dette vil slette alle deltakere i ${activePeriod.name} og tilhørende data (aktiviteter, helsenotater, etc.).\n\nTidligere perioder røres ikke. Dette kan ikke angres. Er du sikker?`)) return;
+    if (!confirm(`Siste sjanse: Er du HELT sikker på at du vil slette alle deltakere i ${activePeriod.name}?`)) return;
 
     setIsDeleting(true);
     try {
-      // Delete related data first (activities, health info/notes/events) so a new period starts clean
-      await supabase.from('participant_activities').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('participant_health_notes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('participant_health_events').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('participant_health_info').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      const periodId = activePeriod.id;
+      await supabase.from('participant_activities').delete().eq('period_id', periodId);
+      await supabase.from('participant_health_notes').delete().eq('period_id', periodId);
+      await supabase.from('participant_health_events').delete().eq('period_id', periodId);
+      await supabase.from('participant_health_info').delete().eq('period_id', periodId);
 
       const { error } = await supabase
         .from('participants')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
+        .eq('period_id', periodId);
 
       if (error) throw error;
-      
+
       loadData();
-      showSuccess('Alle deltakere er slettet');
+      showSuccess(`Deltakerne i ${activePeriod.name} er slettet`);
     } catch (error) {
       console.error('Error deleting participants:', error);
       showError('Kunne ikke slette deltakere');
@@ -773,12 +786,12 @@ export function ParticipantImportTab() {
               ) : (
                 <Trash2 className="w-4 h-4 mr-2" />
               )}
-              Slett alle deltakere
+              Slett deltakerne i aktiv periode
             </Button>
           </div>
           
           <p className="text-sm text-muted-foreground">
-            Bruk denne knappen for å starte en ny periode. Alle eksisterende deltakere vil bli slettet.
+            Sletter bare deltakerne i aktiv periode. Tidligere perioder og år blir stående som historikk.
           </p>
         </CardContent>
       </Card>

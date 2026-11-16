@@ -3437,6 +3437,7 @@ export type Database = {
           payment_status: string | null
           period_id: string | null
           period_label: string | null
+          person_id: string | null
           postal_city: string | null
           postal_code: string | null
           prepayment: number | null
@@ -3474,6 +3475,7 @@ export type Database = {
           payment_status?: string | null
           period_id?: string | null
           period_label?: string | null
+          person_id?: string | null
           postal_city?: string | null
           postal_code?: string | null
           prepayment?: number | null
@@ -3511,6 +3513,7 @@ export type Database = {
           payment_status?: string | null
           period_id?: string | null
           period_label?: string | null
+          person_id?: string | null
           postal_city?: string | null
           postal_code?: string | null
           prepayment?: number | null
@@ -4042,6 +4045,7 @@ export type Database = {
           pass_written: boolean | null
           pass_written_at: string | null
           pass_written_by: string | null
+          person_id: string | null
           period_id: string | null
           room: string | null
           team_id: string | null
@@ -4069,6 +4073,7 @@ export type Database = {
           pass_written?: boolean | null
           pass_written_at?: string | null
           pass_written_by?: string | null
+          person_id?: string | null
           period_id?: string | null
           room?: string | null
           team_id?: string | null
@@ -4096,6 +4101,7 @@ export type Database = {
           pass_written?: boolean | null
           pass_written_at?: string | null
           pass_written_by?: string | null
+          person_id?: string | null
           period_id?: string | null
           room?: string | null
           team_id?: string | null

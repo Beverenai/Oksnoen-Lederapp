@@ -202,7 +202,7 @@ const tools: Tool[] = [
       const rows = await fetchAll(() => {
         let q = db
           .from("participants")
-          .select("id, name, birth_date, room, has_arrived, times_attended, insj_points, image_thumb_url, cabins(name), participant_teams(name)")
+          .select("id, person_id, name, birth_date, room, has_arrived, times_attended, insj_points, image_thumb_url, cabins(name), participant_teams(name)")
           .eq("period_id", p.id)
           .order("name");
         if (sok) q = q.ilike("name", `%${sok}%`);
@@ -220,6 +220,7 @@ const tools: Tool[] = [
         .filter((r) => !hytte || (r.cabins?.name ?? "").toLowerCase().includes(hytte))
         .map((r) => ({
           id: r.id,
+          person_id: r.person_id ?? null,
           navn: r.name,
           alder: age(r.birth_date),
           hytte: r.cabins?.name ?? null,
@@ -251,7 +252,7 @@ const tools: Tool[] = [
       const id = str(args.id);
       const navn = str(args.navn).replace(/[%,()]/g, "");
       if (!id && !navn) throw new Error("Oppgi id eller navn.");
-      const cols = "id, name, birth_date, room, has_arrived, times_attended, insj_points, period_id, image_thumb_url, cabins(name), participant_teams(name)";
+      const cols = "id, person_id, name, birth_date, room, has_arrived, times_attended, insj_points, period_id, image_thumb_url, cabins(name), participant_teams(name)";
       // deno-lint-ignore no-explicit-any
       let found: any[] = [];
       if (id) {
@@ -273,8 +274,20 @@ const tools: Tool[] = [
         db.from("leaders").select("id, name"),
       ]);
       const leaderName = new Map((leaders.data ?? []).map((l) => [l.id, l.name]));
+      // Samme barn i andre perioder og år, funnet på den faste person-ID-en.
+      // deno-lint-ignore no-explicit-any
+      let andre: any[] = [];
+      if (r.person_id) {
+        const { data } = await db
+          .from("participants")
+          .select("id, room, image_thumb_url, cabins(name), periods(name, season_year)")
+          .eq("person_id", r.person_id)
+          .neq("id", r.id);
+        andre = data ?? [];
+      }
       return {
         id: r.id,
+        person_id: r.person_id ?? null,
         navn: r.name,
         alder: age(r.birth_date),
         hytte: r.cabins?.name ?? null,
@@ -285,6 +298,14 @@ const tools: Tool[] = [
         insj_poeng: r.insj_points ?? 0,
         armband: band.data?.[0]?.code ?? null,
         bilde: r.image_thumb_url ?? null,
+        andre_deltakelser: andre.map((d) => ({
+          id: d.id,
+          periode: d.periods?.name ?? null,
+          aar: d.periods?.season_year ?? null,
+          hytte: d.cabins?.name ?? null,
+          rom: d.room ?? null,
+          bilde: d.image_thumb_url ?? null,
+        })),
         aktiviteter: acts.map((a) => ({
           aktivitet: a.activity,
           tidspunkt: a.completed_at,
@@ -482,7 +503,7 @@ const tools: Tool[] = [
 ];
 
 const SERVICE_NAME = "oksnoen-lederapp";
-const SERVICE_VERSION = "1.1.0";
+const SERVICE_VERSION = "1.2.0";
 
 // Helsesjekk: prøver alle verktøyene og melder hvilke som virker. Brukes av
 // admin («Tilkoblinger») for å oppdage at en endring i appen har knekt noe.
