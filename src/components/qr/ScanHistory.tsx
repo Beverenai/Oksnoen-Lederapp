@@ -17,7 +17,7 @@ interface Props {
   participantById: Map<string, BandParticipant>;
   onClose: () => void;
   /** Kalles når en skanning er angret, så skanneren kan godta deltakeren på nytt. */
-  onUndone?: (participantId: string | null, activity: string) => void;
+  onUndone?: (participantId: string | null, activity: string, sessionId: string | null) => void;
 }
 
 interface Row {
@@ -30,6 +30,7 @@ interface Row {
   leader_id: string | null;
   at: string;
   local: boolean;
+  session_id: string | null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,7 +58,7 @@ export function ScanHistory({ open, periodId, participantById, onClose, onUndone
     queryFn: async () => {
       const { data, error } = await db
         .from('participant_activities')
-        .select('id, participant_id, activity, registered_by, scanned_at, completed_at, wristband_code, client_scan_id')
+        .select('id, participant_id, activity, registered_by, scanned_at, completed_at, wristband_code, client_scan_id, scan_session_id')
         .eq('source', 'qr')
         .eq('period_id', periodId)
         .order('completed_at', { ascending: false })
@@ -93,6 +94,7 @@ export function ScanHistory({ open, periodId, participantById, onClose, onUndone
         leader_id: leader?.id ?? null,
         at: s.scanned_at,
         local: true,
+        session_id: s.session_id ?? null,
       }));
     const localIds = new Set(local.map((r) => r.client_scan_id));
     const server: Row[] = serverRows
@@ -107,6 +109,7 @@ export function ScanHistory({ open, periodId, participantById, onClose, onUndone
         leader_id: r.registered_by ?? null,
         at: r.scanned_at ?? r.completed_at,
         local: false,
+        session_id: r.scan_session_id ?? null,
       }));
     return [...local, ...server];
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -134,7 +137,7 @@ export function ScanHistory({ open, periodId, participantById, onClose, onUndone
         await queryClient.invalidateQueries({ queryKey: ['qr-scan-history'] });
       }
       hapticImpact('medium');
-      onUndone?.(row.participant_id, row.activity);
+      onUndone?.(row.participant_id, row.activity, row.session_id);
     } catch {
       hapticError();
     } finally {

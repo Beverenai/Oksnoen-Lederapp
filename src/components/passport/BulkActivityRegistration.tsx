@@ -1,4 +1,5 @@
-import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { useRegistrationPopup } from '@/hooks/useRegistrationPopup';
+import { manualActivityRows } from '@/lib/activityRegistration';
 import { useState, useMemo, useEffect } from 'react';
 import { Search, Check, Users, Home, Sparkles, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,7 +15,6 @@ import { useParticipantTeams } from '@/hooks/useParticipantTeams';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 type Participant = Tables<'participants'>;
@@ -36,7 +36,7 @@ export function BulkActivityRegistration({
   onComplete,
   onClose,
 }: BulkActivityRegistrationProps) {
-  const { showSuccess, showError, showInfo } = useStatusPopup();
+  const { showSuccess, showError, popup } = useRegistrationPopup();
   const { leader } = useAuth();
   const { activities } = useActivities(true);
   const teamsEnabled = useTeamsEnabled();
@@ -101,10 +101,7 @@ export function BulkActivityRegistration({
         teamFilter === 'all' ||
         (teamFilter === 'none' && !(p as any).team_id) ||
         (p as any).team_id === teamFilter;
-      const hasActivity = p.participant_activities?.some(
-        (a) => a.activity.toLowerCase() === selectedActivity.toLowerCase()
-      );
-      return matchesSearch && matchesCabin && matchesTeam && !hasActivity;
+      return matchesSearch && matchesCabin && matchesTeam;
     });
   }, [participants, selectedActivity, searchQuery, cabinFilter, teamFilter]);
 
@@ -152,11 +149,7 @@ export function BulkActivityRegistration({
         setIsSubmitting(false);
         return;
       }
-      const inserts = Array.from(selectedParticipants).map((participantId) => ({
-        participant_id: participantId,
-        activity: activityName,
-        registered_by: leader?.id,
-      }));
+      const inserts = manualActivityRows(Array.from(selectedParticipants), activityName, leader?.id);
 
       const { error } = await supabase.from('participant_activities').insert(inserts);
 
@@ -164,7 +157,6 @@ export function BulkActivityRegistration({
 
       const successMessage = `${activityName} registrert for ${selectedParticipants.size} deltakere!`;
       showSuccess(successMessage);
-      toast.success(successMessage);
       hapticSuccess();
 
       setSelectedParticipants(new Set());
@@ -175,7 +167,6 @@ export function BulkActivityRegistration({
     } catch (error) {
       console.error('Error registering activities:', error);
       showError('Kunne ikke registrere aktiviteter');
-      toast.error('Kunne ikke registrere aktiviteter');
       hapticError();
     } finally {
       setIsSubmitting(false);
@@ -213,6 +204,7 @@ export function BulkActivityRegistration({
 
   return (
     <div className="space-y-3 pb-28">
+      {popup}
       {/* Activity picker — floating chips */}
       <div className="ios-surface p-3 space-y-3">
         <div className="relative">
@@ -368,7 +360,7 @@ export function BulkActivityRegistration({
           <div className="max-h-[52vh] overflow-y-auto overscroll-contain space-y-1.5">
             {filteredParticipants.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">
-                {searchQuery ? 'Ingen deltakere funnet' : 'Alle har allerede gjort denne aktiviteten'}
+                Ingen deltakere funnet
               </p>
             ) : (
               filteredParticipants.map((participant) => {

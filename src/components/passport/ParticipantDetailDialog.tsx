@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Send } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
+import { ActivityTimeline } from './ActivityTimeline';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
 import { compressImage } from '@/lib/imageUtils';
@@ -73,6 +74,8 @@ interface ParticipantActivity {
   id: string;
   activity: string;
   completed_at: string | null;
+  source?: string | null;
+  leaders?: { name: string } | null;
 }
 
 interface HealthInfo {
@@ -103,7 +106,7 @@ async function fetchParticipantDetail(participantId: string, seasonView = false)
   if (seasonView) {
     const [all, activitiesSeason, healthSeason] = await Promise.all([
       fetchSeasonParticipants(),
-      supabase.from('participant_activities').select('*').eq('participant_id', participantId),
+      supabase.from('participant_activities').select('*, leaders!participant_activities_registered_by_fkey(name)').eq('participant_id', participantId).order('completed_at', { ascending: false }),
       supabase.from('participant_health_info').select('*').eq('participant_id', participantId).maybeSingle(),
     ]);
     const row: any = all.find((p) => p.id === participantId);
@@ -117,7 +120,7 @@ async function fetchParticipantDetail(participantId: string, seasonView = false)
 
   const [participantRes, activitiesRes, healthRes] = await Promise.all([
     supabase.from('participants').select('*, cabins:cabin_id(id, name)').eq('id', participantId).single(),
-    supabase.from('participant_activities').select('*').eq('participant_id', participantId),
+    supabase.from('participant_activities').select('*, leaders!participant_activities_registered_by_fkey(name)').eq('participant_id', participantId).order('completed_at', { ascending: false }),
     supabase.from('participant_health_info').select('*').eq('participant_id', participantId).maybeSingle()
   ]);
 
@@ -946,6 +949,7 @@ export const ParticipantDetailDialog = ({
                     completedActivities={activities}
                     onActivityChanged={handleActivityChanged}
                   />
+                  <ActivityTimeline entries={activities} />
                 </div>
 
                 {/* Activity Notes */}
