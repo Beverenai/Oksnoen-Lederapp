@@ -7,6 +7,9 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Calendar, Loader2, Save, CheckCircle2 } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { saveSessionWithHistory } from '@/lib/participantHistory';
+import { StatusPopup } from '@/components/ui/StatusPopup';
 
 export type SessionData = {
   reminder: string;
@@ -60,7 +63,9 @@ function textToSession(text: string): SessionData {
 }
 
 export function SessionActivitiesSheet({ open, onOpenChange }: Props) {
-  const { showSuccess, showError } = useStatusPopup();
+  const { showError } = useStatusPopup();
+  const { leader } = useAuth();
+  const [saved, setSaved] = useState(false);
   const [data, setData] = useState<SessionsPayload>(EMPTY);
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
@@ -124,6 +129,10 @@ export function SessionActivitiesSheet({ open, onOpenChange }: Props) {
   };
 
   const save = async () => {
+    if (!leader) {
+      showError('Du må være innlogget for å lagre');
+      return;
+    }
     setSaving(true);
     try {
       const activeKey = String(data.active) as '1' | '2' | '3';
@@ -132,21 +141,19 @@ export function SessionActivitiesSheet({ open, onOpenChange }: Props) {
         sessions: { ...data.sessions, [activeKey]: textToSession(text) },
       };
       const key = sessionActivitiesKey(periodId);
-      const { error } = await supabase.from('app_config').upsert(
-        { key, value: JSON.stringify(payload), updated_at: new Date().toISOString() },
-        { onConflict: 'key' }
-      );
-      if (error) throw error;
-      showSuccess('Aktiviteter lagret!');
+      await saveSessionWithHistory(key, payload, periodId, leader.id);
+      setSaved(true);
       onOpenChange(false);
-    } catch {
-      showError('Kunne ikke lagre');
+    } catch (error) {
+      showError('Kunne ikke lagre', error instanceof Error ? error.message : undefined);
     } finally {
       setSaving(false);
     }
   };
 
   return (
+    <>
+    {saved && <StatusPopup type="success" title="Aktiviteter og historikk lagret!" onClose={() => setSaved(false)} />}
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-md w-full overflow-y-auto">
         <SheetHeader>
@@ -201,5 +208,6 @@ export function SessionActivitiesSheet({ open, onOpenChange }: Props) {
         </div>
       </SheetContent>
     </Sheet>
+    </>
   );
 }

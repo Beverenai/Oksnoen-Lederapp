@@ -297,6 +297,39 @@ export type Database = {
         }
         Relationships: []
       }
+      change_log: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          id: number
+          new_data: Json | null
+          old_data: Json | null
+          row_id: string | null
+          table_name: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: never
+          new_data?: Json | null
+          old_data?: Json | null
+          row_id?: string | null
+          table_name: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: never
+          new_data?: Json | null
+          old_data?: Json | null
+          row_id?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       chat_mention_notifications: {
         Row: {
           created_at: string
@@ -3336,6 +3369,62 @@ export type Database = {
           },
         ]
       }
+      participant_arrival_log: {
+        Row: {
+          arrived: boolean
+          changed_at: string
+          changed_by: string | null
+          id: string
+          participant_id: string
+          period_id: string | null
+        }
+        Insert: {
+          arrived: boolean
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          participant_id: string
+          period_id?: string | null
+        }
+        Update: {
+          arrived?: boolean
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          participant_id?: string
+          period_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participant_arrival_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_arrival_log_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "participant_arrival_log_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participant_arrival_log_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participant_bonus_points: {
         Row: {
           activity_key: string
@@ -4026,6 +4115,8 @@ export type Database = {
       participants: {
         Row: {
           activity_notes: string | null
+          arrived_at: string | null
+          arrived_by: string | null
           birth_date: string | null
           cabin_id: string | null
           created_at: string | null
@@ -4054,6 +4145,8 @@ export type Database = {
         }
         Insert: {
           activity_notes?: string | null
+          arrived_at?: string | null
+          arrived_by?: string | null
           birth_date?: string | null
           cabin_id?: string | null
           created_at?: string | null
@@ -4082,6 +4175,8 @@ export type Database = {
         }
         Update: {
           activity_notes?: string | null
+          arrived_at?: string | null
+          arrived_by?: string | null
           birth_date?: string | null
           cabin_id?: string | null
           created_at?: string | null
@@ -4109,6 +4204,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "participants_arrived_by_fkey"
+            columns: ["arrived_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "participants_cabin_id_fkey"
             columns: ["cabin_id"]
@@ -5166,6 +5268,51 @@ export type Database = {
         }
         Relationships: []
       }
+      session_log: {
+        Row: {
+          active_session: number
+          id: string
+          log_date: string
+          period_id: string | null
+          saved_at: string
+          saved_by: string | null
+          sessions: Json
+        }
+        Insert: {
+          active_session: number
+          id?: string
+          log_date?: string
+          period_id?: string | null
+          saved_at?: string
+          saved_by?: string | null
+          sessions: Json
+        }
+        Update: {
+          active_session?: number
+          id?: string
+          log_date?: string
+          period_id?: string | null
+          saved_at?: string
+          saved_by?: string | null
+          sessions?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_log_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_log_saved_by_fkey"
+            columns: ["saved_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_assignments: {
         Row: {
           assignment_type: string
@@ -5868,6 +6015,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_app_admin: { Args: never; Returns: boolean }
       is_in_match: { Args: { _match_id: string }; Returns: boolean }
       is_kitchen: { Args: never; Returns: boolean }
       is_leirskole: { Args: never; Returns: boolean }
@@ -5920,6 +6068,10 @@ export type Database = {
       }
       set_murder_game_active: { Args: { _active: boolean }; Returns: undefined }
       set_my_drink: { Args: { _drink: string }; Returns: string }
+      set_participants_arrived: {
+        Args: { _arrived: boolean; _ids: string[] }
+        Returns: number
+      }
       snapshot_leirskole_week: { Args: { _week_id: string }; Returns: number }
       snapshot_period_leaders: {
         Args: { _period_id?: string }
