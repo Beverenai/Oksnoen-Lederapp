@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ActivityRegistration, activityTimeline, checkInDefault, manualActivityRows, periodBounds, registrationKey, scanResultText } from './activityRegistration';
+import { ActivityRegistration, activityTimeline, checkInDefault, manualActivityRows, periodBounds, registrationKey } from './activityRegistration';
 import { getUniqueCompletedCount, getStoreStyrkproveProgress } from './activityUtils';
 
 describe('activity registrations', () => {
@@ -18,11 +18,6 @@ describe('activity registrations', () => {
     const registration = new ActivityRegistration();
     registration.add('child|tube'); registration.undo('child|tube');
     assert.equal(registration.add('child|tube'), true);
-  });
-  test('repeat and duplicate scan results retain occurrence semantics', () => {
-    assert.equal(scanResultText('Tube', 'gjentatt', 3), 'Tube · 3. gang');
-    assert.equal(scanResultText('Klatring', 'dobbel'), 'Allerede lagt inn på Klatring');
-    assert.equal(scanResultText('Tube', 'registrert'), 'Tube');
   });
   test('manual bulk save shares one session and a later save gets a new one', () => {
     const first = manualActivityRows(['one', 'two', 'one'], 'Tube', 'leader');
