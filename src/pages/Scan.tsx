@@ -14,6 +14,8 @@ import { activitySymbol } from '@/lib/activityStyle';
 import { formatWristbandCode } from '@/lib/wristband';
 import { cn } from '@/lib/utils';
 import { ActivityRegistration, registrationKey, scanResultText } from '@/lib/activityRegistration';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
 
 type Tone = 'ok' | 'wait' | 'warn' | 'unknown';
 
@@ -50,6 +52,7 @@ const RING: Record<Tone, string> = {
 
 export default function Scan() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const directory = useBandDirectory();
   const queue = useScanQueue();
   const { byCode, participantById } = directory;
@@ -340,14 +343,20 @@ export default function Scan() {
             <History className="h-5 w-5" />
             Historikk
           </button>
-          <button
+          <Button variant="ghost"
             type="button"
-            onClick={() => navigate('/qr')}
+            onClick={() => {
+              registrationRef.current.start();
+              setCount(0);
+              setActivity('');
+              setUndoStack([]);
+              if (isAdmin) navigate('/qr');
+            }}
             className="flex flex-1 flex-col items-center gap-1 rounded-2xl bg-black/55 py-2.5 text-xs backdrop-blur"
           >
-            <Link2 className="h-5 w-5" />
-            Bånd
-          </button>
+            {isAdmin ? <Link2 className="h-5 w-5" /> : <CheckCircle className="h-5 w-5" />}
+            {isAdmin ? 'Bånd' : 'Avslutt'}
+          </Button>
         </div>
       </div>
 
