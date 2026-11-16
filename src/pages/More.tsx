@@ -42,7 +42,7 @@ import { useAppMode } from '@/hooks/useAppMode';
 import { isLimitedAccessRoute, isLeirskoleRoute } from '@/lib/limitedAccess';
 import { useAccessMode } from '@/hooks/useViewMode';
 import ViewModeSwitcher from '@/components/layout/ViewModeSwitcher';
-import { IdCard, MessageCircle, Circle, Crown, Camera, ChevronRight, Tent, Users } from 'lucide-react';
+import { IdCard, MessageCircle, Circle, Crown, Camera, ChevronRight, Tent, Users, QrCode } from 'lucide-react';
 import { Award } from 'lucide-react';
 import { LeirskoleCompetenceSheet } from '@/components/leirskole/LeirskoleCompetenceSheet';
 import { useMyLeirskoleCompetencies } from '@/hooks/useLeirskole';
@@ -215,6 +215,7 @@ export default function More() {
       items: [
         { to: '/rope-control', icon: Anchor, label: 'Tau Kontroll' },
         { to: '/kiosk', icon: ShoppingBasket, label: 'Gomla' },
+        ...(isAdmin ? [{ to: '/skann', icon: QrCode, label: 'QR-kode' } as MoreItem] : []),
         { to: '/gjenglemt', icon: Shirt, label: 'Gjenglemt' },
         ...(sweatersEnabled
           ? [{ to: '/gensere', icon: Shirt, label: 'Gensere' } as MoreItem]

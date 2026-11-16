@@ -63,6 +63,10 @@ const Chat = lazy(() => import("@/pages/Chat"));
 const More = lazy(() => import("@/pages/More"));
 const LederpassPage = lazy(() => import("@/pages/Lederpass"));
 const Kiosk = lazy(() => import("@/pages/Kiosk"));
+const Qr = lazy(() => import("@/pages/Qr"));
+const Scan = lazy(() => import("@/pages/Scan"));
+const Band = lazy(() => import("@/pages/Band"));
+const QrTestSheet = lazy(() => import("@/pages/admin/QrTestSheet"));
 const Kjokken = lazy(() => import("@/pages/Kjokken"));
 const Klineliste = lazy(() => import("@/pages/Klineliste"));
 const PeriodArchive = lazy(() => import("@/pages/admin/PeriodArchive"));
@@ -269,6 +273,12 @@ function AppRoutes() {
         <Route path="/mer" element={<ProtectedRoute><More /></ProtectedRoute>} />
         <Route path="/lederpass" element={<ProtectedRoute><LederpassPage /></ProtectedRoute>} />
         <Route path="/kiosk" element={<ProtectedRoute><Kiosk /></ProtectedRoute>} />
+        {/* QR-kode: armbånd og skanning. Kun admin til funksjonen er testet. */}
+        <Route path="/skann" element={<ProtectedRoute><AdminOnly><Scan /></AdminOnly></ProtectedRoute>} />
+        <Route path="/qr" element={<ProtectedRoute><AdminOnly><Qr /></AdminOnly></ProtectedRoute>} />
+        <Route path="/admin/qr-test" element={<ProtectedRoute><AdminOnly><QrTestSheet /></AdminOnly></ProtectedRoute>} />
+        {/* Lenken i QR-koden på armbåndet. Viser ingen opplysninger uten innlogging. */}
+        <Route path="/b/:code" element={<Band />} />
         <Route path="/kjokken" element={<ProtectedRoute><Kjokken /></ProtectedRoute>} />
         <Route path="/postkasse" element={<ProtectedRoute><Mailbox /></ProtectedRoute>} />
         {/* Klineliste er deaktivert for vanlige ledere — kun admin. */}
