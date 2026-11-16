@@ -22,7 +22,7 @@ async function derive(pin: string, salt: Uint8Array): Promise<string> {
     ['deriveBits'],
   );
   const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: ITERATIONS },
+    { name: 'PBKDF2', hash: 'SHA-256', salt: new Uint8Array(salt), iterations: ITERATIONS },
     key,
     256,
   );
