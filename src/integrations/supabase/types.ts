@@ -3310,6 +3310,7 @@ export type Database = {
           participant_id: string
           period_id: string | null
           registered_by: string | null
+          scan_session_id: string | null
           scanned_at: string | null
           source: string
           wristband_code: string | null
@@ -3322,6 +3323,7 @@ export type Database = {
           participant_id: string
           period_id?: string | null
           registered_by?: string | null
+          scan_session_id?: string | null
           scanned_at?: string | null
           source?: string
           wristband_code?: string | null
@@ -3334,6 +3336,7 @@ export type Database = {
           participant_id?: string
           period_id?: string | null
           registered_by?: string | null
+          scan_session_id?: string | null
           scanned_at?: string | null
           source?: string
           wristband_code?: string | null
