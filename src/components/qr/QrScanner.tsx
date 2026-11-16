@@ -13,6 +13,8 @@ interface QrScannerProps {
   onInvalid?: (raw: string) => void;
   /** Pause lesingen uten å slå av kameraet (f.eks. mens man velger deltaker). */
   paused?: boolean;
+  /** Fyll hele forelderen (fullskjerm) i stedet for en avrundet rute. */
+  fill?: boolean;
   className?: string;
 }
 
@@ -38,7 +40,7 @@ function createNativeDetector(): Detector | null {
  * Kontinuerlig QR-skanner. All skanning i appen går gjennom denne komponenten,
  * slik at den kan byttes til en ren iOS-skanner senere uten å endre sidene.
  */
-export function QrScanner({ onCode, onInvalid, paused = false, className }: QrScannerProps) {
+export function QrScanner({ onCode, onInvalid, paused = false, fill = false, className }: QrScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -190,8 +192,8 @@ export function QrScanner({ onCode, onInvalid, paused = false, className }: QrSc
   };
 
   return (
-    <div className={cn('space-y-2', className)}>
-      <div className="relative overflow-hidden rounded-3xl bg-black aspect-[4/3] sm:aspect-video">
+    <div className={cn(fill ? 'absolute inset-0' : 'space-y-2', className)}>
+      <div className={cn('relative overflow-hidden bg-black', fill ? 'h-full w-full' : 'rounded-3xl aspect-[4/3] sm:aspect-video')}>
         <video
           ref={videoRef}
           playsInline
@@ -203,7 +205,8 @@ export function QrScanner({ onCode, onInvalid, paused = false, className }: QrSc
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div
               className={cn(
-                'h-[58%] aspect-square rounded-3xl border-[3px] border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.28)] transition-opacity',
+                fill ? 'w-[62%] max-w-xs' : 'h-[58%]',
+                'aspect-square rounded-3xl border-[3px] border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.28)] transition-opacity',
                 paused && 'opacity-40',
               )}
             />
@@ -218,7 +221,12 @@ export function QrScanner({ onCode, onInvalid, paused = false, className }: QrSc
             </Button>
           </div>
         )}
-        <div className="absolute bottom-3 right-3 flex gap-2">
+        <div
+          className={cn(
+            'absolute right-3 flex gap-2',
+            fill ? 'top-[calc(env(safe-area-inset-top,0px)+4.75rem)] flex-col' : 'bottom-3',
+          )}
+        >
           {torchAvailable && (
             <button
               type="button"
@@ -242,7 +250,7 @@ export function QrScanner({ onCode, onInvalid, paused = false, className }: QrSc
 
       {manualOpen && (
         <form
-          className="flex gap-2"
+          className={cn('flex gap-2', fill && 'absolute inset-x-4 top-1/2 z-10 -translate-y-1/2 rounded-3xl bg-background p-3 shadow-2xl')}
           onSubmit={(e) => {
             e.preventDefault();
             submitManual();

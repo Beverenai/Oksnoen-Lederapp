@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useCallback, useRef } from 'react';
+import { Fragment, ReactNode, useState, useEffect, useCallback, useRef } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,6 +33,7 @@ import {
   LayoutDashboard,
   Sun,
   Moon,
+  QrCode,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -263,6 +264,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
       ]
     : getBottomNavItems();
   const mainTabRoutes = bottomNavItems.map(item => item.to);
+  // QR-knappen midt i bunnmenyen. Kun admin til funksjonen er ferdig testet.
+  const showQrButton = isAdmin && accessMode !== 'leirskole';
   const isSubPage = !mainTabRoutes.includes(location.pathname);
 
   // Passkontroll is always available so leaders can see participants.
@@ -824,13 +827,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
           aria-label="Hovednavigasjon"
         >
           <div className="flex items-stretch justify-around px-1">
-            {bottomNavItems.map((item) => {
+            {bottomNavItems.map((item, navIndex) => {
               const isActive = location.pathname === item.to;
               const isHomeWithUnread = item.to === '/' && !hasRead && isRegularLeader;
 
               return (
+                <Fragment key={item.to}>
+                {showQrButton && navIndex === Math.floor(bottomNavItems.length / 2) && (
+                  <div className="flex flex-1 items-start justify-center">
+                    <Link
+                      to="/skann"
+                      aria-label="Skann QR-kode"
+                      onClick={() => hapticImpact('medium')}
+                      className="-mt-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40 ring-4 ring-background transition-transform active:scale-90"
+                    >
+                      <QrCode className="h-8 w-8" strokeWidth={2.2} />
+                    </Link>
+                  </div>
+                )}
                 <NavLink
-                  key={item.to}
                   to={item.to}
                   data-active={isActive}
                   onClick={() => hapticImpact('light')}
@@ -847,6 +862,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     <span className="absolute top-1 right-1/3 w-2 h-2 bg-destructive rounded-full animate-pulse" />
                   )}
                 </NavLink>
+                </Fragment>
               );
             })}
           </div>

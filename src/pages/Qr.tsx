@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Check, CloudOff, Link2, QrCode, RefreshCw, ScanLine, Search, Undo2, Users, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { addScan, getScanQueue, removeScan } from '@/lib/scanQueue';
 import { formatWristbandCode, parseWristbandCode } from '@/lib/wristband';
 import { cn } from '@/lib/utils';
 
-type Tab = 'koble' | 'skann' | 'oversikt';
+type Tab = 'koble' | 'oversikt';
 type Tone = 'ok' | 'warn' | 'unknown' | 'error';
 
 interface Feedback {
@@ -103,11 +103,11 @@ function FeedbackCard({ feedback }: { feedback: Feedback | null }) {
 }
 
 export default function Qr() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>('koble');
   const directory = useBandDirectory();
   const queue = useScanQueue();
-  const { activities } = useActivities(true);
 
   const { participants, byCode, byParticipant, participantById } = directory;
   const withBand = participants.filter((p) => byParticipant.has(p.id)).length;
@@ -201,124 +201,6 @@ export default function Qr() {
     }
   };
 
-  // ---------- Skann aktivitet ----------
-  const [activity, setActivity] = useState('');
-  const [customActivity, setCustomActivity] = useState('');
-  const [activitySearch, setActivitySearch] = useState('');
-  const [scanFeedback, setScanFeedback] = useState<Feedback | null>(null);
-  const [session, setSession] = useState<SessionScan[]>([]);
-  const doneRef = useRef<Set<string>>(new Set());
-  const sendTimer = useRef<ReturnType<typeof setTimeout>>();
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const recent = useMemo(() => readRecent(), [activity]);
-  const visibleActivities = useMemo(() => {
-    const q = activitySearch.trim().toLowerCase();
-    const recentSet = new Set(recent.map((r) => r.toLowerCase()));
-    return activities
-      .filter((a) => !q || a.title.toLowerCase().includes(q))
-      .sort((a, b) => {
-        const ra = recentSet.has(a.title.toLowerCase()) ? 0 : 1;
-        const rb = recentSet.has(b.title.toLowerCase()) ? 0 : 1;
-        return ra !== rb ? ra - rb : a.title.localeCompare(b.title, 'nb');
-      });
-  }, [activities, activitySearch, recent]);
-
-  const pickActivity = (name: string) => {
-    const clean = name.trim();
-    if (!clean) return;
-    hapticImpact('light');
-    saveRecent(clean);
-    doneRef.current = new Set();
-    setSession([]);
-    setScanFeedback(null);
-    setActivity(clean);
-  };
-
-  const onScanCode = useCallback(
-    (code: string) => {
-      if (!activity) return;
-      const participantId = byCode.get(code);
-      const participant = participantId ? participantById.get(participantId) ?? null : null;
-      const key = `${participantId ?? `band:${code}`}|${activity.toLowerCase()}`;
-
-      if (doneRef.current.has(key)) {
-        hapticWarning();
-        setScanFeedback({
-          tone: 'warn',
-          title: participant?.name ?? `Bånd ${formatWristbandCode(code)}`,
-          detail: 'Allerede registrert',
-          participant,
-          at: Date.now(),
-        });
-        return;
-      }
-      doneRef.current.add(key);
-
-      const queued = addScan({
-        code,
-        activity,
-        participant_id: participantId ?? null,
-        participant_name: participant?.name ?? null,
-      });
-
-      if (participant) {
-        hapticSuccess();
-        setScanFeedback({
-          tone: 'ok',
-          title: participant.name,
-          detail: [participant.cabin, activity].filter(Boolean).join(' · '),
-          participant,
-          at: Date.now(),
-        });
-      } else {
-        hapticWarning();
-        setScanFeedback({
-          tone: 'unknown',
-          title: `Ukjent bånd ${formatWristbandCode(code)}`,
-          detail: 'Lagret. Sjekkes når det er nett',
-          at: Date.now(),
-        });
-      }
-
-      setSession((prev) =>
-        [
-          {
-            client_scan_id: queued.client_scan_id,
-            code,
-            name: participant?.name ?? `Bånd ${formatWristbandCode(code)}`,
-            image: participant?.image ?? null,
-            tone: (participant ? 'ok' : 'unknown') as Tone,
-          },
-          ...prev,
-        ].slice(0, 30),
-      );
-
-      // Send litt etter siste skanning, så lederen kan angre den aller siste.
-      clearTimeout(sendTimer.current);
-      sendTimer.current = setTimeout(() => queue.send(), 4000);
-    },
-    [activity, byCode, participantById, queue],
-  );
-
-  useEffect(() => () => clearTimeout(sendTimer.current), []);
-
-  const undoLast = () => {
-    const last = session[0];
-    if (!last) return;
-    const stillQueued = getScanQueue().some((s) => s.client_scan_id === last.client_scan_id);
-    if (!stillQueued || !removeScan(last.client_scan_id)) {
-      hapticError();
-      setScanFeedback({ tone: 'error', title: 'Kan ikke angres', detail: 'Skanningen er allerede sendt inn', at: Date.now() });
-      return;
-    }
-    hapticImpact('medium');
-    const participantId = byCode.get(last.code);
-    doneRef.current.delete(`${participantId ?? `band:${last.code}`}|${activity.toLowerCase()}`);
-    setSession((prev) => prev.slice(1));
-    setScanFeedback({ tone: 'warn', title: last.name, detail: 'Skanningen er angret', at: Date.now() });
-  };
-
   // ---------- Felles ----------
   const queueLine =
     queue.counts.total === 0
@@ -327,7 +209,6 @@ export default function Qr() {
 
   const tabs: { id: Tab; label: string; icon: typeof QrCode }[] = [
     { id: 'koble', label: 'Koble bånd', icon: Link2 },
-    { id: 'skann', label: 'Skann aktivitet', icon: ScanLine },
     { id: 'oversikt', label: 'Oversikt', icon: Users },
   ];
 
@@ -337,7 +218,7 @@ export default function Qr() {
     <div className="mx-auto max-w-2xl space-y-3 animate-fade-in">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-heading font-bold text-foreground lg:text-3xl">QR-kode</h1>
+          <h1 className="text-2xl font-heading font-bold text-foreground lg:text-3xl">Armbånd</h1>
           <p className="text-sm text-muted-foreground">
             {withBand} av {participants.length} har bånd
           </p>
@@ -360,7 +241,12 @@ export default function Qr() {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-1 rounded-2xl bg-muted/60 p-1">
+      <Button className="h-14 w-full gap-2 rounded-2xl text-base font-semibold" onClick={() => navigate('/skann')}>
+        <ScanLine className="h-5 w-5" />
+        Skann aktivitet
+      </Button>
+
+      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-muted/60 p-1">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -482,109 +368,6 @@ export default function Qr() {
                 {linkCandidates.length === 0 && (
                   <p className="py-6 text-center text-sm text-muted-foreground">Ingen deltakere funnet</p>
                 )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ---------- Skann aktivitet ---------- */}
-      {tab === 'skann' && directory.periodId && !activity && (
-        <div className="ios-surface space-y-3 p-3">
-          <p className="text-sm font-medium">Hvilken aktivitet skanner du inn på?</p>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              id="qr-activity-search"
-              placeholder="Søk aktivitet…"
-              value={activitySearch}
-              onChange={(e) => setActivitySearch(e.target.value)}
-              className="h-11 rounded-2xl border-0 bg-muted/50 pl-10"
-            />
-          </div>
-          <div className="flex max-h-[50vh] flex-wrap content-start gap-2 overflow-y-auto overscroll-contain">
-            {visibleActivities.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => pickActivity(a.title)}
-                className="ios-chip rounded-full border border-border/50 bg-muted/50 px-3.5 py-2 text-sm font-medium"
-              >
-                {a.title}
-              </button>
-            ))}
-          </div>
-          <form
-            className="flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              pickActivity(customActivity);
-              setCustomActivity('');
-            }}
-          >
-            <Input
-              id="qr-custom-activity"
-              placeholder="Egendefinert aktivitet…"
-              maxLength={60}
-              value={customActivity}
-              onChange={(e) => setCustomActivity(e.target.value)}
-              className="h-11 rounded-2xl border-0 bg-muted/50"
-            />
-            <Button type="submit" className="h-11 rounded-2xl" disabled={!customActivity.trim()}>
-              Start
-            </Button>
-          </form>
-        </div>
-      )}
-
-      {tab === 'skann' && directory.periodId && activity && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3 rounded-3xl bg-primary px-4 py-3 text-primary-foreground">
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wider opacity-80">Skanner inn på</p>
-              <p className="truncate text-xl font-bold leading-tight">{activity}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-2xl font-bold leading-none tabular-nums">{session.length}</p>
-                <p className="text-[11px] opacity-80">skannet</p>
-              </div>
-              <Button size="sm" variant="secondary" className="rounded-full" onClick={() => setActivity('')}>
-                Bytt
-              </Button>
-            </div>
-          </div>
-
-          <QrScanner
-            onCode={onScanCode}
-            onInvalid={() => {
-              hapticWarning();
-              setScanFeedback({ tone: 'warn', title: 'Dette er ikke et Oksnøen-armbånd', at: Date.now() });
-            }}
-          />
-
-          <FeedbackCard feedback={scanFeedback} />
-
-          {session.length > 0 && (
-            <div className="ios-surface space-y-2 p-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Sist skannet</p>
-                <Button size="sm" variant="ghost" className="h-8 gap-1.5" onClick={undoLast}>
-                  <Undo2 className="h-4 w-4" />
-                  Angre siste
-                </Button>
-              </div>
-              <div className="max-h-56 space-y-1 overflow-y-auto overscroll-contain">
-                {session.map((s) => (
-                  <div key={s.client_scan_id} className="flex items-center gap-2.5 rounded-xl bg-muted/30 p-1.5 pr-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={s.image ?? undefined} />
-                      <AvatarFallback className="text-[10px]">{s.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <p className="min-w-0 flex-1 truncate text-sm">{s.name}</p>
-                    <span className={cn('h-2.5 w-2.5 rounded-full', s.tone === 'ok' ? 'bg-primary' : 'bg-orange-500')} />
-                  </div>
-                ))}
               </div>
             </div>
           )}
