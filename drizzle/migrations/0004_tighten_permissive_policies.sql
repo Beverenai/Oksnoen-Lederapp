@@ -1,0 +1,15 @@
+ALTER POLICY "Authenticated can read kitchen duty" ON public.team_kitchen_duty USING (public.current_leader_id() IS NOT NULL);
+ALTER POLICY "Authenticated can view bonus points" ON public.participant_bonus_points USING (public.current_leader_id() IS NOT NULL);
+ALTER POLICY "Alle innloggede kan lese gruppeaktiviteter" ON public.leirskole_group_completions USING (public.current_leader_id() IS NOT NULL);
+ALTER POLICY "Leaders can view kiosk sale items" ON public.kiosk_sale_items USING (public.current_leader_id() IS NOT NULL);
+ALTER POLICY "Anyone authenticated can read teams" ON public.participant_teams USING (public.current_leader_id() IS NOT NULL);
+ALTER POLICY "leader_period_history_read_authenticated" ON public.leader_period_history USING (public.current_leader_id() IS NOT NULL);
+ALTER POLICY "Authenticated can view service periods" ON public.leader_service_periods USING (public.current_leader_id() IS NOT NULL);
+ALTER POLICY "Authenticated can update sweaters" ON public.participant_sweaters USING (public.current_leader_id() IS NOT NULL) WITH CHECK (public.current_leader_id() IS NOT NULL);
+ALTER POLICY "Authenticated can insert sweaters" ON public.participant_sweaters WITH CHECK (public.current_leader_id() IS NOT NULL);
+ALTER POLICY "part_activities_select" ON public.participant_activities USING (public.current_leader_id() IS NOT NULL);
+ALTER POLICY "part_activities_insert" ON public.participant_activities WITH CHECK (public.current_leader_id() IS NOT NULL);
+ALTER POLICY "part_activities_update" ON public.participant_activities USING (public.current_leader_id() IS NOT NULL) WITH CHECK (public.current_leader_id() IS NOT NULL);
+ALTER POLICY "part_activities_delete" ON public.participant_activities USING (public.current_leader_id() IS NOT NULL);
+ALTER POLICY "Anyone can view gjenglemt images" ON storage.objects TO authenticated USING (bucket_id = 'gjenglemt-images' AND public.current_leader_id() IS NOT NULL);
+ALTER POLICY "Anyone can update participant images" ON storage.objects TO authenticated USING (bucket_id = 'participant-images' AND public.current_leader_id() IS NOT NULL) WITH CHECK (bucket_id = 'participant-images' AND public.current_leader_id() IS NOT NULL);
