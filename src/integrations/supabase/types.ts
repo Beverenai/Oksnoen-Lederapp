@@ -4045,8 +4045,8 @@ export type Database = {
           pass_written: boolean | null
           pass_written_at: string | null
           pass_written_by: string | null
-          person_id: string | null
           period_id: string | null
+          person_id: string | null
           room: string | null
           team_id: string | null
           times_attended: number | null
@@ -4073,8 +4073,8 @@ export type Database = {
           pass_written?: boolean | null
           pass_written_at?: string | null
           pass_written_by?: string | null
-          person_id?: string | null
           period_id?: string | null
+          person_id?: string | null
           room?: string | null
           team_id?: string | null
           times_attended?: number | null
@@ -4101,8 +4101,8 @@ export type Database = {
           pass_written?: boolean | null
           pass_written_at?: string | null
           pass_written_by?: string | null
-          person_id?: string | null
           period_id?: string | null
+          person_id?: string | null
           room?: string | null
           team_id?: string | null
           times_attended?: number | null
