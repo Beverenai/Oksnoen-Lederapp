@@ -2478,7 +2478,60 @@ tools.push({
   },
 });
 
-const SERVICE_VERSION = "2.2.0";
+
+// ---------- Helse for ett barn: bare når admin trykker på det ----------
+//
+// Sykepleierinfo for én deltakelse, aldri for mange barn i ett kall. Huben viser
+// det bare i barnets profil, etter at admin har trykket «Vis helse», og det er ikke
+// et verktøy for AI-assistentene. Oppslaget logges i hub_api_log som alle andre.
+tools.push({
+  name: "deltaker_helse",
+  description:
+    "Sykepleier og hendelser for én deltakelse: helseinfo fra booking og sykepleier, sykepleierens notater, helsehendelser og hendelser meldt av ledere. Krever deltakelsens id.",
+  inputSchema: {
+    type: "object",
+    properties: { id: { type: "string", description: "Deltakelsens id (deltaker_id)" } },
+    required: ["id"],
+  },
+  run: async (db, args) => {
+    const id = str(args.id);
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Oppgi deltakelsens id.");
+    const [info, notes, events, links, leaders] = await Promise.all([
+      db.from("participant_health_info").select("info, updated_at").eq("participant_id", id),
+      db.from("participant_health_notes").select("content, created_at, created_by").eq("participant_id", id).order("created_at"),
+      db.from("participant_health_events").select("event_type, severity, description, created_at, created_by").eq("participant_id", id).order("created_at"),
+      db.from("participant_incident_participants").select("incident_id").eq("participant_id", id),
+      db.from("leaders").select("id, name"),
+    ]);
+    for (const r of [info, notes, events, links]) if (r.error) throw new Error(r.error.message);
+    const ids = (links.data ?? []).map((l) => l.incident_id);
+    const incidents = ids.length
+      ? await db.from("participant_incidents").select("title, category, severity, description, created_at").in("id", ids).order("created_at")
+      : { data: [], error: null };
+    if (incidents.error) throw new Error(incidents.error.message);
+    const who = new Map((leaders.data ?? []).map((l) => [l.id, l.name]));
+    return {
+      helseinfo: (info.data ?? []).map((r) => ({ tekst: r.info, oppdatert: r.updated_at })).filter((r) => r.tekst),
+      notater: (notes.data ?? []).map((r) => ({ tekst: r.content, tidspunkt: r.created_at, av: who.get(r.created_by) ?? null })),
+      helsehendelser: (events.data ?? []).map((r) => ({
+        type: r.event_type,
+        alvorlighet: r.severity,
+        beskrivelse: r.description,
+        tidspunkt: r.created_at,
+        av: who.get(r.created_by) ?? null,
+      })),
+      hendelser: (incidents.data ?? []).map((r) => ({
+        tittel: r.title,
+        kategori: r.category,
+        alvorlighet: r.severity,
+        beskrivelse: r.description,
+        tidspunkt: r.created_at,
+      })),
+    };
+  },
+});
+
+const SERVICE_VERSION = "2.3.0";
 
 // Helsesjekk: prøver alle verktøyene og melder hvilke som virker. Brukes av
 // admin («Tilkoblinger») for å oppdage at en endring i appen har knekt noe.
