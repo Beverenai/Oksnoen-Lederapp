@@ -15,3 +15,6 @@
 
 - Arrival history is written by database triggers; bulk controls use the security-invoker RPC so existing participant permissions remain authoritative.
 - Session saves use a shared config-and-history writer and report partial failures explicitly so missing history cannot be presented as a successful save.
+- Activity registration uses a fresh session UUID per scanner registration or manual batch, preserved in the offline queue, so only same-session duplicates are rejected.
+- Registration confirmations use a scoped popup hook, preserving the rest of the app's notification behavior.
+- Period leader activity summaries read period_leaders and date-bounded records under existing RLS, rather than global active-leader membership.
