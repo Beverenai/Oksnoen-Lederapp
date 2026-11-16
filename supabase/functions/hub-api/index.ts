@@ -263,7 +263,7 @@ const tools: Tool[] = [
       const id = str(args.id);
       const navn = str(args.navn).replace(/[%,()]/g, "");
       if (!id && !navn) throw new Error("Oppgi id eller navn.");
-      const cols = "id, person_id, name, birth_date, room, has_arrived, times_attended, insj_points, period_id, image_thumb_url, image_url, notes, activity_notes, cabins(name), participant_teams(name), periods(name, season_year, start_date, end_date, is_active)";
+      const cols = "id, person_id, name, birth_date, room, has_arrived, times_attended, insj_points, period_id, image_thumb_url, image_url, notes, activity_notes, pass_text, pass_written, pass_written_at, cabins(name), participant_teams(name), periods(name, season_year, start_date, end_date, is_active)";
       // deno-lint-ignore no-explicit-any
       let found: any[] = [];
       if (id) {
@@ -307,6 +307,8 @@ const tools: Tool[] = [
         ankommet: !!r.has_arrived,
         aar_paa_oksnoen: r.times_attended ?? null,
         insj_poeng: r.insj_points ?? 0,
+        // Passet lederne skriver til barnet på slutten av perioden.
+        pass: r.pass_text ? { tekst: r.pass_text, skrevet: !!r.pass_written, dato: r.pass_written_at ?? null } : null,
         armband: band.data?.[0]?.code ?? null,
         bilde: r.image_thumb_url ?? r.image_url ?? null,
         periode: r.periods
@@ -2549,7 +2551,7 @@ tools.push({
   },
 });
 
-const SERVICE_VERSION = "2.3.2";
+const SERVICE_VERSION = "2.4.0";
 
 // Helsesjekk: prøver alle verktøyene og melder hvilke som virker. Brukes av
 // admin («Tilkoblinger») for å oppdage at en endring i appen har knekt noe.
