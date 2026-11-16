@@ -12,6 +12,16 @@ import { arrivalTime } from '@/lib/participantHistory';
 
 interface Entry { id: string; leaderId: string | null; at: string; type: 'QR' | 'Manuelt' | 'Gomla' | 'Nurse'; title: string; detail: string }
 
+async function allRows<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>) {
+  const rows: T[] = [];
+  for (let from = 0; ; from += 500) {
+    const response = await page(from, from + 499);
+    if (response.error) throw new Error(response.error.message);
+    rows.push(...(response.data ?? []));
+    if ((response.data?.length ?? 0) < 500) return rows;
+  }
+}
+
 export function PeriodLeaderActivityTab() {
   const { data: activeId } = useActivePeriodId();
   const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null);
@@ -36,15 +46,15 @@ export function PeriodLeaderActivityTab() {
       const [members, teams, activities, sales, notes] = await Promise.all([
         supabase.from('period_leaders').select('leader_id,period_number,leaders(name)').eq('period_id', period.id),
         supabase.from('leader_teams').select('leader_id,period_number,team').eq('year', period.season_year ?? new Date(period.start_date).getFullYear()),
-        supabase.from('participant_activities').select('id,activity,registered_by,completed_at,source,participants(name)').eq('period_id', period.id).gte('completed_at', bounds.start).lt('completed_at', bounds.end),
-        supabase.from('kiosk_sales').select('id,sold_by,total,sale_number,created_at,voided_at,participants(name)').eq('period_id', period.id).gte('created_at', bounds.start).lt('created_at', bounds.end),
-        supabase.from('nurse_reports').select('id,created_by,content,created_at').eq('period_id', period.id).gte('created_at', bounds.start).lt('created_at', bounds.end),
+        allRows((from,to) => supabase.from('participant_activities').select('id,activity,registered_by,completed_at,source,participants(name)').eq('period_id', period.id).gte('completed_at', bounds.start).lt('completed_at', bounds.end).order('id').range(from,to)),
+        allRows((from,to) => supabase.from('kiosk_sales').select('id,sold_by,total,sale_number,created_at,voided_at,participants(name)').eq('period_id', period.id).gte('created_at', bounds.start).lt('created_at', bounds.end).order('id').range(from,to)),
+        allRows((from,to) => supabase.from('nurse_reports').select('id,created_by,content,created_at').eq('period_id', period.id).gte('created_at', bounds.start).lt('created_at', bounds.end).order('id').range(from,to)),
       ]);
-      for (const response of [members, teams, activities, sales, notes]) if (response.error) throw response.error;
+      for (const response of [members, teams]) if (response.error) throw response.error;
       const entries: Entry[] = [
-        ...(activities.data ?? []).map(row => ({ id: row.id, leaderId: row.registered_by, at: row.completed_at ?? '', type: row.source === 'qr' ? 'QR' as const : 'Manuelt' as const, title: row.activity, detail: row.participants?.name ?? 'Ukjent deltaker' })),
-        ...(sales.data ?? []).map(row => ({ id: row.id, leaderId: row.sold_by, at: row.created_at, type: 'Gomla' as const, title: `Salg #${row.sale_number ?? ''} · ${row.total} kr${row.voided_at ? ' · Annullert' : ''}`, detail: row.participants?.name ?? 'Ukjent deltaker' })),
-        ...(notes.data ?? []).map(row => ({ id: row.id, leaderId: row.created_by, at: row.created_at, type: 'Nurse' as const, title: 'Sykepleiernotat', detail: row.content })),
+        ...activities.map(row => ({ id: row.id, leaderId: row.registered_by, at: row.completed_at ?? '', type: row.source === 'qr' ? 'QR' as const : 'Manuelt' as const, title: row.activity, detail: row.participants?.name ?? 'Ukjent deltaker' })),
+        ...sales.map(row => ({ id: row.id, leaderId: row.sold_by, at: row.created_at, type: 'Gomla' as const, title: `Salg #${row.sale_number ?? ''} · ${row.total} kr${row.voided_at ? ' · Annullert' : ''}`, detail: row.participants?.name ?? 'Ukjent deltaker' })),
+        ...notes.map(row => ({ id: row.id, leaderId: row.created_by, at: row.created_at, type: 'Nurse' as const, title: 'Sykepleiernotat', detail: row.content })),
       ].sort((a, b) => b.at.localeCompare(a.at));
       const unique = new Map((members.data ?? []).map(member => [member.leader_id, member]));
       return { entries, leaders: [...unique.values()].map(member => ({ id: member.leader_id, name: member.leaders?.name ?? 'Ukjent leder', team: teams.data?.find(t => t.leader_id === member.leader_id && t.period_number === member.period_number)?.team ?? null })).sort((a,b) => a.name.localeCompare(b.name, 'nb')) };

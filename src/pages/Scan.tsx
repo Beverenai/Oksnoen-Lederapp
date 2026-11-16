@@ -186,6 +186,7 @@ export default function Scan() {
     if (step.kind === 'pending') {
       setPending((prev) => prev.filter((p) => p.code !== step.code));
     } else {
+      if (queue.isSending) await queue.send();
       const inQueue = getScanQueue().some((s) => s.client_scan_id === step.client_scan_id);
       if (inQueue) {
         removeScan(step.client_scan_id);
