@@ -43,6 +43,13 @@
       "when": 1794823147739,
       "tag": "0005_hub_api_log",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794823996814,
+      "tag": "0006_restrict_policies_to_leaders",
+      "breakpoints": true
     }
   ]
 }
