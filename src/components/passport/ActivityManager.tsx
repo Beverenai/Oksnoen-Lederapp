@@ -5,7 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Plus, Minus, Loader2, X } from 'lucide-react';
-import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { useRegistrationPopup } from '@/hooks/useRegistrationPopup';
+import { manualActivityRows } from '@/lib/activityRegistration';
 import { useActivities } from '@/hooks/useActivities';
 
 interface ActivityManagerProps {
@@ -20,7 +21,7 @@ export const ActivityManager = ({
   onActivityChanged,
 }: ActivityManagerProps) => {
   const { leader } = useAuth();
-  const { showSuccess, showError, showInfo } = useStatusPopup();
+  const { showSuccess, showError, popup } = useRegistrationPopup();
   const { activities } = useActivities(true);
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -49,11 +50,7 @@ export const ActivityManager = ({
   const addActivity = async (activityTitle: string) => {
     setIsLoading(activityTitle);
     try {
-      const { error } = await supabase.from('participant_activities').insert({
-        participant_id: participantId,
-        activity: activityTitle,
-        registered_by: leader?.id,
-      });
+      const { error } = await supabase.from('participant_activities').insert(manualActivityRows([participantId], activityTitle, leader?.id));
 
       if (error) throw error;
 
@@ -157,6 +154,7 @@ export const ActivityManager = ({
 
   return (
     <div className="space-y-3">
+      {popup}
       {uniqueActivities.length > 0 ? (
         <div className="space-y-2">
           {uniqueActivities.map((activity) => {

@@ -273,8 +273,8 @@ function AppRoutes() {
         <Route path="/mer" element={<ProtectedRoute><More /></ProtectedRoute>} />
         <Route path="/lederpass" element={<ProtectedRoute><LederpassPage /></ProtectedRoute>} />
         <Route path="/kiosk" element={<ProtectedRoute><Kiosk /></ProtectedRoute>} />
-        {/* QR-kode: armbånd og skanning. Kun admin til funksjonen er testet. */}
-        <Route path="/skann" element={<ProtectedRoute><AdminOnly><Scan /></AdminOnly></ProtectedRoute>} />
+        {/* Activity scanning is available to authenticated leaders; band administration stays admin-only. */}
+        <Route path="/skann" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
         <Route path="/qr" element={<ProtectedRoute><AdminOnly><Qr /></AdminOnly></ProtectedRoute>} />
         <Route path="/admin/qr-test" element={<ProtectedRoute><AdminOnly><QrTestSheet /></AdminOnly></ProtectedRoute>} />
         {/* Lenken i QR-koden på armbåndet. Viser ingen opplysninger uten innlogging. */}
