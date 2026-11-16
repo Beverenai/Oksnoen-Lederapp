@@ -254,7 +254,7 @@ const tools: Tool[] = [
       const { data } = await db.from("participants").select("id").eq("period_id", period[0].id).limit(1);
       return data?.[0] ? { id: data[0].id } : null;
     },
-    description: "Alt om én deltaker i en periode: hytte, rom, lag, armbånd, og alle aktiviteter med tidspunkt og hvem som registrerte. Oppgi id eller navn.",
+    description: "Alt om én deltaker i en periode: hytte, rom, lag, armbånd, kommentarer fra lederne, og alle aktiviteter med tidspunkt og hvem som registrerte. Oppgi id eller navn.",
     inputSchema: {
       type: "object",
       properties: { ...periodeProp, id: { type: "string" }, navn: { type: "string" } },
@@ -263,7 +263,7 @@ const tools: Tool[] = [
       const id = str(args.id);
       const navn = str(args.navn).replace(/[%,()]/g, "");
       if (!id && !navn) throw new Error("Oppgi id eller navn.");
-      const cols = "id, person_id, name, birth_date, room, has_arrived, times_attended, insj_points, period_id, image_thumb_url, image_url, cabins(name), participant_teams(name)";
+      const cols = "id, person_id, name, birth_date, room, has_arrived, times_attended, insj_points, period_id, image_thumb_url, image_url, notes, activity_notes, cabins(name), participant_teams(name), periods(name, season_year, start_date, end_date, is_active)";
       // deno-lint-ignore no-explicit-any
       let found: any[] = [];
       if (id) {
@@ -309,6 +309,13 @@ const tools: Tool[] = [
         insj_poeng: r.insj_points ?? 0,
         armband: band.data?.[0]?.code ?? null,
         bilde: r.image_thumb_url ?? r.image_url ?? null,
+        periode: r.periods
+          ? { navn: r.periods.name, aar: r.periods.season_year, start: r.periods.start_date, slutt: r.periods.end_date }
+          : null,
+        kommentarer: [
+          r.notes ? { kilde: "Notat", tekst: r.notes } : null,
+          r.activity_notes ? { kilde: "Aktiviteter", tekst: r.activity_notes } : null,
+        ].filter(Boolean),
         andre_deltakelser: andre.map((d) => ({
           id: d.id,
           periode: d.periods?.name ?? null,
@@ -618,6 +625,8 @@ const TABELLER: Record<string, OpenTable> = {
       "first_name",
       "gift_card_number",
       "has_arrived",
+      "arrived_at",
+      "arrived_by",
       "id",
       "image_aged_url",
       "image_thumb_url",
@@ -786,6 +795,21 @@ const TABELLER: Record<string, OpenTable> = {
       "id",
       "room"
     ]
+  },
+  "participant_arrival_log": {
+    "o": "Deltakere og opphold",
+    "h": "Historikk over ankomst: hvert barn som ble markert som ankommet eller fikk ankomsten fjernet, med hvem og når",
+    "k": ["arrived", "changed_at", "changed_by", "id", "participant_id", "period_id"]
+  },
+  "session_log": {
+    "o": "Aktiviteter",
+    "h": "Øktene dag for dag: aktiv økt (1–3) og aktivitetene i hver økt, hver gang admin lagret dem",
+    "k": ["active_session", "id", "log_date", "period_id", "saved_at", "saved_by", "sessions"]
+  },
+  "change_log": {
+    "o": "Historikk",
+    "h": "Endringslogg: gammel og ny verdi for deltakere, aktiviteter, helse, hendelser, rombytter, hytterapporter, Gomla, armbånd, ledere i perioden og vakter",
+    "k": ["action", "changed_at", "changed_by", "id", "new_data", "old_data", "row_id", "table_name"]
   },
   "room_swaps": {
     "o": "Deltakere og opphold",
@@ -2247,7 +2271,7 @@ const REFS: Record<string, { t: string; k: string; n: string[] }> = {
   }
 };
 
-const TIME_COLS = ["created_at", "completed_at", "scanned_at", "changed_at", "work_date", "date", "updated_at"];
+const TIME_COLS = ["saved_at", "created_at", "completed_at", "scanned_at", "changed_at", "work_date", "date", "updated_at"];
 
 /** Legger navn ved siden av ID-er, så svaret kan leses uten flere oppslag. */
 // deno-lint-ignore no-explicit-any
