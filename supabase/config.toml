@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.sync-leaders-import]
 verify_jwt = false
+
+[functions.hub-api]
+verify_jwt = false
