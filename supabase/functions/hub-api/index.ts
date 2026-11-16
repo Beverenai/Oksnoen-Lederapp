@@ -204,7 +204,7 @@ const tools: Tool[] = [
       const rows = await fetchAll(() => {
         let q = db
           .from("participants")
-          .select("id, person_id, name, birth_date, room, has_arrived, times_attended, insj_points, image_thumb_url, cabins(name), participant_teams(name)")
+          .select("id, person_id, name, birth_date, room, has_arrived, times_attended, insj_points, image_thumb_url, image_url, cabins(name), participant_teams(name)")
           .eq("period_id", p.id)
           .order("name");
         if (sok) q = q.ilike("name", `%${sok}%`);
@@ -232,7 +232,7 @@ const tools: Tool[] = [
           aar_paa_oksnoen: r.times_attended ?? null,
           armband: bandBy.get(r.id) ?? null,
           antall_aktiviteter: actCount.get(r.id) ?? 0,
-          bilde: r.image_thumb_url ?? null,
+          bilde: r.image_thumb_url ?? r.image_url ?? null,
         }));
       return { periode: periodOut(p), antall: list.length, deltakere: list.slice(0, maks) };
     },
@@ -2391,7 +2391,7 @@ tools.push(
   },
 );
 
-const SERVICE_VERSION = "2.0.0";
+const SERVICE_VERSION = "2.0.1";
 
 // Helsesjekk: prøver alle verktøyene og melder hvilke som virker. Brukes av
 // admin («Tilkoblinger») for å oppdage at en endring i appen har knekt noe.
