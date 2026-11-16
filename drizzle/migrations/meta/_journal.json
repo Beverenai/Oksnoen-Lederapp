@@ -57,6 +57,13 @@
       "when": 1794856043822,
       "tag": "0007_participant_and_session_history",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794857445498,
+      "tag": "0008_participant_photo_sync",
+      "breakpoints": true
     }
   ]
 }
