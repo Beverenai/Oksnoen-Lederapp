@@ -310,7 +310,7 @@ const tools: Tool[] = [
         armband: band.data?.[0]?.code ?? null,
         bilde: r.image_thumb_url ?? r.image_url ?? null,
         periode: r.periods
-          ? { navn: r.periods.name, aar: r.periods.season_year, start: r.periods.start_date, slutt: r.periods.end_date }
+          ? { id: r.period_id, navn: r.periods.name, aar: r.periods.season_year, start: r.periods.start_date, slutt: r.periods.end_date }
           : null,
         kommentarer: [
           r.notes ? { kilde: "Notat", tekst: r.notes } : null,
@@ -2531,7 +2531,7 @@ tools.push({
   },
 });
 
-const SERVICE_VERSION = "2.3.0";
+const SERVICE_VERSION = "2.3.1";
 
 // Helsesjekk: prøver alle verktøyene og melder hvilke som virker. Brukes av
 // admin («Tilkoblinger») for å oppdage at en endring i appen har knekt noe.
