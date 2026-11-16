@@ -11,6 +11,14 @@ import { hapticError, hapticImpact, hapticSuccess, hapticWarning } from '@/lib/c
 import { addScan, getScanQueue, removeScan } from '@/lib/scanQueue';
 import { formatWristbandCode, parseWristbandCode } from '@/lib/wristband';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { checkInDefault } from '@/lib/activityRegistration';
+import { arrivalTime } from '@/lib/participantHistory';
+import { useRegistrationPopup } from '@/hooks/useRegistrationPopup';
 
 type Tab = 'koble' | 'oversikt';
 type Tone = 'ok' | 'warn' | 'unknown' | 'error';
@@ -108,6 +116,21 @@ export default function Qr() {
   const [tab, setTab] = useState<Tab>('koble');
   const directory = useBandDirectory();
   const queue = useScanQueue();
+  const qc = useQueryClient();
+  const { showSuccess, showError, popup } = useRegistrationPopup();
+  const [checkIn, setCheckIn] = useState(false);
+  const [cabinFilter, setCabinFilter] = useState('all');
+  const { data: activePeriod } = useQuery({
+    queryKey: ['qr-period-start', directory.periodId],
+    enabled: !!directory.periodId,
+    queryFn: async () => {
+      if (!directory.periodId) return null;
+      const { data, error } = await supabase.from('periods').select('start_date').eq('id', directory.periodId).single();
+      if (error) throw error;
+      return data;
+    },
+  });
+  useEffect(() => { setCheckIn(checkInDefault(activePeriod?.start_date)); }, [activePeriod?.start_date, directory.periodId]);
 
   const { participants, byCode, byParticipant, participantById } = directory;
   const withBand = participants.filter((p) => byParticipant.has(p.id)).length;
@@ -143,9 +166,9 @@ export default function Qr() {
   const linkCandidates = useMemo(() => {
     const q = linkSearch.trim().toLowerCase();
     return participants
-      .filter((p) => !q || p.name.toLowerCase().includes(q) || (p.cabin ?? '').toLowerCase().includes(q))
+      .filter((p) => (cabinFilter === 'all' || (p.cabin ?? 'none') === cabinFilter) && (!q || p.name.toLowerCase().includes(q) || (p.cabin ?? '').toLowerCase().includes(q)))
       .sort((a, b) => Number(byParticipant.has(a.id)) - Number(byParticipant.has(b.id)));
-  }, [participants, linkSearch, byParticipant]);
+  }, [participants, linkSearch, byParticipant, cabinFilter]);
 
   const currentHolder = pendingCode ? participantById.get(byCode.get(pendingCode) ?? '') ?? null : null;
 
@@ -163,11 +186,23 @@ export default function Qr() {
         setConflict({ participant, code, holder: result.participant_name ?? 'en annen deltaker' });
         return;
       }
+      if (checkIn) {
+        const { data: changed, error } = await supabase.rpc('set_participants_arrived', { _ids: [participant.id], _arrived: true });
+        if (error || (!participant.has_arrived && changed !== 1)) {
+          await directory.refresh();
+          showError('Båndet er koblet, men innsjekk feilet', error?.message ?? 'Prøv å koble på nytt med innsjekk aktivert.');
+          return;
+        }
+        await directory.refresh();
+        qc.invalidateQueries({ queryKey: ['participants'] });
+        qc.invalidateQueries({ queryKey: ['participant-detail-v2', participant.id] });
+      }
       hapticSuccess();
+      showSuccess(checkIn ? `Bånd ${formatWristbandCode(code)} koblet · ${participant.name} er sjekket inn` : `Bånd ${formatWristbandCode(code)} koblet`, checkIn ? undefined : participant.name);
       setLinkFeedback({
         tone: 'ok',
         title: participant.name,
-        detail: `Bånd ${formatWristbandCode(code)} er koblet`,
+        detail: `Bånd ${formatWristbandCode(code)} er koblet${checkIn ? ' · Sjekket inn' : ''}`,
         participant,
         at: Date.now(),
       });
@@ -175,6 +210,7 @@ export default function Qr() {
       setConflict(null);
     } catch (err) {
       hapticError();
+      showError('Kunne ikke koble båndet', (err as Error)?.message);
       setLinkFeedback({
         tone: 'error',
         title: 'Kunne ikke koble båndet',
@@ -191,6 +227,7 @@ export default function Qr() {
     try {
       await directory.release(participant.id, 'mistet');
       hapticSuccess();
+      showSuccess('Båndet er fjernet', participant.name);
       setLinkFeedback({ tone: 'warn', title: participant.name, detail: 'Båndet er fjernet', participant, at: Date.now() });
       setPendingCode(null);
     } catch (err) {
@@ -212,10 +249,18 @@ export default function Qr() {
     { id: 'oversikt', label: 'Oversikt', icon: Users },
   ];
 
-  const missing = participants.filter((p) => !byParticipant.has(p.id));
+  const missing = participants.filter((p) => !byParticipant.has(p.id) && (cabinFilter === 'all' || (p.cabin ?? 'none') === cabinFilter));
+  const cabinSelector = <Select value={cabinFilter} onValueChange={setCabinFilter}>
+    <SelectTrigger aria-label="Filtrer hytte"><SelectValue /></SelectTrigger>
+    <SelectContent><SelectItem value="all">Alle hytter</SelectItem>
+      {[...new Set(participants.map(p => p.cabin).filter((name): name is string => !!name))].sort().map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
+      <SelectItem value="none">Uten hytte</SelectItem>
+    </SelectContent>
+  </Select>;
 
   return (
     <div className="mx-auto max-w-2xl space-y-3 animate-fade-in">
+      {popup}
       <div className="flex items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-heading font-bold text-foreground lg:text-3xl">Armbånd</h1>
@@ -273,6 +318,11 @@ export default function Qr() {
       {/* ---------- Koble bånd ---------- */}
       {tab === 'koble' && directory.periodId && (
         <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3 py-2">
+            <Label htmlFor="qr-check-in">Sjekk inn samtidig</Label>
+            <Switch id="qr-check-in" checked={checkIn} onCheckedChange={setCheckIn} />
+          </div>
+          {cabinSelector}
           <QrScanner onCode={onLinkCode} paused={!!pendingCode} onInvalid={() => {
             hapticWarning();
             setLinkFeedback({ tone: 'warn', title: 'Dette er ikke et Oksnøen-armbånd', at: Date.now() });
@@ -354,6 +404,7 @@ export default function Qr() {
                         <p className="truncate text-xs text-muted-foreground">
                           {[age(p.birth_date), p.cabin, p.room].filter(Boolean).join(' · ')}
                         </p>
+                        <p className="text-xs text-muted-foreground">{p.has_arrived ? `Sjekket inn${p.arrived_at ? ` ${arrivalTime(p.arrived_at)}` : ''}` : 'Ikke sjekket inn'}</p>
                       </div>
                       {band ? (
                         <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] tabular-nums text-muted-foreground">
@@ -377,6 +428,7 @@ export default function Qr() {
       {/* ---------- Oversikt ---------- */}
       {tab === 'oversikt' && directory.periodId && (
         <div className="space-y-3">
+          {cabinSelector}
           <div className="grid grid-cols-3 gap-2">
             <div className="ios-surface p-3">
               <p className="text-2xl font-bold tabular-nums">{withBand}</p>

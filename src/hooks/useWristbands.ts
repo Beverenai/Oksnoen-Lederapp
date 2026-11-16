@@ -18,6 +18,8 @@ export interface BandParticipant {
   cabin: string | null;
   room: string | null;
   birth_date: string | null;
+  has_arrived?: boolean | null;
+  arrived_at?: string | null;
 }
 
 export interface BandAssignment {
@@ -59,7 +61,7 @@ async function fetchDirectory(periodId: string): Promise<BandDirectory> {
   const [participantsRes, assignmentsRes] = await Promise.all([
     supabase
       .from('participants')
-      .select('id, name, image_url, image_thumb_url, room, birth_date, cabins(name)')
+      .select('id, name, image_url, image_thumb_url, room, birth_date, has_arrived, arrived_at, cabins(name)')
       .eq('period_id', periodId)
       .order('name', { ascending: true }),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,6 +82,8 @@ async function fetchDirectory(periodId: string): Promise<BandDirectory> {
     cabin: p.cabins?.name ?? null,
     room: p.room ?? null,
     birth_date: p.birth_date ?? null,
+    has_arrived: p.has_arrived,
+    arrived_at: p.arrived_at,
   }));
 
   const directory: BandDirectory = {
@@ -102,7 +106,10 @@ export function useBandDirectory() {
   const query = useQuery({
     queryKey: ['qr-band-directory', periodId ?? 'none'],
     enabled: !!periodId,
-    queryFn: () => fetchDirectory(periodId!),
+    queryFn: () => {
+      if (!periodId) throw new Error('Ingen aktiv periode');
+      return fetchDirectory(periodId);
+    },
     placeholderData: () => (periodId ? readCache(periodId) : undefined),
     staleTime: 30_000,
     refetchInterval: 60_000,
