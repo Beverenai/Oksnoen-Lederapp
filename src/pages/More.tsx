@@ -215,7 +215,7 @@ export default function More() {
       items: [
         { to: '/rope-control', icon: Anchor, label: 'Tau Kontroll' },
         { to: '/kiosk', icon: ShoppingBasket, label: 'Gomla' },
-        ...(isAdmin ? [{ to: '/qr', icon: QrCode, label: 'QR-kode' } as MoreItem] : []),
+        ...(isAdmin ? [{ to: '/skann', icon: QrCode, label: 'QR-kode' } as MoreItem] : []),
         { to: '/gjenglemt', icon: Shirt, label: 'Gjenglemt' },
         ...(sweatersEnabled
           ? [{ to: '/gensere', icon: Shirt, label: 'Gensere' } as MoreItem]
