@@ -3241,27 +3241,39 @@ export type Database = {
       participant_activities: {
         Row: {
           activity: string
+          client_scan_id: string | null
           completed_at: string | null
           id: string
           participant_id: string
           period_id: string | null
           registered_by: string | null
+          scanned_at: string | null
+          source: string
+          wristband_code: string | null
         }
         Insert: {
           activity: string
+          client_scan_id?: string | null
           completed_at?: string | null
           id?: string
           participant_id: string
           period_id?: string | null
           registered_by?: string | null
+          scanned_at?: string | null
+          source?: string
+          wristband_code?: string | null
         }
         Update: {
           activity?: string
+          client_scan_id?: string | null
           completed_at?: string | null
           id?: string
           participant_id?: string
           period_id?: string | null
           registered_by?: string | null
+          scanned_at?: string | null
+          source?: string
+          wristband_code?: string | null
         }
         Relationships: [
           {
@@ -5515,6 +5527,74 @@ export type Database = {
           },
         ]
       }
+      wristband_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          code: string
+          created_at: string
+          id: string
+          participant_id: string
+          period_id: string | null
+          release_reason: string | null
+          released_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          participant_id: string
+          period_id?: string | null
+          release_reason?: string | null
+          released_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          participant_id?: string
+          period_id?: string | null
+          release_reason?: string | null
+          released_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wristband_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "leaders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wristband_assignments_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_balances"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "wristband_assignments_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wristband_assignments_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       gjenglemt_public: {
@@ -5601,6 +5681,10 @@ export type Database = {
       apply_period_leaders: { Args: { _period_id: string }; Returns: Json }
       archive_murder_round: { Args: never; Returns: string }
       archive_season: { Args: { _season_year: number }; Returns: Json }
+      assign_wristband: {
+        Args: { _code: string; _force?: boolean; _participant_id: string }
+        Returns: Json
+      }
       claim_murder_kill: { Args: never; Returns: string }
       claim_participant_task: { Args: { _task_id: string }; Returns: boolean }
       confirm_murder_death: { Args: { _claim_id?: string }; Returns: undefined }
@@ -5760,6 +5844,7 @@ export type Database = {
       }
       mark_fix_task_fixed: { Args: { _task_id: string }; Returns: undefined }
       my_sips_left: { Args: never; Returns: number }
+      normalize_wristband_code: { Args: { _code: string }; Returns: string }
       pov_current_roll: {
         Args: never
         Returns: {
@@ -5782,6 +5867,11 @@ export type Database = {
       record_kiosk_sale: {
         Args: { _client_ref?: string; _items: Json; _participant_id: string }
         Returns: string
+      }
+      record_wristband_scans: { Args: { _scans: Json }; Returns: Json }
+      release_wristband: {
+        Args: { _participant_id: string; _reason?: string }
+        Returns: boolean
       }
       restore_leader: { Args: { _leader_id: string }; Returns: undefined }
       revive_and_reshuffle_murder: {
