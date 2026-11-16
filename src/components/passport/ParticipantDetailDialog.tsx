@@ -110,6 +110,7 @@ async function fetchParticipantDetail(participantId: string, seasonView = false)
       supabase.from('participant_health_info').select('*').eq('participant_id', participantId).maybeSingle(),
     ]);
     const row: any = all.find((p) => p.id === participantId);
+    if (activitiesSeason.error) throw activitiesSeason.error;
     if (!row) throw new Error('Deltager ikke funnet');
     return {
       participant: { ...row, cabin: row.cabins ?? null } as ParticipantWithCabin,
@@ -125,6 +126,7 @@ async function fetchParticipantDetail(participantId: string, seasonView = false)
   ]);
 
   if (participantRes.error) throw participantRes.error;
+  if (activitiesRes.error) throw activitiesRes.error;
 
   return {
     participant: {
@@ -346,7 +348,10 @@ export const ParticipantDetailDialog = ({
   // Fetch participant detail with caching
   const { data, isLoading, refetch: refetchParticipant } = useQuery({
     queryKey: ['participant-detail-v2', participantId, seasonView ? 'season' : 'active'],
-    queryFn: () => fetchParticipantDetail(participantId!, seasonView),
+    queryFn: () => {
+      if (!participantId) throw new Error('Ingen deltaker valgt');
+      return fetchParticipantDetail(participantId, seasonView);
+    },
     enabled: open && !!participantId,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
@@ -396,10 +401,11 @@ export const ParticipantDetailDialog = ({
     queryKey: ['secret-word', participantId],
     enabled: open && !!participantId,
     queryFn: async () => {
+      if (!participantId) return null;
       const { data } = await (supabase as any)
         .from('secret_word_assignments')
         .select('word')
-        .eq('participant_id', participantId!)
+        .eq('participant_id', participantId)
         .maybeSingle();
       return (data?.word as string | undefined) ?? null;
     },

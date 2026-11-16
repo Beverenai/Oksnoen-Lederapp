@@ -330,12 +330,12 @@ export default function Qr() {
 
           {!pendingCode && <FeedbackCard feedback={linkFeedback} />}
 
-          {pendingCode && (
+          {(
             <div className="ios-surface space-y-3 p-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">Bånd</p>
-                  <p className="text-2xl font-bold tabular-nums">{formatWristbandCode(pendingCode)}</p>
+                  <p className="text-2xl font-bold tabular-nums">{pendingCode ? formatWristbandCode(pendingCode) : 'Velg et bånd'}</p>
                 </div>
                 <Button variant="ghost" size="icon" aria-label="Avbryt" onClick={() => { setPendingCode(null); setConflict(null); }}>
                   <X className="h-5 w-5" />
@@ -391,8 +391,8 @@ export default function Qr() {
                     <button
                       key={p.id}
                       type="button"
-                      disabled={isLinking}
-                      onClick={() => doAssign(p, pendingCode)}
+                      disabled={isLinking || !pendingCode}
+                      onClick={() => { if (pendingCode) doAssign(p, pendingCode); }}
                       className="flex w-full items-center gap-3 rounded-2xl bg-muted/30 p-2 pr-3 text-left transition-all active:scale-[0.99]"
                     >
                       <Avatar className="h-10 w-10">
