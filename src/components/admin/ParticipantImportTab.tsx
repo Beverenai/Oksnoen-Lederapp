@@ -27,6 +27,11 @@ import { hapticSuccess, hapticWarning, hapticError } from '@/lib/capacitorHaptic
 import { GiftCardImportCard } from './GiftCardImportCard';
 import { ThumbnailsGeneratorCard } from './ThumbnailsGeneratorCard';
 import { AgedPhotosGeneratorCard } from './AgedPhotosGeneratorCard';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useQueryClient } from '@tanstack/react-query';
+import { arrivalChangeIds } from '@/lib/participantHistory';
+import { StatusPopup } from '@/components/ui/StatusPopup';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
 
 interface ImportProgress {
   status: 'idle' | 'running' | 'done' | 'error';
@@ -123,6 +128,11 @@ function decodeCsvBytes(bytes: Uint8Array): string {
 }
 
 export function ParticipantImportTab() {
+  const queryClient = useQueryClient();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [arrivalAction, setArrivalAction] = useState<boolean | null>(null);
+  const [arrivalSaving, setArrivalSaving] = useState(false);
+  const [arrivalResult, setArrivalResult] = useState<string | null>(null);
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -257,6 +267,25 @@ export function ParticipantImportTab() {
   const handleParticipantSaved = () => {
     loadAllParticipants();
     loadData();
+  };
+
+  const bulkArrival = async () => {
+    if (arrivalAction === null || arrivalSaving) return;
+    setArrivalSaving(true);
+    try {
+      const ids = arrivalChangeIds(allParticipants.filter(p => selectedIds.has(p.id)), arrivalAction);
+      const { data: count, error } = await supabase.rpc('set_participants_arrived', { _ids: ids, _arrived: arrivalAction });
+      if (error) throw error;
+      setArrivalResult(arrivalAction ? `${count} barn markert som ankommet` : `Ankomst fjernet for ${count} barn`);
+      setArrivalAction(null);
+      setSelectedIds(new Set());
+      await loadAllParticipants();
+      await queryClient.invalidateQueries({ queryKey: ['participants'] });
+    } catch {
+      showError('Kunne ikke oppdatere ankomst');
+    } finally {
+      setArrivalSaving(false);
+    }
   };
 
   const parseCabinField = (cabinField: string): { cabinName: string; room: string | null } => {
@@ -1029,6 +1058,13 @@ export function ParticipantImportTab() {
                             setIsEditDialogOpen(true);
                           }}
                         >
+                          <div className="mr-3 shrink-0" onClick={e => e.stopPropagation()}>
+                            <Checkbox aria-label={`Velg ${p.name}`} checked={selectedIds.has(p.id)} onCheckedChange={checked => setSelectedIds(previous => {
+                              const next = new Set(previous);
+                              if (checked === true) next.add(p.id); else next.delete(p.id);
+                              return next;
+                            })} />
+                          </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-medium truncate">{p.name}</span>
@@ -1086,6 +1122,11 @@ export function ParticipantImportTab() {
                 </div>
               )}
 
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-muted-foreground">{selectedIds.size} valgt</span>
+                <Button size="sm" disabled={!selectedIds.size || arrivalSaving} onClick={() => setArrivalAction(true)}><CheckCircle2 className="w-4 h-4 mr-2" />Marker som ankommet</Button>
+                <Button size="sm" variant="outline" disabled={!selectedIds.size || arrivalSaving} onClick={() => setArrivalAction(false)}>Fjern ankomst</Button>
+              </div>
               {filteredParticipants.length > 0 && (
                 <p className="text-sm text-muted-foreground text-center">
                   Viser {filteredParticipants.length} av {allParticipants.length} deltakere
@@ -1097,6 +1138,19 @@ export function ParticipantImportTab() {
       </Collapsible>
 
       {/* Edit Dialog */}
+      <AlertDialog open={arrivalAction !== null} onOpenChange={open => { if (!open && !arrivalSaving) setArrivalAction(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{arrivalAction ? 'Registrer ankomst' : 'Fjern ankomst'}</AlertDialogTitle>
+            <AlertDialogDescription>{arrivalAction ? `Marker ${selectedIds.size} valgte barn som ankommet?` : `Fjern ankomst for ${selectedIds.size} valgte barn?`}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={arrivalSaving}>Avbryt</AlertDialogCancel>
+            <Button disabled={arrivalSaving} onClick={bulkArrival}>{arrivalSaving ? 'Lagrer…' : 'Bekreft'}</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {arrivalResult && <StatusPopup type="success" title={arrivalResult} onClose={() => setArrivalResult(null)} />}
       <ParticipantEditDialog
         participant={selectedParticipant}
         cabins={cabins}

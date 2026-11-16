@@ -1,0 +1,5 @@
+# History and arrival registration
+- [x] Apply requested migration with approved access grants and verify schema.
+- [ ] Add cabin and admin bulk arrival controls with confirmation popups and arrival times.
+- [ ] Save full session history on every save, including active-session-only changes.
+- [ ] Run focused tests and verify signed-in flows; leave hub-API unchanged as requested.

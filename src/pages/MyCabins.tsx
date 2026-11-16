@@ -29,6 +29,9 @@ import { StyrkeproveBadges } from '@/components/passport/StyrkeproveBadges';
 import { CabinReportSheet } from '@/components/leaders/CabinReportSheet';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullIndicator } from '@/components/ui/pull-indicator';
+import { arrivalChangeIds, arrivalTime } from '@/lib/participantHistory';
+import { StatusPopup } from '@/components/ui/StatusPopup';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
 
 type Participant = Tables<'participants'>;
 type Cabin = Tables<'cabins'>;
@@ -48,7 +51,10 @@ const calculateAge = (birthDate: string): number => {
 };
 
 export default function MyCabins() {
-  const { showSuccess, showError, showInfo } = useStatusPopup();
+  const { showError } = useStatusPopup();
+  const [arrivalCabin, setArrivalCabin] = useState<LeaderCabin | null>(null);
+  const [arrivalSaving, setArrivalSaving] = useState(false);
+  const [arrivalResult, setArrivalResult] = useState<string | null>(null);
   const { leader, effectiveLeader } = useAuth();
   const navigate = useNavigate();
   const [cabins, setCabins] = useState<LeaderCabin[]>([]);
@@ -105,7 +111,7 @@ export default function MyCabins() {
           };
         })
         .filter(Boolean)
-        .sort((a, b) => a!.name.localeCompare(b!.name, 'nb')) as LeaderCabin[];
+        .sort((a, b) => (a?.name ?? '').localeCompare(b?.name ?? '', 'nb')) as LeaderCabin[];
 
       setCabins(cabinData);
       setExpandedCabins(new Set(cabinData.map(c => c.id)));
@@ -155,10 +161,29 @@ export default function MyCabins() {
       
       if (error) throw error;
       
-      loadData();
-      showSuccess(participant.has_arrived ? 'Ankomst fjernet' : 'Markert som ankommet!');
+      await loadData();
+      setIsDetailDialogOpen(false);
+      setArrivalResult(participant.has_arrived ? 'Ankomst fjernet' : 'Markert som ankommet!');
     } catch (error) {
       showError('Kunne ikke oppdatere status');
+    }
+  };
+
+  const markCabinArrived = async () => {
+    if (!arrivalCabin || !leader || arrivalSaving) return;
+    setArrivalSaving(true);
+    try {
+      const { data: count, error } = await supabase.rpc('set_participants_arrived', {
+        _ids: arrivalChangeIds(arrivalCabin.participants, true), _arrived: true,
+      });
+      if (error) throw error;
+      setArrivalCabin(null);
+      await loadData();
+      setArrivalResult(`${count} barn markert som ankommet`);
+    } catch {
+      showError('Kunne ikke registrere ankomst');
+    } finally {
+      setArrivalSaving(false);
     }
   };
 
@@ -277,6 +302,13 @@ export default function MyCabins() {
               onOpenChange={() => toggleCabinExpanded(cabin.id)}
             >
               <Card>
+                <div className="flex justify-end px-3 pt-3">
+                  <Button variant="outline" size="sm"
+                    disabled={arrivalChangeIds((cabins.find(c => c.id === cabin.id) ?? cabin).participants, true).length === 0}
+                    onClick={() => setArrivalCabin(cabins.find(c => c.id === cabin.id) ?? cabin)}>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />Alle ankommet
+                  </Button>
+                </div>
                 <CollapsibleTrigger className="w-full">
                   <CardHeader className="p-3">
                     <div className="flex items-center gap-3">
@@ -368,6 +400,7 @@ export default function MyCabins() {
                                         <p className="font-medium text-foreground truncate text-sm">
                                           {participant.name}
                                         </p>
+                                        {participant.has_arrived && participant.arrived_at && <span className="text-xs text-muted-foreground shrink-0">kom {arrivalTime(participant.arrived_at)}</span>}
                                         {participant.has_arrived ? (
                                           <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
                                         ) : (
@@ -437,6 +470,7 @@ export default function MyCabins() {
                                         <p className="font-medium text-foreground truncate text-sm">
                                           {participant.name}
                                         </p>
+                                        {participant.has_arrived && participant.arrived_at && <span className="text-xs text-muted-foreground shrink-0">kom {arrivalTime(participant.arrived_at)}</span>}
                                         {participant.has_arrived ? (
                                           <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
                                         ) : (
@@ -472,6 +506,19 @@ export default function MyCabins() {
       </div>
 
       {/* Participant Detail Dialog */}
+      <AlertDialog open={Boolean(arrivalCabin)} onOpenChange={open => { if (!open && !arrivalSaving) setArrivalCabin(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Registrer ankomst</AlertDialogTitle>
+            <AlertDialogDescription>Marker {arrivalChangeIds(arrivalCabin?.participants ?? [], true).length} barn i {arrivalCabin?.name} som ankommet?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={arrivalSaving}>Avbryt</AlertDialogCancel>
+            <Button disabled={arrivalSaving} onClick={markCabinArrived}>{arrivalSaving ? 'Lagrer…' : 'Marker som ankommet'}</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {arrivalResult && <StatusPopup type="success" title={arrivalResult} onClose={() => setArrivalResult(null)} />}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
         <DialogContent className="max-w-md">
           {selectedParticipant && (
