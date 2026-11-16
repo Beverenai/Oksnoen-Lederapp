@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Camera, CheckCircle, XCircle, Loader2, Heart, Trophy, Plus, Minus, Sparkles, MessageSquareWarning, BookUser, Star, X, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Send } from 'lucide-react';
 import { ActivityManager } from './ActivityManager';
+import { ActivityTimeline } from './ActivityTimeline';
 import { StyrkeproveBadges } from './StyrkeproveBadges';
 import { useAuth } from '@/contexts/AuthContext';
 import { compressImage } from '@/lib/imageUtils';
@@ -73,6 +74,8 @@ interface ParticipantActivity {
   id: string;
   activity: string;
   completed_at: string | null;
+  source?: string | null;
+  leaders?: { name: string } | null;
 }
 
 interface HealthInfo {
@@ -103,10 +106,11 @@ async function fetchParticipantDetail(participantId: string, seasonView = false)
   if (seasonView) {
     const [all, activitiesSeason, healthSeason] = await Promise.all([
       fetchSeasonParticipants(),
-      supabase.from('participant_activities').select('*').eq('participant_id', participantId),
+      supabase.from('participant_activities').select('*, leaders!participant_activities_registered_by_fkey(name)').eq('participant_id', participantId).order('completed_at', { ascending: false }),
       supabase.from('participant_health_info').select('*').eq('participant_id', participantId).maybeSingle(),
     ]);
     const row: any = all.find((p) => p.id === participantId);
+    if (activitiesSeason.error) throw activitiesSeason.error;
     if (!row) throw new Error('Deltager ikke funnet');
     return {
       participant: { ...row, cabin: row.cabins ?? null } as ParticipantWithCabin,
@@ -117,11 +121,12 @@ async function fetchParticipantDetail(participantId: string, seasonView = false)
 
   const [participantRes, activitiesRes, healthRes] = await Promise.all([
     supabase.from('participants').select('*, cabins:cabin_id(id, name)').eq('id', participantId).single(),
-    supabase.from('participant_activities').select('*').eq('participant_id', participantId),
+    supabase.from('participant_activities').select('*, leaders!participant_activities_registered_by_fkey(name)').eq('participant_id', participantId).order('completed_at', { ascending: false }),
     supabase.from('participant_health_info').select('*').eq('participant_id', participantId).maybeSingle()
   ]);
 
   if (participantRes.error) throw participantRes.error;
+  if (activitiesRes.error) throw activitiesRes.error;
 
   return {
     participant: {
@@ -343,7 +348,10 @@ export const ParticipantDetailDialog = ({
   // Fetch participant detail with caching
   const { data, isLoading, refetch: refetchParticipant } = useQuery({
     queryKey: ['participant-detail-v2', participantId, seasonView ? 'season' : 'active'],
-    queryFn: () => fetchParticipantDetail(participantId!, seasonView),
+    queryFn: () => {
+      if (!participantId) throw new Error('Ingen deltaker valgt');
+      return fetchParticipantDetail(participantId, seasonView);
+    },
     enabled: open && !!participantId,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
@@ -393,10 +401,11 @@ export const ParticipantDetailDialog = ({
     queryKey: ['secret-word', participantId],
     enabled: open && !!participantId,
     queryFn: async () => {
+      if (!participantId) return null;
       const { data } = await (supabase as any)
         .from('secret_word_assignments')
         .select('word')
-        .eq('participant_id', participantId!)
+        .eq('participant_id', participantId)
         .maybeSingle();
       return (data?.word as string | undefined) ?? null;
     },
@@ -946,6 +955,7 @@ export const ParticipantDetailDialog = ({
                     completedActivities={activities}
                     onActivityChanged={handleActivityChanged}
                   />
+                  <ActivityTimeline entries={activities} />
                 </div>
 
                 {/* Activity Notes */}

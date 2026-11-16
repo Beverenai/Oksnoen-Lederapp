@@ -64,6 +64,13 @@
       "when": 1794857445498,
       "tag": "0008_participant_photo_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794857770173,
+      "tag": "0009_qr_activity_registration_sessions",
+      "breakpoints": true
     }
   ]
 }

@@ -22,6 +22,8 @@ import { LeaderDashboard } from '@/components/admin/LeaderDashboard';
 import { LeaderListView } from '@/components/admin/LeaderListView';
 import { SessionActivitiesSheet } from '@/components/admin/SessionActivitiesSheet';
 import { AdminNotesPanel } from '@/components/admin/notes/AdminNotesPanel';
+import { PeriodLeaderActivityTab } from '@/components/admin/PeriodLeaderActivityTab';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import type { Tables } from '@/integrations/supabase/types';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
 
@@ -219,6 +221,13 @@ export default function Admin() {
       </div>
 
 
+      <Tabs defaultValue="overview">
+        <TabsList className="w-full h-auto flex flex-wrap">
+          <TabsTrigger value="overview">Lederoversikt</TabsTrigger>
+          <TabsTrigger value="period">Ledere denne perioden</TabsTrigger>
+        </TabsList>
+        <TabsContent value="period"><PeriodLeaderActivityTab /></TabsContent>
+        <TabsContent value="overview" className="space-y-4">
       {/* Lederoversikt header with toggle */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -246,6 +255,9 @@ export default function Admin() {
       ) : (
         <LeaderListView leaders={leaders} homeConfig={localHomeConfig} onLeaderUpdated={loadData} />
       )}
+
+        </TabsContent>
+      </Tabs>
 
       {/* Activities Sheet */}
       <SessionActivitiesSheet open={isActivitiesSheetOpen} onOpenChange={setIsActivitiesSheetOpen} />
