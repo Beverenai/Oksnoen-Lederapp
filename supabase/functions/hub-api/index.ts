@@ -2424,7 +2424,7 @@ tools.push(
   },
 );
 
-const SERVICE_VERSION = "2.0.1";
+const SERVICE_VERSION = "2.1.0";
 
 // Helsesjekk: prøver alle verktøyene og melder hvilke som virker. Brukes av
 // admin («Tilkoblinger») for å oppdage at en endring i appen har knekt noe.
