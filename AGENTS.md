@@ -9,4 +9,5 @@
 - **Etter hver endring i hub-API-et:** øk `SERVICE_VERSION`, publiser funksjonen `hub-api` på nytt, og kjør verktøyet `helsesjekk`. Alle verktøy skal være grønne.
 - Hub-API-et er **bare lesing**. Legg aldri til verktøy som endrer data.
 - Behold tilgangskontrollen (`HUB_API_KEY`) og loggingen til `hub_api_log` uendret.
-- Disse opplysningene skal aldri ut gjennom hub-API-et: sykepleiernotater, hendelser, fritekstnotater på deltakere og kontaktinfo til foresatte.
+- **Admin skal kunne lese alt** (bestemt av August 16.11.2026). Verktøyene `datakart` og `rader` åpner hver tabell som står i `TABELLER`. En ny tabell må legges til der, med område og beskrivelse, i samme endring som den lages.
+- Disse skal aldri ut gjennom hub-API-et: PIN-koder (`admin_pins`), push-nøkler (`push_subscriptions`), `app_config`, og det sosiale mellom lederne (sveip, match, meldinger, spill). Avsender på anonyme meldinger i postkassen skal alltid skjules.
