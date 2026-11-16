@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, CloudOff, History, Link2, RefreshCw, Undo2, X } from 'lucide-react';
+import { CheckCircle, ChevronDown, CloudOff, History, Link2, RefreshCw, Undo2, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { QrScanner } from '@/components/qr/QrScanner';
 import { ActivityPicker } from '@/components/qr/ActivityPicker';
