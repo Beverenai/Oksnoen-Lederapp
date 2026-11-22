@@ -1,0 +1,26 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "9SFKGZ8C55.com.oksnoen.ledere"
+        ],
+        "components": [
+          {
+            "/": "/gjenglemt/*",
+            "exclude": true,
+            "comment": "Offentlig side for foreldre"
+          },
+          {
+            "/": "/install*",
+            "exclude": true
+          },
+          {
+            "/": "/*",
+            "comment": "Alt annet åpnes i appen"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Check, CloudOff, Link2, QrCode, RefreshCw, ScanLine, Search, Undo2, Users, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { checkInDefault } from '@/lib/activityRegistration';
 import { arrivalTime } from '@/lib/participantHistory';
 import { useRegistrationPopup } from '@/hooks/useRegistrationPopup';
+import { nativeScannerAvailable } from '@/lib/nativeScanner';
 
 type Tab = 'koble' | 'oversikt';
 type Tone = 'ok' | 'warn' | 'unknown' | 'error';
@@ -137,6 +139,16 @@ export default function Qr() {
 
   // ---------- Koble bånd ----------
   const [pendingCode, setPendingCode] = useState<string | null>(null);
+  // iPhone: armbåndet skannes i fullskjerm med iPhones egen QR-leser (samme som /skann).
+  const [nativeScan, setNativeScan] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    nativeScannerAvailable().then((ok) => alive && setNativeScan(ok)).catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [linkSearch, setLinkSearch] = useState('');
   const [linkFeedback, setLinkFeedback] = useState<Feedback | null>(null);
   const [isLinking, setIsLinking] = useState(false);
@@ -323,10 +335,52 @@ export default function Qr() {
             <Switch id="qr-check-in" checked={checkIn} onCheckedChange={setCheckIn} />
           </div>
           {cabinSelector}
-          <QrScanner onCode={onLinkCode} paused={!!pendingCode} onInvalid={() => {
-            hapticWarning();
-            setLinkFeedback({ tone: 'warn', title: 'Dette er ikke et Oksnøen-armbånd', at: Date.now() });
-          }} />
+          {nativeScan ? (
+            <Button
+              className="h-14 w-full gap-2 rounded-2xl text-base"
+              disabled={!!pendingCode}
+              onClick={() => {
+                hapticImpact('light');
+                setScanOpen(true);
+              }}
+            >
+              <ScanLine className="h-5 w-5" />
+              Skann bånd
+            </Button>
+          ) : (
+            <QrScanner onCode={onLinkCode} paused={!!pendingCode} onInvalid={() => {
+              hapticWarning();
+              setLinkFeedback({ tone: 'warn', title: 'Dette er ikke et Oksnøen-armbånd', at: Date.now() });
+            }} />
+          )}
+          {scanOpen &&
+            createPortal(
+              <div data-scan-layer className="fixed inset-0 z-[70] bg-black text-white">
+                <QrScanner
+                  fill
+                  onCode={(code) => {
+                    setScanOpen(false);
+                    onLinkCode(code);
+                  }}
+                  onInvalid={() => {
+                    hapticWarning();
+                    setLinkFeedback({ tone: 'warn', title: 'Dette er ikke et Oksnøen-armbånd', at: Date.now() });
+                  }}
+                />
+                <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between bg-gradient-to-b from-black/70 to-transparent px-4 pb-10 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]">
+                  <p className="text-base font-semibold">Skann armbåndet</p>
+                  <button
+                    type="button"
+                    aria-label="Lukk"
+                    className="pointer-events-auto rounded-full bg-black/55 p-2 backdrop-blur"
+                    onClick={() => setScanOpen(false)}
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>,
+              document.body,
+            )}
 
           {!pendingCode && <FeedbackCard feedback={linkFeedback} />}
 

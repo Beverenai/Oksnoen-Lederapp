@@ -1,5 +1,6 @@
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
@@ -67,6 +68,19 @@ export default function Fix() {
   const [showNewForm, setShowNewForm] = useState(false);
   const [fixedOpen, setFixedOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<FixTask | null>(null);
+  // /fix?task=<id> (fra varsel eller widget) åpner oppgaven direkte.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linkedTaskId = searchParams.get('task');
+  useEffect(() => {
+    if (!linkedTaskId || !tasks.length) return;
+    const t = tasks.find((x) => x.id === linkedTaskId);
+    if (t) setSelectedTask(t);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('task');
+      return next;
+    }, { replace: true });
+  }, [linkedTaskId, tasks, setSearchParams]);
   
   // Form state
   const [title, setTitle] = useState('');
@@ -284,7 +298,7 @@ export default function Fix() {
           body: {
             title: '🔧 Ny Fix-oppgave',
             message: `Du har fått tildelt: ${task?.title || 'En oppgave'}`,
-            url: '/fix',
+            url: `/fix?task=${taskId}`,
             single_leader_id: leaderId,
             sender_leader_id: leader?.id
           }

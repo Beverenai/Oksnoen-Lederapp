@@ -26,6 +26,28 @@ export interface ApnsAlertPayload {
   threadId?: string;
   /** «time-sensitive» bryter gjennom Fokus. Brukes bare for varsler som haster (f.eks. admin-varsel). */
   interruptionLevel?: "passive" | "active" | "time-sensitive";
+  /** Knapper i varselet (registrert i appen): CHAT_MESSAGE («Svar») og FIX_TASK («Merk som fikset»).
+   *  Settes automatisk ut fra url når den ikke er gitt. */
+  category?: string;
+  /** Ekstra felt appen trenger for knappene (f.eks. message_id, fix_task_id). Legges på toppnivå. */
+  data?: Record<string, string>;
+}
+
+/** Finner knappetype og nødvendige felt ut fra lenken i varselet. */
+function categoryFromUrl(url?: string): { category?: string; data: Record<string, string> } {
+  if (!url) return { data: {} };
+  const [path, query = ""] = url.split("?");
+  const params = new URLSearchParams(query);
+  if (path === "/fix" && params.get("task")) {
+    return { category: "FIX_TASK", data: { fix_task_id: params.get("task")! } };
+  }
+  if (path === "/chat" && params.get("reply")) {
+    const data: Record<string, string> = { message_id: params.get("reply")! };
+    if (params.get("channel")) data.channel = params.get("channel")!;
+    if (params.get("author")) data.author_id = params.get("author")!;
+    return { category: "CHAT_MESSAGE", data };
+  }
+  return { data: {} };
 }
 
 export interface ApnsSendResult {
@@ -189,6 +211,8 @@ export async function sendApnsAlert(
 
   const jwt = await createApnsJwt(cfg);
 
+  const derived = categoryFromUrl(payload.url);
+  const category = payload.category ?? derived.category;
   const threadId = payload.threadId ?? (payload.url?.split("?")[0].split("/").filter(Boolean)[0] || undefined);
   const apsPayload: Record<string, unknown> = {
     aps: {
@@ -197,9 +221,13 @@ export async function sendApnsAlert(
       ...(payload.badge !== undefined ? { badge: payload.badge } : {}),
       ...(threadId ? { "thread-id": threadId } : {}),
       ...(payload.interruptionLevel ? { "interruption-level": payload.interruptionLevel } : {}),
+      ...(category ? { category } : {}),
     },
   };
   if (payload.url) apsPayload.url = payload.url;
+  for (const [k, v] of Object.entries({ ...derived.data, ...(payload.data ?? {}) })) {
+    if (k !== "aps" && k !== "url") apsPayload[k] = v;
+  }
 
   let res: Response;
   try {
@@ -246,5 +274,59 @@ export async function sendApnsAlert(
     reason === "BadDeviceToken" ||
     reason === "DeviceTokenNotForTopic";
 
+  return { ok: false, status: res.status, reason, unregistered };
+}
+
+export interface LiveActivityState {
+  activity: string;
+  sessionLabel: string;
+  extra: string;
+  obs: string;
+}
+
+/**
+ * Oppdaterer eller avslutter live-visningen «Denne økta» på én telefon.
+ * Nøkkelen kommer fra appen (Activity.pushTokenUpdates) og er ikke den vanlige push-nøkkelen.
+ */
+export async function sendApnsLiveActivity(
+  cfg: ApnsConfig,
+  activityToken: string,
+  state: LiveActivityState | null,
+): Promise<ApnsSendResult> {
+  const host = cfg.env === "production"
+    ? "https://api.push.apple.com"
+    : "https://api.sandbox.push.apple.com";
+  const jwt = await createApnsJwt(cfg);
+  const now = Math.floor(Date.now() / 1000);
+  const aps: Record<string, unknown> = state
+    ? { timestamp: now, event: "update", "content-state": state, "stale-date": now + 4 * 60 * 60 }
+    : { timestamp: now, event: "end", "dismissal-date": now };
+
+  let res: Response;
+  try {
+    res = await fetch(`${host}/3/device/${activityToken}`, {
+      method: "POST",
+      headers: {
+        "authorization": `bearer ${jwt}`,
+        "apns-topic": `${cfg.topic}.push-type.liveactivity`,
+        "apns-push-type": "liveactivity",
+        "apns-priority": "10",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ aps }),
+    });
+  } catch (e) {
+    return { ok: false, status: 0, reason: (e as Error).message };
+  }
+  if (res.status === 200) return { ok: true, status: 200 };
+  let reason: string | undefined;
+  try {
+    reason = (await res.json())?.reason;
+  } catch {
+    // ignorer
+  }
+  console.error(`[APNs] live-visning feilet status=${res.status} reason=${reason ?? "?"}`);
+  if (reason === "InvalidProviderToken" || reason === "ExpiredProviderToken") cachedToken = null;
+  const unregistered = res.status === 410 || reason === "Unregistered" || reason === "BadDeviceToken";
   return { ok: false, status: res.status, reason, unregistered };
 }
