@@ -3,7 +3,8 @@
  * Alt er trygt å kalle på web; der skjer ingenting.
  */
 
-import { registerPlugin } from '@capacitor/core';
+import { registerPlugin, type PluginListenerHandle } from '@capacitor/core';
+import { supabase } from '@/integrations/supabase/client';
 import { isCapacitor } from './capacitor';
 
 /** Det widgetene og live-visningen viser. Holdes lite: bare det lederen trenger på et blikk. */
@@ -40,7 +41,23 @@ interface WidgetBridgePlugin {
   }): Promise<{ active: boolean }>;
   endLiveActivity(): Promise<void>;
   reloadWidgets(): Promise<void>;
+  addListener(event: 'liveActivityToken', fn: (data: { token: string }) => void): Promise<PluginListenerHandle>;
 }
+
+// Push-nøkkelen til live-visningen lagres på serveren, så den kan oppdateres når appen er lukket.
+let tokenListener: Promise<PluginListenerHandle> | null = null;
+let lastToken: string | null = null;
+const saveLiveActivityToken = async (token: string | null) => {
+  if (token && token === lastToken) return;
+  lastToken = token;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).rpc('set_live_activity_token', { _token: token ?? '' });
+  if (error) console.log('[WidgetBridge] kunne ikke lagre nøkkel for live-visning:', error.message);
+};
+const listenForLiveActivityToken = (b: WidgetBridgePlugin) => {
+  if (tokenListener) return;
+  tokenListener = b.addListener('liveActivityToken', ({ token }) => void saveLiveActivityToken(token));
+};
 
 let WidgetBridge: WidgetBridgePlugin | null = null;
 
@@ -48,6 +65,7 @@ export const initWidgetBridge = async (): Promise<boolean> => {
   if (!isCapacitor()) return false;
   try {
     WidgetBridge = registerPlugin<WidgetBridgePlugin>('WidgetBridge');
+    listenForLiveActivityToken(WidgetBridge);
     return true;
   } catch (e) {
     console.log('[WidgetBridge] Plugin not available:', e);
@@ -83,6 +101,7 @@ export const updateWidgetData = async (data: {
 export const syncNativeSurfaces = async (snapshot: WidgetSnapshot): Promise<void> => {
   const b = bridge();
   if (!b) return;
+  listenForLiveActivityToken(b);
   try {
     await b.setSnapshot({ json: JSON.stringify(snapshot) });
   } catch (e) {
@@ -111,6 +130,7 @@ export const syncNativeSurfaces = async (snapshot: WidgetSnapshot): Promise<void
 export const clearNativeSurfaces = async (): Promise<void> => {
   const b = bridge();
   if (!b) return;
+  await saveLiveActivityToken(null).catch(() => undefined);
   try {
     await b.setSnapshot({ json: '' });
     await b.endLiveActivity();

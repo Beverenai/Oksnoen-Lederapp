@@ -164,7 +164,8 @@ serve(async (req) => {
       mentionedSet.has(leaderId)
         ? `💬 ${caller.name} tagget deg`
         : `💬 ${caller.name} i ${channelLabel}`;
-    const url = "/chat";
+    // reply/channel/author gir «Svar»-knappen i varselet det den trenger.
+    const url = `/chat?channel=${encodeURIComponent(String(message.channel ?? ""))}&reply=${message.id}&author=${caller.id}`;
 
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");

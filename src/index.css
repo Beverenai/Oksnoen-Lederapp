@@ -182,6 +182,8 @@ html, body {
   }
 
   .dark {
+    /* Skjemaelementer, rullefelt og tastatur følger mørk modus. */
+    color-scheme: dark;
     --background: 220 25% 8%;
     --foreground: 220 10% 95%;
 

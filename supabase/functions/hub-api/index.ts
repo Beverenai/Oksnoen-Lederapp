@@ -2042,6 +2042,7 @@ const HOLDT_UTENFOR = {
   "app_config": "Innstillinger som kan inneholde hemmeligheter",
   "hookup_notifications": "Sosialt mellom lederne, som ledelsen ikke ser i appen",
   "leader_hookups": "Sosialt mellom lederne, som ledelsen ikke ser i appen",
+  "live_activity_tokens": "Push-nøkler (live-visning på iPhone)",
   "leader_match_messages": "Sosialt mellom lederne, som ledelsen ikke ser i appen",
   "leader_matches": "Sosialt mellom lederne, som ledelsen ikke ser i appen",
   "leader_sips": "Sosialt mellom lederne, som ledelsen ikke ser i appen",
@@ -2636,7 +2637,7 @@ tools.push({
   },
 });
 
-const SERVICE_VERSION = "2.5.0";
+const SERVICE_VERSION = "2.5.1";
 
 // Helsesjekk: prøver alle verktøyene og melder hvilke som virker. Brukes av
 // admin («Tilkoblinger») for å oppdage at en endring i appen har knekt noe.

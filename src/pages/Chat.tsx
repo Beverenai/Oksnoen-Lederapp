@@ -1,5 +1,6 @@
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
 import { useActiveLeirskoleWeek, useIsLeirskoleStaff, useLeirskoleStaff } from '@/hooks/useLeirskole';
@@ -111,6 +112,14 @@ export default function Chat() {
     accessMode === 'leirskole' && canUseLeirskoleChat ? 'leirskole' : canUsePeriodChat ? 'period' : 'offseason',
   );
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
+  // /chat?channel=… (fra varsel) åpner riktig kanal, hvis lederen har tilgang til den.
+  const [searchParams] = useSearchParams();
+  const linkedChannel = searchParams.get('channel');
+  useEffect(() => {
+    if (linkedChannel === 'period' && canUsePeriodChat) setChannel('period');
+    else if (linkedChannel === 'leirskole' && canUseLeirskoleChat) setChannel('leirskole');
+    else if (linkedChannel === 'offseason') setChannel('offseason');
+  }, [linkedChannel, canUsePeriodChat, canUseLeirskoleChat]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [leaders, setLeaders] = useState<Record<string, LeaderLite>>({});
   const [input, setInput] = useState('');
