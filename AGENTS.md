@@ -19,3 +19,4 @@
 - Registration confirmations use a scoped popup hook, preserving the rest of the app's notification behavior.
 - Period leader activity summaries read period_leaders and date-bounded records under existing RLS, rather than global active-leader membership.
 - Period registration summaries page through all matching records so API row limits cannot silently truncate counts.
+- Phone login validates the number before requesting a PIN challenge and clears stale PIN state on lookup failures, so unknown users stay on the phone form.
