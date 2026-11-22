@@ -57,6 +57,33 @@
 			</array>
 		</dict>
 	</dict>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.oksnoen.ledere.skann</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Skann armbånd</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>qrcode.viewfinder</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.oksnoen.ledere.fix</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>FIX-oppgaver</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>wrench.and.screwdriver</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.oksnoen.ledere.chat</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Lederhuset</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>bubble.left.and.bubble.right</string>
+		</dict>
+	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>CFBundleURLTypes</key>

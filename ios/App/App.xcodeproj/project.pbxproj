@@ -26,6 +26,8 @@
 		AA000001AABB000100000001 /* LederWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001AABB000200000001 /* LederWidget.swift */; };
 		AA000001AABB000100000002 /* LederWidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001AABB000200000002 /* LederWidgetEntryView.swift */; };
 		AA000001AABB000100000003 /* LederWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001AABB000200000003 /* LederWidgetBundle.swift */; };
+		AA000001AABB000300000002 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AA000001AABB000300000001 /* PrivacyInfo.xcprivacy */; };
+		AA000001AABB000300000004 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AA000001AABB000300000003 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -75,6 +77,8 @@
 		AA000001AABB000200000001 /* LederWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LederWidget.swift; sourceTree = "<group>"; };
 		AA000001AABB000200000002 /* LederWidgetEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LederWidgetEntryView.swift; sourceTree = "<group>"; };
 		AA000001AABB000200000003 /* LederWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LederWidgetBundle.swift; sourceTree = "<group>"; };
+		AA000001AABB000300000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		AA000001AABB000300000003 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -84,6 +88,7 @@
 				AA000001AABB000200000001 /* LederWidget.swift */,
 				AA000001AABB000200000002 /* LederWidgetEntryView.swift */,
 				AA000001AABB000200000003 /* LederWidgetBundle.swift */,
+				AA000001AABB000300000003 /* PrivacyInfo.xcprivacy */,
 			);
 			path = LederWidget;
 			sourceTree = "<group>";
@@ -148,6 +153,7 @@
 				97AA10102F60000000AA012 /* sip-drink.caf */,
 				50B271D01FEDC1A000F3C39B /* public */,
 				97E5D6312F585B850086ECF3 /* NativePlugins.swift */,
+				AA000001AABB000300000001 /* PrivacyInfo.xcprivacy */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -275,6 +281,7 @@
 				97AA10200F60000100AA020 /* sip-beer.caf in Resources */,
 				97AA10201F60000100AA021 /* sip-wine.caf in Resources */,
 				97AA10202F60000100AA022 /* sip-drink.caf in Resources */,
+				AA000001AABB000300000002 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -282,6 +289,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA000001AABB000300000004 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -467,7 +475,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -490,7 +498,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -534,7 +542,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -576,7 +584,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};

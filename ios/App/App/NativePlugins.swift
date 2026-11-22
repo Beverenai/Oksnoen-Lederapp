@@ -102,14 +102,31 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(4 * 60 * 60))
             if let existing = Activity<OktAttributes>.activities.first {
                 await existing.update(content)
+                self.observePushToken(existing)
                 call.resolve(["active": true])
                 return
             }
             do {
-                _ = try Activity.request(attributes: OktAttributes(leaderName: leaderName), content: content, pushType: nil)
+                // pushType .token: serveren kan oppdatere visningen når appen er lukket.
+                let activity = try Activity.request(attributes: OktAttributes(leaderName: leaderName), content: content, pushType: .token)
+                self.observePushToken(activity)
                 call.resolve(["active": true])
             } catch {
                 call.resolve(["active": false])
+            }
+        }
+    }
+
+    private var observedActivityId: String?
+
+    /// Sender push-nøkkelen til live-visningen til appen, som lagrer den på serveren.
+    private func observePushToken(_ activity: Activity<OktAttributes>) {
+        guard observedActivityId != activity.id else { return }
+        observedActivityId = activity.id
+        Task { [weak self] in
+            for await data in activity.pushTokenUpdates {
+                let token = data.map { String(format: "%02x", $0) }.joined()
+                self?.notifyListeners("liveActivityToken", data: ["token": token], retainUntilConsumed: true)
             }
         }
     }
