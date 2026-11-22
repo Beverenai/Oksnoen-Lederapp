@@ -35,7 +35,7 @@ import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullIndicator } from '@/components/ui/pull-indicator';
-import { updateWidgetData } from '@/lib/capacitorWidget';
+import { syncNativeSurfaces } from '@/lib/capacitorWidget';
 import { MessageSquareWarning } from 'lucide-react';
 import { useTeamsEnabled } from '@/hooks/useTeamsEnabled';
 import { useKitchenDutyToday } from '@/hooks/useKitchenDutyToday';
@@ -269,11 +269,6 @@ export default function Home() {
       setRouletteEnabled(cfgMap.get('roulette_enabled') === 'true');
 
       setContent(contentRes.data);
-      updateWidgetData({
-        currentActivity: contentRes.data?.current_activity ?? null,
-        extraActivity: contentRes.data?.extra_activity ?? null,
-        obsMessage: contentRes.data?.obs_message ?? null,
-      });
       if (activitiesTextRes.data?.value) {
         try {
           const parsed = JSON.parse(activitiesTextRes.data.value);
@@ -297,6 +292,43 @@ export default function Home() {
       
       // Set pending rope controls
       setPendingRopeControls((ropeControlsRes.data || []) as PendingRopeControl[]);
+
+      // iPhone: widgeter og live-visning på låseskjermen får samme bilde som forsiden.
+      {
+        let sessionLabel: string | null = null;
+        let sessionReminder: string | null = null;
+        try {
+          const parsed = activitiesTextRes.data?.value ? JSON.parse(activitiesTextRes.data.value) : null;
+          const active = parsed?.sessions?.[String(parsed.active)];
+          if (active && (active.reminder || active.items?.length)) {
+            sessionLabel = `${parsed.active}. økt`;
+            sessionReminder = active.reminder?.trim() || null;
+          }
+        } catch {
+          // ugyldig økt-data: vis uten økt
+        }
+        const fix = ((fixTasksRes.data || []) as { title?: string | null }[]).map((t) => ({
+          kind: 'fix' as const,
+          title: t.title?.trim() || 'FIX-oppgave',
+        }));
+        const tau = ((ropeControlsRes.data || []) as { activity?: string | null }[]).map((r) => ({
+          kind: 'tau' as const,
+          title: r.activity?.trim() ? `Taukontroll: ${r.activity.trim()}` : 'Taukontroll',
+        }));
+        syncNativeSurfaces({
+          leaderName: effectiveLeader.name?.split(' ')[0] ?? null,
+          sessionLabel,
+          currentActivity: contentRes.data?.current_activity?.trim() || null,
+          extraActivity: contentRes.data?.extra_activity?.trim() || null,
+          obsMessage: contentRes.data?.obs_message?.trim() || null,
+          sessionReminder,
+          cabins: cabins.map((c) => c.name).filter(Boolean),
+          tasks: [...fix, ...tau].slice(0, 6),
+          unread: 0,
+          // Live-visning bare når oppdraget er lagt inn det siste døgnet, så gamle oppdrag ikke blir hengende.
+          live: !!contentRes.data?.updated_at && Date.now() - new Date(contentRes.data.updated_at).getTime() < 18 * 60 * 60 * 1000,
+        });
+      }
     } catch (error) {
       console.error('Error loading home data:', error);
       setLoadFailed(true);

@@ -230,7 +230,7 @@ export default function Scan() {
   const overlayOpen = pickerOpen || historyOpen;
 
   return createPortal(
-    <div className="fixed inset-0 z-[70] bg-black text-white">
+    <div data-scan-layer className="fixed inset-0 z-[70] bg-black text-white">
       <QrScanner
         fill
         onCode={onCode}

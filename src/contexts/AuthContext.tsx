@@ -341,6 +341,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     setDeactivatedMessage(null);
     setViewAsLeader(null);
+    // iPhone: tøm widgeter, live-visning og tallmerke når lederen logger ut.
+    await import('@/lib/capacitorWidget').then((m) => m.clearNativeSurfaces()).catch(() => undefined);
     await supabase.auth.signOut();
     localStorage.removeItem('leaderName');
     setLeader(null);

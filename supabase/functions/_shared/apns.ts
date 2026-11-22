@@ -22,6 +22,10 @@ export interface ApnsAlertPayload {
   url?: string;
   badge?: number;
   sound?: string;
+  /** Samler varsler om samme sak i én bunke på låseskjermen. Standard: første ledd i url (f.eks. «fix», «chat»). */
+  threadId?: string;
+  /** «time-sensitive» bryter gjennom Fokus. Brukes bare for varsler som haster (f.eks. admin-varsel). */
+  interruptionLevel?: "passive" | "active" | "time-sensitive";
 }
 
 export interface ApnsSendResult {
@@ -185,11 +189,14 @@ export async function sendApnsAlert(
 
   const jwt = await createApnsJwt(cfg);
 
+  const threadId = payload.threadId ?? (payload.url?.split("?")[0].split("/").filter(Boolean)[0] || undefined);
   const apsPayload: Record<string, unknown> = {
     aps: {
       alert: { title: payload.title, body: payload.body },
       sound: payload.sound ?? "default",
       ...(payload.badge !== undefined ? { badge: payload.badge } : {}),
+      ...(threadId ? { "thread-id": threadId } : {}),
+      ...(payload.interruptionLevel ? { "interruption-level": payload.interruptionLevel } : {}),
     },
   };
   if (payload.url) apsPayload.url = payload.url;

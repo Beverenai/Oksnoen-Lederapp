@@ -10,6 +10,12 @@ const config: CapacitorConfig = {
     scrollEnabled: true,
     backgroundColor: '#0a0f1c',
   },
+  plugins: {
+    // Vis varsler også når appen er åpen.
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
+  },
 };
 
 export default config;

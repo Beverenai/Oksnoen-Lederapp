@@ -18,6 +18,8 @@ interface QrScannerProps {
   className?: string;
 }
 
+import { nativeScannerAvailable, setNativeTorch, startNativeScanner } from '@/lib/nativeScanner';
+
 // Samme kode gir ikke nytt treff før det har gått så lang tid.
 const REPEAT_MS = 2000;
 const SCAN_INTERVAL_MS = 90;
@@ -49,6 +51,10 @@ export function QrScanner({ onCode, onInvalid, paused = false, fill = false, cla
   const pausedRef = useRef(paused);
   const onCodeRef = useRef(onCode);
   const onInvalidRef = useRef(onInvalid);
+  // iPhones innebygde leser (bare fullskjerm). Null når vi bruker web-kameraet.
+  const nativeStopRef = useRef<(() => Promise<void>) | null>(null);
+  const startingRef = useRef(false);
+  const [nativeMode, setNativeMode] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -71,6 +77,12 @@ export function QrScanner({ onCode, onInvalid, paused = false, fill = false, cla
   }, []);
 
   const stop = useCallback(() => {
+    const stopNative = nativeStopRef.current;
+    nativeStopRef.current = null;
+    if (stopNative) {
+      stopNative();
+      setNativeMode(false);
+    }
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     setReady(false);
@@ -78,7 +90,27 @@ export function QrScanner({ onCode, onInvalid, paused = false, fill = false, cla
   }, []);
 
   const start = useCallback(async () => {
-    if (streamRef.current) return;
+    if (streamRef.current || nativeStopRef.current || startingRef.current) return;
+    // Fullskjerm på iPhone: bruk den innebygde leseren. Feiler den, faller vi tilbake til web-kameraet under.
+    if (fill) {
+      startingRef.current = true;
+      try {
+        if (await nativeScannerAvailable()) {
+          const native = await startNativeScanner((value) => {
+            if (!pausedRef.current) handleRaw(value);
+          });
+          nativeStopRef.current = native.stop;
+          setTorchAvailable(native.torch);
+          setNativeMode(true);
+          setError(null);
+          return;
+        }
+      } catch (err) {
+        console.log('[QrScanner] innebygd leser ikke tilgjengelig, bruker web-kameraet', err);
+      } finally {
+        startingRef.current = false;
+      }
+    }
     if (!navigator.mediaDevices?.getUserMedia) {
       setError('Kameraet er ikke tilgjengelig her. Tast nummeret i stedet.');
       return;
@@ -108,7 +140,7 @@ export function QrScanner({ onCode, onInvalid, paused = false, fill = false, cla
           : 'Fikk ikke startet kameraet. Tast nummeret i stedet.',
       );
     }
-  }, []);
+  }, [fill, handleRaw]);
 
   // Start og stopp kameraet med siden, og når appen går i bakgrunnen.
   useEffect(() => {
@@ -171,6 +203,15 @@ export function QrScanner({ onCode, onInvalid, paused = false, fill = false, cla
   }, [ready, handleRaw]);
 
   const toggleTorch = async () => {
+    if (nativeStopRef.current) {
+      try {
+        await setNativeTorch(!torchOn);
+        setTorchOn(!torchOn);
+      } catch {
+        setTorchAvailable(false);
+      }
+      return;
+    }
     const track = streamRef.current?.getVideoTracks()[0];
     if (!track) return;
     try {
@@ -193,13 +234,13 @@ export function QrScanner({ onCode, onInvalid, paused = false, fill = false, cla
 
   return (
     <div className={cn(fill ? 'absolute inset-0' : 'space-y-2', className)}>
-      <div className={cn('relative overflow-hidden bg-black', fill ? 'h-full w-full' : 'rounded-3xl aspect-[4/3] sm:aspect-video')}>
+      <div className={cn('relative overflow-hidden', nativeMode ? 'bg-transparent' : 'bg-black', fill ? 'h-full w-full' : 'rounded-3xl aspect-[4/3] sm:aspect-video')}>
         <video
           ref={videoRef}
           playsInline
           muted
           autoPlay
-          className={cn('h-full w-full object-cover', (!ready || error) && 'opacity-0')}
+          className={cn('h-full w-full object-cover', (!ready || error || nativeMode) && 'opacity-0')}
         />
         {!error && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
