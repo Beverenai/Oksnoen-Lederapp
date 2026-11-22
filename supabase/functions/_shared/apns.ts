@@ -5,7 +5,7 @@
 //   APNS_KEY_ID       - 10 char Key ID from Apple Developer
 //   APNS_TEAM_ID      - 10 char Team ID
 //   APNS_PRIVATE_KEY  - .p8 contents (PEM, may include BEGIN/END lines)
-//   APNS_TOPIC        - bundle id (default com.oksnoen.lederapp)
+//   APNS_TOPIC        - bundle id (default com.oksnoen.ledere)
 //   APNS_ENV          - 'production' (default) or 'sandbox'
 
 export interface ApnsConfig {
@@ -62,7 +62,7 @@ export function getApnsConfig(): ApnsConfig | null {
   const teamId = normalizeSecretValue(Deno.env.get("APNS_TEAM_ID"));
   const privateKeyPem = normalizeSecretValue(Deno.env.get("APNS_PRIVATE_KEY"));
   if (!keyId || !teamId || !privateKeyPem) return null;
-  const topic = normalizeSecretValue(Deno.env.get("APNS_TOPIC")) || "com.oksnoen.lederapp";
+  const topic = normalizeSecretValue(Deno.env.get("APNS_TOPIC")) || "com.oksnoen.ledere";
   const env = (normalizeSecretValue(Deno.env.get("APNS_ENV")) || "production").toLowerCase() === "sandbox"
     ? "sandbox"
     : "production";

@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.oksnoen.lederapp',
+  appId: 'com.oksnoen.ledere',
   appName: 'Oksnøen LederApp',
   webDir: 'dist',
   bundledWebRuntime: false,
