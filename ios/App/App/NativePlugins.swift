@@ -17,6 +17,9 @@ class MainViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(WidgetBridgePlugin())
         bridge?.registerPluginInstance(NativeScannerPlugin())
+        // Sveip fra venstre kant for å gå tilbake, som i vanlige iOS-apper.
+        // Virker med appens egen navigering (history.pushState).
+        webView?.allowsBackForwardNavigationGestures = true
     }
 }
 
