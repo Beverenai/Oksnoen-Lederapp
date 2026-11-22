@@ -9,6 +9,7 @@ import { Phone, Loader2, PauseCircle, ScanFace, Fingerprint } from 'lucide-react
 import oksnoenLogo from '@/assets/oksnoen-logo.png';
 import { hapticError } from '@/lib/capacitorHaptics';
 import { PinPad } from '@/components/auth/PinPad';
+import { loginPinStep, normalizeLoginPhone } from '@/lib/loginPhone';
 import {
   biometricLabel,
   biometricUnlock,
@@ -53,7 +54,7 @@ export default function Login() {
     window.setTimeout(() => setShake(false), 450);
   };
 
-  const handleResult = (result: Awaited<ReturnType<typeof login>>) => {
+  const handleResult = (result: Awaited<ReturnType<typeof login>>, attemptedPhone = phone) => {
     if (result.success) {
       // Offer to enable Face ID for next time
       if (
@@ -69,13 +70,14 @@ export default function Login() {
       navigate('/');
       return;
     }
-    if (result.error === 'PIN_REQUIRED') {
+    const nextPinStep = loginPinStep(attemptedPhone, result.error);
+    if (nextPinStep === 'enter') {
       setAdminName(result.name ?? null);
       setPin('');
       setPinStep('enter');
       return;
     }
-    if (result.error === 'PIN_SETUP_REQUIRED') {
+    if (nextPinStep === 'create') {
       setAdminName(result.name ?? null);
       setPin('');
       setFirstPin('');
@@ -104,20 +106,29 @@ export default function Login() {
       setInactiveState(true);
       return;
     }
+    resetPinStep();
+    pendingCredsRef.current = null;
+    if (result.error === 'UNKNOWN_PHONE') {
+      showError('Ingen bruker', 'Fant ingen bruker med dette telefonnummeret. Kontroller nummeret og prøv igjen.');
+      return;
+    }
     showError(result.message || result.error || 'Innlogging feilet');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!phone.trim()) {
-      showError('Skriv inn telefonnummeret ditt');
+    resetPinStep();
+    pendingCredsRef.current = null;
+    const normalizedPhone = normalizeLoginPhone(phone);
+    if (!normalizedPhone) {
+      showError('Ingen bruker', 'Skriv inn et gyldig telefonnummer med 8 siffer (evt. +47 først).');
       return;
     }
 
     setIsLoading(true);
     setInactiveState(false);
-    const result = await login(phone);
+    const result = await login(normalizedPhone);
     setIsLoading(false);
     handleResult(result);
   };
@@ -155,7 +166,7 @@ export default function Login() {
       navigate('/');
       return;
     }
-    handleResult(result);
+    handleResult(result, creds.phone);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [login, navigate]);
 
