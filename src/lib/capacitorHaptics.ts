@@ -26,6 +26,16 @@ export const initCapacitorHaptics = async (): Promise<boolean> => {
   }
 };
 
+// To varsler rett etter hverandre (f.eks. en popup og en eksplisitt haptikk for
+// samme handling) skal kjennes som ett. Varsel-haptikk innen 350 ms slås sammen.
+let lastNotificationAt = 0;
+const notificationAllowed = (): boolean => {
+  const now = Date.now();
+  if (now - lastNotificationAt < 350) return false;
+  lastNotificationAt = now;
+  return true;
+};
+
 export const isHapticsAvailable = (): boolean => {
   return !!Haptics;
 };
@@ -53,7 +63,7 @@ export const hapticImpact = async (style: 'light' | 'medium' | 'heavy' = 'medium
  * Trigger success notification haptic
  */
 export const hapticSuccess = async (): Promise<void> => {
-  if (!Haptics) return;
+  if (!Haptics || !notificationAllowed()) return;
   
   try {
     await Haptics.notification({ type: NotificationType.Success });
@@ -66,7 +76,7 @@ export const hapticSuccess = async (): Promise<void> => {
  * Trigger warning notification haptic
  */
 export const hapticWarning = async (): Promise<void> => {
-  if (!Haptics) return;
+  if (!Haptics || !notificationAllowed()) return;
   
   try {
     await Haptics.notification({ type: NotificationType.Warning });
@@ -79,7 +89,7 @@ export const hapticWarning = async (): Promise<void> => {
  * Trigger error notification haptic
  */
 export const hapticError = async (): Promise<void> => {
-  if (!Haptics) return;
+  if (!Haptics || !notificationAllowed()) return;
   
   try {
     await Haptics.notification({ type: NotificationType.Error });
@@ -113,4 +123,25 @@ export const hapticVibrate = async (duration: number = 300): Promise<void> => {
   } catch (e) {
     // Silently fail
   }
+};
+
+/**
+ * Gir haptikk på alle toast-meldinger (sonner) uten at hver side må huske det.
+ * Kalles én gang ved oppstart.
+ */
+let toastPatched = false;
+export const patchToastHaptics = async (): Promise<void> => {
+  if (toastPatched) return;
+  toastPatched = true;
+  const { toast } = await import('sonner');
+  const wrap = (key: 'success' | 'error' | 'warning', fire: () => Promise<void>) => {
+    const original = toast[key].bind(toast);
+    (toast as unknown as Record<string, unknown>)[key] = (...args: Parameters<typeof original>) => {
+      void fire();
+      return original(...args);
+    };
+  };
+  wrap('success', hapticSuccess);
+  wrap('error', hapticError);
+  wrap('warning', hapticWarning);
 };

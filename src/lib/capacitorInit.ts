@@ -6,7 +6,7 @@
 import { isCapacitor } from './capacitor';
 import { initCapacitorPush } from './capacitorPush';
 import { initCapacitorCamera } from './capacitorCamera';
-import { initCapacitorHaptics } from './capacitorHaptics';
+import { initCapacitorHaptics, patchToastHaptics } from './capacitorHaptics';
 import { initWidgetBridge } from './capacitorWidget';
 
 interface CapacitorInitResult {
@@ -62,6 +62,7 @@ export const initCapacitorPlugins = async (): Promise<CapacitorInitResult> => {
   }
   
   // Initialize all plugins in parallel
+  void patchToastHaptics();
   const [push, camera, haptics, widget] = await Promise.all([
     initCapacitorPush(),
     initCapacitorCamera(),

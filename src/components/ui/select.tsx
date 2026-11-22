@@ -3,8 +3,17 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { hapticSelection } from "@/lib/capacitorHaptics";
 
-const Select = SelectPrimitive.Root;
+const Select = ({ onValueChange, ...props }: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) => (
+  <SelectPrimitive.Root
+    onValueChange={(value) => {
+      hapticSelection();
+      onValueChange?.(value);
+    }}
+    {...props}
+  />
+);
 
 const SelectGroup = SelectPrimitive.Group;
 

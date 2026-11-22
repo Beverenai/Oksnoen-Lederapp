@@ -57,6 +57,7 @@ import { KioskSuccessDialog, type KioskSuccessData } from '@/components/kiosk/Ki
 import { receiptLabel, type ReceiptData } from '@/lib/kioskReceipt';
 import { getTileStyle } from '@/lib/kioskBrand';
 import { getKioskProductImage } from '@/lib/kioskProductImage';
+import { hapticSelection } from '@/lib/capacitorHaptics';
 
 const Kiosk = () => {
   const { data: participants = [], isLoading: participantsLoading } = useParticipants();
@@ -188,6 +189,7 @@ const Kiosk = () => {
   };
 
   const addLine = (product: KioskProduct) => {
+    hapticSelection();
     setLines((prev) => {
       const existing = prev.find((l) => l.product.id === product.id);
       if (existing) {
@@ -314,6 +316,7 @@ const Kiosk = () => {
   };
 
   const addEditLine = (product: KioskProduct) => {
+    hapticSelection();
     setEditLines((prev) => {
       const existing = prev.find((l) => l.product.id === product.id);
       if (existing) {
