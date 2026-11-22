@@ -56,3 +56,38 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
 }
+
+/// iOS krever nå scener (UIScene) for apper bygget med nyeste Xcode. Uten dette
+/// stopper iOS appen med en gang den åpnes. Vinduet lages fra Main.storyboard
+/// (satt i Info.plist), og lenker sendes videre til Capacitor som før.
+class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+
+    var window: UIWindow?
+
+    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+        guard scene is UIWindowScene else { return }
+        // Noen tillegg ser etter vinduet på AppDelegate.
+        (UIApplication.shared.delegate as? AppDelegate)?.window = window
+
+        // Appen ble åpnet fra en lenke (f.eks. Skann-widgeten) mens den var lukket.
+        if let url = connectionOptions.urlContexts.first?.url {
+            DispatchQueue.main.async {
+                _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, open: url, options: [:])
+            }
+        }
+        if let activity = connectionOptions.userActivities.first {
+            DispatchQueue.main.async {
+                _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, continue: activity, restorationHandler: { _ in })
+            }
+        }
+    }
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        guard let url = URLContexts.first?.url else { return }
+        _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, open: url, options: [:])
+    }
+
+    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, continue: userActivity, restorationHandler: { _ in })
+    }
+}
