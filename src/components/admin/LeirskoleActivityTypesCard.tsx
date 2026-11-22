@@ -10,6 +10,7 @@ import {
   useUpdateLeirskoleActivityType,
   useDeleteLeirskoleActivityType,
 } from '@/hooks/useLeirskole';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 export function LeirskoleActivityTypesCard() {
   const { data: types } = useLeirskoleActivityTypes();
@@ -140,8 +141,8 @@ export function LeirskoleActivityTypesCard() {
                   size="icon"
                   className="h-7 w-7"
                   aria-label="Slett"
-                  onClick={() => {
-                    if (confirm(`Slette "${t.label}"?`)) remove.mutate(t.id);
+                  onClick={async () => {
+                    if ((await confirmDialog(`Slette "${t.label}"?`))) remove.mutate(t.id);
                   }}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />

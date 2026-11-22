@@ -18,6 +18,7 @@ import {
 import { shortDate } from '@/lib/leirskoleDates';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CalendarRange, Plus, Trash2, Check, ChevronDown, Settings2, Crown, Edit3, ChevronRight } from 'lucide-react';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 type Props = {
   selectedWeekId: string | null;
@@ -333,8 +334,8 @@ export function LeirskoleWeekPeriodsCard({ selectedWeekId, activeWeekId, onSelec
                 variant="ghost"
                 size="sm"
                 className="w-full gap-1.5 text-destructive"
-                onClick={() => {
-                  if (confirm(`Slette ${selectedWeek.name} med vaktplan og oppsett?`)) remove.mutate(selectedWeek.id);
+                onClick={async () => {
+                  if ((await confirmDialog(`Slette ${selectedWeek.name} med vaktplan og oppsett?`))) remove.mutate(selectedWeek.id);
                 }}
               >
                 <Trash2 className="h-4 w-4" /> Slett uken

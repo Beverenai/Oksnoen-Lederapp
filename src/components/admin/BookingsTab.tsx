@@ -15,6 +15,7 @@ import { BookingImportCard } from '@/components/admin/bookings/BookingImportCard
 import { MissingBookingInfoCard } from '@/components/admin/bookings/MissingBookingInfoCard';
 import { BookingDetailSheet } from '@/components/admin/bookings/BookingDetailSheet';
 import type { Tables } from '@/integrations/supabase/types';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 type Booking = Tables<'participant_bookings'>;
 type Participant = Pick<Tables<'participants'>, 'id' | 'first_name' | 'last_name' | 'birth_date' | 'image_url'>;
@@ -111,7 +112,7 @@ export function BookingsTab() {
 
   const handleDeleteAll = async () => {
     if (!periodId) return;
-    if (!confirm('Slett ALLE booking-rader for valgt periode?')) return;
+    if (!(await confirmDialog('Slett ALLE booking-rader for valgt periode?'))) return;
     setIsDeleting(true);
     const { error } = await supabase.from('participant_bookings').delete().eq('period_id', periodId);
     setIsDeleting(false);

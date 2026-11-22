@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Map, Upload, Trash2, Loader2, Image, Link as LinkIcon } from 'lucide-react';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 export function SkjaerTab() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
@@ -129,7 +130,7 @@ export function SkjaerTab() {
   };
 
   const removeSkjaer = async () => {
-    if (!confirm('Er du sikker på at du vil fjerne skjærkartet?')) return;
+    if (!(await confirmDialog('Er du sikker på at du vil fjerne skjærkartet?'))) return;
 
     setIsSaving(true);
     try {

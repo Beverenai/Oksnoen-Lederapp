@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import {
+  ChevronRight,
+  ToggleRight,
   Shield,
   ArrowLeft,
   Users,
@@ -18,13 +20,11 @@ import {
   Anchor,
   Dumbbell,
   MapIcon,
-  BookOpen,
   LayoutGrid,
   FileSpreadsheet,
   Bed,
   Shirt,
   Heart,
-  Dices,
   Skull,
   ClipboardList,
   ShoppingBasket,
@@ -35,6 +35,7 @@ import {
 import { LeaderDetailDialog } from '@/components/admin/LeaderDetailDialog';
 import { AdminSettingsContent } from '@/components/admin/settings/AdminSettingsContent';
 import type { Tables } from '@/integrations/supabase/types';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 type Leader = Tables<'leaders'>;
 type UserRole = Tables<'user_roles'>;
@@ -44,45 +45,72 @@ interface LeaderWithRole extends Leader {
   role: AppRole;
 }
 
-// Navigation card definitions
-const topNavItems = [
-  { key: 'leaders', label: 'Ledere', desc: 'Administrer ledere og roller', icon: Users, color: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
-  { key: 'participants', label: 'Deltakere', desc: 'Importer og håndter deltakere', icon: Users, color: 'bg-green-500/15 text-green-600 dark:text-green-400' },
-];
+// Innstillingene i grupper, iOS-stil (som Innstillinger-appen).
+type NavItem = { key: string; label: string; icon: typeof Users; tint: string; path?: string };
 
-const navItems = [
-  { key: 'cabins', label: 'Hytter', desc: 'Administrer hytter', icon: Home, color: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' },
-  { key: 'schedule', label: 'Vaktplan', desc: 'Sett opp vaktplan', icon: Calendar, color: 'bg-purple-500/15 text-purple-600 dark:text-purple-400' },
-  { key: 'activities', label: 'Aktiviteter', desc: 'Administrer aktiviteter', icon: Dumbbell, color: 'bg-pink-500/15 text-pink-600 dark:text-pink-400' },
-  { key: 'skjaer', label: 'Skjær', desc: 'Skjæraktiviteter', icon: MapIcon, color: 'bg-teal-500/15 text-teal-600 dark:text-teal-400' },
-  { key: 'stories', label: 'Historier', desc: 'Administrer historier', icon: BookOpen, color: 'bg-orange-500/15 text-orange-600 dark:text-orange-400' },
-  { key: 'push', label: 'Push-varsler', desc: 'Send push-varsler', icon: Bell, color: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' },
-  { key: 'rope-control', label: 'Tau-kontroll', desc: 'Tau-kontroll oppsett', icon: Anchor, color: 'bg-red-500/15 text-red-600 dark:text-red-400' },
-  { key: 'home-config', label: 'Hjemskjerm', desc: 'Tittel, ikon og synlighet', icon: LayoutGrid, color: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400' },
-  { key: 'google-sheet', label: 'Google Sheet sync', desc: 'Synk ledere fra Google Sheet', icon: FileSpreadsheet, color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
-  { key: 'overnatting', label: 'Overnatting', desc: 'Se hvem som vil overnatte', icon: Bed, color: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400' },
-  { key: 'gjenglemt', label: 'Gjenglemt', desc: 'Perioder og offentlige lenker', icon: Shirt, color: 'bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400' },
-  { key: 'nurse-periods', label: 'Periode', desc: 'Velg aktiv periode (1–7)', icon: Heart, color: 'bg-rose-500/15 text-rose-600 dark:text-rose-400' },
-  { key: 'roulette', label: 'Oppgave-roulette', desc: 'Legg inn senior/U18-oppgaver', icon: Dices, color: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
-  { key: 'murder', label: 'Morder-leken', desc: 'Start spillet og se hele kjeden', icon: Skull, color: 'bg-stone-500/15 text-stone-600 dark:text-stone-300' },
-  { key: 'pov', label: 'Øksnøen POV', desc: 'Engangskamera-filmer og utvikling', icon: Camera, color: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' },
-  { key: 'bookings', label: 'Booking-info', desc: 'Importer booking-data per periode', icon: ClipboardList, color: 'bg-sky-500/15 text-sky-600 dark:text-sky-400' },
-  { key: 'sweaters', label: 'Gensere', desc: 'Hentet / kjøpt genser dag 1', icon: Shirt, color: 'bg-lime-500/15 text-lime-600 dark:text-lime-400' },
-  { key: 'kiosk', label: 'Gomla', desc: 'Varer og priser i Gomla', icon: ShoppingBasket, color: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
-  { key: 'season-view', label: 'Hele sesongen', desc: 'Se alle perioder samlet (kun lesing)', icon: Archive, color: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300' },
-  { key: 'archive', label: 'Periodearkiv', desc: 'Se data fra alle perioder', icon: Archive, color: 'bg-slate-500/15 text-slate-600 dark:text-slate-300', path: '/arkiv' },
-  { key: 'tinder', label: 'Øksnøen Tinder', desc: 'Se matcher og likes mellom ledere', icon: Flame, color: 'bg-rose-500/15 text-rose-600 dark:text-rose-300' },
+const navGroups: { title: string; items: NavItem[] }[] = [
+  {
+    title: 'Periode',
+    items: [
+      { key: 'features', label: 'Funksjoner denne perioden', icon: ToggleRight, tint: 'bg-green-500' },
+      { key: 'nurse-periods', label: 'Aktiv periode og app av/på', icon: Heart, tint: 'bg-rose-500' },
+      { key: 'home-config', label: 'Forsiden', icon: LayoutGrid, tint: 'bg-cyan-500' },
+      { key: 'push', label: 'Send varsel', icon: Bell, tint: 'bg-red-500' },
+    ],
+  },
+  {
+    title: 'Folk',
+    items: [
+      { key: 'leaders', label: 'Ledere', icon: Users, tint: 'bg-blue-500' },
+      { key: 'participants', label: 'Deltakere', icon: Users, tint: 'bg-green-600' },
+      { key: 'bookings', label: 'Booking-info', icon: ClipboardList, tint: 'bg-sky-500' },
+      { key: 'cabins', label: 'Hytter og rom', icon: Home, tint: 'bg-amber-500' },
+      { key: 'google-sheet', label: 'Synk ledere fra Google Sheet', icon: FileSpreadsheet, tint: 'bg-emerald-600' },
+    ],
+  },
+  {
+    title: 'Plan',
+    items: [
+      { key: 'schedule', label: 'Vaktplan', icon: Calendar, tint: 'bg-purple-500' },
+      { key: 'activities', label: 'Aktiviteter', icon: Dumbbell, tint: 'bg-pink-500' },
+      { key: 'rope-control', label: 'Taukontroll', icon: Anchor, tint: 'bg-red-600' },
+      { key: 'skjaer', label: 'Skjær', icon: MapIcon, tint: 'bg-teal-500' },
+    ],
+  },
+  {
+    title: 'Drift',
+    items: [
+      { key: 'kiosk', label: 'Gomla', icon: ShoppingBasket, tint: 'bg-emerald-500' },
+      { key: 'sweaters', label: 'Gensere', icon: Shirt, tint: 'bg-lime-600' },
+      { key: 'gjenglemt', label: 'Gjenglemt', icon: Shirt, tint: 'bg-fuchsia-500' },
+      { key: 'overnatting', label: 'Overnatting', icon: Bed, tint: 'bg-indigo-500' },
+    ],
+  },
+  {
+    title: 'Moro',
+    items: [
+      { key: 'murder', label: 'Morderleken', icon: Skull, tint: 'bg-stone-600' },
+      { key: 'pov', label: 'Øksnøen POV', icon: Camera, tint: 'bg-amber-600' },
+      { key: 'tinder', label: 'Øksnøen Tinder', icon: Flame, tint: 'bg-rose-500' },
+    ],
+  },
+  {
+    title: 'Historikk',
+    items: [
+      { key: 'season-view', label: 'Hele sesongen', icon: Archive, tint: 'bg-zinc-500' },
+      { key: 'archive', label: 'Periodearkiv', icon: Archive, tint: 'bg-slate-500', path: '/arkiv' },
+    ],
+  },
 ];
 
 const sectionLabels: Record<string, string> = {
   leaders: 'Ledere', participants: 'Deltakere', cabins: 'Hytter', schedule: 'Vaktplan',
-  activities: 'Aktiviteter', skjaer: 'Skjær', stories: 'Historier', push: 'Push-varsler',
-  'rope-control': 'Tau-kontroll', 'home-config': 'Hjemskjerm-elementer',
+  activities: 'Aktiviteter', skjaer: 'Skjær', push: 'Send varsel', features: 'Funksjoner denne perioden',
+  'rope-control': 'Tau-kontroll', 'home-config': 'Forsiden',
   gjenglemt: 'Gjenglemt',
   'google-sheet': 'Google Sheet sync',
   overnatting: 'Overnatting',
   'nurse-periods': 'Periode',
-  roulette: 'Oppgave-roulette',
   murder: 'Morder-leken',
   pov: 'Øksnøen POV',
   bookings: 'Booking-info',
@@ -126,7 +154,7 @@ export default function AdminSettings() {
   }, [activeSection]);
 
   const deactivateAllLeaders = async () => {
-    if (!confirm('Reset periode: Dette vil deaktivere alle nåværende ledere.\n\nNår du syncer nye ledere, vil de som matcher (basert på telefonnummer) automatisk bli aktivert igjen med sin lagrede info (profilbilde, notater osv).')) return;
+    if (!(await confirmDialog('Reset periode: Dette vil deaktivere alle nåværende ledere.\n\nNår du syncer nye ledere, vil de som matcher (basert på telefonnummer) automatisk bli aktivert igjen med sin lagrede info (profilbilde, notater osv).'))) return;
 
     setIsDeactivating(true);
     try {
@@ -148,7 +176,7 @@ export default function AdminSettings() {
   };
 
   const activateAllLeaders = async () => {
-    if (!confirm('Er du sikker på at du vil aktivere alle ledere?')) return;
+    if (!(await confirmDialog('Er du sikker på at du vil aktivere alle ledere?'))) return;
 
     setIsDeactivating(true);
     try {
@@ -348,6 +376,7 @@ export default function AdminSettings() {
             setLocalHomeConfig={setLocalHomeConfig}
             setHomeConfig={setHomeConfig}
             onLeaderUpdated={quietReload}
+            onOpenSection={setActiveSection}
           />
         </div>
 
@@ -383,40 +412,30 @@ export default function AdminSettings() {
           </div>
         </div>
 
-        {/* Top cards - Ledere & Deltakere */}
-        <div className="grid grid-cols-2 gap-3">
-          {topNavItems.map(({ key, label, desc, icon: Icon, color }) => (
-            <Card
-              key={key}
-              className={`p-5 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${color}`}
-              onClick={() => setActiveSection(key)}
-            >
-              <Icon className="h-8 w-8 mb-2" />
-              <p className="font-semibold">{label}</p>
-              <p className="text-xs opacity-70 mt-0.5">{desc}</p>
-            </Card>
-          ))}
-        </div>
-
-        {/* Rest of nav cards */}
-        <div className="grid grid-cols-2 gap-3">
-          {navItems.map((item) => {
-            const { key, label, desc, color } = item;
-            const Icon = item.icon;
-            const path = (item as { path?: string }).path;
-            return (
-              <Card
-                key={key}
-                className={`p-4 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform ${color}`}
-                onClick={() => (path ? navigate(path) : setActiveSection(key))}
-              >
-                <Icon className="h-7 w-7 mb-2" />
-                <p className="font-semibold text-sm">{label}</p>
-                <p className="text-xs opacity-70 mt-0.5">{desc}</p>
-              </Card>
-            );
-          })}
-        </div>
+        {navGroups.map((group) => (
+          <section key={group.title} className="space-y-1.5">
+            <h2 className="px-4 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">{group.title}</h2>
+            <div className="overflow-hidden rounded-2xl bg-card divide-y divide-border/60">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-muted"
+                    onClick={() => (item.path ? navigate(item.path) : setActiveSection(item.key))}
+                  >
+                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white ${item.tint}`}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="flex-1 text-[17px]">{item.label}</span>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
       </div>
     </>
   );

@@ -26,12 +26,12 @@ import { ParticipantEditDialog } from './ParticipantEditDialog';
 import { hapticSuccess, hapticWarning, hapticError } from '@/lib/capacitorHaptics';
 import { GiftCardImportCard } from './GiftCardImportCard';
 import { ThumbnailsGeneratorCard } from './ThumbnailsGeneratorCard';
-import { AgedPhotosGeneratorCard } from './AgedPhotosGeneratorCard';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useQueryClient } from '@tanstack/react-query';
 import { arrivalChangeIds } from '@/lib/participantHistory';
 import { StatusPopup } from '@/components/ui/StatusPopup';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 interface ImportProgress {
   status: 'idle' | 'running' | 'done' | 'error';
@@ -763,7 +763,6 @@ export function ParticipantImportTab() {
 
       <GiftCardImportCard onImported={loadData} />
       <ThumbnailsGeneratorCard />
-      <AgedPhotosGeneratorCard />
 
       {/* CSV Upload */}
       <Card>
@@ -1098,7 +1097,7 @@ export function ParticipantImportTab() {
                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                onClick={async (e) => {
                                  e.stopPropagation();
-                                 if (!confirm(`Slette ${p.name}? Dette kan ikke angres.`)) return;
+                                 if (!(await confirmDialog(`Slette ${p.name}? Dette kan ikke angres.`))) return;
                                  try {
                                    const { error } = await supabase.from('participants').delete().eq('id', p.id);
                                    if (error) throw error;

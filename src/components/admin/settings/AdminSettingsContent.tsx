@@ -1,4 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { FeaturesTab } from './FeaturesTab';
 import { lazy, Suspense, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,13 +25,11 @@ import { PushNotificationsTab } from '@/components/admin/PushNotificationsTab';
 import { RopeControlTab } from '@/components/admin/RopeControlTab';
 import { ActivitiesTab } from '@/components/admin/ActivitiesTab';
 import { SkjaerTab } from '@/components/admin/SkjaerTab';
-import { StoriesTab } from '@/components/admin/StoriesTab';
 import { LeaderImportDialog } from '@/components/admin/LeaderImportDialog';
 import { GoogleSheetSyncTab } from '@/components/admin/GoogleSheetSyncTab';
 import { OvernattingTab } from '@/components/admin/OvernattingTab';
 import { GjenglemtSettingsTab } from '@/components/admin/settings/GjenglemtSettingsTab';
 import { NursePeriodsTab } from '@/components/admin/NursePeriodsTab';
-import { RouletteTasksTab } from '@/components/admin/RouletteTasksTab';
 import { MurderGameTab } from '@/components/admin/MurderGameTab';
 import { PovTab } from '@/components/admin/PovTab';
 import { BookingsTab } from '@/components/admin/BookingsTab';
@@ -75,6 +74,7 @@ interface AdminSettingsContentProps {
   setLocalHomeConfig: React.Dispatch<React.SetStateAction<any[]>>;
   setHomeConfig: React.Dispatch<React.SetStateAction<any[]>>;
   onLeaderUpdated: () => void | Promise<void>;
+  onOpenSection?: (key: string) => void;
 }
 
 export function AdminSettingsContent({
@@ -100,6 +100,7 @@ export function AdminSettingsContent({
   setLocalHomeConfig,
   setHomeConfig,
   onLeaderUpdated,
+  onOpenSection,
 }: AdminSettingsContentProps) {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
@@ -330,8 +331,8 @@ export function AdminSettingsContent({
     case 'skjaer':
       return <SkjaerTab />;
 
-    case 'stories':
-      return <StoriesTab />;
+    case 'features':
+      return <FeaturesTab onOpenSection={(k) => onOpenSection?.(k)} />;
 
     case 'google-sheet':
       return <GoogleSheetSyncTab />;
@@ -344,9 +345,6 @@ export function AdminSettingsContent({
 
     case 'nurse-periods':
       return <NursePeriodsTab />;
-
-    case 'roulette':
-      return <RouletteTasksTab />;
 
     case 'murder':
       return <MurderGameTab />;

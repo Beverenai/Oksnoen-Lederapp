@@ -33,6 +33,7 @@ import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { compressImage } from '@/lib/imageUtils';
 import { hapticSuccess, hapticWarning, hapticError } from '@/lib/capacitorHaptics';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 interface FixTask {
   id: string;
@@ -400,7 +401,7 @@ export default function Fix() {
 
   const handleDelete = async (taskId: string) => {
     hapticWarning();
-    if (!confirm('Er du sikker på at du vil slette denne oppgaven?')) return;
+    if (!(await confirmDialog('Er du sikker på at du vil slette denne oppgaven?'))) return;
 
     try {
       const { error } = await supabase

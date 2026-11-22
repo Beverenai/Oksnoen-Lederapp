@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { CheckoutDetailDialog } from '@/components/checkout/CheckoutDetailDialog';
 import { hapticImpact, hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 interface CheckoutProgress {
   status: 'idle' | 'starting' | 'running' | 'done' | 'error';
@@ -194,7 +195,7 @@ export function CheckoutTab() {
 
   const handleResetPasses = async () => {
     if (!activePeriod) return;
-    if (!confirm(`Tilbakestille ALLE pass for ${activePeriod.name}? Dette sletter AI-forslag, skrevet tekst og markeringer.`)) return;
+    if (!(await confirmDialog(`Tilbakestille ALLE pass for ${activePeriod.name}? Dette sletter AI-forslag, skrevet tekst og markeringer.`))) return;
     setIsResetting(true);
     try {
       const { error } = await supabase

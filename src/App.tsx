@@ -1,5 +1,6 @@
 import { Suspense, lazy } from "react";
 import { StatusPopupProvider } from "@/hooks/useStatusPopup";
+import { ConfirmHost } from "@/components/ui/confirm-sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -29,7 +30,6 @@ import NotFound from "@/pages/NotFound";
 // Lazy load non-critical pages for better performance
 const Profile = lazy(() => import("@/pages/Profile"));
 const SnusPage = lazy(() => import("@/pages/SnusPage"));
-const FeedbackPage = lazy(() => import("@/pages/Feedback"));
 const PovPage = lazy(() => import("@/pages/Pov"));
 const Leaders = lazy(() => import("@/pages/Leaders"));
 const Team = lazy(() => import("@/pages/Team"));
@@ -38,7 +38,6 @@ const PassportActivity = lazy(() => import("@/pages/PassportActivity"));
 const MyCabins = lazy(() => import("@/pages/MyCabins"));
 const Schedule = lazy(() => import("@/pages/Schedule"));
 const Skjaer = lazy(() => import("@/pages/Skjaer"));
-const Stories = lazy(() => import("@/pages/Stories"));
 const Admin = lazy(() => import("@/pages/admin/Admin"));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
@@ -50,13 +49,11 @@ const ImportantInfo = lazy(() => import("@/pages/ImportantInfo"));
 const ParticipantStats = lazy(() => import("@/pages/admin/ParticipantStats"));
 const Checkout = lazy(() => import("@/pages/admin/Checkout"));
 const ShiftPlanner = lazy(() => import("@/pages/admin/ShiftPlanner"));
-const ShiftPlannerMini = lazy(() => import("@/pages/admin/ShiftPlannerMini"));
 const Dynga = lazy(() => import("@/pages/admin/Dynga"));
 const MyShifts = lazy(() => import("@/pages/MyShifts"));
 const Gjenglemt = lazy(() => import("@/pages/Gjenglemt"));
 const PublicGjenglemt = lazy(() => import("@/pages/PublicGjenglemt"));
 const GjenglemtAdmin = lazy(() => import("@/pages/GjenglemtAdmin"));
-const Roulette = lazy(() => import("@/pages/Roulette"));
 const Morder = lazy(() => import("@/pages/Morder"));
 const Gensere = lazy(() => import("@/pages/Gensere"));
 const Hendelser = lazy(() => import("@/pages/Hendelser"));
@@ -67,7 +64,6 @@ const Kiosk = lazy(() => import("@/pages/Kiosk"));
 const Qr = lazy(() => import("@/pages/Qr"));
 const Scan = lazy(() => import("@/pages/Scan"));
 const Band = lazy(() => import("@/pages/Band"));
-const QrTestSheet = lazy(() => import("@/pages/admin/QrTestSheet"));
 const Kjokken = lazy(() => import("@/pages/Kjokken"));
 const Klineliste = lazy(() => import("@/pages/Klineliste"));
 const PeriodArchive = lazy(() => import("@/pages/admin/PeriodArchive"));
@@ -251,7 +247,6 @@ function AppRoutes() {
         <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
         <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/shifts" element={<ProtectedRoute><ShiftPlanner /></ProtectedRoute>} />
-        <Route path="/admin/shifts-mini" element={<ProtectedRoute><ShiftPlannerMini /></ProtectedRoute>} />
         <Route path="/admin/dynga" element={<ProtectedRoute><Dynga /></ProtectedRoute>} />
         <Route path="/arkiv" element={<ProtectedRoute><PeriodArchive /></ProtectedRoute>} />
         <Route path="/leirskole" element={<ProtectedRoute><Leirskole /></ProtectedRoute>} />
@@ -261,7 +256,6 @@ function AppRoutes() {
         <Route path="/gjenglemt" element={<ProtectedRoute><Gjenglemt /></ProtectedRoute>} />
         <Route path="/gjenglemt-admin" element={<GjenglemtAdmin />} />
         <Route path="/gjenglemt/:slug" element={<PublicGjenglemt />} />
-        <Route path="/roulette" element={<ProtectedRoute><Roulette /></ProtectedRoute>} />
         <Route path="/morder" element={<ProtectedRoute><Morder /></ProtectedRoute>} />
         <Route path="/gensere" element={<ProtectedRoute><Gensere /></ProtectedRoute>} />
         <Route path="/participant-stats" element={<ProtectedRoute><ParticipantStats /></ProtectedRoute>} />
@@ -269,7 +263,6 @@ function AppRoutes() {
         <Route path="/fix" element={<ProtectedRoute><Fix /></ProtectedRoute>} />
         <Route path="/rope-control" element={<ProtectedRoute><RopeControl /></ProtectedRoute>} />
         <Route path="/skjaer" element={<ProtectedRoute><Skjaer /></ProtectedRoute>} />
-        <Route path="/stories" element={<ProtectedRoute><Stories /></ProtectedRoute>} />
         <Route path="/hendelser" element={<ProtectedRoute><Hendelser /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="/mer" element={<ProtectedRoute><More /></ProtectedRoute>} />
@@ -278,7 +271,6 @@ function AppRoutes() {
         {/* Activity scanning is available to authenticated leaders; band administration stays admin-only. */}
         <Route path="/skann" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
         <Route path="/qr" element={<ProtectedRoute><AdminOnly><Qr /></AdminOnly></ProtectedRoute>} />
-        <Route path="/admin/qr-test" element={<ProtectedRoute><AdminOnly><QrTestSheet /></AdminOnly></ProtectedRoute>} />
         {/* Lenken i QR-koden på armbåndet. Viser ingen opplysninger uten innlogging. */}
         <Route path="/b/:code" element={<Band />} />
         <Route path="/kjokken" element={<ProtectedRoute><Kjokken /></ProtectedRoute>} />
@@ -288,7 +280,6 @@ function AppRoutes() {
         {/* Tinder er deaktivert for alle ledere. */}
         <Route path="/kline-tinder" element={<Navigate to="/" replace />} />
         <Route path="/snus" element={<ProtectedRoute><SnusPage /></ProtectedRoute>} />
-        <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
         <Route path="/pov" element={<ProtectedRoute><PovPage /></ProtectedRoute>} />
         <Route path="/liggeliste" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFound />} />
@@ -320,6 +311,7 @@ const App = () => (
                 </SeasonViewProvider>
               </AuthProvider>
             </BrowserRouter>
+            <ConfirmHost />
           </StatusPopupProvider>
         </TooltipProvider>
       </ThemeProvider>

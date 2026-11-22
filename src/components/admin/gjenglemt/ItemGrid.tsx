@@ -11,6 +11,7 @@ import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 interface Props {
   items: GjenglemtItem[];
@@ -51,7 +52,7 @@ export function ItemGrid({ items, canManageAll }: Props) {
   };
 
   const remove = async (item: GjenglemtItem) => {
-    if (!confirm('Slette denne?')) return;
+    if (!(await confirmDialog('Slette denne?'))) return;
     try { await deleteItem.mutateAsync(item); showSuccess('Slettet'); }
     catch (e: any) { showError(e?.message ?? 'Kunne ikke slette'); }
   };

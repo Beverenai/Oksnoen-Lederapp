@@ -8,6 +8,7 @@ import { Calendar, Loader2, Power, MoonStar } from 'lucide-react';
 import { useAppMode, setAppMode } from '@/hooks/useAppMode';
 import { useAuth } from '@/contexts/AuthContext';
 import { LeaderHistoryImportCard } from '@/components/admin/LeaderHistoryImportCard';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 interface Period {
   id: string;
@@ -28,7 +29,7 @@ export function NursePeriodsTab() {
   const [sendingOffSeason, setSendingOffSeason] = useState(false);
 
   const sendAllToOffSeason = async () => {
-    if (!confirm('Sende alle ledere (unntatt Bengt Simonsen) til off-season? De får off-season-appen og et push-varsel.')) return;
+    if (!(await confirmDialog('Sende alle ledere (unntatt Bengt Simonsen) til off-season? De får off-season-appen og et push-varsel.'))) return;
     setSendingOffSeason(true);
     try {
       const { data, error } = await supabase.functions.invoke('deactivate-all-leaders');
@@ -85,7 +86,6 @@ export function NursePeriodsTab() {
         'overnatting_enabled',
         'teams_enabled',
         'sweaters_enabled',
-        'roulette_enabled',
         'hookups_enabled',
       ];
       await supabase
@@ -120,7 +120,7 @@ export function NursePeriodsTab() {
     const confirmMsg = next === 'inactive'
       ? 'Sette appen til INAKTIV? Alle ledere blir aktivert og ser kun Hjem + Lederhuset. Superadmin beholder full tilgang.'
       : 'Skru på AKTIV-modus igjen? Alle funksjoner blir tilgjengelig for alle.';
-    if (!confirm(confirmMsg)) return;
+    if (!(await confirmDialog(confirmMsg))) return;
     setChangingMode(true);
     try {
       await setAppMode(next);
