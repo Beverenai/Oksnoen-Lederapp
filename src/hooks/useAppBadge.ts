@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
+import { setNativeBadge } from '@/lib/capacitorWidget';
 
 type BadgeNavigator = Navigator & {
   setAppBadge?: (count?: number) => Promise<void>;
@@ -9,6 +10,8 @@ type BadgeNavigator = Navigator & {
 };
 
 async function applyBadge(count: number) {
+  // iPhone-appen: tallmerket settes av vår egen iOS-bro.
+  await setNativeBadge(count);
   const nav = navigator as BadgeNavigator;
   try {
     if (count > 0) await nav.setAppBadge?.(count);

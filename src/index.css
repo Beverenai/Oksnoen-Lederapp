@@ -824,3 +824,18 @@ html.oks-leirskole-theme.oks-ls-dark .oks-leirskole-bg {
     hsl(var(--oks-ls-green)) 66%,
     hsl(var(--oks-ls-blue)) 100%);
 }
+
+/* iPhones innebygde QR-leser: kameraet ligger bak nettsiden. Mens skanneren er åpen skjules alt
+   unntatt skannerlaget, og bakgrunnene gjøres gjennomsiktige. */
+html.native-scan,
+html.native-scan body,
+html.native-scan #root {
+  background: transparent !important;
+}
+/* Skannerlaget og dialogene ligger rett under <body> (portaler), så bare selve appen bak skjules. */
+html.native-scan #root {
+  visibility: hidden;
+}
+html.native-scan [data-scan-layer] {
+  background: transparent !important;
+}
