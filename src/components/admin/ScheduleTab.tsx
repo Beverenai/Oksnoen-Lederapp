@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calendar, Upload, Trash2, Loader2, Image, Link as LinkIcon, CalendarDays, Sparkles } from 'lucide-react';
+import { Calendar, Upload, Trash2, Loader2, Image, Link as LinkIcon, CalendarDays } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { hapticSuccess, hapticError } from '@/lib/capacitorHaptics';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 export function ScheduleTab() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
@@ -130,7 +131,7 @@ export function ScheduleTab() {
   };
 
   const removeSchedule = async () => {
-    if (!confirm('Er du sikker på at du vil fjerne vaktplanen?')) return;
+    if (!(await confirmDialog('Er du sikker på at du vil fjerne vaktplanen?'))) return;
 
     setIsSaving(true);
     try {
@@ -181,12 +182,6 @@ export function ScheduleTab() {
             <Button variant="outline" className="gap-2">
               <CalendarDays className="h-4 w-4" />
               Vaktplan
-            </Button>
-          </Link>
-          <Link to="/admin/shifts-mini">
-            <Button variant="outline" className="gap-2">
-              <Sparkles className="h-4 w-4" />
-              Vaktplan Mini
             </Button>
           </Link>
         </CardContent>

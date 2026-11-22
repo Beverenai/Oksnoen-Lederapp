@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { ActivityRegistration, registrationKey, scanResultText } from '@/lib/activityRegistration';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 type Tone = 'ok' | 'wait' | 'warn' | 'unknown';
 
@@ -211,8 +212,12 @@ export default function Scan() {
     flash({ name: step.name, image: null, text: 'Angret', tone: 'warn' });
   };
 
-  const close = () => {
-    if (pendingRef.current.length > 0 && !window.confirm('Du har skannet deltakere uten å velge aktivitet. Lukke likevel?')) return;
+  const close = async () => {
+    if (
+      pendingRef.current.length > 0 &&
+      !(await confirmDialog('Du har skannet deltakere uten å velge aktivitet. Lukke likevel?', { confirmLabel: 'Lukk', destructive: true }))
+    )
+      return;
     if (window.history.length > 1) navigate(-1);
     else navigate('/');
   };

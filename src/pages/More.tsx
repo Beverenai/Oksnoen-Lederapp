@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   Wrench,
   Map,
-  BookOpen,
   Heart,
   BarChart2,
   LayoutDashboard,
@@ -22,7 +21,6 @@ import {
   Mail,
   HeartHandshake,
   Flame,
-  Lightbulb,
   Beer,
   LucideIcon,
 } from 'lucide-react';
@@ -239,7 +237,6 @@ export default function More() {
         ...(isAdmin
           ? [
               { to: '/skjaer', icon: Map, label: 'Skjær' } as MoreItem,
-              { to: '/stories', icon: BookOpen, label: 'Historier' } as MoreItem,
             ]
           : []),
       ],
@@ -265,7 +262,6 @@ export default function More() {
           : []),
         { to: '/pov', icon: Camera, label: 'POV' } as MoreItem,
         { icon: Crown, label: 'Øksnøen +', onClick: () => setPlusOpen(true) } as MoreItem,
-        { to: '/feedback', icon: Lightbulb, label: 'Feedback' } as MoreItem,
       ],
     },
     {
@@ -292,7 +288,6 @@ export default function More() {
       label: 'Mer moro',
       items: [
         { icon: Crown, label: 'Øksnøen +', desc: 'Se abonnementet', onClick: () => setPlusOpen(true) },
-        { to: '/feedback', icon: Lightbulb, label: 'Feedback', desc: 'Foreslå nye funksjoner' },
       ],
     },
     {

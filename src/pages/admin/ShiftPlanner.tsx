@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { exportShiftScheduleXlsx } from '@/lib/exportShiftScheduleXlsx';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 type Leader = Tables<'leaders'>;
 type ShiftSchedule = Tables<'shift_schedules'>;
@@ -111,7 +112,7 @@ export default function ShiftPlanner() {
       );
 
       const shouldForceRegenerate = publishedSchedule
-        ? confirm('Denne perioden er publisert. Arkivér og generer på nytt?')
+        ? (await confirmDialog('Denne perioden er publisert. Arkivér og generer på nytt?'))
         : false;
 
       if (publishedSchedule && !shouldForceRegenerate) {
@@ -147,7 +148,7 @@ export default function ShiftPlanner() {
 
   const regenerateKeepLocked = async () => {
     if (!viewedSchedule) return;
-    if (!confirm('Regenerér resten av planen? Manuelt endrede (låste) celler beholdes.')) return;
+    if (!(await confirmDialog('Regenerér resten av planen? Manuelt endrede (låste) celler beholdes.'))) return;
     setGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-shift-schedule', {
@@ -184,7 +185,7 @@ export default function ShiftPlanner() {
   };
 
   const deleteSchedule = async (id: string) => {
-    if (!confirm('Slette denne vaktplanen permanent?')) return;
+    if (!(await confirmDialog('Slette denne vaktplanen permanent?'))) return;
     try {
       const { error } = await supabase.from('shift_schedules').delete().eq('id', id);
       if (error) throw error;

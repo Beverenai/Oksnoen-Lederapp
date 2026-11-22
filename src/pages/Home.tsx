@@ -26,7 +26,6 @@ import {
   Anchor,
   Wrench,
   Bed,
-  Dices,
   ChefHat,
   type LucideIcon
 } from 'lucide-react';
@@ -177,7 +176,6 @@ export default function Home() {
   const [overnattingSaving, setOvernattingSaving] = useState(false);
   const [overnattingAnswered, setOvernattingAnswered] = useState(true);
   const [overnattingEditOpen, setOvernattingEditOpen] = useState(false);
-  const [rouletteEnabled, setRouletteEnabled] = useState(false);
   const [activePeriodLabel, setActivePeriodLabel] = useState<string | null>(null);
   const [snusBrothers, setSnusBrothers] = useState<{ id: string; name: string }[]>([]);
   const [snusBrothersOpen, setSnusBrothersOpen] = useState(false);
@@ -185,8 +183,6 @@ export default function Home() {
   const { data: mailboxUnread = 0 } = useMailboxUnreadCount(!!isAdmin);
   const { data: myMailboxMessages = [] } = useMyMailboxMessages();
   const hasNewReply = !isAdmin && myMailboxMessages.some((m) => !!m.admin_reply);
-  const inRoulette = !!(effectiveLeader as any)?.in_roulette;
-  const showRoulette = rouletteEnabled && inRoulette;
   const teamsEnabled = useTeamsEnabled();
   const { data: murderState } = useMyMurderState();
   const showMurder = !!murderState?.is_active;
@@ -257,7 +253,7 @@ export default function Home() {
       ]);
 
       const [overCfgRes, overRespRes] = await Promise.all([
-        supabase.from('app_config').select('key,value').in('key', ['overnatting_enabled', 'overnatting_title', 'overnatting_question', 'roulette_enabled']),
+        supabase.from('app_config').select('key,value').in('key', ['overnatting_enabled', 'overnatting_title', 'overnatting_question']),
         supabase.from('overnatting_responses').select('is_joining').eq('leader_id', effectiveLeader.id).maybeSingle(),
       ]);
       const cfgMap = new Map((overCfgRes.data || []).map((r: { key: string; value: string }) => [r.key, r.value]));
@@ -266,7 +262,6 @@ export default function Home() {
       setOvernattingQuestion(cfgMap.get('overnatting_question') || 'Vil du være med på overnatting?');
       setOvernattingJoining(overRespRes.data?.is_joining ?? false);
       setOvernattingAnswered(!!overRespRes.data);
-      setRouletteEnabled(cfgMap.get('roulette_enabled') === 'true');
 
       setContent(contentRes.data);
       if (activitiesTextRes.data?.value) {
@@ -841,28 +836,6 @@ export default function Home() {
         )}
 
         {/* Morder-leken: kun ikonet ved profilbildet (ingen kort her) */}
-        {showRoulette && (
-        <Card
-          className="border border-violet-500/30 bg-violet-50/50 dark:bg-violet-950/20 cursor-pointer hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors shadow-sm"
-          onClick={() => navigate('/roulette')}
-        >
-          <CardContent className="py-3 sm:py-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-violet-500/15 shrink-0">
-                <Dices className="w-5 h-5 text-violet-600 dark:text-violet-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] uppercase tracking-wide text-violet-600/80 dark:text-violet-400/80 font-medium mb-0.5">
-                  Oppgave-roulette
-                </p>
-                <p className="text-sm sm:text-base font-medium text-foreground">
-                  Trekk en oppgave og marker den som gjort
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        )}
 
         {/* Fix Task Alert - consistent with secondary cards */}
         {assignedFixTasks.length > 0 && (

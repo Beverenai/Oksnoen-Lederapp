@@ -13,6 +13,7 @@ import { Search, Plus, Check, X, ArrowRight, ArrowLeftRight, Loader2, Users, Rot
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { getParticipantThumb } from '@/lib/participantImage';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 interface Participant {
   id: string;
@@ -271,7 +272,7 @@ export function RoomSwapTab() {
       showError('Ingen aktiv periode');
       return;
     }
-    if (!confirm('Slette ALLE rombytter i den aktive perioden? Dette kan ikke angres.')) return;
+    if (!(await confirmDialog('Slette ALLE rombytter i den aktive perioden? Dette kan ikke angres.'))) return;
     setSubmitting(true);
     try {
       const { error } = await supabase.from('room_swaps').delete().eq('period_id', activePeriodId);

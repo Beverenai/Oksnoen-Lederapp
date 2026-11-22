@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Upload, FileText, Trash2 } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 interface PeriodRow { id: string; name: string; }
 interface LeaderRow { id: string; name: string; }
@@ -170,7 +171,7 @@ export function LeaderHistoryImportCard() {
   };
 
   const clearPeriod = async (period: PeriodRow) => {
-    if (!confirm(`Slette all historikk for ${period.name}?`)) return;
+    if (!(await confirmDialog(`Slette all historikk for ${period.name}?`))) return;
     setClearingId(period.id);
     try {
       const { error } = await supabase

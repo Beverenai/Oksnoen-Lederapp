@@ -20,7 +20,6 @@ import {
   Bell,
   Anchor,
   Map,
-  BookOpen,
   LucideIcon,
   ChevronDown,
   ArrowLeft,
@@ -90,7 +89,6 @@ const scheduleNavItem: NavItem = { to: '/schedule', icon: Calendar, label: 'Vakt
 const importantInfoNavItem: NavItem = { to: '/important-info', icon: AlertTriangle, label: 'Viktig info' };
 const fixNavItem: NavItem = { to: '/fix', icon: Wrench, label: 'FIX' };
 const skjaerNavItem: NavItem = { to: '/skjaer', icon: Map, label: 'Skjær' };
-const storiesNavItem: NavItem = { to: '/stories', icon: BookOpen, label: 'Historier' };
 
 // Special access items
 const nurseNavItem: NavItem = { to: '/nurse', icon: Heart, label: 'Nurse' };
@@ -278,7 +276,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const contentNavItems = [
     ...(hasScheduleImage ? [scheduleNavItem] : []),
     importantInfoNavItem,
-    ...(isAdmin ? [skjaerNavItem, storiesNavItem] : []),
+    ...(isAdmin ? [skjaerNavItem] : []),
     fixNavItem,
   ];
 

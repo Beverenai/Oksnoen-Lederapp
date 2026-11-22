@@ -13,6 +13,7 @@ import { ArrowLeft, Archive, FileSpreadsheet, Loader2, Printer, Lock } from 'luc
 import { archiveGroups, datasetsForGroup, archiveDatasets, type ArchiveRow } from '@/lib/archiveDatasets';
 import { downloadWorkbook } from '@/lib/archiveExport';
 import { ArchiveDatasetCard } from '@/components/archive/ArchiveDatasetCard';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 interface Period {
   id: string;
@@ -124,9 +125,9 @@ export default function PeriodArchive() {
 
   const archiveSeason = async () => {
     if (!yearPeriods.length || year === null) return;
-    const ok = confirm(
+    const ok = (await confirmDialog(
       `Arkivere sesongen ${year}?\n\nAlle ${yearPeriods.length} perioder merkes arkivert, lederne for hver periode lagres, og du får ned en komplett Excel-fil. Ingenting slettes — du kan fortsatt åpne hver periode her.`,
-    );
+    ));
     if (!ok) return;
     setExporting(true);
     try {

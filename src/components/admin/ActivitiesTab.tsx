@@ -19,6 +19,7 @@ import {
   X
 } from 'lucide-react';
 import { hapticSuccess, hapticError, hapticImpact } from '@/lib/capacitorHaptics';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 export function ActivitiesTab() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
@@ -118,7 +119,7 @@ export function ActivitiesTab() {
   };
 
   const deleteActivity = async (id: string, title: string) => {
-    if (!confirm(`Er du sikker på at du vil slette "${title}"? Dette kan ikke angres.`)) {
+    if (!(await confirmDialog(`Er du sikker på at du vil slette "${title}"? Dette kan ikke angres.`))) {
       return;
     }
 

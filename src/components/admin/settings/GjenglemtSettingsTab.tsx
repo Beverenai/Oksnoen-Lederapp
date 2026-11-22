@@ -15,6 +15,7 @@ import {
 import { slugify } from '@/lib/gjenglemtConstants';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { copyText } from '@/lib/clipboard';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 export function GjenglemtSettingsTab() {
   const { showSuccess, showError, showInfo } = useStatusPopup();
@@ -52,7 +53,7 @@ export function GjenglemtSettingsTab() {
   };
 
   const handleDelete = async (p: GjenglemtPeriod) => {
-    if (!confirm(`Slette perioden "${p.name}"? Alle gjenglemte ting i denne perioden slettes også.`)) return;
+    if (!(await confirmDialog(`Slette perioden "${p.name}"? Alle gjenglemte ting i denne perioden slettes også.`))) return;
     try { await deletePeriod.mutateAsync(p.id); showSuccess('Periode slettet'); }
     catch (e: any) { showError(e?.message ?? 'Kunne ikke slette'); }
   };

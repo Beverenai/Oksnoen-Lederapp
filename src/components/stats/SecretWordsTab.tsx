@@ -10,6 +10,7 @@ import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { formatFullRoom } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { CheckCircle2, Clock } from 'lucide-react';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 interface Pair { id: string; word_1: string; word_2: string }
 interface Assignment { id: string; participant_id: string; word: string; pair_id: string; slot: number }
@@ -95,7 +96,7 @@ export function SecretWordsTab() {
     if (!periodId || !pairs || !participants) return;
     if (participants.length < 2) { showError('For få deltakere', 'Trenger minst 2 deltakere.'); return; }
     const maxPairs = Math.min(pairs.length, Math.floor(participants.length / 2));
-    if (!confirm(`Dette gir ${maxPairs * 2} deltakere hvert sitt ord (${maxPairs} par). Eventuelle eksisterende tildelinger for perioden overskrives. Fortsett?`)) return;
+    if (!(await confirmDialog(`Dette gir ${maxPairs * 2} deltakere hvert sitt ord (${maxPairs} par). Eventuelle eksisterende tildelinger for perioden overskrives. Fortsett?`))) return;
     setWorking(true);
     try {
       // Wipe existing
@@ -131,7 +132,7 @@ export function SecretWordsTab() {
 
   const clearAll = async () => {
     if (!periodId) return;
-    if (!confirm('Fjern alle ord-tildelinger OG matcher for aktiv periode?')) return;
+    if (!(await confirmDialog('Fjern alle ord-tildelinger OG matcher for aktiv periode?'))) return;
     setWorking(true);
     try {
       await (supabase as any).from('secret_word_matches').delete().eq('period_id', periodId);
@@ -144,7 +145,7 @@ export function SecretWordsTab() {
 
   const resetMatches = async () => {
     if (!periodId) return;
-    if (!confirm('Nullstill alle matcher (ord-tildelinger beholdes)?')) return;
+    if (!(await confirmDialog('Nullstill alle matcher (ord-tildelinger beholdes)?'))) return;
     await (supabase as any).from('secret_word_matches').delete().eq('period_id', periodId);
     await qc.invalidateQueries({ queryKey: ['secret-word-matches'] });
     showSuccess('Matcher nullstilt', '');

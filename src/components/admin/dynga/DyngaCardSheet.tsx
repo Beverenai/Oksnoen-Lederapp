@@ -9,6 +9,7 @@ import { nb } from 'date-fns/locale';
 import { useAddComment, useDeleteComment, useDyngaComments, useRemoveCard, type DyngaCardWithParticipant } from '@/hooks/useDynga';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 interface Props {
   cardId: string | null;
@@ -42,7 +43,7 @@ export function DyngaCardSheet({ cardId, card, open, onOpenChange }: Props) {
 
   const remove = async () => {
     if (!cardId) return;
-    if (!confirm(`Fjerne ${name} fra Dynga? Alle kommentarer slettes.`)) return;
+    if (!(await confirmDialog(`Fjerne ${name} fra Dynga? Alle kommentarer slettes.`))) return;
     try {
       await removeCard.mutateAsync(cardId);
       showSuccess('Fjernet', `${name} er fjernet fra Dynga`);

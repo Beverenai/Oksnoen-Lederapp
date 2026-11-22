@@ -14,6 +14,7 @@ import {
   Users,
   Save
 } from 'lucide-react';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 interface Cabin {
   id: string;
@@ -164,7 +165,7 @@ export function CabinsTab() {
       return;
     }
 
-    if (!confirm(`Er du sikker på at du vil slette "${cabin.name}"?`)) return;
+    if (!(await confirmDialog(`Er du sikker på at du vil slette "${cabin.name}"?`))) return;
 
     setDeletingId(cabin.id);
     try {
@@ -232,7 +233,7 @@ export function CabinsTab() {
       showError(`Kan ikke slette - ${occupancy} beboere er tilknyttet dette rommet`);
       return;
     }
-    if (!confirm(`Slette rom "${capacity.room || 'enkeltrom'}"?`)) return;
+    if (!(await confirmDialog(`Slette rom "${capacity.room || 'enkeltrom'}"?`))) return;
     setDeletingRoomId(capacity.id);
     try {
       const { error } = await supabase.from('room_capacity').delete().eq('id', capacity.id);

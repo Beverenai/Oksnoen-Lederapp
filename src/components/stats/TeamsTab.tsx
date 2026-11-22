@@ -17,6 +17,7 @@ import { Loader2, Shuffle, ChevronDown, Users2 } from 'lucide-react';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { Trophy, ChefHat, Plus, Minus, MoreHorizontal } from 'lucide-react';
 import { useKitchenDutyConfig, computeTodayPair, todayIso, pairForCycleIndex } from '@/hooks/useKitchenDutyToday';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 const PALETTE = [
   '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
@@ -235,7 +236,7 @@ export function TeamsTab() {
 
   const distributeAll = async () => {
     if (!teams || teams.length === 0 || !participants) return;
-    if (!confirm(`Dette vil fordele alle ${participants.length} deltakere tilfeldig i ${teams.length} lag. Fortsett?`)) return;
+    if (!(await confirmDialog(`Dette vil fordele alle ${participants.length} deltakere tilfeldig i ${teams.length} lag. Fortsett?`))) return;
     setDistributing(true);
     try {
       const shuffled = [...participants].sort(() => Math.random() - 0.5);
@@ -264,7 +265,7 @@ export function TeamsTab() {
   };
 
   const clearAll = async () => {
-    if (!confirm('Fjern alle lag-tildelinger for aktiv periode?')) return;
+    if (!(await confirmDialog('Fjern alle lag-tildelinger for aktiv periode?'))) return;
     const { error } = await supabase
       .from('participants')
       .update({ team_id: null })

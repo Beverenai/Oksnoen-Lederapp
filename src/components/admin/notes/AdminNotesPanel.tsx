@@ -17,6 +17,7 @@ import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { hapticImpact } from '@/lib/capacitorHaptics';
 import { holdAppUpdate } from '@/lib/registerSW';
 import { ADMIN_NOTES_OPEN_EVENT } from '@/lib/adminNotesBus';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 function relTime(iso: string | null) {
   if (!iso) return '';
@@ -372,7 +373,7 @@ export function AdminNotesPanel() {
                   className="h-9 w-9 p-0 shrink-0 text-destructive"
                   title="Slett"
                   onClick={async () => {
-                    if (!window.confirm(`Slette «${active.title}»?`)) return;
+                    if (!(await confirmDialog(`Slette «${active.title}»?`))) return;
                     try { await deleteNote(active.id); } catch { showError('Kunne ikke slette'); }
                   }}
                 >

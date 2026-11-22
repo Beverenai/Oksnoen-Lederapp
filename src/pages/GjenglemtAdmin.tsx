@@ -8,6 +8,7 @@ import { colorMeta, garmentLabel } from '@/lib/gjenglemtConstants';
 import { Loader2, Lock, Search, Trash2, CheckCircle2, RotateCcw, LogOut, X } from 'lucide-react';
 import { toast } from 'sonner';
 import backgroundAsset from '@/assets/oksnoen-header.png.asset.json';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 const SS_KEY = 'gjenglemt-admin-pw';
 
@@ -129,7 +130,7 @@ export default function GjenglemtAdmin() {
   };
 
   const deleteItem = async (item: Item) => {
-    if (!confirm(`Slette #${item.item_number ?? ''} ${item.garment_type ? garmentLabel(item.garment_type) : ''}?`)) return;
+    if (!(await confirmDialog(`Slette #${item.item_number ?? ''} ${item.garment_type ? garmentLabel(item.garment_type) : ''}?`))) return;
     const prev = items;
     setItems(items.filter(x => x.id !== item.id));
     if (lightbox?.id === item.id) setLightbox(null);

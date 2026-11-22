@@ -6,6 +6,7 @@ import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { useDeleteColumn, useDyngaColumns, useUpsertColumn } from '@/hooks/useDynga';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
 import { cn } from '@/lib/utils';
+import { confirmDialog } from '@/components/ui/confirm-sheet';
 
 interface Props { open: boolean; onOpenChange: (o: boolean) => void; periodId?: string | null; }
 
@@ -62,7 +63,7 @@ export function ManageColumnsSheet({ open, onOpenChange, periodId }: Props) {
       showError('Kan ikke slette', 'Du må ha minst én kolonne');
       return;
     }
-    if (!confirm('Slette kolonnen? Eventuelle kort flyttes til første gjenværende kolonne.')) return;
+    if (!(await confirmDialog('Slette kolonnen? Eventuelle kort flyttes til første gjenværende kolonne.'))) return;
     const fallback = columns.find(c => c.id !== id)?.id || null;
     try {
       await del.mutateAsync({ columnId: id, fallbackColumnId: fallback });
