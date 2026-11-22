@@ -5,7 +5,7 @@
 	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>en</string>
+	<string>nb</string>
 	<key>CFBundleDisplayName</key>
 	<string>Oksnøen LederApp</string>
 	<key>CFBundleExecutable</key>
@@ -30,15 +30,26 @@
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UIStatusBarStyle</key>
 	<string></string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.oksnoen.ledere</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>oksnoen</string>
+			</array>
+		</dict>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -52,7 +63,7 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>Vi bruker Face ID for at du raskt og trygt kan logge inn i appen.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Vi trenger tilgang til kameraet for å ta profilbilde og bilder til Fix-meldinger.</string>
+	<string>Vi bruker kameraet til å skanne armbånd, ta profilbilde og ta bilder til Fix-meldinger.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Vi trenger tilgang til mikrofonen for å diktere hendelser i appen.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

@@ -22,7 +22,7 @@
 		97E5D6192F585A8F0086ECF3 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97E5D6182F585A8F0086ECF3 /* WidgetKit.framework */; };
 		97E5D61B2F585A8F0086ECF3 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97E5D61A2F585A8F0086ECF3 /* SwiftUI.framework */; };
 		97E5D6282F585A900086ECF3 /* LederWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 97E5D6162F585A8F0086ECF3 /* LederWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		97E5D6322F585B850086ECF3 /* WidgetBridgePlugin 2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E5D6312F585B850086ECF3 /* WidgetBridgePlugin 2.swift */; };
+		97E5D6322F585B850086ECF3 /* NativePlugins.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E5D6312F585B850086ECF3 /* NativePlugins.swift */; };
 		AA000001AABB000100000001 /* LederWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001AABB000200000001 /* LederWidget.swift */; };
 		AA000001AABB000100000002 /* LederWidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001AABB000200000002 /* LederWidgetEntryView.swift */; };
 		AA000001AABB000100000003 /* LederWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001AABB000200000003 /* LederWidgetBundle.swift */; };
@@ -71,7 +71,7 @@
 		97E5D6162F585A8F0086ECF3 /* LederWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LederWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		97E5D6182F585A8F0086ECF3 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		97E5D61A2F585A8F0086ECF3 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
-		97E5D6312F585B850086ECF3 /* WidgetBridgePlugin 2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WidgetBridgePlugin 2.swift"; sourceTree = "<group>"; };
+		97E5D6312F585B850086ECF3 /* NativePlugins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NativePlugins.swift"; sourceTree = "<group>"; };
 		AA000001AABB000200000001 /* LederWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LederWidget.swift; sourceTree = "<group>"; };
 		AA000001AABB000200000002 /* LederWidgetEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LederWidgetEntryView.swift; sourceTree = "<group>"; };
 		AA000001AABB000200000003 /* LederWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LederWidgetBundle.swift; sourceTree = "<group>"; };
@@ -147,7 +147,7 @@
 				97AA10101F60000000AA011 /* sip-wine.caf */,
 				97AA10102F60000000AA012 /* sip-drink.caf */,
 				50B271D01FEDC1A000F3C39B /* public */,
-				97E5D6312F585B850086ECF3 /* WidgetBridgePlugin 2.swift */,
+				97E5D6312F585B850086ECF3 /* NativePlugins.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -293,7 +293,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
-				97E5D6322F585B850086ECF3 /* WidgetBridgePlugin 2.swift in Sources */,
+				97E5D6322F585B850086ECF3 /* NativePlugins.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -467,7 +467,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -490,7 +490,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -534,7 +534,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -576,7 +576,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
