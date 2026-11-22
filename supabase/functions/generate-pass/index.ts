@@ -1,3 +1,4 @@
+import { claudeChat, CLAUDE_SONNET } from "../_shared/claude.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { loadPassContext, buildTeamPromptLines } from "../_shared/passContext.ts";
@@ -63,7 +64,9 @@ EKSEMPLER PÅ GODE PASS:
 
 "Ada er en rå Berit-Bu jente som vi elsker å ha på leir. Hun har deltatt på en rekke aktiviteter i tillegg til å hoppe fra 13-meteren og tatt taubanen baklengs. Vi digger deg!"
 
-"Charlotte har vært en fantastisk jente å ha på leir. Hun er en ekte glad og morsom jente man ikke kan unngå å bli glad i. Hun er med på overnatting, dramakurs med forestilling, klatrer i fjellveggen og stått på vannski. Håper å se deg neste år!"`;
+"Charlotte har vært en fantastisk jente å ha på leir. Hun er en ekte glad og morsom jente man ikke kan unngå å bli glad i. Hun er med på overnatting, dramakurs med forestilling, klatrer i fjellveggen og stått på vannski. Håper å se deg neste år!"
+
+Svar bare med selve passteksten, uten overskrift, merknader eller forklaringer.`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -73,9 +76,9 @@ serve(async (req) => {
   try {
     const { participants, single } = await req.json();
     
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    // AI: Claude via Anthropic (22.11.2026), nøkkelen ligger som edge-secret.
+    if (!Deno.env.get("ANTHROPIC_API_KEY")) {
+      throw new Error("ANTHROPIC_API_KEY is not configured");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -128,20 +131,12 @@ Skriv passet nå (5-6 setninger):`;
 
       console.log(`Generating pass for ${participant.name}`);
 
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: userPrompt }
-          ],
-        }),
-      });
+      const response = await claudeChat({
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userPrompt }
+        ],
+      }, CLAUDE_SONNET);
 
       if (!response.ok) {
         if (response.status === 429) {
@@ -153,7 +148,7 @@ Skriv passet nå (5-6 setninger):`;
         }
         if (response.status === 402) {
           console.error("Payment required");
-          return new Response(JSON.stringify({ error: "Payment required, please add funds to your Lovable AI workspace." }), {
+          return new Response(JSON.stringify({ error: "AI-kontoen hos Anthropic mangler kreditt." }), {
             status: 402,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });

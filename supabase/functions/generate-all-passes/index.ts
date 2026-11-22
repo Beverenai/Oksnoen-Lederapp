@@ -1,3 +1,4 @@
+import { claudeChat, CLAUDE_SONNET } from "../_shared/claude.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { differenceInYears } from "https://esm.sh/date-fns@3.6.0";
@@ -70,7 +71,9 @@ EKSEMPLER PÅ GODE PASS:
 
 "Ada er en rå Berit-Bu jente som vi elsker å ha på leir. Hun har deltatt på en rekke aktiviteter i tillegg til å hoppe fra 13-meteren og tatt taubanen baklengs. Vi digger deg!"
 
-"Charlotte har vært en fantastisk jente å ha på leir. Hun er en ekte glad og morsom jente man ikke kan unngå å bli glad i. Hun er med på overnatting, dramakurs med forestilling, klatrer i fjellveggen og stått på vannski. Håper å se deg neste år!"`;
+"Charlotte har vært en fantastisk jente å ha på leir. Hun er en ekte glad og morsom jente man ikke kan unngå å bli glad i. Hun er med på overnatting, dramakurs med forestilling, klatrer i fjellveggen og stått på vannski. Håper å se deg neste år!"
+
+Svar bare med selve passteksten, uten overskrift, merknader eller forklaringer.`;
 
 // Mapping of shortened/alternative activity names to canonical names
 const ACTIVITY_NAME_MAPPING: Record<string, string[]> = {
@@ -189,20 +192,12 @@ VIKTIG ORDLISTE: "Rappis" = rappellering ned fjellveggen (skriv "rappellert ned 
 
 Skriv passet nå (5-6 setninger):`;
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userPrompt }
-      ],
-    }),
-  });
+  const response = await claudeChat({
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: userPrompt }
+    ],
+  }, CLAUDE_SONNET);
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -349,9 +344,10 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // AI: Claude via Anthropic (22.11.2026). Variabelnavnet under er beholdt for å endre minst mulig.
+    const LOVABLE_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      throw new Error("ANTHROPIC_API_KEY is not configured");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

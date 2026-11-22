@@ -36,6 +36,41 @@
       "when": 1794787807760,
       "tag": "0004_tighten_permissive_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794823147739,
+      "tag": "0005_hub_api_log",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794823996814,
+      "tag": "0006_restrict_policies_to_leaders",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794856043822,
+      "tag": "0007_participant_and_session_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794857445498,
+      "tag": "0008_participant_photo_sync",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794857770173,
+      "tag": "0009_qr_activity_registration_sessions",
+      "breakpoints": true
     }
   ]
 }

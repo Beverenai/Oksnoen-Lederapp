@@ -7,6 +7,7 @@ export type ScanState = 'venter' | 'ukjent';
 
 export interface QueuedScan {
   client_scan_id: string;
+  session_id?: string;
   code: string;
   activity: string;
   scanned_at: string;
@@ -21,6 +22,7 @@ export interface FlushResult {
   duplicates: number;
   unknown: number;
   failed: boolean;
+  outcomes: { scan: QueuedScan; status: string; gang?: number; participant_id?: string }[];
 }
 
 const KEY = 'oksnoen_qr_scan_queue_v1';
@@ -106,7 +108,7 @@ export function flushScanQueue(): Promise<FlushResult> {
 }
 
 async function doFlush(): Promise<FlushResult> {
-  const result: FlushResult = { sent: 0, registered: 0, duplicates: 0, unknown: 0, failed: false };
+  const result: FlushResult = { sent: 0, registered: 0, duplicates: 0, unknown: 0, failed: false, outcomes: [] };
   const snapshot = read();
   if (snapshot.length === 0) return result;
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -116,11 +118,12 @@ async function doFlush(): Promise<FlushResult> {
 
   for (let i = 0; i < snapshot.length; i += BATCH) {
     const batch = snapshot.slice(i, i + BATCH);
-    const payload = batch.map(({ client_scan_id, code, activity, scanned_at }) => ({
+    const payload = batch.map(({ client_scan_id, code, activity, scanned_at, session_id }) => ({
       client_scan_id,
       code,
       activity,
       scanned_at,
+      session_id,
     }));
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -131,16 +134,18 @@ async function doFlush(): Promise<FlushResult> {
       break;
     }
 
-    const rows: { client_scan_id: string; status: string }[] = Array.isArray(data) ? data : [];
+    const rows: { client_scan_id: string; status: string; gang?: number; participant_id?: string }[] = Array.isArray(data) ? data : [];
     const done = new Set<string>();
     const unknown = new Set<string>();
     for (const row of rows) {
+      const scan = batch.find(s => s.client_scan_id === row.client_scan_id);
+      if (scan) result.outcomes.push({ scan, status: row.status, gang: row.gang, participant_id: row.participant_id });
       if (row.status === 'ukjent_band') {
         unknown.add(row.client_scan_id);
         result.unknown++;
       } else {
         done.add(row.client_scan_id);
-        if (row.status === 'registrert') result.registered++;
+        if (row.status === 'registrert' || row.status === 'gjentatt') result.registered++;
         else result.duplicates++;
       }
     }

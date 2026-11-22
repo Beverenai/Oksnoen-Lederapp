@@ -44,6 +44,25 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Importen kjører med full databasetilgang, så bare admin får starte den.
+    const denied = await requireAdmin(req, supabase);
+    if (denied) return denied;
+
+    // Importen gjelder alltid aktiv periode. Uten aktiv periode stopper vi,
+    // ellers kan deltakere fra tidligere perioder bli truffet og overskrevet.
+    const { data: activePeriod } = await supabase
+      .from('periods')
+      .select('id')
+      .eq('is_active', true)
+      .maybeSingle();
+    if (!activePeriod) {
+      return new Response(
+        JSON.stringify({ error: 'Ingen aktiv periode. Velg periode før import.' }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const periodId: string = activePeriod.id;
+
     const { participants } = await req.json() as { participants: ParsedParticipant[] };
     
     if (!participants || participants.length === 0) {
@@ -69,7 +88,7 @@ Deno.serve(async (req) => {
     await updateProgress(supabase, initialProgress);
 
     // Start background processing
-    EdgeRuntime.waitUntil(processParticipants(supabase, participants));
+    EdgeRuntime.waitUntil(processParticipants(supabase, participants, periodId));
 
     return new Response(
       JSON.stringify({ 
@@ -103,7 +122,58 @@ async function updateProgress(supabase: any, progress: ImportProgress) {
   }
 }
 
-async function processParticipants(supabase: any, participants: ParsedParticipant[]) {
+// Escape for ilike, så % og _ i et navn ikke virker som jokertegn.
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+// Barnets faste ID. Samme navn og fødselsdato som en tidligere deltakelse gir
+// samme person. Ellers lages en ny ID. Uten fødselsdato lages alltid en ny,
+// og den må kobles for hånd om barnet finnes fra før.
+async function resolvePersonId(supabase: any, fullName: string, birthDate: string | null): Promise<string> {
+  if (birthDate) {
+    const { data } = await supabase
+      .from('participants')
+      .select('person_id')
+      .eq('birth_date', birthDate)
+      .ilike('name', escapeLike(fullName))
+      .not('person_id', 'is', null)
+      .limit(1);
+    if (data && data.length > 0 && data[0].person_id) return data[0].person_id;
+  }
+  return crypto.randomUUID();
+}
+
+// Returnerer et avslag hvis den som kaller ikke er admin, ellers null.
+async function requireAdmin(req: Request, supabase: any): Promise<Response | null> {
+  const deny = (error: string, status: number) =>
+    new Response(JSON.stringify({ error }), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) return deny('Unauthorized', 401);
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+  if (userError || !userData?.user) return deny('Invalid token', 401);
+
+  const { data: leader } = await supabase
+    .from('leaders')
+    .select('id')
+    .eq('auth_user_id', userData.user.id)
+    .maybeSingle();
+  if (!leader) return deny('Leader not found', 403);
+
+  const { data: roles } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('leader_id', leader.id);
+  const isAdmin = (roles || []).some((r: { role: string }) => r.role === 'admin' || r.role === 'superadmin');
+  return isAdmin ? null : deny('Admin access required', 403);
+}
+
+async function processParticipants(supabase: any, participants: ParsedParticipant[], periodId: string) {
   const progress: ImportProgress = {
     status: 'running',
     processed: 0,
@@ -183,7 +253,7 @@ async function processParticipants(supabase: any, participants: ParsedParticipan
       
       for (const participant of batch) {
         try {
-          await processParticipant(supabase, participant, cabinMap, progress);
+          await processParticipant(supabase, participant, cabinMap, progress, periodId);
         } catch (error) {
           console.error(`Error processing ${participant.firstName} ${participant.lastName}:`, error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -220,7 +290,8 @@ async function processParticipant(
   supabase: any, 
   participant: ParsedParticipant, 
   cabinMap: Map<string, string>,
-  progress: ImportProgress
+  progress: ImportProgress,
+  periodId: string
 ) {
   const normalizeCabinKey = (n: string) => n.replace(/\s+/g, ' ').trim().toLowerCase();
   const base = normalizeCabinKey(participant.cabinName);
@@ -242,25 +313,29 @@ async function processParticipant(
 
   const fullName = `${participant.firstName} ${participant.lastName}`.trim();
 
-  // Check if participant exists - first try exact name match
+  // Finn deltakeren i DENNE perioden. Tidligere perioder og år skal aldri
+  // treffes: de er historikk og må ikke overskrives.
   let existingParticipant = null;
-  
+
   const { data: exactMatch } = await supabase
     .from('participants')
     .select('id, birth_date')
-    .ilike('name', fullName)
+    .eq('period_id', periodId)
+    .ilike('name', escapeLike(fullName))
     .limit(1);
 
   if (exactMatch && exactMatch.length > 0) {
     existingParticipant = exactMatch[0];
   } else if (participant.birthDate) {
-    // If no exact match, try birth date + first name
+    // Ingen treff på fullt navn: prøv fødselsdato + fornavn, fortsatt i samme periode.
     const { data: birthDateMatch } = await supabase
       .from('participants')
       .select('id')
+      .eq('period_id', periodId)
       .eq('birth_date', participant.birthDate)
-      .ilike('name', `%${participant.firstName}%`)
+      .ilike('name', `%${escapeLike(participant.firstName)}%`)
       .limit(1);
+
     existingParticipant = birthDateMatch && birthDateMatch.length > 0 ? birthDateMatch[0] : null;
   }
 
@@ -308,6 +383,8 @@ async function processParticipant(
   } else {
     // Create new participant
     const insertData = {
+      period_id: periodId,
+      person_id: await resolvePersonId(supabase, fullName, participant.birthDate),
       name: fullName,
       first_name: participant.firstName,
       last_name: participant.lastName,

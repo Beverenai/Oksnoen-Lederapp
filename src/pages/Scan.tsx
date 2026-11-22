@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, CloudOff, History, Link2, RefreshCw, Undo2, X } from 'lucide-react';
+import { CheckCircle, ChevronDown, CloudOff, History, Link2, RefreshCw, Undo2, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { QrScanner } from '@/components/qr/QrScanner';
 import { ActivityPicker } from '@/components/qr/ActivityPicker';
@@ -13,6 +13,9 @@ import { addScan, getScanQueue, removeScan } from '@/lib/scanQueue';
 import { activitySymbol } from '@/lib/activityStyle';
 import { formatWristbandCode } from '@/lib/wristband';
 import { cn } from '@/lib/utils';
+import { ActivityRegistration, registrationKey, scanResultText } from '@/lib/activityRegistration';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
 
 type Tone = 'ok' | 'wait' | 'warn' | 'unknown';
 
@@ -49,6 +52,7 @@ const RING: Record<Tone, string> = {
 
 export default function Scan() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const directory = useBandDirectory();
   const queue = useScanQueue();
   const { byCode, participantById } = directory;
@@ -61,7 +65,7 @@ export default function Scan() {
   const [count, setCount] = useState(0);
   const [undoStack, setUndoStack] = useState<UndoStep[]>([]);
 
-  const doneRef = useRef<Set<string>>(new Set());
+  const registrationRef = useRef(new ActivityRegistration());
   const pendingRef = useRef<Pending[]>([]);
   const sendTimer = useRef<ReturnType<typeof setTimeout>>();
   const flashTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -90,16 +94,13 @@ export default function Scan() {
     sendTimer.current = setTimeout(() => queue.send(), 4000);
   }, [queue]);
 
-  const keyFor = (participantId: string | null, code: string, act: string) =>
-    `${participantId ?? `band:${code}`}|${act.toLowerCase()}`;
-
   /** Legger én skanning i lageret. Svarer false hvis den allerede er registrert. */
   const register = useCallback(
     (p: Pending, act: string): boolean => {
-      const key = keyFor(p.participant_id, p.code, act);
-      if (doneRef.current.has(key)) return false;
-      doneRef.current.add(key);
+      const key = registrationKey(p.participant_id, p.code, act);
+      if (!registrationRef.current.add(key)) return false;
       const queued = addScan({
+        session_id: registrationRef.current.sessionId,
         code: p.code,
         activity: act,
         participant_id: p.participant_id,
@@ -142,7 +143,7 @@ export default function Scan() {
 
       if (!register(item, activity)) {
         hapticWarning();
-        flash({ name, image, text: `Har allerede ${activity}`, tone: 'warn' });
+        flash({ name, image, text: `Allerede lagt inn på ${activity}`, tone: 'warn' });
         return;
       }
       if (participant) {
@@ -159,7 +160,9 @@ export default function Scan() {
 
   const pickActivity = (act: string) => {
     setPickerOpen(false);
-    if (act.toLowerCase() !== activity.toLowerCase()) setCount(0);
+    registrationRef.current.start();
+    setCount(0);
+    setUndoStack(prev => prev.filter(u => u.kind === 'pending'));
     setActivity(act);
     const waiting = pendingRef.current;
     if (waiting.length > 0) {
@@ -183,6 +186,7 @@ export default function Scan() {
     if (step.kind === 'pending') {
       setPending((prev) => prev.filter((p) => p.code !== step.code));
     } else {
+      if (queue.isSending) await queue.send();
       const inQueue = getScanQueue().some((s) => s.client_scan_id === step.client_scan_id);
       if (inQueue) {
         removeScan(step.client_scan_id);
@@ -199,7 +203,7 @@ export default function Scan() {
           return;
         }
       }
-      doneRef.current.delete(step.key);
+      registrationRef.current.undo(step.key);
       setCount((c) => Math.max(0, c - 1));
     }
     hapticImpact('medium');
@@ -212,6 +216,16 @@ export default function Scan() {
     if (window.history.length > 1) navigate(-1);
     else navigate('/');
   };
+
+  useEffect(() => {
+    queue.lastResult?.outcomes.forEach(({ scan, status, gang, participant_id }) => {
+      if (scan.session_id !== registrationRef.current.sessionId || status === 'ukjent_band') return;
+      const person = participantById.get(participant_id ?? scan.participant_id ?? '');
+      flash({ name: person?.name ?? scan.participant_name ?? 'Deltaker', image: person?.image ?? null,
+        text: scanResultText(scan.activity, status, gang), tone: status === 'registrert' || status === 'gjentatt' ? 'ok' : 'warn' });
+      if (status === 'dobbel' || status === 'ugyldig') setCount(c => Math.max(0, c - 1));
+    });
+  }, [queue.lastResult, flash]);
 
   const overlayOpen = pickerOpen || historyOpen;
 
@@ -330,14 +344,20 @@ export default function Scan() {
             <History className="h-5 w-5" />
             Historikk
           </button>
-          <button
+          <Button variant="ghost"
             type="button"
-            onClick={() => navigate('/qr')}
+            onClick={() => {
+              registrationRef.current.start();
+              setCount(0);
+              setActivity('');
+              setUndoStack([]);
+              if (isAdmin) navigate('/qr');
+            }}
             className="flex flex-1 flex-col items-center gap-1 rounded-2xl bg-black/55 py-2.5 text-xs backdrop-blur"
           >
-            <Link2 className="h-5 w-5" />
-            Bånd
-          </button>
+            {isAdmin ? <Link2 className="h-5 w-5" /> : <CheckCircle className="h-5 w-5" />}
+            {isAdmin ? 'Bånd' : 'Avslutt'}
+          </Button>
         </div>
       </div>
 
@@ -354,8 +374,8 @@ export default function Scan() {
           periodId={directory.periodId}
           participantById={participantById}
           onClose={() => setHistoryOpen(false)}
-          onUndone={(participantId, act) => {
-            if (participantId) doneRef.current.delete(`${participantId}|${act.toLowerCase()}`);
+          onUndone={(participantId, act, sessionId) => {
+            if (participantId && sessionId === registrationRef.current.sessionId) registrationRef.current.undo(registrationKey(participantId, '', act));
           }}
         />
       </div>

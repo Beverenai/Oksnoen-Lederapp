@@ -27,6 +27,11 @@ import { hapticSuccess, hapticWarning, hapticError } from '@/lib/capacitorHaptic
 import { GiftCardImportCard } from './GiftCardImportCard';
 import { ThumbnailsGeneratorCard } from './ThumbnailsGeneratorCard';
 import { AgedPhotosGeneratorCard } from './AgedPhotosGeneratorCard';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useQueryClient } from '@tanstack/react-query';
+import { arrivalChangeIds } from '@/lib/participantHistory';
+import { StatusPopup } from '@/components/ui/StatusPopup';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
 
 interface ImportProgress {
   status: 'idle' | 'running' | 'done' | 'error';
@@ -123,13 +128,17 @@ function decodeCsvBytes(bytes: Uint8Array): string {
 }
 
 export function ParticipantImportTab() {
+  const queryClient = useQueryClient();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [arrivalAction, setArrivalAction] = useState<boolean | null>(null);
+  const [arrivalSaving, setArrivalSaving] = useState(false);
+  const [arrivalResult, setArrivalResult] = useState<string | null>(null);
   const { showSuccess, showError, showInfo } = useStatusPopup();
   const [cabins, setCabins] = useState<Cabin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [participantCount, setParticipantCount] = useState(0);
   const [parsedData, setParsedData] = useState<ParsedParticipant[]>([]);
   const [isImporting, setIsImporting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -258,6 +267,25 @@ export function ParticipantImportTab() {
   const handleParticipantSaved = () => {
     loadAllParticipants();
     loadData();
+  };
+
+  const bulkArrival = async () => {
+    if (arrivalAction === null || arrivalSaving) return;
+    setArrivalSaving(true);
+    try {
+      const ids = arrivalChangeIds(allParticipants.filter(p => selectedIds.has(p.id)), arrivalAction);
+      const { data: count, error } = await supabase.rpc('set_participants_arrived', { _ids: ids, _arrived: arrivalAction });
+      if (error) throw error;
+      setArrivalResult(arrivalAction ? `${count} barn markert som ankommet` : `Ankomst fjernet for ${count} barn`);
+      setArrivalAction(null);
+      setSelectedIds(new Set());
+      await loadAllParticipants();
+      await queryClient.invalidateQueries({ queryKey: ['participants'] });
+    } catch {
+      showError('Kunne ikke oppdatere ankomst');
+    } finally {
+      setArrivalSaving(false);
+    }
   };
 
   const parseCabinField = (cabinField: string): { cabinName: string; room: string | null } => {
@@ -707,36 +735,6 @@ export function ParticipantImportTab() {
     }
   };
 
-  const deleteAllParticipants = async () => {
-    hapticWarning();
-    if (!confirm('⚠️ ADVARSEL: Dette vil slette ALLE deltakere og tilhørende data (aktiviteter, helsenotater, etc.).\n\nDette kan ikke angres. Er du sikker?')) return;
-    if (!confirm('Siste sjanse: Er du HELT sikker på at du vil slette alle deltakere?')) return;
-
-    setIsDeleting(true);
-    try {
-      // Delete related data first (activities, health info/notes/events) so a new period starts clean
-      await supabase.from('participant_activities').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('participant_health_notes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('participant_health_events').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('participant_health_info').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-
-      const { error } = await supabase
-        .from('participants')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      if (error) throw error;
-      
-      loadData();
-      showSuccess('Alle deltakere er slettet');
-    } catch (error) {
-      console.error('Error deleting participants:', error);
-      showError('Kunne ikke slette deltakere');
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -761,26 +759,6 @@ export function ParticipantImportTab() {
             Importer deltakere fra CSV-fil
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <Button 
-              variant="destructive" 
-              onClick={deleteAllParticipants}
-              disabled={isDeleting || participantCount === 0}
-            >
-              {isDeleting ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4 mr-2" />
-              )}
-              Slett alle deltakere
-            </Button>
-          </div>
-          
-          <p className="text-sm text-muted-foreground">
-            Bruk denne knappen for å starte en ny periode. Alle eksisterende deltakere vil bli slettet.
-          </p>
-        </CardContent>
       </Card>
 
       <GiftCardImportCard onImported={loadData} />
@@ -1080,6 +1058,13 @@ export function ParticipantImportTab() {
                             setIsEditDialogOpen(true);
                           }}
                         >
+                          <div className="mr-3 shrink-0" onClick={e => e.stopPropagation()}>
+                            <Checkbox aria-label={`Velg ${p.name}`} checked={selectedIds.has(p.id)} onCheckedChange={checked => setSelectedIds(previous => {
+                              const next = new Set(previous);
+                              if (checked === true) next.add(p.id); else next.delete(p.id);
+                              return next;
+                            })} />
+                          </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-medium truncate">{p.name}</span>
@@ -1137,6 +1122,11 @@ export function ParticipantImportTab() {
                 </div>
               )}
 
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-muted-foreground">{selectedIds.size} valgt</span>
+                <Button size="sm" disabled={!selectedIds.size || arrivalSaving} onClick={() => setArrivalAction(true)}><CheckCircle2 className="w-4 h-4 mr-2" />Marker som ankommet</Button>
+                <Button size="sm" variant="outline" disabled={!selectedIds.size || arrivalSaving} onClick={() => setArrivalAction(false)}>Fjern ankomst</Button>
+              </div>
               {filteredParticipants.length > 0 && (
                 <p className="text-sm text-muted-foreground text-center">
                   Viser {filteredParticipants.length} av {allParticipants.length} deltakere
@@ -1148,6 +1138,19 @@ export function ParticipantImportTab() {
       </Collapsible>
 
       {/* Edit Dialog */}
+      <AlertDialog open={arrivalAction !== null} onOpenChange={open => { if (!open && !arrivalSaving) setArrivalAction(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{arrivalAction ? 'Registrer ankomst' : 'Fjern ankomst'}</AlertDialogTitle>
+            <AlertDialogDescription>{arrivalAction ? `Marker ${selectedIds.size} valgte barn som ankommet?` : `Fjern ankomst for ${selectedIds.size} valgte barn?`}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={arrivalSaving}>Avbryt</AlertDialogCancel>
+            <Button disabled={arrivalSaving} onClick={bulkArrival}>{arrivalSaving ? 'Lagrer…' : 'Bekreft'}</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {arrivalResult && <StatusPopup type="success" title={arrivalResult} onClose={() => setArrivalResult(null)} />}
       <ParticipantEditDialog
         participant={selectedParticipant}
         cabins={cabins}

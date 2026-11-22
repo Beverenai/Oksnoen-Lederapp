@@ -1,7 +1,7 @@
-project_id = "noxnbtvxksgjsqzfdgcd"
+project_id = "scarxoedkpjqjahrccvz"
 
 [functions.phone-login]
 verify_jwt = false
 
-[functions.sync-leaders-import]
+[functions.hub-api]
 verify_jwt = false

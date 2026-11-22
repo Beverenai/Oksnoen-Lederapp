@@ -1,3 +1,4 @@
+import { claudeChat, CLAUDE_HAIKU } from "../_shared/claude.ts";
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -9,7 +10,8 @@ const COLOR_VALUES = [
   'svart','hvit','gra','rod','rosa','oransje','gul','gronn','bla','lilla','brun','beige','flerfarget'
 ];
 
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+// AI: Claude via Anthropic (22.11.2026).
+const LOVABLE_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -24,7 +26,7 @@ Deno.serve(async (req) => {
 
   try {
     if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY missing' }), {
+      return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY missing' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -82,14 +84,7 @@ Deno.serve(async (req) => {
       },
     };
 
-    const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+    const aiResp = await claudeChat({
         messages: [
           {
             role: 'system',
@@ -105,8 +100,7 @@ Deno.serve(async (req) => {
         ],
         tools: [tool],
         tool_choice: { type: 'function', function: { name: 'classify_lost_item' } },
-      }),
-    });
+    } as Parameters<typeof claudeChat>[0], CLAUDE_HAIKU);
 
     if (!aiResp.ok) {
       const text = await aiResp.text();
