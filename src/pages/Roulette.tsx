@@ -14,6 +14,7 @@ import {
   useSkipAssignment,
 } from '@/hooks/useRoulette';
 import { useStatusPopup } from '@/hooks/useStatusPopup';
+import { hapticImpact } from '@/lib/capacitorHaptics';
 
 export default function Roulette() {
   const navigate = useNavigate();
@@ -36,6 +37,7 @@ export default function Roulette() {
   const skip = useSkipAssignment();
 
   const handleDraw = async () => {
+    hapticImpact('medium');
     try {
       await draw.mutateAsync({ isU18 });
       showSuccess('Ny oppgave hentet!');

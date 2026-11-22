@@ -1,3 +1,4 @@
+import { hapticImpact } from '@/lib/capacitorHaptics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { uniqueRealtimeChannelName } from '@/lib/realtimeChannel';
@@ -388,6 +389,7 @@ export default function Chat() {
     const body = input.trim();
     if (!body || !leader) return;
     const replyingTo = replyTo;
+    hapticImpact('light');
     setSending(true);
     nearBottomRef.current = true;
     const mentions = mentionIdsFor(body, replyingTo);
