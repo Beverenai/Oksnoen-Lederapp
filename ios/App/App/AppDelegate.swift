@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,7 +8,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        registerNotificationActions()
         return true
     }
 
@@ -46,6 +47,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
+    /// Knapper i varsler. Serveren setter kategorien (se supabase/functions/_shared/apns.ts),
+    /// og appen gjør selve handlingen (src/hooks/useNativePushNavigation.ts).
+    private func registerNotificationActions() {
+        let reply = UNTextInputNotificationAction(
+            identifier: "reply",
+            title: "Svar",
+            options: [.foreground],
+            textInputButtonTitle: "Send",
+            textInputPlaceholder: "Skriv et svar"
+        )
+        let chat = UNNotificationCategory(identifier: "CHAT_MESSAGE", actions: [reply], intentIdentifiers: [], options: [])
+        let fixed = UNNotificationAction(identifier: "fix_done", title: "Merk som fikset", options: [.foreground])
+        let fix = UNNotificationCategory(identifier: "FIX_TASK", actions: [fixed], intentIdentifiers: [], options: [])
+        UNUserNotificationCenter.current().setNotificationCategories([chat, fix])
+    }
+
     // Forward APNs device token to Capacitor (required for @capacitor/push-notifications)
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
@@ -75,10 +92,34 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                 _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, open: url, options: [:])
             }
         }
+        // Appen ble åpnet fra et hurtigvalg på app-ikonet.
+        if let shortcut = connectionOptions.shortcutItem, let url = SceneDelegate.url(for: shortcut) {
+            DispatchQueue.main.async {
+                _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, open: url, options: [:])
+            }
+        }
         if let activity = connectionOptions.userActivities.first {
             DispatchQueue.main.async {
                 _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, continue: activity, restorationHandler: { _ in })
             }
+        }
+    }
+
+    /// Hurtigvalg når man holder inne app-ikonet (UIApplicationShortcutItems i Info.plist).
+    func windowScene(_ windowScene: UIWindowScene, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
+        guard let url = SceneDelegate.url(for: shortcutItem) else {
+            completionHandler(false)
+            return
+        }
+        completionHandler(ApplicationDelegateProxy.shared.application(UIApplication.shared, open: url, options: [:]))
+    }
+
+    static func url(for shortcut: UIApplicationShortcutItem) -> URL? {
+        switch shortcut.type {
+        case "com.oksnoen.ledere.skann": return URL(string: "oksnoen://skann")
+        case "com.oksnoen.ledere.fix": return URL(string: "oksnoen://fix")
+        case "com.oksnoen.ledere.chat": return URL(string: "oksnoen://chat")
+        default: return nil
         }
     }
 
